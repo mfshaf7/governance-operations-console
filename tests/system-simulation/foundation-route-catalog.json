@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "id": "proposal-parked-terminal",
+      "category": "proposal",
+      "expected": "terminal",
+      "boundary": "console-local"
+    },
+    {
+      "id": "proposal-parked-resume",
+      "category": "proposal",
+      "expected": "routed",
+      "boundary": "console-local"
+    },
+    {
+      "id": "proposal-rejected-terminal",
+      "category": "proposal",
+      "expected": "terminal",
+      "boundary": "console-local"
+    },
+    {
+      "id": "proposal-prototype-no-repository",
+      "category": "proposal",
+      "expected": "prototype-entry",
+      "boundary": "console-local"
+    },
+    {
+      "id": "proposal-prototype-existing-repository",
+      "category": "proposal",
+      "expected": "prototype-entry",
+      "boundary": "console-local"
+    },
+    {
+      "id": "proposal-prototype-repository-resolution",
+      "category": "repository",
+      "expected": "prototype-entry",
+      "boundary": "console-local"
+    },
+    {
+      "id": "proposal-delivery-no-repository",
+      "category": "proposal",
+      "expected": "delivery-intake",
+      "boundary": "console-local"
+    },
+    {
+      "id": "proposal-delivery-existing-repository",
+      "category": "proposal",
+      "expected": "delivery-intake",
+      "boundary": "console-local"
+    },
+    {
+      "id": "proposal-delivery-repository-resolution",
+      "category": "repository",
+      "expected": "delivery-intake",
+      "boundary": "console-local"
+    },
+    {
+      "id": "proposal-new-repository-gate-blocked",
+      "category": "repository",
+      "expected": "blocked",
+      "boundary": "console-local"
+    },
+    {
+      "id": "proposal-direct-portfolio-forbidden",
+      "category": "proposal",
+      "expected": "forbidden",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-candidate-order-guard",
+      "category": "prototype",
+      "expected": "blocked",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-baseline-order-guard",
+      "category": "prototype",
+      "expected": "blocked",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-landing-blocked",
+      "category": "prototype",
+      "expected": "blocked",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-landing-recovery",
+      "category": "prototype",
+      "expected": "landed",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-candidate-blocked",
+      "category": "prototype",
+      "expected": "blocked",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-candidate-closeout-routed",
+      "category": "prototype",
+      "expected": "closeout-routed",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-preview-proof",
+      "category": "prototype",
+      "expected": "proof-ready",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-baseline-blocked",
+      "category": "prototype",
+      "expected": "blocked",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-baseline-closeout-routed",
+      "category": "prototype",
+      "expected": "closeout-routed",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-baseline-to-delivery",
+      "category": "prototype",
+      "expected": "delivery-intake",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-impacted-closeout-request",
+      "category": "prototype",
+      "expected": "request-recorded",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-returned-movement-unchanged-blocked",
+      "category": "prototype",
+      "expected": "blocked",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-returned-movement-corrected",
+      "category": "prototype",
+      "expected": "request-recorded",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-local-retirement",
+      "category": "prototype",
+      "expected": "retired",
+      "boundary": "console-local"
+    },
+    {
+      "id": "prototype-direct-portfolio-forbidden",
+      "category": "prototype",
+      "expected": "forbidden",
+      "boundary": "console-local"
+    },
+    {
+      "id": "delivery-consume-design-refine",
+      "category": "delivery",
+      "expected": "refined",
+      "boundary": "console-local"
+    },
+    {
+      "id": "delivery-consume-failed-recovered",
+      "category": "delivery",
+      "expected": "consumed",
+      "boundary": "console-local"
+    },
+    {
+      "id": "delivery-work-design-stale-blocked",
+      "category": "delivery",
+      "expected": "blocked",
+      "boundary": "console-local"
+    },
+    {
+      "id": "delivery-refinement-failed",
+      "category": "delivery",
+      "expected": "blocked",
+      "boundary": "console-local"
+    },
+    {
+      "id": "delivery-refinement-retry",
+      "category": "delivery",
+      "expected": "refined",
+      "boundary": "console-local"
+    },
+    {
+      "id": "delivery-product-outcome",
+      "category": "delivery",
+      "expected": "candidate",
+      "boundary": "console-local"
+    },
+    {
+      "id": "delivery-ordinary-outcome-history",
+      "category": "delivery",
+      "expected": "history",
+      "boundary": "console-local"
+    },
+    {
+      "id": "workspace-intake-out-of-scope",
+      "category": "workspace-governance",
+      "expected": "out-of-scope",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-intake-proposed",
+      "category": "workspace-governance",
+      "expected": "proposed",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-intake-admitted-product",
+      "category": "workspace-governance",
+      "expected": "admitted",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-promote-repository",
+      "category": "workspace-governance",
+      "expected": "promoted",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-promote-product",
+      "category": "workspace-governance",
+      "expected": "promoted",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-promote-component",
+      "category": "workspace-governance",
+      "expected": "promoted",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-intake-idempotent-replay",
+      "category": "workspace-governance",
+      "expected": "replayed",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-promotion-non-admitted-forbidden",
+      "category": "workspace-governance",
+      "expected": "forbidden",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-promotion-stale-intake-forbidden",
+      "category": "workspace-governance",
+      "expected": "forbidden",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-promotion-stale-digest-forbidden",
+      "category": "workspace-governance",
+      "expected": "forbidden",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-component-repository-forbidden",
+      "category": "workspace-governance",
+      "expected": "forbidden",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "workspace-promotion-overlap-forbidden",
+      "category": "workspace-governance",
+      "expected": "forbidden",
+      "boundary": "contract-simulated"
+    },
+    {
+      "id": "portfolio-inactive-product-forbidden",
+      "category": "portfolio",
+      "expected": "blocked",
+      "boundary": "console-local"
+    },
+    {
+      "id": "portfolio-publication-captured",
+      "category": "portfolio",
+      "expected": "captured",
+      "boundary": "console-local"
+    },
+    {
+      "id": "portfolio-publication-rejected",
+      "category": "portfolio",
+      "expected": "rejected",
+      "boundary": "console-local"
+    },
+    {
+      "id": "portfolio-active-product-published",
+      "category": "portfolio",
+      "expected": "published",
+      "boundary": "console-local"
+    },
+    {
+      "id": "portfolio-existing-product-updated",
+      "category": "portfolio",
+      "expected": "updated",
+      "boundary": "console-local"
+    },
+    {
+      "id": "portfolio-duplicate-product-rejected",
+      "category": "portfolio",
+      "expected": "rejected",
+      "boundary": "console-local"
+    },
+    {
+      "id": "portfolio-release-updated",
+      "category": "portfolio",
+      "expected": "updated",
+      "boundary": "console-local"
+    },
+    {
+      "id": "portfolio-product-retired",
+      "category": "portfolio",
+      "expected": "retired",
+      "boundary": "console-local"
+    },
+    {
+      "id": "portfolio-idempotent-replay",
+      "category": "portfolio",
+      "expected": "replayed",
+      "boundary": "console-local"
+    }
+  ]
+}

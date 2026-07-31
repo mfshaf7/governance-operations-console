@@ -1,0 +1,3817 @@
+/* Work Design Context Board CSS boundary.
+   Board/editor internals live here so the future standalone board app keeps its visual ownership separate from workflow shell primitives. */
+
+.contextBoardAdvisorPanel {
+  grid-row: 3;
+  min-height: 0;
+}
+
+.contextBoardDecisionList {
+  display: grid;
+  gap: 0.34rem;
+  margin-top: 0.58rem;
+}
+
+.contextBoardDecisionOption {
+  --decision-rgb: 139, 181, 255;
+  display: grid;
+  width: 100%;
+  min-height: 2.72rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.72rem;
+  row-gap: 0.2rem;
+  border: 1px solid rgba(var(--decision-rgb), 0.18);
+  border-radius: 0.82rem;
+  padding: 0.4rem 0.5rem 0.4rem 0.64rem;
+  color: rgba(255, 247, 231, 0.86);
+  background:
+    linear-gradient(90deg, rgba(var(--decision-rgb), 0.045), transparent 74%),
+    rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.contextBoardDecisionOption::after {
+  display: inline-flex;
+  min-width: 5.7rem;
+  min-height: 1.55rem;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(var(--decision-rgb), 0.28);
+  border-radius: 0.62rem;
+  color: rgba(255, 247, 231, 0.74);
+  background:
+    linear-gradient(180deg, rgba(var(--decision-rgb), 0.08), rgba(255, 247, 231, 0.012)),
+    rgba(0, 0, 0, 0.3);
+  content: "Select";
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.46rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contextBoardDecisionOption[data-tone="warn"] {
+  --decision-rgb: 255, 193, 90;
+}
+
+.contextBoardDecisionOption[data-tone="danger"] {
+  --decision-rgb: 255, 106, 61;
+}
+
+.contextBoardDecisionOption[data-tone="ok"] {
+  --decision-rgb: 130, 236, 151;
+}
+
+.contextBoardDecisionOption:hover,
+.contextBoardDecisionOption:focus-visible,
+.contextBoardDecisionOptionSelected {
+  border-color: rgba(var(--decision-rgb), 0.5);
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--decision-rgb), 0.16),
+    0 0 16px rgba(var(--decision-rgb), 0.1);
+}
+
+.contextBoardDecisionOptionSelected {
+  border-color: rgba(var(--decision-rgb), 0.72);
+  background:
+    linear-gradient(90deg, rgba(var(--decision-rgb), 0.14), rgba(var(--decision-rgb), 0.035) 76%),
+    rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--decision-rgb), 0.3),
+    inset 3px 0 0 rgba(var(--decision-rgb), 0.92),
+    0 0 22px rgba(var(--decision-rgb), 0.16);
+}
+
+.contextBoardDecisionOption:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+  transform: none;
+}
+
+.contextBoardDecisionOption:disabled::after {
+  color: rgba(245, 239, 226, 0.5);
+  border-color: rgba(245, 239, 226, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  content: "Locked";
+}
+
+.contextBoardDecisionOption:hover::after,
+.contextBoardDecisionOption:focus-visible::after,
+.contextBoardDecisionOptionSelected::after {
+  color: rgba(255, 247, 231, 0.98);
+  border-color: rgba(var(--decision-rgb), 0.58);
+  background:
+    linear-gradient(180deg, rgba(var(--decision-rgb), 0.18), rgba(var(--decision-rgb), 0.06)),
+    rgba(0, 0, 0, 0.34);
+}
+
+.contextBoardDecisionOptionSelected::after {
+  color: #07090d;
+  border-color: rgba(var(--decision-rgb), 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.08)),
+    rgb(var(--decision-rgb));
+  box-shadow:
+    0 0 18px rgba(var(--decision-rgb), 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  content: "Selected";
+}
+
+.contextBoardDecisionOptionSelected:disabled::after {
+  color: rgba(245, 239, 226, 0.58);
+  border-color: rgba(245, 239, 226, 0.15);
+  background: rgba(0, 0, 0, 0.24);
+  box-shadow: none;
+  content: "Locked";
+}
+
+.contextBoardDecisionOption span {
+  grid-column: 1;
+  color: rgba(255, 247, 231, 0.94);
+  font-size: 0.64rem;
+  font-weight: 780;
+  line-height: 1.2;
+}
+
+.contextBoardDecisionOption small {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 0.58rem;
+  line-height: 1.26;
+}
+
+.contextBoardWorkspace {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.38fr);
+  gap: 0.9rem;
+}
+
+.contextBoardStage {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgba(139, 181, 255, 0.28);
+  border-radius: 1.1rem;
+  background:
+    radial-gradient(circle at 16% 24%, rgba(139, 181, 255, 0.13), transparent 28%),
+    linear-gradient(180deg, rgba(139, 181, 255, 0.055), rgba(0, 0, 0, 0.12)),
+    #080b10;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 20px 56px rgba(0, 0, 0, 0.28);
+}
+
+.contextBoardTopbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(139, 181, 255, 0.14);
+  padding: 0.82rem 0.95rem;
+  background:
+    linear-gradient(90deg, rgba(139, 181, 255, 0.09), transparent 72%),
+    rgba(3, 5, 8, 0.72);
+}
+
+.contextBoardTopbar p,
+.contextBoardFloatingTray span,
+.contextBoardNode span {
+  margin: 0;
+  color: rgba(255, 193, 90, 0.82);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.contextBoardTopbar h3 {
+  margin: 0.28rem 0 0;
+  color: rgba(255, 247, 231, 0.96);
+  font-size: 1.18rem;
+  font-weight: 760;
+  line-height: 1.06;
+}
+
+.contextBoardTopbar span {
+  display: block;
+  margin-top: 0.38rem;
+  color: rgba(245, 239, 226, 0.62);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.contextBoardLockNotice {
+  position: absolute;
+  z-index: 16;
+  top: 1rem;
+  left: 1rem;
+  display: grid;
+  max-width: min(25rem, calc(100% - 2rem));
+  gap: 0.18rem;
+  border: 1px solid rgba(130, 236, 151, 0.24);
+  border-radius: 0.86rem;
+  padding: 0.58rem 0.68rem;
+  background:
+    linear-gradient(135deg, rgba(130, 236, 151, 0.1), transparent 72%),
+    rgba(4, 8, 8, 0.84);
+  box-shadow:
+    inset 3px 0 0 rgba(130, 236, 151, 0.5),
+    0 14px 30px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.contextBoardLockNotice span {
+  color: rgba(130, 236, 151, 0.82);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.contextBoardLockNotice strong {
+  color: rgba(255, 247, 231, 0.94);
+  font-size: 0.76rem;
+  line-height: 1.16;
+}
+
+.contextBoardLockNotice small {
+  color: rgba(245, 239, 226, 0.62);
+  font-size: 0.6rem;
+  line-height: 1.32;
+}
+
+.contextBoardStage[data-read-only="true"] .contextBoardToolDock,
+.contextBoardStage[data-read-only="true"] .contextBoardDeleteButton,
+.contextBoardStage[data-read-only="true"] .contextBoardDuplicateButton,
+.contextBoardStage[data-read-only="true"] .contextBoardTemplateTrayDelete,
+.contextBoardStage[data-read-only="true"] .contextBoardTemplateTrayResize,
+.contextBoardStage[data-read-only="true"] .contextBoardPorts,
+.contextBoardStage[data-read-only="true"] .contextBoardConnectorRemoveButton,
+.contextBoardStage[data-read-only="true"] .contextBoardConnectorDuplicateButton,
+.contextBoardStage[data-read-only="true"] .contextBoardConnectorEndpointHandle {
+  display: none;
+}
+
+.contextBoardStage[data-read-only="true"] .contextBoardCardTitleInput,
+.contextBoardStage[data-read-only="true"] .contextBoardCardDetailInput {
+  cursor: default;
+}
+
+.contextBoardSnapshotCaptureHost {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: var(--board-width, 5600px);
+  height: var(--board-height, 3600px);
+  overflow: hidden;
+  pointer-events: none;
+  visibility: visible;
+  contain: layout paint style;
+}
+
+.contextBoardSnapshotCaptureHost .contextBoardStage {
+  width: var(--board-width, 5600px);
+  height: var(--board-height, 3600px);
+  min-height: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.contextBoardSnapshotCaptureHost .contextBoardPlaneSizer {
+  width: var(--board-width, 5600px);
+  height: var(--board-height, 3600px);
+}
+
+.contextBoardCanvas {
+  position: relative;
+  min-height: 0;
+  overflow: auto;
+  background-color: #06090e;
+  cursor: grab;
+  scrollbar-color: rgba(255, 193, 90, 0.46) rgba(10, 13, 19, 0.8);
+  scrollbar-width: thin;
+  user-select: none;
+}
+
+.contextBoardCanvas[data-panning="true"] {
+  cursor: grabbing;
+}
+
+.contextBoardCanvas[data-tool="select"] {
+  cursor: crosshair;
+}
+
+.contextBoardCanvas[data-tool="sketch"] {
+  cursor: crosshair;
+}
+
+.contextBoardPlane[data-tool="select"] .contextBoardCustomItem[data-selected="true"],
+.contextBoardPlane[data-tool="select"] .contextBoardNode[data-selected="true"],
+.contextBoardPlane[data-tool="select"] .contextBoardTemplateTray[data-selected="true"] {
+  cursor: move;
+}
+
+.contextBoardFloatingLayer {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 8;
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+}
+
+.contextBoardFloatingTray,
+.contextBoardToolDock,
+.contextBoardNavigator,
+.contextBoardFloatingSources,
+.contextBoardZoomFloat {
+  position: absolute;
+  border: 1px solid rgba(255, 193, 90, 0.14);
+  border-radius: 0.82rem;
+  background: rgba(5, 7, 10, 0.52);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+.contextBoardFloatingTray {
+  padding: 0.58rem 0.64rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.contextBoardToolDock {
+  top: 10.8rem;
+  left: 0.72rem;
+  width: 15.6rem;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.052), rgba(139, 181, 255, 0.028)),
+    rgba(5, 7, 10, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 16px 34px rgba(0, 0, 0, 0.34);
+}
+
+.contextBoardToolDock[data-collapsed="true"] {
+  width: 3.34rem;
+}
+
+.contextBoardToolDockBody {
+  display: grid;
+  grid-template-columns: 2.42rem minmax(0, 1fr);
+  gap: 0.42rem;
+  padding: 0.44rem;
+}
+
+.contextBoardToolDock[data-collapsed="true"] .contextBoardToolDockBody {
+  grid-template-columns: 1fr;
+  padding: 0.42rem;
+}
+
+.contextBoardToolRail {
+  display: grid;
+  gap: 0.32rem;
+  align-content: start;
+}
+
+.contextBoardToolDock[data-collapsed="true"] .contextBoardToolRail {
+  justify-items: center;
+}
+
+.contextBoardToolRail button,
+.contextBoardToolOptionGrid button {
+  color: rgba(245, 239, 226, 0.7);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 231, 0.035), rgba(255, 255, 255, 0.01)),
+    rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(245, 239, 226, 0.13);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.contextBoardToolRail button {
+  display: grid;
+  width: 2.34rem;
+  min-height: 2.34rem;
+  place-items: center;
+  border-radius: 0.72rem;
+  padding: 0;
+}
+
+.contextBoardToolRail button span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.contextBoardToolRail button svg,
+.contextBoardToolOptionGrid button svg,
+.contextBoardToolSelectorGrid button svg,
+.contextBoardLineChoice button svg {
+  color: currentColor;
+}
+
+.contextBoardToolRail button:hover,
+.contextBoardToolRail button:focus-visible,
+.contextBoardToolRail button[aria-pressed="true"],
+.contextBoardToolOptionGrid button:hover,
+.contextBoardToolOptionGrid button:focus-visible,
+.contextBoardToolOptionGrid button[aria-pressed="true"],
+.contextBoardToolSelectorGrid button:hover,
+.contextBoardToolSelectorGrid button:focus-visible,
+.contextBoardToolSelectorGrid button[aria-pressed="true"],
+.contextBoardLineChoice button:hover,
+.contextBoardLineChoice button:focus-visible,
+.contextBoardLineChoice button[aria-pressed="true"] {
+  color: rgba(255, 247, 231, 0.96);
+  border-color: rgba(255, 193, 90, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.16), rgba(255, 193, 90, 0.045)),
+    rgba(0, 0, 0, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 14px rgba(255, 193, 90, 0.1);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contextBoardToolRail button:disabled,
+.contextBoardToolOptionGrid button:disabled,
+.contextBoardToolSelectorGrid button:disabled,
+.contextBoardLineChoice button:disabled {
+  cursor: not-allowed;
+  color: rgba(245, 239, 226, 0.26);
+  border-color: rgba(245, 239, 226, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: none;
+  transform: none;
+}
+
+.contextBoardToolDivider {
+  width: 100%;
+  height: 1px;
+  margin: 0.08rem 0;
+  background: rgba(245, 239, 226, 0.12);
+}
+
+.contextBoardToolOptions {
+  display: grid;
+  gap: 0.48rem;
+  min-width: 0;
+  align-content: start;
+}
+
+.contextBoardToolOptionGroup {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.contextBoardToolOptionGroup[data-collapsed="true"] {
+  display: none;
+}
+
+.contextBoardToolOptionGroup > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.22rem;
+  color: rgba(255, 193, 90, 0.68);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.contextBoardToolSectionHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  align-items: center;
+  gap: 0.38rem;
+  border: 1px solid rgba(255, 193, 90, 0.14);
+  border-radius: 0.58rem;
+  padding: 0.38rem 0.44rem;
+  color: rgba(255, 193, 90, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.052), rgba(255, 255, 255, 0.012)),
+    rgba(0, 0, 0, 0.2);
+  cursor: default;
+  text-align: left;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.contextBoardToolSectionHeader:focus-visible {
+  border-color: rgba(255, 193, 90, 0.36);
+  color: rgba(255, 224, 166, 0.92);
+  outline: none;
+  box-shadow: 0 0 14px rgba(255, 193, 90, 0.08);
+}
+
+.contextBoardToolSectionHeader span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.24rem;
+  overflow: hidden;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.contextBoardToolSectionHeader small {
+  max-width: 6.5rem;
+  overflow: hidden;
+  color: rgba(245, 239, 226, 0.46);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.44rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-align: right;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.contextBoardToolSectionHeader > svg:last-child {
+  display: none;
+}
+
+.contextBoardToolSectionBody {
+  display: grid;
+  gap: 0.26rem;
+}
+
+.contextBoardToolSubsection {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.contextBoardToolSubsectionHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  align-items: center;
+  gap: 0.34rem;
+  border: 1px solid rgba(255, 193, 90, 0.14);
+  border-radius: 0.58rem;
+  padding: 0.36rem 0.44rem;
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.052), rgba(255, 255, 255, 0.012)),
+    rgba(0, 0, 0, 0.2);
+}
+
+.contextBoardToolSubsectionHeader > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.24rem;
+  overflow: hidden;
+  color: rgba(255, 193, 90, 0.72);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.contextBoardToolSubsectionHeader small {
+  overflow: hidden;
+  color: rgba(245, 239, 226, 0.46);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.44rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-align: right;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.contextBoardToolOptionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.22rem;
+}
+
+.contextBoardToolSelectorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.18rem;
+  padding: 0.18rem;
+  border: 1px solid rgba(139, 181, 255, 0.1);
+  border-radius: 0.62rem;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.contextBoardToolOptionGrid button,
+.contextBoardToolSelectorGrid button,
+.contextBoardLineChoice button {
+  display: inline-flex;
+  min-height: 1.54rem;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.26rem;
+  border-radius: 0.52rem;
+  padding: 0 0.38rem;
+  text-align: left;
+}
+
+.contextBoardToolSelectorGrid button {
+  min-height: 1.46rem;
+  border-color: rgba(139, 181, 255, 0.14);
+  color: rgba(245, 239, 226, 0.62);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.contextBoardToolSelectorGrid button[aria-pressed="true"] {
+  border-color: rgba(139, 181, 255, 0.45);
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.16), rgba(139, 181, 255, 0.04)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 14px rgba(139, 181, 255, 0.08);
+}
+
+.contextBoardToolOptionGrid button span,
+.contextBoardToolSelectorGrid button span,
+.contextBoardLineChoice button span {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 221, 164, 0.76);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.46rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.contextBoardToolOptionGrid button:hover span,
+.contextBoardToolOptionGrid button:focus-visible span,
+.contextBoardToolOptionGrid button[aria-pressed="true"] span,
+.contextBoardToolSelectorGrid button:hover span,
+.contextBoardToolSelectorGrid button:focus-visible span,
+.contextBoardToolSelectorGrid button[aria-pressed="true"] span,
+.contextBoardLineChoice button:hover span,
+.contextBoardLineChoice button:focus-visible span,
+.contextBoardLineChoice button[aria-pressed="true"] span {
+  color: rgba(255, 235, 198, 0.95);
+}
+
+.contextBoardToolOptionGrid button[data-kind="end"],
+.contextBoardToolOptionGrid button[data-kind="start"],
+.contextBoardToolOptionGrid button[data-kind="topic"],
+.contextBoardToolOptionGrid button[data-kind="branch"],
+.contextBoardToolOptionGrid button[data-kind="shape-circle"],
+.contextBoardToolOptionGrid button[data-kind="shape-rounded"],
+.contextBoardToolOptionGrid button[data-kind="uml-state"],
+.contextBoardToolOptionGrid button[data-kind="uml-usecase"] {
+  border-radius: 999px;
+}
+
+.contextBoardToolOptionGrid button[data-kind="decision"],
+.contextBoardToolOptionGrid button[data-kind="shape-diamond"] {
+  border-radius: 0.72rem 0.32rem;
+}
+
+.contextBoardToolOptionGrid button[data-kind="container"],
+.contextBoardToolOptionGrid button[data-kind="c4-external-system"],
+.contextBoardToolOptionGrid button[data-kind="c4-system-boundary"],
+.contextBoardToolOptionGrid button[data-kind="lane"],
+.contextBoardToolOptionGrid button[data-kind="uml-interface"],
+.contextBoardToolOptionGrid button[data-kind="uml-package"] {
+  border-style: dashed;
+}
+
+.contextBoardToolOptionGrid button[data-kind="c4-software-system"] {
+  border-color: rgba(190, 143, 255, 0.34);
+}
+
+.contextBoardToolOptionGrid button[data-kind="c4-container"] {
+  border-color: rgba(255, 193, 90, 0.32);
+}
+
+.contextBoardToolOptionGrid button[data-kind="c4-component"] {
+  border-color: rgba(139, 181, 255, 0.32);
+}
+
+.contextBoardToolOptionGrid button[data-kind="c4-relationship"] {
+  min-height: 1.3rem;
+  border-radius: 999px;
+}
+
+.contextBoardToolOptionGrid button[data-kind="sequence-activation"] {
+  border-radius: 999px;
+}
+
+.contextBoardToolOptionGrid button[data-kind="sequence-fragment"] {
+  border-style: dashed;
+}
+
+.contextBoardToolOptionGrid button[data-kind="sequence-message"],
+.contextBoardToolOptionGrid button[data-kind="sequence-return"] {
+  color: rgba(255, 247, 231, 0.9);
+}
+
+.contextBoardToolOptionGrid button[data-kind="text"] {
+  color: rgba(255, 247, 231, 0.9);
+}
+
+.contextBoardToolOptionGrid button[data-kind^="label-"] {
+  border-color: rgba(255, 193, 90, 0.25);
+}
+
+.contextBoardToolOptionGrid button[data-kind="label-tag"],
+.contextBoardToolOptionGrid button[data-kind="label-pill"] {
+  border-radius: 999px;
+}
+
+.contextBoardToolOptionGrid button[data-kind="label-field"] {
+  border-radius: 0.38rem;
+}
+
+.contextBoardToolOptionGrid button[data-kind="label-area"] {
+  border-radius: 0.54rem;
+}
+
+.contextBoardToolOptionGrid button[data-kind="freeform-frame"] {
+  border-style: dashed;
+}
+
+.contextBoardToolMiniActions {
+  display: grid;
+  gap: 0.26rem;
+}
+
+.contextBoardToolMiniActions button {
+  min-height: 1.6rem;
+  border: 1px solid rgba(255, 193, 90, 0.22);
+  border-radius: 0.6rem;
+  color: rgba(255, 221, 164, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.11), rgba(255, 193, 90, 0.032)),
+    rgba(0, 0, 0, 0.3);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.contextBoardToolMiniActions button:hover,
+.contextBoardToolMiniActions button:focus-visible {
+  border-color: rgba(255, 193, 90, 0.54);
+  color: rgba(255, 235, 198, 0.95);
+  box-shadow: 0 0 14px rgba(255, 193, 90, 0.12);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contextBoardToolMiniActions button:disabled {
+  cursor: not-allowed;
+  color: rgba(245, 239, 226, 0.28);
+  border-color: rgba(245, 239, 226, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: none;
+  transform: none;
+}
+
+.contextBoardToolMiniActions .contextBoardToolTemplateAction {
+  justify-content: center;
+  border-color: rgba(96, 165, 250, 0.34);
+  color: rgba(210, 226, 255, 0.9);
+  background:
+    linear-gradient(180deg, rgba(30, 64, 175, 0.32), rgba(15, 23, 42, 0.2)),
+    rgba(9, 16, 34, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 0 16px rgba(37, 99, 235, 0.1);
+}
+
+.contextBoardToolMiniActions .contextBoardToolTemplateAction:hover,
+.contextBoardToolMiniActions .contextBoardToolTemplateAction:focus-visible {
+  border-color: rgba(147, 197, 253, 0.48);
+  color: rgba(236, 244, 255, 0.98);
+  background:
+    linear-gradient(180deg, rgba(37, 99, 235, 0.34), rgba(15, 23, 42, 0.22)),
+    rgba(10, 22, 48, 0.76);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.11),
+    0 0 18px rgba(59, 130, 246, 0.14);
+}
+
+.contextBoardLineControls {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.contextBoardLineControl {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.18rem;
+  border: 1px solid rgba(139, 181, 255, 0.1);
+  border-radius: 0.62rem;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.contextBoardLineControl > span {
+  color: rgba(245, 239, 226, 0.5);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.42rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.contextBoardLineChoice {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.16rem;
+}
+
+.contextBoardUmlRelationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.16rem;
+}
+
+.contextBoardLineChoice button {
+  min-height: 1.38rem;
+  justify-content: center;
+  border-color: rgba(139, 181, 255, 0.14);
+  color: rgba(245, 239, 226, 0.62);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.contextBoardLineChoice button[aria-pressed="true"] {
+  border-color: rgba(139, 181, 255, 0.45);
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.16), rgba(139, 181, 255, 0.04)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 14px rgba(139, 181, 255, 0.08);
+}
+
+.contextBoardUmlRelationGrid button {
+  min-height: 1.38rem;
+  justify-content: center;
+  border: 1px solid rgba(255, 193, 90, 0.15);
+  border-radius: 0.32rem;
+  color: rgba(255, 218, 148, 0.76);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.045), rgba(255, 255, 255, 0.012)),
+    rgba(4, 6, 10, 0.84);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.contextBoardUmlRelationGrid button:hover,
+.contextBoardUmlRelationGrid button:focus-visible,
+.contextBoardUmlRelationGrid button[aria-pressed="true"] {
+  border-color: rgba(255, 193, 90, 0.42);
+  color: rgba(255, 244, 218, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.16), rgba(255, 193, 90, 0.045)),
+    rgba(17, 12, 5, 0.94);
+  outline: none;
+  box-shadow: 0 0 16px rgba(255, 193, 90, 0.08);
+}
+
+.contextBoardLineChoice button .contextBoardLineGlyph {
+  flex: 0 0 0.86rem;
+  width: 0.86rem;
+  min-width: 0.86rem;
+  height: 0;
+  overflow: visible;
+  border-top: 2px solid currentColor;
+  color: rgba(255, 221, 164, 0.78);
+}
+
+.contextBoardLineChoice button .contextBoardLineGlyph[data-stroke="dashed"] {
+  border-top-style: dashed;
+}
+
+.contextBoardLineChoice button:hover .contextBoardLineGlyph,
+.contextBoardLineChoice button:focus-visible .contextBoardLineGlyph,
+.contextBoardLineChoice button[aria-pressed="true"] .contextBoardLineGlyph {
+  color: rgba(255, 235, 198, 0.95);
+}
+
+.contextBoardLineSwatches {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.14rem;
+}
+
+.contextBoardLineSwatches button {
+  --connector-rgb: 255, 193, 90;
+  position: relative;
+  min-height: 1.16rem;
+  min-width: 0;
+  border: 1px solid rgba(var(--connector-rgb), 0.42);
+  border-radius: 0.4rem;
+  background:
+    linear-gradient(180deg, rgba(var(--connector-rgb), 0.92), rgba(var(--connector-rgb), 0.58)),
+    rgba(var(--connector-rgb), 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0 10px rgba(var(--connector-rgb), 0.08);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.contextBoardLineSwatches button[aria-pressed="true"] {
+  border-color: rgba(255, 247, 231, 0.9);
+  box-shadow:
+    inset 0 0 0 2px rgba(5, 8, 12, 0.4),
+    0 0 14px rgba(var(--connector-rgb), 0.34);
+}
+
+.contextBoardLineSwatches button[aria-pressed="true"]::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: rgba(255, 247, 231, 0.96);
+  box-shadow: 0 0 0 1px rgba(5, 8, 12, 0.4);
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.contextBoardLineSwatches button:hover,
+.contextBoardLineSwatches button:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contextBoardLineSwatches button[data-tone="blue"],
+.contextBoardConnectorPath[data-tone="blue"],
+.contextBoardConnectorDraftPath[data-tone="blue"],
+.contextBoardConnectorMarker[data-tone="blue"],
+.contextBoardSketchPath[data-tone="blue"] {
+  --connector-rgb: 139, 181, 255;
+}
+
+.contextBoardLineSwatches button[data-tone="amber"],
+.contextBoardConnectorPath[data-tone="amber"],
+.contextBoardConnectorDraftPath[data-tone="amber"],
+.contextBoardConnectorMarker[data-tone="amber"],
+.contextBoardSketchPath[data-tone="amber"] {
+  --connector-rgb: 255, 193, 90;
+}
+
+.contextBoardLineSwatches button[data-tone="green"],
+.contextBoardConnectorPath[data-tone="green"],
+.contextBoardConnectorDraftPath[data-tone="green"],
+.contextBoardConnectorMarker[data-tone="green"],
+.contextBoardSketchPath[data-tone="green"] {
+  --connector-rgb: 130, 236, 151;
+}
+
+.contextBoardLineSwatches button[data-tone="red"],
+.contextBoardConnectorPath[data-tone="red"],
+.contextBoardConnectorDraftPath[data-tone="red"],
+.contextBoardConnectorMarker[data-tone="red"],
+.contextBoardSketchPath[data-tone="red"] {
+  --connector-rgb: 255, 106, 61;
+}
+
+.contextBoardLineSwatches button[data-tone="purple"],
+.contextBoardConnectorPath[data-tone="purple"],
+.contextBoardConnectorDraftPath[data-tone="purple"],
+.contextBoardConnectorMarker[data-tone="purple"],
+.contextBoardSketchPath[data-tone="purple"] {
+  --connector-rgb: 190, 143, 255;
+}
+
+.contextBoardLineSwatches button[data-tone="neutral"],
+.contextBoardConnectorPath[data-tone="neutral"],
+.contextBoardConnectorDraftPath[data-tone="neutral"],
+.contextBoardConnectorMarker[data-tone="neutral"],
+.contextBoardSketchPath[data-tone="neutral"] {
+  --connector-rgb: 174, 181, 194;
+}
+
+.contextBoardLineSwatches button[data-tone="black"],
+.contextBoardSketchPath[data-tone="black"] {
+  --connector-rgb: 8, 10, 14;
+}
+
+.contextBoardLineSwatches button[data-tone="white"],
+.contextBoardSketchPath[data-tone="white"] {
+  --connector-rgb: 255, 255, 255;
+}
+
+.contextBoardLineSwatches button[data-tone="charcoal"],
+.contextBoardSketchPath[data-tone="charcoal"] {
+  --connector-rgb: 42, 47, 55;
+}
+
+.contextBoardLineSwatches button[data-tone="navy"],
+.contextBoardSketchPath[data-tone="navy"] {
+  --connector-rgb: 34, 58, 102;
+}
+
+.contextBoardLineSwatches button[data-tone="forest"],
+.contextBoardSketchPath[data-tone="forest"] {
+  --connector-rgb: 34, 82, 60;
+}
+
+.contextBoardLineSwatches button[data-tone="burgundy"],
+.contextBoardSketchPath[data-tone="burgundy"] {
+  --connector-rgb: 106, 38, 48;
+}
+
+.contextBoardLineSwatches button[data-tone="white"] {
+  border-color: rgba(8, 10, 14, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 0 0 1px rgba(8, 10, 14, 0.08),
+    0 0 10px rgba(8, 10, 14, 0.08);
+}
+
+.contextBoardLineSwatches button[data-tone="white"][aria-pressed="true"]::after {
+  background: rgba(8, 10, 14, 0.9);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.72);
+}
+
+.contextBoardFloatingTray strong {
+  display: block;
+  margin-top: 0.24rem;
+  color: rgba(255, 247, 231, 0.92);
+  font-size: 0.86rem;
+  font-weight: 760;
+  line-height: 1.1;
+}
+
+.contextBoardFloatingTray small {
+  display: block;
+  margin-top: 0.2rem;
+  color: rgba(245, 239, 226, 0.58);
+  font-size: 0.62rem;
+  line-height: 1.3;
+}
+
+.contextBoardFloatingVisual {
+  top: 0.72rem;
+  left: 0.72rem;
+  width: min(28rem, calc(100% - 22rem));
+  border-color: rgba(190, 143, 255, 0.18);
+  pointer-events: none;
+}
+
+.contextBoardFloatingVisual[data-has-content="true"] {
+  width: 14rem;
+  padding: 0.42rem 0.52rem;
+}
+
+.contextBoardFloatingVisual[data-has-content="true"] strong {
+  margin-top: 0.1rem;
+  overflow: hidden;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contextBoardFloatingVisual[data-has-content="true"] small {
+  display: none;
+}
+
+.contextBoardZoomFloat {
+  top: 8.86rem;
+  right: 0.72rem;
+  display: grid;
+  width: 2.5rem;
+  justify-items: center;
+  gap: 0.32rem;
+  padding: 0.38rem 0.32rem;
+}
+
+.contextBoardZoomFloat button {
+  display: inline-grid;
+  width: 1.45rem;
+  height: 1.45rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 193, 90, 0.22);
+  border-radius: 0.5rem;
+  color: rgba(255, 247, 231, 0.78);
+  background: rgba(255, 255, 255, 0.035);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.contextBoardZoomFloat input {
+  width: 1.28rem;
+  height: 4.9rem;
+  min-width: 0;
+  min-height: 0;
+  accent-color: #ffc15a;
+  direction: rtl;
+  writing-mode: vertical-lr;
+}
+
+.contextBoardZoomFloat span {
+  width: auto;
+  color: rgba(255, 193, 90, 0.72);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.contextBoardNavigator {
+  top: 0.72rem;
+  right: 0.72rem;
+  display: grid;
+  width: 10.8rem;
+  gap: 0.28rem;
+  padding: 0.38rem;
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.052), rgba(255, 193, 90, 0.025)),
+    rgba(5, 7, 10, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 14px 28px rgba(0, 0, 0, 0.28);
+}
+
+.contextBoardNavigatorHeader {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.38rem;
+}
+
+.contextBoardNavigatorHeader span,
+.contextBoardNavigatorHeader small {
+  overflow: hidden;
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 900;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.contextBoardNavigatorHeader span {
+  color: rgba(255, 193, 90, 0.76);
+  font-size: 0.46rem;
+  letter-spacing: 0.12em;
+}
+
+.contextBoardNavigatorHeader small {
+  color: rgba(245, 239, 226, 0.46);
+  font-size: 0.38rem;
+  letter-spacing: 0.08em;
+}
+
+.contextBoardNavigatorMap {
+  position: relative;
+  aspect-ratio: 56 / 34;
+  overflow: hidden;
+  border: 1px solid rgba(139, 181, 255, 0.18);
+  border-radius: 0.58rem;
+  background:
+    radial-gradient(circle at center, rgba(139, 181, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(139, 181, 255, 0.045), rgba(0, 0, 0, 0.16)),
+    rgba(0, 0, 0, 0.5);
+  background-size: 12px 12px, auto, auto;
+  cursor: crosshair;
+}
+
+.contextBoardNavigatorMap:focus-visible {
+  border-color: rgba(255, 193, 90, 0.48);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 193, 90, 0.1);
+}
+
+.contextBoardNavigatorItem,
+.contextBoardNavigatorViewport {
+  position: absolute;
+  top: var(--map-y);
+  left: var(--map-x);
+  width: max(3px, var(--map-width));
+  height: max(3px, var(--map-height));
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.contextBoardNavigatorItem {
+  border: 1px solid rgba(255, 247, 231, 0.12);
+  background: rgba(139, 181, 255, 0.52);
+  box-shadow: 0 0 8px rgba(139, 181, 255, 0.1);
+}
+
+.contextBoardNavigatorItem[data-type="template"] {
+  border-color: rgba(255, 193, 90, 0.2);
+  background: rgba(255, 193, 90, 0.36);
+}
+
+.contextBoardNavigatorItem[data-type="core"] {
+  background: rgba(130, 236, 151, 0.4);
+}
+
+.contextBoardNavigatorItem[data-selected="true"] {
+  border-color: rgba(255, 247, 231, 0.9);
+  background: rgba(255, 193, 90, 0.82);
+  box-shadow: 0 0 10px rgba(255, 193, 90, 0.4);
+}
+
+.contextBoardNavigatorViewport {
+  border: 1px solid rgba(255, 247, 231, 0.9);
+  background: rgba(255, 247, 231, 0.035);
+  box-shadow:
+    0 0 0 1px rgba(5, 7, 10, 0.72),
+    0 0 14px rgba(255, 247, 231, 0.16);
+}
+
+.contextBoardPlaneSizer {
+  position: relative;
+  width: var(--board-scaled-width);
+  height: var(--board-scaled-height);
+}
+
+.contextBoardPlane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--board-width);
+  height: var(--board-height);
+  overflow: hidden;
+  transform: scale(var(--board-zoom));
+  transform-origin: 0 0;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(139, 181, 255, 0.22) 1px, transparent 0),
+    linear-gradient(rgba(139, 181, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 181, 255, 0.045) 1px, transparent 1px);
+  background-position:
+    0 0,
+    0 0,
+    0 0;
+  background-size:
+    22px 22px,
+    110px 110px,
+    110px 110px;
+  background-color: #0a0d13;
+}
+
+.contextBoardStage[data-style="flow"] .contextBoardPlane {
+  background-color: #090d12;
+  background-image:
+    linear-gradient(90deg, rgba(139, 181, 255, 0.13) 1px, transparent 1px),
+    linear-gradient(rgba(139, 181, 255, 0.06) 1px, transparent 1px);
+  background-size: 88px 88px;
+}
+
+.contextBoardStage[data-style="map"] .contextBoardPlane {
+  background-color: #0b0e12;
+  background-image:
+    radial-gradient(circle at 2px 2px, rgba(255, 193, 90, 0.18) 1.5px, transparent 0),
+    radial-gradient(circle at 2px 2px, rgba(139, 181, 255, 0.1) 1px, transparent 0);
+  background-size:
+    28px 28px,
+    112px 112px;
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardCanvas {
+  background-color: #eef1f5;
+  scrollbar-color: rgba(8, 10, 14, 0.42) rgba(221, 226, 235, 0.82);
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardPlane {
+  background: #ffffff;
+  background-image: none;
+  box-shadow: inset 0 0 0 1px rgba(8, 10, 14, 0.08);
+}
+
+.contextBoardPlane::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 8% 18%, rgba(255, 193, 90, 0.1), transparent 22%),
+    radial-gradient(circle at 74% 22%, rgba(130, 236, 151, 0.075), transparent 24%),
+    radial-gradient(circle at 54% 70%, rgba(255, 106, 61, 0.07), transparent 28%);
+  content: "";
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardPlane::before {
+  display: none;
+}
+
+.contextBoardConnectorLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.contextBoardConnectorPath,
+.contextBoardConnectorDraftPath {
+  --connector-rgb: 255, 193, 90;
+  fill: none;
+  stroke: rgba(var(--connector-rgb), 0.34);
+  stroke-linecap: round;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 7px rgba(var(--connector-rgb), 0.18));
+}
+
+.contextBoardConnectorMarker {
+  --connector-rgb: 255, 193, 90;
+  fill: rgba(var(--connector-rgb), 0.68);
+  stroke: rgba(var(--connector-rgb), 0.72);
+  stroke-width: 1.25;
+}
+
+.contextBoardConnectorMarker[data-marker="triangle"],
+.contextBoardConnectorMarker[data-marker="diamond"] {
+  fill: rgba(5, 8, 12, 0.95);
+}
+
+.contextBoardConnectorMarker[data-marker="filled-diamond"] {
+  fill: rgba(var(--connector-rgb), 0.78);
+}
+
+.contextBoardConnectorPath[data-tip="arrow"] {
+  stroke: rgba(var(--connector-rgb), 0.48);
+}
+
+.contextBoardConnectorPath[data-shape="straight"] {
+  stroke-dasharray: none;
+  stroke-width: 2.2;
+}
+
+.contextBoardConnectorDraftPath {
+  stroke: rgba(var(--connector-rgb), 0.66);
+  stroke-dasharray: none;
+  stroke-width: 2;
+}
+
+.contextBoardConnectorPath[data-stroke="dashed"],
+.contextBoardConnectorDraftPath[data-stroke="dashed"] {
+  stroke-dasharray: 8 7;
+}
+
+.contextBoardConnectorHitPath {
+  fill: none;
+  stroke: transparent;
+  stroke-linecap: round;
+  stroke-width: 16;
+  cursor: default;
+  pointer-events: stroke;
+}
+
+.contextBoardSketchPath {
+  --connector-rgb: 255, 193, 90;
+  fill: none;
+  opacity: var(--sketch-opacity);
+  pointer-events: none;
+  stroke: rgb(var(--connector-rgb));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: calc(var(--sketch-width) * 1px);
+}
+
+.contextBoardSketchPath[data-sketch-tool="highlighter"] {
+  mix-blend-mode: multiply;
+}
+
+.contextBoardStage:not([data-style="plain"]) .contextBoardSketchPath[data-sketch-tool="highlighter"] {
+  mix-blend-mode: screen;
+}
+
+.contextBoardConnectorPoint {
+  fill: rgba(255, 193, 90, 0.78);
+  stroke: rgba(5, 8, 12, 0.96);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.contextBoardConnectorEndpointHandle {
+  fill: rgba(255, 193, 90, 0.12);
+  stroke: rgba(255, 193, 90, 0.28);
+  stroke-width: 1.5;
+  cursor: grab;
+  opacity: 0;
+  outline: none;
+  pointer-events: all;
+  transition:
+    fill 150ms ease,
+    opacity 150ms ease,
+    stroke 150ms ease,
+    transform 150ms ease;
+}
+
+.contextBoardConnectorEndpointHandle[data-visible="true"],
+.contextBoardConnectorEndpointHandle:hover,
+.contextBoardConnectorEndpointHandle:focus-visible {
+  fill: rgba(255, 193, 90, 0.2);
+  stroke: rgba(255, 193, 90, 0.72);
+  opacity: 1;
+}
+
+.contextBoardConnectorEndpointHandle:active {
+  cursor: grabbing;
+}
+
+.contextBoardConnectorRemoveButton,
+.contextBoardConnectorDuplicateButton {
+  position: absolute;
+  z-index: 7;
+  top: calc(var(--connector-y) - 1.78rem);
+  display: inline-grid;
+  width: 1.44rem;
+  height: 1.44rem;
+  place-items: center;
+  border: 1px solid rgba(255, 193, 90, 0.34);
+  border-radius: 999px;
+  color: rgba(255, 247, 231, 0.78);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.08), rgba(255, 255, 255, 0.018)),
+    rgba(5, 8, 12, 0.92);
+  box-shadow:
+    0 0 0 2px rgba(5, 8, 12, 0.88),
+    0 0 14px rgba(255, 193, 90, 0.12);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.contextBoardConnectorRemoveButton {
+  left: calc(var(--connector-x) - 0.72rem);
+}
+
+.contextBoardConnectorDuplicateButton {
+  left: calc(var(--connector-x) + 0.92rem);
+}
+
+.contextBoardConnectorRemoveButton[data-visible="true"],
+.contextBoardConnectorDuplicateButton[data-visible="true"] {
+  opacity: 0.82;
+}
+
+.contextBoardConnectorRemoveButton:hover,
+.contextBoardConnectorRemoveButton:focus-visible {
+  border-color: rgba(255, 106, 61, 0.58);
+  color: #ff8f6b;
+  opacity: 1;
+  outline: none;
+  transform: translateY(-1px) scale(1.04);
+}
+
+.contextBoardConnectorDuplicateButton:hover,
+.contextBoardConnectorDuplicateButton:focus-visible {
+  border-color: rgba(255, 193, 90, 0.62);
+  color: #ffd199;
+  opacity: 1;
+  outline: none;
+  transform: translateY(-1px) scale(1.04);
+}
+
+.contextBoardSelectionBox {
+  position: absolute;
+  z-index: 11;
+  left: var(--selection-x);
+  top: var(--selection-y);
+  width: var(--selection-width);
+  height: var(--selection-height);
+  border: 1px solid rgba(139, 181, 255, 0.88);
+  border-radius: 0.36rem;
+  background:
+    linear-gradient(135deg, rgba(139, 181, 255, 0.16), rgba(255, 193, 90, 0.055)),
+    rgba(139, 181, 255, 0.08);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 18px rgba(139, 181, 255, 0.16);
+  pointer-events: none;
+}
+
+.contextBoardStylePalette {
+  position: absolute;
+  z-index: 12;
+  left: var(--board-x);
+  top: var(--board-y);
+  display: flex;
+  align-items: center;
+  gap: 0.34rem;
+  min-height: 1.92rem;
+  padding: 0.26rem 0.36rem;
+  border: 1px solid rgba(255, 193, 90, 0.28);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(255, 193, 90, 0.11), rgba(8, 10, 15, 0.9)),
+    rgba(7, 9, 13, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.075),
+    0 14px 30px rgba(0, 0, 0, 0.32),
+    0 0 24px rgba(255, 193, 90, 0.12);
+  pointer-events: auto;
+  transform: scale(var(--palette-zoom, 1));
+  transform-origin: top left;
+}
+
+.contextBoardStylePalette div {
+  display: flex;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.contextBoardStylePalette button {
+  --swatch-rgb: 255, 193, 90;
+  display: inline-grid;
+  width: 1.12rem;
+  height: 1.12rem;
+  place-items: center;
+  border: 1px solid rgba(var(--swatch-rgb), 0.44);
+  border-radius: 999px;
+  color: transparent;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.42), transparent 32%),
+    rgba(var(--swatch-rgb), 0.82);
+  box-shadow:
+    inset 0 0 0 1px rgba(5, 8, 12, 0.36),
+    0 0 10px rgba(var(--swatch-rgb), 0.1);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.contextBoardStylePalette button span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.contextBoardStylePalette button[data-tone="default"] {
+  --swatch-rgb: 255, 247, 231;
+  background:
+    linear-gradient(135deg, rgba(139, 181, 255, 0.86) 0 33%, rgba(255, 193, 90, 0.86) 33% 66%, rgba(130, 236, 151, 0.86) 66%),
+    rgba(255, 247, 231, 0.82);
+}
+
+.contextBoardStylePalette button[data-tone="blue"] {
+  --swatch-rgb: 139, 181, 255;
+}
+
+.contextBoardStylePalette button[data-tone="amber"] {
+  --swatch-rgb: 255, 193, 90;
+}
+
+.contextBoardStylePalette button[data-tone="green"] {
+  --swatch-rgb: 130, 236, 151;
+}
+
+.contextBoardStylePalette button[data-tone="red"] {
+  --swatch-rgb: 255, 106, 61;
+}
+
+.contextBoardStylePalette button[data-tone="purple"] {
+  --swatch-rgb: 190, 143, 255;
+}
+
+.contextBoardStylePalette button[data-tone="neutral"] {
+  --swatch-rgb: 174, 181, 194;
+}
+
+.contextBoardStylePalette button:hover,
+.contextBoardStylePalette button:focus-visible,
+.contextBoardStylePalette button[aria-pressed="true"] {
+  border-color: rgba(var(--swatch-rgb), 0.96);
+  box-shadow:
+    inset 0 0 0 2px rgba(5, 8, 12, 0.22),
+    0 0 16px rgba(var(--swatch-rgb), 0.34);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contextBoardEmptyHint {
+  position: absolute;
+  top: var(--empty-hint-y, 50%);
+  left: var(--empty-hint-x, 50%);
+  z-index: 3;
+  box-sizing: border-box;
+  display: grid;
+  width: min(22rem, calc(100% - 3rem));
+  gap: 0.28rem;
+  padding: 1rem 1.12rem;
+  border: 1px dashed rgba(255, 193, 90, 0.24);
+  border-radius: 1rem;
+  background:
+    linear-gradient(135deg, rgba(255, 193, 90, 0.07), rgba(139, 181, 255, 0.035)),
+    rgba(5, 8, 12, 0.74);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 18px 34px rgba(0, 0, 0, 0.26);
+  pointer-events: none;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.contextBoardEmptyHint span {
+  color: rgba(255, 193, 90, 0.78);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.contextBoardEmptyHint strong {
+  color: rgba(255, 247, 231, 0.94);
+  font-size: 0.98rem;
+  font-weight: 760;
+  line-height: 1.18;
+}
+
+.contextBoardEmptyHint small {
+  color: rgba(245, 239, 226, 0.58);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.contextBoardCustomItem,
+.contextBoardNode {
+  position: absolute;
+  z-index: 2;
+}
+
+.contextBoardTemplateTray {
+  --tray-rgb: 255, 193, 90;
+  position: absolute;
+  z-index: 1;
+  left: var(--board-x);
+  top: var(--board-y);
+  width: var(--board-width);
+  height: var(--board-height);
+  border: 1px solid rgba(var(--tray-rgb), 0.48);
+  border-radius: 1.05rem;
+  background:
+    linear-gradient(135deg, rgba(var(--tray-rgb), 0.105), rgba(var(--tray-rgb), 0.024) 58%, rgba(5, 8, 12, 0.24)),
+    rgba(5, 8, 12, 0.24);
+  box-shadow:
+    inset 0 2.65rem 0 rgba(var(--tray-rgb), 0.095),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.055),
+    0 0 34px rgba(var(--tray-rgb), 0.12);
+  cursor: grab;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+}
+
+.contextBoardTemplateTray[data-diagram-type="c4"],
+.contextBoardTemplateTray[data-diagram-type="uml"] {
+  --tray-rgb: 190, 143, 255;
+}
+
+.contextBoardTemplateTray[data-diagram-type="freeform"] {
+  --tray-rgb: 174, 181, 194;
+}
+
+.contextBoardTemplateTray[data-diagram-type="dependency"],
+.contextBoardTemplateTray[data-diagram-type="flowchart"] {
+  --tray-rgb: 255, 193, 90;
+}
+
+.contextBoardTemplateTray[data-diagram-type="mindmap"] {
+  --tray-rgb: 130, 236, 151;
+}
+
+.contextBoardTemplateTray[data-diagram-type="sequence"],
+.contextBoardTemplateTray[data-diagram-type="swimlane"] {
+  --tray-rgb: 139, 181, 255;
+}
+
+.contextBoardTemplateTray[data-tone="blue"] {
+  --tray-rgb: 139, 181, 255;
+}
+
+.contextBoardTemplateTray[data-tone="amber"] {
+  --tray-rgb: 255, 193, 90;
+}
+
+.contextBoardTemplateTray[data-tone="green"] {
+  --tray-rgb: 130, 236, 151;
+}
+
+.contextBoardTemplateTray[data-tone="red"] {
+  --tray-rgb: 255, 106, 61;
+}
+
+.contextBoardTemplateTray[data-tone="purple"] {
+  --tray-rgb: 190, 143, 255;
+}
+
+.contextBoardTemplateTray[data-tone="neutral"] {
+  --tray-rgb: 174, 181, 194;
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardTemplateTray[data-diagram-type="freeform"] {
+  border-color: rgba(var(--tray-rgb), 0.34);
+  border-style: solid;
+  background:
+    linear-gradient(135deg, rgba(var(--tray-rgb), 0.07), transparent 64%),
+    rgba(255, 255, 255, 0.58);
+  box-shadow:
+    inset 0 2.65rem 0 rgba(var(--tray-rgb), 0.065),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.62),
+    0 18px 30px rgba(8, 10, 14, 0.08);
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardTemplateTray[data-diagram-type="freeform"] .contextBoardTemplateTrayHeader {
+  border-bottom-color: rgba(var(--tray-rgb), 0.2);
+  background:
+    linear-gradient(90deg, rgba(var(--tray-rgb), 0.11), rgba(var(--tray-rgb), 0.035) 74%, transparent);
+  box-shadow: none;
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardTemplateTray[data-diagram-type="freeform"] .contextBoardTemplateTrayHeader span {
+  color: rgba(var(--tray-rgb), 0.78);
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardTemplateTray[data-diagram-type="freeform"] .contextBoardTemplateTrayHeader strong {
+  color: rgba(8, 10, 14, 0.76);
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardTemplateTray[data-diagram-type="freeform"][data-manual="true"] {
+  border-color: rgba(var(--tray-rgb), 0.32);
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.42),
+    0 14px 26px rgba(8, 10, 14, 0.045);
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardTemplateTray[data-diagram-type="freeform"][data-manual="true"] .contextBoardTemplateTrayHeader {
+  position: absolute;
+  top: 0.48rem;
+  left: 0.48rem;
+  width: max-content;
+  max-width: calc(100% - 1rem);
+  height: 1.62rem;
+  padding: 0 0.68rem 0 2.08rem;
+  border: 1px solid rgba(var(--tray-rgb), 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.72),
+    0 10px 18px rgba(8, 10, 14, 0.08);
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardTemplateTray[data-diagram-type="freeform"][data-manual="true"] .contextBoardTemplateTrayHeader span {
+  color: rgba(var(--tray-rgb), 0.78);
+}
+
+.contextBoardTemplateTray[data-selected="true"] {
+  border-color: rgba(var(--tray-rgb), 0.78);
+  box-shadow:
+    inset 0 2.65rem 0 rgba(var(--tray-rgb), 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.075),
+    0 0 44px rgba(var(--tray-rgb), 0.2);
+}
+
+.contextBoardTemplateTray[data-dragging="true"] {
+  cursor: grabbing;
+  border-color: rgba(var(--tray-rgb), 0.72);
+  box-shadow:
+    inset 0 2.65rem 0 rgba(var(--tray-rgb), 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 0 42px rgba(var(--tray-rgb), 0.18);
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardTemplateTray[data-diagram-type="freeform"][data-manual="true"][data-selected="true"] {
+  border-color: rgba(var(--tray-rgb), 0.48);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--tray-rgb), 0.05),
+    0 0 0 2px rgba(255, 255, 255, 0.82),
+    0 16px 28px rgba(8, 10, 14, 0.075);
+}
+
+.contextBoardStage[data-style="plain"] .contextBoardTemplateTray[data-diagram-type="freeform"][data-manual="true"][data-dragging="true"] {
+  border-color: rgba(var(--tray-rgb), 0.58);
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--tray-rgb), 0.06),
+    0 0 0 2px rgba(255, 255, 255, 0.86),
+    0 18px 32px rgba(8, 10, 14, 0.1);
+}
+
+.contextBoardTemplateTrayHeader {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.48rem;
+  height: 2.45rem;
+  padding: 0 0.82rem 0 2.55rem;
+  border-bottom: 1px solid rgba(var(--tray-rgb), 0.2);
+  border-radius: 1.05rem 1.05rem 0 0;
+  background:
+    linear-gradient(90deg, rgba(var(--tray-rgb), 0.11), rgba(var(--tray-rgb), 0.025) 74%, transparent);
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.contextBoardTemplateTray[data-dragging="true"] .contextBoardTemplateTrayHeader {
+  cursor: grabbing;
+}
+
+.contextBoardTemplateTrayHeader span {
+  color: rgba(var(--tray-rgb), 0.9);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.contextBoardTemplateTrayHeader strong {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 247, 231, 0.88);
+  font-size: 0.72rem;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contextBoardTemplateTrayDelete,
+.contextBoardTemplateTrayResize {
+  position: absolute;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(var(--tray-rgb), 0.28);
+  color: rgba(255, 247, 231, 0.78);
+  background: rgba(5, 8, 12, 0.76);
+  pointer-events: auto;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.contextBoardTemplateTrayDelete {
+  top: 0.46rem;
+  left: 0.5rem;
+  width: 1.52rem;
+  height: 1.52rem;
+  border-radius: 999px;
+  opacity: 0.64;
+}
+
+.contextBoardTemplateTrayResize {
+  right: 0.44rem;
+  bottom: 0.44rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 0.32rem;
+  cursor: nwse-resize;
+}
+
+.contextBoardTemplateTrayResize::before {
+  width: 0.46rem;
+  height: 0.46rem;
+  border-right: 2px solid rgba(var(--tray-rgb), 0.72);
+  border-bottom: 2px solid rgba(var(--tray-rgb), 0.72);
+  content: "";
+}
+
+.contextBoardTemplateTray:hover .contextBoardTemplateTrayDelete,
+.contextBoardTemplateTray:focus-within .contextBoardTemplateTrayDelete {
+  opacity: 1;
+}
+
+.contextBoardTemplateTrayDelete:hover,
+.contextBoardTemplateTrayDelete:focus-visible {
+  border-color: rgba(255, 106, 61, 0.62);
+  color: #ff8f6b;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contextBoardTemplateTrayResize:hover,
+.contextBoardTemplateTrayResize:focus-visible {
+  border-color: rgba(var(--tray-rgb), 0.58);
+  color: rgba(255, 247, 231, 0.94);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contextBoardCustomResize {
+  --tray-rgb: var(--diagram-rgb);
+  z-index: 4;
+  opacity: 0;
+}
+
+.contextBoardCustomItem:hover .contextBoardCustomResize,
+.contextBoardCustomItem:focus-within .contextBoardCustomResize,
+.contextBoardCustomResize:focus-visible {
+  opacity: 1;
+}
+
+.contextBoardCustomItem,
+.contextBoardNode {
+  --diagram-rgb: 139, 181, 255;
+  left: var(--board-x);
+  top: var(--board-y);
+  width: 20rem;
+  min-height: 7.2rem;
+  border: 1px solid rgba(var(--diagram-rgb), 0.34);
+  border-radius: 1rem;
+  padding: 0.92rem 1rem;
+  background:
+    linear-gradient(135deg, rgba(var(--diagram-rgb), 0.14), rgba(var(--diagram-rgb), 0.035) 58%, rgba(5, 8, 12, 0.98)),
+    rgba(6, 9, 14, 0.98);
+  box-shadow:
+    inset 4px 0 0 rgba(var(--diagram-rgb), 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(var(--diagram-rgb), 0.08);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.contextBoardCustomItem:active,
+.contextBoardNode:active,
+.contextBoardCustomItem[data-dragging="true"],
+.contextBoardNode[data-dragging="true"] {
+  cursor: grabbing;
+  transform: scale(1.015);
+  box-shadow:
+    inset 4px 0 0 rgba(var(--diagram-rgb), 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 22px 44px rgba(0, 0, 0, 0.34),
+    0 0 28px rgba(var(--diagram-rgb), 0.16);
+}
+
+.contextBoardNode[data-tone="warn"],
+.contextBoardNode[data-tone="amber"] {
+  --diagram-rgb: 255, 193, 90;
+}
+
+.contextBoardNode[data-tone="danger"],
+.contextBoardNode[data-tone="red"] {
+  --diagram-rgb: 255, 106, 61;
+}
+
+.contextBoardNode[data-tone="ok"],
+.contextBoardNode[data-tone="green"] {
+  --diagram-rgb: 130, 236, 151;
+}
+
+.contextBoardNode[data-tone="neutral"] {
+  --diagram-rgb: 174, 181, 194;
+}
+
+.contextBoardNode span {
+  color: rgba(var(--diagram-rgb), 0.88);
+}
+
+.contextBoardCustomItem span,
+.contextBoardNode strong {
+  display: block;
+  margin-top: 0.32rem;
+  color: rgba(255, 247, 231, 0.96);
+  font-size: 1rem;
+  font-weight: 760;
+  line-height: 1.16;
+}
+
+.contextBoardNode small,
+.contextBoardCustomItem small {
+  display: block;
+  margin-top: 0.38rem;
+  color: rgba(245, 239, 226, 0.66);
+  font-size: 0.7rem;
+  line-height: 1.36;
+}
+
+.contextBoardCardTitleInput,
+.contextBoardCardDetailInput {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 0.42rem;
+  outline: none;
+  background: transparent;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.contextBoardCardTitleInput {
+  margin-top: 0.2rem;
+  padding: 0.1rem 0.14rem;
+  color: rgba(255, 247, 231, 0.96);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 760;
+  line-height: 1.16;
+}
+
+.contextBoardCardDetailInput {
+  min-height: 2.16rem;
+  margin-top: 0.24rem;
+  padding: 0.1rem 0.14rem;
+  overflow: hidden;
+  resize: none;
+  color: rgba(245, 239, 226, 0.66);
+  font: inherit;
+  font-size: 0.7rem;
+  line-height: 1.36;
+}
+
+.contextBoardCardTitleInput::placeholder,
+.contextBoardCardDetailInput::placeholder {
+  color: rgba(245, 239, 226, 0.38);
+}
+
+.contextBoardCardTitleInput:focus,
+.contextBoardCardDetailInput:focus {
+  border-color: rgba(var(--diagram-rgb), 0.4);
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: 0 0 0 2px rgba(var(--diagram-rgb), 0.08);
+}
+
+.contextBoardCustomItem {
+  --diagram-rgb: 255, 193, 90;
+  width: 16.5rem;
+  min-height: 6.4rem;
+  background:
+    linear-gradient(135deg, rgba(255, 193, 90, 0.16), rgba(255, 193, 90, 0.04) 58%, rgba(5, 8, 12, 0.96)),
+    rgba(6, 9, 14, 0.96);
+}
+
+.contextBoardCustomItem[data-kind="diagram"] {
+  --diagram-rgb: 190, 143, 255;
+  width: 19rem;
+  min-height: 8.2rem;
+  border-radius: 0.72rem;
+  background:
+    linear-gradient(135deg, rgba(190, 143, 255, 0.18), rgba(139, 181, 255, 0.055) 54%, rgba(5, 8, 12, 0.98)),
+    rgba(9, 8, 18, 0.98);
+  box-shadow:
+    inset 0 0 0 2px rgba(190, 143, 255, 0.14),
+    inset 0 2.1rem 0 rgba(190, 143, 255, 0.06),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(190, 143, 255, 0.12);
+}
+
+.contextBoardCustomItem[data-kind="actor"] {
+  --diagram-rgb: 139, 181, 255;
+  width: 12.5rem;
+  min-height: 6.2rem;
+  border-radius: 1.2rem 1.2rem 999px 999px;
+  padding-top: 1.08rem;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 0.9rem, rgba(139, 181, 255, 0.28) 0 0.95rem, transparent 1rem),
+    linear-gradient(180deg, rgba(139, 181, 255, 0.13), rgba(139, 181, 255, 0.035)),
+    rgba(5, 8, 12, 0.96);
+  box-shadow:
+    inset 0 -3px 0 rgba(139, 181, 255, 0.44),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(139, 181, 255, 0.1);
+}
+
+.contextBoardCustomItem[data-kind="branch"] {
+  --diagram-rgb: 130, 236, 151;
+  width: 14rem;
+  min-height: 5.4rem;
+  border-radius: 999px;
+  padding: 0.9rem 1.35rem;
+  background:
+    linear-gradient(90deg, rgba(130, 236, 151, 0.16), rgba(130, 236, 151, 0.035)),
+    rgba(7, 15, 11, 0.96);
+  box-shadow:
+    inset 0 0 0 2px rgba(130, 236, 151, 0.16),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(130, 236, 151, 0.12);
+}
+
+.contextBoardCustomItem[data-kind="component"] {
+  --diagram-rgb: 139, 181, 255;
+  width: 18rem;
+  min-height: 7.2rem;
+  border-radius: 0.42rem;
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.12), rgba(139, 181, 255, 0.035)),
+    rgba(6, 10, 16, 0.98);
+  box-shadow:
+    inset 0 0 0 2px rgba(139, 181, 255, 0.16),
+    inset 0 2.25rem 0 rgba(139, 181, 255, 0.055),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(139, 181, 255, 0.08);
+}
+
+.contextBoardCustomItem[data-kind="container"] {
+  --diagram-rgb: 190, 143, 255;
+  width: 20rem;
+  min-height: 8.25rem;
+  border-style: dashed;
+  border-radius: 0.82rem;
+  padding: 1.08rem 1.16rem;
+  background:
+    linear-gradient(135deg, rgba(190, 143, 255, 0.14), rgba(190, 143, 255, 0.035) 56%, rgba(5, 8, 12, 0.96)),
+    rgba(8, 7, 15, 0.96);
+  box-shadow:
+    inset 0 0 0 6px rgba(190, 143, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(190, 143, 255, 0.12);
+}
+
+.contextBoardCustomItem[data-kind="decision"] {
+  --diagram-rgb: 255, 193, 90;
+  isolation: isolate;
+  display: grid;
+  width: 14rem;
+  min-height: 14rem;
+  align-content: center;
+  border: 0;
+  border-radius: 0;
+  padding: 3rem 2.58rem;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+}
+
+.contextBoardCustomItem[data-kind="decision"]::before {
+  position: absolute;
+  inset: 1.45rem;
+  z-index: -1;
+  border: 1px solid rgba(255, 193, 90, 0.42);
+  border-radius: 0.58rem;
+  background:
+    linear-gradient(135deg, rgba(255, 193, 90, 0.24), rgba(255, 193, 90, 0.05) 50%, rgba(5, 8, 12, 0.96)),
+    rgba(15, 11, 5, 0.96);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 193, 90, 0.14),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(255, 193, 90, 0.14);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.contextBoardCustomItem[data-diagram-type="flowchart"][data-kind="decision"] {
+  width: 10.25rem;
+  height: 10.25rem;
+  min-height: 10.25rem;
+  padding: 2.12rem 1.72rem;
+}
+
+.contextBoardCustomItem[data-diagram-type="flowchart"][data-kind="decision"]::before {
+  inset: 1.04rem;
+  border-radius: 0.48rem;
+}
+
+.contextBoardCustomItem[data-kind="lane"] {
+  --diagram-rgb: 139, 181, 255;
+  width: 23rem;
+  min-height: 9.4rem;
+  border-style: dashed;
+  border-radius: 0.52rem;
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.12), rgba(139, 181, 255, 0.02) 38%, rgba(5, 8, 12, 0.92)),
+    rgba(6, 9, 14, 0.9);
+  box-shadow:
+    inset 0 2.2rem 0 rgba(139, 181, 255, 0.07),
+    inset 0 0 0 1px rgba(139, 181, 255, 0.1),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(139, 181, 255, 0.08);
+}
+
+.contextBoardCustomItem[data-diagram-type="swimlane"][data-kind="lane"] {
+  width: 66.25rem;
+  height: 8.5rem;
+  min-height: 8.5rem;
+  padding: 0.82rem 1rem;
+  border-color: rgba(139, 181, 255, 0.3);
+  background:
+    linear-gradient(90deg, rgba(139, 181, 255, 0.12), rgba(139, 181, 255, 0.026) 34%, rgba(5, 8, 12, 0.88)),
+    rgba(6, 9, 14, 0.82);
+  box-shadow:
+    inset 0 2.2rem 0 rgba(139, 181, 255, 0.065),
+    inset 0 0 0 1px rgba(139, 181, 255, 0.08),
+    0 16px 32px rgba(0, 0, 0, 0.22),
+    0 0 20px rgba(139, 181, 255, 0.075);
+}
+
+.contextBoardCustomItem[data-diagram-type="swimlane"][data-kind="lane"] .contextBoardCardTitleInput {
+  max-width: 12rem;
+  color: rgba(255, 247, 231, 0.96);
+  font-size: 0.92rem;
+}
+
+.contextBoardCustomItem[data-diagram-type="swimlane"][data-kind="lane"] .contextBoardCardDetailInput {
+  max-width: 18rem;
+  min-height: 1.9rem;
+  color: rgba(245, 239, 226, 0.54);
+  font-size: 0.62rem;
+  line-height: 1.3;
+}
+
+.contextBoardCustomItem[data-kind="lifeline"] {
+  --diagram-rgb: 139, 181, 255;
+  width: 12.5rem;
+  min-height: 9rem;
+  border-radius: 0.62rem;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.12), rgba(139, 181, 255, 0.025)),
+    rgba(5, 8, 12, 0.96);
+  box-shadow:
+    inset 0 2.4rem 0 rgba(139, 181, 255, 0.055),
+    inset 0 0 0 1px rgba(139, 181, 255, 0.14),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(139, 181, 255, 0.08);
+}
+
+.contextBoardCustomItem[data-kind="lifeline"]::after {
+  position: absolute;
+  top: 3.8rem;
+  bottom: 0.72rem;
+  left: 50%;
+  border-left: 1px dashed rgba(var(--diagram-rgb), 0.34);
+  content: "";
+}
+
+.contextBoardCustomItem[data-diagram-type="sequence"][data-kind="actor"],
+.contextBoardCustomItem[data-diagram-type="sequence"][data-kind="lifeline"] {
+  --diagram-rgb: 139, 181, 255;
+  z-index: 2;
+  min-height: 26.875rem;
+  border-color: rgba(139, 181, 255, 0.28);
+  border-radius: 0.7rem;
+  padding: 0.58rem 0.7rem;
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.09), rgba(139, 181, 255, 0.012) 30%, transparent),
+    rgba(5, 8, 12, 0.44);
+  box-shadow:
+    inset 0 2.55rem 0 rgba(139, 181, 255, 0.07),
+    inset 0 0 0 1px rgba(139, 181, 255, 0.1),
+    0 14px 28px rgba(0, 0, 0, 0.22);
+  text-align: center;
+}
+
+.contextBoardCustomItem[data-diagram-type="sequence"][data-kind="actor"] {
+  background:
+    radial-gradient(circle at 50% 3.72rem, rgba(139, 181, 255, 0.24) 0 1rem, transparent 1.06rem),
+    linear-gradient(180deg, rgba(139, 181, 255, 0.09), rgba(139, 181, 255, 0.012) 30%, transparent),
+    rgba(5, 8, 12, 0.44);
+}
+
+.contextBoardCustomItem[data-diagram-type="sequence"][data-kind="actor"]::after,
+.contextBoardCustomItem[data-diagram-type="sequence"][data-kind="lifeline"]::after {
+  position: absolute;
+  top: 4.25rem;
+  bottom: 0.72rem;
+  left: 50%;
+  z-index: 0;
+  border-left: 1px dashed rgba(139, 181, 255, 0.54);
+  content: "";
+}
+
+.contextBoardCustomItem[data-diagram-type="sequence"][data-kind="actor"] .contextBoardCardTitleInput,
+.contextBoardCustomItem[data-diagram-type="sequence"][data-kind="lifeline"] .contextBoardCardTitleInput {
+  position: relative;
+  z-index: 1;
+  min-height: 1.7rem;
+  margin: 0;
+  border: 1px solid rgba(139, 181, 255, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.34rem 0.42rem;
+  color: rgba(255, 247, 231, 0.96);
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.14), rgba(139, 181, 255, 0.045)),
+    rgba(5, 8, 12, 0.92);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.contextBoardCustomItem[data-kind="sequence-activation"] {
+  --diagram-rgb: 255, 193, 90;
+  z-index: 4;
+  min-height: 9.625rem;
+  border-color: rgba(255, 193, 90, 0.5);
+  border-radius: 999px;
+  padding: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.78), rgba(255, 193, 90, 0.22)),
+    rgba(255, 193, 90, 0.08);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 247, 231, 0.18),
+    0 0 18px rgba(255, 193, 90, 0.18),
+    0 16px 28px rgba(0, 0, 0, 0.24);
+}
+
+.contextBoardCustomItem[data-kind="sequence-activation"] .contextBoardCardTitleInput {
+  display: none;
+}
+
+.contextBoardCustomItem[data-kind="sequence-fragment"] {
+  --diagram-rgb: 190, 143, 255;
+  z-index: 1;
+  min-height: 14.875rem;
+  border: 1px dashed rgba(190, 143, 255, 0.45);
+  border-radius: 0.72rem;
+  padding: 0;
+  background:
+    linear-gradient(135deg, rgba(190, 143, 255, 0.08), rgba(139, 181, 255, 0.035) 54%, transparent),
+    rgba(10, 8, 18, 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(190, 143, 255, 0.08),
+    0 0 20px rgba(190, 143, 255, 0.08);
+}
+
+.contextBoardCustomItem[data-kind="sequence-fragment"] .contextBoardCardTitleInput {
+  position: absolute;
+  top: -0.05rem;
+  left: -0.05rem;
+  width: auto;
+  max-width: 18rem;
+  border: 1px solid rgba(190, 143, 255, 0.36);
+  border-radius: 0.68rem 0 0.68rem 0;
+  padding: 0.34rem 0.58rem;
+  color: rgba(255, 247, 231, 0.94);
+  background:
+    linear-gradient(180deg, rgba(190, 143, 255, 0.18), rgba(190, 143, 255, 0.065)),
+    rgba(6, 6, 12, 0.96);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.contextBoardCustomItem[data-kind="sequence-message"],
+.contextBoardCustomItem[data-kind="sequence-return"] {
+  --diagram-rgb: 255, 193, 90;
+  z-index: 5;
+  min-height: 2.625rem;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.contextBoardCustomItem[data-kind="sequence-message"]::after,
+.contextBoardCustomItem[data-kind="sequence-return"]::after {
+  position: absolute;
+  top: 50%;
+  right: 0.55rem;
+  left: 0.55rem;
+  border-top: 2px solid rgba(var(--diagram-rgb), 0.82);
+  content: "";
+}
+
+.contextBoardCustomItem[data-kind="sequence-return"]::after {
+  border-top-style: dashed;
+}
+
+.contextBoardCustomItem[data-kind="sequence-message"]::before {
+  position: absolute;
+  top: calc(50% - 0.34rem);
+  right: 0.2rem;
+  border-top: 0.34rem solid transparent;
+  border-bottom: 0.34rem solid transparent;
+  border-left: 0.58rem solid rgba(var(--diagram-rgb), 0.9);
+  content: "";
+}
+
+.contextBoardCustomItem[data-kind="sequence-return"]::before {
+  position: absolute;
+  top: calc(50% - 0.34rem);
+  left: 0.2rem;
+  border-top: 0.34rem solid transparent;
+  border-right: 0.58rem solid rgba(var(--diagram-rgb), 0.9);
+  border-bottom: 0.34rem solid transparent;
+  content: "";
+}
+
+.contextBoardCustomItem[data-kind="sequence-message"] .contextBoardCardTitleInput,
+.contextBoardCustomItem[data-kind="sequence-return"] .contextBoardCardTitleInput {
+  position: absolute;
+  top: -0.18rem;
+  left: 50%;
+  z-index: 1;
+  width: max-content;
+  max-width: min(15rem, calc(100% - 2rem));
+  margin: 0;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 193, 90, 0.24);
+  border-radius: 999px;
+  padding: 0.18rem 0.48rem;
+  color: rgba(255, 247, 231, 0.94);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.14), rgba(255, 193, 90, 0.035)),
+    rgba(5, 8, 12, 0.95);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.56rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.contextBoardCustomItem[data-kind="process"] {
+  --diagram-rgb: 255, 193, 90;
+  width: 17.5rem;
+  min-height: 6.8rem;
+  border-radius: 0.34rem;
+  background:
+    linear-gradient(90deg, rgba(255, 193, 90, 0.17), rgba(255, 193, 90, 0.045) 62%, rgba(5, 8, 12, 0.96)),
+    rgba(14, 10, 5, 0.96);
+  box-shadow:
+    inset 5px 0 0 rgba(255, 193, 90, 0.86),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(255, 193, 90, 0.1);
+}
+
+.contextBoardCustomItem[data-diagram-type="swimlane"][data-kind="process"] {
+  width: 12.375rem;
+  height: 4.375rem;
+  min-height: 4.375rem;
+  padding: 0.5rem 0.62rem;
+  border-radius: 0.38rem;
+  background:
+    linear-gradient(90deg, rgba(255, 193, 90, 0.2), rgba(255, 193, 90, 0.05) 58%, rgba(5, 8, 12, 0.97)),
+    rgba(12, 9, 5, 0.97);
+  box-shadow:
+    inset 4px 0 0 rgba(255, 193, 90, 0.84),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 28px rgba(0, 0, 0, 0.28),
+    0 0 18px rgba(255, 193, 90, 0.12);
+}
+
+.contextBoardCustomItem[data-diagram-type="swimlane"][data-kind="process"] .contextBoardCardTitleInput {
+  font-size: 0.78rem;
+  line-height: 1.12;
+}
+
+.contextBoardCustomItem[data-diagram-type="swimlane"][data-kind="process"] .contextBoardCardDetailInput {
+  min-height: 1.4rem;
+  font-size: 0.54rem;
+  line-height: 1.24;
+}
+
+.contextBoardCustomItem[data-diagram-type="swimlane"][data-kind="decision"] {
+  width: 8.25rem;
+  height: 8.25rem;
+  min-height: 8.25rem;
+  padding: 1.65rem 1.18rem;
+}
+
+.contextBoardCustomItem[data-diagram-type="swimlane"][data-kind="decision"]::before {
+  inset: 0.95rem;
+}
+
+.contextBoardCustomItem[data-diagram-type="flowchart"][data-kind="process"] {
+  width: 14rem;
+  height: 5.125rem;
+  min-height: 5.125rem;
+  padding: 0.58rem 0.74rem;
+}
+
+.contextBoardCustomItem[data-kind="start"] {
+  --diagram-rgb: 130, 236, 151;
+  width: 12rem;
+  min-height: 4.62rem;
+  align-content: center;
+  border-radius: 999px;
+  padding: 0.78rem 1.2rem;
+  text-align: center;
+  background:
+    linear-gradient(90deg, rgba(130, 236, 151, 0.2), rgba(130, 236, 151, 0.055)),
+    rgba(5, 16, 10, 0.96);
+  box-shadow:
+    inset 0 0 0 2px rgba(130, 236, 151, 0.18),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(130, 236, 151, 0.14);
+}
+
+.contextBoardCustomItem[data-diagram-type="flowchart"][data-kind="start"] {
+  width: 10rem;
+  height: 3.875rem;
+  min-height: 3.875rem;
+  padding: 0.46rem 0.92rem;
+}
+
+.contextBoardCustomItem[data-kind="end"] {
+  --diagram-rgb: 139, 181, 255;
+  width: 12rem;
+  min-height: 4.62rem;
+  align-content: center;
+  border-radius: 999px;
+  padding: 0.78rem 1.2rem;
+  text-align: center;
+  background:
+    linear-gradient(90deg, rgba(139, 181, 255, 0.19), rgba(139, 181, 255, 0.055)),
+    rgba(5, 10, 16, 0.96);
+  box-shadow:
+    inset 0 0 0 2px rgba(139, 181, 255, 0.18),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(139, 181, 255, 0.14);
+}
+
+.contextBoardCustomItem[data-diagram-type="flowchart"][data-kind="end"] {
+  width: 10rem;
+  height: 3.875rem;
+  min-height: 3.875rem;
+  padding: 0.46rem 0.92rem;
+}
+
+.contextBoardCustomItem[data-kind="text"] {
+  --diagram-rgb: 255, 247, 231;
+  display: grid;
+  width: 6rem;
+  min-height: 2.12rem;
+  align-content: center;
+  border-color: rgba(255, 193, 90, 0.24);
+  border-radius: 0.55rem;
+  padding: 0.24rem 0.42rem;
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(5, 8, 12, 0.76);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.22),
+    0 0 14px rgba(255, 193, 90, 0.1);
+}
+
+.contextBoardCustomItem[data-diagram-type="flowchart"][data-kind="text"] {
+  width: 4rem;
+  height: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0.18rem 0.24rem;
+}
+
+.contextBoardCustomItem[data-diagram-type="flowchart"][data-kind="text"] .contextBoardCardTitleInput {
+  font-size: 0.58rem;
+}
+
+.contextBoardCustomItem[data-diagram-type="flowchart"] .contextBoardCardTitleInput {
+  margin-top: 0.08rem;
+  padding: 0.04rem 0.1rem;
+  font-size: 0.86rem;
+  line-height: 1.08;
+}
+
+.contextBoardCustomItem[data-diagram-type="flowchart"] .contextBoardCardDetailInput {
+  min-height: 1.05rem;
+  margin-top: 0.08rem;
+  padding: 0.04rem 0.1rem;
+  font-size: 0.58rem;
+  line-height: 1.2;
+}
+
+.contextBoardCustomItem[data-diagram-type="flowchart"][data-kind="decision"] .contextBoardCardTitleInput,
+.contextBoardCustomItem[data-diagram-type="flowchart"][data-kind="decision"] .contextBoardCardDetailInput {
+  text-align: center;
+}
+
+.contextBoardCustomItem[data-kind="text"] .contextBoardDeleteButton {
+  top: -0.55rem;
+  right: -0.55rem;
+}
+
+.contextBoardCustomItem[data-kind="text"] .contextBoardDuplicateButton {
+  top: -0.55rem;
+  right: 1.08rem;
+}
+
+.contextBoardCustomItem[data-kind="text"] .contextBoardCardTitleInput {
+  margin: 0;
+  padding: 0.08rem 0.12rem;
+  color: rgba(255, 247, 231, 0.94);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.contextBoardCustomItem[data-kind^="shape-"] {
+  --diagram-rgb: 139, 181, 255;
+  display: grid;
+  align-content: center;
+  justify-items: stretch;
+  border-color: rgba(var(--diagram-rgb), 0.46);
+  padding: 0.62rem 0.72rem;
+  text-align: center;
+  background:
+    linear-gradient(135deg, rgba(var(--diagram-rgb), 0.18), rgba(var(--diagram-rgb), 0.05) 58%, rgba(5, 8, 12, 0.96)),
+    rgba(6, 9, 14, 0.96);
+  box-shadow:
+    inset 0 0 0 2px rgba(var(--diagram-rgb), 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 16px 32px rgba(0, 0, 0, 0.26),
+    0 0 20px rgba(var(--diagram-rgb), 0.1);
+}
+
+.contextBoardCustomItem[data-kind="shape-rect"] {
+  border-radius: 0.24rem;
+}
+
+.contextBoardCustomItem[data-kind="shape-rounded"] {
+  border-radius: 1.2rem;
+}
+
+.contextBoardCustomItem[data-kind="shape-circle"] {
+  border-radius: 999px;
+}
+
+.contextBoardCustomItem[data-kind="shape-diamond"] {
+  isolation: isolate;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.contextBoardCustomItem[data-kind="shape-diamond"]::before {
+  position: absolute;
+  inset: 0.82rem;
+  z-index: -1;
+  border: 1px solid rgba(var(--diagram-rgb), 0.48);
+  border-radius: 0.42rem;
+  background:
+    linear-gradient(135deg, rgba(var(--diagram-rgb), 0.2), rgba(var(--diagram-rgb), 0.05) 56%, rgba(5, 8, 12, 0.96)),
+    rgba(6, 9, 14, 0.96);
+  box-shadow:
+    inset 0 0 0 2px rgba(var(--diagram-rgb), 0.12),
+    0 16px 32px rgba(0, 0, 0, 0.26),
+    0 0 20px rgba(var(--diagram-rgb), 0.1);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.contextBoardCustomItem[data-kind^="shape-"] .contextBoardCardTitleInput {
+  margin: 0;
+  padding: 0.12rem 0.2rem;
+  text-align: center;
+}
+
+.contextBoardCustomItem[data-kind="topic"] {
+  --diagram-rgb: 255, 193, 90;
+  width: 15rem;
+  min-height: 6rem;
+  border-radius: 999px;
+  padding: 1.02rem 1.5rem;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 193, 90, 0.18), rgba(255, 193, 90, 0.045) 66%, rgba(5, 8, 12, 0.98)),
+    rgba(14, 10, 5, 0.98);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 193, 90, 0.16),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(255, 193, 90, 0.14);
+}
+
+.contextBoardCustomItem[data-kind="c4-system-boundary"] {
+  --diagram-rgb: 190, 143, 255;
+  z-index: 1;
+  border: 1px dashed rgba(190, 143, 255, 0.42);
+  border-radius: 0.72rem;
+  padding: 1rem 1.12rem;
+  background:
+    linear-gradient(135deg, rgba(190, 143, 255, 0.07), rgba(139, 181, 255, 0.024) 52%, transparent),
+    rgba(10, 8, 18, 0.18);
+  box-shadow:
+    inset 0 2.9rem 0 rgba(190, 143, 255, 0.08),
+    inset 0 0 0 1px rgba(190, 143, 255, 0.08),
+    0 0 26px rgba(190, 143, 255, 0.08);
+}
+
+.contextBoardCustomItem[data-kind="c4-system-boundary"] .contextBoardCardTitleInput {
+  max-width: 24rem;
+  margin-top: 0.16rem;
+  color: rgba(255, 247, 231, 0.94);
+  font-size: 0.86rem;
+}
+
+.contextBoardCustomItem[data-kind="c4-system-boundary"] .contextBoardCardDetailInput {
+  max-width: 31rem;
+  min-height: 1.45rem;
+  margin-top: 0.12rem;
+  color: rgba(245, 239, 226, 0.54);
+  font-size: 0.6rem;
+}
+
+.contextBoardCustomItem[data-kind="c4-person"] {
+  --diagram-rgb: 139, 181, 255;
+  display: grid;
+  align-content: start;
+  border-color: rgba(139, 181, 255, 0.42);
+  border-radius: 999px 999px 1.1rem 1.1rem;
+  overflow: visible;
+  padding: 2.2rem 1.18rem 1rem;
+  text-align: center;
+  background:
+    radial-gradient(ellipse at 50% 1.36rem, rgba(139, 181, 255, 0.2), rgba(139, 181, 255, 0.045) 58%, transparent 70%),
+    linear-gradient(180deg, rgba(139, 181, 255, 0.15), rgba(139, 181, 255, 0.038)),
+    rgba(5, 8, 12, 0.97);
+  box-shadow:
+    inset 0 -4px 0 rgba(139, 181, 255, 0.44),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(139, 181, 255, 0.12);
+}
+
+.contextBoardCustomItem[data-kind="c4-person"]::before {
+  position: absolute;
+  top: -1.02rem;
+  left: 50%;
+  width: 1.12rem;
+  height: 1.12rem;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 247, 231, 0.34);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 42% 36%, rgba(255, 247, 231, 0.92), rgba(255, 247, 231, 0.68) 54%, rgba(139, 181, 255, 0.52));
+  box-shadow:
+    0 0 0 0.2rem rgba(139, 181, 255, 0.12),
+    0 0 18px rgba(139, 181, 255, 0.16);
+  content: "";
+}
+
+.contextBoardCustomItem[data-kind="c4-person"]::after {
+  position: absolute;
+  top: 0.08rem;
+  left: 50%;
+  width: 2.55rem;
+  height: 1.28rem;
+  transform: translateX(-50%);
+  border: 1px solid rgba(139, 181, 255, 0.34);
+  border-radius: 999px 999px 0.42rem 0.42rem;
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.36), rgba(139, 181, 255, 0.09)),
+    rgba(4, 8, 13, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 16px rgba(139, 181, 255, 0.1);
+  content: "";
+}
+
+.contextBoardCustomItem[data-kind="c4-person"] .contextBoardCardTitleInput {
+  margin-top: 0.32rem;
+  font-size: 0.78rem;
+  line-height: 1.08;
+  text-align: center;
+}
+
+.contextBoardCustomItem[data-kind="c4-person"] .contextBoardCardDetailInput {
+  min-height: unset;
+  margin-top: 0.18rem;
+  overflow: hidden;
+  font-size: 0.58rem;
+  line-height: 1.28;
+  text-align: center;
+}
+
+.contextBoardCustomItem[data-kind="c4-software-system"] {
+  --diagram-rgb: 190, 143, 255;
+  border-color: rgba(190, 143, 255, 0.46);
+  border-radius: 0.54rem;
+  padding: 1.02rem 1.12rem;
+  background:
+    linear-gradient(135deg, rgba(190, 143, 255, 0.18), rgba(139, 181, 255, 0.05) 58%, rgba(5, 8, 12, 0.98)),
+    rgba(9, 8, 18, 0.98);
+  box-shadow:
+    inset 0 0 0 2px rgba(190, 143, 255, 0.14),
+    inset 0 2.55rem 0 rgba(190, 143, 255, 0.08),
+    0 20px 40px rgba(0, 0, 0, 0.3),
+    0 0 28px rgba(190, 143, 255, 0.14);
+}
+
+.contextBoardCustomItem[data-kind="c4-external-system"] {
+  --diagram-rgb: 174, 181, 194;
+  border-style: dashed;
+  border-color: rgba(174, 181, 194, 0.46);
+  border-radius: 0.52rem;
+  padding: 0.96rem 1.06rem;
+  background:
+    linear-gradient(135deg, rgba(174, 181, 194, 0.14), rgba(139, 181, 255, 0.035) 58%, rgba(5, 8, 12, 0.97)),
+    rgba(8, 10, 14, 0.97);
+  box-shadow:
+    inset 0 0 0 2px rgba(174, 181, 194, 0.1),
+    inset 0 2.4rem 0 rgba(174, 181, 194, 0.055),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(174, 181, 194, 0.1);
+}
+
+.contextBoardCustomItem[data-kind="c4-container"] {
+  --diagram-rgb: 255, 193, 90;
+  border-color: rgba(255, 193, 90, 0.44);
+  border-radius: 0.42rem;
+  padding: 0.9rem 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.14), rgba(255, 193, 90, 0.034)),
+    rgba(14, 10, 5, 0.97);
+  box-shadow:
+    inset 0 2.35rem 0 rgba(255, 193, 90, 0.07),
+    inset 0 0 0 1px rgba(255, 193, 90, 0.16),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(255, 193, 90, 0.1);
+}
+
+.contextBoardCustomItem[data-kind="c4-component"] {
+  --diagram-rgb: 139, 181, 255;
+  border-color: rgba(139, 181, 255, 0.44);
+  border-radius: 0.32rem;
+  padding: 0.82rem 0.94rem;
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.13), rgba(139, 181, 255, 0.032)),
+    rgba(5, 10, 16, 0.97);
+  box-shadow:
+    inset 0 2.2rem 0 rgba(139, 181, 255, 0.065),
+    inset 0 0 0 1px rgba(139, 181, 255, 0.16),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 20px rgba(139, 181, 255, 0.1);
+}
+
+.contextBoardCustomItem[data-kind="c4-relationship"] {
+  --diagram-rgb: 255, 193, 90;
+  display: grid;
+  align-content: center;
+  border-color: rgba(255, 193, 90, 0.28);
+  border-radius: 999px;
+  padding: 0.18rem 0.56rem;
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.1), rgba(255, 255, 255, 0.018)),
+    rgba(5, 8, 12, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(0, 0, 0, 0.22),
+    0 0 14px rgba(255, 193, 90, 0.09);
+}
+
+.contextBoardCustomItem[data-kind="c4-relationship"] .contextBoardCardTitleInput {
+  margin: 0;
+  padding: 0.08rem 0.12rem;
+  color: rgba(255, 247, 231, 0.92);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.contextBoardCustomItem[data-kind^="c4-"] .contextBoardCardTitleInput {
+  margin-top: 0.16rem;
+}
+
+.contextBoardCustomItem[data-kind^="c4-"] .contextBoardCardDetailInput {
+  min-height: 1.72rem;
+  margin-top: 0.16rem;
+}
+
+.contextBoardCustomItem[data-kind="uml-class"] {
+  --diagram-rgb: 190, 143, 255;
+  width: 16.75rem;
+  min-height: 8.875rem;
+  border-radius: 0.34rem;
+  background:
+    linear-gradient(180deg, rgba(190, 143, 255, 0.14), rgba(190, 143, 255, 0.035)),
+    rgba(8, 7, 15, 0.98);
+  box-shadow:
+    inset 0 2.7rem 0 rgba(190, 143, 255, 0.09),
+    inset 0 4.35rem 0 rgba(245, 239, 226, 0.035),
+    inset 0 4.45rem 0 rgba(190, 143, 255, 0.12),
+    inset 0 0 0 1px rgba(190, 143, 255, 0.22),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(190, 143, 255, 0.12);
+}
+
+.contextBoardCustomItem[data-kind="uml-interface"] {
+  --diagram-rgb: 139, 181, 255;
+  width: 15.75rem;
+  min-height: 7.25rem;
+  border-style: dashed;
+  border-radius: 0.38rem;
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.11), rgba(139, 181, 255, 0.026)),
+    rgba(5, 9, 15, 0.98);
+  box-shadow:
+    inset 0 2.5rem 0 rgba(139, 181, 255, 0.065),
+    inset 0 0 0 1px rgba(139, 181, 255, 0.16),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 20px rgba(139, 181, 255, 0.1);
+}
+
+.contextBoardCustomItem[data-kind="uml-package"] {
+  --diagram-rgb: 190, 143, 255;
+  isolation: isolate;
+  width: 19.375rem;
+  min-height: 8.625rem;
+  border-style: dashed;
+  border-radius: 0.42rem;
+  padding-top: 1.08rem;
+  background:
+    linear-gradient(135deg, rgba(190, 143, 255, 0.12), rgba(190, 143, 255, 0.026) 58%, rgba(5, 8, 12, 0.96)),
+    rgba(8, 7, 15, 0.96);
+  box-shadow:
+    inset 0 0 0 5px rgba(190, 143, 255, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(190, 143, 255, 0.1);
+}
+
+.contextBoardCustomItem[data-kind="uml-package"]::before {
+  position: absolute;
+  top: -0.72rem;
+  left: 1rem;
+  z-index: -1;
+  width: 5.8rem;
+  height: 1.15rem;
+  border: 1px solid rgba(190, 143, 255, 0.3);
+  border-bottom: 0;
+  border-radius: 0.38rem 0.38rem 0 0;
+  background: rgba(18, 11, 28, 0.96);
+  content: "";
+}
+
+.contextBoardCustomItem[data-kind="uml-usecase"] {
+  --diagram-rgb: 255, 193, 90;
+  width: 14.375rem;
+  min-height: 5.375rem;
+  align-content: center;
+  border-radius: 999px;
+  padding: 0.86rem 1.3rem;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 193, 90, 0.18), rgba(255, 193, 90, 0.045) 68%, rgba(5, 8, 12, 0.98)),
+    rgba(14, 10, 5, 0.98);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 193, 90, 0.18),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(255, 193, 90, 0.12);
+}
+
+.contextBoardCustomItem[data-kind="uml-state"] {
+  --diagram-rgb: 130, 236, 151;
+  width: 13.125rem;
+  min-height: 5.125rem;
+  align-content: center;
+  border-radius: 1rem;
+  text-align: center;
+  background:
+    linear-gradient(90deg, rgba(130, 236, 151, 0.16), rgba(130, 236, 151, 0.035)),
+    rgba(7, 15, 11, 0.96);
+  box-shadow:
+    inset 0 0 0 2px rgba(130, 236, 151, 0.16),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(130, 236, 151, 0.12);
+}
+
+.contextBoardCustomItem[data-kind="note"] {
+  --diagram-rgb: 255, 218, 148;
+  width: 15.6rem;
+  min-height: 6.35rem;
+  border-radius: 0.38rem;
+  background:
+    linear-gradient(180deg, rgba(255, 218, 148, 0.2), rgba(255, 193, 90, 0.055)),
+    rgba(18, 13, 5, 0.97);
+  box-shadow:
+    inset 0 0.42rem 0 rgba(255, 218, 148, 0.18),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(255, 218, 148, 0.1);
+}
+
+.contextBoardCustomItem[data-tone="blue"] {
+  --diagram-rgb: 139, 181, 255;
+}
+
+.contextBoardCustomItem[data-tone="amber"] {
+  --diagram-rgb: 255, 193, 90;
+}
+
+.contextBoardCustomItem[data-tone="green"] {
+  --diagram-rgb: 130, 236, 151;
+}
+
+.contextBoardCustomItem[data-tone="red"] {
+  --diagram-rgb: 255, 106, 61;
+}
+
+.contextBoardCustomItem[data-tone="purple"] {
+  --diagram-rgb: 190, 143, 255;
+}
+
+.contextBoardCustomItem[data-tone="neutral"] {
+  --diagram-rgb: 174, 181, 194;
+}
+
+.contextBoardCustomItem[data-kind^="label-"] {
+  display: grid;
+  align-content: center;
+  justify-items: stretch;
+  min-height: 1.75rem;
+  border-color: rgba(var(--diagram-rgb), 0.3);
+  padding: 0.18rem 0.5rem;
+  background:
+    linear-gradient(180deg, rgba(var(--diagram-rgb), 0.08), rgba(255, 255, 255, 0.018)),
+    rgba(5, 8, 12, 0.9);
+  box-shadow:
+    0 0 0 2px rgba(5, 8, 12, 0.72),
+    0 8px 18px rgba(0, 0, 0, 0.2),
+    0 0 16px rgba(var(--diagram-rgb), 0.08);
+}
+
+.contextBoardCustomItem[data-kind="label-tag"] {
+  border-radius: 999px;
+}
+
+.contextBoardCustomItem[data-kind="label-pill"] {
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(var(--diagram-rgb), 0.13), rgba(var(--diagram-rgb), 0.03)),
+    rgba(5, 8, 12, 0.92);
+}
+
+.contextBoardCustomItem[data-kind="label-field"] {
+  border-radius: 0.38rem;
+  background:
+    linear-gradient(180deg, rgba(255, 247, 231, 0.05), rgba(var(--diagram-rgb), 0.025)),
+    rgba(5, 8, 12, 0.9);
+}
+
+.contextBoardCustomItem[data-kind="label-area"] {
+  align-content: start;
+  border-radius: 0.5rem;
+  padding: 0.48rem 0.58rem;
+  background:
+    linear-gradient(180deg, rgba(255, 247, 231, 0.045), rgba(var(--diagram-rgb), 0.026)),
+    rgba(5, 8, 12, 0.9);
+}
+
+.contextBoardCustomItem[data-kind^="label-"] .contextBoardCardTitleInput {
+  margin: 0;
+  padding: 0.08rem 0.12rem;
+  color: rgba(255, 247, 231, 0.94);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.12;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.contextBoardCustomItem[data-kind="label-field"] .contextBoardCardTitleInput {
+  font-size: 0.62rem;
+  text-align: left;
+  text-transform: none;
+}
+
+.contextBoardCustomItem[data-kind="label-area"] .contextBoardCardTitleInput {
+  font-size: 0.6rem;
+  text-align: left;
+  text-transform: none;
+}
+
+.contextBoardCustomItem[data-kind="label-area"] .contextBoardCardDetailInput {
+  min-height: 2.4rem;
+  margin-top: 0.18rem;
+  padding: 0.08rem 0.12rem;
+  color: rgba(245, 239, 226, 0.66);
+  font-size: 0.62rem;
+  line-height: 1.28;
+}
+
+.contextBoardCustomItem[data-kind^="label-"] .contextBoardDeleteButton {
+  top: -0.55rem;
+  right: -0.55rem;
+}
+
+.contextBoardCustomItem[data-kind^="label-"] .contextBoardDuplicateButton {
+  top: -0.55rem;
+  right: 1.08rem;
+}
+
+.contextBoardCustomItem[data-kind^="label-"][data-tone="blue"] {
+  --diagram-rgb: 139, 181, 255;
+}
+
+.contextBoardCustomItem[data-kind^="label-"][data-tone="amber"] {
+  --diagram-rgb: 255, 193, 90;
+}
+
+.contextBoardCustomItem[data-kind^="label-"][data-tone="green"] {
+  --diagram-rgb: 130, 236, 151;
+}
+
+.contextBoardCustomItem[data-kind^="label-"][data-tone="red"] {
+  --diagram-rgb: 255, 106, 61;
+}
+
+.contextBoardCustomItem[data-kind^="label-"][data-tone="purple"] {
+  --diagram-rgb: 190, 143, 255;
+}
+
+.contextBoardCustomItem[data-kind^="label-"][data-tone="neutral"] {
+  --diagram-rgb: 174, 181, 194;
+}
+
+.contextBoardCustomItem[data-tone]:not([data-tone="default"]) {
+  background:
+    linear-gradient(135deg, rgba(var(--diagram-rgb), 0.18), rgba(var(--diagram-rgb), 0.045) 58%, rgba(5, 8, 12, 0.96)),
+    rgba(6, 9, 14, 0.96);
+  box-shadow:
+    inset 4px 0 0 rgba(var(--diagram-rgb), 0.78),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(var(--diagram-rgb), 0.13);
+}
+
+.contextBoardCustomItem[data-kind^="label-"][data-tone]:not([data-tone="default"]) {
+  background:
+    linear-gradient(180deg, rgba(var(--diagram-rgb), 0.1), rgba(255, 255, 255, 0.018)),
+    rgba(5, 8, 12, 0.9);
+  box-shadow:
+    0 0 0 2px rgba(5, 8, 12, 0.72),
+    0 8px 18px rgba(0, 0, 0, 0.2),
+    0 0 16px rgba(var(--diagram-rgb), 0.1);
+}
+
+.contextBoardCustomItem[data-kind="branch"][data-tone]:not([data-tone="default"]) {
+  background:
+    linear-gradient(90deg, rgba(var(--diagram-rgb), 0.18), rgba(var(--diagram-rgb), 0.044)),
+    rgba(7, 12, 11, 0.96);
+  box-shadow:
+    inset 0 0 0 2px rgba(var(--diagram-rgb), 0.15),
+    0 18px 36px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(var(--diagram-rgb), 0.12);
+}
+
+.contextBoardCustomItem[data-kind="shape-diamond"][data-tone]:not([data-tone="default"]) {
+  background: transparent;
+  box-shadow: none;
+}
+
+.contextBoardCustomItem[data-selected="true"],
+.contextBoardNode[data-selected="true"] {
+  border-color: rgba(var(--diagram-rgb), 0.78);
+  box-shadow:
+    inset 4px 0 0 rgba(var(--diagram-rgb), 0.88),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 20px 42px rgba(0, 0, 0, 0.32),
+    0 0 32px rgba(var(--diagram-rgb), 0.2);
+}
+
+.contextBoardCustomItem[data-kind^="label-"][data-selected="true"] {
+  box-shadow:
+    0 0 0 2px rgba(5, 8, 12, 0.82),
+    0 10px 22px rgba(0, 0, 0, 0.24),
+    0 0 24px rgba(var(--diagram-rgb), 0.18);
+}
+
+.contextBoardCustomItem[data-kind="decision"][data-selected="true"],
+.contextBoardCustomItem[data-kind="shape-diamond"][data-selected="true"],
+.contextBoardCustomItem[data-kind="sequence-message"][data-selected="true"],
+.contextBoardCustomItem[data-kind="sequence-return"][data-selected="true"] {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.contextBoardCustomItem[data-kind="decision"][data-selected="true"]::before,
+.contextBoardCustomItem[data-kind="shape-diamond"][data-selected="true"]::before {
+  border-color: rgba(var(--diagram-rgb), 0.78);
+  box-shadow:
+    inset 0 0 0 2px rgba(var(--diagram-rgb), 0.18),
+    0 20px 42px rgba(0, 0, 0, 0.32),
+    0 0 32px rgba(var(--diagram-rgb), 0.22);
+}
+
+.contextBoardCustomItem[data-kind="sequence-message"][data-selected="true"]::after,
+.contextBoardCustomItem[data-kind="sequence-return"][data-selected="true"]::after {
+  border-top-color: rgba(var(--diagram-rgb), 0.96);
+  filter: drop-shadow(0 0 12px rgba(var(--diagram-rgb), 0.34));
+}
+
+.contextBoardCustomItem[data-kind="sequence-message"][data-selected="true"] .contextBoardCardTitleInput,
+.contextBoardCustomItem[data-kind="sequence-return"][data-selected="true"] .contextBoardCardTitleInput {
+  border-color: rgba(var(--diagram-rgb), 0.54);
+  box-shadow:
+    0 0 0 1px rgba(var(--diagram-rgb), 0.16),
+    0 0 18px rgba(var(--diagram-rgb), 0.16);
+}
+
+.contextBoardDeleteButton,
+.contextBoardDuplicateButton {
+  position: absolute;
+  top: 0.42rem;
+  z-index: 4;
+  display: inline-grid;
+  width: 1.45rem;
+  height: 1.45rem;
+  place-items: center;
+  border: 1px solid rgba(245, 239, 226, 0.13);
+  border-radius: 999px;
+  color: rgba(255, 247, 231, 0.72);
+  background: rgba(0, 0, 0, 0.34);
+  opacity: 0;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.contextBoardDeleteButton {
+  right: 0.42rem;
+}
+
+.contextBoardDuplicateButton {
+  right: 2.06rem;
+}
+
+.contextBoardCustomItem:hover .contextBoardDeleteButton,
+.contextBoardCustomItem:focus-within .contextBoardDeleteButton,
+.contextBoardCustomItem:hover .contextBoardDuplicateButton,
+.contextBoardCustomItem:focus-within .contextBoardDuplicateButton,
+.contextBoardNode:hover .contextBoardDeleteButton,
+.contextBoardNode:focus-within .contextBoardDeleteButton {
+  opacity: 1;
+}
+
+.contextBoardDeleteButton:hover,
+.contextBoardDeleteButton:focus-visible {
+  border-color: rgba(255, 106, 61, 0.54);
+  color: #ff8f6b;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contextBoardDuplicateButton:hover,
+.contextBoardDuplicateButton:focus-visible {
+  border-color: rgba(255, 190, 118, 0.58);
+  color: #ffd199;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contextBoardPorts {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.contextBoardPlane[data-tool="connect"] .contextBoardPorts,
+.contextBoardCustomItem:hover .contextBoardPorts,
+.contextBoardCustomItem:focus-within .contextBoardPorts,
+.contextBoardNode:hover .contextBoardPorts,
+.contextBoardNode:focus-within .contextBoardPorts {
+  opacity: 1;
+}
+
+.contextBoardPlane[data-tool="connect"] .contextBoardPorts {
+  pointer-events: auto;
+}
+
+.contextBoardPort {
+  position: absolute;
+  display: inline-grid;
+  width: 0.82rem;
+  height: 0.82rem;
+  place-items: center;
+  border: 1px solid rgba(255, 193, 90, 0.62);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 193, 90, 0.95) 0 28%, transparent 30%),
+    rgba(5, 8, 12, 0.96);
+  box-shadow:
+    0 0 0 2px rgba(5, 8, 12, 0.92),
+    0 0 12px rgba(255, 193, 90, 0.18);
+  cursor: crosshair;
+  pointer-events: auto;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.contextBoardPort:hover,
+.contextBoardPort:focus-visible {
+  border-color: rgba(139, 181, 255, 0.8);
+  box-shadow:
+    0 0 0 2px rgba(5, 8, 12, 0.92),
+    0 0 16px rgba(139, 181, 255, 0.32);
+  outline: none;
+  transform: scale(1.18);
+}
+
+.contextBoardPort[data-side="top"] {
+  top: -0.42rem;
+  left: calc(50% - 0.41rem);
+}
+
+.contextBoardPort[data-side="right"] {
+  top: calc(50% - 0.41rem);
+  right: -0.42rem;
+}
+
+.contextBoardPort[data-side="bottom"] {
+  bottom: -0.42rem;
+  left: calc(50% - 0.41rem);
+}
+
+.contextBoardPort[data-side="left"] {
+  top: calc(50% - 0.41rem);
+  left: -0.42rem;
+}
+
+.contextBoardCustomItem span {
+  color: rgba(var(--diagram-rgb), 0.88);
+  margin: 0;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.contextBoardCustomItem strong {
+  display: block;
+  margin-top: 0.32rem;
+  color: rgba(255, 247, 231, 0.96);
+  font-size: 1rem;
+  font-weight: 760;
+  line-height: 1.16;
+}
+
+.contextBoardSourceCluster {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.contextBoardSourceChip {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.52rem;
+  border: 1px solid rgba(139, 181, 255, 0.13);
+  border-radius: 0.82rem;
+  padding: 0.42rem 0.48rem;
+  background: rgba(5, 8, 12, 0.5);
+}
+
+.contextBoardSourceName {
+  margin: 0;
+  color: rgba(245, 239, 226, 0.56);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.contextBoardRail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.56rem;
+  overflow: hidden;
+  scrollbar-color: rgba(255, 193, 90, 0.42) rgba(12, 10, 9, 0.72);
+  scrollbar-width: thin;
+}
+
+.contextBoardRail > * {
+  flex: 0 0 auto;
+}
+
+.contextBoardRail > :last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.contextBoardFloatingSources {
+  top: var(--context-sources-top, 34rem);
+  right: 0.72rem;
+  display: grid;
+  width: 14.6rem;
+  gap: 0.5rem;
+  border: 1px solid rgba(139, 181, 255, 0.18);
+  border-radius: 0.92rem;
+  padding: 0.54rem 0.58rem;
+  background:
+    linear-gradient(135deg, rgba(12, 18, 28, 0.92), rgba(9, 11, 17, 0.96)),
+    rgba(6, 8, 13, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 18px 34px rgba(0, 0, 0, 0.24);
+}
+
+.contextBoardFloatingSources[data-collapsed="true"] {
+  width: auto;
+  min-width: 12.2rem;
+  padding: 0.38rem 0.46rem;
+  border-color: rgba(139, 181, 255, 0.28);
+  border-radius: 999px;
+}
+
+.contextBoardFloatingSourcesHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.38rem;
+  border: 0;
+  padding: 0;
+  color: rgba(255, 221, 170, 0.88);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.contextBoardFloatingSourcesHeader span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(245, 239, 226, 0.56);
+  font-size: 0.54rem;
+  font-weight: 820;
+  letter-spacing: 0.13em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.contextBoardFloatingSourcesHeader svg {
+  color: rgba(255, 193, 90, 0.76);
+  transition: transform 160ms ease;
+}
+
+.contextBoardFloatingSources[data-collapsed="false"] .contextBoardFloatingSourcesHeader svg {
+  transform: rotate(180deg);
+}
+
+.contextBoardFloatingSourcesHeader:hover,
+.contextBoardFloatingSourcesHeader:focus-visible {
+  outline: none;
+}
+
+.contextBoardFloatingSourcesHeader:hover span:first-child,
+.contextBoardFloatingSourcesHeader:focus-visible span:first-child {
+  color: rgba(245, 239, 226, 0.72);
+}
+
+.contextBoardFloatingSources .contextBoardMiniPill {
+  min-height: 1.02rem;
+  padding: 0.12rem 0.36rem;
+  font-size: 0.42rem;
+  letter-spacing: 0.06em;
+}
+
+.contextBoardFloatingSources .contextBoardSourceCountPill {
+  min-width: 4.1rem;
+}
+
+.contextBoardDecisionPanel {
+  overflow: auto;
+}
+
+.contextBoardContextBriefPanel {
+  display: grid;
+  gap: 0.44rem;
+  overflow: hidden;
+}
+
+.contextBoardBriefHeaderActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.42rem;
+}
+
+.contextBoardBriefReadiness {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7.3rem, 0.32fr);
+  gap: 0.5rem 0.62rem;
+  align-items: stretch;
+  border: 1px solid rgba(245, 239, 226, 0.11);
+  border-radius: 0.86rem;
+  padding: 0.48rem 0.54rem;
+  background:
+    linear-gradient(135deg, rgba(245, 239, 226, 0.038), transparent 72%),
+    rgba(5, 8, 12, 0.5);
+}
+
+.contextBoardBriefIdentity {
+  display: grid;
+  min-height: 100%;
+  min-width: 0;
+  align-content: start;
+  border: 1px solid rgba(245, 239, 226, 0.1);
+  border-radius: 0.66rem;
+  padding: 0.42rem 0.46rem;
+  background:
+    linear-gradient(180deg, rgba(245, 239, 226, 0.035), rgba(255, 255, 255, 0.006)),
+    rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.contextBoardBriefReadiness span {
+  display: block;
+  color: var(--teras-inner-title-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.contextBoardBriefReadiness strong {
+  display: block;
+  margin-top: 0.24rem;
+  color: rgba(255, 247, 231, 0.96);
+  font-size: 0.98rem;
+  font-weight: 780;
+  line-height: 1.12;
+}
+
+.contextBoardBriefReadiness p {
+  margin: 0.26rem 0 0;
+  color: rgba(245, 239, 226, 0.62);
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
+
+.contextBoardBriefFactList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.28rem;
+  margin: 0.4rem 0 0;
+}
+
+.contextBoardBriefFactList div {
+  min-width: 0;
+  border: 1px solid rgba(245, 239, 226, 0.1);
+  border-radius: 0.5rem;
+  padding: 0.28rem 0.32rem;
+  background:
+    linear-gradient(180deg, rgba(245, 239, 226, 0.035), rgba(255, 255, 255, 0.008)),
+    rgba(0, 0, 0, 0.2);
+}
+
+.contextBoardBriefFactList dt {
+  color: var(--teras-inner-title-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.43rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.contextBoardBriefFactList dd {
+  min-width: 0;
+  overflow: hidden;
+  margin: 0.16rem 0 0;
+  color: rgba(245, 239, 226, 0.72);
+  font-size: 0.54rem;
+  line-height: 1.24;
+  overflow-wrap: anywhere;
+}
+
+.contextBoardCheckpointEntryButton {
+  display: inline-flex;
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 193, 90, 0.22);
+  border-radius: 0.62rem;
+  padding: 0.44rem 0.58rem;
+  color: rgba(255, 247, 231, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.07), rgba(255, 247, 231, 0.012)),
+    rgba(0, 0, 0, 0.22);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.22;
+  text-align: center;
+  text-transform: uppercase;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+  white-space: normal;
+}
+
+.contextBoardCheckpointEntryButton:hover,
+.contextBoardCheckpointEntryButton:focus-visible {
+  color: rgba(255, 247, 231, 0.96);
+  border-color: rgba(255, 193, 90, 0.48);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.14), rgba(255, 193, 90, 0.04)),
+    rgba(0, 0, 0, 0.28);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contextBoardCheckpointEntryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+}
+
+.contextBoardContextBriefBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7.8rem, 0.28fr);
+  gap: 0.58rem;
+  align-items: stretch;
+}
+
+.contextBoardContextBriefActions {
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+  gap: 0.42rem;
+}
+
+.contextBoardContextBriefActions button {
+  display: inline-flex;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  border: 1px solid rgba(139, 181, 255, 0.2);
+  border-radius: 0.72rem;
+  padding: 0.34rem 0.42rem;
+  color: rgba(245, 239, 226, 0.78);
+  background:
+    linear-gradient(180deg, rgba(139, 181, 255, 0.06), rgba(255, 247, 231, 0.012)),
+    rgba(0, 0, 0, 0.26);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.contextBoardContextBriefActions button:hover:not(:disabled),
+.contextBoardContextBriefActions button:focus-visible:not(:disabled) {
+  color: rgba(255, 247, 231, 0.96);
+  border-color: rgba(255, 193, 90, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.12), rgba(255, 193, 90, 0.04)),
+    rgba(0, 0, 0, 0.32);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.contextBoardContextBriefActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.contextBoardContextBriefPrimaryAction {
+  border-color: rgba(255, 193, 90, 0.52) !important;
+  color: rgba(255, 222, 154, 0.94) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.17), rgba(255, 193, 90, 0.055)),
+    rgba(25, 15, 6, 0.48) !important;
+  box-shadow:
+    0 0 16px rgba(255, 193, 90, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.contextBoardContextBriefPrimaryAction:hover,
+.contextBoardContextBriefPrimaryAction:focus-visible {
+  border-color: rgba(255, 216, 139, 0.72) !important;
+  color: rgba(255, 247, 231, 0.98) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.24), rgba(255, 193, 90, 0.08)),
+    rgba(32, 19, 7, 0.56) !important;
+  box-shadow:
+    0 0 20px rgba(255, 193, 90, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.contextBoardBriefReadiness span,
+.contextBoardBriefFactList dt,
+.contextBoardDecisionOption span {
+  color: var(--teras-inner-title-muted);
+}
+
+@media (max-width: 760px) {
+  .contextBoardContextBriefBody {
+      grid-template-columns: 1fr;
+    }
+
+  .contextBoardContextBriefActions {
+      flex-direction: row;
+    }
+
+  .contextBoardContextBriefActions button {
+      min-height: 1.9rem;
+    }
+
+  .contextBoardBriefReadiness {
+      grid-template-columns: 1fr;
+    }
+
+  .contextBoardCheckpointEntryButton {
+      justify-self: start;
+    }
+}

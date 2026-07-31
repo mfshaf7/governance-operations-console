@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "prototype_id": "governance-operations-console",
+  "art_ref": "openproject://work_packages/784",
+  "approved_baseline_ref": "record://design-baselines/governance-operations-console-2026-07-30",
+  "source_repository": "https://github.com/mfshaf7/workspace-prototype-studio",
+  "source_app_commit": "aa12fdbb9b4f7b16c8ac2d2229c4dd4f6c95ec98",
+  "source_app_tree": "28647acecce1709f408f5b8b1f6e3f944cb46104",
+  "source_docs_commit": "32bbd95561a3ded8701cfa089bf6f1a68a879e2c",
+  "source_docs_tree": "50c049a6846b2f90a27f425b1d61b7daf1e22e1c",
+  "approved_baseline_blob": "e2b52ad598354364e82dd966c24e9fd6518018b2",
+  "transfer": {
+    "application_source": "apps/governance-operations-console",
+    "application_target": ".",
+    "application_file_count": 1107,
+    "included_application_file_count": 1106,
+    "excluded_application_files": [
+      {
+        "path": "apps/governance-operations-console/README.md",
+        "reason": "The owner-repository README replaces prototype-local entry guidance."
+      }
+    ],
+    "product_record_source": "docs/prototypes/governance-operations-console",
+    "product_record_target": "docs/product",
+    "product_record_file_count": 49,
+    "approved_baseline_source": "records/design-baselines/governance-operations-console-2026-07-30.yaml",
+    "approved_baseline_target": "docs/graduation/approved-design-baseline.yaml"
+  },
+  "adaptations": [
+    "Relocate the application subtree to the owner-repository root.",
+    "Relocate product-local records to docs/product.",
+    "Rewrite product-record references to their durable owner-repository paths.",
+    "Replace prototype-repository entry guidance with durable owner guidance.",
+    "Materialize the application guard's source-structure dependency as a product-owned contract.",
+    "Remove trailing blank lines from three root configuration files.",
+    "Extend owner-repository validation and CI to run the approved product baseline."
+  ],
+  "excluded_disposable_paths": [
+    ".next",
+    "node_modules",
+    "tmp",
+    "tsconfig.tsbuildinfo",
+    "logs",
+    "environment files",
+    "local runtime state"
+  ],
+  "preserved_constraints": [
+    "Loopback-only local preview.",
+    "Read-only bounded local host telemetry.",
+    "Synthetic or fixture-backed operational data.",
+    "Prototype-local writes and receipts.",
+    "Synthetic unauthenticated identity.",
+    "Manual suggestion-only local Ollama interaction with synthetic context.",
+    "No live backend, deployment, release, identity, or security authority."
+  ]
+}

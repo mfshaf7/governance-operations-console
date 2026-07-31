@@ -1,32 +1,35 @@
 # Governance Operations Console Agent Notes
 
 This repository is the durable product-source owner for the Governance
-Operations Console after its approved Prototype Studio baseline graduates.
+Operations Console.
 
 ## Read First
 
 - `README.md`
 - `docs/security-and-data-boundaries.md`
+- `docs/product/README.md`
+- `docs/graduation/source-manifest.json`
 - [Security review checklist](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/security-review-checklist.md)
+- [Source-graduation security delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-31-governance-operations-console-source-graduation.md)
 - [Owner-repository admission review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-31-governance-operations-console-owner-repository-admission.md)
 
 ## Current Boundary
 
-- The repository is provisioned but does not yet contain the approved
-  application source.
-- Workspace Prototype Studio remains source and local preview authority until
-  the separate source-transfer landing is reviewed, validated, and recorded.
-- Do not reconstruct, partially copy, or independently reshape the application
-  before that transfer.
+- The repository contains the exact approved application baseline plus the
+  explicitly recorded path and ownership adaptations required for graduation.
+- Workspace Prototype Studio retains prototype history and the final
+  graduation record; it must not retain a competing active source copy.
+- Preserve baseline behavior and visual design during graduation. Any broader
+  product change needs separate ART scope after custody is complete.
 - Do not claim live backend wiring, production deployment, identity authority,
   security acceptance, or governed release maturity from repository
-  provisioning alone.
+  source graduation alone.
 
 ## Ownership
 
 This repository owns:
 
-- product source after graduation
+- product source
 - product-local architecture and interface contracts
 - product tests and build validation
 - product-local operator documentation
@@ -64,6 +67,9 @@ Platform Engineering, or Security Architecture as appropriate.
 - During source graduation, prove baseline equivalence before changing
   behavior or visual design.
 - Keep public-source safety and repository validation passing.
+- Treat the local Ollama adapter, synthetic identity, local host telemetry,
+  browser-memory evidence, fixture-backed workflows, and prototype-local
+  receipts as constrained baseline behavior, not live authority.
 
 ## Validation
 
@@ -71,4 +77,7 @@ Run:
 
 ```bash
 python3 scripts/validate_repository.py
+npm ci
+npm run check
+npm audit --omit=dev
 ```

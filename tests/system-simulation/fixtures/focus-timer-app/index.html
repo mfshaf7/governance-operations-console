@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Focus Timer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="timer-shell" aria-labelledby="timer-title">
+      <p class="eyebrow">Focus Timer</p>
+      <h1 id="timer-title">One task. One interval.</h1>
+      <output id="timer" class="timer" aria-live="polite">25:00</output>
+      <div class="controls" aria-label="Timer controls">
+        <button id="toggle" type="button">Start</button>
+        <button id="reset" class="secondary" type="button">Reset</button>
+      </div>
+      <p id="status" class="status">Ready for a focused interval.</p>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,569 @@
+/* Build Tree structured tree primitive.
+   Shared by Build Tree structured mode and read-only tree viewer. */
+
+.buildTreeTreeControlArea {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.34rem;
+}
+
+.buildTreeTreeToggle {
+  display: inline-flex;
+  width: 1.85rem;
+  height: 1.85rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(var(--node-rgb), 0.2);
+  border-radius: 999px;
+  color: rgba(var(--node-rgb), 0.74);
+  background: rgba(0, 0, 0, 0.22);
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.buildTreeTreeToggle:hover,
+.buildTreeTreeToggle:focus-visible {
+  border-color: rgba(var(--node-rgb), 0.42);
+  color: rgba(var(--node-rgb), 0.96);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.buildTreeTreeToggle svg {
+  width: 0.92rem;
+  height: 0.92rem;
+  transition: transform 140ms ease;
+}
+
+.buildTreeTreeToggleOpen {
+  transform: rotate(180deg);
+}
+
+.buildTreeTreeActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.buildTreeTreeToggleAll {
+  min-width: 4.15rem;
+  border: 1px solid rgba(245, 239, 226, 0.12);
+  border-radius: 0.52rem;
+  padding: 0.24rem 0.42rem;
+  color: rgba(245, 239, 226, 0.48);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 231, 0.018), rgba(255, 255, 255, 0.006)),
+    rgba(0, 0, 0, 0.18);
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.buildTreeTreeToggleAll:hover,
+.buildTreeTreeToggleAll:focus-visible {
+  border-color: rgba(255, 193, 90, 0.26);
+  color: rgba(255, 218, 148, 0.76);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.055), rgba(255, 193, 90, 0.018)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow: 0 0 10px rgba(255, 193, 90, 0.055);
+  outline: none;
+}
+
+.buildTreeStructuredTreeBranch {
+  position: relative;
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+}
+
+.buildTreeStructuredTreeChildren {
+  position: relative;
+  display: grid;
+  gap: 0.5rem;
+  margin-left: 1.28rem;
+  padding-left: 1.24rem;
+}
+
+.buildTreeStructuredTreeChildren::before {
+  position: absolute;
+  top: -0.18rem;
+  bottom: 0.52rem;
+  left: 0.38rem;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 193, 90, 0.52), rgba(255, 193, 90, 0.18));
+  content: "";
+}
+
+.buildTreeStructuredTreeChildren > .buildTreeStructuredTreeBranch::before,
+.buildTreeStructuredStoryGroup::before {
+  position: absolute;
+  top: 1.38rem;
+  left: -0.86rem;
+  width: 0.84rem;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 193, 90, 0.46);
+  content: "";
+}
+
+.buildTreeStructuredTreeChildren
+  > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"]) {
+  display: grid;
+  grid-template-columns: minmax(23rem, 0.95fr) minmax(22rem, 1.05fr);
+  gap: 0.82rem;
+  align-items: start;
+}
+
+.buildTreeStructuredTreeChildren
+  > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"])
+  > .buildTreeStructuredTreeNode[data-role="group"] {
+  grid-column: 1;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.buildTreeStructuredTreeChildren
+  > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"])
+  > .buildTreeStructuredTreeNode[data-role="group"]
+  > .buildTreeStructuredTreeMeta {
+  display: none;
+}
+
+.buildTreeStructuredTreeChildren
+  > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"])
+  > .buildTreeStructuredTreeChildren {
+  grid-column: 2;
+  min-width: 0;
+  margin-left: 0;
+  padding-left: 1.02rem;
+}
+
+.buildTreeStructuredTreeChildren
+  > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"])
+  > .buildTreeStructuredTreeChildren::before {
+  display: none;
+}
+
+.buildTreeStructuredTreeChildren
+  > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"])
+  > .buildTreeStructuredTreeChildren
+  > .buildTreeStructuredStoryGroup::before {
+  top: 1.7rem;
+  left: -1.85rem;
+  width: 1.95rem;
+  background: rgba(255, 193, 90, 0.46);
+}
+
+@media (max-width: 980px) {
+  .buildTreeStructuredTreeChildren
+      > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"]) {
+      grid-template-columns: 1fr;
+    }
+
+  .buildTreeStructuredTreeChildren
+      > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"])
+      > .buildTreeStructuredTreeChildren {
+      grid-column: 1;
+      margin-left: 1.28rem;
+      padding-left: 1.24rem;
+    }
+}
+
+.buildTreeStructuredTreeNode {
+  --node-rgb: 139, 181, 255;
+  --node-accent: rgba(var(--node-rgb), 0.84);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.72rem;
+  align-items: center;
+  overflow: visible;
+  border: 1px solid rgba(var(--node-rgb), 0.27);
+  border-radius: 0.9rem;
+  padding: 0.68rem 0.72rem;
+  background:
+    linear-gradient(90deg, rgba(var(--node-rgb), 0.1), transparent 70%),
+    linear-gradient(180deg, rgba(255, 247, 231, 0.028), rgba(255, 255, 255, 0.01)),
+    rgba(7, 9, 12, 0.84);
+  box-shadow:
+    inset 4px 0 0 rgba(var(--node-rgb), 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 22px rgba(0, 0, 0, 0.12);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.buildTreeStructuredTreeNode:hover,
+.buildTreeStructuredTreeNode:focus-within {
+  border-color: rgba(var(--node-rgb), 0.46);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(var(--node-rgb), 0.1), transparent 44%),
+    linear-gradient(90deg, rgba(var(--node-rgb), 0.13), transparent 70%),
+    linear-gradient(180deg, rgba(255, 247, 231, 0.032), rgba(255, 255, 255, 0.012)),
+    rgba(8, 10, 13, 0.88);
+  box-shadow:
+    inset 4px 0 0 rgba(var(--node-rgb), 0.68),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 14px 26px rgba(0, 0, 0, 0.16),
+    0 0 16px rgba(var(--node-rgb), 0.1);
+  transform: translateY(-1px);
+}
+
+.buildTreeStructuredTreeNode[data-role="root"] {
+  --node-rgb: 190, 144, 255;
+  border-color: rgba(190, 144, 255, 0.42);
+  padding: 0.82rem 0.86rem;
+  background:
+    linear-gradient(90deg, rgba(190, 144, 255, 0.18), rgba(255, 247, 231, 0.026) 78%),
+    rgba(18, 11, 29, 0.62);
+  box-shadow:
+    inset 5px 0 0 rgba(190, 144, 255, 0.76),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 14px 28px rgba(190, 144, 255, 0.1),
+    0 10px 22px rgba(0, 0, 0, 0.12);
+}
+
+.buildTreeStructuredTreeNode[data-role="group"] {
+  --node-rgb: 139, 181, 255;
+}
+
+.buildTreeStructuredTreeNode[data-role="leaf"] {
+  --node-rgb: 118, 215, 196;
+  border-color: rgba(118, 215, 196, 0.3);
+  background:
+    linear-gradient(90deg, rgba(118, 215, 196, 0.105), transparent 70%),
+    linear-gradient(180deg, rgba(255, 247, 231, 0.026), rgba(255, 255, 255, 0.01)),
+    rgba(5, 18, 17, 0.72);
+}
+
+.buildTreeStructuredTreeNode[data-role="support"] {
+  --node-rgb: 255, 193, 90;
+  border-color: rgba(255, 193, 90, 0.34);
+  background:
+    linear-gradient(90deg, rgba(255, 193, 90, 0.12), transparent 72%),
+    linear-gradient(180deg, rgba(255, 247, 231, 0.03), rgba(255, 255, 255, 0.01)),
+    rgba(16, 11, 5, 0.62);
+}
+
+.buildTreeStructuredTreeNodeSelected {
+  border-color: rgba(var(--node-rgb), 0.62);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(var(--node-rgb), 0.17), transparent 44%),
+    linear-gradient(90deg, rgba(var(--node-rgb), 0.18), rgba(var(--node-rgb), 0.05) 62%, transparent),
+    rgba(8, 10, 14, 0.95);
+  box-shadow:
+    inset 4px 0 0 rgba(var(--node-rgb), 0.9),
+    0 0 0 1px rgba(var(--node-rgb), 0.08),
+    0 14px 26px rgba(0, 0, 0, 0.16),
+    0 0 18px rgba(var(--node-rgb), 0.12);
+}
+
+.buildTreeStructuredTreeSelect {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.68rem;
+  align-items: center;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.buildTreeStructuredTreeSelect:hover,
+.buildTreeStructuredTreeSelect:focus-visible {
+  outline: none;
+}
+
+.buildTreeStructuredTreeIndex,
+.buildTreeStructuredStoryGroupIndex {
+  display: inline-flex;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  align-items: center;
+  justify-content: center;
+  color: rgba(7, 9, 13, 0.94);
+  border: 1px solid rgba(var(--node-rgb), 0.58);
+  border-radius: 0.52rem;
+  background: rgba(var(--node-rgb), 0.88);
+  box-shadow: 0 0 14px rgba(var(--node-rgb), 0.15);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.52rem;
+  font-weight: 960;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.buildTreeStructuredTreeText {
+  min-width: 0;
+}
+
+.buildTreeStructuredTreeKind {
+  display: block;
+  color: var(--node-accent);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.buildTreeStructuredTreeText strong {
+  display: block;
+  margin-top: 0.24rem;
+  color: rgba(255, 247, 231, 0.94);
+  font-size: 0.84rem;
+  font-weight: 760;
+  line-height: 1.22;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.buildTreeStructuredTreeText small {
+  display: block;
+  margin-top: 0.24rem;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.32;
+}
+
+.buildTreeStructuredTreeMeta {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 6.8rem;
+  color: rgba(245, 239, 226, 0.54);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.5rem;
+  font-weight: 860;
+  letter-spacing: 0.09em;
+  line-height: 1.1;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.buildTreeStructuredTreeNode:hover .buildTreeTreeActions,
+.buildTreeStructuredTreeNode:focus-within .buildTreeTreeActions,
+.buildTreeStructuredTreeNodeMenuOpen .buildTreeTreeActions {
+  opacity: 1;
+}
+
+.buildTreeStructuredStoryGroup {
+  --node-rgb: 245, 239, 226;
+  position: relative;
+  display: grid;
+  gap: 0.46rem;
+}
+
+.buildTreeStructuredStoryGroupCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.72rem;
+  align-items: center;
+  border: 1px solid rgba(245, 239, 226, 0.13);
+  border-radius: 0.86rem;
+  padding: 0.64rem 0.72rem;
+  color: inherit;
+  background:
+    linear-gradient(90deg, rgba(245, 239, 226, 0.045), transparent 74%),
+    rgba(9, 10, 12, 0.76);
+  box-shadow:
+    inset 3px 0 0 rgba(245, 239, 226, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.buildTreeStructuredStoryGroupCard:hover,
+.buildTreeStructuredStoryGroupCard:focus-within,
+.buildTreeStructuredStoryGroupOpen .buildTreeStructuredStoryGroupCard {
+  border-color: rgba(255, 193, 90, 0.3);
+  background:
+    linear-gradient(90deg, rgba(255, 193, 90, 0.075), transparent 74%),
+    rgba(12, 13, 15, 0.86);
+  outline: none;
+}
+
+.buildTreeStructuredStoryGroupButton {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.68rem;
+  align-items: center;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.buildTreeStructuredStoryGroupButton:hover,
+.buildTreeStructuredStoryGroupButton:focus-visible {
+  outline: none;
+}
+
+.buildTreeStructuredStoryGroupText {
+  min-width: 0;
+}
+
+.buildTreeStructuredStoryGroupText > span {
+  display: block;
+  color: var(--amber);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.buildTreeStructuredStoryGroupText strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: rgba(255, 247, 231, 0.86);
+  font-size: 0.78rem;
+  font-weight: 760;
+  line-height: 1.22;
+}
+
+.buildTreeStructuredStoryGroupText small {
+  display: block;
+  margin-top: 0.22rem;
+  color: var(--muted);
+  font-size: 0.64rem;
+  line-height: 1.3;
+}
+
+.buildTreeStructuredStoryControls {
+  --node-rgb: 245, 239, 226;
+  align-items: center;
+}
+
+.buildTreeStructuredStoryGroup:hover .buildTreeTreeActions,
+.buildTreeStructuredStoryGroup:focus-within .buildTreeTreeActions {
+  opacity: 1;
+}
+
+.buildTreeStructuredStoryList {
+  position: relative;
+  display: grid;
+  gap: 0.5rem;
+  margin-left: 1.26rem;
+  padding-left: 1.22rem;
+}
+
+.buildTreeStructuredStoryList::before {
+  position: absolute;
+  top: -0.14rem;
+  bottom: 0.54rem;
+  left: 0.34rem;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 193, 90, 0.48), rgba(255, 193, 90, 0.14));
+  content: "";
+}
+
+.buildTreeStructuredStoryList > .buildTreeStructuredTreeBranch::before {
+  position: absolute;
+  top: 1.36rem;
+  left: -0.86rem;
+  width: 0.84rem;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 193, 90, 0.42);
+  content: "";
+}
+
+.buildTreeStructuredSupportGroup {
+  --node-rgb: 255, 193, 90;
+  position: relative;
+  display: grid;
+  gap: 0.46rem;
+  margin-top: 0.16rem;
+  border: 1px solid rgba(255, 193, 90, 0.18);
+  border-radius: 0.92rem;
+  padding: 0.62rem 0.7rem 0.7rem;
+  background:
+    linear-gradient(90deg, rgba(255, 193, 90, 0.075), transparent 72%),
+    rgba(11, 9, 6, 0.52);
+}
+
+.buildTreeStructuredSupportGroup > span {
+  color: var(--teras-inner-title-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.buildTreeViewerTreeReadOnly {
+  display: grid;
+  min-height: 0;
+  margin-top: 0.45rem;
+  overflow: auto;
+  border: 1px solid rgba(255, 193, 90, 0.16);
+  border-radius: 0.9rem;
+  padding: 0.58rem 0.62rem 0.58rem 0.36rem;
+  background:
+    linear-gradient(180deg, rgba(255, 247, 231, 0.018), rgba(255, 255, 255, 0.004)),
+    rgba(0, 0, 0, 0.16);
+  scrollbar-color: rgba(255, 193, 90, 0.42) rgba(12, 10, 9, 0.72);
+  scrollbar-width: thin;
+}
+
+.buildTreeViewerTreeReadOnly > .buildTreeStructuredTreeBranch {
+  min-width: 64rem;
+}
+
+.buildTreeViewerTreeReadOnly .buildTreeStructuredTreeNode {
+  cursor: default;
+}
+
+.buildTreeViewerTreeReadOnly .buildTreeStructuredTreeNode:hover,
+.buildTreeViewerTreeReadOnly .buildTreeStructuredTreeNode:focus-within {
+  transform: none;
+}
+
+.buildTreeViewerTreeReadOnly .buildTreeStructuredTreeSelect {
+  cursor: default;
+}
+
+.buildTreeViewerStructuredNode {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.buildTreeViewerTreeNodeControls {
+  display: flex;
+  min-width: max-content;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.48rem;
+}
+
+.buildTreeViewerTreeNodeControls .buildTreeStructuredTreeMeta {
+  display: grid !important;
+}
+
+.buildTreeViewerTreeToggle {
+  flex: 0 0 auto;
+  align-self: center;
+}

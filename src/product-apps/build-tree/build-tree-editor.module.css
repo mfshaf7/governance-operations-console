@@ -1,0 +1,102 @@
+.buildTreeEditorGrid {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.62fr);
+  gap: 1rem;
+  overflow: hidden;
+  align-items: stretch;
+}
+
+.buildTreeEditorTreePanel {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  padding: 1.05rem;
+}
+
+.buildTreeEditorViewSwitch {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid rgba(255, 193, 90, 0.22);
+  border-radius: 999px;
+  padding: 0.2rem;
+  background:
+    linear-gradient(180deg, rgba(255, 247, 231, 0.04), rgba(255, 255, 255, 0.012)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.buildTreeEditorViewSwitch button {
+  min-width: 5.7rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.44rem 0.7rem;
+  color: rgba(255, 218, 148, 0.72);
+  background: transparent;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.buildTreeEditorViewSwitch button:hover,
+.buildTreeEditorViewSwitch button:focus-visible {
+  color: rgba(255, 247, 231, 0.94);
+  outline: none;
+}
+
+.buildTreeEditorViewSwitchActive,
+.buildTreeEditorViewSwitch button[aria-pressed="true"] {
+  color: #17130d !important;
+  background:
+    linear-gradient(180deg, rgba(255, 218, 148, 0.96), rgba(255, 193, 90, 0.88));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.56),
+    0 0 18px rgba(255, 193, 90, 0.14);
+}
+
+.buildTreeEditorUtilityRow {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.5rem 0 -0.18rem;
+}
+
+.buildTreeEditorToggleAll {
+  min-width: 4.15rem;
+  border: 1px solid rgba(245, 239, 226, 0.12);
+  border-radius: 0.52rem;
+  padding: 0.24rem 0.42rem;
+  color: rgba(245, 239, 226, 0.48);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 231, 0.018), rgba(255, 255, 255, 0.006)),
+    rgba(0, 0, 0, 0.18);
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.buildTreeEditorToggleAll:hover,
+.buildTreeEditorToggleAll:focus-visible {
+  border-color: rgba(255, 193, 90, 0.26);
+  color: rgba(255, 218, 148, 0.76);
+  background:
+    linear-gradient(180deg, rgba(255, 193, 90, 0.055), rgba(255, 193, 90, 0.018)),
+    rgba(0, 0, 0, 0.24);
+  box-shadow: 0 0 10px rgba(255, 193, 90, 0.055);
+  outline: none;
+}

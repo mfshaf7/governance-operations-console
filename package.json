@@ -1,0 +1,45 @@
+{
+  "name": "governance-operations-console",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "NEXT_TELEMETRY_DISABLED=1 next dev --hostname 127.0.0.1 --port 3317",
+    "build": "NEXT_TELEMETRY_DISABLED=1 next build",
+    "typecheck": "tsc --noEmit",
+    "architecture": "node scripts/guards/run-guards.mjs --all",
+    "architecture:shared": "node scripts/guards/run-guards.mjs --shared",
+    "architecture:delivery": "node scripts/guards/run-guards.mjs --domain delivery",
+    "architecture:orchestration": "node scripts/guards/run-guards.mjs --domain orchestration",
+    "architecture:model-operations": "node scripts/guards/run-guards.mjs --domain model-operations",
+    "test:environment-lifecycle": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/environment-lifecycle/*.test.mjs",
+    "test:lifecycle-transitions": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/lifecycle-transitions/*.test.mjs",
+    "test:operation-runtime": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/operation-runtime/*.test.mjs",
+    "test:system-simulation": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/system-simulation/*.test.mjs",
+    "test:semantics": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/console-architecture/*.test.mjs tests/environment-lifecycle/*.test.mjs tests/operation-workbench/*.test.mjs tests/operation-runtime/*.test.mjs tests/operation-projections/*.test.mjs tests/delivery/*.test.mjs tests/lifecycle-transitions/*.test.mjs tests/model-operations/*.test.mjs tests/orchestration/*.test.mjs tests/prototype/*.test.mjs tests/system-simulation/*.test.mjs",
+    "check": "npm run architecture && npm run test:semantics && npm run typecheck && npm run build"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/space-grotesk": "^5.2.10",
+    "html-to-image": "^1.11.13",
+    "lucide-react": "^0.475.0",
+    "motion": "^12.0.0",
+    "next": "^15.5.22",
+    "postcss": "^8.5.25",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "sharp": "0.35.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}

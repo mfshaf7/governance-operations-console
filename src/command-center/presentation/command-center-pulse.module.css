@@ -1,0 +1,659 @@
+.panel {
+  position: relative;
+  overflow: visible;
+}
+
+.panelOpen {
+  z-index: 4;
+}
+
+.metricGrid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.metricCard,
+.moodCard {
+  position: relative;
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  flex-direction: column;
+  overflow: visible;
+  border-radius: 1rem;
+  padding: 1rem;
+  text-align: left;
+}
+
+.metricCard:focus-visible,
+.moodCard:focus-visible {
+  outline: 2px solid rgba(255, 193, 90, 0.82);
+  outline-offset: 3px;
+}
+
+.metricTop,
+.metricBody {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.metricLabel {
+  color: #fff1d6;
+  font-size: 0.78rem;
+  font-weight: 720;
+}
+
+.metricBody {
+  margin-top: 0.85rem;
+  align-items: flex-end;
+}
+
+.metricBody > strong {
+  color: #fff7e7;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 2.1rem;
+  font-weight: 650;
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(var(--status-rgb), 0.24);
+}
+
+.metricDetail {
+  max-width: 10rem;
+  color: rgba(255, 247, 231, 0.7);
+  font-size: 0.68rem;
+  line-height: 1.15rem;
+  text-align: right;
+}
+
+.metricState {
+  width: fit-content;
+  margin-top: 0.75rem;
+  color: rgba(var(--status-rgb), 0.82);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.54rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+}
+
+.moodCard {
+  margin-top: 1.25rem;
+  background: var(--mood-card-bg);
+}
+
+.moodCard:hover {
+  background: var(--mood-card-hover-bg);
+}
+
+.moodLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.moodPosture {
+  margin-top: 0.55rem;
+  color: rgb(var(--status-rgb));
+  font-size: 1.4rem;
+  font-weight: 720;
+  line-height: 1.2;
+}
+
+.moodDetail {
+  margin-top: 0.55rem;
+  color: rgba(255, 247, 231, 0.68);
+  font-size: 0.72rem;
+  line-height: 1.25rem;
+}
+
+.cardActive,
+.cardActive:hover {
+  z-index: 6;
+  border-color: var(--mood-line);
+  border-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  background: var(--mood-surface);
+  box-shadow: none;
+  color: var(--mood-ink);
+  transform: none;
+}
+
+.cardActive .metricLabel,
+.cardActive .moodLabel {
+  color: var(--mood-kicker);
+}
+
+.cardActive .metricBody > strong,
+.cardActive .moodPosture {
+  color: var(--mood-posture);
+  text-shadow: 0 0 18px var(--mood-posture-glow);
+}
+
+.cardActive .metricDetail,
+.cardActive .moodDetail,
+.cardActive .metricState {
+  color: var(--mood-soft-text);
+}
+
+.sideBridge {
+  display: none;
+}
+
+.focusContent {
+  position: relative;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--mood-ink);
+}
+
+.focusHero,
+.detailSurface {
+  border: 1px solid var(--mood-line);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(
+      circle at 12% 0%,
+      rgba(var(--status-rgb), 0.11),
+      transparent 42%
+    ),
+    var(--mood-hero-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 18px 44px var(--mood-shadow);
+  padding: 1.25rem;
+}
+
+.focusHeader,
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.focusKicker,
+.sectionKicker {
+  color: var(--mood-kicker);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.focusTitle {
+  margin-top: 0.45rem;
+  color: var(--mood-posture);
+  font-size: 1.85rem;
+  font-weight: 720;
+  line-height: 1.15;
+  text-shadow: 0 0 18px var(--mood-posture-glow);
+}
+
+.focusDescription {
+  max-width: 38rem;
+  margin-top: 0.65rem;
+  color: var(--mood-soft-text);
+  font-size: 0.82rem;
+  line-height: 1.4rem;
+}
+
+.backButton {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--mood-line) 72%, transparent);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--mood-kicker);
+}
+
+.backButton:hover {
+  border-color: var(--mood-line);
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.backButton:focus-visible,
+.routeButton:focus-visible,
+.signalRow:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--mood-posture) 70%, white);
+  outline-offset: 3px;
+}
+
+.focusSummary {
+  display: grid;
+  min-width: 7.5rem;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.1rem 0.75rem;
+  text-align: right;
+}
+
+.focusSummary > strong {
+  color: var(--mood-posture);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 2.25rem;
+  line-height: 1;
+}
+
+.focusSummary > small {
+  color: var(--mood-kicker);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.55rem;
+  font-weight: 850;
+  grid-column: 1;
+  letter-spacing: 0.14em;
+}
+
+.focusSummary .backButton {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.projectionStrip {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--mood-line) 60%, transparent);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 0.6rem 0.75rem;
+}
+
+.projectionStrip span {
+  overflow: hidden;
+  color: var(--mood-soft-text);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.56rem;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectionStrip span:first-child {
+  color: var(--mood-kicker);
+}
+
+.projectionStrip span + span {
+  border-left: 1px solid color-mix(in srgb, var(--mood-line) 56%, transparent);
+  padding-left: 0.55rem;
+}
+
+.designSwitcher {
+  margin-top: 0.85rem;
+}
+
+.detailSurface {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  margin-top: 1rem;
+  background:
+    radial-gradient(
+      circle at 10% 0%,
+      rgba(var(--status-rgb), 0.1),
+      transparent 42%
+    ),
+    rgba(8, 12, 9, 0.92);
+  color: var(--text);
+}
+
+.sectionHeader {
+  align-items: center;
+}
+
+.sectionHeader h3 {
+  margin-top: 0.3rem;
+  color: #fff7e7;
+  font-size: 1rem;
+  font-weight: 720;
+}
+
+.sectionHeader p:last-child {
+  margin-top: 0.35rem;
+  color: rgba(247, 240, 228, 0.62);
+  font-size: 0.72rem;
+  line-height: 1.2rem;
+}
+
+.countPill {
+  width: fit-content;
+  flex: 0 0 auto;
+  border: 1px solid rgba(var(--status-rgb), 0.3);
+  border-radius: 999px;
+  background: rgba(var(--status-rgb), 0.09);
+  color: color-mix(in srgb, rgb(var(--status-rgb)) 78%, #fff7e7 22%);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 0.35rem 0.6rem;
+  text-transform: uppercase;
+}
+
+.recordViewport,
+.signalList {
+  display: grid;
+  min-height: 0;
+  max-height: 22rem;
+  align-content: start;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 236, 198, 0.12);
+  border-radius: 0.9rem;
+  background: rgba(3, 7, 10, 0.58);
+  padding: 0.65rem;
+}
+
+.recordRow,
+.signalRow {
+  --row-rgb: 169, 163, 150;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid rgba(var(--row-rgb), 0.24);
+  border-radius: 0.75rem;
+  background:
+    linear-gradient(90deg, rgba(var(--row-rgb), 0.08), transparent 45%),
+    rgba(8, 10, 14, 0.78);
+  padding: 0.8rem;
+}
+
+.recordRow[data-tone="ok"],
+.signalRow[data-tone="ok"] {
+  --row-rgb: 130, 236, 151;
+}
+
+.recordRow[data-tone="warn"],
+.signalRow[data-tone="warn"] {
+  --row-rgb: 255, 193, 90;
+}
+
+.recordRow[data-tone="danger"],
+.signalRow[data-tone="danger"] {
+  --row-rgb: 255, 106, 61;
+}
+
+.recordRow[data-tone="info"],
+.signalRow[data-tone="info"] {
+  --row-rgb: 139, 181, 255;
+}
+
+.recordRow[data-tone="stale"],
+.signalRow[data-tone="stale"] {
+  --row-rgb: 154, 176, 197;
+}
+
+.recordState {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.45rem;
+  color: rgb(var(--row-rgb));
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.recordCopy {
+  display: grid;
+  min-width: 0;
+  gap: 0.24rem;
+}
+
+.recordCopy strong {
+  overflow: hidden;
+  color: #fff7e7;
+  font-size: 0.78rem;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recordCopy small {
+  color: rgba(247, 240, 228, 0.64);
+  font-size: 0.68rem;
+  line-height: 1.1rem;
+}
+
+.recordCopy > span {
+  color: rgba(var(--row-rgb), 0.7);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.54rem;
+  font-weight: 700;
+}
+
+.recordAction {
+  display: flex;
+  min-width: 8.5rem;
+  justify-content: flex-end;
+}
+
+.recordAction > small {
+  color: rgba(247, 240, 228, 0.4);
+  font-size: 0.58rem;
+}
+
+.routeButton {
+  display: inline-flex;
+  width: fit-content;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(255, 193, 90, 0.34);
+  border-radius: 0.55rem;
+  background: rgba(255, 193, 90, 0.1);
+  color: rgba(255, 218, 148, 0.88);
+  font-size: 0.62rem;
+  font-weight: 760;
+  padding: 0.48rem 0.65rem;
+}
+
+.routeButton:hover {
+  border-color: rgba(255, 193, 90, 0.64);
+  background: rgba(255, 193, 90, 0.17);
+}
+
+.emptyState {
+  display: grid;
+  gap: 0.3rem;
+  min-height: 7rem;
+  margin-top: 1rem;
+  place-content: center;
+  border: 1px dashed rgba(245, 239, 226, 0.2);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.035);
+  text-align: center;
+}
+
+.detailSurface > .emptyState {
+  min-height: 0;
+  flex: 1;
+}
+
+.emptyState strong {
+  color: #fff7e7;
+  font-size: 0.78rem;
+}
+
+.emptyState span {
+  color: rgba(247, 240, 228, 0.58);
+  font-size: 0.68rem;
+}
+
+.signalList {
+  flex: 1;
+  max-height: none;
+}
+
+.detailSurface > .recordViewport {
+  flex: 1;
+  max-height: none;
+}
+
+.signalRow {
+  width: 100%;
+  cursor: pointer;
+  grid-template-columns: minmax(0, 1fr) 5rem auto;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.signalRow:hover {
+  border-color: rgba(var(--row-rgb), 0.52);
+  background:
+    linear-gradient(90deg, rgba(var(--row-rgb), 0.13), transparent 48%),
+    rgba(8, 10, 14, 0.9);
+  transform: translateY(-1px);
+}
+
+.signalIdentity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.signalIdentity > span {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.signalIdentity strong {
+  color: #fff7e7;
+  font-size: 0.76rem;
+}
+
+.signalIdentity small {
+  overflow: hidden;
+  color: rgba(247, 240, 228, 0.58);
+  font-size: 0.65rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signalValue {
+  display: grid;
+  gap: 0.15rem;
+  text-align: right;
+}
+
+.signalValue strong {
+  color: rgb(var(--row-rgb));
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.15rem;
+}
+
+.signalValue small {
+  color: rgba(var(--row-rgb), 0.72);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.signalRow > svg {
+  color: rgba(var(--row-rgb), 0.72);
+}
+
+.boundaryNote {
+  margin-top: 0.8rem;
+  color: rgba(247, 240, 228, 0.46);
+  font-size: 0.62rem;
+  line-height: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .panelOpen .cardActive > .sideBridge {
+    position: absolute;
+    top: -1px;
+    right: calc(-1 * var(--system-mood-bridge-width) - 1px);
+    bottom: -1px;
+    z-index: 7;
+    display: block;
+    width: calc(var(--system-mood-bridge-width) + 2px);
+    background: var(--mood-surface);
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .recordRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .recordState {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .focusHeader,
+  .sectionHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .focusSummary {
+    width: 100%;
+    text-align: left;
+  }
+
+  .projectionStrip {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .projectionStrip span + span {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .recordRow,
+  .signalRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .recordState,
+  .recordAction {
+    grid-column: auto;
+  }
+
+  .recordAction {
+    justify-content: flex-start;
+  }
+
+  .signalValue {
+    text-align: left;
+  }
+
+  .signalRow > svg {
+    display: none;
+  }
+}

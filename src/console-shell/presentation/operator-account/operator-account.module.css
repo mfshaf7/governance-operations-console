@@ -1,0 +1,339 @@
+.card {
+  width: 100%;
+  cursor: pointer;
+  border: 1px solid rgba(255, 240, 216, 0.42);
+  border-radius: 1rem;
+  background:
+    radial-gradient(
+      circle at 14% 0%,
+      rgba(255, 193, 90, 0.08),
+      transparent 38%
+    ),
+    linear-gradient(145deg, rgba(255, 249, 238, 0.78), rgba(235, 218, 190, 0.68));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 18px 38px rgba(0, 0, 0, 0.2);
+  color: #17110b;
+  padding: 0.82rem;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.card:hover {
+  border-color: rgba(255, 193, 90, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 20px 40px rgba(0, 0, 0, 0.24);
+  transform: translateY(-2px);
+}
+
+.card:focus-visible {
+  outline: 2px solid rgba(255, 193, 90, 0.92);
+  outline-offset: 3px;
+}
+
+.cardHeader,
+.cardFooter,
+.cardOpenCue,
+.cardTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.cardHeader,
+.cardFooter {
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.cardHeader {
+  margin-bottom: 0.68rem;
+}
+
+.cardTitle {
+  gap: 0.45rem;
+  color: #b95f10;
+  font-size: 0.79rem;
+  font-weight: 760;
+}
+
+.cardTitle svg,
+.cardOpenCue svg {
+  flex: 0 0 auto;
+}
+
+.cardStatus {
+  width: fit-content;
+  max-width: 8.5rem;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 1px solid rgba(23, 17, 11, 0.28);
+  border-radius: 999px;
+  background: rgba(23, 17, 11, 0.08);
+  color: rgba(23, 17, 11, 0.72);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.48rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0.3rem 0.44rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardStatus[data-tone="danger"] {
+  border-color: rgba(150, 43, 20, 0.38);
+  background: rgba(150, 43, 20, 0.1);
+  color: #7f2414;
+}
+
+.cardStatus[data-tone="ok"] {
+  border-color: rgba(22, 112, 57, 0.34);
+  background: rgba(22, 112, 57, 0.09);
+  color: #165c34;
+}
+
+.cardStatus[data-tone="stale"],
+.cardStatus[data-tone="muted"] {
+  border-color: rgba(53, 60, 66, 0.26);
+  background: rgba(53, 60, 66, 0.07);
+  color: rgba(23, 17, 11, 0.56);
+}
+
+.cardIdentity {
+  display: block;
+  border: 1px solid rgba(255, 193, 90, 0.22);
+  border-radius: 0.75rem;
+  background: rgba(8, 10, 14, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 24px rgba(0, 0, 0, 0.16);
+  color: var(--text);
+  padding: 0.76rem 0.8rem;
+}
+
+.cardIdentity strong,
+.cardIdentity span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardIdentity strong {
+  color: #fff7e7;
+  font-size: 1rem;
+  font-weight: 720;
+}
+
+.cardIdentity span {
+  margin-top: 0.25rem;
+  color: rgba(247, 240, 228, 0.66);
+  font-size: 0.65rem;
+}
+
+.cardFooter {
+  margin-top: 0.68rem;
+  color: rgba(23, 17, 11, 0.52);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.53rem;
+  font-weight: 800;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.cardFooter > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardOpenCue {
+  flex: 0 0 auto;
+  gap: 0.28rem;
+  color: rgba(23, 17, 11, 0.78);
+  white-space: nowrap;
+}
+
+.card:hover .cardOpenCue {
+  color: #8e450b;
+}
+
+.accountDialog {
+  display: flex;
+  height: min(45rem, calc(100vh - 3rem));
+  flex-direction: column;
+}
+
+.accountDialog > div:last-child {
+  min-height: 0;
+  max-height: none;
+  flex: 1;
+  padding: 0.5rem 0.65rem;
+}
+
+.accountContent {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.875rem;
+  border: 1px solid rgba(255, 236, 198, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  padding: 0.5rem;
+}
+
+.accountContent > [role="tabpanel"] {
+  min-height: 0;
+}
+
+.accountContent > [role="tabpanel"] > div {
+  height: 100%;
+  align-items: stretch;
+}
+
+.accountContent > [role="tabpanel"] > div > div {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.accountContent > [role="tabpanel"] > div > div > * {
+  flex: 1;
+}
+
+.accountContent [role="tabpanel"] section {
+  display: flex;
+  flex-direction: column;
+}
+
+.accountContent [role="tabpanel"] section > div:nth-child(3) {
+  margin-top: auto;
+}
+
+.accountNavigation {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(255, 193, 90, 0.18);
+  border-radius: 0.9rem;
+  background:
+    radial-gradient(
+      circle at 8% 0%,
+      rgba(255, 193, 90, 0.11),
+      transparent 42%
+    ),
+    rgba(14, 12, 9, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 0.48rem;
+}
+
+.accountIdentity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
+  padding-left: 0.25rem;
+}
+
+.accountIdentityIcon {
+  display: inline-flex;
+  width: 2.35rem;
+  height: 2.35rem;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 193, 90, 0.28);
+  border-radius: 0.72rem;
+  background: rgba(255, 193, 90, 0.08);
+  color: rgba(255, 218, 148, 0.88);
+}
+
+.accountIdentityCopy {
+  display: grid;
+  min-width: 0;
+  gap: 0.14rem;
+}
+
+.accountIdentityName {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.accountIdentityCopy strong,
+.accountIdentityCopy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountIdentityCopy strong {
+  color: rgba(255, 247, 231, 0.92);
+  font-size: 0.74rem;
+  font-weight: 720;
+}
+
+.accountIdentityCopy small {
+  color: rgba(255, 247, 231, 0.48);
+  font-size: 0.58rem;
+}
+
+.accountIdentityStatus {
+  width: fit-content;
+  max-width: 11rem;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 1px solid rgba(139, 181, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(139, 181, 255, 0.1);
+  color: rgba(171, 202, 255, 0.88);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.48rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0.28rem 0.42rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountIdentityStatus[data-tone="ok"] {
+  border-color: rgba(130, 236, 151, 0.34);
+  background: rgba(130, 236, 151, 0.11);
+  color: rgba(164, 247, 180, 0.9);
+}
+
+.accountIdentityStatus[data-tone="warn"] {
+  border-color: rgba(255, 193, 90, 0.36);
+  background: rgba(255, 193, 90, 0.11);
+  color: rgba(255, 211, 137, 0.9);
+}
+
+.accountIdentityStatus[data-tone="danger"] {
+  border-color: rgba(255, 106, 61, 0.38);
+  background: rgba(255, 106, 61, 0.11);
+  color: rgba(255, 143, 109, 0.92);
+}
+
+.accountIdentityStatus[data-tone="stale"],
+.accountIdentityStatus[data-tone="muted"] {
+  border-color: rgba(169, 163, 150, 0.24);
+  background: rgba(169, 163, 150, 0.08);
+  color: rgba(255, 247, 231, 0.58);
+}
+
+@media (max-width: 760px) {
+  .accountNavigation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

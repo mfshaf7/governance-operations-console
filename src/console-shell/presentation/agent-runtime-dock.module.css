@@ -1,0 +1,359 @@
+.dock {
+  position: fixed;
+  top: var(--console-right-dock-edge);
+  right: var(--console-right-dock-edge);
+  z-index: 180;
+  display: grid;
+  width: min(
+    var(--console-right-dock-width),
+    calc(
+      100vw - var(--console-right-dock-edge) -
+        var(--console-right-dock-edge)
+    )
+  );
+  height: calc(
+    100vh - var(--console-agent-dock-height) -
+      var(--console-right-dock-edge) - var(--console-right-dock-edge) -
+      var(--console-right-dock-gap)
+  );
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.75rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 193, 90, 0.34);
+  border-radius: 24px;
+  background:
+    radial-gradient(
+      circle at 8% 0%,
+      rgba(255, 193, 90, 0.09),
+      transparent 38%
+    ),
+    linear-gradient(155deg, rgba(17, 18, 19, 0.96), rgba(7, 8, 11, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(255, 193, 90, 0.035),
+    0 18px 42px rgba(0, 0, 0, 0.32),
+    0 0 34px rgba(255, 193, 90, 0.07);
+  backdrop-filter: blur(22px) saturate(1.18);
+}
+
+.statusCard {
+  --status-border: rgba(var(--status-rgb), 0.62);
+  --status-wash: rgba(var(--status-rgb), 0.34);
+  --status-wash-soft: rgba(var(--status-rgb), 0.16);
+  --status-hover-wash: rgba(var(--status-rgb), 0.46);
+  --status-hover-soft: rgba(var(--status-rgb), 0.22);
+  --status-shadow: rgba(var(--status-rgb), 0.28);
+  --status-hover-shadow: rgba(var(--status-rgb), 0.4);
+  min-width: 0;
+  width: 100%;
+  padding: 1rem;
+  border-radius: 16px;
+  cursor: pointer;
+  text-align: left;
+  background:
+    radial-gradient(circle at 12% 0%, var(--status-wash), transparent 44%),
+    linear-gradient(145deg, var(--status-wash-soft), rgba(255, 255, 255, 0.07)),
+    rgba(9, 14, 13, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 0 1px rgba(var(--status-rgb), 0.08),
+    0 22px 54px var(--status-shadow),
+    0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
+.statusCard:hover {
+  background:
+    radial-gradient(circle at 12% 0%, var(--status-hover-wash), transparent 44%),
+    linear-gradient(145deg, var(--status-hover-soft), rgba(255, 255, 255, 0.08)),
+    rgba(9, 14, 13, 0.9);
+}
+
+.statusCard:focus-visible {
+  outline: 2px solid rgba(255, 193, 90, 0.82);
+  outline-offset: 4px;
+}
+
+.statusHeader,
+.statusTitle {
+  display: flex;
+  align-items: center;
+}
+
+.statusHeader {
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.statusTitle {
+  min-width: 0;
+  gap: 0.5rem;
+  color: rgba(255, 250, 238, 0.96);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.statePill {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.62rem;
+  color: #071008;
+  border: 1px solid rgba(var(--status-rgb), 0.72);
+  border-radius: 999px;
+  background: rgba(var(--status-rgb), 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 22px rgba(var(--status-rgb), 0.22);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+
+.providerShell {
+  padding: 0.75rem;
+  border: 1px solid rgba(var(--status-rgb), 0.38);
+  border-radius: 16px;
+  background:
+    linear-gradient(145deg, rgba(var(--status-rgb), 0.18), rgba(6, 9, 9, 0.82)),
+    rgba(4, 8, 7, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(var(--status-rgb), 0.05),
+    0 14px 28px rgba(0, 0, 0, 0.2);
+}
+
+.providerLabel,
+.openHint {
+  font-family: var(--font-geist-mono), monospace;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.providerLabel {
+  color: rgba(var(--status-rgb), 0.78);
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+}
+
+.providerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.providerName {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 250, 238, 0.98);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelPill {
+  flex: 0 0 auto;
+  max-width: 48%;
+  overflow: hidden;
+  padding: 0.3rem 0.72rem;
+  color: #1b0f05;
+  border: 1px solid rgba(255, 193, 90, 0.7);
+  border-radius: 999px;
+  background:
+    linear-gradient(145deg, rgba(255, 193, 90, 0.95), rgba(255, 143, 64, 0.9));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 10px 22px rgba(255, 143, 64, 0.2);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtimeDetail {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.openHint {
+  margin-top: 0.72rem;
+  color: rgba(255, 236, 198, 0.66);
+  font-size: 0.64rem;
+  letter-spacing: 0.16em;
+}
+
+.roster {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  padding: 0.65rem;
+  border: 1px solid rgba(245, 239, 226, 0.15);
+  border-radius: 16px;
+  background: rgba(245, 239, 226, 0.035);
+}
+
+.rosterHeader {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.rosterHeader p {
+  color: rgba(255, 193, 90, 0.72);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.rosterHeader span {
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  place-items: center;
+  color: rgba(247, 240, 228, 0.84);
+  border: 1px solid rgba(245, 239, 226, 0.16);
+  border-radius: 999px;
+  background: rgba(5, 7, 9, 0.54);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.runtimeList {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  padding: 0.3rem;
+  overflow-y: auto;
+  border: 1px solid rgba(245, 239, 226, 0.11);
+  border-radius: 12px;
+  background: rgba(3, 5, 7, 0.38);
+}
+
+.runtimeRow {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+  padding: 0.38rem 0.55rem;
+  cursor: pointer;
+  color: rgba(247, 240, 228, 0.82);
+  border: 1px solid rgba(245, 239, 226, 0.1);
+  border-radius: 10px;
+  background: rgba(5, 7, 9, 0.48);
+  font-size: 0.75rem;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.runtimeRow:hover {
+  border-color: rgba(255, 193, 90, 0.34);
+  background: rgba(255, 193, 90, 0.065);
+  box-shadow: inset 2px 0 0 rgba(255, 193, 90, 0.62);
+}
+
+.runtimeRow:focus-visible {
+  outline: 2px solid rgba(255, 193, 90, 0.78);
+  outline-offset: 2px;
+}
+
+.runtimeRowHeader,
+.runtimeRowMeta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.runtimeRowHeader strong {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(247, 240, 228, 0.9);
+  font-size: 0.68rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtimeRowStatus {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.57rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.runtimeRowMeta {
+  color: rgba(169, 163, 150, 0.72);
+  font-size: 0.58rem;
+}
+
+.runtimeRowMeta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtimeRowMeta span:last-child {
+  text-align: right;
+}
+
+.statusDot {
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.emptyRoster {
+  padding: 0.9rem;
+  color: rgba(169, 163, 150, 0.7);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+@media (max-width: 1199px) {
+  .dock {
+    display: none;
+  }
+}
+
+@media (max-height: 820px) {
+  .dock {
+    gap: 0.55rem;
+    padding: 0.55rem;
+  }
+
+  .statusCard {
+    padding: 0.75rem;
+  }
+
+  .roster {
+    padding: 0.55rem;
+  }
+}

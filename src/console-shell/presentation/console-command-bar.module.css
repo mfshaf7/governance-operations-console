@@ -1,0 +1,47 @@
+.layout {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  align-items: start;
+  gap: 1.5rem;
+}
+
+.copy,
+.accountSlot {
+  min-width: 0;
+}
+
+.accountSlot {
+  width: min(100%, 320px);
+}
+
+@media (min-width: 1200px) and (max-width: 1439px) {
+  .layout {
+    width: calc(
+      100% - var(--console-navigation-width) - var(--console-right-dock-width) -
+        var(--console-navigation-gap) - var(--console-navigation-gap)
+    );
+    min-width: 320px;
+    margin-left: calc(
+      var(--console-navigation-width) + var(--console-navigation-gap)
+    );
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .layout {
+    width: calc(
+      100% - var(--console-right-dock-width) - var(--console-right-dock-gap)
+    );
+  }
+}
+
+@media (min-width: 1920px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .accountSlot {
+    justify-self: end;
+  }
+}

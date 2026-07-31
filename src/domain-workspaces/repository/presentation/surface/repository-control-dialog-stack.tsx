@@ -1,0 +1,91 @@
+import { TerasDraftCloseGuardDialog } from "@/teras";
+
+import { RepositoryAdmissionDialog } from "../dialogs/admission/repository-admission-dialog.tsx";
+import { RepositoryAdmissionRunDialog } from "../dialogs/admission/repository-admission-run-dialog.tsx";
+import { RepositoryDetailDialog } from "../dialogs/details/repository-detail-dialog.tsx";
+import { RepositoryGateResolutionDialog } from "../dialogs/gate-resolution/repository-gate-resolution-dialog.tsx";
+import { RepositoryHistoryDialog } from "../dialogs/history/repository-history-dialog.tsx";
+import { RepositoryRequestDialog } from "../dialogs/request/repository-request-dialog.tsx";
+import { RepositoryRetirementRequestDialog } from "../dialogs/retirement/repository-retirement-request-dialog.tsx";
+import type { RepositoryControlController } from "./use-repository-control-controller.ts";
+
+export function RepositoryControlDialogStack({
+  controller,
+}: {
+  controller: RepositoryControlController;
+}) {
+  return (
+    <>
+      <RepositoryRequestDialog
+        canSubmit={controller.request.canSubmit}
+        draft={controller.request.draft}
+        onClose={controller.request.close}
+        onSubmit={controller.request.onSubmit}
+        onUpdateDraft={controller.request.onUpdateDraft}
+        open={controller.request.open}
+      />
+
+      <TerasDraftCloseGuardDialog
+        description="This repository request has unsaved local fields. Leaving will discard the draft from this prototype session."
+        kicker="Repository Request"
+        leaveLabel="Discard Draft"
+        onKeepEditing={controller.request.keepEditing}
+        onLeave={controller.request.discard}
+        open={controller.request.closeGuardOpen}
+        title="Close Draft?"
+      />
+
+      <RepositoryDetailDialog
+        onClose={controller.details.close}
+        onOpenHistory={controller.details.onOpenHistory}
+        onResolveProposalGate={controller.details.onResolveProposalGate}
+        repository={controller.details.repository}
+      />
+      <RepositoryGateResolutionDialog
+        key={
+          controller.gateResolution.repository?.id ??
+          "repository-gate-resolution"
+        }
+        onClose={controller.gateResolution.close}
+        onRecordResolution={controller.gateResolution.onRecordResolution}
+        repository={controller.gateResolution.repository}
+      />
+      <RepositoryAdmissionDialog
+        onClose={controller.admission.close}
+        onOpenHistory={controller.admission.onOpenHistory}
+        onOpenRetirementRequest={controller.admission.onOpenRetirementRequest}
+        onStart={controller.admission.onStart}
+        receipt={controller.admission.receipt}
+        repository={controller.admission.repository}
+      />
+      <RepositoryHistoryDialog
+        onClose={controller.history.close}
+        receipts={controller.history.receipts}
+        repository={controller.history.repository}
+      />
+      <RepositoryAdmissionRunDialog
+        onBack={controller.admissionRun.onBack}
+        onClose={controller.admissionRun.close}
+        onRun={controller.admissionRun.onRun}
+        receipt={controller.admissionRun.receipt}
+        repository={controller.admissionRun.repository}
+      />
+      <RepositoryRetirementRequestDialog
+        onClose={controller.retirement.close}
+        onRequestRecord={controller.retirement.onRequestRecord}
+        receipt={controller.retirement.receipt}
+        repository={controller.retirement.repository}
+      />
+      <TerasDraftCloseGuardDialog
+        description={controller.retirement.guardDescription}
+        keepEditingLabel="Back"
+        kicker="Repository Retirement"
+        leaveLabel="Record Retirement Request"
+        onKeepEditing={controller.retirement.onKeepEditing}
+        onLeave={controller.retirement.onRecordRequest}
+        open={controller.retirement.guardOpen}
+        title="Confirm Retirement Request?"
+      />
+    </>
+  );
+}
