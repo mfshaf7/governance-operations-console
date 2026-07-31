@@ -1,0 +1,590 @@
+import type { RepositoryWorkspaceRecord } from "../../../domain/repository-types.ts";
+import {
+  postureGroup,
+  postureItem as repositoryPostureItem,
+  runtimeLane,
+  securityBinding,
+} from "../repository-fixture-builders.ts";
+
+function postureItem(label: string, value: string, detail: string, tone: "ok") {
+  return repositoryPostureItem(label, value, detail, "clear", tone);
+}
+
+export const repositoryActiveRecords: RepositoryWorkspaceRecord[] = [
+  {
+    admissionPosture: [
+      postureGroup(
+        "intake",
+        "Intake Decision",
+        "Active Repo",
+        "Repository is active in workspace governance.",
+        "ok",
+        [
+          postureItem(
+            "Decision",
+            "admitted",
+            "Active repo entry exists in contracts/repos.yaml.",
+            "ok",
+          ),
+          postureItem(
+            "README.md",
+            "present",
+            "Primary repo orientation surface exists.",
+            "ok",
+          ),
+          postureItem(
+            "AGENTS.md",
+            "present",
+            "Repo-local guidance exists.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "identity",
+        "Repository Identity",
+        "Ownership",
+        "Prototype Studio owns incubation source and local prototype records.",
+        "ok",
+        [
+          postureItem(
+            "Repo class",
+            "product-incubation",
+            "Fast prototype and product-incubation source lane.",
+            "ok",
+          ),
+          postureItem(
+            "Owns",
+            "declared",
+            "Prototype source, design baselines, mock fixtures, and graduation records.",
+            "ok",
+          ),
+          postureItem(
+            "Must not own",
+            "declared",
+            "Production releases, security acceptance, and long-lived product source after graduation.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "validation",
+        "Validation Behavior",
+        "WGCF Graph",
+        "Validation posture is owner-repo covered.",
+        "ok",
+        [
+          postureItem(
+            "Posture",
+            "covered-by-owner-repo",
+            "Prototype Studio owns local validation while baseline is still incubating.",
+            "ok",
+          ),
+          postureItem(
+            "Graph role",
+            "product-runtime-source",
+            "WGCF sees this as an incubation source, not platform release authority.",
+            "ok",
+          ),
+          postureItem(
+            "Catalog refs",
+            "declared",
+            "component-contracts and review-coverage.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "repo-rules",
+        "Repo Rule Posture",
+        "Repo Rules",
+        "Required review controls and security triggers are declared.",
+        "ok",
+        [
+          postureItem(
+            "Repo rules",
+            "present",
+            "workspace-prototype-studio repo-rule exists.",
+            "ok",
+          ),
+          postureItem(
+            "Review controls",
+            "present",
+            "CODEOWNERS, PR template, and validation workflow requirements are declared.",
+            "ok",
+          ),
+          postureItem(
+            "Security triggers",
+            "declared",
+            "Real data, client-visible exposure, or mutable external systems trigger security review.",
+            "ok",
+          ),
+        ],
+      ),
+    ],
+    admissionState: "admitted",
+    blockers: [],
+    boundary:
+      "Prototype and product-incubation source only; no production release authority.",
+    githubUrl: "git@github.com:mfshaf7/workspace-prototype-studio.git",
+    id: "repo-workspace-prototype-studio",
+    lastValidation: "make validate / passing",
+    lifecycle: "active",
+    name: "workspace-prototype-studio",
+    nextAction: "Keep prototype records current until baseline or graduation.",
+    owner: "Prototype Studio",
+    purpose:
+      "Fast design and product-incubation lane for internal tools, UI prototypes, and future client apps.",
+    repoClass: "product-incubation",
+    role: "prototype",
+    routeSource: "openproject://work_packages/681",
+    runtimeLane: runtimeLane(
+      "local-only",
+      "prototype-lane",
+      "Prototype preview and validation stay local until graduation or a governed product path exists.",
+      "info",
+    ),
+    securityBinding: securityBinding(
+      false,
+      true,
+      "baseline-linked",
+      "Prototype Studio has baseline security review coverage; high-risk prototype changes trigger delta review.",
+      "ok",
+      "docs/reviews/components/2026-05-06-workspace-prototype-studio-product-incubation-baseline.md",
+    ),
+    tone: "ok",
+  },
+  {
+    admissionPosture: [
+      postureGroup(
+        "intake",
+        "Intake Decision",
+        "Active Repo",
+        "Workspace governance is an active authority repo.",
+        "ok",
+        [
+          postureItem(
+            "Decision",
+            "admitted",
+            "Active repo entry exists in contracts/repos.yaml.",
+            "ok",
+          ),
+          postureItem(
+            "README.md",
+            "present",
+            "Primary workspace governance surface exists.",
+            "ok",
+          ),
+          postureItem(
+            "AGENTS.md",
+            "present",
+            "Workspace routing guidance exists.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "identity",
+        "Repository Identity",
+        "Ownership",
+        "Workspace Governance owns central contracts and routing.",
+        "ok",
+        [
+          postureItem(
+            "Repo class",
+            "governance",
+            "Workspace control-plane source.",
+            "ok",
+          ),
+          postureItem(
+            "Owns",
+            "declared",
+            "Workspace-root guidance, contracts, audits, intake, and skill source.",
+            "ok",
+          ),
+          postureItem(
+            "Must not own",
+            "declared",
+            "Platform rollout, product source, runtime packaging, and security standards stay elsewhere.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "validation",
+        "Validation Behavior",
+        "WGCF Graph",
+        "Workspace Governance owns catalog truth consumed by WGCF.",
+        "ok",
+        [
+          postureItem(
+            "Posture",
+            "catalog-owner",
+            "Owns validator identity and admission policy.",
+            "ok",
+          ),
+          postureItem(
+            "Graph role",
+            "catalog-authority-source",
+            "WGCF consumes this as catalog authority.",
+            "ok",
+          ),
+          postureItem(
+            "Catalog refs",
+            "declared",
+            "contract-model, intake-model, component-contracts, workspace-layout, codex-review-controls.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "repo-rules",
+        "Repo Rule Posture",
+        "Repo Rules",
+        "Workspace governance repo-rule and review-control requirements exist.",
+        "ok",
+        [
+          postureItem(
+            "Repo rules",
+            "present",
+            "workspace-governance repo-rule exists.",
+            "ok",
+          ),
+          postureItem(
+            "Root sync",
+            "enabled",
+            "Root guidance is materialized from workspace-governance/workspace-root.",
+            "ok",
+          ),
+          postureItem(
+            "Review controls",
+            "present",
+            "Review guidance and validation controls are declared.",
+            "ok",
+          ),
+        ],
+      ),
+    ],
+    admissionState: "admitted",
+    blockers: [],
+    boundary:
+      "Workspace contracts, routing rules, instruction governance, and root guidance.",
+    githubUrl: "git@github.com:mfshaf7/workspace-governance.git",
+    id: "repo-workspace-governance",
+    lastValidation: "workspace audit / passing",
+    lifecycle: "active",
+    name: "workspace-governance",
+    nextAction:
+      "Keep contracts and root sync controls aligned with active repos.",
+    owner: "Workspace Governance",
+    purpose:
+      "Canonical workspace governance contracts and cross-repo routing model.",
+    repoClass: "governance",
+    role: "governance",
+    routeSource: "workspace-root authority",
+    runtimeLane: runtimeLane(
+      "no-runtime",
+      "not-required",
+      "Governance records and validators do not require a repo-specific runtime lane.",
+      "muted",
+    ),
+    securityBinding: securityBinding(
+      false,
+      true,
+      "review-coverage",
+      "Workspace governance is security-review visible, but does not require repo-local security bindings.",
+      "info",
+    ),
+    tone: "ok",
+  },
+  {
+    admissionPosture: [
+      postureGroup(
+        "intake",
+        "Intake Decision",
+        "Active Repo",
+        "OOS is active as the shared operator workflow service.",
+        "ok",
+        [
+          postureItem(
+            "Decision",
+            "admitted",
+            "Active repo entry exists in contracts/repos.yaml.",
+            "ok",
+          ),
+          postureItem(
+            "README.md",
+            "present",
+            "Primary repo orientation surface exists.",
+            "ok",
+          ),
+          postureItem(
+            "AGENTS.md",
+            "present",
+            "Repo-local workflow and review guidance exists.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "identity",
+        "Repository Identity",
+        "Ownership",
+        "OOS owns shared operator workflow APIs and adapters.",
+        "ok",
+        [
+          postureItem(
+            "Repo class",
+            "shared-operator-service",
+            "Shared workflow orchestration service.",
+            "ok",
+          ),
+          postureItem(
+            "Owns",
+            "declared",
+            "Broker-backed workflow orchestration, bounded AI-assist orchestration, and OpenProject adapters.",
+            "ok",
+          ),
+          postureItem(
+            "Must not own",
+            "declared",
+            "Workspace contracts, platform release, and security acceptance remain external.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "validation",
+        "Validation Behavior",
+        "WGCF Graph",
+        "OOS is visible through profile-gated validation.",
+        "ok",
+        [
+          postureItem(
+            "Posture",
+            "profile-gated-external-owner",
+            "WGCF may consume broker evidence through explicit profile gates.",
+            "ok",
+          ),
+          postureItem(
+            "Graph role",
+            "operator-workflow-source",
+            "OOS remains the ART/workflow mutation authority.",
+            "ok",
+          ),
+          postureItem(
+            "Catalog refs",
+            "declared",
+            "delivery-art-broker-read and OpenProject adapter checks.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "repo-rules",
+        "Repo Rule Posture",
+        "Repo Rules",
+        "Review and security-control requirements exist.",
+        "ok",
+        [
+          postureItem(
+            "Repo rules",
+            "present",
+            "operator-orchestration-service repo-rule exists.",
+            "ok",
+          ),
+          postureItem(
+            "Review controls",
+            "present",
+            "CODEOWNERS, PR template, and validation workflow requirements are declared.",
+            "ok",
+          ),
+          postureItem(
+            "Security triggers",
+            "declared",
+            "Broker runtime, auth, secret-delivery, and adapter changes trigger review.",
+            "ok",
+          ),
+        ],
+      ),
+    ],
+    admissionState: "admitted",
+    blockers: [],
+    boundary:
+      "Shared operator workflow APIs and OpenProject workflow adapters.",
+    githubUrl: "git@github.com:mfshaf7/operator-orchestration-service.git",
+    id: "repo-operator-orchestration-service",
+    lastValidation: "api contract smoke / passing",
+    lifecycle: "active",
+    name: "operator-orchestration-service",
+    nextAction:
+      "Prepare orchestration implementation after console design baseline.",
+    owner: "OOS",
+    purpose:
+      "Shared workflow orchestration and request/approval adapter service.",
+    repoClass: "shared-operator-service",
+    role: "workflow",
+    routeSource: "openproject://work_packages/698",
+    runtimeLane: runtimeLane(
+      "dev-integration-required",
+      "profile-managed",
+      "OOS dev-integration profiles are handled by the Devint/Profile Control path, not Repository Control.",
+      "info",
+      "accepted-idea-delivery",
+    ),
+    securityBinding: securityBinding(
+      true,
+      true,
+      "baseline-linked",
+      "OOS has runtime-admission review coverage and delta triggers for broker/API changes.",
+      "ok",
+      "docs/reviews/components/2026-04-18-operator-orchestration-service-runtime-admission.md",
+    ),
+    tone: "ok",
+  },
+  {
+    admissionPosture: [
+      postureGroup(
+        "intake",
+        "Intake Decision",
+        "Active Repo",
+        "CGG is active as a governance-runtime repository.",
+        "ok",
+        [
+          postureItem(
+            "Decision",
+            "admitted",
+            "Active repo entry exists in contracts/repos.yaml.",
+            "ok",
+          ),
+          postureItem(
+            "README.md",
+            "present",
+            "Operational Context Governance orientation exists.",
+            "ok",
+          ),
+          postureItem(
+            "AGENTS.md",
+            "present",
+            "Context admission and fail-closed guidance exists.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "identity",
+        "Repository Identity",
+        "Ownership",
+        "CGG owns context admission implementation, not platform/security authority.",
+        "ok",
+        [
+          postureItem(
+            "Repo class",
+            "governance-runtime",
+            "Shared governance runtime component implementation.",
+            "ok",
+          ),
+          postureItem(
+            "Owns",
+            "declared",
+            "Context capture, redaction, packet generation, receipts, manifests, and local ledger behavior.",
+            "ok",
+          ),
+          postureItem(
+            "Must not own",
+            "declared",
+            "WGCF readiness, ART mutation, platform deployment, security acceptance, and custom LLM gateway authority stay external.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "validation",
+        "Validation Behavior",
+        "WGCF Graph",
+        "CGG is a profile-gated external owner and context packet provider.",
+        "ok",
+        [
+          postureItem(
+            "Posture",
+            "profile-gated-external-owner",
+            "WGCF may consume CGG evidence only through explicit profile gates.",
+            "ok",
+          ),
+          postureItem(
+            "Graph role",
+            "context-packet-provider",
+            "CGG provides packets and receipts; it does not replace WGCF.",
+            "ok",
+          ),
+          postureItem(
+            "Catalog refs",
+            "declared",
+            "developer-integration, devint-runner-read, security-bindings, review-coverage.",
+            "ok",
+          ),
+        ],
+      ),
+      postureGroup(
+        "repo-rules",
+        "Repo Rule Posture",
+        "Repo Rules",
+        "CGG repo-rule and security review triggers exist.",
+        "ok",
+        [
+          postureItem(
+            "Repo rules",
+            "present",
+            "context-governance-gateway repo-rule exists.",
+            "ok",
+          ),
+          postureItem(
+            "Review controls",
+            "present",
+            "CODEOWNERS, PR template, and validation workflow requirements are declared.",
+            "ok",
+          ),
+          postureItem(
+            "Context behavior",
+            "declared",
+            "Context-behavior and raw-context retirement contracts cover CGG paths.",
+            "ok",
+          ),
+        ],
+      ),
+    ],
+    admissionState: "admitted",
+    blockers: [],
+    boundary:
+      "Operational Context Governance and context admission control implementation.",
+    githubUrl: "git@github.com:mfshaf7/context-governance-gateway.git",
+    id: "repo-context-governance-gateway",
+    lastValidation: "devint smoke / passing",
+    lifecycle: "active",
+    name: "context-governance-gateway",
+    nextAction:
+      "Keep repository admission current; runtime profile and stage handoff remain separate platform/security workflows.",
+    owner: "CGG",
+    purpose:
+      "Capture, classify, redact, budget, and packetize operational context before model or operator use.",
+    repoClass: "governance-runtime",
+    role: "context-control",
+    routeSource: "openproject://work_packages/395",
+    runtimeLane: runtimeLane(
+      "dev-integration-required",
+      "profile-active",
+      "Active local dev-integration profile exists, but stage/prod runtime admission is handled by the platform/security admission path.",
+      "info",
+      "context-governance-gateway",
+    ),
+    securityBinding: securityBinding(
+      true,
+      true,
+      "baseline-linked",
+      "Security binding exists for context custody, runtime, and AI-related review triggers.",
+      "ok",
+      "docs/reviews/components/2026-05-05-context-governance-gateway-phase-1-local-custody.md",
+    ),
+    tone: "ok",
+  },
+];

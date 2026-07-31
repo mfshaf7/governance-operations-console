@@ -18,8 +18,23 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install product dependencies
+        run: npm ci
+
       - name: Validate repository
         run: python3 scripts/validate_repository.py
 
       - name: Compile validator
         run: python3 -m py_compile scripts/validate_repository.py
+
+      - name: Validate approved product baseline
+        run: npm run check
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev

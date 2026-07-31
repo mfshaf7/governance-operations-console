@@ -1,0 +1,1451 @@
+schema_version: 1
+
+system:
+  id: governance-operations-console
+  name: Workspace Governance Operations Console
+  owner_repo: governance-operations-console
+  prototype_lifecycle: graduated
+  design_status: approved-target
+  data_mode: real-readonly
+  mutation_boundary: prototype-local
+  target_role: >
+    Provide one coherent operator surface over workspace governance, delivery,
+    prototype, product, repository, model, orchestration, environment, runtime,
+    identity, and evidence authorities without becoming their canonical store.
+  current_work_home: governance-operations-console
+  post_baseline_work_home_rule: >
+    Route each implementation slice to the authority or adapter owner that must
+    review, deploy, validate, and roll it back.
+  non_goals:
+    - Own a Console business database for canonical workspace records.
+    - Replace Workspace Governance, OOS, WGCF, OpenProject, Platform Engineering, Security Architecture, CGG, or owner repositories.
+    - Present prototype-local commands or receipts as live backend effects.
+    - Constrain the approved target architecture to only the APIs implemented before baseline approval.
+
+vocabularies:
+  design_status:
+    - observed-current
+    - approved-target
+    - proposed
+    - retired
+  console_implementation:
+    - implemented
+    - partial
+    - prototype-only
+    - not-started
+    - retired
+  backend_support:
+    - implemented
+    - partial
+    - missing
+    - not-required
+    - unverified
+  adapter_status:
+    - connected
+    - prototype-local
+    - missing
+    - not-required
+  delivery_phase:
+    - pre-baseline
+    - baseline-gate
+    - post-baseline
+
+planes:
+  operator-experience:
+    role: Console shell, navigation, dashboards, focused workspaces, dialogs, and bounded assistance.
+  domain-operations:
+    role: Domain-owned proposal, repository, model, delivery, prototype, portfolio, and orchestration behavior.
+  cross-domain-control:
+    role: Transition correlation, environment operations, attention routing, and read-only runtime posture.
+  governance-evidence:
+    role: Workspace policy, validation planning, readiness, context admission, receipts, and security decisions.
+  workflow-execution:
+    role: Bounded operator workflow APIs, adapters, retries, correlation, and future durable execution.
+  canonical-authority:
+    role: Durable business, product, repository, prototype, delivery, source, and platform records.
+  runtime-release:
+    role: Local integration, stage, production, product runtime, and release execution.
+  interface-infrastructure:
+    role: Product-neutral UI primitives and incubating reusable product applications.
+
+global_invariants:
+  - Business lifecycle, cross-domain transition state, command state, runtime state, and evidence freshness remain separate.
+  - A prepared packet is not target admission, authorization, application, or completion.
+  - The source and target never both mutate the same canonical record.
+  - A target-owned receipt is required before target custody or application is projected.
+  - The Console stores only ephemeral UI state, local drafts, prototype-local receipts, safe preferences, and disposable caches.
+  - Backend absence is an implementation gap, not evidence that an approved target capability is invalid.
+  - A future capability must remain visibly unavailable or prototype-local until its authority backend and adapter are proven.
+  - Routine policy-clear handoffs do not gain an extra central approval step.
+  - Exceptions, waivers, and accepted-risk decisions remain with the authority named by the governing control.
+  - Every mutable command checks actor authority, source version, idempotency, and receipt reconciliation.
+  - Long or sensitive operational context is projected through CGG after admission rather than copied raw into the Console or a model prompt.
+  - Workspace intake classifies repos, products, and components before active governance; an admitted intake entry is not an active inventory record, released product, or Portfolio listing.
+
+authorities:
+  workspace-governance:
+    label: Workspace Governance
+    owner_repo: workspace-governance
+    plane: canonical-authority
+    owns:
+      - Workspace contracts, controlled vocabularies, repo and product inventory, intake decisions, and routing rules.
+    must_not_own:
+      - Runtime execution, platform release, security acceptance, product source, or ART mutation.
+    implementation:
+      backend_support: implemented
+      delivery_phase: pre-baseline
+
+  workspace-governance-control-fabric:
+    label: Workspace Governance Control Fabric
+    owner_repo: workspace-governance-control-fabric
+    plane: governance-evidence
+    owns:
+      - Governance graph, validation planning, admission and readiness evaluation, receipts, and ledger runtime.
+    must_not_own:
+      - Workspace contracts, platform release authority, security acceptance, or ART mutation.
+    implementation:
+      backend_support: implemented
+      delivery_phase: pre-baseline
+
+  operator-orchestration-service:
+    label: Operator Orchestration Service
+    owner_repo: operator-orchestration-service
+    plane: workflow-execution
+    owns:
+      - Shared workflow APIs, OpenProject adapters, correlation, audit, and bounded retry or run-control contracts.
+    must_not_own:
+      - Workspace contracts, product source, platform release authority, or security acceptance.
+    implementation:
+      backend_support: partial
+      delivery_phase: pre-baseline
+
+  openproject:
+    label: OpenProject
+    owner_repo: platform-engineering
+    plane: canonical-authority
+    owns:
+      - Canonical Proposal backlog records and Workspace Delivery ART work-state records.
+    must_not_own:
+      - Workspace policy, product registry, source repositories, or platform release authority.
+    implementation:
+      backend_support: implemented
+      delivery_phase: pre-baseline
+
+  workspace-prototype-studio:
+    label: Workspace Prototype Studio
+    owner_repo: workspace-prototype-studio
+    plane: canonical-authority
+    owns:
+      - Prototype registry, lifecycle records, design baselines, local fixtures, and incubation source before graduation.
+    must_not_own:
+      - Production release, security acceptance, ART truth, or long-lived graduated product source.
+    implementation:
+      backend_support: implemented
+      delivery_phase: pre-baseline
+
+  platform-engineering:
+    label: Platform Engineering
+    owner_repo: platform-engineering
+    plane: runtime-release
+    owns:
+      - Dev-integration runner, environment contracts, product integration, Argo state, stage, production, and release execution.
+    must_not_own:
+      - Workspace contracts, source-product behavior, or security standards.
+    implementation:
+      backend_support: implemented
+      delivery_phase: pre-baseline
+
+  security-architecture:
+    label: Security Architecture
+    owner_repo: security-architecture
+    plane: governance-evidence
+    owns:
+      - Trust-boundary standards, security review, findings, acceptance, and security exception decisions.
+    must_not_own:
+      - Runtime rollout, product packaging, or ordinary domain workflow decisions.
+    implementation:
+      backend_support: implemented
+      delivery_phase: pre-baseline
+
+  context-governance-gateway:
+    label: Context Governance Gateway
+    owner_repo: context-governance-gateway
+    plane: governance-evidence
+    owns:
+      - Context capture, normalization, redaction, budgeting, model-safe and operator-safe packets, receipts, and local ledger behavior.
+    must_not_own:
+      - WGCF validation, ART mutation, model invocation, platform release, or security acceptance.
+    implementation:
+      backend_support: partial
+      delivery_phase: pre-baseline
+
+  owner-repositories:
+    label: Product And Source Owner Repositories
+    owner_repo: null
+    plane: canonical-authority
+    owns:
+      - Durable product and component source, product-owned manifests, versioned behavior, and source-level evidence.
+    must_not_own:
+      - Workspace-wide intake policy, platform release authority, or security acceptance.
+    implementation:
+      backend_support: implemented
+      delivery_phase: pre-baseline
+
+  federated-identity-access:
+    label: Federated Identity And Platform Access
+    owner_repo: platform-engineering
+    security_owner_repo: security-architecture
+    plane: canonical-authority
+    owns:
+      - Authentication, sessions, group-to-role mapping, named authority, access requests, and authorization enforcement.
+    must_not_own:
+      - Domain business decisions or Console-local presentation preferences.
+    implementation:
+      backend_support: missing
+      delivery_phase: post-baseline
+
+capabilities:
+  console-shell:
+    label: Console Shell
+    plane: operator-experience
+    kind: shell
+    role: Compose the whole Console, global navigation, focused workspace mounting, context candidates, account entry, and close guards.
+    authority_refs:
+      - owner-repositories
+    canonical_records: []
+    must_not_own:
+      - Domain lifecycle, domain action eligibility, runtime truth, model authority, or receipts.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: not-required
+      live_adapter: not-required
+      delivery_phase: pre-baseline
+
+  command-center:
+    label: Command Center Focus
+    plane: cross-domain-control
+    kind: projection
+    role: Rank and route current operator attention from public owner-domain sources without executing the action.
+    authority_refs:
+      - operator-orchestration-service
+      - workspace-governance-control-fabric
+      - platform-engineering
+    canonical_records: []
+    must_not_own:
+      - Domain state, mutation, approval, chronology, or autonomous recovery.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: prototype-local
+      delivery_phase: pre-baseline
+    post_baseline_work:
+      - Connect admitted owner-domain attention projections incrementally.
+
+  workspace-pulse:
+    label: Workspace Pulse
+    plane: operator-experience
+    kind: aggregate-projection
+    role: Summarize overall workspace posture and system mood without becoming an actionable queue.
+    authority_refs:
+      - workspace-governance-control-fabric
+      - operator-orchestration-service
+      - platform-engineering
+    canonical_records: []
+    must_not_own:
+      - Required moves, domain mutation, or canonical health records.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: prototype-local
+      delivery_phase: pre-baseline
+
+  governance-activity:
+    label: Governance Activity
+    plane: operator-experience
+    kind: activity-projection
+    role: Compose material events and receipt references from owner-domain activity sources.
+    authority_refs:
+      - operator-orchestration-service
+      - workspace-governance-control-fabric
+      - platform-engineering
+    canonical_records: []
+    must_not_own:
+      - Source history, raw logs, or mutable domain records.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: prototype-local
+      delivery_phase: pre-baseline
+
+  operator-account:
+    label: Operator Account
+    plane: operator-experience
+    kind: account-projection
+    role: Show identity and access posture and manage Console-local presentation preferences.
+    authority_refs:
+      - federated-identity-access
+      - security-architecture
+    canonical_records:
+      - console-operator-identity/v1
+      - console-operator-account/v1
+    must_not_own:
+      - Authentication, authorization, sessions, roles, named authority, or access approval.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: missing
+      live_adapter: prototype-local
+      delivery_phase: post-baseline
+
+  agent-console:
+    label: Agent Console And Runtime
+    plane: operator-experience
+    kind: bounded-assistance
+    role: Provide separate local agent sessions, provider observation, runtime presence, and explicit context-projection decisions.
+    authority_refs:
+      - context-governance-gateway
+      - platform-engineering
+      - security-architecture
+    canonical_records:
+      - local-agent-invocation
+      - agent-runtime-presence
+    must_not_own:
+      - Domain decisions, canonical mutation, profile approval, or context admission authority.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: connected
+      delivery_phase: pre-baseline
+    post_baseline_work:
+      - Replace synthetic-only context projection with admitted CGG packets and receipts.
+      - Route governed model access through the platform access plane.
+
+  runtime-readiness:
+    label: Runtime Readiness
+    plane: cross-domain-control
+    kind: read-only-observation
+    role: Show bounded local host telemetry, declared component observations, freshness, and source-qualified alerts.
+    authority_refs:
+      - platform-engineering
+    canonical_records:
+      - host-resource-observation
+      - component-observation
+    must_not_own:
+      - Environment promotion, runtime mutation, WGCF readiness, or product release decisions.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: implemented
+      live_adapter: connected
+      delivery_phase: pre-baseline
+
+  operation-workbench:
+    label: Operation Workbench
+    plane: operator-experience
+    kind: domain-host
+    role: Provide one typed selector, shared host, and direct entry for all operation domains.
+    authority_refs:
+      - owner-repositories
+    canonical_records: []
+    must_not_own:
+      - Operation-domain internals, lifecycle, commands, or receipts.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: not-required
+      live_adapter: not-required
+      delivery_phase: pre-baseline
+
+  proposal:
+    label: Proposal
+    plane: domain-operations
+    kind: operation-domain
+    role: Capture, triage, decide, route, and retain new ideas before downstream work owns execution.
+    authority_refs:
+      - operator-orchestration-service
+      - openproject
+    canonical_records:
+      - proposal-record
+      - proposal-lifecycle
+    must_not_own:
+      - Delivery planning, Prototype landing, repository admission, or Portfolio publication.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+    post_baseline_work:
+      - Connect capture, triage, decision, refresh, and Delivery consume to OOS.
+      - Extend OOS with target-neutral route and handoff projection for Prototype.
+      - Keep proposal lifecycle separate from handoff and downstream completion state.
+
+  repository:
+    label: Repository
+    plane: domain-operations
+    kind: operation-domain
+    role: Request, inspect, admit, onboard, resolve gates for, and retire durable source repositories.
+    authority_refs:
+      - workspace-governance
+      - owner-repositories
+    canonical_records:
+      - workspace-repository-intake
+      - workspace-repository-inventory
+      - owner-repository
+    must_not_own:
+      - Proposal routing, Delivery planning, product admission, or free-text owner-repo catalog truth.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+    post_baseline_work:
+      - Add an admitted repository request and projection API without moving inventory authority out of Workspace Governance.
+
+  model-operations:
+    label: Model Operations
+    plane: domain-operations
+    kind: operation-domain
+    role: Project governed model-profile lifecycle, caller eligibility, access-plane readiness, runtime controls, and security evidence.
+    authority_refs:
+      - platform-engineering
+      - security-architecture
+      - operator-orchestration-service
+    canonical_records:
+      - governed-model-profile
+      - registered-model-consumer
+    must_not_own:
+      - Model invocation, provider credentials, direct registry mutation, or Agent Console sessions.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+    post_baseline_work:
+      - Add read projections and an OOS-owned profile request workflow.
+      - Keep fulfillment, activation, suspension, and retirement source-backed and owner-routed.
+
+  delivery:
+    label: Delivery
+    plane: domain-operations
+    kind: operation-domain
+    role: Consume accepted work, design and refine governed delivery packages, execute ART work, manage Delivery catalog values, and close outcomes.
+    authority_refs:
+      - operator-orchestration-service
+      - openproject
+      - workspace-governance-control-fabric
+    canonical_records:
+      - delivery-initiative
+      - delivery-work-item
+      - delivery-review-packet
+      - delivery-receipt
+    must_not_own:
+      - Proposal intake, Prototype baseline approval, repository admission, product admission, or platform release.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: implemented
+      live_adapter: missing
+      delivery_phase: post-baseline
+    post_baseline_work:
+      - Connect reads and bounded writes through OOS and WGCF.
+      - Add missing controlled-value add, repository link, and sync adapters.
+      - Connect the Console-local closeout contract to OOS readiness, close, and downstream Workspace Intake or product-owner adapters.
+
+  prototype:
+    label: Prototype
+    plane: domain-operations
+    kind: operation-domain
+    role: Land and shape incubation work, operate preview proof, promote candidates and baselines, prepare graduation intent, and retain history.
+    authority_refs:
+      - workspace-prototype-studio
+      - platform-engineering
+      - security-architecture
+    canonical_records:
+      - prototype-registry-record
+      - design-baseline-record
+      - graduation-record
+      - retirement-record
+    must_not_own:
+      - Target admission, Delivery execution, product admission, stage, production, or security acceptance.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+    post_baseline_work:
+      - Add a registry adapter and source-backed baseline or graduation receipts.
+      - Add Proposal ingress and Delivery graduation adapters.
+      - Keep Preview Runtime proof separate from platform readiness.
+
+  portfolio:
+    label: Product Portfolio
+    plane: domain-operations
+    kind: operation-domain
+    role: Present and curate admitted, durable, managed products and their truthful owner, access, release, runtime, security, and Delivery evidence.
+    authority_refs:
+      - workspace-governance
+      - owner-repositories
+      - platform-engineering
+      - security-architecture
+      - workspace-governance-control-fabric
+    canonical_records:
+      - admitted-product
+      - product-owned-portfolio-manifest
+      - portfolio-listing-projection
+    must_not_own:
+      - Product creation, workspace product admission, runtime exposure, release promotion, security acceptance, or source custody.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+    operator_boundary:
+      - Products, Publication, and Curation are separate peer surfaces.
+      - Publication requires canonical Workspace product identity and a versioned product-owner packet.
+      - Prototype-local publication and listing receipts never imply a live canonical write.
+    post_baseline_work:
+      - Add product registry, owner manifest, Platform, Security, WGCF, Delivery, and release projections.
+      - Add a listing-publication adapter only after product identity is admitted.
+
+  orchestration:
+    label: Orchestration
+    plane: domain-operations
+    kind: operation-domain
+    role: Qualify durable workflow candidates, define immutable versions, inspect runs, and request bounded run controls.
+    authority_refs:
+      - operator-orchestration-service
+      - platform-engineering
+      - security-architecture
+    canonical_records:
+      - orchestration-definition
+      - orchestration-run
+      - orchestration-receipt
+    must_not_own:
+      - Domain workflow meaning, executable source, target admission, Temporal credentials, or business decisions.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+    post_baseline_work:
+      - Extend OOS with definition catalog, run projection, run control, and correlation.
+      - Admit a replaceable durable runtime adapter only for qualified workflows.
+
+  lifecycle-transitions:
+    label: Lifecycle Transitions
+    plane: cross-domain-control
+    kind: transition-projection
+    role: Correlate source intent, validation, target admission, execution, application, failures, and immutable receipts.
+    authority_refs:
+      - workspace-governance-control-fabric
+      - operator-orchestration-service
+    canonical_records:
+      - lifecycle-transition-projection
+    must_not_own:
+      - Route decisions, validation authority, target admission, exception decisions, execution, or canonical mutation.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  dev-integration:
+    label: Dev Integration
+    plane: cross-domain-control
+    kind: environment-workspace
+    role: Request and operate admitted local integration profiles and produce stage handoff evidence.
+    authority_refs:
+      - workspace-governance
+      - platform-engineering
+      - security-architecture
+      - workspace-governance-control-fabric
+    canonical_records:
+      - dev-integration-profile
+      - dev-integration-operation
+      - promote-check-receipt
+    must_not_own:
+      - Profile admission, shared runner, stage promotion, or production authority.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: implemented
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  governed-releases:
+    label: Governed Releases
+    plane: cross-domain-control
+    kind: environment-workspace
+    role: Project product-specific release and runtime lifecycle capabilities and route supported governed operations.
+    authority_refs:
+      - platform-engineering
+      - security-architecture
+      - workspace-governance-control-fabric
+      - owner-repositories
+    canonical_records:
+      - product-capability-descriptor
+      - release-receipt
+      - runtime-lifecycle-receipt
+    must_not_own:
+      - Universal release state, unsupported product capabilities, Argo mutation, or release approval.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  workspace-intake:
+    label: Workspace Intake Classification
+    plane: governance-evidence
+    kind: authority-workflow
+    role: Classify a newly discovered repository, product, or component before it can enter active workspace governance.
+    authority_refs:
+      - workspace-governance
+      - workspace-governance-control-fabric
+      - operator-orchestration-service
+    canonical_records:
+      - workspace-governance/contracts/intake-register.yaml
+    must_not_own:
+      - Active inventory promotion, physical repository provisioning, product creation, Delivery execution, Portfolio publication, runtime access, or security acceptance.
+    design_status: approved-target
+    implementation:
+      console: partial
+      backend_support: implemented
+      live_adapter: missing
+      delivery_phase: post-baseline
+    operator_visibility: >
+      The originating workflow exposes the candidate, explicit operator
+      classification, and returned receipt. No standalone Operation Workbench
+      domain is required. A future generic queue is permitted only for direct,
+      detected, or unresolved entrants.
+
+  workspace-active-inventory:
+    label: Workspace Active Inventory
+    plane: canonical-authority
+    kind: canonical-registry
+    role: Hold active repository, product, and component identities after an admitted intake entry passes type-specific promotion requirements.
+    authority_refs:
+      - workspace-governance
+      - workspace-governance-control-fabric
+    canonical_records:
+      - workspace-governance/contracts/repos.yaml
+      - workspace-governance/contracts/products.yaml
+      - workspace-governance/contracts/components.yaml
+    must_not_own:
+      - Source implementation, runtime execution, Portfolio listing state, Delivery work state, or security acceptance.
+    design_status: approved-target
+    implementation:
+      console: partial
+      backend_support: implemented
+      live_adapter: missing
+      delivery_phase: post-baseline
+    operator_visibility: >
+      Owner-domain surfaces consume typed active-inventory projections. Intake
+      and active inventory never contain the same entrant at the same time.
+
+  teras:
+    label: Teras
+    plane: interface-infrastructure
+    kind: ui-primitive-library
+    role: Provide product-neutral interface primitives and grouped composition patterns.
+    authority_refs:
+      - owner-repositories
+    canonical_records: []
+    must_not_own:
+      - Domain language, business state, product behavior, or canonical data.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: not-required
+      live_adapter: not-required
+      delivery_phase: pre-baseline
+
+  context-board:
+    label: Context Board
+    plane: interface-infrastructure
+    kind: incubating-product-app
+    role: Provide neutral context-board authoring, snapshot, export, and review behavior consumed first by Delivery.
+    authority_refs:
+      - owner-repositories
+    canonical_records:
+      - context-board-document
+    must_not_own:
+      - Delivery package meaning, ART semantics, or Teras primitives.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: not-required
+      live_adapter: not-required
+      delivery_phase: pre-baseline
+
+  build-tree:
+    label: Build Tree
+    plane: interface-infrastructure
+    kind: incubating-product-app
+    role: Provide neutral tree viewing, selection, editing, traversal, scaffold, and review behavior consumed first by Delivery.
+    authority_refs:
+      - owner-repositories
+    canonical_records:
+      - build-tree-document
+    must_not_own:
+      - Delivery item types, metadata semantics, ART truth, or Teras primitives.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: not-required
+      live_adapter: not-required
+      delivery_phase: pre-baseline
+
+  control-board:
+    label: Control Board
+    plane: interface-infrastructure
+    kind: incubating-product-app
+    role: Provide neutral package lanes, cards, family grouping, progress, and tree-host dashboard behavior consumed first by Delivery.
+    authority_refs:
+      - owner-repositories
+    canonical_records:
+      - control-board-projection
+    must_not_own:
+      - Delivery package state, package actions, ART mutation, or Teras primitives.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: not-required
+      live_adapter: not-required
+      delivery_phase: pre-baseline
+
+transitions:
+  proposal-to-delivery:
+    label: Proposal To Delivery
+    source: proposal
+    target: delivery
+    business_trigger: An accepted proposal selects governed Delivery.
+    source_output: Versioned Delivery handoff packet with resolved source custody.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: operator-orchestration-service
+    execution_owner: operator-orchestration-service
+    mutation_owner: openproject
+    receipt_owner: operator-orchestration-service
+    target_completion: A Delivery-owned ingress receipt creates an Intake source; Proposal remains accepted until downstream closeout.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: implemented
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  proposal-to-prototype:
+    label: Proposal To Prototype
+    source: proposal
+    target: prototype
+    business_trigger: An accepted proposal selects Prototype exploration.
+    source_output: Versioned Prototype entry packet with proposal context and resolved source custody.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: workspace-prototype-studio
+    execution_owner: operator-orchestration-service
+    mutation_owner: workspace-prototype-studio
+    receipt_owner: operator-orchestration-service
+    target_completion: A Prototype-owned application receipt creates an exploring record with Landing required; Proposal remains accepted.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: missing
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  proposal-repository-gate:
+    label: Proposal Repository Gate
+    source: proposal
+    target: repository
+    business_trigger: A selected Delivery or Prototype route requires new or clarified source custody.
+    source_output: Repository request packet; the selected route remains unchanged.
+    validation_owner: workspace-governance
+    admission_owner: workspace-governance
+    execution_owner: owner-repositories
+    mutation_owner: workspace-governance
+    receipt_owner: workspace-governance
+    target_completion: An active workspace repository reference resolves the gate and returns control to Proposal handoff.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: missing
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  repository-request-provisioning:
+    label: Repository Request And Provisioning
+    source: repository
+    target: repository
+    business_trigger: An operator or upstream domain requests a durable source repository.
+    source_output: Versioned repository provisioning request with ownership and baseline-file requirements.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: owner-repositories
+    execution_owner: owner-repositories
+    mutation_owner: owner-repositories
+    receipt_owner: owner-repositories
+    target_completion: A physical repository, owner evidence, README, and AGENTS baseline exist; no workspace intake or active inventory state is implied.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  prototype-to-delivery:
+    label: Prototype To Delivery
+    source: prototype
+    target: delivery
+    business_trigger: A baseline-approved Prototype prepares governed Delivery graduation.
+    source_output: Versioned Prototype Delivery packet with baseline, remaining work, and resolved source custody.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: operator-orchestration-service
+    execution_owner: operator-orchestration-service
+    mutation_owner: openproject
+    receipt_owner: operator-orchestration-service
+    target_completion: Delivery Consume creates or reuses the ART shell and backlinks; only the final receipt marks Prototype graduated.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: missing
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  delivery-owner-repo-catalog-link:
+    label: Delivery Owner Repo Catalog Link
+    source: repository
+    target: delivery
+    business_trigger: Active Delivery work discovers that an admitted repository must become a selectable Owner Repo value.
+    source_output: Admitted repository ref selected by the Delivery Catalog request.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: operator-orchestration-service
+    execution_owner: operator-orchestration-service
+    mutation_owner: openproject
+    receipt_owner: operator-orchestration-service
+    target_completion: Catalog add, repository link, backend sync, and work-item owner_repo update all reconcile.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  repository-to-workspace-intake:
+    label: Repository To Workspace Intake
+    source: repository
+    target: workspace-intake
+    business_trigger: A provisioned repository is ready for explicit workspace classification.
+    source_output: Generic repository entrant packet containing identity, class, ownership, security, validation, and physical-repository evidence.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: workspace-governance
+    execution_owner: operator-orchestration-service
+    mutation_owner: workspace-governance
+    receipt_owner: workspace-governance
+    target_completion: The repository has one explicit out-of-scope, proposed, or admitted intake-register decision; active repo inventory is not implied.
+    design_status: approved-target
+    implementation:
+      console: not-started
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  prototype-to-workspace-intake:
+    label: Prototype To Workspace Intake
+    source: prototype
+    target: workspace-intake
+    business_trigger: Prototype work establishes a new durable repository, product, or component boundary that is not already classified.
+    source_output: Generic entrant packet containing the entrant kind, identity, owners, intended endpoint, validation behavior, and baseline evidence refs.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: workspace-governance
+    execution_owner: operator-orchestration-service
+    mutation_owner: workspace-governance
+    receipt_owner: workspace-governance
+    target_completion: The entrant has one explicit intake-register decision; Prototype baseline approval and graduation remain separate.
+    design_status: approved-target
+    implementation:
+      console: not-started
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  delivery-to-workspace-intake:
+    label: Delivery To Workspace Intake
+    source: delivery
+    target: workspace-intake
+    business_trigger: Delivery work discovers a new durable repository, product, or component boundary that is not already classified.
+    source_output: Generic entrant packet containing the entrant kind, identity, owners, intended endpoint, validation behavior, and Delivery evidence refs.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: workspace-governance
+    execution_owner: operator-orchestration-service
+    mutation_owner: workspace-governance
+    receipt_owner: workspace-governance
+    target_completion: The entrant has one explicit intake-register decision; Delivery closeout and active inventory remain separate.
+    design_status: approved-target
+    implementation:
+      console: partial
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  workspace-intake-to-active-inventory:
+    label: Workspace Intake To Active Inventory
+    source: workspace-intake
+    target: workspace-active-inventory
+    business_trigger: An admitted intake entrant satisfies the type-specific requirements for active governance.
+    source_output: Versioned promotion packet with the intake decision, owner metadata, validation behavior, active-contract fields, and required evidence.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: workspace-governance
+    execution_owner: operator-orchestration-service
+    mutation_owner: workspace-governance
+    receipt_owner: workspace-governance
+    target_completion: One governed change removes the entrant from intake-register.yaml, adds it to exactly one active inventory contract, validates cross-repo truth, and returns a canonical receipt.
+    design_status: approved-target
+    implementation:
+      console: partial
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  active-product-to-portfolio:
+    label: Active Product To Portfolio
+    source: workspace-active-inventory
+    target: portfolio
+    business_trigger: An active product has a valid product-owned publication packet plus required operating, access, release, and security evidence.
+    source_output: Versioned product publication packet referencing the active products.yaml record and product-owner evidence.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: workspace-governance
+    execution_owner: operator-orchestration-service
+    mutation_owner: workspace-governance
+    receipt_owner: operator-orchestration-service
+    target_completion: Portfolio projects one listing for the active real product under a policy-permitted audience and access scope.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: missing
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  existing-product-update-to-portfolio:
+    label: Existing Product Update To Portfolio
+    source: delivery
+    target: portfolio
+    business_trigger: Delivery closeout or a product release materially changes an already admitted product.
+    source_output: Delivery outcome or release evidence bound to an active product ref; the product owner assembles the versioned publication packet.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: workspace-governance
+    execution_owner: operator-orchestration-service
+    mutation_owner: workspace-governance
+    receipt_owner: operator-orchestration-service
+    target_completion: The existing Portfolio projection updates without creating a second product.
+    design_status: approved-target
+    implementation:
+      console: partial
+      backend_support: missing
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  model-profile-request:
+    label: Model Profile Request
+    source: model-operations
+    target: model-operations
+    business_trigger: An operator requests profile creation or an owner-routed lifecycle change.
+    source_output: Versioned OOS profile request with caller, purpose, data, output, environment, and approval requirements.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: platform-engineering
+    execution_owner: operator-orchestration-service
+    mutation_owner: platform-engineering
+    receipt_owner: operator-orchestration-service
+    target_completion: Source-backed registry and access-plane changes reconcile with OOS and Security evidence.
+    design_status: approved-target
+    implementation:
+      console: not-started
+      backend_support: missing
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  orchestration-definition-admission:
+    label: Orchestration Definition Admission
+    source: orchestration
+    target: orchestration
+    business_trigger: A qualified durable candidate has reviewed executable source and required platform and security evidence.
+    source_output: Immutable definition-version admission request.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: operator-orchestration-service
+    execution_owner: operator-orchestration-service
+    mutation_owner: operator-orchestration-service
+    receipt_owner: operator-orchestration-service
+    target_completion: OOS exposes one immutable active definition version.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: missing
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  orchestration-run-execution:
+    label: Durable Orchestration Run
+    source: orchestration
+    target: orchestration
+    business_trigger: An approved source-domain command matches an active durable definition.
+    source_output: Versioned run request with actor, source version, correlation, and expected receipt.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: operator-orchestration-service
+    execution_owner: operator-orchestration-service
+    mutation_owner: operator-orchestration-service
+    receipt_owner: operator-orchestration-service
+    target_completion: The durable adapter returns a reconciled final receipt and source-domain projection.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: missing
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  dev-integration-profile-request:
+    label: Dev Integration Profile Request
+    source: dev-integration
+    target: dev-integration
+    business_trigger: A component or workflow requires an admitted fast local integration lane.
+    source_output: Profile intent and runtime contract request.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: workspace-governance
+    execution_owner: platform-engineering
+    mutation_owner: workspace-governance
+    receipt_owner: platform-engineering
+    target_completion: An admitted active profile and owner commands exist; profile activation does not imply stage.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  governed-release-operation:
+    label: Governed Product Release
+    source: governed-releases
+    target: governed-releases
+    business_trigger: A product capability descriptor permits a specific stage, production, or runtime-lifecycle operation.
+    source_output: Product-specific release or runtime command with evidence and expected version.
+    validation_owner: workspace-governance-control-fabric
+    admission_owner: platform-engineering
+    execution_owner: platform-engineering
+    mutation_owner: platform-engineering
+    receipt_owner: platform-engineering
+    target_completion: Product and platform projections reconcile with an immutable operation receipt.
+    design_status: approved-target
+    implementation:
+      console: prototype-only
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+  context-admission-to-agent:
+    label: Governed Context To Agent
+    source: agent-console
+    target: agent-console
+    business_trigger: A live or source-projected Console context candidate is requested for model use.
+    source_output: Bounded context admission request.
+    validation_owner: context-governance-gateway
+    admission_owner: context-governance-gateway
+    execution_owner: context-governance-gateway
+    mutation_owner: context-governance-gateway
+    receipt_owner: context-governance-gateway
+    target_completion: Agent Console receives only a model-safe packet and receipt references through an admitted model-access path.
+    design_status: approved-target
+    implementation:
+      console: partial
+      backend_support: partial
+      live_adapter: missing
+      delivery_phase: post-baseline
+
+state_families:
+  proposal-lifecycle:
+    owner: operator-orchestration-service
+    values:
+      - captured
+      - triaged
+      - parked
+      - owner-assigned
+      - accepted
+      - rejected
+      - implemented
+      - superseded
+    rule: Target handoff state is separate; target ingress alone does not mean implemented.
+
+  prototype-lifecycle:
+    owner: workspace-prototype-studio
+    values:
+      - exploring
+      - candidate
+      - baseline-approved
+      - graduating
+      - graduated
+      - retired
+
+  delivery-intake:
+    owner: delivery
+    values:
+      - needs-consume
+      - consume-failed
+      - consumed
+
+  workspace-intake:
+    owner: workspace-governance
+    values:
+      - out-of-scope
+      - proposed
+      - admitted
+
+  portfolio-listing:
+    owner: portfolio
+    values:
+      - listed
+      - unlisted
+      - retired
+    rule: Listing state is separate from workspace intake classification, active product inventory, product maturity, runtime availability, and access.
+
+  orchestration-definition:
+    owner: operator-orchestration-service
+    values:
+      - candidate
+      - qualified
+      - definition-ready
+      - implementation-requested
+      - admission-review
+      - active
+      - suspended
+      - retired
+
+  orchestration-run:
+    owner: operator-orchestration-service
+    values:
+      - queued
+      - running
+      - waiting
+      - blocked
+      - failed
+      - completed
+      - cancelled
+
+  dev-integration-profile:
+    owner: workspace-governance
+    values:
+      - proposed
+      - build-admitted
+      - active
+      - suspended
+      - retired
+
+  lifecycle-transition:
+    owner: lifecycle-transitions
+    values:
+      - prepared
+      - validating
+      - awaiting-admission
+      - awaiting-authority
+      - authorized
+      - applying
+      - applied
+      - blocked
+      - returned
+      - deferred
+      - rejected
+      - failed
+      - cancelled
+      - superseded
+
+  command-operation:
+    owner: operator-orchestration-service
+    values:
+      - requested
+      - queued
+      - running
+      - succeeded
+      - failed
+      - cancelled
+
+  source-freshness:
+    owner: source-authority
+    values:
+      - current
+      - stale
+      - unverified
+      - unavailable
+
+views:
+  system-context:
+    output: views/01-system-context.md
+    authority_refs:
+      - workspace-governance
+      - workspace-governance-control-fabric
+      - operator-orchestration-service
+      - openproject
+      - workspace-prototype-studio
+      - platform-engineering
+      - security-architecture
+      - context-governance-gateway
+      - owner-repositories
+      - federated-identity-access
+    capability_refs:
+      - console-shell
+      - operation-workbench
+      - lifecycle-transitions
+      - dev-integration
+      - governed-releases
+      - runtime-readiness
+      - agent-console
+      - workspace-intake
+      - workspace-active-inventory
+    transition_refs: []
+
+  operator-surfaces:
+    output: views/02-operator-surfaces.md
+    authority_refs: []
+    capability_refs:
+      - console-shell
+      - command-center
+      - workspace-pulse
+      - governance-activity
+      - operator-account
+      - agent-console
+      - runtime-readiness
+      - operation-workbench
+      - proposal
+      - repository
+      - model-operations
+      - delivery
+      - prototype
+      - portfolio
+      - orchestration
+      - lifecycle-transitions
+      - dev-integration
+      - governed-releases
+      - teras
+      - context-board
+      - build-tree
+      - control-board
+    transition_refs: []
+
+  authority-map:
+    output: views/03-authority-map.md
+    authority_refs:
+      - workspace-governance
+      - workspace-governance-control-fabric
+      - operator-orchestration-service
+      - openproject
+      - workspace-prototype-studio
+      - platform-engineering
+      - security-architecture
+      - context-governance-gateway
+      - owner-repositories
+      - federated-identity-access
+    capability_refs:
+      - proposal
+      - repository
+      - model-operations
+      - delivery
+      - prototype
+      - portfolio
+      - orchestration
+      - workspace-intake
+      - workspace-active-inventory
+    transition_refs: []
+
+  lifecycle:
+    output: views/04-lifecycle.md
+    authority_refs:
+      - workspace-governance
+      - workspace-prototype-studio
+      - operator-orchestration-service
+      - openproject
+    capability_refs:
+      - proposal
+      - repository
+      - delivery
+      - prototype
+      - portfolio
+      - workspace-intake
+      - workspace-active-inventory
+    transition_refs:
+      - proposal-to-delivery
+      - proposal-to-prototype
+      - proposal-repository-gate
+      - prototype-to-delivery
+      - repository-to-workspace-intake
+      - prototype-to-workspace-intake
+      - delivery-to-workspace-intake
+      - workspace-intake-to-active-inventory
+      - active-product-to-portfolio
+      - existing-product-update-to-portfolio
+
+  handoffs:
+    output: views/05-handoffs.md
+    authority_refs:
+      - workspace-governance
+      - workspace-governance-control-fabric
+      - operator-orchestration-service
+      - openproject
+      - workspace-prototype-studio
+      - platform-engineering
+      - security-architecture
+      - context-governance-gateway
+      - owner-repositories
+    capability_refs:
+      - proposal
+      - repository
+      - model-operations
+      - delivery
+      - prototype
+      - portfolio
+      - orchestration
+      - lifecycle-transitions
+      - dev-integration
+      - governed-releases
+      - workspace-intake
+      - workspace-active-inventory
+      - agent-console
+    transition_refs:
+      - proposal-to-delivery
+      - proposal-to-prototype
+      - proposal-repository-gate
+      - repository-request-provisioning
+      - prototype-to-delivery
+      - delivery-owner-repo-catalog-link
+      - repository-to-workspace-intake
+      - prototype-to-workspace-intake
+      - delivery-to-workspace-intake
+      - workspace-intake-to-active-inventory
+      - active-product-to-portfolio
+      - existing-product-update-to-portfolio
+      - model-profile-request
+      - orchestration-definition-admission
+      - orchestration-run-execution
+      - dev-integration-profile-request
+      - governed-release-operation
+      - context-admission-to-agent
+
+  runtime-release:
+    output: views/06-runtime-release.md
+    authority_refs:
+      - workspace-governance
+      - workspace-governance-control-fabric
+      - operator-orchestration-service
+      - platform-engineering
+      - security-architecture
+      - context-governance-gateway
+      - owner-repositories
+      - federated-identity-access
+    capability_refs:
+      - prototype
+      - dev-integration
+      - governed-releases
+      - runtime-readiness
+      - model-operations
+      - orchestration
+      - agent-console
+    transition_refs:
+      - model-profile-request
+      - orchestration-definition-admission
+      - orchestration-run-execution
+      - dev-integration-profile-request
+      - governed-release-operation
+      - context-admission-to-agent
+
+  capability-maturity:
+    output: views/07-capability-maturity.md
+    authority_refs:
+      - workspace-governance
+      - workspace-governance-control-fabric
+      - operator-orchestration-service
+      - openproject
+      - workspace-prototype-studio
+      - platform-engineering
+      - security-architecture
+      - context-governance-gateway
+      - owner-repositories
+      - federated-identity-access
+    capability_refs:
+      - console-shell
+      - command-center
+      - workspace-pulse
+      - governance-activity
+      - operator-account
+      - agent-console
+      - runtime-readiness
+      - operation-workbench
+      - proposal
+      - repository
+      - model-operations
+      - delivery
+      - prototype
+      - portfolio
+      - orchestration
+      - lifecycle-transitions
+      - dev-integration
+      - governed-releases
+      - workspace-intake
+      - workspace-active-inventory
+      - teras
+      - context-board
+      - build-tree
+      - control-board
+    transition_refs:
+      - proposal-to-delivery
+      - proposal-to-prototype
+      - proposal-repository-gate
+      - repository-request-provisioning
+      - prototype-to-delivery
+      - delivery-owner-repo-catalog-link
+      - repository-to-workspace-intake
+      - prototype-to-workspace-intake
+      - delivery-to-workspace-intake
+      - workspace-intake-to-active-inventory
+      - active-product-to-portfolio
+      - existing-product-update-to-portfolio
+      - model-profile-request
+      - orchestration-definition-admission
+      - orchestration-run-execution
+      - dev-integration-profile-request
+      - governed-release-operation
+      - context-admission-to-agent
+
+  foundation-proof:
+    output: views/08-foundation-proof.md
+    authority_refs:
+      - workspace-governance
+      - workspace-prototype-studio
+      - operator-orchestration-service
+      - openproject
+      - owner-repositories
+    capability_refs:
+      - proposal
+      - repository
+      - prototype
+      - delivery
+      - workspace-intake
+      - workspace-active-inventory
+      - portfolio
+    transition_refs:
+      - proposal-to-delivery
+      - proposal-to-prototype
+      - proposal-repository-gate
+      - repository-request-provisioning
+      - prototype-to-delivery
+      - repository-to-workspace-intake
+      - prototype-to-workspace-intake
+      - delivery-to-workspace-intake
+      - workspace-intake-to-active-inventory
+      - active-product-to-portfolio
+      - existing-product-update-to-portfolio

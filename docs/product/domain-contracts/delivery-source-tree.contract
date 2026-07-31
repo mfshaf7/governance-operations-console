@@ -1,0 +1,489 @@
+# Delivery Source Tree Contract
+
+schema_version: 3
+status: canonical-path-baseline
+root: src/domain-workspaces/delivery
+
+This is the canonical source-tree contract for the Delivery domain workspace
+path model. It records the implemented Delivery architecture paths, not a
+mechanical relocation of the previous legacy tree.
+
+No exceptions are allowed in the final Delivery source tree path model. Any
+Delivery path outside this contract is a source-tree violation. New Delivery
+code must use this tree and naming model.
+
+This contract proves path ownership. Extraction grain, public boundary
+discipline, product-app host boundaries, and surface/workflow consistency are
+governed by the normalization rules in `operation-workbench-contract.md` and
+by the baseline decisions below.
+
+Naming rules:
+
+- Prefer human readability over path-only DRY naming. File names must remain
+  understandable in editor tabs, search results, import lists, and review diffs
+  where the full folder tree may not be visible.
+- Boundary folders provide ownership context, but important files may repeat
+  the surface, workflow, or business concept when that improves readability.
+- Avoid empty duplication such as repeating `delivery` in every internal file.
+  Public workspace boundary files may carry `delivery-workspace` because they
+  are imported outside the Delivery folder and act as external-facing entry
+  points.
+- Avoid generic major-component names such as `surface.tsx`, `view.tsx`, or
+  `modal.tsx` when the file is likely to be opened, searched, or imported
+  outside a tiny local folder. Use names such as `home-surface.tsx`,
+  `refinement-session-modal.tsx`, or `work-design-hub-view.tsx`.
+- Domain files, when extracted, name business concepts and rules.
+- Application files, when extracted, name use cases, routing, commands, and
+  projections of intent. Application files do not render React.
+- Presentation files name UI components, workflow views, local view models, and
+  CSS modules.
+- Product adapter files name the mapping direction between Delivery and the
+  product app.
+- Test-only, fixture-only, and local-runtime files keep explicit suffixes such
+  as `.fixture.ts`, `-receipt.ts`, `-command.ts`, and `-transition.ts`.
+
+Normalization rules:
+
+- The allowed path list is a source-tree boundary, not a quality certificate.
+  A file inside an allowed path violates the normalization contract when it
+  owns too many unrelated responsibilities.
+- Comparable Delivery areas must use the same extraction grammar unless the
+  difference is justified by a real domain boundary. Work Design and Refinement
+  may differ in feature count, but their workflow scaffolds must make ownership
+  of hub, session, controller, shell, step, support, artifact,
+  product host, and view-model code obvious.
+- Surface files should compose. A surface that owns selection state, modal
+  routing, mutation drafts, derived rows, action copy, and panel rendering must
+  be split by ownership before new behavior is added.
+- A multi-panel surface must split panel renderers and panel-specific
+  projections. A single view-model may compose them, but should not own several
+  unrelated panel families itself.
+- A config/control surface must make selection, current values, mutation draft,
+  inspector/selected panel, and mutation dialog ownership visible.
+- Workflow step folders hold routeable step entry points and step-local
+  subcomponents only. Durable outputs move to `artifacts/`; reusable app hosts
+  move to `embedded-products/`; reusable non-routeable workflow support moves
+  to `support/`.
+- `work-model/` owns domain command contracts, validation, transitions, and
+  persisted workflow/session/artifact DTOs. It must not
+  collect transient product-app interaction types such as drag state, resize
+  state, selection boxes, tool drawers, hover state, or other UI-only app
+  state unless that state is intentionally persisted and recorded.
+- Product-app public APIs are imported from `product-adapters/` or explicit
+  `embedded-products/<product>/` host edges. Other direct product-app imports
+  are source-tree violations unless they are classified and recorded.
+- `index.ts` is allowed only at true public boundaries. Explicit exports are
+  preferred. Wildcard exports are allowed only for deliberate type/read-model
+  facades or stable adapter facades whose whole module surface is intentionally
+  public.
+
+Architecture baseline decisions:
+
+- `presentation/surfaces/home/` uses panel-family projections. Status,
+  attention queue, recent activity, and agent response projection live in
+  focused model files. `home-view-model.ts` is the thin composition and public
+  import point for the Home surface.
+- `presentation/surfaces/catalog/` exposes config/control presentation
+  boundaries. `catalog-surface.tsx` composes the control layout,
+  `use-catalog-control-state.ts` owns selection and local draft state, and
+  values, inspector, mutation-dialog, and current-value rendering live in
+  focused files. Catalog classification, draft validation, and mutation
+  transitions live under `work-model/catalog/`; command submission lives under
+  `local-runtime/commands/`.
+- `presentation/workflows/work-design/artifacts/context-brief/` is the correct
+  artifact boundary. Finalized brief projection, fingerprinting, snapshot
+  attachment modeling, board snapshot generation, finalized brief rendering,
+  evidence wrapping, record-reference details, saved-session state, handoff
+  rows, and finalization requirements live in focused files.
+  `use-work-design-context-artifacts.ts` remains the composition hook.
+- `presentation/workflows/work-design/session-controller/use-work-design-session-controller.ts`
+  is an accepted composition root. It may be long when the length is
+  explicit prop wiring between already-focused hooks, panels, product hosts,
+  lifecycle, apply, and dialog owners. Split only a proven hidden owner, not
+  the composition root itself.
+- `presentation/workflows/work-design/session/work-design-session-step-router.tsx`
+  and `presentation/workflows/work-design/session/work-design-session-dialogs.tsx`
+  are accepted composition roots. They may unpack focused hook outputs and
+  route props into owned step/dialog components, but must not absorb independent
+  panel rendering, projection families, or command authority.
+- `local-runtime/commands/` owns prototype-local command receipt factories.
+  Workflow presentation may keep modal/session state, but must not fabricate
+  command-result receipts inline when a runtime helper exists.
+- `local-runtime/persistence/` owns prototype-local persistence. Persistence
+  shape changes are out of scope for Delivery structure normalization and need
+  a separate recorded design decision before implementation.
+- `local-runtime/projections/` owns prototype-local cross-surface projection
+  overlays. Presentation may subscribe to projection snapshots, but must not
+  keep local Delivery package/intake/workflow projection truth in component
+  state.
+- `work-model/work-design/work-design-types.ts` keeps persisted snapshot/session
+  and artifact-oriented Context Board DTO aliases only.
+  Transient app interaction aliases used by Work Design session code are
+  imported from the Context Board product-adapter facade instead.
+- Refinement's metadata draft step keeps many subcomponents locally. That is
+  acceptable only while those components are truly step-local. Any product-app
+  viewer/selector host behavior must be classified as a host edge.
+- Execution Board's Control Board integration is a product-app boundary case.
+  It must not be used as precedent for casual product-app imports elsewhere.
+
+[directories]
+domain
+local-runtime
+local-runtime/commands
+local-runtime/ingress
+local-runtime/persistence
+local-runtime/projections
+local-runtime/transitions
+presentation
+presentation/package-register
+presentation/shared
+presentation/shared/export
+presentation/shared/format
+presentation/surfaces
+presentation/surfaces/catalog
+presentation/surfaces/execution-board
+presentation/surfaces/execution-board/action-session
+presentation/surfaces/home
+presentation/surfaces/intake
+presentation/surfaces/refinement
+presentation/surfaces/work-design
+presentation/workflows
+presentation/workflows/refinement
+presentation/workflows/refinement/hub
+presentation/workflows/refinement/model
+presentation/workflows/refinement/session
+presentation/workflows/refinement/session-controller
+presentation/workflows/refinement/session/dialogs
+presentation/workflows/refinement/shell
+presentation/workflows/refinement/steps
+presentation/workflows/refinement/steps/apply-refinement
+presentation/workflows/refinement/steps/history
+presentation/workflows/refinement/steps/metadata-draft
+presentation/workflows/refinement/steps/readiness-review
+presentation/workflows/refinement/support
+presentation/workflows/refinement/support/blocker-recovery
+presentation/workflows/refinement/view-model
+presentation/workflows/shared
+presentation/workflows/shared/blocker-recovery
+presentation/workflows/shared/package-actions
+presentation/workflows/work-design
+presentation/workflows/work-design/artifacts
+presentation/workflows/work-design/artifacts/context-brief
+presentation/workflows/work-design/embedded-products
+presentation/workflows/work-design/embedded-products/build-tree
+presentation/workflows/work-design/embedded-products/context-board
+presentation/workflows/work-design/hub
+presentation/workflows/work-design/model
+presentation/workflows/work-design/session
+presentation/workflows/work-design/session-controller
+presentation/workflows/work-design/session/dialogs
+presentation/workflows/work-design/shell
+presentation/workflows/work-design/steps
+presentation/workflows/work-design/steps/apply-draft
+presentation/workflows/work-design/steps/build-tree
+presentation/workflows/work-design/steps/context
+presentation/workflows/work-design/steps/history
+presentation/workflows/work-design/steps/review-draft
+presentation/workflows/work-design/support
+presentation/workflows/work-design/support/blocker-recovery
+presentation/workflows/work-design/support/structured-tree
+presentation/workflows/work-design/view-model
+presentation/workspace
+product-adapters
+product-adapters/build-tree
+product-adapters/context-board
+product-adapters/control-board
+read-model
+read-model/fixtures
+read-model/fixtures/apply-intents
+read-model/fixtures/audit-events
+read-model/fixtures/board
+read-model/fixtures/catalog
+read-model/fixtures/intake-sources
+read-model/fixtures/packages
+read-model/fixtures/packages/work-design
+read-model/fixtures/selected-package
+read-model/projections
+read-model/selectors
+read-model/terms
+work-model
+work-model/catalog
+work-model/closeout
+work-model/execution
+work-model/ingress
+work-model/refinement
+work-model/work-design
+
+[files]
+domain/delivery-audit.ts
+domain/delivery-catalog.ts
+domain/delivery-common.ts
+domain/delivery-execution.ts
+domain/delivery-intake.ts
+domain/delivery-package-posture.ts
+domain/delivery-package.ts
+domain/delivery-refinement.ts
+domain/delivery-types.ts
+domain/delivery-work-design.ts
+index.ts
+local-runtime/commands/catalog-mutation-runtime.ts
+local-runtime/commands/delivery-closeout-runtime.ts
+local-runtime/commands/execution-action-runtime.ts
+local-runtime/commands/workflow-receipts.ts
+local-runtime/index.ts
+local-runtime/ingress/delivery-ingress-runtime.ts
+local-runtime/persistence/refinement-session-persistence.ts
+local-runtime/persistence/work-design-session-persistence.ts
+local-runtime/projections/delivery-effective-projection.ts
+local-runtime/projections/workspace-projection.ts
+local-runtime/transitions/closeout-transition.ts
+local-runtime/transitions/execution-transition.ts
+local-runtime/transitions/intake-transition.ts
+local-runtime/transitions/refinement-handoff-transition.ts
+local-runtime/transitions/refinement-execution-transition.ts
+local-runtime/transitions/refinement-transition.ts
+local-runtime/transitions/transition-record.ts
+local-runtime/transitions/work-design-transition.ts
+presentation/package-register/index.ts
+presentation/package-register/package-register-data.ts
+presentation/package-register/package-register-selected-panel.tsx
+presentation/package-register/package-register-surface.tsx
+presentation/package-register/package-register-table.tsx
+presentation/package-register/package-register-types.ts
+presentation/package-register/package-register-view-model.ts
+presentation/package-register/package-workflow-router.tsx
+presentation/shared/delivery-package-metadata.ts
+presentation/shared/format/format-date-time.ts
+presentation/surfaces/catalog/catalog-current-values.tsx
+presentation/surfaces/catalog/catalog-display-model.ts
+presentation/surfaces/catalog/catalog-inspector-panel.tsx
+presentation/surfaces/catalog/catalog-mutation-dialog.tsx
+presentation/surfaces/catalog/catalog-mutation-view-model.ts
+presentation/surfaces/catalog/catalog-selector-panel.tsx
+presentation/surfaces/catalog/catalog-surface.tsx
+presentation/surfaces/catalog/catalog-values-panel.tsx
+presentation/surfaces/catalog/catalog-view-model.ts
+presentation/surfaces/catalog/use-catalog-control-state.ts
+presentation/surfaces/execution-board/action-session/execution-action-modal.tsx
+presentation/surfaces/execution-board/action-session/execution-action-view-model.ts
+presentation/surfaces/execution-board/action-session/use-execution-action-session.ts
+presentation/surfaces/execution-board/execution-board-surface.tsx
+presentation/surfaces/execution-board/execution-board-view-model.ts
+presentation/surfaces/execution-board/execution-selected-package-panel.tsx
+presentation/surfaces/execution-board/execution-tree-edit-support-panel.tsx
+presentation/surfaces/execution-board/execution-tree-edit-view.tsx
+presentation/surfaces/home/home-activity-model.ts
+presentation/surfaces/home/home-agent-console.tsx
+presentation/surfaces/home/home-agent-model.ts
+presentation/surfaces/home/home-attention-queue-panel.tsx
+presentation/surfaces/home/home-recent-activity-panel.tsx
+presentation/surfaces/home/home-surface.tsx
+presentation/surfaces/home/home-types.ts
+presentation/surfaces/home/home-view-model.ts
+presentation/surfaces/home/home-workspace-status-model.ts
+presentation/surfaces/home/home-workspace-status-panel.tsx
+presentation/surfaces/intake/intake-modals.tsx
+presentation/surfaces/intake/intake-register-table.tsx
+presentation/surfaces/intake/intake-selected-source.tsx
+presentation/surfaces/intake/intake-surface.tsx
+presentation/surfaces/intake/intake-view-model.ts
+presentation/surfaces/refinement/refinement-surface.tsx
+presentation/surfaces/work-design/work-design-surface.tsx
+presentation/workflows/refinement/hub/refinement-hub-view.tsx
+presentation/workflows/refinement/index.ts
+presentation/workflows/refinement/model/refinement-model.ts
+presentation/workflows/refinement/session-controller/use-refinement-session-controller.ts
+presentation/workflows/refinement/session-controller/use-refinement-session-state.ts
+presentation/workflows/refinement/session/dialogs/refinement-close-guard-dialog.tsx
+presentation/workflows/refinement/session/refinement-session-footer.tsx
+presentation/workflows/refinement/session/refinement-session-modal.tsx
+presentation/workflows/refinement/session/refinement-step-router.tsx
+presentation/workflows/refinement/shell/refinement-progress-panel.tsx
+presentation/workflows/refinement/steps/apply-refinement/refinement-apply-view.tsx
+presentation/workflows/refinement/steps/history/refinement-history-view.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-advisor.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-draft-step.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-editor-controls.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-editor-panel.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-field-editor.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-workbench-tree.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-workbench-view.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-selected-metadata-editor.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-shared-metadata-editor.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-shared-metadata-state.tsx
+presentation/workflows/refinement/steps/readiness-review/refinement-readiness-review-view.tsx
+presentation/workflows/refinement/support/blocker-recovery/refinement-blocker-model.ts
+presentation/workflows/refinement/support/blocker-recovery/refinement-blocker-recovery-dialog.tsx
+presentation/workflows/refinement/view-model/refinement-advisor-draft.ts
+presentation/workflows/refinement/view-model/refinement-apply-model.ts
+presentation/workflows/refinement/view-model/refinement-current-move.ts
+presentation/workflows/refinement/view-model/refinement-gate-model.ts
+presentation/workflows/refinement/view-model/refinement-history-model.ts
+presentation/workflows/refinement/view-model/refinement-hub-model.ts
+presentation/workflows/refinement/view-model/refinement-metadata-model.ts
+presentation/workflows/refinement/view-model/refinement-packet-model.ts
+presentation/workflows/refinement/view-model/refinement-readiness-model.ts
+presentation/workflows/refinement/view-model/refinement-shell-view-model.ts
+presentation/workflows/refinement/view-model/refinement-step-model.ts
+presentation/workflows/shared/blocker-recovery/blocker-action-info-dialog.tsx
+presentation/workflows/shared/blocker-recovery/blocker-problem-panel.tsx
+presentation/workflows/shared/blocker-recovery/blocker-recovery-action-panel.tsx
+presentation/workflows/shared/blocker-recovery/blocker-recovery-advisor-panel.tsx
+presentation/workflows/shared/blocker-recovery/blocker-recovery-dialog-types.ts
+presentation/workflows/shared/blocker-recovery/blocker-recovery-dialogs.tsx
+presentation/workflows/shared/blocker-recovery/blocker-recovery-model.ts
+presentation/workflows/shared/blocker-recovery/blocker-recovery-result-panel.tsx
+presentation/workflows/shared/blocker-recovery/index.ts
+presentation/workflows/shared/package-actions/package-action-routing.ts
+presentation/workflows/shared/package-actions/package-action-types.ts
+presentation/workflows/shared/package-actions/package-handoff-evidence.tsx
+presentation/workflows/work-design/artifacts/context-brief/index.ts
+presentation/workflows/work-design/artifacts/context-brief/use-work-design-context-artifacts.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-brief-projection.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-context-artifact-types.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-context-brief-dialogs.tsx
+presentation/workflows/work-design/artifacts/context-brief/work-design-context-brief-model.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-context-brief-state.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-context-finalize-requirements.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-context-finalized-projection.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-context-fingerprint.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-context-handoff-projection.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-context-snapshot-evidence.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-finalized-board-snapshot.ts
+presentation/workflows/work-design/artifacts/context-brief/work-design-finalized-brief-details-dialog.tsx
+presentation/workflows/work-design/artifacts/context-brief/work-design-finalized-brief-dialog.tsx
+presentation/workflows/work-design/artifacts/context-brief/work-design-finalized-brief-evidence-dialog.tsx
+presentation/workflows/work-design/artifacts/context-brief/work-design-snapshot-attachment-model.ts
+presentation/workflows/work-design/embedded-products/build-tree/index.ts
+presentation/workflows/work-design/embedded-products/build-tree/use-work-design-build-tree.ts
+presentation/workflows/work-design/embedded-products/build-tree/work-design-build-tree-dialogs.tsx
+presentation/workflows/work-design/embedded-products/build-tree/work-design-build-tree-view-model.ts
+presentation/workflows/work-design/embedded-products/build-tree/work-design-build-tree-view.tsx
+presentation/workflows/work-design/embedded-products/context-board/index.ts
+presentation/workflows/work-design/embedded-products/context-board/use-work-design-context-board.ts
+presentation/workflows/work-design/embedded-products/context-board/work-design-context-board-rail.tsx
+presentation/workflows/work-design/embedded-products/context-board/work-design-context-board-sources.tsx
+presentation/workflows/work-design/embedded-products/context-board/work-design-context-board-types.ts
+presentation/workflows/work-design/embedded-products/context-board/work-design-context-board-view.tsx
+presentation/workflows/work-design/hub/work-design-hub-view.tsx
+presentation/workflows/work-design/index.ts
+presentation/workflows/work-design/model/work-design-model.ts
+presentation/workflows/work-design/session-controller/use-work-design-apply-blocker-actions.ts
+presentation/workflows/work-design/session-controller/use-work-design-context-actions.ts
+presentation/workflows/work-design/session-controller/use-work-design-context-brief-actions.ts
+presentation/workflows/work-design/session-controller/use-work-design-context-session-actions.ts
+presentation/workflows/work-design/session-controller/use-work-design-export-actions.ts
+presentation/workflows/work-design/session-controller/use-work-design-session-controller.ts
+presentation/workflows/work-design/session-controller/use-work-design-session-lifecycle.ts
+presentation/workflows/work-design/session-controller/use-work-design-session-persistence.ts
+presentation/workflows/work-design/session-controller/use-work-design-session-state.ts
+presentation/workflows/work-design/session/dialogs/work-design-board-guard-dialogs.tsx
+presentation/workflows/work-design/session/dialogs/work-design-close-guard-dialog.tsx
+presentation/workflows/work-design/session/dialogs/work-design-session-checkpoint-dialogs.tsx
+presentation/workflows/work-design/session/dialogs/work-design-tree-reconciliation-dialog.tsx
+presentation/workflows/work-design/session/work-design-session-dialog-stack.tsx
+presentation/workflows/work-design/session/work-design-session-dialogs.tsx
+presentation/workflows/work-design/session/work-design-session-footer.tsx
+presentation/workflows/work-design/session/work-design-session-modal.tsx
+presentation/workflows/work-design/session/work-design-session-step-router.tsx
+presentation/workflows/work-design/shell/work-design-progress-panel.tsx
+presentation/workflows/work-design/steps/apply-draft/use-work-design-apply-state.ts
+presentation/workflows/work-design/steps/apply-draft/use-work-design-apply-workflow.ts
+presentation/workflows/work-design/steps/apply-draft/work-design-apply-draft-view.tsx
+presentation/workflows/work-design/steps/apply-draft/work-design-apply-log-dialog.tsx
+presentation/workflows/work-design/steps/build-tree/work-design-build-tree-step.tsx
+presentation/workflows/work-design/steps/context/work-design-context-step.tsx
+presentation/workflows/work-design/steps/history/work-design-history-view.tsx
+presentation/workflows/work-design/steps/review-draft/use-work-design-review-tree-dialog.ts
+presentation/workflows/work-design/steps/review-draft/work-design-review-draft-view.tsx
+presentation/workflows/work-design/steps/review-draft/work-design-review-tree-dialog.tsx
+presentation/workflows/work-design/support/blocker-recovery/work-design-blocker-model.ts
+presentation/workflows/work-design/view-model/work-design-apply-model.ts
+presentation/workflows/work-design/view-model/work-design-blocker-disposition-model.ts
+presentation/workflows/work-design/view-model/work-design-blocker-recovery-view-model.ts
+presentation/workflows/work-design/view-model/work-design-context-advisor-view-model.ts
+presentation/workflows/work-design/view-model/work-design-context-decision-model.ts
+presentation/workflows/work-design/view-model/work-design-current-move.ts
+presentation/workflows/work-design/view-model/work-design-display-formatters.ts
+presentation/workflows/work-design/view-model/work-design-history-model.ts
+presentation/workflows/work-design/view-model/work-design-hub-model.ts
+presentation/workflows/work-design/view-model/work-design-register-view-model.ts
+presentation/workflows/work-design/view-model/work-design-session-view-model.ts
+presentation/workflows/work-design/view-model/work-design-shell-view-model.ts
+presentation/workflows/work-design/view-model/work-design-source-posture-model.ts
+presentation/workflows/work-design/view-model/work-design-step-model.ts
+presentation/workspace/index.ts
+presentation/workspace/workspace-config.ts
+presentation/workspace/workspace-contract.ts
+presentation/workspace/workspace-controller.tsx
+presentation/workspace/workspace-count-model.ts
+presentation/workspace/workspace-modal.tsx
+presentation/workspace/workspace-status-model.ts
+presentation/workspace/workspace-summary-model.ts
+presentation/workspace/workspace-types.ts
+presentation/workspace/workspace-view-model.ts
+presentation/workspace/workspace.tsx
+product-adapters/build-tree/index.ts
+product-adapters/build-tree/work-design-build-tree-advisor.ts
+product-adapters/build-tree/work-design-build-tree-scaffold.ts
+product-adapters/build-tree/work-design-tree-model.ts
+product-adapters/context-board/index.ts
+product-adapters/context-board/work-design-context-board-core.ts
+product-adapters/context-board/work-design-context-board-rendering.ts
+product-adapters/context-board/work-design-context-board-starters.ts
+product-adapters/context-board/work-design-context-board-templates.ts
+product-adapters/control-board/delivery-control-board-adapter.ts
+product-adapters/control-board/index.ts
+read-model/activity-source.ts
+read-model/attention-source.ts
+read-model/delivery-read-model.ts
+read-model/fixtures/apply-intents/apply-intents.fixture.ts
+read-model/fixtures/audit-events/audit-events.fixture.ts
+read-model/fixtures/board/art-tree.fixture.ts
+read-model/fixtures/board/board.fixture.ts
+read-model/fixtures/board/family-map.fixture.ts
+read-model/fixtures/board/summary.fixture.ts
+read-model/fixtures/catalog/catalog.fixture.ts
+read-model/fixtures/catalog/groups.fixture.ts
+read-model/fixtures/catalog/items.fixture.ts
+read-model/fixtures/catalog/summary.fixture.ts
+read-model/fixtures/catalog/values.fixture.ts
+read-model/fixtures/intake-sources/intake-sources.fixture.ts
+read-model/fixtures/packages/actions.fixture.ts
+read-model/fixtures/packages/execution.fixture.ts
+read-model/fixtures/packages/intake.fixture.ts
+read-model/fixtures/packages/packages.fixture.ts
+read-model/fixtures/packages/refinement-helpers.fixture.ts
+read-model/fixtures/packages/refinement.fixture.ts
+read-model/fixtures/packages/source-custody.fixture.ts
+read-model/fixtures/packages/work-design/artifacts.fixture.ts
+read-model/fixtures/packages/work-design/blocker.fixture.ts
+read-model/fixtures/packages/work-design/context.fixture.ts
+read-model/fixtures/packages/work-design/decision.fixture.ts
+read-model/fixtures/packages/work-design/entry.fixture.ts
+read-model/fixtures/packages/work-design/evidence.fixture.ts
+read-model/fixtures/packages/work-design/review.fixture.ts
+read-model/fixtures/packages/work-design/work-design.fixture.ts
+read-model/fixtures/selected-package/selected-package.fixture.ts
+read-model/index.ts
+read-model/projections/root-projection.ts
+read-model/selectors/delivery-attention-selector.ts
+read-model/selectors/workflow-package-selectors.ts
+read-model/terms/copy.ts
+work-model/catalog/catalog-draft-model.ts
+work-model/catalog/catalog-mutation-model.ts
+work-model/catalog/catalog-mutation-types.ts
+work-model/catalog/catalog-retirement-model.ts
+work-model/catalog/catalog-selectors.ts
+work-model/closeout/delivery-closeout-contracts.ts
+work-model/closeout/delivery-closeout-model.ts
+work-model/execution/execution-action-contracts.ts
+work-model/execution/execution-action-eligibility.ts
+work-model/execution/execution-action-intent.ts
+work-model/ingress/proposal-delivery-entry-packet.ts
+work-model/ingress/prototype-movement-entry-packet.ts
+work-model/refinement/refinement-types.ts
+work-model/work-design/work-design-artifact-types.ts
+work-model/work-design/work-design-handoff-model.ts
+work-model/work-design/work-design-session-model.ts
+work-model/work-design/work-design-types.ts

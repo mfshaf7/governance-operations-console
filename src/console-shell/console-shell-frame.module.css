@@ -1,0 +1,24 @@
+.desktopLayout {
+  min-width: 0;
+}
+
+.navigationSlot {
+  position: relative;
+  z-index: 180;
+}
+
+.stageSlot {
+  min-width: 0;
+}
+
+@media (min-width: 1440px) {
+  .stageSlot {
+    padding-left: var(--console-navigation-stage-inset);
+  }
+}
+
+@media (min-width: 1920px) {
+  .stageSlot {
+    padding-right: var(--console-navigation-stage-inset);
+  }
+}

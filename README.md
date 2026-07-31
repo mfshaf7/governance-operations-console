@@ -1,37 +1,64 @@
 # Governance Operations Console
 
-This repository is the durable product-source home for the Governance
-Operations Console.
+This repository owns the durable product source for the Governance Operations
+Console.
 
 ## Current Status
 
-The repository is provisioned, but the approved application baseline has not
-graduated here yet. Workspace Prototype Studio remains the source and local
-preview authority until the separately reviewed source-transfer work is
-complete.
+The approved Prototype Studio baseline is present in this repository as the
+source-graduation candidate for ART `openproject://work_packages/784`. The
+cross-repo graduation record establishes final custody after the source landing,
+Prototype Studio handoff, and Workspace Governance product promotion are all
+reviewed.
 
-This repository currently owns:
+The transferred baseline remains:
 
-- product ownership guidance
-- repository review controls
-- public-source safety validation
-- the future durable application source after graduation
+- private and operator-local
+- loopback-only for local preview
+- fixture-backed or synthetic for operational workflows
+- read-only for bounded local host telemetry
+- prototype-local for all simulated writes and receipts
 
-It does not own:
+Source graduation does not grant:
 
 - workspace contracts or intake decisions
 - Workspace Delivery ART work-state truth
 - shared workflow orchestration
 - platform deployment or release authority
 - identity or security acceptance
-- the approved prototype source before graduation completes
+- live backend mutation or durable receipt authority
+- governed AI, stage, production, public, or client-visible runtime status
+
+## Product Source
+
+The application is a Next.js 15 console with product source under `src/`,
+architecture guards under `scripts/guards/`, semantic and system-simulation
+tests under `tests/`, and product records under [`docs/product`](docs/product/).
+
+The exact approved source origin and transfer mapping are recorded in
+[`docs/graduation/source-manifest.json`](docs/graduation/source-manifest.json).
+The approved design-baseline record is retained at
+[`docs/graduation/approved-design-baseline.yaml`](docs/graduation/approved-design-baseline.yaml).
+
+## Local Development
+
+```bash
+npm ci
+npm run dev
+```
+
+The local preview binds to `http://127.0.0.1:3317`.
+
+Use `npm run check` for the complete architecture, semantic, type, and
+production-build validation.
 
 ## Authority Map
 
 | Responsibility | Authority |
 | --- | --- |
 | Workspace classification and owner map | [Workspace Governance](https://github.com/mfshaf7/workspace-governance) |
-| Current approved application source | [Workspace Prototype Studio](https://github.com/mfshaf7/workspace-prototype-studio) |
+| Prototype history and graduation record | [Workspace Prototype Studio](https://github.com/mfshaf7/workspace-prototype-studio) |
+| Durable product source after graduation | This repository |
 | Delivery work state and shared workflow APIs | [Operator Orchestration Service](https://github.com/mfshaf7/operator-orchestration-service) |
 | Runtime integration and governed release | [Platform Engineering](https://github.com/mfshaf7/platform-engineering) |
 | Trust boundaries and security acceptance | [Security Architecture](https://github.com/mfshaf7/security-architecture) |
@@ -56,8 +83,12 @@ Run:
 
 ```bash
 python3 scripts/validate_repository.py
+npm ci
+npm run check
+npm audit --omit=dev
 ```
 
-The validator checks the owner skeleton and rejects common public-source
-leaks, unresolved placeholders, secret-bearing files, and disposable runtime
-artifacts.
+The repository validator checks the owner and source structure and rejects
+common public-source leaks, unresolved placeholders, secret-bearing files, and
+disposable runtime artifacts. The product check runs the complete approved
+architecture and behavior baseline.

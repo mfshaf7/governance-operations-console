@@ -1,0 +1,31 @@
+schema_version: 1
+prototype_id: governance-operations-console
+baseline_id: governance-operations-console-2026-07-30
+approved_on: "2026-07-30"
+approved_by: mfshaf7
+decision: approved
+source_refs:
+  - repo://workspace-prototype-studio@aa12fdbb9b4f7b16c8ac2d2229c4dd4f6c95ec98
+  - https://github.com/mfshaf7/workspace-prototype-studio/pull/2
+art_refs:
+  - openproject://work_packages/767
+  - openproject://work_packages/768
+  - openproject://work_packages/769
+  - openproject://work_packages/770
+  - openproject://work_packages/771
+security_review_refs:
+  - security-architecture/docs/reviews/components/2026-05-06-workspace-prototype-studio-product-incubation-baseline.md
+  - security-architecture/docs/reviews/components/2026-07-30-governance-operations-console-baseline-security-delta.md
+evidence_refs:
+  - docs/prototypes/governance-operations-console/baseline-candidate-review.md
+  - docs/prototypes/governance-operations-console/architecture/README.md
+  - docs/prototypes/governance-operations-console/foundation-simulation-report.md
+  - https://github.com/mfshaf7/security-architecture/pull/89
+  - https://github.com/mfshaf7/security-architecture/pull/90
+constraints:
+  - Approval covers the local product shape, workflow model, visual language, source boundaries, and fixture-backed proof only.
+  - Runtime exposure remains loopback-only in the prototype-devint lane.
+  - Real host data is read-only; prototype writes remain local and disposable.
+  - No authenticated identity authority, secrets, real client data, mutable canonical backend integration, autonomous AI action, or tool execution is approved.
+  - No shared, stage, production, public, or client-visible deployment is approved.
+  - Live adapters, durable orchestration, canonical persistence, deployment, and graduation require separately governed owner-repo work and fresh security review where triggered.

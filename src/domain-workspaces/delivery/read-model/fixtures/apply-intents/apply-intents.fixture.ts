@@ -1,0 +1,358 @@
+import type { DeliveryApplyIntent } from "../../../domain/delivery-types.ts";
+
+export const deliveryApplyIntentFixtures: DeliveryApplyIntent[] = [
+  {
+    action_type: "start-work",
+    artifacts: ["WGCF-READY-698", "REFINE-698-v1"],
+    advisor_reason:
+      "The selected story has complete metadata, Target PI, and no active blocker.",
+    current_backend_status: "ready",
+    current_package_posture: "Ready",
+    delivery_package_id: "pkg-698",
+    dirty_state: "clean",
+    expected_backend_route:
+      "POST /v1/delivery-work-items/{work_item_id}/update",
+    gate_checks: [
+      {
+        label: "Execution target selected",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "Source revision current",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "No active blocker",
+        passed: true,
+        tone: "ok",
+      },
+    ],
+    intent_id: "intent-start-698-714",
+    operator_payload: {
+      status: "in-progress",
+      work_note: "",
+    },
+    receipt_category: null,
+    required_payload_fields: ["status", "work_note"],
+    scope: "execution_target",
+    source_epic_id: 698,
+    source_revision: "mock-delivery-v1:pkg-698",
+    target_display_name:
+      "User story #714 - Validate mutation draft before apply",
+    target_id: "node-698-story-1",
+    target_type: "User story",
+  },
+  {
+    action_type: "defer",
+    artifacts: ["WGCF-READY-698", "REFINE-698-v1"],
+    advisor_reason:
+      "The package can be parked without changing child structure. Operator justification is required before apply.",
+    current_backend_status: "ready",
+    current_package_posture: "Ready",
+    delivery_package_id: "pkg-698",
+    dirty_state: "clean",
+    expected_backend_route:
+      "POST /v1/delivery-work-items/{work_item_id}/parking",
+    gate_checks: [
+      {
+        label: "Parking route available",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "No active apply receipt pending",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "Resume path remains available",
+        passed: true,
+        tone: "ok",
+      },
+    ],
+    intent_id: "intent-defer-698",
+    operator_payload: {
+      action: "park",
+      park_decision: "defer",
+      park_reason: "",
+      park_review_date: "",
+      work_note: "",
+    },
+    receipt_category: null,
+    required_payload_fields: [
+      "action",
+      "park_decision",
+      "park_reason",
+      "park_review_date",
+      "work_note",
+    ],
+    scope: "package_with_children",
+    source_epic_id: 698,
+    source_revision: "mock-delivery-v1:pkg-698",
+    target_display_name: "OpenProject Epic #698 - Governed AI Control Plane",
+    target_id: "pkg-698",
+    target_type: "Epic",
+  },
+  {
+    action_type: "clear-blocker",
+    artifacts: ["readiness-gate-signal-753"],
+    advisor_reason:
+      "The active execution target can clear only after readiness proof exists.",
+    current_backend_status: "blocked",
+    current_package_posture: "Blocked",
+    delivery_package_id: "pkg-753",
+    dirty_state: "clean",
+    expected_backend_route:
+      "POST /v1/delivery-work-items/{work_item_id}/blocker",
+    gate_checks: [
+      {
+        label: "Blocker record exists",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "Readiness proof exists",
+        passed: false,
+        tone: "warn",
+      },
+      {
+        label: "Blocker clear route available",
+        passed: true,
+        tone: "ok",
+      },
+    ],
+    intent_id: "intent-clear-blocker-753",
+    operator_payload: {
+      action: "clear",
+      resume_status: "",
+    },
+    receipt_category: "blocked_by_gate",
+    required_payload_fields: ["action", "resume_status"],
+    scope: "execution_target",
+    source_epic_id: 753,
+    source_revision: "mock-delivery-v1:pkg-753",
+    target_display_name: "Active execution target under Epic #753",
+    target_id: "node-753",
+    target_type: "Epic",
+  },
+  {
+    action_type: "defer",
+    artifacts: ["readiness-gate-signal-753"],
+    advisor_reason:
+      "Deferring blocked scope removes it from active focus but does not clear the blocker.",
+    current_backend_status: "blocked",
+    current_package_posture: "Blocked",
+    delivery_package_id: "pkg-753",
+    dirty_state: "clean",
+    expected_backend_route:
+      "POST /v1/delivery-work-items/{work_item_id}/parking",
+    gate_checks: [
+      {
+        label: "Blocked posture remains visible",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "Parking route available",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "Resume path remains available",
+        passed: true,
+        tone: "ok",
+      },
+    ],
+    intent_id: "intent-defer-753",
+    operator_payload: {
+      action: "park",
+      park_decision: "defer",
+      park_reason: "",
+      park_review_date: "",
+      work_note: "",
+    },
+    receipt_category: "blocked_by_gate",
+    required_payload_fields: [
+      "action",
+      "park_decision",
+      "park_reason",
+      "park_review_date",
+      "work_note",
+    ],
+    scope: "package_with_children",
+    source_epic_id: 753,
+    source_revision: "mock-delivery-v1:pkg-753",
+    target_display_name: "OpenProject Epic #753 - Readiness Gate Repair",
+    target_id: "pkg-753",
+    target_type: "Epic",
+  },
+  {
+    action_type: "sync-owner-repo",
+    artifacts: ["repo://client-insight-delivery", "repository-admission-812"],
+    advisor_reason:
+      "Repository admission exists, but Delivery Catalog has not added, linked, and synced the Owner Repo value yet.",
+    current_backend_status: "blocked",
+    current_package_posture: "Blocked",
+    delivery_package_id: "pkg-812",
+    dirty_state: "clean",
+    expected_backend_route: null,
+    gate_checks: [
+      {
+        label: "Repository admission resolved",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "Catalog entry linked",
+        passed: false,
+        tone: "warn",
+      },
+      {
+        label: "Backend value synced",
+        passed: false,
+        tone: "warn",
+      },
+    ],
+    intent_id: "intent-sync-owner-repo-812",
+    operator_payload: {
+      catalog_value: "client-insight-delivery",
+      repository_ref: "repo://client-insight-delivery",
+      work_note:
+        "Add and link Owner Repo value in Delivery Catalog, then sync before applying owner_repo to execution work.",
+    },
+    receipt_category: "projection_sync_required",
+    required_payload_fields: ["catalog_value", "repository_ref", "work_note"],
+    scope: "package_with_children",
+    source_epic_id: 812,
+    source_revision: "mock-delivery-v1:pkg-812",
+    target_display_name: "OpenProject Epic #812 - Client Insight Delivery",
+    target_id: "pkg-812",
+    target_type: "Epic",
+  },
+  {
+    action_type: "open-closeout",
+    artifacts: ["closeout-readiness-681"],
+    advisor_reason:
+      "Closeout should inspect completion evidence and remaining child work before any terminal package mutation.",
+    current_backend_status: "in-progress",
+    current_package_posture: "Closeout Pending",
+    delivery_package_id: "pkg-681",
+    dirty_state: "clean",
+    expected_backend_route:
+      "GET /v1/delivery-initiatives/{delivery_id}/closeout-readiness",
+    gate_checks: [
+      {
+        label: "Completion evidence available",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "Remaining work decision required",
+        passed: true,
+        tone: "warn",
+      },
+      {
+        label: "Terminal closeout mutation not prepared",
+        passed: true,
+        tone: "info",
+      },
+    ],
+    intent_id: "intent-closeout-681",
+    operator_payload: {},
+    receipt_category: null,
+    required_payload_fields: [],
+    scope: "package_with_children",
+    source_epic_id: 681,
+    source_revision: "mock-delivery-v1:pkg-681",
+    target_display_name: "OpenProject Epic #681 - Broker Apply Controls",
+    target_id: "pkg-681",
+    target_type: "Epic",
+  },
+  {
+    action_type: "resume",
+    artifacts: ["parking-decision-087"],
+    advisor_reason:
+      "Parked security baseline scope can return to ready posture after operator review confirms it belongs in active focus.",
+    current_backend_status: "parked",
+    current_package_posture: "Deferred",
+    delivery_package_id: "pkg-087",
+    dirty_state: "clean",
+    expected_backend_route:
+      "POST /v1/delivery-work-items/{work_item_id}/parking",
+    gate_checks: [
+      {
+        label: "Parking decision exists",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "Target PI still uncommitted",
+        passed: true,
+        tone: "warn",
+      },
+      {
+        label: "No blocker carried into ready posture",
+        passed: true,
+        tone: "ok",
+      },
+    ],
+    intent_id: "intent-resume-087",
+    operator_payload: {
+      action: "resume",
+      resume_status: "",
+      work_note: "",
+    },
+    receipt_category: null,
+    required_payload_fields: ["action", "resume_status", "work_note"],
+    scope: "package_with_children",
+    source_epic_id: 87,
+    source_revision: "mock-delivery-v1:pkg-087",
+    target_display_name: "OpenProject Epic #087 - Security Baseline Review",
+    target_id: "pkg-087",
+    target_type: "Epic",
+  },
+  {
+    action_type: "continue-remaining-work",
+    artifacts: ["closeout-finding-714"],
+    advisor_reason:
+      "Closeout found remaining child work, so the package should stay in progress and continue the open execution target.",
+    current_backend_status: "in-progress",
+    current_package_posture: "In Progress",
+    delivery_package_id: "pkg-714",
+    dirty_state: "clean",
+    expected_backend_route:
+      "POST /v1/delivery-work-items/{work_item_id}/update",
+    gate_checks: [
+      {
+        label: "Remaining work exists",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "Closeout not terminal",
+        passed: true,
+        tone: "ok",
+      },
+      {
+        label: "Next execution target remains selected",
+        passed: true,
+        tone: "ok",
+      },
+    ],
+    intent_id: "intent-continue-714",
+    operator_payload: {
+      status: "in-progress",
+      work_note: "",
+    },
+    receipt_category: null,
+    required_payload_fields: ["status", "work_note"],
+    scope: "package_with_children",
+    source_epic_id: 714,
+    source_revision: "mock-delivery-v1:pkg-714",
+    target_display_name: "OpenProject Epic #714 - Broker Draft Validation",
+    target_id: "pkg-714",
+    target_type: "Epic",
+  },
+];

@@ -2,8 +2,9 @@
 
 ## Current Posture
 
-Repository provisioning does not activate the Console, move the approved
-prototype source, or authorize connections to live workspace systems.
+The approved Console source baseline is present in this repository for
+graduation. Source custody does not activate a shared runtime or authorize
+connections to live workspace systems.
 
 The current security evidence is:
 
@@ -19,11 +20,27 @@ The current security evidence is:
 - Operator Orchestration Service owns shared workflow APIs and adapters.
 - Platform Engineering owns runtime integration, deployment, and release.
 - Security Architecture owns trust-boundary review and security acceptance.
-- This repository owns product source only after the recorded graduation
+- This repository owns durable product source after the recorded graduation
   completes.
 
 The Console may project evidence from those authorities. It must not replace
 them or imply that a local UI state is an authority decision.
+
+## Graduated Baseline Boundary
+
+The transferred baseline remains limited to:
+
+- loopback local preview
+- read-only local host telemetry
+- synthetic or fixture-backed operational records
+- prototype-local workflow state and receipts
+- synthetic, unauthenticated operator identity
+- manual, suggestion-only local Ollama interaction with synthetic context
+
+The source manifest is
+[`graduation/source-manifest.json`](graduation/source-manifest.json). The
+baseline security findings remain expansion gates until separately reviewed
+live-integration work resolves them.
 
 ## Public Repository Boundary
 
