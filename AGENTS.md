@@ -7,6 +7,8 @@ Operations Console after its approved Prototype Studio baseline graduates.
 
 - `README.md`
 - `docs/security-and-data-boundaries.md`
+- [Security review checklist](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/security-review-checklist.md)
+- [Owner-repository admission review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-31-governance-operations-console-owner-repository-admission.md)
 
 ## Current Boundary
 
