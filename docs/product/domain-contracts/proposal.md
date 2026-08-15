@@ -30,12 +30,15 @@ than SSE/websocket.
 
 ## Source Of Truth
 
-Canonical proposal state belongs to the proposal backend/OOS path. Prototype
-receipts in this console are local proof until admitted mutation wiring exists.
+Canonical Proposal state belongs to Workspace Proposals in OpenProject. OOS is
+the only admitted mutation adapter. The Console reads typed OOS projections and
+submits version-bound commands through same-origin server routes; it never
+calls OpenProject from the browser or treats local state as canonical truth.
 
-The console may record prototype-local receipts for workflow proof, but it
-must label those as local receipt/projection state rather than changed backend
-truth.
+When `OOS_BASE_URL` is absent, the Console enters explicit disconnected preview
+and uses synthetic fixtures plus prototype-local receipts. When an OOS endpoint
+is configured but unavailable, the Console fails closed, shows an offline
+source posture, disables writes, and does not fall back to fixtures.
 
 ## Projection Authority And Live Failover
 
@@ -46,17 +49,22 @@ read model, OOS proposal projection, or a future admitted Proposal backend
 projection. Workflow session code must not mutate those fields to simulate
 triage, disposition, route, handoff, or implemented backend truth.
 
-The console may create a prototype-local proposal record from direct capture.
-That record must remain visibly local through `proposal://local/...`,
-`recordVersion: "local-capture"`, and a syncing/local projection posture until
-an admitted backend create path returns a canonical proposal id and projection
-version.
+Live direct capture uses `POST /v1/ideas/capture`; the resulting Proposal is
+refreshed through the versioned projection route before it is shown as
+canonical. Disconnected preview may still create a prototype-local record, but
+that record remains visibly local through `proposal://local/...`,
+`recordVersion: "local-capture"`, and local projection posture.
 
-Workflow steps may record prototype-local commands and receipts for Triage,
-Disposition, Route Selection, and Handoff. Those receipts may drive the Hub,
-progress cards, current required move, and read-only History posture, but they
-must not overwrite the source proposal projection. The source proposal record
-remains the selected record context; the local receipt is an overlay.
+In live mode, workflow steps submit `triage`, `disposition`, and `handoff`
+commands to OOS with the canonical record ref, expected version, lifecycle
+status, and current projection state. OOS projections and immutable history
+events drive the Hub, progress cards, required move, and History posture. Local
+drafts remain browser-local and lose write eligibility when their source
+version is no longer current.
+
+In disconnected preview, workflow steps may record prototype-local commands
+and receipts. Those receipts may drive the same interface but must not be
+presented as backend truth.
 `projectProposalEffectiveRecords` is the single merge boundary for source
 records, console captures, matching workflow receipts, and Repository gate
 resolutions. Summary, filters, register rows, selected context, Details, Hub,
@@ -77,8 +85,8 @@ if the projection becomes stale, offline, or errored, Proposal must show a
 source-review posture and block further local apply actions until the operator
 reviews the refreshed source.
 
-Cross-operation outputs from Proposal are local projection packets until live
-wiring exists:
+Cross-operation outputs from disconnected preview remain local projection
+packets:
 
 - repository requests from Proposal repository gates stay under
   `operation-integrations/proposal-repository-request-projection.ts`
@@ -89,13 +97,14 @@ wiring exists:
 
 Those outputs use the shared schema-versioned packet envelope. Each output uses
 a separate custody projection, and applied handoffs carry their producer
-receipt reference.
-Those packets must carry or originate from `authority: "prototype-local"` and
+receipt reference. Those packets carry `authority: "prototype-local"` and
 must not be presented as durable Repository, Prototype, Delivery,
 lifecycle-transition, or OOS receipts. When OOS or the owning backend returns a
 durable receipt or refreshed projection, the backend projection wins. The
 local receipt or packet must then be removed, ignored, or reconciled against
-the returned projection version.
+the returned projection version. Live OOS Handoff prepares a canonical target
+packet only. It does not execute Delivery or Prototype application, emit a
+target-owned receipt, or mark the Proposal implemented.
 
 If the Proposal source projection becomes stale, offline, or changes version
 while a local draft or receipt exists, the UI must show stale, conflict, or
@@ -153,6 +162,10 @@ files stay private under ownership folders:
 - `read-model/`: structured Proposal types, read-model entry, and fixture truth
   split by activities, scenarios, scenario coverage, summary, and workspace status
 - `local-runtime/`: prototype-local subscription and command receipt adapter
+- `live-runtime/`: browser-safe OOS contract projection, bounded polling,
+  same-origin command client, and explicit live/disconnected runtime state
+- `server/`: server-only OOS client, caller authentication, configuration,
+  timeout, response validation, and Next route handlers
 
 Proposal must not add implementation files at the domain root except the public
 barrel. Proposal uses Teras primitives directly and must not keep placeholder
@@ -186,7 +199,8 @@ Proposal active workflow steps:
      packets, and does not perform handoff
 3. Handoff
    - reviews already selected route and repository gate
-   - records local handoff request or handoff block
+   - records a version-bound prepared-handoff result through OOS in live mode
+     or a clearly local receipt in disconnected preview
    - does not choose a new route or create/mutate a repository
 
 History is available as read-only archive. It is not a progress step in the

@@ -212,6 +212,8 @@ function proposalRequiredMoveId(proposal: ProposalWorkspaceScenario) {
   switch (proposal.status) {
     case "captured":
       return "proposal.triage";
+    case "triaged":
+      return "proposal.disposition";
     case "ready-to-route":
       return "proposal.handoff-review";
     case "waiting-on-source":

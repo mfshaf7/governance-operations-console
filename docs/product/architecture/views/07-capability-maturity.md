@@ -29,7 +29,7 @@ All capabilities and transitions in this view are `approved-target`.
 | Agent Console And Runtime | implemented | partial | connected | pre-baseline |
 | Runtime Readiness | implemented | implemented | connected | pre-baseline |
 | Operation Workbench | implemented | not-required | not-required | pre-baseline |
-| Proposal | implemented | partial | missing | post-baseline |
+| Proposal | implemented | implemented | connected | post-baseline |
 | Repository | implemented | partial | missing | post-baseline |
 | Model Operations | implemented | partial | missing | post-baseline |
 | Delivery | implemented | implemented | missing | post-baseline |
@@ -50,8 +50,8 @@ All capabilities and transitions in this view are `approved-target`.
 
 | Transition | Console | Backend | Adapter | Phase |
 | --- | --- | --- | --- | --- |
-| Proposal to Delivery | prototype-only | implemented | missing | post-baseline |
-| Proposal to Prototype | prototype-only | missing | missing | post-baseline |
+| Proposal to Delivery | partial | implemented | partial | post-baseline |
+| Proposal to Prototype | partial | partial | partial | post-baseline |
 | Proposal Repository Gate | prototype-only | missing | missing | post-baseline |
 | Repository Request and Provisioning | prototype-only | partial | missing | post-baseline |
 | Prototype to Delivery | prototype-only | missing | missing | post-baseline |

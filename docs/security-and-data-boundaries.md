@@ -2,9 +2,10 @@
 
 ## Current Posture
 
-The approved Console source baseline is present in this repository for
-graduation. Source custody does not activate a shared runtime or authorize
-connections to live workspace systems.
+The approved Console source baseline is graduated. Proposal is the first
+separately governed external-system adapter: the browser calls same-origin
+Console routes and the server-side adapter authenticates to OOS. This source
+change does not itself grant deployment or security acceptance.
 
 The current security evidence is:
 
@@ -37,6 +38,11 @@ The transferred baseline remains limited to:
 - prototype-local workflow state and receipts
 - synthetic, unauthenticated operator identity
 - manual, suggestion-only local Ollama interaction with synthetic context
+
+The Proposal exception to that baseline is bounded to OOS list, capture,
+projection, command, and history routes. OOS credentials and configured
+operator attribution are server-only. Configured OOS failure disables Proposal
+writes and never falls back to synthetic records.
 
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The

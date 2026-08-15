@@ -38,8 +38,8 @@ application or completion.
 
 | Transition | Trigger and target completion | Console | Backend | Adapter |
 | --- | --- | --- | --- | --- |
-| Proposal to Delivery | Accepted Proposal selects Delivery; a Delivery ingress receipt creates an Intake source while Proposal remains accepted. | prototype-only | implemented | missing |
-| Proposal to Prototype | Accepted Proposal selects exploration; a Prototype receipt creates an `exploring` record with Landing required. | prototype-only | missing | missing |
+| Proposal to Delivery | Accepted Proposal selects Delivery; OOS prepares the target packet, while a future Delivery ingress receipt creates an Intake source and Proposal remains accepted. | partial | implemented | partial |
+| Proposal to Prototype | Accepted Proposal selects exploration; OOS prepares the target packet, while a future Prototype receipt creates an `exploring` record with Landing required. | partial | partial | partial |
 | Proposal Repository Gate | Selected route needs new or clarified source custody; an active workspace repository ref returns control to Proposal handoff. | prototype-only | missing | missing |
 | Repository Request and Provisioning | Operator or upstream domain requests durable source; physical repository, ownership, README, and AGENTS evidence reconcile without implying workspace classification. | prototype-only | partial | missing |
 | Prototype to Delivery | Baseline-approved Prototype prepares graduation; Delivery Consume creates or reuses the ART shell and final receipt marks graduation. | prototype-only | missing | missing |

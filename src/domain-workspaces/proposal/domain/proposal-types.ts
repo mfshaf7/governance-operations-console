@@ -8,6 +8,7 @@ export type ProposalWorkspaceScenarioStatus =
   | "captured"
   | "done"
   | "parked"
+  | "triaged"
   | "ready-to-route"
   | "waiting-on-repository"
   | "waiting-on-source";

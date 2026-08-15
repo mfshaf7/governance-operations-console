@@ -11,13 +11,21 @@ cross-repo graduation record establishes final custody after the source landing,
 Prototype Studio handoff, and Workspace Governance product promotion are all
 reviewed.
 
-The transferred baseline remains:
+The graduated baseline remains private and loopback-only. Proposal now has one
+separately governed live integration slice:
+
+- server-only OOS caller credentials and operator attribution
+- canonical Proposal list, capture, projection, command, and history paths
+- bounded visible-page polling with fail-closed writes
+- explicit disconnected preview when no OOS endpoint is configured
+
+All other operational workflows remain:
 
 - private and operator-local
 - loopback-only for local preview
-- fixture-backed or synthetic for operational workflows
+- fixture-backed or synthetic unless their own contract says otherwise
 - read-only for bounded local host telemetry
-- prototype-local for all simulated writes and receipts
+- prototype-local for simulated writes and receipts outside Proposal live mode
 
 Source graduation does not grant:
 
@@ -51,6 +59,10 @@ The local preview binds to `http://127.0.0.1:3317`.
 
 Use `npm run check` for the complete architecture, semantic, type, and
 production-build validation.
+
+The Proposal live adapter is configured through the server-only environment
+boundary documented in
+[`docs/product/proposal-live-integration.md`](docs/product/proposal-live-integration.md).
 
 ## Authority Map
 

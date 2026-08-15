@@ -16,9 +16,11 @@ import {
   type ProposalIngressFilter,
   type ProposalStatusFilter,
 } from "../shared/proposal-display-model.ts";
+import type { OperationSurfaceStatusModel } from "../../../operation-contracts/surface-status.ts";
 
 export type ProposalControlController = {
   capture: {
+    available: boolean;
     canSubmit: boolean;
     close: () => void;
     context: string;
@@ -75,4 +77,5 @@ export type ProposalControlController = {
   selectedProposal: ProposalWorkspaceScenario | null;
   selectedProposalHubProjection: ProposalHubProjection | null;
   summary: ProposalWorkspaceSummaryMetric[];
+  workspaceStatus: OperationSurfaceStatusModel;
 };

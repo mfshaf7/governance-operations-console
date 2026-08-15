@@ -16,10 +16,12 @@ import {
 import type { ProposalWorkspaceSummaryMetric } from "../../read-model/proposal-workspace-read-model.ts";
 
 export function ProposalControlOverviewPanel({
+  canCapture,
   onCaptureProposal,
   summary,
   workspaceStatus,
 }: {
+  canCapture: boolean;
   onCaptureProposal: () => void;
   summary: ProposalWorkspaceSummaryMetric[];
   workspaceStatus: OperationSurfaceStatusModel;
@@ -39,6 +41,7 @@ export function ProposalControlOverviewPanel({
         action={
           <TerasActionButton
             data-proposal-capture-action="true"
+            disabled={!canCapture}
             onClick={onCaptureProposal}
           >
             <Plus aria-hidden="true" size={14} />

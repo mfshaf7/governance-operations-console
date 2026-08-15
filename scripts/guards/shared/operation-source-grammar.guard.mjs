@@ -32,6 +32,7 @@ const completedDomains = [
   }),
   operationDomain({
     domain: "proposal",
+    optionalLayers: ["live-runtime", "server"],
     requiredLayers: [
       "domain",
       "local-runtime",

@@ -377,12 +377,12 @@ capabilities:
     design_status: approved-target
     implementation:
       console: implemented
-      backend_support: partial
-      live_adapter: missing
+      backend_support: implemented
+      live_adapter: connected
       delivery_phase: post-baseline
     post_baseline_work:
-      - Connect capture, triage, decision, refresh, and Delivery consume to OOS.
-      - Extend OOS with target-neutral route and handoff projection for Prototype.
+      - Reconcile target-owned Delivery and Prototype application receipts.
+      - Add Repository Operation gate resolution after its owner contract is admitted.
       - Keep proposal lifecycle separate from handoff and downstream completion state.
 
   repository:
