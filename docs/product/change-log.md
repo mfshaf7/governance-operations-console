@@ -6,6 +6,17 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-08-16
+
+- Connected Proposal to the admitted Operator Orchestration Service contract
+  through server-only same-origin routes for list, capture, projection,
+  command, and history behavior.
+- Added bounded visible-page polling, canonical projection and receipt mapping,
+  version-bound commands, and fail-closed write behavior when a configured OOS
+  source is unavailable.
+- Preserved an explicit disconnected-preview mode for local development without
+  presenting fixture records or local receipts as canonical backend truth.
+
 ## 2026-07-31
 
 - Transferred the approved application baseline and product records into the

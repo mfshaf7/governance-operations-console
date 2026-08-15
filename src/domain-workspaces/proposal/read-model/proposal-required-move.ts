@@ -43,6 +43,16 @@ export function proposalRequiredMove(
         title: "Revisit Parked Proposal",
         tone: "warn",
       };
+    case "triaged":
+      return {
+        buttonLabel: "Open Disposition",
+        description:
+          "Triage is recorded. Review the outcome, route, and repository handling.",
+        statusTitle: "Disposition Required",
+        target: "disposition",
+        title: "Record Disposition",
+        tone: "warn",
+      };
     case "ready-to-route":
       return {
         buttonLabel: "Open Handoff",

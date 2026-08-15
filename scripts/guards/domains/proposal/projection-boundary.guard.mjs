@@ -40,6 +40,11 @@ export const guard = {
       `${integrationsRoot}/proposal-delivery-entry-projection.ts`;
     const workflowIntegration =
       `${integrationsRoot}/proposal-workflow-integration-runtime.ts`;
+    const liveContract = `${root}/live-runtime/proposal-live-contract.ts`;
+    const liveProjection = `${root}/live-runtime/proposal-live-projection.ts`;
+    const liveRuntime = `${root}/live-runtime/use-proposal-live-runtime.ts`;
+    const serverRoutes = `${root}/server/proposal-api-routes.ts`;
+    const oosClient = `${root}/server/proposal-oos-client.ts`;
 
     for (const path of [
       `${root}/domain/proposal-types.ts`,
@@ -53,6 +58,11 @@ export const guard = {
       prototypeIntegration,
       deliveryIntegration,
       workflowIntegration,
+      liveContract,
+      liveProjection,
+      liveRuntime,
+      serverRoutes,
+      oosClient,
     ]) {
       assertAppFile(failures, path);
     }
@@ -79,6 +89,10 @@ export const guard = {
       "proposalEffectiveRepositoryGateResolution",
       "proposalWorkspaceSummaryMetrics",
       "submitProposalWorkflowIntegrationCommand",
+      "useProposalLiveRuntime",
+      "projectProposalLiveRecords",
+      "projectProposalCanonicalDrafts",
+      "proposalLiveWorkspaceStatus",
     ]);
     assertOmits(failures, controller, [
       "handoffCustodyBySourceRecordId",
@@ -90,6 +104,34 @@ export const guard = {
       "proposalWorkspaceReadModel.summary",
       "receiptsByProposal: proposalRuntimeProjection.workflowReceipts",
       "proposalRuntimeProjection.workflowReceipts[hubProposal.id]",
+      "openproject",
+      "x-oos-caller-secret",
+    ]);
+    assertIncludes(failures, oosClient, [
+      '"/v1/ideas/capture"',
+      "/v1/ideas?limit=",
+      '"x-oos-caller-id"',
+      '"x-oos-caller-secret"',
+      'cache: "no-store"',
+      "AbortSignal.timeout",
+      "request.source.recordVersion",
+    ]);
+    assertIncludes(failures, liveRuntime, [
+      'fetch("/api/proposals"',
+      "proposalPollIntervalMs",
+      'document.visibilityState === "visible"',
+      "await refresh()",
+    ]);
+    assertOmits(failures, liveRuntime, [
+      "proposalWorkspaceReadModel",
+      "proposalWorkspaceScenarios",
+      "openproject",
+      "OOS_CALLER_SECRET",
+    ]);
+    assertIncludes(failures, serverRoutes, [
+      'mode: "disconnected-preview"',
+      'mode: "live"',
+      "proposalOosConfigured",
     ]);
     assertIncludes(failures, receiptProjection, [
       "proposalWorkflowReceiptsForSource",

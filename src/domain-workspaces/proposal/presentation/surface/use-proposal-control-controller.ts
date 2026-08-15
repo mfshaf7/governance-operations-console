@@ -21,6 +21,14 @@ import {
 } from "../../local-runtime/proposal-effective-projection.ts";
 import { proposalWorkflowDraftsFromReceipts } from "../../local-runtime/proposal-workflow-receipt-projection.ts";
 import {
+  projectProposalCanonicalDrafts,
+  projectProposalLiveRecords,
+  proposalLiveWorkspaceStatus,
+} from "../../live-runtime/proposal-live-projection.ts";
+import { useProposalLiveRuntime } from "../../live-runtime/use-proposal-live-runtime.ts";
+import type { ProposalWorkflowApplyPayload } from "../../work-model/proposal-workflow-command-model.ts";
+import type { ProposalWorkflowSourceSnapshot } from "../../work-model/proposal-source-projection-model.ts";
+import {
   proposalFilterRegisterRows,
   proposalWorkspaceSummaryMetrics,
   proposalStatusFilterOptions,
@@ -49,6 +57,9 @@ export function useProposalControlController({
 }: {
   entryIntent?: ConsoleSurfaceEntryIntent | null;
 } = {}): ProposalControlController {
+  const proposalLiveRuntime = useProposalLiveRuntime();
+  const liveSnapshot = proposalLiveRuntime.snapshot;
+  const previewMode = liveSnapshot?.mode === "disconnected-preview";
   const runtimeCapabilities = getProposalRuntimeCapabilities();
   const proposalRuntimeProjection = useSyncExternalStore(
     subscribeProposalRuntimeProjection,
@@ -88,22 +99,38 @@ export function useProposalControlController({
       repositoryGateResolutions,
     ],
   );
-  const proposals = effectiveProjection.records;
-  const effectiveWorkflowReceipts =
-    effectiveProjection.workflowReceiptsByProposal;
+  const canonicalProjection = useMemo(
+    () => projectProposalCanonicalDrafts(liveSnapshot?.records ?? []),
+    [liveSnapshot?.records],
+  );
+  const liveProposals = useMemo(
+    () => projectProposalLiveRecords(liveSnapshot?.records ?? []),
+    [liveSnapshot?.records],
+  );
+  const proposals = previewMode ? effectiveProjection.records : liveProposals;
+  const effectiveWorkflowReceipts = previewMode
+    ? effectiveProjection.workflowReceiptsByProposal
+    : canonicalProjection.workflowReceipts;
   const effectiveRepositoryGateResolutions = useMemo(
     () =>
-      Object.fromEntries(
-        proposals.flatMap((proposal) => {
-          const resolution = proposalEffectiveRepositoryGateResolution(
-            proposal,
-            repositoryGateResolutions[proposal.id] ?? null,
-          );
+      previewMode
+        ? Object.fromEntries(
+            proposals.flatMap((proposal) => {
+              const resolution = proposalEffectiveRepositoryGateResolution(
+                proposal,
+                repositoryGateResolutions[proposal.id] ?? null,
+              );
 
-          return resolution ? [[proposal.id, resolution]] : [];
-        }),
-      ),
-    [proposals, repositoryGateResolutions],
+              return resolution ? [[proposal.id, resolution]] : [];
+            }),
+          )
+        : canonicalProjection.repositoryGateResolutions,
+    [
+      canonicalProjection.repositoryGateResolutions,
+      previewMode,
+      proposals,
+      repositoryGateResolutions,
+    ],
   );
   const [selectedProposalId, setSelectedProposalId] = useState(
     proposalWorkspaceReadModel.proposals[1]?.id ??
@@ -150,35 +177,88 @@ export function useProposalControlController({
         );
       }
 
-      const { receipt } = await submitProposalWorkflowIntegrationCommand({
-        ...input,
-        proposal,
-      });
+      if (previewMode) {
+        const { receipt } = await submitProposalWorkflowIntegrationCommand({
+          ...input,
+          proposal,
+        });
 
+        return {
+          receiptId: receipt.receipt.receiptId,
+          recordedAt: receipt.receipt.recordedAt,
+        };
+      }
+
+      const liveRecord = liveSnapshot?.records.find(
+        (record) => record.projection.proposal_id === input.proposalId,
+      );
+      if (!liveRecord || liveSnapshot?.status !== "current") {
+        throw new Error("Canonical Proposal state is unavailable for this command.");
+      }
+      const result = await proposalLiveRuntime.command({
+        commandId: proposalLiveCommandId(input),
+        payload: input.payload,
+        proposalId: input.proposalId,
+        source: {
+          projectionState: liveRecord.projection.projection_state,
+          recordRef: liveRecord.projection.record_ref,
+          recordVersion: liveRecord.projection.record_version,
+          status: liveRecord.projection.status,
+        },
+      });
       return {
-        receiptId: receipt.receipt.receiptId,
-        recordedAt: receipt.receipt.recordedAt,
+        receiptId: result.receipt.receipt_ref,
+        recordedAt: result.receipt.recorded_at,
       };
     },
   });
   const { decisionDrafts, handoffDrafts, routeSelectionDrafts, triageDrafts } =
-    useMemo(
-      () =>
-        proposalWorkflowDraftsFromReceipts({
+    useMemo(() => {
+      if (previewMode) {
+        return proposalWorkflowDraftsFromReceipts({
           decisionDrafts: localDecisionDrafts,
           handoffDrafts: localHandoffDrafts,
           receiptsByProposal: effectiveWorkflowReceipts,
           routeSelectionDrafts: localRouteSelectionDrafts,
           triageDrafts: localTriageDrafts,
-        }),
-      [
-        localDecisionDrafts,
-        localHandoffDrafts,
-        localRouteSelectionDrafts,
-        localTriageDrafts,
-        effectiveWorkflowReceipts,
-      ],
-    );
+        });
+      }
+
+      return {
+        decisionDrafts: mergeCurrentProposalDrafts(
+          canonicalProjection.decisionDrafts,
+          localDecisionDrafts,
+          proposals,
+        ),
+        handoffDrafts: mergeCurrentProposalDrafts(
+          canonicalProjection.handoffDrafts,
+          localHandoffDrafts,
+          proposals,
+        ),
+        routeSelectionDrafts: mergeCurrentProposalDrafts(
+          canonicalProjection.routeSelectionDrafts,
+          localRouteSelectionDrafts,
+          proposals,
+        ),
+        triageDrafts: mergeCurrentProposalDrafts(
+          canonicalProjection.triageDrafts,
+          localTriageDrafts,
+          proposals,
+        ),
+      };
+    }, [
+      canonicalProjection.decisionDrafts,
+      canonicalProjection.handoffDrafts,
+      canonicalProjection.routeSelectionDrafts,
+      canonicalProjection.triageDrafts,
+      effectiveWorkflowReceipts,
+      localDecisionDrafts,
+      localHandoffDrafts,
+      localRouteSelectionDrafts,
+      localTriageDrafts,
+      previewMode,
+      proposals,
+    ]);
   const filteredProposals = useMemo(
     () =>
       proposalFilterRegisterRows({
@@ -220,7 +300,9 @@ export function useProposalControlController({
     [hubProposalId, proposals],
   );
   const canSubmitCapture =
-    runtimeCapabilities.canSubmit &&
+    (previewMode
+      ? runtimeCapabilities.canSubmit
+      : liveSnapshot?.status === "current") &&
     captureTitle.trim().length > 0 &&
     captureContext.trim().length > 0;
   const selectedProposalHubProjection = selectedProposal
@@ -258,13 +340,21 @@ export function useProposalControlController({
       return;
     }
 
-    const { record: capturedProposal } = await submitProposalCaptureCommand({
-      bodyPreview: captureContext.trim(),
-      captureRequestId,
-      title: captureTitle.trim(),
-    });
+    const capturedProposalId = previewMode
+      ? (
+          await submitProposalCaptureCommand({
+            bodyPreview: captureContext.trim(),
+            captureRequestId,
+            title: captureTitle.trim(),
+          })
+        ).record.id
+      : await proposalLiveRuntime.capture({
+          body: captureContext.trim(),
+          requestId: captureRequestId,
+          title: captureTitle.trim(),
+        });
 
-    setSelectedProposalId(capturedProposal.id);
+    setSelectedProposalId(capturedProposalId);
     setCaptureContext("");
     setCaptureRequestId(createProposalCaptureRequestId());
     setCaptureTitle("");
@@ -278,6 +368,7 @@ export function useProposalControlController({
 
   return {
     capture: {
+      available: previewMode || liveSnapshot?.status === "current",
       canSubmit: canSubmitCapture,
       close: () => setCaptureOpen(false),
       context: captureContext,
@@ -361,5 +452,39 @@ export function useProposalControlController({
     selectedProposal,
     selectedProposalHubProjection,
     summary,
+    workspaceStatus: proposalLiveWorkspaceStatus(liveSnapshot),
   };
+}
+
+function mergeCurrentProposalDrafts<TDraft extends { sourceRecordVersion?: string }>(
+  canonicalDrafts: Record<string, TDraft>,
+  localDrafts: Record<string, TDraft>,
+  proposals: ProposalWorkspaceScenario[],
+) {
+  const currentVersions = new Map(
+    proposals.map((proposal) => [proposal.id, proposal.recordVersion]),
+  );
+  return {
+    ...canonicalDrafts,
+    ...Object.fromEntries(
+      Object.entries(localDrafts).filter(
+        ([proposalId, draft]) =>
+          draft.sourceRecordVersion === currentVersions.get(proposalId),
+      ),
+    ),
+  };
+}
+
+function proposalLiveCommandId(input: {
+  payload: ProposalWorkflowApplyPayload;
+  proposalId: string;
+  source: ProposalWorkflowSourceSnapshot;
+}) {
+  const value = JSON.stringify(input);
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `proposal-command:${input.proposalId}:${input.payload.step}:${(hash >>> 0).toString(16)}`;
 }

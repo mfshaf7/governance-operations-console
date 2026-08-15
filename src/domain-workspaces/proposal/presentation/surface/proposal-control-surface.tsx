@@ -9,7 +9,6 @@ import {
   TerasSelectedPanel,
 } from "@/teras";
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
-import { proposalWorkspaceReadModel } from "../../read-model/proposal-workspace-read-model.ts";
 import { ProposalCaptureModal } from "../dialogs/capture/proposal-capture-modal.tsx";
 import { ProposalDetailModal } from "../dialogs/details/proposal-detail-modal.tsx";
 import { ProposalHubModal } from "../hub/proposal-hub-modal.tsx";
@@ -30,26 +29,9 @@ export function ProposalControlSurface({
 }) {
   const controller = useProposalControlController({ entryIntent });
   const selectedProposal = controller.selectedProposal;
-
-  if (!selectedProposal) {
-    return (
-      <TerasEmptyState fill>
-        No proposal records are available in the projection.
-      </TerasEmptyState>
-    );
-  }
-
   const selectedProposalHubProjection =
     controller.selectedProposalHubProjection;
-  if (!selectedProposalHubProjection) {
-    return (
-      <TerasEmptyState fill>
-        No proposal records are available in the projection.
-      </TerasEmptyState>
-    );
-  }
-
-  const selectedProposalMove = selectedProposalHubProjection.currentMove;
+  const selectedProposalMove = selectedProposalHubProjection?.currentMove;
 
   return (
     <>
@@ -59,9 +41,10 @@ export function ProposalControlSurface({
         mode="overview-register-selected"
         overview={
           <ProposalControlOverviewPanel
+            canCapture={controller.capture.available}
             onCaptureProposal={controller.capture.openModal}
             summary={controller.summary}
-            workspaceStatus={proposalWorkspaceReadModel.workspaceStatus}
+            workspaceStatus={controller.workspaceStatus}
           />
         }
         register={
@@ -106,7 +89,7 @@ export function ProposalControlSurface({
                 onInspectProposal={controller.register.inspect}
                 onSelectProposal={controller.register.select}
                 proposals={controller.proposals.filtered}
-                selectedProposalId={selectedProposal.id}
+                selectedProposalId={selectedProposal?.id ?? ""}
               />
             ) : (
               <TerasEmptyState fill>
@@ -115,7 +98,7 @@ export function ProposalControlSurface({
             )}
           </TerasRegisterPanel>
         }
-        selected={
+        selected={selectedProposal && selectedProposalHubProjection && selectedProposalMove ? (
           <TerasSelectedPanel
             action={{
               description: selectedProposalMove.description,
@@ -143,7 +126,11 @@ export function ProposalControlSurface({
             tone={selectedProposalHubProjection.status.tone}
             variant="compact"
           />
-        }
+        ) : (
+          <TerasEmptyState fill>
+            No canonical proposal record is available. Check Workspace Status for source health.
+          </TerasEmptyState>
+        )}
         selectedProps={{
           "data-proposal-selected-launcher": "true",
         }}

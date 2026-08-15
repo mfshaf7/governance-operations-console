@@ -30,6 +30,8 @@ export function proposalStatusPillLabel(proposal: ProposalWorkspaceScenario) {
       return "Done";
     case "parked":
       return "Parked";
+    case "triaged":
+      return "Triaged";
     case "ready-to-route":
       return "Review";
     case "waiting-on-repository":
@@ -49,6 +51,8 @@ export function proposalScenarioStatusLabel(
       return "Done";
     case "parked":
       return "Parked";
+    case "triaged":
+      return "Triaged";
     case "ready-to-route":
       return "Handoff review";
     case "waiting-on-repository":
