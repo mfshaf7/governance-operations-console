@@ -3,9 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import type {
   ProposalLiveCaptureRequest,
   ProposalLiveCommandRequest,
+  ProposalLiveHandoffApplicationRequest,
 } from "../live-runtime/proposal-live-types.ts";
 import {
   applyProposalCommand,
+  applyProposalDeliveryHandoff,
   captureProposal,
   listProposalLiveRecords,
   proposalOosConfigured,
@@ -77,6 +79,25 @@ export async function applyProposalCommandRoute(
   }
 }
 
+export async function applyProposalDeliveryHandoffRoute(
+  request: NextRequest,
+  proposalId: string,
+) {
+  try {
+    const body = assertHandoffApplicationRequest(
+      await request.json().catch(() => null),
+      proposalId,
+    );
+    const result = await applyProposalDeliveryHandoff(body);
+    return NextResponse.json(result, {
+      headers: noStoreHeaders,
+      status: result.replayed ? 200 : 201,
+    });
+  } catch (error) {
+    return proposalErrorResponse(error);
+  }
+}
+
 function assertCaptureRequest(value: unknown): ProposalLiveCaptureRequest {
   if (
     !isRecord(value) ||
@@ -114,6 +135,28 @@ function assertCommandRequest(
     );
   }
   return value as unknown as ProposalLiveCommandRequest;
+}
+
+function assertHandoffApplicationRequest(
+  value: unknown,
+  proposalId: string,
+): ProposalLiveHandoffApplicationRequest {
+  if (
+    !isRecord(value) ||
+    value.proposalId !== proposalId ||
+    !isRecord(value.source) ||
+    typeof value.source.handoffPacketRef !== "string" ||
+    typeof value.source.recordRef !== "string" ||
+    typeof value.source.recordVersion !== "string" ||
+    value.source.status !== "accepted"
+  ) {
+    throw new ProposalOosError(
+      "Proposal handoff application request is invalid.",
+      "proposal_handoff_application_invalid",
+      400,
+    );
+  }
+  return value as unknown as ProposalLiveHandoffApplicationRequest;
 }
 
 function proposalErrorResponse(error: unknown) {

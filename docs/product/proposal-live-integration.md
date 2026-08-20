@@ -3,8 +3,8 @@
 ## Purpose
 
 This is the primary operator and runtime instruction surface for the Console's
-OOS-backed Proposal integration. It covers only Proposal list, capture,
-projection, versioned commands, history, and bounded polling.
+OOS-backed Proposal integration. It covers Proposal list, capture, projection,
+versioned commands, Delivery handoff application, history, and bounded polling.
 
 ## Runtime Modes
 
@@ -44,8 +44,14 @@ authority declarations, and operator attribution are assembled server-side.
    expected record version, and current source status to OOS.
 6. A conflict refreshes source truth. The local draft remains available for
    operator review but cannot silently overwrite the newer record.
-7. Handoff prepares a target packet only. Delivery or Prototype application is
-   not claimed until a target-owned receipt exists.
+7. Applying a Delivery handoff prepares the canonical packet when needed, then
+   submits that packet through OOS's Delivery application route with one stable
+   application identity.
+8. The Console reports Delivery handoff completion only after OOS returns the
+   target record and application receipt. A failed application refreshes the
+   canonical blocked state and remains retryable with the same identity.
+9. Prototype handoff still stops at canonical preparation until a
+   Prototype-owned application adapter is admitted.
 
 ## Local Validation
 

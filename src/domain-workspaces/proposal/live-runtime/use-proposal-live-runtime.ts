@@ -5,13 +5,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   assertProposalLiveSnapshot,
   assertProposalOosCommandResult,
+  assertProposalOosHandoffApplicationResult,
   isProposalLiveApiError,
 } from "./proposal-live-contract.ts";
 import type {
   ProposalLiveCaptureRequest,
   ProposalLiveCommandRequest,
+  ProposalLiveHandoffApplicationRequest,
   ProposalLiveSnapshot,
   ProposalOosCommandResult,
+  ProposalOosHandoffApplicationResult,
 } from "./proposal-live-types.ts";
 
 const proposalPollIntervalMs = 15_000;
@@ -93,7 +96,31 @@ export function useProposalLiveRuntime() {
     [refresh],
   );
 
-  return { capture, command, refresh, snapshot };
+  const applyDeliveryHandoff = useCallback(
+    async (
+      request: ProposalLiveHandoffApplicationRequest,
+    ): Promise<ProposalOosHandoffApplicationResult> => {
+      const response = await fetch(
+        `/api/proposals/${encodeURIComponent(request.proposalId)}/handoff/apply`,
+        {
+          body: JSON.stringify(request),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+      const body: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        await refresh();
+        throw proposalClientError(body);
+      }
+      const result = assertProposalOosHandoffApplicationResult(body);
+      await refresh();
+      return result;
+    },
+    [refresh],
+  );
+
+  return { applyDeliveryHandoff, capture, command, refresh, snapshot };
 }
 
 function proposalOfflineSnapshot(value: unknown): ProposalLiveSnapshot {

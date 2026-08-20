@@ -8,6 +8,7 @@ import {
 } from "../../src/domain-workspaces/proposal/live-runtime/proposal-live-projection.ts";
 import {
   applyProposalCommand,
+  applyProposalDeliveryHandoff,
   listProposalLiveRecords,
   ProposalOosError,
 } from "../../src/domain-workspaces/proposal/server/proposal-oos-client.ts";
@@ -119,6 +120,61 @@ test("case:console-proposal-adapter-negative fails closed without fixture or dir
   assert.match(clientSource, /response\.status === 409|await refresh\(\)/);
 });
 
+test("case:console-proposal-delivery-application submits a stable version-bound application", async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ init, url: String(url) });
+    return jsonResponse(proposalHandoffApplicationResult(), 201);
+  };
+
+  const result = await applyProposalDeliveryHandoff(
+    {
+      proposalId: "idea-851",
+      source: {
+        handoffPacketRef: "proposal-packet:851",
+        recordRef: "openproject://work_packages/851",
+        recordVersion: "version-19",
+        status: "accepted",
+      },
+    },
+    { env, fetchImpl },
+  );
+
+  const application = JSON.parse(String(calls[0].init.body));
+  assert.equal(
+    calls[0].url,
+    "http://127.0.0.1:8080/v1/proposals/idea-851/handoff/apply",
+  );
+  assert.equal(application.application_id, "proposal-application:851:delivery-1");
+  assert.equal(application.operator.id, "operator:console-owner");
+  assert.equal(application.source.handoff_packet_ref, "proposal-packet:851");
+  assert.equal(application.source.record_version, "version-19");
+  assert.equal(result.receipt.target_record_ref, "openproject://work_packages/901");
+  assert.equal(result.projection.handoff.state, "applied");
+});
+
+test("case:console-proposal-delivery-application rejects an unproven target result", async () => {
+  const malformed = proposalHandoffApplicationResult();
+  malformed.projection.handoff.target_record_ref =
+    "openproject://work_packages/902";
+
+  await assert.rejects(
+    applyProposalDeliveryHandoff(
+      {
+        proposalId: "idea-851",
+        source: {
+          handoffPacketRef: "proposal-packet:851",
+          recordRef: "openproject://work_packages/851",
+          recordVersion: "version-19",
+          status: "accepted",
+        },
+      },
+      { env, fetchImpl: async () => jsonResponse(malformed, 201) },
+    ),
+    /handoff application result is invalid/i,
+  );
+});
+
 test("canonical live projection drives triage, route, gate, and history state", () => {
   const record = {
     createdAt: "2026-08-16T00:00:00Z",
@@ -150,6 +206,95 @@ test("canonical live projection drives triage, route, gate, and history state", 
   assert.equal(drafts.decisionDrafts["idea-851"].outcome, "accepted");
   assert.equal(drafts.routeSelectionDrafts["idea-851"].routeTarget, "Prototype");
   assert.equal(drafts.repositoryGateResolutions["idea-851"].result, "resolved");
+});
+
+test("Delivery handoff stays actionable until target application is proven", () => {
+  const route = {
+    rationale: "The accepted proposal is ready for Delivery.",
+    source_custody: {
+      classification: "existing-repo",
+      owner: "governance-operations-console",
+      rationale: "Existing source custody is resolved.",
+      repository_gate_state: "resolved",
+      repository_mode: "existing",
+      source_ref: "repo://governance-operations-console",
+    },
+    target: "delivery",
+  };
+  const preparedEvent = proposalEvent({
+    event_id: "proposal-event:851:handoff-prepared",
+    event_type: "handoff-prepared",
+    occurred_at: "2026-08-16T03:00:00Z",
+    receipt_refs: ["proposal-receipt:851:handoff-prepared"],
+    status_after: "accepted",
+    status_before: "accepted",
+    summary: "Prepared the Delivery handoff.",
+  });
+  const preparedRecord = {
+    createdAt: "2026-08-16T00:00:00Z",
+    history: {
+      events: [preparedEvent],
+      next_cursor: null,
+      proposal_id: "idea-851",
+      record_version: "version-19",
+      schema_version: 1,
+    },
+    projection: proposalProjection({
+      handoff: {
+        packet_ref: "proposal-packet:851",
+        state: "ready",
+        target_receipt_ref: null,
+        target_record_ref: null,
+      },
+      record_version: "version-19",
+      route,
+      status: "accepted",
+    }),
+  };
+
+  const [preparedSurface] = projectProposalLiveRecords([preparedRecord]);
+  const preparedDraft = projectProposalCanonicalDrafts([preparedRecord])
+    .handoffDrafts["idea-851"];
+  assert.equal(preparedSurface.status, "ready-to-route");
+  assert.equal(preparedDraft.appliedAt, undefined);
+
+  const appliedEvent = proposalEvent({
+    event_id: "proposal-event:851:handoff-applied",
+    event_type: "handoff-applied",
+    occurred_at: "2026-08-16T04:00:00Z",
+    receipt_refs: ["proposal-target-receipt:idea-851:abc123"],
+    status_after: "accepted",
+    status_before: "accepted",
+    summary: "Applied the prepared Proposal handoff to Delivery.",
+  });
+  const appliedRecord = {
+    ...preparedRecord,
+    history: {
+      ...preparedRecord.history,
+      events: [preparedEvent, appliedEvent],
+      record_version: "version-21",
+    },
+    projection: proposalProjection({
+      handoff: {
+        packet_ref: "proposal-packet:851",
+        state: "applied",
+        target_receipt_ref: "proposal-target-receipt:idea-851:abc123",
+        target_record_ref: "openproject://work_packages/901",
+      },
+      record_version: "version-21",
+      route,
+      status: "accepted",
+    }),
+  };
+  const [appliedSurface] = projectProposalLiveRecords([appliedRecord]);
+  const appliedDraft = projectProposalCanonicalDrafts([appliedRecord])
+    .handoffDrafts["idea-851"];
+  assert.equal(appliedSurface.status, "done");
+  assert.equal(appliedDraft.appliedAt, "2026-08-16T04:00:00Z");
+  assert.equal(
+    appliedDraft.appliedReceiptId,
+    "proposal-target-receipt:idea-851:abc123",
+  );
 });
 
 function proposalProjection(overrides = {}) {
@@ -263,6 +408,66 @@ function proposalCommandResult() {
       recorded_at: "2026-08-16T01:00:00Z",
       record_ref: "openproject://work_packages/851",
       record_version: "version-18",
+    },
+    replayed: false,
+    schema_version: 1,
+  };
+}
+
+function proposalHandoffApplicationResult() {
+  const projection = proposalProjection({
+    decision_notes: "Accepted for governed Delivery.",
+    handoff: {
+      packet_ref: "proposal-packet:851",
+      state: "applied",
+      target_receipt_ref: "proposal-target-receipt:idea-851:abc123",
+      target_record_ref: "openproject://work_packages/901",
+    },
+    last_event_ref: "proposal-event:851:handoff-applied",
+    record_version: "version-21",
+    route: {
+      rationale: "The accepted proposal is ready for Delivery.",
+      source_custody: {
+        classification: "existing-repo",
+        owner: "governance-operations-console",
+        rationale: "Existing source custody is resolved.",
+        repository_gate_state: "resolved",
+        repository_mode: "existing",
+        source_ref: "repo://governance-operations-console",
+      },
+      target: "delivery",
+    },
+    status: "accepted",
+    updated_at: "2026-08-16T04:00:00Z",
+  });
+  const event = proposalEvent({
+    event_id: "proposal-event:851:handoff-applied",
+    event_type: "handoff-applied",
+    occurred_at: "2026-08-16T04:00:00Z",
+    receipt_refs: ["proposal-target-receipt:idea-851:abc123"],
+    status_after: "accepted",
+    status_before: "accepted",
+    summary: "Applied the prepared Proposal handoff to Delivery.",
+  });
+  return {
+    application_id: "proposal-application:851:delivery-1",
+    event,
+    history: {
+      events: [event],
+      next_cursor: null,
+      proposal_id: "idea-851",
+      record_version: "version-21",
+      schema_version: 1,
+    },
+    projection,
+    receipt: {
+      owner: "operator-orchestration-service",
+      receipt_ref: "proposal-target-receipt:idea-851:abc123",
+      recorded_at: "2026-08-16T04:00:00Z",
+      source_record_ref: "openproject://work_packages/851",
+      source_record_version: "version-21",
+      target_record_ref: "openproject://work_packages/901",
+      target_record_system: "openproject",
     },
     replayed: false,
     schema_version: 1,

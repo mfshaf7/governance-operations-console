@@ -130,6 +130,34 @@ export type ProposalOosCommandResult = {
   schema_version: 1;
 };
 
+export type ProposalLiveHandoffApplicationRequest = {
+  proposalId: string;
+  source: {
+    handoffPacketRef: string;
+    recordRef: string;
+    recordVersion: string;
+    status: "accepted";
+  };
+};
+
+export type ProposalOosHandoffApplicationResult = {
+  application_id: string;
+  event: ProposalOosEvent;
+  history: ProposalOosHistory;
+  projection: ProposalOosProjection;
+  receipt: {
+    owner: "operator-orchestration-service";
+    receipt_ref: string;
+    recorded_at: string;
+    source_record_ref: string;
+    source_record_version: string;
+    target_record_ref: string;
+    target_record_system: "openproject";
+  };
+  replayed: boolean;
+  schema_version: 1;
+};
+
 export type ProposalLiveCaptureRequest = {
   body: string;
   requestId: string;

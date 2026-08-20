@@ -103,8 +103,12 @@ lifecycle-transition, or OOS receipts. When OOS or the owning backend returns a
 durable receipt or refreshed projection, the backend projection wins. The
 local receipt or packet must then be removed, ignored, or reconciled against
 the returned projection version. Live OOS Handoff prepares a canonical target
-packet only. It does not execute Delivery or Prototype application, emit a
-target-owned receipt, or mark the Proposal implemented.
+packet. For a Delivery route, the same operator action then calls the OOS
+Delivery application boundary with a stable application identity and the
+refreshed source version. The Console does not claim application until OOS
+returns a target record and durable receipt. Prototype application remains
+outside this adapter. Neither preparation nor Delivery application marks the
+Proposal implemented.
 
 If the Proposal source projection becomes stale, offline, or changes version
 while a local draft or receipt exists, the UI must show stale, conflict, or
@@ -200,7 +204,9 @@ Proposal active workflow steps:
 3. Handoff
    - reviews already selected route and repository gate
    - records a version-bound prepared-handoff result through OOS in live mode
-     or a clearly local receipt in disconnected preview
+   - applies a prepared Delivery handoff through the separate OOS application
+     route using one stable application identity
+   - records a clearly local receipt in disconnected preview
    - does not choose a new route or create/mutate a repository
 
 History is available as read-only archive. It is not a progress step in the
@@ -250,8 +256,9 @@ target admission, target application, or Proposal completion.
 - Proposal-to-Prototype handoff becomes applied only when a Prototype-owned
   application receipt creates the derived `proposal-routed` / `exploring`
   entry with Landing `captured`.
-- Proposal-to-Delivery handoff becomes applied only when a Delivery-owned
-  ingress receipt creates an Intake source with `needs_consume`.
+- Proposal-to-Delivery handoff becomes applied only when the OOS application
+  receipt proves the created or reused Delivery target and the refreshed
+  Proposal projection carries that target reference.
 - Delivery Intake Consume is not part of Proposal Handoff. Consume failure is
   Delivery/Orchestration-owned and must not reopen Proposal.
 - Validation that requires source correction keeps the action with Proposal.

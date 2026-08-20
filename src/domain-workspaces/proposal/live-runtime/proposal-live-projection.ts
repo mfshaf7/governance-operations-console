@@ -208,10 +208,19 @@ export function projectProposalCanonicalDrafts(
     }
 
     if (record.projection.handoff.state !== "not-requested") {
+      const handoffRecorded =
+        record.projection.handoff.state === "applied" ||
+        (route?.target === "prototype" &&
+          record.projection.handoff.state === "ready");
       projection.handoffDrafts[proposalId] = {
         ...source,
-        appliedAt: handoffEvent?.occurred_at ?? record.projection.updated_at,
-        appliedReceiptId: handoffEvent?.receipt_refs[0],
+        ...(handoffRecorded
+          ? {
+              appliedAt:
+                handoffEvent?.occurred_at ?? record.projection.updated_at,
+              appliedReceiptId: handoffEvent?.receipt_refs[0],
+            }
+          : {}),
         notes: handoffEvent?.summary ?? "Canonical handoff review recorded.",
         proposalId,
         result:
@@ -257,6 +266,7 @@ function proposalSurfaceStatus(
   projection: ProposalOosProjection,
 ): ProposalWorkspaceScenario["status"] {
   if (projection.projection_state !== "current") return "waiting-on-source";
+  if (projection.handoff.state === "applied") return "done";
   if (projection.status === "captured") return "captured";
   if (projection.status === "triaged") return "triaged";
   if (projection.status === "parked") return "parked";
@@ -272,6 +282,7 @@ function proposalSurfaceTone(
   projection: ProposalOosProjection,
 ): ProposalWorkspaceScenario["tone"] {
   if (projection.projection_state !== "current") return "warn";
+  if (projection.handoff.state === "applied") return "ok";
   if (projection.status === "implemented") return "ok";
   if (projection.status === "rejected" || projection.status === "parked") {
     return "muted";
@@ -344,10 +355,21 @@ function eventPayload(event: ProposalOosEvent, projection: ProposalOosProjection
       step: "disposition" as const,
     };
   }
-  if (["handoff-applied", "handoff-blocked", "handoff-prepared"].includes(event.event_type)) {
+  if (
+    [
+      "handoff-applied",
+      "handoff-blocked",
+      "handoff-prepared",
+      "target-application-failed",
+    ].includes(event.event_type)
+  ) {
     return {
       notes: event.summary,
-      result: event.event_type === "handoff-blocked" ? "blocked" as const : "ready" as const,
+      result:
+        event.event_type === "handoff-blocked" ||
+        event.event_type === "target-application-failed"
+          ? "blocked" as const
+          : "ready" as const,
       step: "handoff" as const,
     };
   }
@@ -360,7 +382,11 @@ function latestEvent(record: ProposalLiveRecord, eventType: ProposalOosEvent["ev
 
 function latestHandoffEvent(record: ProposalLiveRecord) {
   return record.history.events
-    .filter((event) => event.event_type.startsWith("handoff-"))
+    .filter(
+      (event) =>
+        event.event_type.startsWith("handoff-") ||
+        event.event_type === "target-application-failed",
+    )
     .at(-1);
 }
 
