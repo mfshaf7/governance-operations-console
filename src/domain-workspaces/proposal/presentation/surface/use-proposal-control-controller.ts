@@ -195,6 +195,22 @@ export function useProposalControlController({
       if (!liveRecord || liveSnapshot?.status !== "current") {
         throw new Error("Canonical Proposal state is unavailable for this command.");
       }
+      const appliesToDelivery =
+        input.payload.step === "handoff" &&
+        liveRecord.projection.route?.target === "delivery" &&
+        (input.payload.result === "ready" ||
+          liveRecord.projection.handoff.state === "blocked" ||
+          liveRecord.projection.handoff.state === "ready" ||
+          liveRecord.projection.handoff.state === "waiting-on-target");
+      if (
+        appliesToDelivery &&
+        liveRecord.projection.handoff.state !== "not-requested"
+      ) {
+        return applyLiveDeliveryHandoff(
+          proposalLiveRuntime,
+          liveRecord.projection,
+        );
+      }
       const result = await proposalLiveRuntime.command({
         commandId: proposalLiveCommandId(input),
         payload: input.payload,
@@ -206,6 +222,12 @@ export function useProposalControlController({
           status: liveRecord.projection.status,
         },
       });
+      if (appliesToDelivery) {
+        return applyLiveDeliveryHandoff(
+          proposalLiveRuntime,
+          result.projection,
+        );
+      }
       return {
         receiptId: result.receipt.receipt_ref,
         recordedAt: result.receipt.recorded_at,
@@ -453,6 +475,39 @@ export function useProposalControlController({
     selectedProposalHubProjection,
     summary,
     workspaceStatus: proposalLiveWorkspaceStatus(liveSnapshot),
+  };
+}
+
+async function applyLiveDeliveryHandoff(
+  runtime: Pick<
+    ReturnType<typeof useProposalLiveRuntime>,
+    "applyDeliveryHandoff"
+  >,
+  projection: NonNullable<
+    ReturnType<typeof useProposalLiveRuntime>["snapshot"]
+  >["records"][number]["projection"],
+) {
+  if (
+    projection.status !== "accepted" ||
+    projection.route?.target !== "delivery" ||
+    !projection.handoff.packet_ref
+  ) {
+    throw new Error(
+      "Canonical Proposal state is not ready for Delivery application.",
+    );
+  }
+  const result = await runtime.applyDeliveryHandoff({
+    proposalId: projection.proposal_id,
+    source: {
+      handoffPacketRef: projection.handoff.packet_ref,
+      recordRef: projection.record_ref,
+      recordVersion: projection.record_version,
+      status: projection.status,
+    },
+  });
+  return {
+    receiptId: result.receipt.receipt_ref,
+    recordedAt: result.receipt.recorded_at,
   };
 }
 

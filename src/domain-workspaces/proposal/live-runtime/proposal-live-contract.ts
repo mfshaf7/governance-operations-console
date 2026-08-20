@@ -3,6 +3,7 @@ import type {
   ProposalLiveSnapshot,
   ProposalOosCommandResult,
   ProposalOosEvent,
+  ProposalOosHandoffApplicationResult,
   ProposalOosHistory,
   ProposalOosProjection,
 } from "./proposal-live-types.ts";
@@ -45,6 +46,40 @@ export function assertProposalOosCommandResult(
     throw new Error("Proposal command receipt is invalid.");
   }
   return value as unknown as ProposalOosCommandResult;
+}
+
+export function assertProposalOosHandoffApplicationResult(
+  value: unknown,
+): ProposalOosHandoffApplicationResult {
+  if (
+    !isRecord(value) ||
+    value.schema_version !== 1 ||
+    typeof value.application_id !== "string" ||
+    typeof value.replayed !== "boolean" ||
+    !isRecord(value.receipt) ||
+    value.receipt.owner !== "operator-orchestration-service" ||
+    typeof value.receipt.receipt_ref !== "string" ||
+    typeof value.receipt.recorded_at !== "string" ||
+    typeof value.receipt.source_record_ref !== "string" ||
+    typeof value.receipt.source_record_version !== "string" ||
+    typeof value.receipt.target_record_ref !== "string" ||
+    value.receipt.target_record_system !== "openproject" ||
+    !isRecord(value.projection) ||
+    !isRecord(value.projection.handoff) ||
+    value.projection.handoff.state !== "applied" ||
+    value.projection.handoff.target_receipt_ref !==
+      value.receipt.receipt_ref ||
+    value.projection.handoff.target_record_ref !==
+      value.receipt.target_record_ref ||
+    !isRecord(value.event) ||
+    value.event.event_type !== "handoff-applied"
+  ) {
+    throw new Error("Proposal handoff application result is invalid.");
+  }
+  assertProposalOosProjection(value.projection);
+  assertProposalOosHistory(value.history);
+  assertProposalOosEvent(value.event);
+  return value as unknown as ProposalOosHandoffApplicationResult;
 }
 
 export function isProposalLiveApiError(value: unknown): value is ProposalLiveApiError {

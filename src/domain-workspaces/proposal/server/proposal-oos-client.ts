@@ -1,13 +1,16 @@
 import {
   assertProposalOosCommandResult,
+  assertProposalOosHandoffApplicationResult,
   assertProposalOosHistory,
   assertProposalOosProjection,
 } from "../live-runtime/proposal-live-contract.ts";
 import type {
   ProposalLiveCaptureRequest,
   ProposalLiveCommandRequest,
+  ProposalLiveHandoffApplicationRequest,
   ProposalLiveRecord,
   ProposalOosCommandResult,
+  ProposalOosHandoffApplicationResult,
   ProposalOosHistory,
   ProposalOosProjection,
   ProposalOosRoute,
@@ -146,6 +149,42 @@ export async function applyProposalCommand(
     fetchImpl,
   );
   return assertProposalOosCommandResult(result);
+}
+
+export async function applyProposalDeliveryHandoff(
+  request: ProposalLiveHandoffApplicationRequest,
+  {
+    env = process.env,
+    fetchImpl = fetch,
+  }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+): Promise<ProposalOosHandoffApplicationResult> {
+  const config = resolveProposalOosConfig(env);
+  const result = await proposalOosRequest(
+    config,
+    `/v1/proposals/${encodeURIComponent(request.proposalId)}/handoff/apply`,
+    {
+      body: JSON.stringify({
+        application_id: proposalDeliveryApplicationId(request.proposalId),
+        authority: {
+          mutation_adapter: "operator-orchestration-service",
+          record_project: "workspace-proposals",
+          record_system: "openproject",
+        },
+        operator: proposalOperator(config),
+        proposal_id: request.proposalId,
+        schema_version: 1,
+        source: {
+          handoff_packet_ref: request.source.handoffPacketRef,
+          record_ref: request.source.recordRef,
+          record_version: request.source.recordVersion,
+          status: request.source.status,
+        },
+      }),
+      method: "POST",
+    },
+    fetchImpl,
+  );
+  return assertProposalOosHandoffApplicationResult(result);
 }
 
 export async function readProposalProjection(
@@ -319,6 +358,18 @@ function proposalOperator(config: ProposalOosConfig) {
     ...(config.operatorHandle ? { handle: config.operatorHandle } : {}),
     id: config.operatorId,
   };
+}
+
+function proposalDeliveryApplicationId(proposalId: string) {
+  const numericId = proposalId.match(/^idea-([1-9][0-9]*)$/)?.[1];
+  if (!numericId) {
+    throw new ProposalOosError(
+      "Delivery handoff requires a canonical Proposal identity.",
+      "proposal_handoff_application_identity_invalid",
+      400,
+    );
+  }
+  return `proposal-application:${numericId}:delivery-1`;
 }
 
 async function proposalOosRequest(
