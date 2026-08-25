@@ -89,8 +89,7 @@ function ownerSurfaceLabel(
   }
   if (
     ownerRef === "delivery-ingress-adapter" ||
-    ownerRef === "delivery-ingress-policy" ||
-    ownerRef === "delivery-intake-consume"
+    ownerRef === "delivery-ingress-policy"
   ) {
     return operationWorkbenchPathLabels.delivery;
   }

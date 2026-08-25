@@ -24,9 +24,11 @@ export const guard = {
     assertDomainOwnershipRoot(failures, "prototype", {
       allowedLayers: [
         "domain",
+        "live-runtime",
         "local-runtime",
         "presentation",
         "read-model",
+        "server",
         "work-model",
       ],
     });
@@ -54,6 +56,12 @@ export const guard = {
       `${root}/work-model/workflows/baseline-promotion/prototype-baseline-promotion-model.ts`,
       `${root}/local-runtime/prototype-runtime.ts`,
       `${root}/local-runtime/prototype-effective-projection.ts`,
+      `${root}/live-runtime/prototype-delivery-live-contract.ts`,
+      `${root}/live-runtime/prototype-delivery-live-projection.ts`,
+      `${root}/live-runtime/prototype-delivery-live-types.ts`,
+      `${root}/live-runtime/use-prototype-delivery-live-runtime.ts`,
+      `${root}/server/prototype-delivery-api-routes.ts`,
+      `${root}/server/prototype-delivery-oos-client.ts`,
     ]) {
       assertAppFile(failures, path);
     }

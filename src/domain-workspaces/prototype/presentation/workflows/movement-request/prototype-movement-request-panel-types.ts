@@ -7,6 +7,7 @@ export type MovementDraftPatchHandler = (
 ) => void;
 
 export type MovementStatus = {
+  description?: string;
   label: string;
   tone: TerasTone;
 };

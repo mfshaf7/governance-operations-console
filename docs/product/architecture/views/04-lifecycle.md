@@ -34,7 +34,7 @@ flowchart LR
   Candidate --> Baseline["Baseline approved"]
   Baseline --> Graduating["Graduating"]
   Graduating --> DeliveryIngress
-  DeliveryIngress -. "final consume receipt" .-> Graduated["Prototype graduated"]
+  DeliveryIngress -. "durable application receipt" .-> Graduated["Prototype graduated"]
 
   Closeout --> DeliveryHistory["Delivery history"]
   Closeout -. "existing active product impact evidence" .-> ProductUpdate["Product-owner update packet"]
@@ -64,8 +64,9 @@ flowchart LR
   history.
 - Prototype ingress creates an `exploring` record with Landing still required.
   Prototype owns incubation through baseline approval and graduation intent.
-- A Prototype graduates only after Delivery Consume returns the final shell,
-  backlink, and source-custody receipt.
+- A Prototype graduates only after OOS returns the final Delivery shell,
+  backlink, and source-custody receipt. Delivery Intake then continues the
+  admitted work without recreating that target.
 - Workspace Intake classifies newly discovered repositories, products, and
   components. `admitted` does not place the entrant in active inventory.
 - Active-inventory promotion is a separate Workspace Governance change that

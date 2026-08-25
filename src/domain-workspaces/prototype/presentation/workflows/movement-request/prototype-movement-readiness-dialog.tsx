@@ -7,22 +7,28 @@ export function PrototypeMovementReadinessDialog({
   onClose,
   open,
   record,
+  sourceDeliveryPacket,
 }: {
   onClose: () => void;
   open: boolean;
   record: PrototypeRecord;
+  sourceDeliveryPacket: boolean;
 }) {
   return (
     <TerasDialog
       contentOverflow="auto"
       height="content"
-      closeLabel="Close movement readiness facts"
-      description="Source, baseline, custody, and issue facts captured with this Movement request draft."
-      kicker="Movement Readiness"
+      closeLabel="Close Delivery readiness facts"
+      description={
+        sourceDeliveryPacket
+          ? "Source, baseline, custody, and issue facts retained for OOS validation."
+          : "Source, baseline, custody, and issue facts retained with this local request draft."
+      }
+      kicker="Delivery Readiness"
       onClose={onClose}
       open={open}
       width="standard"
-      title="Movement Readiness Facts"
+      title="Delivery Readiness Facts"
     >
       <TerasList frame="contained">
         {movementGateChecklistRows(record).map((row, index) => (

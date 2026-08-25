@@ -61,7 +61,7 @@ export const LIFECYCLE_TRANSITION_ROUTES = {
     sourceDomain: "prototype",
     target: {
       admissionOwnerRef: "delivery-ingress-policy",
-      applicationOwnerRef: "delivery-intake-consume",
+      applicationOwnerRef: "delivery-ingress-adapter",
       domain: "delivery",
       homeRef: "workspace-delivery-art",
       ingressRef: "delivery-intake",

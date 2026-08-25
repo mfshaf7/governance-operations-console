@@ -42,7 +42,7 @@ application or completion.
 | Proposal to Prototype | Accepted Proposal selects exploration; OOS prepares the target packet, while a future Prototype receipt creates an `exploring` record with Landing required. | partial | partial | partial |
 | Proposal Repository Gate | Selected route needs new or clarified source custody; an active workspace repository ref returns control to Proposal handoff. | prototype-only | missing | missing |
 | Repository Request and Provisioning | Operator or upstream domain requests durable source; physical repository, ownership, README, and AGENTS evidence reconcile without implying workspace classification. | prototype-only | partial | missing |
-| Prototype to Delivery | Baseline-approved Prototype prepares graduation; Delivery Consume creates or reuses the ART shell and final receipt marks graduation. | prototype-only | missing | missing |
+| Prototype to Delivery | Baseline-approved Prototype supplies an exact packet; OOS creates or reuses the Delivery Epic and its durable receipt marks graduation, while Delivery Intake continues the admitted work. | partial | implemented | partial |
 | Delivery Owner Repo Catalog Link | Active Delivery needs an active workspace repo as `Owner Repo`; catalog add, link, sync, and work-item update reconcile. | prototype-only | partial | missing |
 | Repository to Workspace Intake | A provisioned repo emits a generic entrant packet; Workspace Governance records one explicit intake classification without creating active inventory. | not-started | partial | missing |
 | Prototype to Workspace Intake | Prototype establishes a new durable repo, product, or component boundary; the originating workflow submits a generic entrant packet. | not-started | partial | missing |

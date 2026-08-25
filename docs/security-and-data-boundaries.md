@@ -2,10 +2,11 @@
 
 ## Current Posture
 
-The approved Console source baseline is graduated. Proposal is the first
-separately governed external-system adapter: the browser calls same-origin
-Console routes and the server-side adapter authenticates to OOS. This source
-change does not itself grant deployment or security acceptance.
+The approved Console source baseline is graduated. Proposal and the bounded
+Prototype-to-Delivery application are separately governed external-system
+adapters: the browser calls same-origin Console routes and the server-side
+adapters authenticate to OOS. These source changes do not themselves grant
+deployment or security acceptance.
 
 The current security evidence is:
 
@@ -43,6 +44,14 @@ The Proposal exception to that baseline is bounded to OOS list, capture,
 projection, command, and history routes. OOS credentials and configured
 operator attribution are server-only. Configured OOS failure disables Proposal
 writes and never falls back to synthetic records.
+
+The Prototype exception is narrower. The Console may submit an exact
+source-authoritative Prototype Delivery packet to OOS and project only the
+validated application result and durable receipt. The browser cannot supply
+OOS caller identity or credentials, the Console does not create the canonical
+packet, and neither browser nor server mutates OpenProject or WGCF directly.
+If no Workspace Prototype Studio packet is available, the existing fixture
+workflow remains explicitly local and cannot invoke the live adapter.
 
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The

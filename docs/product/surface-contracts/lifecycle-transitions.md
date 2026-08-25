@@ -162,7 +162,7 @@ operator click.
 |---|---|---|---|
 | Proposal -> Prototype | Proposal | Prototype ingress policy | automatic after validation |
 | Proposal -> Delivery | Proposal | Delivery ingress policy | automatic after validation |
-| Prototype -> Delivery | Prototype | Delivery ingress policy | automatic admission after validation; Delivery Intake Consume applies the target shell |
+| Prototype -> Delivery | Prototype | Delivery ingress policy | OOS applies the validated packet through the canonical Delivery adapter; Delivery Intake continues the admitted Epic |
 | Proposal -> Portfolio | not allowed | not applicable | Portfolio accepts managed-product publication, not work routing |
 | Prototype -> Portfolio | not allowed | not applicable | graduate to a durable product owner before product publication |
 | Repository, Prototype, or Delivery -> Workspace Intake | originating domain | Workspace Governance | conditional generic repo, product, or component classification; the decision does not create active inventory |
@@ -342,16 +342,16 @@ Shared validation checks packet schema, source version, baseline evidence,
 source custody, duplicate transition posture, and required authority evidence.
 A source correction returns to Prototype with a named owner and required fix.
 
-A valid packet is admitted automatically by Delivery ingress policy and creates
-one Delivery Intake source with `needs_consume`. This is target-owned admission,
-not source mutation. Routine policy-clear traffic does not gain another generic
-approval click.
+A valid packet is applied automatically through OOS after WGCF readiness allows
+it. OOS creates or reuses one top-level Delivery Epic through the canonical
+adapter, records the Prototype and Baseline Packet backlinks, and emits the
+durable target receipt. This is target-owned application, not source mutation.
+Routine policy-clear traffic does not gain another generic approval click.
 
-Delivery Intake Consume then creates or reuses one top-level Delivery Epic
-shell, records the Prototype and Baseline Packet backlinks, and starts a
-Delivery continuation. Consume remains the deliberate target application
-action; it does not create Features, User stories, execution metadata,
-blockers, closeout records, or landing units.
+Delivery Intake then presents the admitted Epic for the normal Delivery
+continuation. Consume must not create a duplicate target shell or become a
+second Prototype-graduation decision. It still does not create Features, User
+stories, execution metadata, blockers, closeout records, or landing units.
 
 The final Prototype graduation receipt is emitted only when:
 
@@ -362,8 +362,8 @@ The final Prototype graduation receipt is emitted only when:
 - the resulting target references and application evidence are recorded
 
 Only that receipt may project Prototype as `graduated`. The graduated Prototype
-record becomes read-only history. A Delivery Intake row or request-acceptance
-receipt alone is insufficient.
+record becomes read-only history. A locally prepared request or unvalidated
+target reference is insufficient.
 
 ### Delivery Continuation
 

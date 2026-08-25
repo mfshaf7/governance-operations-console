@@ -25,6 +25,7 @@ import type {
 import type { PrototypeCommandId } from "../../work-model/commands/prototype-command-model.ts";
 import type { PrototypeRecord } from "../../read-model/prototype-workspace-read-model.ts";
 import type { PrototypeRequestDraft } from "../../work-model/entry/prototype-request-model.ts";
+import type { PrototypeDeliveryPacketProjection } from "../../domain/prototype-delivery.ts";
 import {
   prototypeDialogRouteForCurrentMove,
   type PrototypeDialogRoute,
@@ -36,6 +37,7 @@ type PrototypeControlDialogStackProps = {
   canSubmitRequest: boolean;
   previewReceipts: PrototypeProjectedReceipt[];
   receipts: PrototypeProjectedReceipt[];
+  sourceDeliveryPacket: PrototypeDeliveryPacketProjection | null;
   onBackToDashboard: () => void;
   onCloseDialog: () => void;
   onDraftChange: <Field extends keyof PrototypeRequestDraft>(
@@ -93,6 +95,7 @@ export function PrototypeControlDialogStack({
   canSubmitRequest,
   previewReceipts,
   receipts,
+  sourceDeliveryPacket,
   onBackToDashboard,
   onCloseDialog,
   onDraftChange,
@@ -165,6 +168,7 @@ export function PrototypeControlDialogStack({
         onOpenHistory={(record) => onOpenDialog("history", record)}
         onRecordReceipt={onRecordMovementRequest}
         record={activeDialog === "movement-request" ? activeRecord : null}
+        sourceDeliveryPacket={sourceDeliveryPacket}
       />
       <PrototypeHistoryModal
         receipts={receipts}

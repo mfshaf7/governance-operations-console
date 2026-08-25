@@ -38,6 +38,7 @@ export function PrototypeMovementRequestStepPanel({
   onMovementIntentChange,
   packetStatus,
   record,
+  sourceDeliveryPacket,
 }: {
   activeStep: PrototypeMovementRequestStepId;
   draft: PrototypeMovementRequestLocalDraft;
@@ -50,6 +51,7 @@ export function PrototypeMovementRequestStepPanel({
   onMovementIntentChange: (movementIntent: PrototypeMovementIntentId) => void;
   packetStatus: MovementStatus;
   record: PrototypeRecord;
+  sourceDeliveryPacket: boolean;
 }) {
   if (activeStep === "intent") {
     const returnedCorrection = record.movementRequest.state === "returned";
@@ -62,7 +64,9 @@ export function PrototypeMovementRequestStepPanel({
           </TerasStatusPill>
         }
         description={
-          returnedCorrection
+          sourceDeliveryPacket
+            ? "Review the fixed Delivery intent supplied by the source-authoritative packet."
+            : returnedCorrection
             ? "Update the returned request reason using Movement Control's correction instruction."
             : "Confirm the Movement Control intent. Prototype prepares the request; it does not choose the final movement outcome."
         }
@@ -98,7 +102,9 @@ export function PrototypeMovementRequestStepPanel({
             minimumHeight="short"
             onValueChange={(requestReason) => onDraftChange({ requestReason })}
             placeholder={
-              returnedCorrection
+              sourceDeliveryPacket
+                ? "Source-authoritative Delivery rationale"
+                : returnedCorrection
                 ? "Explain the durable-delivery need and expected governed outcome."
                 : "Why should Movement Control review this movement request?"
             }
@@ -118,7 +124,9 @@ export function PrototypeMovementRequestStepPanel({
         </TerasStatusPill>
       }
       description={
-        movementRequestRecorded
+        sourceDeliveryPacket
+          ? "Review the exact source packet before OOS applies the Delivery handoff."
+          : movementRequestRecorded
           ? "Review the locally recorded request before opening the receipt trail."
           : "Review the prepared request before recording the local Prototype receipt."
       }

@@ -146,12 +146,14 @@ source kind, source ref, source version, packet ref, source custody, and
 optional origin-specific metadata; `proposal_ref` must not remain the universal
 source identity once Prototype ingress is implemented.
 
-For Prototype ingress, Consume creates or reuses one top-level Delivery Epic
-shell and records Prototype and Baseline Packet backlinks. Work Design starts
-with a continuation context seeded from the approved Prototype objective,
-scope, non-goals, existing source, evidence, and remaining work. The operator
-still shapes the Delivery tree. Prototype component, UI, and evidence trees are
-not imported as executable ART work.
+For Prototype ingress, OOS creates or reuses one top-level Delivery Epic shell
+through the canonical Delivery ingress adapter and records Prototype and
+Baseline Packet backlinks. Delivery Intake consumes or projects that admitted
+target into the normal Delivery continuation. Work Design starts with a
+continuation context seeded from the approved Prototype objective, scope,
+non-goals, existing source, evidence, and remaining work. The operator still
+shapes the Delivery tree. Prototype component, UI, and evidence trees are not
+imported as executable ART work.
 
 The final target application receipt must prove the Delivery shell, reciprocal
 backlinks, and resolved durable source custody before Prototype may project
@@ -234,12 +236,12 @@ handoff. Delivery Intake Consume is a later, internal Delivery action that
 creates or links the Delivery package shell and does not determine whether
 Proposal Handoff completed.
 
-For Prototype-to-Delivery, ingress admission creates the Intake source but does
-not complete graduation. Delivery Intake Consume is the target-application
-stage for that route: it creates or reuses the Delivery shell, records the
-Prototype and Baseline Packet backlinks, and contributes to the final
-graduation receipt. Until that receipt proves the shell, reciprocal backlinks,
-and durable source custody, Prototype remains `graduating`.
+For Prototype-to-Delivery, OOS application creates or reuses the Delivery shell,
+records the Prototype and Baseline Packet backlinks, and returns the durable
+target receipt. That receipt completes the cross-domain application and allows
+Prototype to project `graduated`. Delivery Intake remains the normal operator
+entry for continuing the admitted Epic; it does not duplicate target creation
+or determine whether Prototype graduation completed.
 
 Intake operational states are limited to:
 

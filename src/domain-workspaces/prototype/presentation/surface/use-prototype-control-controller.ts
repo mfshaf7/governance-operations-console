@@ -45,6 +45,7 @@ import {
 import { type PrototypeCandidatePromotionInput } from "../../work-model/workflows/candidate-promotion/prototype-candidate-promotion-model.ts";
 import { type PrototypeCloseoutInput } from "../../work-model/workflows/closeout-retirement/prototype-closeout-retirement-model.ts";
 import { type PrototypeMovementRequestDraftInput } from "../../work-model/workflows/movement-request/prototype-movement-request-model.ts";
+import { usePrototypeDeliveryLiveRuntime } from "../../live-runtime/use-prototype-delivery-live-runtime.ts";
 import {
   type PrototypePreviewProfileDraft,
   type PrototypePreviewProfileMutationActionId,
@@ -65,6 +66,7 @@ export function usePrototypeControlController({
   entryIntent?: ConsoleSurfaceEntryIntent | null;
 } = {}) {
   const runtimeCapabilities = getPrototypeRuntimeCapabilities();
+  const deliveryRuntime = usePrototypeDeliveryLiveRuntime();
   const sourceReadModel = getPrototypeWorkspaceReadModel();
   const state = usePrototypeControlState(sourceReadModel);
   const [requestDraft, setRequestDraft] = useState<PrototypeRequestDraft>(
@@ -89,11 +91,18 @@ export function usePrototypeControlController({
   const effectiveProjection = useMemo(
     () =>
       projectPrototypeEffectiveReadModel({
+        deliveryApplicationsByPrototypeId:
+          deliveryRuntime.projectionsByPrototypeId,
         proposalEntryRecords,
         runtimeProjection: state.runtimeProjection,
         sourceReadModel,
       }),
-    [proposalEntryRecords, sourceReadModel, state.runtimeProjection],
+    [
+      deliveryRuntime.projectionsByPrototypeId,
+      proposalEntryRecords,
+      sourceReadModel,
+      state.runtimeProjection,
+    ],
   );
   const readModel = effectiveProjection.readModel;
   const filteredRecords = useMemo(
@@ -266,6 +275,16 @@ export function usePrototypeControlController({
       return;
     }
 
+    const sourcePacket =
+      sourceReadModel.deliveryPacketsByPrototypeId?.[record.id];
+    if (sourcePacket?.authority === "workspace-prototype-studio") {
+      await deliveryRuntime.apply({
+        decisionRef: `console://prototype-delivery-decisions/${sourcePacket.packet.packet_id}`,
+        packet: sourcePacket.packet,
+      });
+      return;
+    }
+
     const result = await recordPrototypeProjection(record, commandId, draft);
 
     if (result?.projected) {
@@ -343,6 +362,9 @@ export function usePrototypeControlController({
     selectedPreviewReceipts,
     selectedReceipts,
     selectedRecord,
+    selectedSourceDeliveryPacket: activeRecord
+      ? (sourceReadModel.deliveryPacketsByPrototypeId?.[activeRecord.id] ?? null)
+      : null,
     selectRecord,
     workflowActions: {
       backToDashboard: () => openDialog("dashboard"),

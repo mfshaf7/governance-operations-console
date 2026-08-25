@@ -1,4 +1,5 @@
 import type { OperationTone } from "../../operation-contracts/operation-state.ts";
+import type { PrototypeDeliveryPacketProjection } from "./prototype-delivery.ts";
 
 export type PrototypeLifecycle =
   | "baseline-approved"
@@ -317,6 +318,9 @@ export type PrototypeWorkspaceSource = {
 };
 
 export type PrototypeWorkspaceReadModel = {
+  deliveryPacketsByPrototypeId?: Readonly<
+    Record<string, PrototypeDeliveryPacketProjection>
+  >;
   records: PrototypeRecord[];
   source: PrototypeWorkspaceSource;
 };

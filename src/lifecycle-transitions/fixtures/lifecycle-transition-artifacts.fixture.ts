@@ -72,7 +72,7 @@ const contexts = {
     startedAt: "2026-07-24T04:00:00.000Z",
     transitionId: "transition-proposal-prototype-404",
   },
-  prototypeToDeliveryApplying: {
+  prototypeToDeliveryApplied: {
     correlationId: "corr-prototype-delivery-307",
     reasonCode: "baseline-graduation",
     reasonDetail:
@@ -172,27 +172,33 @@ export const lifecycleTransitionArtifactFixtures = {
       2,
     ),
   ],
-  prototypeToDeliveryApplying: [
+  prototypeToDeliveryApplied: [
     createLifecycleTransitionSourcePacketFixture(
-      contexts.prototypeToDeliveryApplying,
+      contexts.prototypeToDeliveryApplied,
     ),
     createLifecycleTransitionValidationStartedFixture(
-      contexts.prototypeToDeliveryApplying,
+      contexts.prototypeToDeliveryApplied,
       1,
     ),
     createLifecycleTransitionValidationPassedFixture(
-      contexts.prototypeToDeliveryApplying,
+      contexts.prototypeToDeliveryApplied,
       2,
     ),
     createLifecycleTransitionTargetAdmissionFixture(
-      contexts.prototypeToDeliveryApplying,
+      contexts.prototypeToDeliveryApplied,
       3,
-      "delivery-intake://source/INT-307",
+      "openproject://work_packages/307",
     ),
     createLifecycleTransitionApplicationStartedFixture(
-      contexts.prototypeToDeliveryApplying,
+      contexts.prototypeToDeliveryApplied,
       4,
-      "oos-run://delivery-intake-consume/307",
+      "oos-run://prototype-delivery-application/307",
+    ),
+    createLifecycleTransitionTargetApplicationFixture(
+      contexts.prototypeToDeliveryApplied,
+      5,
+      "oos-run://prototype-delivery-application/307",
+      "openproject://work_packages/307",
     ),
   ],
   prototypeToDeliveryFailed: [
@@ -215,12 +221,12 @@ export const lifecycleTransitionArtifactFixtures = {
     createLifecycleTransitionApplicationStartedFixture(
       contexts.prototypeToDeliveryFailed,
       4,
-      "oos-run://delivery-intake-consume/509",
+      "oos-run://prototype-delivery-application/509",
     ),
     createLifecycleTransitionApplicationFailedFixture(
       contexts.prototypeToDeliveryFailed,
       5,
-      "oos-run://delivery-intake-consume/509",
+      "oos-run://prototype-delivery-application/509",
     ),
   ],
 } as const satisfies Record<string, readonly LifecycleTransitionArtifact[]>;

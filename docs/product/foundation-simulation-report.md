@@ -96,8 +96,10 @@ The simulation proves architecture, not live readiness. These gaps remain:
    dependency, and receipt contracts matching the authority schemas, while the
    isolated simulator proves those contracts without serving as durable
    implementation.
-3. Proposal-to-Prototype, Prototype-to-Delivery, and Portfolio publication still
-   lack their final OOS and authority adapters even where local packets exist.
+3. Proposal-to-Prototype and Portfolio publication still lack their final OOS
+   and authority adapters. Prototype-to-Delivery now has OOS target application
+   and a bounded Console adapter, while Workspace Prototype Studio packet
+   discovery remains separate work.
 4. Real identity, authorization, durable receipt storage, retry scheduling,
    authority readback, and rollback proof remain post-baseline implementation
    work.
