@@ -119,8 +119,10 @@ Domain root layers:
   read-model/       source-projected UI read shape, selectors, fixtures, projections
   work-model/       command/session/workflow DTOs when the domain mutates work
   local-runtime/    prototype-local runtime, draft, receipt, projection adapter
+  live-runtime/     optional browser-safe canonical backend integration state
   presentation/     React views, controllers, view models, dialogs, dashboards
   product-adapters/ only when the domain consumes an incubating product app
+  server/           optional credentialed backend client and same-origin routes
 ```
 
 Rules:
@@ -141,6 +143,13 @@ Rules:
   receipts, projection overlays, or runtime subscriptions.
 - `product-adapters/` is not a shared-component folder. It belongs only to a
   domain that consumes a product app and maps domain data into that product app.
+- `live-runtime/` and `server/` are paired optional layers when an operation
+  consumes canonical backend workflow authority. Browser code owns only
+  same-origin projection and command state; server code owns credentials,
+  authenticated backend calls, timeouts, and response validation.
+- A configured backend failure must fail closed. Fixture behavior is allowed
+  only through an explicit disconnected-preview mode when the backend is not
+  configured, never as fallback after a live request fails.
 - Do not add `components/`, `views/`, `utils/`, `model/`, `runtime/`,
   `session/`, `steps/`, or `shared/` at the domain root. Those roles belong
   inside the owning layer.
@@ -1243,8 +1252,9 @@ Required coding style:
   domain. An integration adapter may import the public models of the domains
   it connects; consumers import the adapter through this explicit boundary.
 - Dependency direction is enforced as code: `domain/` cannot depend on
-  `read-model/`, `work-model/`, `local-runtime/`, `product-adapters/`, or
-  `presentation/`; `read-model/` and `local-runtime/` cannot depend on
+  `read-model/`, `work-model/`, `local-runtime/`, `live-runtime/`, `server/`,
+  `product-adapters/`, or `presentation/`; `read-model/`, `local-runtime/`,
+  `live-runtime/`, and `server/` cannot depend on
   `presentation/`; `work-model/` cannot depend on `local-runtime/` or
   `presentation/`; and `product-adapters/` cannot depend on `local-runtime/`
   or `presentation/`.

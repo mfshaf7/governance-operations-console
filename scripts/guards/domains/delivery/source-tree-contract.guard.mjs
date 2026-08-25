@@ -10,12 +10,13 @@ const contractPath =
   "docs/product/domain-contracts/delivery-source-tree.contract";
 const deliveryRoot = "src/domain-workspaces/delivery";
 const finalRootDirectories = new Set([
-  "application",
   "domain",
+  "live-runtime",
   "local-runtime",
   "presentation",
   "product-adapters",
   "read-model",
+  "server",
   "work-model",
 ]);
 const legacyTopLevelRoots = new Set([

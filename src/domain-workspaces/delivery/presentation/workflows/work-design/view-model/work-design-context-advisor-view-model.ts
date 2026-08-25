@@ -23,7 +23,7 @@ export type WorkDesignContextAdvisorRequest = {
 export type WorkDesignContextAdvisorResponse = {
   advisor_mode: "context_session";
   confidence: "high" | "low" | "medium";
-  required_operator_action: "review";
+  required_operator_action: "no_change" | "review";
   response_id: string;
   status: "mocked" | "ready";
   text: string;
@@ -36,7 +36,7 @@ export function workDesignContextAdvisorOpening(
     request.context_decision ?? "proceed",
   );
 
-  return `Context mode loaded for ${request.package_ref}. I can inspect source context, duplicate signals, wider ART fit, and whether the operator should ${decisionCopy.label.toLowerCase()}. Live OOS/CGG/model wiring is not attached in this prototype.`;
+  return `Context mode loaded for ${request.package_ref}. I can inspect source context, duplicate signals, wider ART fit, and whether the operator should ${decisionCopy.label.toLowerCase()}. Advice remains a suggestion until the operator accepts the brief.`;
 }
 
 export function workDesignContextAdvisorTranscript({

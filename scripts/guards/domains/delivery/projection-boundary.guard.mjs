@@ -31,6 +31,14 @@ export const guard = {
       `${root}/presentation/workspace/workspace-summary-model.ts`;
     const controller =
       `${root}/presentation/workspace/workspace-controller.tsx`;
+    const workDesignLiveContract =
+      `${root}/live-runtime/work-design-live-contract.ts`;
+    const workDesignLiveRuntime =
+      `${root}/live-runtime/use-work-design-live-runtime.ts`;
+    const workDesignServerRoutes =
+      `${root}/server/work-design-api-routes.ts`;
+    const workDesignOosClient =
+      `${root}/server/work-design-oos-client.ts`;
 
     for (const path of [
       packageModel,
@@ -39,6 +47,10 @@ export const guard = {
       transitionRecord,
       summaryModel,
       controller,
+      workDesignLiveContract,
+      workDesignLiveRuntime,
+      workDesignServerRoutes,
+      workDesignOosClient,
     ]) {
       assertAppFile(failures, path);
     }
@@ -82,6 +94,40 @@ export const guard = {
     assertIncludes(failures, controller, [
       "projectDeliveryEffectiveReadModel",
       "runtimeProjection: localProjection",
+    ]);
+    assertIncludes(failures, workDesignLiveContract, [
+      "workDesignLivePackageRef",
+      "workDesignLiveIdentity",
+      "assertWorkDesignOosProjection",
+      "assertWorkDesignOosApplyResult",
+    ]);
+    assertIncludes(failures, workDesignLiveRuntime, [
+      'fetch(',
+      "/api/delivery/work-design/",
+      'mode: "live"',
+      "work_design_projection_unavailable",
+    ]);
+    assertOmits(failures, workDesignLiveRuntime, [
+      "OOS_BASE_URL",
+      "OOS_CALLER_SECRET",
+      "x-oos-caller-secret",
+      "process.env",
+    ]);
+    assertIncludes(failures, workDesignServerRoutes, [
+      'mode: "disconnected-preview"',
+      "workDesignOosConfigured",
+      "applyWorkDesignDraft",
+    ]);
+    assertIncludes(failures, workDesignOosClient, [
+      '"x-oos-caller-id"',
+      '"x-oos-caller-secret"',
+      "GOVERNANCE_CONSOLE_OPERATOR_ID",
+      "AbortSignal.timeout",
+      'cache: "no-store"',
+    ]);
+    assertOmits(failures, workDesignOosClient, [
+      'mode: "disconnected-preview"',
+      "localStorage",
     ]);
 
     for (const path of [

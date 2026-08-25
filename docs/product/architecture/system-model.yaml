@@ -453,10 +453,10 @@ capabilities:
     implementation:
       console: implemented
       backend_support: implemented
-      live_adapter: missing
+      live_adapter: partial
       delivery_phase: post-baseline
     post_baseline_work:
-      - Connect reads and bounded writes through OOS and WGCF.
+      - Extend the implemented Work Design adapter to the Delivery register, Intake, Refinement, Execution, Catalog, and closeout through OOS and WGCF.
       - Add missing controlled-value add, repository link, and sync adapters.
       - Connect the Console-local closeout contract to OOS readiness, close, and downstream Workspace Intake or product-owner adapters.
 

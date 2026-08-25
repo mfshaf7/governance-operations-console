@@ -12,7 +12,7 @@ Prototype Studio handoff, and Workspace Governance product promotion are all
 reviewed.
 
 The graduated baseline remains private and loopback-only. The Console now has
-two separately governed OOS integration slices:
+three separately governed OOS integration slices:
 
 - server-only OOS caller credentials and operator attribution
 - canonical Proposal list, capture, projection, command, and history paths
@@ -21,6 +21,8 @@ two separately governed OOS integration slices:
 - Prototype-to-Delivery application for an exact, source-authoritative
   Prototype Delivery packet, with server-only caller credentials and
   receipt-bound result projection
+- Delivery Work Design source projection, bounded governed advice, canonical
+  apply, reconciliation, and durable receipt readback
 
 Prototype source discovery and all other operational workflows remain:
 
@@ -68,6 +70,8 @@ boundary documented in
 [`docs/product/proposal-live-integration.md`](docs/product/proposal-live-integration.md).
 The Prototype Delivery application boundary is documented in
 [`docs/product/prototype-delivery-live-integration.md`](docs/product/prototype-delivery-live-integration.md).
+The Delivery Work Design boundary is documented in
+[`docs/product/work-design-live-integration.md`](docs/product/work-design-live-integration.md).
 
 ## Authority Map
 

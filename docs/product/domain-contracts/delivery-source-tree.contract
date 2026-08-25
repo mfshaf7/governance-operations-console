@@ -112,6 +112,12 @@ Architecture baseline decisions:
 - `local-runtime/persistence/` owns prototype-local persistence. Persistence
   shape changes are out of scope for Delivery structure normalization and need
   a separate recorded design decision before implementation.
+- `live-runtime/` owns browser-safe canonical Work Design projection and
+  same-origin command state. It must not read server credentials or call OOS or
+  OpenProject directly.
+- `server/` owns authenticated OOS requests, configuration, timeout, response
+  validation, and Next route handlers. Configured failures fail closed; only
+  an unconfigured runtime may select explicit disconnected preview behavior.
 - `local-runtime/projections/` owns prototype-local cross-surface projection
   overlays. Presentation may subscribe to projection snapshots, but must not
   keep local Delivery package/intake/workflow projection truth in component
@@ -128,6 +134,7 @@ Architecture baseline decisions:
 
 [directories]
 domain
+live-runtime
 local-runtime
 local-runtime/commands
 local-runtime/ingress
@@ -206,6 +213,7 @@ read-model/fixtures/selected-package
 read-model/projections
 read-model/selectors
 read-model/terms
+server
 work-model
 work-model/catalog
 work-model/closeout
@@ -244,6 +252,9 @@ local-runtime/transitions/refinement-execution-transition.ts
 local-runtime/transitions/refinement-transition.ts
 local-runtime/transitions/transition-record.ts
 local-runtime/transitions/work-design-transition.ts
+live-runtime/use-work-design-live-runtime.ts
+live-runtime/work-design-live-contract.ts
+live-runtime/work-design-live-types.ts
 presentation/package-register/index.ts
 presentation/package-register/package-register-data.ts
 presentation/package-register/package-register-selected-panel.tsx
@@ -470,6 +481,8 @@ read-model/projections/root-projection.ts
 read-model/selectors/delivery-attention-selector.ts
 read-model/selectors/workflow-package-selectors.ts
 read-model/terms/copy.ts
+server/work-design-api-routes.ts
+server/work-design-oos-client.ts
 work-model/catalog/catalog-draft-model.ts
 work-model/catalog/catalog-mutation-model.ts
 work-model/catalog/catalog-mutation-types.ts

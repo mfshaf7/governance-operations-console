@@ -21,6 +21,7 @@ function operationDomain({ domain, optionalLayers = [], requiredLayers }) {
 const completedDomains = [
   operationDomain({
     domain: "delivery",
+    optionalLayers: ["live-runtime", "server"],
     requiredLayers: [
       "domain",
       "local-runtime",

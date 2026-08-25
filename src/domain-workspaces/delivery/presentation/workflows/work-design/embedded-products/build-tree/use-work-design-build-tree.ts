@@ -31,7 +31,6 @@ import type {
   WorkDesignNode,
 } from "../../model/work-design-model.ts";
 import {
-  workDesignBuildAdvisorAdapter,
   workDesignBuildAdvisorOpening,
 } from "../../../../../product-adapters/build-tree/index.ts";
 import type { WorkDesignAdvisorTranscriptLine } from "../../../../../product-adapters/build-tree/index.ts";
@@ -49,6 +48,14 @@ type UseWorkDesignBuildTreeOptions = {
   deliveryPackage: DeliveryPackageSummary;
   initialTree: WorkDesignNode;
   onTreeDirty: () => void;
+  requestTreeAdvice: (request: {
+    operatorPrompt: string;
+    selectedNode: WorkDesignNode;
+    tree: WorkDesignNode;
+  }) => Promise<{
+    response_id: string;
+    text: string;
+  }>;
 };
 
 export function useWorkDesignBuildTree({
@@ -57,6 +64,7 @@ export function useWorkDesignBuildTree({
   deliveryPackage,
   initialTree,
   onTreeDirty,
+  requestTreeAdvice,
 }: UseWorkDesignBuildTreeOptions) {
   const [deleteBlockedNode, setDeleteBlockedNode] =
     useState<WorkDesignNode | null>(null);
@@ -307,7 +315,7 @@ export function useWorkDesignBuildTree({
     );
   }
 
-  function submitBuildAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
+  async function submitBuildAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const prompt = buildAdvisorPrompt.trim();
 
@@ -317,16 +325,6 @@ export function useWorkDesignBuildTree({
 
     const node = selectedNode;
     const turnId = Date.now();
-    const response = workDesignBuildAdvisorAdapter({
-      finalized_brief_ref: contextFinalizedBrief.metadataPacketRef,
-      operator_prompt: prompt,
-      package_ref: deliveryPackage.delivery_package_id,
-      request_id: `build-tree-${turnId}`,
-      selected_node: node,
-      source_ref: deliveryPackage.source_ref,
-      tree_snapshot: tree,
-    });
-
     setBuildAdvisorTurns((current) => [
       ...current,
       {
@@ -334,13 +332,35 @@ export function useWorkDesignBuildTree({
         role: "operator",
         text: prompt,
       },
-      {
-        id: response.response_id,
-        role: "advisor",
-        text: response.text,
-      },
     ]);
     setBuildAdvisorPrompt("");
+    try {
+      const response = await requestTreeAdvice({
+        operatorPrompt: prompt,
+        selectedNode: node,
+        tree,
+      });
+      setBuildAdvisorTurns((current) => [
+        ...current,
+        {
+          id: response.response_id,
+          role: "advisor",
+          text: response.text,
+        },
+      ]);
+    } catch (error) {
+      setBuildAdvisorTurns((current) => [
+        ...current,
+        {
+          id: `advisor-build-error-${turnId}`,
+          role: "advisor",
+          text:
+            error instanceof Error
+              ? `Governed advisor unavailable: ${error.message}`
+              : "Governed advisor unavailable.",
+        },
+      ]);
+    }
   }
 
   function openScaffold(node = selectedNode) {

@@ -13,6 +13,7 @@ export function useWorkDesignApplyState() {
   const [applyRunStartedAt, setApplyRunStartedAt] = useState<string | null>(
     null,
   );
+  const [applyRuntimeError, setApplyRuntimeError] = useState<string | null>(null);
   const [applyViewOpenedAt, setApplyViewOpenedAt] = useState(() =>
     new Date().toISOString(),
   );
@@ -33,6 +34,7 @@ export function useWorkDesignApplyState() {
   return {
     applyLogDialogOpen,
     applyRunStartedAt,
+    applyRuntimeError,
     applyViewOpenedAt,
     blockerActionInfoDialogOpen,
     blockerAdvisorPrompt,
@@ -43,6 +45,7 @@ export function useWorkDesignApplyState() {
     blockerRecoveryActionId,
     setApplyLogDialogOpen,
     setApplyRunStartedAt,
+    setApplyRuntimeError,
     setApplyViewOpenedAt,
     setBlockerActionInfoDialogOpen,
     setBlockerAdvisorPrompt,

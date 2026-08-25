@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
 import { createLocalWorkDesignApplyReceipt } from "../../../../local-runtime/index.ts";
 import type { WorkDesignApplyReceipt } from "../../../../work-model/work-design/work-design-types.ts";
+import { useWorkDesignLiveRuntime } from "../../../../live-runtime/use-work-design-live-runtime.ts";
 
 import {
   workDesignContextBoardCoreNodes,
@@ -37,6 +38,8 @@ import {
 } from "../view-model/work-design-current-move.ts";
 import { workDesignProgressActiveStep } from "../view-model/work-design-step-model.ts";
 import type { WorkDesignBoardSnapshot } from "../model/work-design-model.ts";
+import { workDesignMockContextAdvisorAdapter } from "../view-model/work-design-context-advisor-view-model.ts";
+import { workDesignBuildAdvisorAdapter } from "../../../../product-adapters/build-tree/index.ts";
 
 type UseWorkDesignSessionControllerParams = {
   deliveryPackage: DeliveryPackageSummary;
@@ -50,7 +53,14 @@ export function useWorkDesignSessionController({
   onClose,
 }: UseWorkDesignSessionControllerParams) {
   const modalState = useWorkDesignSessionState(deliveryPackage);
+  const liveRuntime = useWorkDesignLiveRuntime(deliveryPackage);
   const [hasCurrentSessionEdits, setHasCurrentSessionEdits] = useState(false);
+  const applyInFlightRef = useRef(false);
+  const pendingAcceptanceRef = useRef<{
+    acceptedAt: string;
+    acceptanceId: string;
+    treeKey: string;
+  } | null>(null);
   const {
     activeBriefVersionId,
     activeStep,
@@ -115,6 +125,41 @@ export function useWorkDesignSessionController({
     treeDraftStale,
     draftValidationAccepted,
   } = modalState;
+  const applyState = useWorkDesignApplyState();
+  useEffect(() => {
+    if (liveRuntime.mode !== "live") return;
+    if (liveRuntime.projectionError) {
+      applyState.setApplyRuntimeError(liveRuntime.projectionError);
+      return;
+    }
+    if (liveRuntime.projectionStatus === "current") {
+      applyState.setApplyRuntimeError(null);
+    }
+  }, [
+    liveRuntime.mode,
+    liveRuntime.projectionError,
+    liveRuntime.projectionStatus,
+  ]);
+  useEffect(() => {
+    if (liveRuntime.mode !== "live") return;
+    const latest = liveRuntime.projection?.latest_application;
+    if (!latest) {
+      setApplyReceiptId(null);
+      setApplyReceiptRecorded(false);
+      applyState.setApplyRunStartedAt(null);
+      return;
+    }
+    setApplyReceiptId(latest.receipt.ref);
+    setApplyReceiptRecorded(true);
+    applyState.setApplyRunStartedAt(latest.applied_at);
+    applyState.setApplyRuntimeError(null);
+    setHasCurrentSessionEdits(false);
+  }, [
+    liveRuntime.projection?.latest_application,
+    liveRuntime.mode,
+    setApplyReceiptId,
+    setApplyReceiptRecorded,
+  ]);
   const setHasUnsavedSessionChangesFromUser: Dispatch<
     SetStateAction<boolean>
   > = (value) => {
@@ -134,7 +179,6 @@ export function useWorkDesignSessionController({
     ...modalState,
     setHasUnsavedSessionChanges: setHasUnsavedSessionChangesFromUser,
   };
-  const applyState = useWorkDesignApplyState();
   const contextBoardCoreNodes = useMemo(
     () => workDesignContextBoardCoreNodes(deliveryPackage, contextDecision),
     [deliveryPackage, contextDecision],
@@ -211,7 +255,9 @@ export function useWorkDesignSessionController({
     contextSnapshotAttachmentStatusLabel,
   } = contextArtifacts;
   const sourceWorkDesignComplete =
-    workDesignPackageCompletedFromSource(deliveryPackage);
+    liveRuntime.mode === "live"
+      ? Boolean(liveRuntime.projection?.latest_application)
+      : workDesignPackageCompletedFromSource(deliveryPackage);
   const sourceWorkDesignRetired =
     workDesignPackageRetiredFromSource(deliveryPackage);
   const sourceWorkDesignClosed =
@@ -219,18 +265,54 @@ export function useWorkDesignSessionController({
   const sourceApplyComplete =
     sourceWorkDesignComplete && contextDecision === "proceed";
   const applyCompleted = applyReceiptRecorded || sourceWorkDesignClosed;
+  const requestTreeAdvice = useCallback(
+    async ({
+      operatorPrompt,
+      selectedNode,
+      tree,
+    }: {
+      operatorPrompt: string;
+      selectedNode: typeof initialTree;
+      tree: typeof initialTree;
+    }) => {
+      const live = await liveRuntime.treeAdvice({
+        operatorPrompt,
+        selectedNodeId: selectedNode.id,
+        tree,
+      });
+      if (live.result) return live.result;
+      return workDesignBuildAdvisorAdapter({
+        finalized_brief_ref: contextFinalizedBrief.metadataPacketRef,
+        operator_prompt: operatorPrompt,
+        package_ref: deliveryPackage.delivery_package_id,
+        request_id: `build-tree-${Date.now()}`,
+        selected_node: selectedNode,
+        source_ref: deliveryPackage.source_ref,
+        tree_snapshot: tree,
+      });
+    },
+    [
+      contextFinalizedBrief.metadataPacketRef,
+      deliveryPackage.delivery_package_id,
+      deliveryPackage.source_ref,
+      liveRuntime,
+    ],
+  );
   const buildTree = useWorkDesignBuildTree({
     applyCompleted,
     contextFinalizedBrief,
     deliveryPackage,
     initialTree,
     onTreeDirty: () => {
+      pendingAcceptanceRef.current = null;
+      applyState.setApplyRuntimeError(null);
       setHasUnsavedSessionChangesFromUser(true);
       setApplyReceiptRecorded(false);
       applyState.setApplyRunStartedAt(null);
       setDraftValidationAccepted(false);
       setDraftReviewAccepted(false);
     },
+    requestTreeAdvice,
   });
   const { metrics, tree } = buildTree;
   const reviewTreeDialog = useWorkDesignReviewTreeDialog({ tree });
@@ -241,6 +323,24 @@ export function useWorkDesignSessionController({
     contextDecision,
     contextOperatorNote,
     deliveryPackage,
+    requestContextAdvice: async (request) => {
+      const live = await liveRuntime.contextAdvice({
+        contextDecision: request.context_decision ?? "proceed",
+        contextNote: request.context_note ?? "",
+        operatorPrompt: request.operator_prompt,
+      });
+      if (live.result) {
+        return {
+          advisor_mode: "context_session",
+          confidence: live.result.confidence,
+          required_operator_action: live.result.required_operator_action,
+          response_id: live.result.response_id,
+          status: live.result.status,
+          text: live.result.text,
+        };
+      }
+      return workDesignMockContextAdvisorAdapter(request);
+    },
     setActiveStep,
     setApplyReceiptRecorded,
     setApplyRunStartedAt: applyState.setApplyRunStartedAt,
@@ -270,6 +370,10 @@ export function useWorkDesignSessionController({
     reviewHandoffNote,
     draftReviewAccepted,
   });
+  const applyActionReady =
+    applyReady &&
+    (liveRuntime.mode === "disconnected-preview" ||
+      liveRuntime.projectionStatus === "current");
   const applyWorkflow = useWorkDesignApplyWorkflow({
     activeStep,
     applyReceiptId,
@@ -282,12 +386,16 @@ export function useWorkDesignSessionController({
     contextSnapshotAttachmentStatusLabel,
     deliveryPackage,
     metrics,
+    runtimeMode: liveRuntime.mode,
+    runtimeError: applyState.applyRuntimeError,
     setActiveStep,
     setApplyReceiptId,
     setApplyReceiptRecorded,
     setHasUnsavedSessionChanges: setHasUnsavedSessionChangesFromUser,
     setDraftValidationAccepted,
     sourceApplyComplete,
+    sourceRecordRef:
+      liveRuntime.projection?.source.ref ?? deliveryPackage.source_ref,
   });
   const {
     activeBlockerIssue,
@@ -429,24 +537,55 @@ export function useWorkDesignSessionController({
     onClose();
   }
 
-  function runApplyDraft() {
+  async function runApplyDraft() {
     if (
-      !applyReady ||
+      !applyActionReady ||
       workDesignBlocked ||
       contextDecision !== "proceed" ||
       sourceWorkDesignClosed
     ) {
       return;
     }
-
-    const receipt = createLocalWorkDesignApplyReceipt({
-      deliveryPackage,
-      targetTree: tree,
-    });
-
-    recordApplyDraft(receipt);
-    setHasCurrentSessionEdits(false);
-    onApplied?.(receipt);
+    if (applyInFlightRef.current) return;
+    applyInFlightRef.current = true;
+    applyState.setApplyRuntimeError(null);
+    try {
+      const treeKey = JSON.stringify(tree);
+      if (pendingAcceptanceRef.current?.treeKey !== treeKey) {
+        pendingAcceptanceRef.current = {
+          acceptedAt: new Date().toISOString(),
+          acceptanceId: `work-design-acceptance:${crypto.randomUUID()}`,
+          treeKey,
+        };
+      }
+      const acceptance = pendingAcceptanceRef.current;
+      const live = await liveRuntime.apply({
+        acceptanceId: acceptance.acceptanceId,
+        acceptedAt: acceptance.acceptedAt,
+        note: reviewHandoffNote,
+        tree,
+      });
+      const receipt: WorkDesignApplyReceipt = live.result
+        ? {
+            appliedAt: live.result.applied_at,
+            appliedBy: live.result.applied_by,
+            receiptId: live.result.receipt.ref,
+            targetTree: tree,
+          }
+        : createLocalWorkDesignApplyReceipt({
+            deliveryPackage,
+            targetTree: tree,
+          });
+      recordApplyDraft(receipt);
+      setHasCurrentSessionEdits(false);
+      if (!live.result) onApplied?.(receipt);
+    } catch (error) {
+      applyState.setApplyRuntimeError(
+        error instanceof Error ? error.message : "Work Design apply failed.",
+      );
+    } finally {
+      applyInFlightRef.current = false;
+    }
   }
 
   const shellWidth =
@@ -472,7 +611,7 @@ export function useWorkDesignSessionController({
     footerProps: {
       activeStep,
       applyReceiptRecorded,
-      applyReady,
+      applyReady: applyActionReady,
       contextBriefReady,
       contextDecision,
       contextDecisionTone: contextDecisionCopy.tone,

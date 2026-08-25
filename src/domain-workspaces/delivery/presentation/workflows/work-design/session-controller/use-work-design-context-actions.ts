@@ -20,6 +20,9 @@ type UseWorkDesignContextActionsParams = {
   contextDecision: WorkDesignContextDecision;
   contextOperatorNote: string;
   deliveryPackage: DeliveryPackageSummary;
+  requestContextAdvice: (
+    request: Parameters<typeof workDesignMockContextAdvisorAdapter>[0],
+  ) => Promise<ReturnType<typeof workDesignMockContextAdvisorAdapter>>;
   setActiveStep: Dispatch<SetStateAction<WorkDesignStep>>;
   setApplyReceiptRecorded: Dispatch<SetStateAction<boolean>>;
   setApplyRunStartedAt: Dispatch<SetStateAction<string | null>>;
@@ -43,6 +46,7 @@ export function useWorkDesignContextActions({
   contextDecision,
   contextOperatorNote,
   deliveryPackage,
+  requestContextAdvice,
   setActiveStep,
   setApplyReceiptRecorded,
   setApplyRunStartedAt,
@@ -70,7 +74,7 @@ export function useWorkDesignContextActions({
     setDraftReviewAccepted(false);
   }
 
-  function submitContextAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
+  async function submitContextAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (contextBriefReadOnly) {
@@ -84,17 +88,6 @@ export function useWorkDesignContextActions({
     }
 
     const turnId = Date.now();
-    const response = workDesignMockContextAdvisorAdapter({
-      advisor_mode: "context_session",
-      allowed_response_types: ["text"],
-      context_decision: contextDecision,
-      context_note: contextOperatorNote,
-      operator_prompt: prompt,
-      package_ref: deliveryPackage.delivery_package_id,
-      request_id: `context-session-${turnId}`,
-      source_ref: deliveryPackage.source_ref,
-    });
-
     setContextAdvisorPrompt("");
     setContextAdvisorTurns((current) => [
       ...current,
@@ -103,12 +96,39 @@ export function useWorkDesignContextActions({
         role: "operator",
         text: prompt,
       },
-      {
-        id: response.response_id,
-        role: "advisor",
-        text: response.text,
-      },
     ]);
+    try {
+      const response = await requestContextAdvice({
+        advisor_mode: "context_session",
+        allowed_response_types: ["text"],
+        context_decision: contextDecision,
+        context_note: contextOperatorNote,
+        operator_prompt: prompt,
+        package_ref: deliveryPackage.delivery_package_id,
+        request_id: `context-session-${turnId}`,
+        source_ref: deliveryPackage.source_ref,
+      });
+      setContextAdvisorTurns((current) => [
+        ...current,
+        {
+          id: response.response_id,
+          role: "advisor",
+          text: response.text,
+        },
+      ]);
+    } catch (error) {
+      setContextAdvisorTurns((current) => [
+        ...current,
+        {
+          id: `advisor-context-error-${turnId}`,
+          role: "advisor",
+          text:
+            error instanceof Error
+              ? `Governed advisor unavailable: ${error.message}`
+              : "Governed advisor unavailable.",
+        },
+      ]);
+    }
   }
 
   function acceptContextBrief() {
