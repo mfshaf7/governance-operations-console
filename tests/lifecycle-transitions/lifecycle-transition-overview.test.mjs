@@ -55,7 +55,8 @@ test("route summaries derive posture from transition truth", () => {
   assert.equal(proposalToDelivery.tone, "ok");
   assert.equal(proposalToDelivery.appliedCount, 1);
   assert.equal(prototypeToDelivery.tone, "danger");
-  assert.equal(prototypeToDelivery.activeCount, 1);
+  assert.equal(prototypeToDelivery.appliedCount, 1);
+  assert.equal(prototypeToDelivery.activeCount, 0);
   assert.equal(prototypeToDelivery.attentionCount, 1);
 });
 

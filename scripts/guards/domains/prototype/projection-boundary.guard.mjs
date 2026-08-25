@@ -16,6 +16,16 @@ const runtimeStore =
   `${prototypeRoot}/local-runtime/prototype-runtime-store.ts`;
 const movementRequestProjection =
   "src/domain-workspaces/operation-integrations/prototype-movement-request-projection.ts";
+const liveContract =
+  `${prototypeRoot}/live-runtime/prototype-delivery-live-contract.ts`;
+const liveProjection =
+  `${prototypeRoot}/live-runtime/prototype-delivery-live-projection.ts`;
+const liveRuntime =
+  `${prototypeRoot}/live-runtime/use-prototype-delivery-live-runtime.ts`;
+const serverRoutes =
+  `${prototypeRoot}/server/prototype-delivery-api-routes.ts`;
+const oosClient =
+  `${prototypeRoot}/server/prototype-delivery-oos-client.ts`;
 
 export const guard = {
   id: "prototype/projection-boundary",
@@ -42,6 +52,11 @@ export const guard = {
       runtimeModel,
       runtimeStore,
       movementRequestProjection,
+      liveContract,
+      liveProjection,
+      liveRuntime,
+      serverRoutes,
+      oosClient,
       `${prototypeRoot}/presentation/dialogs/history/prototype-history-view-model.ts`,
       `${prototypeRoot}/presentation/dashboards/prototype-dashboard/prototype-dashboard-view-model.ts`,
       `${prototypeRoot}/presentation/dashboards/prototype-dashboard/prototype-dashboard-status-area-dialog.tsx`,
@@ -69,6 +84,8 @@ export const guard = {
       "left.recordedAt.localeCompare(right.recordedAt)",
       "left.receiptId.localeCompare(right.receiptId)",
       "uniquePrototypeRecords",
+      "projectPrototypeDeliveryApplication",
+      "deliveryApplicationsByPrototypeId",
     ]);
     assertOmits(failures, effectiveProjection, [
       "runtimeProjection.localRecords",
@@ -92,6 +109,16 @@ export const guard = {
       failures,
       `${prototypeRoot}/presentation/surface/use-prototype-control-controller.ts`,
       ["recordPrototypeMovementRequestPacket(result.receipt)"],
+    );
+    assertIncludes(
+      failures,
+      `${prototypeRoot}/presentation/surface/use-prototype-control-controller.ts`,
+      [
+        "usePrototypeDeliveryLiveRuntime",
+        "sourceReadModel.deliveryPacketsByPrototypeId",
+        'sourcePacket?.authority === "workspace-prototype-studio"',
+        "await deliveryRuntime.apply",
+      ],
     );
     assertOmits(
       failures,
@@ -165,6 +192,48 @@ export const guard = {
       `${prototypeRoot}/local-runtime/prototype-runtime.ts`,
       ["projectRecord", "localRecords", "upsertPrototypeLocalRecordProjection"],
     );
+
+    assertIncludes(failures, liveContract, [
+      "assertPrototypeDeliveryPacket",
+      "assertPrototypeDeliveryApplicationResult",
+      "assertPrototypeDeliveryResultMatchesPacket",
+      "sameCustody",
+    ]);
+    assertIncludes(failures, liveProjection, [
+      "assertPrototypeDeliveryResultMatchesPacket",
+      'lifecycle: "graduated"',
+      'authority: "source-projected"',
+      "result.receipt.receipt_ref",
+      "result.target.record_ref",
+    ]);
+    assertIncludes(failures, liveRuntime, [
+      'fetch("/api/prototypes/delivery-applications"',
+      "assertPrototypeDeliveryResultMatchesPacket",
+      "projectionsByPrototypeId",
+    ]);
+    assertOmits(failures, liveRuntime, [
+      "fixtures/",
+      "OOS_CALLER_SECRET",
+      "openproject",
+    ]);
+    assertIncludes(failures, serverRoutes, [
+      "applyPrototypeDeliveryApplication",
+      "readPrototypeDeliveryApplication",
+      'mode: "live"',
+      'status: "offline"',
+    ]);
+    assertIncludes(failures, oosClient, [
+      '"/v1/delivery-ingress/prototype/applications"',
+      '"x-oos-caller-id"',
+      '"x-oos-caller-secret"',
+      'cache: "no-store"',
+      "AbortSignal.timeout",
+      "config.callerId",
+    ]);
+    assertOmits(failures, oosClient, [
+      "NEXT_PUBLIC_",
+      "openproject",
+    ]);
 
     assertIncludes(
       failures,

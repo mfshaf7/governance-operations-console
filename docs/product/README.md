@@ -4,8 +4,9 @@ Status: approved source-baseline contract index.
 
 This directory owns the product-local architecture and design records
 transferred from Workspace Prototype Studio with the approved source baseline.
-The implementation remains local-only and pre-live-integration, but this
-repository is now the durable home for future product changes.
+Most workflows remain local or fixture-backed, while separately admitted live
+adapters are documented explicitly. This repository is the durable home for
+current and future product changes.
 
 ## Read Order
 
@@ -67,6 +68,14 @@ repository is now the durable home for future product changes.
    - `backlog.md`
    - `decision-log.md`
    - `change-log.md`
+
+## Live Integration Surfaces
+
+- `proposal-live-integration.md`
+  - OOS-backed Proposal projection and command behavior.
+- `prototype-delivery-live-integration.md`
+  - Exact source-packet application through OOS and receipt-bound Prototype
+    graduation projection.
 
 Retired planning and audit records have been removed from the active record
 set. If an implementation question is not answered by the files above, stop and

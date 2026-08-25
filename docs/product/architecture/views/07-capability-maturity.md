@@ -12,7 +12,7 @@ orthogonal; a complete prototype UI does not prove backend or adapter support.
 | Design | Whether the target is observed, approved, proposed, or retired. |
 | Console | Whether the operator surface is implemented, partial, prototype-only, not started, or retired. |
 | Backend | Whether the required authority backend is implemented, partial, missing, unnecessary, or unverified. |
-| Adapter | Whether the Console is connected, prototype-local, missing, or unnecessary. |
+| Adapter | Whether the Console is connected, partial, prototype-local, missing, or unnecessary. |
 | Phase | Whether work is valid pre-baseline, belongs to the baseline gate, or is routed after baseline approval. |
 
 All capabilities and transitions in this view are `approved-target`.
@@ -33,7 +33,7 @@ All capabilities and transitions in this view are `approved-target`.
 | Repository | implemented | partial | missing | post-baseline |
 | Model Operations | implemented | partial | missing | post-baseline |
 | Delivery | implemented | implemented | missing | post-baseline |
-| Prototype | implemented | partial | missing | post-baseline |
+| Prototype | partial | partial | partial | post-baseline |
 | Product Portfolio | implemented | partial | missing | post-baseline |
 | Orchestration | implemented | partial | missing | post-baseline |
 | Lifecycle Transitions | implemented | partial | missing | post-baseline |
@@ -54,7 +54,7 @@ All capabilities and transitions in this view are `approved-target`.
 | Proposal to Prototype | partial | partial | partial | post-baseline |
 | Proposal Repository Gate | prototype-only | missing | missing | post-baseline |
 | Repository Request and Provisioning | prototype-only | partial | missing | post-baseline |
-| Prototype to Delivery | prototype-only | missing | missing | post-baseline |
+| Prototype to Delivery | partial | implemented | partial | post-baseline |
 | Delivery Owner Repo Catalog Link | prototype-only | partial | missing | post-baseline |
 | Repository to Workspace Intake | not-started | partial | missing | post-baseline |
 | Prototype to Workspace Intake | not-started | partial | missing | post-baseline |
@@ -78,8 +78,11 @@ All capabilities and transitions in this view are `approved-target`.
 
 ### Post-Baseline Authority Work
 
-- Add or extend OOS APIs for Proposal, Delivery, Model, Orchestration, and
+- Add or extend OOS APIs for Delivery, Model, Orchestration, and remaining
   correlated transition workflows.
+- Connect Workspace Prototype Studio packet discovery to the implemented
+  Prototype-to-Delivery application without synthesizing packet truth in the
+  Console.
 - Add a generic Workspace Governance adapter for repo, product, and component
   intake classification plus a separate active-inventory promotion path.
 - Add Workspace Prototype Studio registry and graduation adapters.

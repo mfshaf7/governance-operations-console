@@ -2,6 +2,7 @@ import type { TerasTone } from "@/teras";
 
 import type { PrototypeCommandView } from "../../../work-model/commands/prototype-command-model.ts";
 import type { PrototypeRecord } from "../../../read-model/prototype-workspace-read-model.ts";
+import type { PrototypeDeliveryPacketProjection } from "../../../domain/prototype-delivery.ts";
 import {
   type PrototypeMovementIntentId,
   type PrototypeMovementRequestDraftInput,
@@ -35,7 +36,17 @@ export type PrototypeMovementStatusProjection = {
 
 export function movementRequestDraftFromRecord(
   record: PrototypeRecord | null,
+  sourceDeliveryPacket: PrototypeDeliveryPacketProjection | null = null,
 ): PrototypeMovementRequestLocalDraft {
+  if (sourceDeliveryPacket) {
+    return {
+      movementIntent: "governed-delivery",
+      requestReason: sourceDeliveryPacket.packet.content.rationale,
+      targetLane: "Delivery Intake",
+      targetOwner: "Operator Orchestration Service",
+    };
+  }
+
   return {
     movementIntent: record
       ? prototypeMovementIntentForRecord(record)
@@ -122,9 +133,26 @@ export function movementRequestReviewStatus({
   };
 }
 
-export function movementRequestAuthorityStatus(
-  command: PrototypeCommandView,
-): PrototypeMovementStatusProjection {
+export function movementRequestAuthorityStatus({
+  applicationError,
+  applicationPending,
+  command,
+  sourceDeliveryPacket,
+}: {
+  applicationError: string | null;
+  applicationPending: boolean;
+  command: PrototypeCommandView;
+  sourceDeliveryPacket: boolean;
+}): PrototypeMovementStatusProjection {
+  if (applicationError) {
+    return { description: applicationError, label: "Retry needed", tone: "danger" };
+  }
+  if (applicationPending) {
+    return { label: "Applying", tone: "info" };
+  }
+  if (sourceDeliveryPacket) {
+    return { label: "OOS application", tone: "info" };
+  }
   return {
     label: "Prototype local",
     tone: command.disabledReason ? "warn" : "info",

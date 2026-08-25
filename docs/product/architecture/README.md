@@ -42,6 +42,10 @@ An approved target may therefore have a complete Console prototype while its
 backend or live adapter is still missing. That is a planned implementation gap,
 not permission to display a fake live effect.
 
+`partial` adapter status means one admitted live slice exists while another
+required source, command, or read projection remains disconnected. It must be
+described explicitly in the owning integration record.
+
 ## Authority Rule
 
 The Console is an operator and command surface. It has no canonical business

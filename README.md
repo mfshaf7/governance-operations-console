@@ -11,15 +11,18 @@ cross-repo graduation record establishes final custody after the source landing,
 Prototype Studio handoff, and Workspace Governance product promotion are all
 reviewed.
 
-The graduated baseline remains private and loopback-only. Proposal now has one
-separately governed live integration slice:
+The graduated baseline remains private and loopback-only. The Console now has
+two separately governed OOS integration slices:
 
 - server-only OOS caller credentials and operator attribution
 - canonical Proposal list, capture, projection, command, and history paths
 - bounded visible-page polling with fail-closed writes
 - explicit disconnected preview when no OOS endpoint is configured
+- Prototype-to-Delivery application for an exact, source-authoritative
+  Prototype Delivery packet, with server-only caller credentials and
+  receipt-bound result projection
 
-All other operational workflows remain:
+Prototype source discovery and all other operational workflows remain:
 
 - private and operator-local
 - loopback-only for local preview
@@ -63,6 +66,8 @@ production-build validation.
 The Proposal live adapter is configured through the server-only environment
 boundary documented in
 [`docs/product/proposal-live-integration.md`](docs/product/proposal-live-integration.md).
+The Prototype Delivery application boundary is documented in
+[`docs/product/prototype-delivery-live-integration.md`](docs/product/prototype-delivery-live-integration.md).
 
 ## Authority Map
 

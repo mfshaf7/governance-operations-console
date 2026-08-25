@@ -73,22 +73,22 @@ test("Proposal to Delivery ends at target-owned Intake admission", () => {
   );
 });
 
-test("Prototype to Delivery remains applying after Intake admission and Consume start", () => {
+test("Prototype to Delivery completes only from the OOS target application receipt", () => {
   const projection = projectLifecycleTransition(
-    lifecycleTransitionArtifactFixtures.prototypeToDeliveryApplying,
+    lifecycleTransitionArtifactFixtures.prototypeToDeliveryApplied,
   );
 
-  assert.equal(projection.state, "applying");
+  assert.equal(projection.state, "applied");
   assert.equal(
     projection.admission.targetRecordRef,
-    "delivery-intake://source/INT-307",
+    "openproject://work_packages/307",
   );
-  assert.equal(projection.application.state, "running");
+  assert.equal(projection.application.state, "applied");
   assert.equal(
-    projection.nextAction?.ownerRef,
-    "operator-orchestration-service",
+    projection.application.evidenceKind,
+    "target-application-receipt",
   );
-  assert.equal(projection.nextAction?.action, "complete-application");
+  assert.equal(projection.nextAction, null);
 });
 
 test("stale source validation returns ownership without claiming target custody", () => {
@@ -138,16 +138,16 @@ test("projection ordering is deterministic and selectors preserve all states", (
   const artifacts = [
     ...lifecycleTransitionArtifactFixtures.proposalToPrototypeApplied,
     ...lifecycleTransitionArtifactFixtures.proposalToDeliveryApplied,
-    ...lifecycleTransitionArtifactFixtures.prototypeToDeliveryApplying,
+    ...lifecycleTransitionArtifactFixtures.prototypeToDeliveryApplied,
   ].reverse();
   const projections = projectLifecycleTransitions(artifacts);
   const summary = summarizeLifecycleTransitionStates(projections);
 
   assert.equal(projections.length, 3);
-  assert.equal(summary.applied, 2);
-  assert.equal(summary.applying, 1);
+  assert.equal(summary.applied, 3);
+  assert.equal(summary.applying, 0);
   assert.equal(summary.blocked, 0);
-  assert.equal(selectLifecycleTransitionsRequiringAction(projections).length, 1);
+  assert.equal(selectLifecycleTransitionsRequiringAction(projections).length, 0);
 });
 
 test("mixed correlation identity fails closed", () => {

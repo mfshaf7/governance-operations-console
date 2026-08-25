@@ -42,6 +42,7 @@ vocabularies:
     - unverified
   adapter_status:
     - connected
+    - partial
     - prototype-local
     - missing
     - not-required
@@ -466,6 +467,9 @@ capabilities:
     role: Land and shape incubation work, operate preview proof, promote candidates and baselines, prepare graduation intent, and retain history.
     authority_refs:
       - workspace-prototype-studio
+      - workspace-governance-control-fabric
+      - operator-orchestration-service
+      - openproject
       - platform-engineering
       - security-architecture
     canonical_records:
@@ -479,11 +483,12 @@ capabilities:
     implementation:
       console: implemented
       backend_support: partial
-      live_adapter: missing
+      live_adapter: partial
       delivery_phase: post-baseline
     post_baseline_work:
-      - Add a registry adapter and source-backed baseline or graduation receipts.
-      - Add Proposal ingress and Delivery graduation adapters.
+      - Add a registry adapter and source-backed baseline receipts.
+      - Connect Proposal ingress and Workspace Prototype Studio packet discovery.
+      - Preserve the OOS-owned Prototype Delivery application and receipt boundary.
       - Keep Preview Runtime proof separate from platform readiness.
 
   portfolio:
@@ -799,9 +804,9 @@ transitions:
     target_completion: A physical repository, owner evidence, README, and AGENTS baseline exist; no workspace intake or active inventory state is implied.
     design_status: approved-target
     implementation:
-      console: prototype-only
+      console: partial
       backend_support: partial
-      live_adapter: missing
+      live_adapter: partial
       delivery_phase: post-baseline
 
   prototype-to-delivery:
@@ -815,12 +820,12 @@ transitions:
     execution_owner: operator-orchestration-service
     mutation_owner: openproject
     receipt_owner: operator-orchestration-service
-    target_completion: Delivery Consume creates or reuses the ART shell and backlinks; only the final receipt marks Prototype graduated.
+    target_completion: OOS creates or reuses the Delivery Epic and backlinks through the canonical adapter; only its durable receipt marks Prototype graduated, while Delivery Intake continues the admitted work.
     design_status: approved-target
     implementation:
-      console: prototype-only
-      backend_support: missing
-      live_adapter: missing
+      console: partial
+      backend_support: implemented
+      live_adapter: partial
       delivery_phase: post-baseline
 
   delivery-owner-repo-catalog-link:

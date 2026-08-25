@@ -6,6 +6,20 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-08-25
+
+- Added the server-only Console adapter for OOS Prototype Delivery application
+  and readback using an exact Workspace Prototype Studio packet.
+- Added strict packet/result binding, deterministic replay behavior,
+  fail-closed conflict and malformed-result handling, and receipt-bound
+  Prototype graduation projection.
+- Reconciled the current architecture with the admitted OOS behavior: OOS now
+  creates or reuses the Delivery Epic, while Delivery Intake continues the
+  admitted target instead of acting as a second target-creation decision.
+- Kept Prototype packet discovery, the Delivery live register projection,
+  authenticated human identity, deployment, and security acceptance outside
+  this bounded Console slice.
+
 ## 2026-08-16
 
 - Connected Proposal to the admitted Operator Orchestration Service contract

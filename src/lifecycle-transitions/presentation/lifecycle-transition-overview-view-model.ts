@@ -93,7 +93,7 @@ const routeDescriptions = {
   "proposal-to-prototype":
     "Accepted proposal enters Prototype Landing after validation and target application.",
   "prototype-to-delivery":
-    "Baseline-approved prototype enters Delivery Intake before Consume applies the continuation.",
+    "OOS applies the baseline-approved Prototype packet before Delivery Intake continues the admitted Epic.",
 } as const satisfies Record<LifecycleTransitionRouteId, string>;
 
 const stateLabels = {
@@ -130,7 +130,6 @@ const nextActionLabels = {
 const ownerLabels: Record<string, string> = {
   "delivery-ingress-adapter": "Delivery ingress",
   "delivery-ingress-policy": "Delivery ingress",
-  "delivery-intake-consume": "Delivery Intake",
   "operator-orchestration-service": "Orchestration",
   proposal: "Proposal",
   "prototype-ingress-adapter": "Prototype ingress",

@@ -35,6 +35,7 @@ export function PrototypeMovementRequestSupportPanels({
   onOpenReadiness,
   record,
   reviewStatus,
+  sourceDeliveryPacket,
 }: {
   activeStep: PrototypeMovementRequestStepId;
   authorityStatus: MovementStatus;
@@ -48,6 +49,7 @@ export function PrototypeMovementRequestSupportPanels({
   onOpenReadiness: () => void;
   record: PrototypeRecord;
   reviewStatus: MovementStatus;
+  sourceDeliveryPacket: boolean;
 }) {
   if (activeStep === "intent") {
     const returnInstruction = movementReturnInstructionProjection(record);
@@ -111,7 +113,11 @@ export function PrototypeMovementRequestSupportPanels({
             ) : (
               <TerasStatusItem
                 tone={gateTone}
-                detail="Readiness facts are retained for Movement Control inspection."
+                detail={
+                  sourceDeliveryPacket
+                    ? "Readiness facts remain available for OOS validation."
+                    : "Readiness facts remain available with the local source intent."
+                }
                 label="Gate facts"
                 status={gateFactStatus.status}
               />
@@ -139,9 +145,12 @@ export function PrototypeMovementRequestSupportPanels({
             </TerasStatusPill>
           }
           description={
-            movementRequestRecorded
-              ? "Local request receipt exists. Movement Control still owns the outcome."
-              : "Check current Movement request readiness before recording."
+            authorityStatus.description ??
+            (sourceDeliveryPacket
+              ? "OOS validates and applies the exact source packet; only its durable receipt completes the handoff."
+              : movementRequestRecorded
+                ? "The local source-intent receipt is recorded without claiming target application."
+                : "Check current request readiness before recording the local preview.")
           }
           treatment="rail"
           fit="content"
@@ -171,27 +180,43 @@ export function PrototypeMovementRequestSupportPanels({
               {authorityStatus.label}
             </TerasStatusPill>
           }
-          description="This records a local request record only. Movement Control still owns queueing, decision, outcome, and durable receipt truth."
+          description={
+            sourceDeliveryPacket
+              ? "The Console submits the source-owned packet through its server-only OOS adapter."
+              : "This records a Prototype-local source intent only; live validation and target application remain unavailable."
+          }
           treatment="rail"
           fit="content"
           kicker="Authority"
-          title="Preparation only"
+          title={
+            sourceDeliveryPacket ? "Application boundary" : "Preparation only"
+          }
           tone={authorityStatus.tone}
         >
           <TerasList frame="contained">
             <TerasStatusItem
               tone="info"
-              detail="Prototype prepares the request packet."
+              detail={
+                sourceDeliveryPacket
+                  ? "Workspace Prototype Studio owns the exact packet."
+                  : "Prototype prepares the local source intent."
+              }
               index="01"
               label="Prototype"
-              status="prepare"
+              status={sourceDeliveryPacket ? "source" : "prepare"}
             />
             <TerasStatusItem
               tone="info"
-              detail="Movement Control owns the actual decision and durable receipt."
+              detail={
+                sourceDeliveryPacket
+                  ? "OOS owns target application and the durable receipt."
+                  : "No live target application is claimed."
+              }
               index="02"
-              label="Movement Control"
-              status="external"
+              label={
+                sourceDeliveryPacket ? "Orchestration" : "Target application"
+              }
+              status={sourceDeliveryPacket ? "apply" : "unavailable"}
             />
           </TerasList>
         </TerasWizardPanel>

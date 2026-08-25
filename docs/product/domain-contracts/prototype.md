@@ -15,6 +15,12 @@ retired records.
 Prototype is not a lifecycle-transition authority and not a Delivery execution
 surface.
 
+For the admitted Prototype-to-Delivery slice, the Console accepts only an exact
+Workspace Prototype Studio packet and sends it through its server-only OOS
+adapter. OOS owns target application and the durable receipt. The Console may
+project graduation only from that validated result; it does not manufacture
+the packet from the local Prototype fixture.
+
 ## Ingress
 
 Allowed ingress classes:
@@ -835,7 +841,10 @@ Source Transition Intent preparation, currently labeled `Movement Request`,
 translates the approved baseline or impacted closeout into a versioned
 source-side lifecycle-transition intent. It prepares source fields, target
 intent, evidence refs, gate snapshot, and request reason. It does not decide
-target admission, exceptions, or target application.
+target admission, exceptions, or target application. When Workspace Prototype
+Studio supplies the accepted Prototype Delivery packet, the Console presents a
+fixed Delivery Handoff and submits that exact packet to OOS; it does not rebuild
+the packet from editable Console fields.
 
 The current Prototype surface models the following source-intent categories for
 route discussion. They are not target authorization, and no category is live
@@ -879,13 +888,12 @@ The workflow currently labeled `Movement Request` has internal progression:
 - Request Review: structured transition-intent preview, authority boundary,
   unresolved blockers, and final prepare or returned-correction action.
 
-Its output is a structured transition-intent draft, a prototype-local source
-record, and a projected current required action. It may use `request-recorded`
-only for a real local source record produced by that workflow. The shared
-transition projection correlates later validation, admission, application, and
-receipt truth. Once a local source receipt exists, the workflow must stop
-offering the prepare action and route the operator to History / Receipts for
-review.
+Without a source-authoritative packet, its output is a structured
+transition-intent draft, a prototype-local source record, and a projected
+current required action. It may use `request-recorded` only for a real local
+source record produced by that workflow. With an exact source packet, only the
+validated OOS application result may add the Delivery target, durable receipt,
+and `graduated` projection. A local receipt must never satisfy those states.
 A returned transition receipt is not terminal completion; it is return
 evidence. Returned records remain actionable through Returned Transition
 Correction until the operator records a superseding source intent or a later
@@ -1284,8 +1292,8 @@ prepared evidence and target rationale for route-specific validation.
 When Prototype prepares movement toward Workspace Delivery ART, the movement
 packet must carry source-custody classification: `existing-repo`,
 `new-repo-required`, `platform-internal`, or `non-source-work`, plus owner,
-repo/source ref when applicable, repository gate state, and rationale. Delivery
-Intake verifies that metadata before consume instead of assuming every
+repo/source ref when applicable, repository gate state, and rationale. WGCF and
+OOS verify that metadata before target application instead of assuming every
 graduating prototype requires a new repository. Prototype must not hand off to
 Delivery while a repository/source-custody gate is still unresolved.
 
@@ -1296,11 +1304,11 @@ baseline-approved
   -> Prepare Delivery Handoff
   -> versioned Prototype Delivery packet
   -> shared validation
-  -> automatic Delivery ingress admission
-  -> Delivery Intake / needs_consume
-  -> Consume creates or reuses one Delivery shell and backlinks
-  -> final graduation receipt
+  -> OOS Delivery application
+  -> canonical adapter creates or reuses one Delivery Epic and backlinks
+  -> durable application receipt
   -> graduated / review-only Prototype history
+  -> Delivery Intake continues the admitted Epic
 ```
 
 The Delivery handoff uses a fixed target and generated target ownership. It

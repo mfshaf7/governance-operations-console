@@ -11,6 +11,7 @@ import {
 import type { PrototypeCommandId } from "../../../work-model/commands/prototype-command-model.ts";
 import { getPrototypeCommandView } from "../../../work-model/commands/prototype-command-model.ts";
 import type { PrototypeRecord } from "../../../read-model/prototype-workspace-read-model.ts";
+import type { PrototypeDeliveryPacketProjection } from "../../../domain/prototype-delivery.ts";
 import {
   type PrototypeWorkflowGuardIntent,
   prototypeWorkflowRecordCanEdit,
@@ -53,6 +54,7 @@ export function PrototypeMovementRequestModal({
   onOpenHistory,
   onRecordReceipt,
   record,
+  sourceDeliveryPacket,
 }: {
   onBackToDashboard: () => void;
   onClose: () => void;
@@ -61,14 +63,17 @@ export function PrototypeMovementRequestModal({
     record: PrototypeRecord,
     commandId: PrototypeCommandId,
     draft: PrototypeMovementRequestDraftInput,
-  ) => void;
+  ) => Promise<void> | void;
   record: PrototypeRecord | null;
+  sourceDeliveryPacket: PrototypeDeliveryPacketProjection | null;
 }) {
   const [activeStep, setActiveStep] =
     useState<PrototypeMovementRequestStepId>("intent");
   const [closeGuardIntent, setCloseGuardIntent] =
     useState<PrototypeWorkflowGuardIntent | null>(null);
   const [readinessDialogOpen, setReadinessDialogOpen] = useState(false);
+  const [applicationError, setApplicationError] = useState<string | null>(null);
+  const [applicationPending, setApplicationPending] = useState(false);
   const [draft, setDraft] = useState<PrototypeMovementRequestLocalDraft>(() =>
     movementRequestDraftFromRecord(null),
   );
@@ -78,9 +83,11 @@ export function PrototypeMovementRequestModal({
       setActiveStep(prototypeMovementRequestActiveStep(record));
       setCloseGuardIntent(null);
       setReadinessDialogOpen(false);
-      setDraft(movementRequestDraftFromRecord(record));
+      setApplicationError(null);
+      setApplicationPending(false);
+      setDraft(movementRequestDraftFromRecord(record, sourceDeliveryPacket));
     }
-  }, [record]);
+  }, [record, sourceDeliveryPacket]);
 
   if (!record) {
     return null;
@@ -100,7 +107,10 @@ export function PrototypeMovementRequestModal({
     workflowSteps,
     activeStep,
   );
-  const sourceDraft = movementRequestDraftFromRecord(record);
+  const sourceDraft = movementRequestDraftFromRecord(
+    record,
+    sourceDeliveryPacket,
+  );
   const draftDirty = movementRequestDraftDirty(draft, sourceDraft);
   const draftComplete = movementRequestDraftComplete(draft);
   const correctionRequired = record.movementRequest.state === "returned";
@@ -128,7 +138,12 @@ export function PrototypeMovementRequestModal({
     gateBlocked,
     requestReady,
   });
-  const authorityStatus = movementRequestAuthorityStatus(command);
+  const authorityStatus = movementRequestAuthorityStatus({
+    applicationError,
+    applicationPending,
+    command,
+    sourceDeliveryPacket: Boolean(sourceDeliveryPacket),
+  });
   const intentStatus = movementRequestIntentStatus(record);
   const packetStatus = movementRequestPacketStatus({
     actionLabel: actionState.label,
@@ -140,10 +155,12 @@ export function PrototypeMovementRequestModal({
     gateBlocked,
     gatesClear,
   });
-  const draftMutable = prototypeWorkflowRecordCanEdit({
-    disabledReason: command.disabledReason,
-    record,
-  });
+  const draftMutable =
+    !sourceDeliveryPacket &&
+    prototypeWorkflowRecordCanEdit({
+      disabledReason: command.disabledReason,
+      record,
+    });
 
   function updateDraft(patch: Partial<PrototypeMovementRequestLocalDraft>) {
     if (!draftMutable) {
@@ -187,7 +204,9 @@ export function PrototypeMovementRequestModal({
   function discardMovementDraft() {
     const intent = closeGuardIntent;
 
-    setDraft(movementRequestDraftFromRecord(activeRecord));
+    setDraft(
+      movementRequestDraftFromRecord(activeRecord, sourceDeliveryPacket),
+    );
     setCloseGuardIntent(null);
 
     if (intent === "back") {
@@ -200,32 +219,59 @@ export function PrototypeMovementRequestModal({
     }
   }
 
-  function recordMovementRequest() {
-    if (!requestReady || command.disabledReason) {
+  async function recordMovementRequest() {
+    if (
+      !requestReady ||
+      applicationPending ||
+      (!sourceDeliveryPacket && command.disabledReason)
+    ) {
       return;
     }
 
-    onRecordReceipt(activeRecord, command.id, {
-      movementIntent: draft.movementIntent,
-      requestReason: draft.requestReason,
-      targetLane: movementTarget.targetLane,
-      targetOwner: movementTarget.targetOwner,
-    });
+    setApplicationError(null);
+    setApplicationPending(true);
+    try {
+      await onRecordReceipt(activeRecord, command.id, {
+        movementIntent: draft.movementIntent,
+        requestReason: draft.requestReason,
+        targetLane: movementTarget.targetLane,
+        targetOwner: movementTarget.targetOwner,
+      });
+    } catch (error) {
+      setApplicationError(
+        error instanceof Error
+          ? error.message
+          : "OOS rejected the Prototype Delivery application.",
+      );
+    } finally {
+      setApplicationPending(false);
+    }
   }
 
   return (
     <>
       <TerasWizardModal
         activeStepId={activeStep}
-        description="Prepare a structured Movement Control request draft. Prototype records preparation only; Movement Control owns queueing, decision, outcome, and receipts."
+        description={
+          sourceDeliveryPacket
+            ? "Review the source-authoritative Prototype packet before OOS applies it to Workspace Delivery ART."
+            : "Prepare a structured Delivery handoff preview. Local fixtures do not claim target application or durable receipts."
+        }
         footer={
           <TerasWizardFooter
             apply={
               activeStep === "request" && !movementRequestRecorded
                 ? {
                     dataAction: command.id,
-                    disabled: Boolean(command.disabledReason) || !requestReady,
-                    label: command.label,
+                    disabled:
+                      applicationPending ||
+                      !requestReady ||
+                      (!sourceDeliveryPacket && Boolean(command.disabledReason)),
+                    label: applicationPending
+                      ? "Applying Handoff..."
+                      : sourceDeliveryPacket
+                        ? "Apply Delivery Handoff"
+                      : command.label,
                     onClick: recordMovementRequest,
                     tone: command.tone === "danger" ? "danger" : "accent",
                   }
@@ -292,10 +338,11 @@ export function PrototypeMovementRequestModal({
             onOpenReadiness={() => setReadinessDialogOpen(true)}
             record={record}
             reviewStatus={reviewStatus}
+            sourceDeliveryPacket={Boolean(sourceDeliveryPacket)}
           />
         }
         surfaceId="prototype-movement-request"
-        title="Movement Request"
+        title={sourceDeliveryPacket ? "Delivery Handoff" : "Movement Request"}
       >
         <PrototypeMovementRequestStepPanel
           activeStep={activeStep}
@@ -309,6 +356,7 @@ export function PrototypeMovementRequestModal({
           onMovementIntentChange={updateMovementIntent}
           packetStatus={packetStatus}
           record={record}
+          sourceDeliveryPacket={Boolean(sourceDeliveryPacket)}
         />
       </TerasWizardModal>
       <TerasDraftCloseGuardDialog
@@ -324,6 +372,7 @@ export function PrototypeMovementRequestModal({
         onClose={() => setReadinessDialogOpen(false)}
         open={readinessDialogOpen}
         record={activeRecord}
+        sourceDeliveryPacket={Boolean(sourceDeliveryPacket)}
       />
     </>
   );
