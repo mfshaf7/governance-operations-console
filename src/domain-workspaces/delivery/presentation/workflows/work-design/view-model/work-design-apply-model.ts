@@ -4,6 +4,7 @@ import type {
   DeliveryWorkDesignSnapshotAttachmentDisplayStatus,
 } from "../../../../read-model/index.ts";
 import { formatWorkDesignDateTime } from "./work-design-display-formatters.ts";
+import type { WorkDesignLiveMode } from "../../../../live-runtime/work-design-live-types.ts";
 
 export function workDesignApplyReadinessRows({
   applyTargetRecordRef,
@@ -99,12 +100,16 @@ export function workDesignApplyBackendChecklistRows({
   applyTargetRecordRef,
   snapshotAction,
   sourceApplyComplete,
+  runtimeError,
+  runtimeMode,
 }: {
   applyReceiptRecorded: boolean;
   applyReady: boolean;
   applyTargetRecordRef: string;
   snapshotAction: string;
   sourceApplyComplete: boolean;
+  runtimeError: string | null;
+  runtimeMode: WorkDesignLiveMode;
 }): Array<{
   detail: string;
   label: string;
@@ -167,6 +172,34 @@ export function workDesignApplyBackendChecklistRows({
     ];
   }
 
+  if (runtimeError) {
+    return [
+      {
+        detail: `Draft input remains bound to ${applyTargetRecordRef}.`,
+        label: "Validate Apply Input",
+        status: "complete",
+        tone: "ok",
+      },
+      {
+        detail: runtimeError,
+        label: "Submit Apply Request",
+        status: "blocked",
+        tone: "warn",
+      },
+      ...[
+        "Run Governance Checks",
+        "Update Backend Record",
+        "Attach Snapshot Evidence",
+        "Return Receipt And Projection",
+      ].map((label) => ({
+        detail: "This step did not run because the governed apply request stopped.",
+        label,
+        status: "locked",
+        tone: "muted" as DeliveryTone,
+      })),
+    ];
+  }
+
   return [
     {
       detail: applyReceiptRecorded
@@ -184,7 +217,9 @@ export function workDesignApplyBackendChecklistRows({
     },
     {
       detail: applyReceiptRecorded
-        ? "Apply request accepted the work-design update intent."
+        ? runtimeMode === "live"
+          ? "OOS accepted the operator-approved Work Design update."
+          : "Preview runtime accepted the Work Design update intent."
         : applyReady
           ? "Operator approval will submit the work-design update request."
           : "Apply request waits for ready apply inputs.",
@@ -208,7 +243,9 @@ export function workDesignApplyBackendChecklistRows({
     },
     {
       detail: applyReceiptRecorded
-        ? "Backend adapter recorded the accepted Work Design update."
+        ? runtimeMode === "live"
+          ? "OOS reconciled the accepted Work Design update with canonical Delivery."
+          : "Preview runtime recorded the accepted Work Design update."
         : applyReady
           ? "The accepted update will route to the current backend adapter."
           : "Backend update is locked.",
@@ -228,7 +265,7 @@ export function workDesignApplyBackendChecklistRows({
     },
     {
       detail: applyReceiptRecorded
-        ? `Prototype receipt accepted for ${applyTargetRecordRef}; projection proof is available in Session History.`
+        ? `${runtimeMode === "live" ? "Durable OOS" : "Preview"} receipt accepted for ${applyTargetRecordRef}; projection proof is available in Session History.`
         : applyReady
           ? "Final proof appears after the backend returns an apply receipt."
           : "Receipt proof is not available yet.",
@@ -251,6 +288,8 @@ export function workDesignApplyExecutionLogLines({
   recordedAt,
   snapshotAction,
   sourceApplyComplete,
+  runtimeError,
+  runtimeMode,
 }: {
   applyReceiptRecorded: boolean;
   applyReady: boolean;
@@ -259,6 +298,8 @@ export function workDesignApplyExecutionLogLines({
   recordedAt: string;
   snapshotAction: string;
   sourceApplyComplete: boolean;
+  runtimeError: string | null;
+  runtimeMode: WorkDesignLiveMode;
 }): Array<{
   marker: string;
   text: string;
@@ -284,6 +325,29 @@ export function workDesignApplyExecutionLogLines({
         text: `${snapshotAction} is retained as completed Work Design evidence.`,
         timestamp: recordedAt,
         tone: "ok",
+      },
+    ];
+  }
+
+  if (runtimeError) {
+    return [
+      {
+        marker: "[ok]",
+        text: `Validated ${draftRef} against ${applyTargetRecordRef}.`,
+        timestamp: recordedAt,
+        tone: "ok",
+      },
+      {
+        marker: "[!!]",
+        text: runtimeError,
+        timestamp: recordedAt,
+        tone: "warn",
+      },
+      {
+        marker: "[..]",
+        text: "No completion state is projected without a durable apply receipt.",
+        timestamp: recordedAt,
+        tone: "muted",
       },
     ];
   }
@@ -331,7 +395,7 @@ export function workDesignApplyExecutionLogLines({
   return [
     {
       marker: "[ok]",
-      text: `Prototype adapter accepted apply intent for ${draftRef}.`,
+      text: `${runtimeMode === "live" ? "OOS" : "Preview runtime"} accepted apply intent for ${draftRef}.`,
       timestamp: recordedAt,
       tone: "ok",
     },
@@ -349,7 +413,10 @@ export function workDesignApplyExecutionLogLines({
     },
     {
       marker: "[ok]",
-      text: "Backend adapter recorded the Work Design update in mock mode.",
+      text:
+        runtimeMode === "live"
+          ? "OOS reconciled the Work Design update with canonical Delivery."
+          : "Preview runtime recorded the Work Design update locally.",
       timestamp: recordedAt,
       tone: "ok",
     },
@@ -399,7 +466,7 @@ export function workDesignApplyHeaderProjection({
   return {
     applyComplete,
     description: applyReceiptRecorded
-      ? "Prototype receipt is captured in the final checklist step. Live wiring will use the same apply sequence."
+      ? "The accepted receipt is captured in the final checklist step and retained in Session History."
       : sourceApplyComplete
         ? "Source read model already marks this Work Design pass Done. This view is read-only evidence."
         : applyReady

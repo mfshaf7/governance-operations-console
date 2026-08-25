@@ -18,6 +18,7 @@ import type {
   WorkDesignStep,
 } from "../../model/work-design-model.ts";
 import type { WorkDesignApplyState } from "./use-work-design-apply-state.ts";
+import type { WorkDesignLiveMode } from "../../../../../live-runtime/work-design-live-types.ts";
 
 type WorkDesignMetricsSummary = {
   features: number;
@@ -41,12 +42,15 @@ export function useWorkDesignApplyWorkflow({
   contextSnapshotAttachmentStatusLabel,
   deliveryPackage,
   metrics,
+  runtimeMode,
+  runtimeError,
   setActiveStep,
   setApplyReceiptId,
   setApplyReceiptRecorded,
   setHasUnsavedSessionChanges,
   setDraftValidationAccepted,
   sourceApplyComplete,
+  sourceRecordRef,
 }: {
   activeStep: WorkDesignStep;
   applyReceiptId: string | null;
@@ -59,12 +63,15 @@ export function useWorkDesignApplyWorkflow({
   contextSnapshotAttachmentStatusLabel: string;
   deliveryPackage: DeliveryPackageSummary;
   metrics: WorkDesignMetricsSummary;
+  runtimeMode: WorkDesignLiveMode;
+  runtimeError: string | null;
   setActiveStep: Dispatch<SetStateAction<WorkDesignStep>>;
   setApplyReceiptId: Dispatch<SetStateAction<string | null>>;
   setApplyReceiptRecorded: Dispatch<SetStateAction<boolean>>;
   setHasUnsavedSessionChanges: Dispatch<SetStateAction<boolean>>;
   setDraftValidationAccepted: Dispatch<SetStateAction<boolean>>;
   sourceApplyComplete: boolean;
+  sourceRecordRef: string;
 }) {
   const {
     applyRunStartedAt,
@@ -156,7 +163,10 @@ export function useWorkDesignApplyWorkflow({
     contextSnapshotAttachmentStatusLabel,
     deliveryPackage,
     metrics,
+    runtimeMode,
+    runtimeError,
     sourceApplyComplete,
+    sourceRecordRef,
   });
 
   return {

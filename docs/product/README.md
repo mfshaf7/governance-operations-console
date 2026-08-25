@@ -76,6 +76,9 @@ current and future product changes.
 - `prototype-delivery-live-integration.md`
   - Exact source-packet application through OOS and receipt-bound Prototype
     graduation projection.
+- `work-design-live-integration.md`
+  - OOS-backed Delivery Work Design source projection, governed advice,
+    canonical apply, reconciliation, and durable receipt readback.
 
 Retired planning and audit records have been removed from the active record
 set. If an implementation question is not answered by the files above, stop and

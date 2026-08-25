@@ -8,10 +8,12 @@ import {
 const deliveryRoot = "src/domain-workspaces/delivery";
 const targetRootDirectories = new Set([
   "domain",
+  "live-runtime",
   "local-runtime",
   "product-adapters",
   "presentation",
   "read-model",
+  "server",
   "work-model",
 ]);
 const bannedLegacyRootDirectories = new Set([
@@ -42,7 +44,8 @@ export const guard = {
       [
         "Architecture Ratchet Rule",
         "`domain/`, `read-model/`, `work-model/`, `product-adapters/`,",
-        "`local-runtime/`, and `presentation/` are the only final Delivery",
+        "`local-runtime/`, `live-runtime/`, `server/`, and `presentation/`",
+        "are the only final Delivery",
         "Legacy root folders are not allowed",
         "`workspace-shell/`",
         "`surfaces/`",

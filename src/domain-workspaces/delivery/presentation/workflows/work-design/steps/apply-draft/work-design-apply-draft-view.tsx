@@ -183,7 +183,7 @@ export function WorkDesignApplyDraftView({
               ),
               closeLabel: "Close full apply log",
               description:
-                "Timestamped preview record for apply troubleshooting. Live wiring will replace these mock rows with streamed backend events.",
+                "Timestamped apply record for troubleshooting, including the authoritative receipt when live apply completes.",
               facts: workDesignApplyLogFacts({
                 applyDraftRef,
                 applyLogRecordedAt,

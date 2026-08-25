@@ -18,6 +18,7 @@ import type {
   WorkDesignSnapshotAttachment,
 } from "../artifacts/context-brief/index.ts";
 import type { WorkDesignContextDecision } from "../model/work-design-model.ts";
+import type { WorkDesignLiveMode } from "../../../../live-runtime/work-design-live-types.ts";
 
 type WorkDesignMetricsSummary = {
   features: number;
@@ -153,7 +154,10 @@ export function workDesignApplyDraftViewModel({
   contextSnapshotAttachmentStatusLabel,
   deliveryPackage,
   metrics,
+  runtimeMode,
+  runtimeError,
   sourceApplyComplete,
+  sourceRecordRef,
 }: {
   applyReceiptId: string | null;
   applyReceiptRecorded: boolean;
@@ -166,10 +170,15 @@ export function workDesignApplyDraftViewModel({
   contextSnapshotAttachmentStatusLabel: string;
   deliveryPackage: DeliveryPackageSummary;
   metrics: WorkDesignMetricsSummary;
+  runtimeMode: WorkDesignLiveMode;
+  runtimeError: string | null;
   sourceApplyComplete: boolean;
+  sourceRecordRef: string;
 }) {
   const applyTargetRecordRef =
-    contextSnapshotAttachment.targetRecordRef ?? deliveryPackage.source_ref;
+    sourceRecordRef ||
+    contextSnapshotAttachment.targetRecordRef ||
+    deliveryPackage.source_ref;
   const applySnapshotActionLabel =
     contextSnapshotAttachment.attachmentStatus === "pending_apply"
       ? "Attach On Apply"
@@ -188,6 +197,8 @@ export function workDesignApplyDraftViewModel({
     applyTargetRecordRef,
     snapshotAction: applySnapshotActionLabel,
     sourceApplyComplete,
+    runtimeError,
+    runtimeMode,
   });
   const applyExecutionLogLines = workDesignApplyExecutionLogLines({
     applyReceiptRecorded,
@@ -197,6 +208,8 @@ export function workDesignApplyDraftViewModel({
     recordedAt: historyRecordedAt,
     snapshotAction: applySnapshotActionLabel,
     sourceApplyComplete,
+    runtimeError,
+    runtimeMode,
   });
   const historyReceiptRows = workDesignHistoryReceiptRows({
     applyReceiptId,

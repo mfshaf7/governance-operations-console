@@ -41,10 +41,12 @@ const executionBoardActionFiles = [
 ];
 const targetRootDirectories = new Set([
   "domain",
+  "live-runtime",
   "local-runtime",
   "product-adapters",
   "presentation",
   "read-model",
+  "server",
   "work-model",
 ]);
 const bannedLegacyRootDirectories = new Set([

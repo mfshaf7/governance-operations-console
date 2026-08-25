@@ -8,6 +8,15 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-08-25
 
+- Integrated Delivery Work Design with OOS for canonical source projection,
+  governed context and tree advice, exact-draft apply, reconciliation, and
+  durable receipt readback without changing the established workflow visual.
+- Added explicit disconnected-preview behavior for an unconfigured endpoint
+  and fail-closed behavior for configured OOS failures. Live apply no longer
+  projects a fixture Refinement package as canonical backend truth.
+- Extended the Delivery source architecture with paired optional
+  `live-runtime/` and `server/` boundaries and guards matching the established
+  Proposal and Prototype integration grammar.
 - Added the server-only Console adapter for OOS Prototype Delivery application
   and readback using an exact Workspace Prototype Studio packet.
 - Added strict packet/result binding, deterministic replay behavior,

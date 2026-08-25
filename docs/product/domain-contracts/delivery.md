@@ -317,6 +317,7 @@ Delivery uses the implemented source tree recorded in
 ```text
 src/domain-workspaces/delivery/
   index.ts
+  live-runtime/
   local-runtime/
     persistence/
     transitions/
@@ -336,6 +337,7 @@ src/domain-workspaces/delivery/
     selectors/
     terms/
     types/
+  server/
 ```
 
 Delivery-hosted product-app source:
@@ -516,9 +518,11 @@ Delivery uses the strongest accepted engineering model that is implemented in
 code, not a fictional future tree, as the target contract.
 
 `domain/`, `read-model/`, `work-model/`, `product-adapters/`,
-`local-runtime/`, and `presentation/` are the only final Delivery architecture
-root classes. `index.ts` is allowed only at real public boundaries, not as a
-default folder scaffold.
+`local-runtime/`, `live-runtime/`, `server/`, and `presentation/`
+are the only final Delivery architecture root classes. `live-runtime/` and
+`server/` are optional and exist only when Delivery integrates with canonical
+backend workflow authority. `index.ts` is allowed only at real public
+boundaries, not as a default folder scaffold.
 
 These are the only final Delivery architecture root classes.
 
@@ -551,7 +555,8 @@ Target dependency direction:
 
 ```text
 domain
-  <- read-model / work-model / product-adapters / local-runtime
+  <- read-model / work-model / product-adapters / local-runtime / live-runtime
+  <- server
   <- presentation
 ```
 
@@ -570,6 +575,12 @@ Rules:
 - `local-runtime/` owns prototype-local storage, command receipt factories,
   local projection stores, local receipts, local transitions, mock command
   responses, and reconciliation helpers.
+- `live-runtime/` owns browser-safe canonical projection contracts, same-origin
+  request state, bounded refresh behavior, and explicit disconnected-preview
+  selection. It never owns credentials or direct backend mutation.
+- `server/` owns authenticated OOS clients, environment configuration,
+  timeouts, response validation, and same-origin route handlers. It never owns
+  React state or fixture fallback.
 - `presentation/` owns React surfaces, workflow modals, panels, local layout
   CSS, and Teras composition.
 
@@ -579,6 +590,8 @@ Forbidden dependencies:
 - product apps importing Delivery internals
 - read model importing presentation
 - local runtime owning canonical Delivery rules
+- live runtime reading server credentials or calling OpenProject directly
+- server adapters importing React or presentation state
 - presentation computing canonical posture, action eligibility, route
   authority, receipt authority, or source-of-truth state
 

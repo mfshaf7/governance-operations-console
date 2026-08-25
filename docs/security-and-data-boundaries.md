@@ -2,11 +2,11 @@
 
 ## Current Posture
 
-The approved Console source baseline is graduated. Proposal and the bounded
-Prototype-to-Delivery application are separately governed external-system
-adapters: the browser calls same-origin Console routes and the server-side
-adapters authenticate to OOS. These source changes do not themselves grant
-deployment or security acceptance.
+The approved Console source baseline is graduated. Proposal, the bounded
+Prototype-to-Delivery application, and Delivery Work Design are separately
+governed external-system adapters: the browser calls same-origin Console routes
+and the server-side adapters authenticate to OOS. These source changes do not
+themselves grant deployment or security acceptance.
 
 The current security evidence is:
 
@@ -52,6 +52,15 @@ OOS caller identity or credentials, the Console does not create the canonical
 packet, and neither browser nor server mutates OpenProject or WGCF directly.
 If no Workspace Prototype Studio packet is available, the existing fixture
 workflow remains explicitly local and cannot invoke the live adapter.
+
+The Delivery Work Design exception is bounded to canonical source projection,
+governed context and tree advice, canonical apply, reconciliation, and durable
+receipt readback through OOS. OOS credentials and configured operator
+attribution remain server-only. The model supplies advice only; it cannot apply
+the draft. A configured OOS failure blocks canonical advice and apply and never
+falls back to fixture behavior. A valid apply receipt is recorded in the
+current Console session without fabricating a fixture Refinement package as
+canonical backend state.
 
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The
