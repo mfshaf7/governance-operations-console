@@ -113,9 +113,9 @@ Architecture baseline decisions:
   shape changes are out of scope for Delivery structure normalization and need
   a separate recorded design decision before implementation.
 - `live-runtime/` owns browser-safe canonical Delivery projection and
-  same-origin command state for admitted Work Design, Refinement, and Catalog
-  contracts. It must not read server credentials or call OOS or OpenProject
-  directly.
+  same-origin command state for admitted Work Design, Refinement, Catalog, and
+  Execution work-session contracts. It must not read server credentials or
+  call OOS or OpenProject directly.
 - `server/` owns authenticated OOS requests, configuration, timeout, response
   validation, and Next route handlers. Configured failures fail closed; only
   an unconfigured runtime may select explicit disconnected preview behavior.
@@ -151,6 +151,7 @@ presentation/surfaces
 presentation/surfaces/catalog
 presentation/surfaces/execution-board
 presentation/surfaces/execution-board/action-session
+presentation/surfaces/execution-board/work-session
 presentation/surfaces/home
 presentation/surfaces/intake
 presentation/surfaces/refinement
@@ -256,9 +257,12 @@ local-runtime/transitions/work-design-transition.ts
 live-runtime/catalog-live-contract.ts
 live-runtime/catalog-live-types.ts
 live-runtime/delivery-live-identity.ts
+live-runtime/delivery-work-session-live-contract.ts
+live-runtime/delivery-work-session-live-types.ts
 live-runtime/refinement-live-contract.ts
 live-runtime/refinement-live-types.ts
 live-runtime/use-catalog-live-runtime.ts
+live-runtime/use-delivery-work-session-live-runtime.ts
 live-runtime/use-refinement-live-runtime.ts
 live-runtime/use-work-design-live-runtime.ts
 live-runtime/work-design-live-contract.ts
@@ -291,6 +295,7 @@ presentation/surfaces/execution-board/execution-board-view-model.ts
 presentation/surfaces/execution-board/execution-selected-package-panel.tsx
 presentation/surfaces/execution-board/execution-tree-edit-support-panel.tsx
 presentation/surfaces/execution-board/execution-tree-edit-view.tsx
+presentation/surfaces/execution-board/work-session/execution-work-session-modal.tsx
 presentation/surfaces/home/home-activity-model.ts
 presentation/surfaces/home/home-agent-console.tsx
 presentation/surfaces/home/home-agent-model.ts
@@ -490,6 +495,8 @@ read-model/selectors/delivery-attention-selector.ts
 read-model/selectors/workflow-package-selectors.ts
 read-model/terms/copy.ts
 server/delivery-oos-client.ts
+server/delivery-work-session-api-routes.ts
+server/delivery-work-session-oos-client.ts
 server/refinement-catalog-api-routes.ts
 server/refinement-catalog-oos-client.ts
 server/work-design-api-routes.ts

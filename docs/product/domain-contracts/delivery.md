@@ -752,6 +752,8 @@ context. They are not generic workspace actions.
 Rules:
 
 - action availability comes from package posture and backend gates
+- executable child identity is structured data; live work-session routing must
+  not parse a work-item id from a display label or package prose
 - quick actions prepare or open a draft; they do not mutate ART directly
 - final mutation requires guarded apply review and receipt
 - package-level actions and child-target actions stay separate
@@ -761,6 +763,13 @@ Rules:
   impact before apply
 - every mutation result maps to a visible receipt category: accepted, blocked
   by gate, rejected, apply failed, or projection sync required
+- configured live `Start Work` consumes OOS work-session state, exact session
+  revision, next action, source observation, and command receipt through a
+  same-origin server adapter; the browser does not derive those facts
+- disconnected preview may retain the explicitly local action simulator, but a
+  configured live failure must not fall back to its receipt or projection
+- in-flight adaptation and closeout remain separate action families and must
+  not be folded into the initial work-session adapter
 
 ## Catalog
 
