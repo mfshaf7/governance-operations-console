@@ -22,6 +22,9 @@ type DeliveryWorkSessionClientOptions = {
   fetchImpl?: typeof fetch;
 };
 
+const deliveryWorkSessionReadTimeoutMs = 45_000;
+const deliveryWorkSessionCommandTimeoutMs = 75_000;
+
 export function deliveryWorkSessionOosConfigured(
   env: NodeJS.ProcessEnv = process.env,
 ) {
@@ -160,8 +163,17 @@ async function requestWorkSession(
   const value = await deliveryOosRequest(
     config,
     `/v1/delivery-work-items/${workItemId}/work-session${suffix}`,
-    init,
+    {
+      ...init,
+      headers: {
+        ...Object.fromEntries(new Headers(init.headers).entries()),
+        "x-oos-operator-id": config.operatorId,
+      },
+    },
     fetchImpl,
+    suffix === ""
+      ? deliveryWorkSessionReadTimeoutMs
+      : deliveryWorkSessionCommandTimeoutMs,
   );
   const projection = assertDeliveryWorkSessionProjection(value);
   if (projection.work_item_id !== `work-item-${workItemId}`) {
@@ -175,13 +187,5 @@ async function requestWorkSession(
 }
 
 function resolveWorkSessionConfig(env: NodeJS.ProcessEnv) {
-  const config = resolveDeliveryOosConfig(env);
-  if (config.callerId !== config.operatorId) {
-    throw new DeliveryOosError(
-      "Delivery work-session caller identity must match the accountable operator identity.",
-      "delivery_work_session_caller_binding_invalid",
-      503,
-    );
-  }
-  return config;
+  return resolveDeliveryOosConfig(env);
 }

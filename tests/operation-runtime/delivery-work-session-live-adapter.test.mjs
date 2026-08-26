@@ -20,7 +20,7 @@ import { DeliveryOosError } from "../../src/domain-workspaces/delivery/server/de
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:console-owner",
   OOS_BASE_URL: "http://127.0.0.1:8080",
-  OOS_CALLER_ID: "operator:console-owner",
+  OOS_CALLER_ID: "governance-operations-console",
   OOS_CALLER_SECRET: "test-only-console-secret",
 };
 
@@ -28,7 +28,7 @@ test("case:delivery-execution-source-provenance-positive reads and advances only
   const calls = [];
   const fetchImpl = async (url, init) => {
     const body = init.body ? JSON.parse(String(init.body)) : null;
-    calls.push({ body, method: init.method, url: String(url) });
+    calls.push({ body, headers: init.headers, method: init.method, url: String(url) });
     return jsonResponse(
       projection({
         receipt: init.method === "POST",
@@ -57,6 +57,7 @@ test("case:delivery-execution-source-provenance-positive reads and advances only
     "http://127.0.0.1:8080/v1/delivery-work-items/714/work-session",
   );
   assert.equal(calls[0].method, "GET");
+  assert.equal(calls[0].headers["x-oos-operator-id"], "operator:console-owner");
   assert.equal(calls[1].method, "POST");
   assert.match(calls[1].url, /\/work-session\/continue$/);
   assert.deepEqual(calls[1].body, {
@@ -92,11 +93,15 @@ test("case:delivery-work-session-start preserves the reviewed decision and comma
   assert.deepEqual(calls[0].body.command.decision, decision);
   assert.equal(
     calls[0].headers["x-oos-caller-id"],
-    "operator:console-owner",
+    "governance-operations-console",
   );
   assert.equal(
     calls[0].headers["x-oos-caller-secret"],
     "test-only-console-secret",
+  );
+  assert.equal(
+    calls[0].headers["x-oos-operator-id"],
+    "operator:console-owner",
   );
   assert.deepEqual(deliveryWorkSessionOperator(env), {
     decision_source: "operator",
@@ -131,7 +136,7 @@ test("case:delivery-execution-end-to-end-positive rebuilds accepted input from a
   assert.deepEqual(decision, acceptedDecision());
 });
 
-test("case:delivery-execution-source-provenance-negative rejects mismatched source, caller, and malformed drafts", async () => {
+test("case:delivery-execution-source-provenance-negative rejects mismatched source and malformed drafts", async () => {
   await assert.rejects(
     readDeliveryWorkSession(714, {
       env,
@@ -142,19 +147,6 @@ test("case:delivery-execution-source-provenance-negative rejects mismatched sour
       error instanceof DeliveryOosError &&
       error.code === "delivery_work_session_target_mismatch" &&
       error.status === 502,
-  );
-
-  await assert.rejects(
-    readDeliveryWorkSession(714, {
-      env: { ...env, OOS_CALLER_ID: "governance-operations-console" },
-      fetchImpl: async () => {
-        throw new Error("OOS must not run with a mismatched caller binding.");
-      },
-    }),
-    (error) =>
-      error instanceof DeliveryOosError &&
-      error.code === "delivery_work_session_caller_binding_invalid" &&
-      error.status === 503,
   );
 
   const malformedDecision = acceptedDecision();
@@ -231,6 +223,7 @@ function acceptedDecision() {
       required: true,
     },
     artifact_type: "delivery_art_work_session_decision",
+    caller_id: "governance-operations-console",
     covered_work_item_ids: ["work-item-714"],
     human_gate_work_item_ids: { security_acceptance: [] },
     landing_unit: {
@@ -285,10 +278,12 @@ function projection({
     ...(receipt
       ? {
           command_receipt: {
+            caller_id: "governance-operations-console",
             command_id: "work-session-command:console-continue-714-1",
             completed_at: revision,
             digest: `sha256:${"a".repeat(64)}`,
             executor_id: "source-executor:dev-integration",
+            operator_id: "operator:console-owner",
             ref: "oos://delivery-art/work-session-command-receipts/continue-714-1",
             request_digest: `sha256:${"b".repeat(64)}`,
             result_state: "source-work",

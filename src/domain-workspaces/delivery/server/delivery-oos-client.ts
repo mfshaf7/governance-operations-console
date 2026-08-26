@@ -67,6 +67,7 @@ export async function deliveryOosRequest(
   path: string,
   init: RequestInit,
   fetchImpl: typeof fetch = fetch,
+  timeoutMs = deliveryOosTimeoutMs,
 ) {
   let response: Response;
   try {
@@ -74,12 +75,13 @@ export async function deliveryOosRequest(
       ...init,
       cache: "no-store",
       headers: {
+        ...Object.fromEntries(new Headers(init.headers).entries()),
         Accept: "application/json",
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
       },
-      signal: AbortSignal.timeout(deliveryOosTimeoutMs),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
     throw new DeliveryOosError(

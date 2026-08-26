@@ -17,6 +17,7 @@ export type DeliveryWorkSessionDecision = {
     required: boolean | null;
   };
   artifact_type: "delivery_art_work_session_decision";
+  caller_id: string;
   covered_work_item_ids: string[];
   human_gate_work_item_ids: {
     security_acceptance: string[];
@@ -38,10 +39,12 @@ export type DeliveryWorkSessionDecision = {
 };
 
 export type DeliveryWorkSessionCommandReceipt = {
+  caller_id: string;
   command_id: string;
   completed_at: string;
   digest: string;
   executor_id: string;
+  operator_id: string;
   ref: string;
   request_digest: string;
   result_state: string;
