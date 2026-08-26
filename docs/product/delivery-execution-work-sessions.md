@@ -33,13 +33,17 @@ Do not expose them through `NEXT_PUBLIC_*` variables or commit concrete values.
 | Variable | Required in live mode | Purpose |
 | --- | --- | --- |
 | `OOS_BASE_URL` | yes | OOS HTTP endpoint visible to the Console server. |
-| `OOS_CALLER_SECRET` | yes | Caller-specific secret for the accountable work-session identity. |
-| `GOVERNANCE_CONSOLE_OPERATOR_ID` | yes | Accountable operator identity used by the OOS session. |
-| `OOS_CALLER_ID` | yes | Must match the operator identity until authenticated per-user Console identity is admitted. |
+| `OOS_CALLER_SECRET` | yes | Caller-specific secret for the Console application identity. |
+| `GOVERNANCE_CONSOLE_OPERATOR_ID` | yes | Separately attributed accountable operator identity used by the OOS session. |
+| `OOS_CALLER_ID` | yes | Console application caller identity; defaults to `governance-operations-console`. |
 
 The browser calls only same-origin
 `/api/delivery/execution/{workItemId}/work-session` routes. The server assembles
-credentials and authoritative operator attribution.
+credentials and the server-owned operator header. The application caller and
+accountable operator are distinct bindings; neither is supplied by the browser.
+Work-session reads use a bounded 45-second server timeout. Start and continue
+commands use 75 seconds because the local ART backend may perform two sequential
+authoritative reads; other OOS Console calls retain their shorter timeout.
 
 ## Operator Flow
 

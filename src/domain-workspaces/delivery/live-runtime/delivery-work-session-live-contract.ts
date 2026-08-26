@@ -77,9 +77,11 @@ export function assertDeliveryWorkSessionProjection(
       "work-session command receipt",
     );
     match(receipt.command_id, commandIdPattern, "receipt command identity");
+    text(receipt.caller_id, "receipt caller identity");
     dateTime(receipt.completed_at, "receipt completion time");
     match(receipt.digest, digestPattern, "receipt digest");
     text(receipt.executor_id, "receipt executor identity");
+    text(receipt.operator_id, "receipt operator identity");
     match(
       receipt.ref,
       /^oos:\/\/delivery-art\/work-session-command-receipts\//,
@@ -104,6 +106,7 @@ export function assertDeliveryWorkSessionDecision(
     "decision artifact type",
   );
   workItemId(decision.work_item_id, "decision work item");
+  text(decision.caller_id, "decision caller identity");
   workItemIdList(decision.covered_work_item_ids, "covered work items");
   const operator = record(decision.operator, "decision operator");
   text(operator.id, "decision operator identity");
