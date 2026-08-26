@@ -1,8 +1,4 @@
-import type { DeliveryTone } from "./delivery-common.ts";
-import type {
-  DeliveryWorkDesignDraftNode,
-  DeliveryWorkDesignDraftNodeKind,
-} from "./delivery-work-design.ts";
+import type { DeliveryComponentType, DeliveryTone } from "./delivery-common.ts";
 
 export type DeliveryRefinementStepId =
   "apply_refinement" | "metadata_draft" | "readiness_review";
@@ -52,12 +48,13 @@ export type DeliveryRefinementHandoffState = {
 export type DeliveryRefinementDraftField = {
   allowed_values?: string[];
   backend_field: string;
+  field_key?: string;
   field_kind: DeliveryRefinementFieldKind;
   label: string;
   required: boolean;
   route_binding: DeliveryRefinementFieldRouteBinding;
   status: DeliveryRefinementFieldStatus;
-  target_kinds?: DeliveryWorkDesignDraftNodeKind[];
+  target_kinds?: DeliveryComponentType[];
   target_node_ids?: string[];
   target_statuses?: Record<string, DeliveryRefinementFieldStatus>;
   target_values?: Record<string, string>;
@@ -118,6 +115,17 @@ export type DeliveryRefinementApplyReceipt = {
   tone: DeliveryTone;
 };
 
+export type DeliveryRefinementTreeNode = {
+  children?: DeliveryRefinementTreeNode[];
+  description: string;
+  draft_body: string;
+  id: string;
+  kind: DeliveryComponentType;
+  remark: string;
+  title: string;
+  tone: DeliveryTone;
+};
+
 export type DeliveryRefinementPacket = {
   active_step: DeliveryRefinementStepId;
   apply_plan: DeliveryRefinementApplyPlan;
@@ -125,8 +133,9 @@ export type DeliveryRefinementPacket = {
   handoff: DeliveryRefinementHandoffState;
   last_saved_at: string;
   packet_id: string;
+  packet_revision?: string;
   readiness_gates: DeliveryRefinementReadinessGate[];
   receipt: DeliveryRefinementApplyReceipt | null;
   status: DeliveryRefinementPacketStatus;
-  target_tree: DeliveryWorkDesignDraftNode;
+  target_tree: DeliveryRefinementTreeNode;
 };

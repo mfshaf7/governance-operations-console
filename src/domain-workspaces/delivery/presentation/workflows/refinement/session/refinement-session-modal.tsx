@@ -35,7 +35,7 @@ export function DeliveryRefinementWorkflowModal({
     return (
       <TerasModalShell
         height="content"
-        description="This package has no Refinement packet yet."
+        description={controller.packetUnavailableReason}
         footer={
           <TerasActionButton onClick={onClose} emphasis="secondary">
             Back to Register
@@ -55,7 +55,7 @@ export function DeliveryRefinementWorkflowModal({
             statusLabel="not ready"
             statusTone="warn"
             title="Refinement cannot start"
-            description="The selected package needs a Work Design apply handoff or a backend planning packet before this workflow can run."
+            description={controller.packetUnavailableReason}
           />
         </TerasPanel>
       </TerasModalShell>

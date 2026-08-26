@@ -73,7 +73,7 @@ Implemented:
 Still separate:
 
 - a canonical live Delivery package and register projection
-- live Refinement, Intake, Execution, Catalog, and closeout adapters
+- live Intake, Execution, and closeout adapters
 - authenticated human identity beyond configured operator attribution
 - platform deployment and security acceptance
 

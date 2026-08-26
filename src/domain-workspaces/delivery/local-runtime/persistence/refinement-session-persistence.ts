@@ -74,6 +74,10 @@ export function normalizeRefinementPersistedSession(
     metadata,
     packageId,
     packetId: candidate.packetId,
+    packetRevision:
+      typeof candidate.packetRevision === "string"
+        ? candidate.packetRevision
+        : undefined,
     refinementSessionId: candidate.refinementSessionId,
     schemaVersion: 1,
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import {
   getDeliveryEffectivePackageProjection,
@@ -15,6 +15,8 @@ import type {
   DeliveryBlockerIssue,
   DeliveryBlockerRecoveryAction,
 } from "../../shared/blocker-recovery/index.ts";
+import { useRefinementLiveRuntime } from "../../../../live-runtime/use-refinement-live-runtime.ts";
+import type { RefinementAssistCommand } from "../../../../live-runtime/refinement-live-types.ts";
 
 import { refinementMetadataWorkbenchSummary } from "../view-model/refinement-metadata-model.ts";
 import {
@@ -43,7 +45,22 @@ export function useRefinementSessionController({
 }: UseRefinementSessionControllerParams) {
   const [blockerRecoveryOpen, setBlockerRecoveryOpen] = useState(false);
   const [closeGuardOpen, setCloseGuardOpen] = useState(false);
-  const packet = refinementPacketForPackage(deliveryPackage);
+  const [applyInFlight, setApplyInFlight] = useState(false);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const pendingAcceptanceRef = useRef<{
+    acceptedAt: string;
+    acceptanceId: string;
+    draftKey: string;
+  } | null>(null);
+  const fixturePacket = refinementPacketForPackage(deliveryPackage);
+  const liveRuntime = useRefinementLiveRuntime(deliveryPackage);
+  const packet = liveRuntime.loading
+    ? fixturePacket
+    : liveRuntime.mode === "disconnected-preview"
+      ? fixturePacket
+      : liveRuntime.projectionStatus === "current"
+        ? liveRuntime.packet
+        : null;
   const sessionState = useRefinementSessionState(
     deliveryPackage.delivery_package_id,
     packet,
@@ -80,7 +97,10 @@ export function useRefinementSessionController({
         packet,
       }) &&
       !refinementBlocked &&
-      !activeReceipt
+      !activeReceipt &&
+      !applyInFlight &&
+      (liveRuntime.mode === "disconnected-preview" ||
+        liveRuntime.projectionStatus === "current")
     : false;
   const openGateCount = packet
     ? refinementEffectiveOpenGateCount({
@@ -171,32 +191,80 @@ export function useRefinementSessionController({
         id: "refinement-advisor-1",
         role: "advisor" as const,
         text: packet
-          ? `I am locked to ${deliveryPackage.display_name}. Ask about the selected metadata field and I can draft a local value from this Refinement packet for operator review. Mock only; I cannot apply backend changes.`
-          : "No Refinement packet exists for this package yet.",
+          ? liveRuntime.mode === "disconnected-preview"
+            ? `I am locked to ${deliveryPackage.display_name}. Ask about the selected metadata field and I can draft a local value for operator review. This disconnected preview cannot apply backend changes.`
+            : `I am locked to ${deliveryPackage.display_name}. Ask about the selected metadata field and I will route a governed advice request through OOS for operator review.`
+          : liveRuntime.projectionError ??
+            "Canonical Refinement truth is unavailable for this package.",
       },
     ],
-    [deliveryPackage.display_name, packet],
+    [
+      deliveryPackage.display_name,
+      liveRuntime.mode,
+      liveRuntime.projectionError,
+      packet,
+    ],
   );
 
-  function applyRefinement() {
-    if (!packet || !canApply) {
-      return;
+  const requestMetadataAdvice = useCallback(
+    async (command: RefinementAssistCommand) => liveRuntime.advise(command),
+    [liveRuntime],
+  );
+
+  async function applyRefinement() {
+    if (!packet || !canApply || applyInFlight) return;
+
+    setApplyInFlight(true);
+    setRuntimeError(null);
+    try {
+      if (liveRuntime.mode === "disconnected-preview") {
+        const receipt = createLocalRefinementApplyReceipt({
+          applyPlan: packet.apply_plan,
+          metadataDraftValues,
+          metadataFieldResolutions,
+          packetId: packet.packet_id,
+          sourceWorkDesignReceiptId:
+            packet.handoff.source_work_design_receipt_id,
+        });
+
+        setLocalReceipt(receipt);
+        recordLocalDeliveryRefinementApply({ deliveryPackage, receipt });
+      } else {
+        const acceptedMetadata = refinementAcceptedMetadata({
+          draftValues: metadataDraftValues,
+          packet,
+          resolutions: metadataFieldResolutions,
+        });
+        const draftKey = JSON.stringify({
+          applyPlan: packet.apply_plan,
+          metadata: acceptedMetadata,
+          packetRevision: packet.packet_revision,
+        });
+        if (pendingAcceptanceRef.current?.draftKey !== draftKey) {
+          pendingAcceptanceRef.current = {
+            acceptedAt: new Date().toISOString(),
+            acceptanceId: `refinement-acceptance:${crypto.randomUUID()}`,
+            draftKey,
+          };
+        }
+        const acceptance = pendingAcceptanceRef.current;
+        await liveRuntime.apply({
+          acceptanceId: acceptance.acceptanceId,
+          acceptedAt: acceptance.acceptedAt,
+          applyPlan: packet.apply_plan,
+          metadataResolutions: acceptedMetadata.resolutions,
+          metadataValues: acceptedMetadata.values,
+          note: "Apply the operator-reviewed Refinement metadata draft.",
+        });
+      }
+      setActiveStep("receipt");
+    } catch (error) {
+      setRuntimeError(
+        error instanceof Error ? error.message : "Refinement apply failed.",
+      );
+    } finally {
+      setApplyInFlight(false);
     }
-
-    const receipt = createLocalRefinementApplyReceipt({
-      applyPlan: packet.apply_plan,
-      metadataDraftValues,
-      metadataFieldResolutions,
-      packetId: packet.packet_id,
-      sourceWorkDesignReceiptId: packet.handoff.source_work_design_receipt_id,
-    });
-
-    setLocalReceipt(receipt);
-    recordLocalDeliveryRefinementApply({
-      deliveryPackage,
-      receipt,
-    });
-    setActiveStep("receipt");
   }
 
   function recordBlockerDisposition({
@@ -249,7 +317,10 @@ export function useRefinementSessionController({
 
   return {
     advisorTranscript,
+    advisorMode: liveRuntime.mode,
+    advisorStatus: liveRuntime.projectionStatus,
     applyRefinement,
+    applyInFlight,
     blockerRecoveryOpen,
     canApply,
     closeGuardOpen,
@@ -263,16 +334,64 @@ export function useRefinementSessionController({
     returnToRegister,
     openGateCount,
     packet,
+    packetUnavailableReason:
+      liveRuntime.projectionError ??
+      (liveRuntime.loading
+        ? "Loading canonical Refinement truth."
+        : "This package has no canonical Refinement packet yet."),
     progressActiveStep,
     recordBlockerDisposition,
+    requestMetadataAdvice,
     refinementBlocked,
     runHubAction,
     sessionState,
     shellWidth,
+    runtimeError,
+    runtimeRun: liveRuntime.activeRun,
     sourceWorkDesignPackage,
     shellCopy: {
       ...shellCopy,
       kicker: "Refinement Workflow",
     },
   };
+}
+
+function refinementAcceptedMetadata({
+  draftValues,
+  packet,
+  resolutions,
+}: {
+  draftValues: Record<string, string>;
+  packet: NonNullable<ReturnType<typeof refinementPacketForPackage>>;
+  resolutions: Record<string, "accepted" | "ai_drafted" | "repaired">;
+}) {
+  const values: Record<string, string> = {};
+  const acceptedResolutions: Record<
+    string,
+    "accepted" | "ai_drafted" | "repaired"
+  > = {};
+
+  packet.draft_groups.forEach((group) => {
+    group.fields.forEach((field) => {
+      const targetNodeIds = field.target_node_ids ?? [];
+      if (targetNodeIds.length === 0) {
+        const localKey = `${group.group_id}:${field.backend_field || field.label}`;
+        values[field.backend_field] = draftValues[localKey] ?? field.value;
+        acceptedResolutions[field.backend_field] =
+          resolutions[localKey] ?? "accepted";
+        return;
+      }
+
+      targetNodeIds.forEach((nodeId) => {
+        const localKey = `${nodeId}:${group.group_id}:${field.backend_field || field.label}`;
+        const acceptedKey = `${field.backend_field}:${nodeId}`;
+        values[acceptedKey] =
+          draftValues[localKey] ?? field.target_values?.[nodeId] ?? field.value;
+        acceptedResolutions[acceptedKey] =
+          resolutions[localKey] ?? "accepted";
+      });
+    });
+  });
+
+  return { resolutions: acceptedResolutions, values };
 }

@@ -3,14 +3,15 @@
 ## Current Posture
 
 The approved Console source baseline is graduated. Proposal, the bounded
-Prototype-to-Delivery application, and Delivery Work Design are separately
-governed external-system adapters: the browser calls same-origin Console routes
-and the server-side adapters authenticate to OOS. These source changes do not
-themselves grant deployment or security acceptance.
+Prototype-to-Delivery application, and Delivery Work Design, Refinement, and
+Catalog are separately governed external-system adapters: the browser calls
+same-origin Console routes and the server-side adapters authenticate to OOS.
+These source changes do not themselves grant deployment or security acceptance.
 
 The current security evidence is:
 
 - [Security review checklist](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/security-review-checklist.md)
+- [Refinement and Catalog dev-integration boundary review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-08-26-refinement-catalog-dev-integration-boundary.md)
 - [Governance Operations Console source-graduation security delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-31-governance-operations-console-source-graduation.md)
 - [Governance Operations Console owner-repository admission review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-31-governance-operations-console-owner-repository-admission.md)
 - [Governance Operations Console baseline security delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-30-governance-operations-console-baseline-security-delta.md)
@@ -61,6 +62,18 @@ the draft. A configured OOS failure blocks canonical advice and apply and never
 falls back to fixture behavior. A valid apply receipt is recorded in the
 current Console session without fabricating a fixture Refinement package as
 canonical backend state.
+
+The Delivery Refinement exception is bounded to canonical packet and run
+projection, admitted metadata advice, exact reviewed apply, durable event
+polling, canonical readback, and receipt projection through OOS. The model
+cannot apply metadata. Configured failure locks advice and apply without local
+fallback, and only a completed run with a validated receipt reports success.
+
+The Delivery Catalog exception is bounded to canonical group, item, and value
+projection plus reviewed add, edit, and retire mutations through OOS. Owner
+Repository linking requires an exact WGCF readiness reference already exposed
+through canonical truth. The Console does not call WGCF, OpenProject, or the
+privileged Catalog adapter directly and does not synthesize missing readiness.
 
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The

@@ -5,6 +5,7 @@ import type {
   DeliveryRefinementPacket,
   DeliveryTone,
 } from "../../../../read-model/index.ts";
+import type { RefinementOosRun } from "../../../../live-runtime/refinement-live-types.ts";
 
 export type RefinementApplyRuntimeLine = {
   marker: string;
@@ -18,12 +19,16 @@ export function refinementApplyRuntimeLines({
   canApply,
   packet,
   routeSummary,
+  runtimeError,
+  runtimeRun,
   uniqueRoutes,
 }: {
   activeReceipt: DeliveryRefinementApplyReceipt | null;
   canApply: boolean;
   packet: DeliveryRefinementPacket;
   routeSummary: string;
+  runtimeError: string | null;
+  runtimeRun: RefinementOosRun | null;
   uniqueRoutes: string[];
 }): RefinementApplyRuntimeLine[] {
   const recordedReceipt = activeReceipt ?? packet.receipt;
@@ -45,6 +50,36 @@ export function refinementApplyRuntimeLines({
     ];
   }
 
+  if (runtimeRun?.events.length) {
+    return runtimeRun.events.map((event) => ({
+      marker:
+        event.status === "completed"
+          ? "[ok]"
+          : event.status === "failed"
+            ? "[fail]"
+            : "[run]",
+      text: event.message,
+      timestamp: event.recorded_at,
+      tone:
+        event.status === "completed"
+          ? "ok"
+          : event.status === "failed"
+            ? "danger"
+            : "info",
+    }));
+  }
+
+  if (runtimeError) {
+    return [
+      {
+        marker: "[fail]",
+        text: runtimeError,
+        timestamp: new Date().toISOString(),
+        tone: "danger",
+      },
+    ];
+  }
+
   return [
     {
       marker: "[plan]",
@@ -61,7 +96,7 @@ export function refinementApplyRuntimeLines({
     {
       marker: canApply ? "[armed]" : "[idle]",
       text: canApply
-        ? "Footer Apply Refinement will record the local receipt and move to History."
+        ? "Footer Apply Refinement will submit the reviewed draft and move to History after receipt readback."
         : "Apply is waiting for metadata review and readiness gates.",
       timestamp: packet.last_saved_at,
       tone: canApply ? "warn" : "muted",
@@ -146,19 +181,43 @@ export function refinementApplyInputsProjection({
 export function refinementApplyLogPanelProjection({
   applyRecorded,
   canApply,
+  runtimeError,
+  runtimeRun,
 }: {
   applyRecorded: boolean;
   canApply: boolean;
+  runtimeError: string | null;
+  runtimeRun: RefinementOosRun | null;
 }) {
-  const tone: DeliveryTone = applyRecorded ? "ok" : canApply ? "warn" : "muted";
+  const tone: DeliveryTone = runtimeError
+    ? "danger"
+    : applyRecorded
+      ? "ok"
+      : runtimeRun
+        ? "info"
+        : canApply
+          ? "warn"
+          : "muted";
 
   return {
-    description: applyRecorded
+    description: runtimeError
+      ? "The governed apply stopped without reporting local success."
+      : applyRecorded
       ? "Receipt events are available in History."
+      : runtimeRun
+        ? "Durable OOS run events are updating from canonical runtime truth."
       : canApply
-        ? "Press Apply Refinement in the footer to record the local apply receipt."
+        ? "Press Apply Refinement in the footer to submit the reviewed draft."
         : "Runtime log is idle until apply inputs are ready.",
-    statusLabel: applyRecorded ? "complete" : canApply ? "armed" : "idle",
+    statusLabel: runtimeError
+      ? "failed"
+      : applyRecorded
+        ? "complete"
+        : runtimeRun
+          ? runtimeRun.state
+          : canApply
+            ? "armed"
+            : "idle",
     statusTone: tone,
     tone,
   };

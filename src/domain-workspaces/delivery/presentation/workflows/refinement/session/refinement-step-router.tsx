@@ -20,13 +20,18 @@ type RefinementStepRouterProps = ReturnType<
 
 export function RefinementStepRouter({
   advisorTranscript,
+  advisorMode,
+  advisorStatus,
   canApply,
   deliveryPackage,
   hubAction,
   metadataWorkbenchSummary,
   packet,
   progressActiveStep,
+  requestMetadataAdvice,
   refinementBlocked,
+  runtimeError,
+  runtimeRun,
   runHubAction,
   sessionState,
   sourceWorkDesignPackage,
@@ -103,10 +108,13 @@ export function RefinementStepRouter({
             onOpenHandoff={openHandoffDialog}
             onReviewReadiness={() => setActiveStep("readiness_review")}
             packet={packet}
+            requestMetadataAdvice={requestMetadataAdvice}
             resetMetadataDraftValue={resetMetadataDraftValue}
             resetMetadataDraftValues={resetMetadataDraftValues}
             selectedMetadataBulkNodeIds={selectedMetadataBulkNodeIds}
             selectedMetadataFieldKey={selectedMetadataFieldKey}
+            runtimeMode={advisorMode}
+            runtimeStatus={advisorStatus}
             setMetadataSelectionMode={setMetadataSelectionMode}
             setSelectedMetadataFieldKey={setSelectedMetadataFieldKey}
             toggleMetadataBulkNode={toggleMetadataBulkNode}
@@ -131,6 +139,8 @@ export function RefinementStepRouter({
             deliveryPackage={deliveryPackage}
             onOpenHandoff={openHandoffDialog}
             packet={packet}
+            runtimeError={runtimeError}
+            runtimeRun={runtimeRun}
           />
         ) : (
           <RefinementHistoryView

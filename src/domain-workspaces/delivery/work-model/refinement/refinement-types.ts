@@ -36,6 +36,7 @@ export type RefinementPersistedSession = {
   metadata: RefinementSessionMetadataDraft;
   packageId: string;
   packetId: string;
+  packetRevision?: string;
   refinementSessionId: string;
   schemaVersion: 1;
 };

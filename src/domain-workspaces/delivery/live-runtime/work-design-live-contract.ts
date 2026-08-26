@@ -8,6 +8,10 @@ import type {
   WorkDesignOosProjection,
   WorkDesignProjectionSnapshot,
 } from "./work-design-live-types.ts";
+import {
+  deliveryLiveIdentity,
+  deliveryLivePackageRef,
+} from "./delivery-live-identity.ts";
 
 const digestPattern = /^sha256:[a-f0-9]{64}$/;
 const stableIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
@@ -17,17 +21,15 @@ const sourceRefPattern = /^openproject:\/\/work_packages\/[1-9][0-9]*$/;
 export function workDesignLivePackageRef(
   deliveryPackage: Pick<DeliveryPackageSummary, "legacy_epic_id">,
 ) {
-  return `delivery-package:${deliveryPackage.legacy_epic_id}`;
+  return deliveryLivePackageRef(deliveryPackage);
 }
 
 export function workDesignLiveIdentity(packageRef: string) {
-  const recordId = packageRef.match(/^delivery-package:([1-9][0-9]*)$/)?.[1];
-  if (!recordId) invalid("Work Design package identity is invalid.");
-  return {
-    deliveryId: `delivery-${recordId}`,
-    packageRef,
-    sourceRef: `openproject://work_packages/${recordId}`,
-  };
+  try {
+    return deliveryLiveIdentity(packageRef);
+  } catch {
+    invalid("Work Design package identity is invalid.");
+  }
 }
 
 export function workDesignOosNode(node: WorkDesignNode): WorkDesignOosNode {

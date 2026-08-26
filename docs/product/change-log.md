@@ -6,6 +6,18 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-08-26
+
+- Integrated Delivery Refinement with canonical OOS packet projection,
+  governed metadata advice, exact reviewed apply, durable run polling, and
+  receipt-bound readback without changing the approved workflow layout.
+- Integrated Delivery Catalog with canonical OOS projection, source-bound
+  mutation, readback, and receipt handling while preserving its approved
+  three-zone control surface.
+- Added explicit disconnected preview and configured fail-closed behavior for
+  both areas. Owner Repo mutation requires matching canonical WGCF readiness
+  evidence and never fabricates or directly retrieves a receipt in the browser.
+
 ## 2026-08-25
 
 - Integrated Delivery Work Design with OOS for canonical source projection,

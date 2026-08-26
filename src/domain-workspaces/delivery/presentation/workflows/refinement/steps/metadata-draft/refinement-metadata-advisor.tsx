@@ -11,6 +11,10 @@ import type {
   RefinementSharedMetadataTargetGroup,
 } from "../../view-model/refinement-metadata-model.ts";
 import type { DeliveryRefinementModalStep } from "../../model/refinement-model.ts";
+import type {
+  RefinementAssistCommand,
+  RefinementLiveMode,
+} from "../../../../../live-runtime/refinement-live-types.ts";
 
 type RefinementAdvisorLine = {
   id: string;
@@ -27,6 +31,9 @@ export function RefinementMetadataAdvisor({
   markMetadataFieldResolution,
   markMetadataFieldResolutions,
   onToggleCollapsed,
+  requestMetadataAdvice,
+  runtimeMode,
+  runtimeStatus,
   selectedSharedMetadataGroup,
   selectedTarget,
   updateMetadataDraftValue,
@@ -46,6 +53,16 @@ export function RefinementMetadataAdvisor({
     resolution: "accepted" | "ai_drafted" | "repaired",
   ) => void;
   onToggleCollapsed: () => void;
+  requestMetadataAdvice: (
+    command: RefinementAssistCommand,
+  ) => Promise<{
+    mode: RefinementLiveMode;
+    result: {
+      suggestion: { rationale: string; summary: string; value: string };
+    } | null;
+  }>;
+  runtimeMode: RefinementLiveMode;
+  runtimeStatus: "current" | "offline";
   selectedSharedMetadataGroup: RefinementSharedMetadataTargetGroup | undefined;
   selectedTarget: RefinementMetadataTarget | undefined;
   updateMetadataDraftValue: (fieldKey: string, value: string) => void;
@@ -57,7 +74,7 @@ export function RefinementMetadataAdvisor({
   >([]);
   const advisorLines = [...advisorTranscript, ...advisorExchange];
 
-  function submitAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
+  async function submitAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const prompt = advisorPrompt.trim();
@@ -67,24 +84,9 @@ export function RefinementMetadataAdvisor({
     }
 
     const timestamp = Date.now();
-    const advisorDraft = refinementAdvisorDraft({
-      deliveryPackageName,
-      draftValue,
-      selectedTarget: selectedSharedMetadataGroup?.targets[0] ?? selectedTarget,
-      sharedTargetCount: selectedSharedMetadataGroup?.targets.length,
-    });
-
-    if (selectedSharedMetadataGroup && advisorDraft.value !== null) {
-      const fieldKeys = selectedSharedMetadataGroup.targets.map(
-        (target) => target.key,
-      );
-
-      updateMetadataDraftValues(fieldKeys, advisorDraft.value);
-      markMetadataFieldResolutions(fieldKeys, "ai_drafted");
-    } else if (selectedTarget && advisorDraft.value !== null) {
-      updateMetadataDraftValue(selectedTarget.key, advisorDraft.value);
-      markMetadataFieldResolution(selectedTarget.key, "ai_drafted");
-    }
+    const activeTarget =
+      selectedSharedMetadataGroup?.targets[0] ?? selectedTarget;
+    if (!activeTarget) return;
 
     setAdvisorExchange((current) => [
       ...current,
@@ -93,13 +95,69 @@ export function RefinementMetadataAdvisor({
         role: "operator",
         text: prompt,
       },
-      {
-        id: `refinement-advisor-${timestamp}`,
-        role: "advisor",
-        text: advisorDraft.reply,
-      },
     ]);
     setAdvisorPrompt("");
+
+    try {
+      const live = await requestMetadataAdvice({
+        allowedValues: activeTarget.field.allowed_values ?? [],
+        draftValue,
+        fieldKey:
+          activeTarget.field.field_key ?? activeTarget.field.backend_field,
+        fieldKind: activeTarget.field.field_kind,
+        fieldLabel: activeTarget.field.label,
+        operatorPrompt: prompt,
+        required: activeTarget.field.required,
+        selectedNodeIds: selectedSharedMetadataGroup
+          ? selectedSharedMetadataGroup.targets.map((target) => target.node.id)
+          : [activeTarget.node.id],
+        sourceValue: activeTarget.sourceValue,
+      });
+      const advisorDraft = live.result
+        ? {
+            reply: `${live.result.suggestion.summary} ${live.result.suggestion.rationale}`.trim(),
+            value: live.result.suggestion.value,
+          }
+        : refinementAdvisorDraft({
+            deliveryPackageName,
+            draftValue,
+            selectedTarget: activeTarget,
+            sharedTargetCount: selectedSharedMetadataGroup?.targets.length,
+          });
+
+      if (selectedSharedMetadataGroup && advisorDraft.value !== null) {
+        const fieldKeys = selectedSharedMetadataGroup.targets.map(
+          (target) => target.key,
+        );
+
+        updateMetadataDraftValues(fieldKeys, advisorDraft.value);
+        markMetadataFieldResolutions(fieldKeys, "ai_drafted");
+      } else if (advisorDraft.value !== null) {
+        updateMetadataDraftValue(activeTarget.key, advisorDraft.value);
+        markMetadataFieldResolution(activeTarget.key, "ai_drafted");
+      }
+
+      setAdvisorExchange((current) => [
+        ...current,
+        {
+          id: `refinement-advisor-${timestamp}`,
+          role: "advisor",
+          text: advisorDraft.reply,
+        },
+      ]);
+    } catch (error) {
+      setAdvisorExchange((current) => [
+        ...current,
+        {
+          id: `refinement-advisor-error-${timestamp}`,
+          role: "advisor",
+          text:
+            error instanceof Error
+              ? error.message
+              : "Governed Refinement advice is unavailable.",
+        },
+      ]);
+    }
   }
 
   return (
@@ -127,9 +185,21 @@ export function RefinementMetadataAdvisor({
             }
           : undefined
       }
-      statusLabel="mock only"
-      statusTitle="Local mock advisor only. Future live support must run through CGG admission and OOS-owned Refinement tooling."
-      statusTone="warn"
+      statusLabel={
+        runtimeMode === "disconnected-preview"
+          ? "preview"
+          : runtimeStatus === "current"
+            ? "governed"
+            : "offline"
+      }
+      statusTitle={
+        runtimeMode === "disconnected-preview"
+          ? "Disconnected preview uses local advisor fixtures and cannot mutate backend truth."
+          : runtimeStatus === "current"
+            ? "Advice is admitted and routed through the OOS Refinement contract."
+            : "Canonical Refinement advice is unavailable and does not fall back locally."
+      }
+      statusTone={runtimeStatus === "offline" ? "danger" : "warn"}
       transcript={advisorLines}
     />
   );

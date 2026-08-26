@@ -2,7 +2,7 @@
 
 import { TerasSegmentedControl, TerasStatusPill } from "@/teras";
 import { BuildTreeTargetSelector } from "@/product-apps/build-tree";
-import type { DeliveryWorkDesignDraftNode } from "../../../../../read-model/index.ts";
+import type { DeliveryRefinementTreeNode } from "../../../../../read-model/index.ts";
 
 import {
   refinementMetadataTargetNodeSharedMeta,
@@ -53,7 +53,7 @@ export function MetadataTargetTree({
 }: {
   metadataSelectionMode: RefinementMetadataSelectionMode;
   metadataFieldResolutions: RefinementMetadataFieldResolutionMap;
-  node: DeliveryWorkDesignDraftNode;
+  node: DeliveryRefinementTreeNode;
   onSelectMetadataField: (fieldKey: string) => void;
   onToggleMetadataBulkNode: (nodeId: string) => void;
   position: number;
@@ -67,7 +67,7 @@ export function MetadataTargetTree({
     selectedNodeId,
   });
 
-  function targetStats(targetNode: DeliveryWorkDesignDraftNode) {
+  function targetStats(targetNode: DeliveryRefinementTreeNode) {
     const nodeTargets = targets.filter(
       (target) => target.node.id === targetNode.id,
     );
@@ -93,7 +93,7 @@ export function MetadataTargetTree({
     };
   }
 
-  function metadataTargetNodeMeta(targetNode: DeliveryWorkDesignDraftNode) {
+  function metadataTargetNodeMeta(targetNode: DeliveryRefinementTreeNode) {
     const { actionableTargets, blockedTargets, openTargets } =
       targetStats(targetNode);
     const bulkSelected = selectedBulkNodeIds.includes(targetNode.id);
@@ -127,7 +127,7 @@ export function MetadataTargetTree({
     );
   }
 
-  function selectMetadataTargetNode(targetNode: DeliveryWorkDesignDraftNode) {
+  function selectMetadataTargetNode(targetNode: DeliveryRefinementTreeNode) {
     if (metadataSelectionMode === "shared") {
       onToggleMetadataBulkNode(targetNode.id);
       return;
@@ -156,7 +156,7 @@ export function MetadataTargetTree({
 }
 
 function metadataTargetNodeIndex(
-  node: DeliveryWorkDesignDraftNode,
+  node: DeliveryRefinementTreeNode,
   position: number,
 ) {
   if (node.kind === "Epic") {
