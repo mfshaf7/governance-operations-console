@@ -18,6 +18,10 @@ import type {
   RefinementMetadataFieldResolutionMap,
   RefinementMetadataSelectionMode,
 } from "../../model/refinement-model.ts";
+import type {
+  RefinementAssistCommand,
+  RefinementLiveMode,
+} from "../../../../../live-runtime/refinement-live-types.ts";
 import { RefinementMetadataAdvisor } from "./refinement-metadata-advisor.tsx";
 import { RefinementMetadataWorkbenchView } from "./refinement-metadata-workbench-view.tsx";
 import { RefinementSelectedMetadataFieldEditor } from "./refinement-metadata-field-editor.tsx";
@@ -40,6 +44,9 @@ export function RefinementMetadataDraftStep({
   onOpenHandoff,
   onReviewReadiness,
   packet,
+  requestMetadataAdvice,
+  runtimeMode,
+  runtimeStatus,
   resetMetadataDraftValue,
   resetMetadataDraftValues,
   selectedMetadataBulkNodeIds,
@@ -67,8 +74,18 @@ export function RefinementMetadataDraftStep({
   onOpenHandoff: () => void;
   onReviewReadiness: () => void;
   packet: DeliveryRefinementPacket;
+  requestMetadataAdvice: (
+    command: RefinementAssistCommand,
+  ) => Promise<{
+    mode: RefinementLiveMode;
+    result: {
+      suggestion: { rationale: string; summary: string; value: string };
+    } | null;
+  }>;
   resetMetadataDraftValue: (fieldKey: string, value: string) => void;
   resetMetadataDraftValues: (values: Record<string, string>) => void;
+  runtimeMode: RefinementLiveMode;
+  runtimeStatus: "current" | "offline";
   selectedMetadataBulkNodeIds: string[];
   selectedMetadataFieldKey: string;
   setMetadataSelectionMode: (mode: RefinementMetadataSelectionMode) => void;
@@ -128,6 +145,9 @@ export function RefinementMetadataDraftStep({
             markMetadataFieldResolution={markMetadataFieldResolution}
             markMetadataFieldResolutions={markMetadataFieldResolutions}
             onToggleCollapsed={toggleAdvisorCollapsed}
+            requestMetadataAdvice={requestMetadataAdvice}
+            runtimeMode={runtimeMode}
+            runtimeStatus={runtimeStatus}
             selectedSharedMetadataGroup={selectedSharedMetadataGroup}
             selectedTarget={selectedMetadataTarget}
             updateMetadataDraftValue={updateMetadataDraftValue}

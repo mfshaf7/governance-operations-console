@@ -80,6 +80,7 @@ export type DeliveryCatalogReadModel = {
   groups: DeliveryCatalogGroup[];
   items: DeliveryCatalogItem[];
   projection_status: DeliveryProjectionStatus;
+  source_revision?: string;
   summary: {
     drift_count: number;
     missing_route_count: number;

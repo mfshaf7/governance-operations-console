@@ -84,7 +84,9 @@ export function useRefinementSessionState(
     const persistedSession =
       packet && packageId ? loadRefinementSessionDraft(packageId) : null;
     const matchingSession =
-      persistedSession?.packetId === packet?.packet_id
+      persistedSession?.packetId === packet?.packet_id &&
+      (persistedSession?.packetRevision ?? "") ===
+        (packet?.packet_revision ?? "")
         ? persistedSession
         : null;
 
@@ -107,7 +109,7 @@ export function useRefinementSessionState(
       matchingSession?.metadata.selectedFieldKey || nextSelectedFieldKey,
     );
     setPersistenceLoaded(true);
-  }, [packageId, packet?.packet_id]);
+  }, [packageId, packet?.packet_id, packet?.packet_revision]);
 
   useEffect(() => {
     if (!persistenceLoaded || !packet || !packageId) {
@@ -130,6 +132,7 @@ export function useRefinementSessionState(
       },
       packageId,
       packetId: packet.packet_id,
+      packetRevision: packet.packet_revision,
       refinementSessionId: `refinement-session-${packageId}`,
       schemaVersion: 1,
     };

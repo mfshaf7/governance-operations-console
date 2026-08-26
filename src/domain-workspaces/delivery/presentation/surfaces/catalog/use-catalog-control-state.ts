@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   DeliveryCatalogValue,
@@ -10,6 +10,8 @@ import {
   getDeliveryCatalogRuntimeCapabilities,
   submitCatalogMutationCommand,
 } from "../../../local-runtime/commands/catalog-mutation-runtime.ts";
+import { useCatalogLiveRuntime } from "../../../live-runtime/use-catalog-live-runtime.ts";
+import { catalogUnavailableReadModel } from "../../../live-runtime/catalog-live-contract.ts";
 
 import { repositoryOwnerRepoCatalogOptions } from "@/domain-workspaces/operation-integrations/repository-owner-repo-catalog-projection";
 import {
@@ -26,11 +28,30 @@ import {
   type CatalogMutationSubmit,
 } from "./catalog-view-model.ts";
 export function useCatalogControlState(model: DeliveryReadModel) {
-  const runtimeCapabilities = getDeliveryCatalogRuntimeCapabilities();
-  const [catalogValues, setCatalogValues] = useState(model.catalog.values);
+  const localRuntimeCapabilities = getDeliveryCatalogRuntimeCapabilities();
+  const liveRuntime = useCatalogLiveRuntime();
+  const pendingAcceptanceRef = useRef<{
+    acceptanceId: string;
+    acceptedAt: string;
+    draftKey: string;
+  } | null>(null);
+  const sourceCatalog = liveRuntime.loading
+    ? model.catalog
+    : liveRuntime.mode === "disconnected-preview"
+      ? model.catalog
+      : liveRuntime.projectionStatus === "current" && liveRuntime.readModel
+        ? liveRuntime.readModel
+        : catalogUnavailableReadModel();
+  const canSubmit =
+    liveRuntime.mode === "disconnected-preview"
+      ? localRuntimeCapabilities.canSubmit
+      : liveRuntime.projectionStatus === "current" &&
+        liveRuntime.readModel !== null;
+  const sourceKey = `${liveRuntime.mode}:${sourceCatalog.source_revision ?? sourceCatalog.generated_at}`;
+  const [catalogValues, setCatalogValues] = useState(sourceCatalog.values);
   const catalogs = useMemo(
-    () => editableCatalogItems(model.catalog.items),
-    [model.catalog.items],
+    () => editableCatalogItems(sourceCatalog.items),
+    [sourceCatalog.items],
   );
   const [activeCatalogId, setActiveCatalogId] = useState("catalog-target-pi");
   const [search, setSearch] = useState("");
@@ -41,6 +62,26 @@ export function useCatalogControlState(model: DeliveryReadModel) {
     useState<CatalogMutationDraft | null>(null);
   const [localDraftReceipt, setLocalDraftReceipt] =
     useState<CatalogLocalDraftReceipt | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCatalogValues(sourceCatalog.values);
+    setLocalDraftReceipt(null);
+    setMutationError(null);
+    const nextCatalogs = editableCatalogItems(sourceCatalog.items);
+    const nextActiveCatalog =
+      nextCatalogs.find((catalog) => catalog.catalog_item_id === activeCatalogId) ??
+      nextCatalogs[0] ??
+      null;
+    if (nextActiveCatalog) {
+      setActiveCatalogId(nextActiveCatalog.catalog_item_id);
+      const nextValue = sourceCatalog.values.find(
+        (value) =>
+          value.catalog_item_id === nextActiveCatalog.catalog_item_id,
+      );
+      setSelectedValueId(nextValue?.catalog_value_id ?? "");
+    }
+  }, [sourceKey]);
 
   const activeCatalog =
     catalogs.find((catalog) => catalog.catalog_item_id === activeCatalogId) ??
@@ -62,8 +103,8 @@ export function useCatalogControlState(model: DeliveryReadModel) {
     [catalogValues],
   );
   const planningFacetCatalogs = useMemo(
-    () => planningFacetCatalogItems(model.catalog.items, activeCatalog),
-    [activeCatalog, model.catalog.items],
+    () => planningFacetCatalogItems(sourceCatalog.items, activeCatalog),
+    [activeCatalog, sourceCatalog.items],
   );
   const ownerRepoOptions = useMemo(
     () => repositoryOwnerRepoCatalogOptions(),
@@ -79,18 +120,16 @@ export function useCatalogControlState(model: DeliveryReadModel) {
       ) ?? null)
     : null;
   const canMutateActiveCatalog =
-    runtimeCapabilities.canSubmit && canDraftCatalogMutation(activeCatalog);
+    canSubmit && canDraftCatalogMutation(activeCatalog);
   const selectedDraftReceipt =
     selectedValue &&
     localDraftReceipt?.valueId === selectedValue.catalog_value_id
       ? localDraftReceipt
       : null;
   const canEditSelectedValue =
-    runtimeCapabilities.canSubmit &&
-    canDraftCatalogValueMutation(activeCatalog, selectedValue, "edit");
+    canSubmit && canDraftCatalogValueMutation(activeCatalog, selectedValue, "edit");
   const canRetireSelectedValue =
-    runtimeCapabilities.canSubmit &&
-    canDraftCatalogValueMutation(activeCatalog, selectedValue, "retire");
+    canSubmit && canDraftCatalogValueMutation(activeCatalog, selectedValue, "retire");
   const selectedTargetPiPlanningFacetSummary =
     selectedValue && planningFacetCatalogs.length > 0
       ? planningFacetCatalogs
@@ -121,28 +160,33 @@ export function useCatalogControlState(model: DeliveryReadModel) {
       : "PI Planning Date is managed as a Target PI facet through the platform/OpenProject owner route.";
   const canEditCatalogValue = useCallback(
     (value: DeliveryCatalogValue) =>
-      runtimeCapabilities.canSubmit &&
-      canDraftCatalogValueMutation(activeCatalog, value, "edit"),
-    [activeCatalog, runtimeCapabilities.canSubmit],
+      canSubmit && canDraftCatalogValueMutation(activeCatalog, value, "edit"),
+    [activeCatalog, canSubmit],
   );
   const canRetireCatalogValue = useCallback(
     (value: DeliveryCatalogValue) =>
-      runtimeCapabilities.canSubmit &&
-      canDraftCatalogValueMutation(activeCatalog, value, "retire"),
-    [activeCatalog, runtimeCapabilities.canSubmit],
+      canSubmit && canDraftCatalogValueMutation(activeCatalog, value, "retire"),
+    [activeCatalog, canSubmit],
   );
   const openAddDraft = useCallback(
-    () => setMutationDraft({ mode: "add", valueId: null }),
+    () => {
+      setMutationError(null);
+      setMutationDraft({ mode: "add", valueId: null });
+    },
     [],
   );
   const openEditDraft = useCallback(
-    (value: DeliveryCatalogValue) =>
-      setMutationDraft({ mode: "edit", valueId: value.catalog_value_id }),
+    (value: DeliveryCatalogValue) => {
+      setMutationError(null);
+      setMutationDraft({ mode: "edit", valueId: value.catalog_value_id });
+    },
     [],
   );
   const openRetireDraft = useCallback(
-    (value: DeliveryCatalogValue) =>
-      setMutationDraft({ mode: "retire", valueId: value.catalog_value_id }),
+    (value: DeliveryCatalogValue) => {
+      setMutationError(null);
+      setMutationDraft({ mode: "retire", valueId: value.catalog_value_id });
+    },
     [],
   );
 
@@ -157,28 +201,63 @@ export function useCatalogControlState(model: DeliveryReadModel) {
   async function submitCatalogDraft({
     description,
     label,
+    linkedRepository,
     parentCatalogValueKey,
     planningWindowEndDate,
     planningWindowStartDate,
     valueKey,
   }: CatalogMutationSubmit) {
-    if (!runtimeCapabilities.canSubmit) {
+    if (!canSubmit || !activeCatalog || !mutationDraft) {
       return;
     }
 
-    const result = await submitCatalogMutationCommand({
-      activeCatalog,
-      catalogValues,
-      draft: {
-        description,
-        label,
-        parentCatalogValueKey,
-        planningWindowEndDate,
-        planningWindowStartDate,
-        valueKey,
-      },
+    const draft = {
+      description,
+      label,
+      linkedRepository,
+      parentCatalogValueKey,
+      planningWindowEndDate,
+      planningWindowStartDate,
+      valueKey,
+    };
+    const draftKey = JSON.stringify({
+      catalogItemId: activeCatalog.catalog_item_id,
+      draft,
       mutationDraft,
+      sourceRevision: sourceCatalog.source_revision,
     });
+    if (pendingAcceptanceRef.current?.draftKey !== draftKey) {
+      pendingAcceptanceRef.current = {
+        acceptanceId: `catalog-acceptance:${crypto.randomUUID()}`,
+        acceptedAt: new Date().toISOString(),
+        draftKey,
+      };
+    }
+    const acceptance = pendingAcceptanceRef.current;
+    setMutationError(null);
+    let result;
+    try {
+      result =
+        liveRuntime.mode === "disconnected-preview"
+          ? await submitCatalogMutationCommand({
+              activeCatalog,
+              catalogValues,
+              draft,
+              mutationDraft,
+            })
+          : await liveRuntime.mutate(activeCatalog.catalog_item_id, {
+              acceptanceId: acceptance.acceptanceId,
+              acceptedAt: acceptance.acceptedAt,
+              draft,
+              mode: mutationDraft.mode,
+              targetValueId: mutationDraft.valueId,
+            });
+    } catch (error) {
+      setMutationError(
+        error instanceof Error ? error.message : "Catalog mutation failed.",
+      );
+      return;
+    }
 
     if (!result) {
       return;
@@ -189,6 +268,7 @@ export function useCatalogControlState(model: DeliveryReadModel) {
     setSearch(result.search);
     setLocalDraftReceipt(result.localDraftReceipt);
     setMutationDraft(null);
+    pendingAcceptanceRef.current = null;
   }
 
   return {
@@ -200,14 +280,21 @@ export function useCatalogControlState(model: DeliveryReadModel) {
     canRetireSelectedValue,
     catalogValues,
     catalogs,
-    closeMutationDraft: () => setMutationDraft(null),
+    closeMutationDraft: () => {
+      setMutationDraft(null);
+      setMutationError(null);
+    },
     mutationDraft,
     mutationPlanningFacetSummary,
+    mutationError,
     mutationValue,
     openAddDraft,
     openEditDraft,
     openRetireDraft,
     ownerRepoOptions,
+    projectionError: liveRuntime.projectionError,
+    runtimeMode: liveRuntime.mode,
+    runtimeStatus: liveRuntime.projectionStatus,
     search,
     selectedDraftReceipt,
     selectedTargetPiPlanningFacetSummary,

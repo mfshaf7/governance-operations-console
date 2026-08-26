@@ -112,9 +112,10 @@ Architecture baseline decisions:
 - `local-runtime/persistence/` owns prototype-local persistence. Persistence
   shape changes are out of scope for Delivery structure normalization and need
   a separate recorded design decision before implementation.
-- `live-runtime/` owns browser-safe canonical Work Design projection and
-  same-origin command state. It must not read server credentials or call OOS or
-  OpenProject directly.
+- `live-runtime/` owns browser-safe canonical Delivery projection and
+  same-origin command state for admitted Work Design, Refinement, and Catalog
+  contracts. It must not read server credentials or call OOS or OpenProject
+  directly.
 - `server/` owns authenticated OOS requests, configuration, timeout, response
   validation, and Next route handlers. Configured failures fail closed; only
   an unconfigured runtime may select explicit disconnected preview behavior.
@@ -252,6 +253,13 @@ local-runtime/transitions/refinement-execution-transition.ts
 local-runtime/transitions/refinement-transition.ts
 local-runtime/transitions/transition-record.ts
 local-runtime/transitions/work-design-transition.ts
+live-runtime/catalog-live-contract.ts
+live-runtime/catalog-live-types.ts
+live-runtime/delivery-live-identity.ts
+live-runtime/refinement-live-contract.ts
+live-runtime/refinement-live-types.ts
+live-runtime/use-catalog-live-runtime.ts
+live-runtime/use-refinement-live-runtime.ts
 live-runtime/use-work-design-live-runtime.ts
 live-runtime/work-design-live-contract.ts
 live-runtime/work-design-live-types.ts
@@ -481,6 +489,9 @@ read-model/projections/root-projection.ts
 read-model/selectors/delivery-attention-selector.ts
 read-model/selectors/workflow-package-selectors.ts
 read-model/terms/copy.ts
+server/delivery-oos-client.ts
+server/refinement-catalog-api-routes.ts
+server/refinement-catalog-oos-client.ts
 server/work-design-api-routes.ts
 server/work-design-oos-client.ts
 work-model/catalog/catalog-draft-model.ts

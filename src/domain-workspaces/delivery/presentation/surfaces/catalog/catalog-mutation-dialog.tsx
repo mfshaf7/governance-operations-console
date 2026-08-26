@@ -42,6 +42,7 @@ export function CatalogMutationDialog({
   catalog,
   catalogValues,
   mode,
+  mutationError,
   onClose,
   onSubmit,
   open,
@@ -53,6 +54,7 @@ export function CatalogMutationDialog({
   catalog: DeliveryCatalogItem | null;
   catalogValues: DeliveryCatalogValue[];
   mode: DeliveryCatalogMutationMode | null;
+  mutationError: string | null;
   onClose: () => void;
   onSubmit: (draft: CatalogMutationSubmit) => void;
   open: boolean;
@@ -263,6 +265,18 @@ export function CatalogMutationDialog({
       title={catalogMutationTitle(resolvedMode, catalog, value)}
     >
       <TerasTrayStack>
+        {mutationError ? (
+          <TerasMetadataList
+            columns={1}
+            items={[
+              {
+                label: "Submission",
+                tone: "danger",
+                value: mutationError,
+              },
+            ]}
+          />
+        ) : null}
         {isRetireMode ? (
           <TerasMetadataList
             items={catalogRetirementMetadata({

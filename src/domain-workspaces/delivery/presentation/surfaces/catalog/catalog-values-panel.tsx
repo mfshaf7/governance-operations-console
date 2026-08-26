@@ -23,6 +23,7 @@ export function CatalogValuesPanel({
   canMutate,
   canRetire,
   catalogValues,
+  emptyMessage,
   onAdd,
   onEdit,
   onRetire,
@@ -37,6 +38,7 @@ export function CatalogValuesPanel({
   canMutate: boolean;
   canRetire: (value: DeliveryCatalogValue) => boolean;
   catalogValues: DeliveryCatalogValue[];
+  emptyMessage?: string;
   onAdd: () => void;
   onEdit: (value: DeliveryCatalogValue) => void;
   onRetire: (value: DeliveryCatalogValue) => void;
@@ -102,7 +104,7 @@ export function CatalogValuesPanel({
         />
       ) : (
         <TerasEmptyState fill>
-          No current values match this catalog and search.
+          {emptyMessage ?? "No current values match this catalog and search."}
         </TerasEmptyState>
       )}
     </TerasPanel>

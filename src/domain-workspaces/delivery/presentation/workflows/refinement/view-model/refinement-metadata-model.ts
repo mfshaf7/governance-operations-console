@@ -3,8 +3,8 @@ import type {
   DeliveryRefinementDraftGroup,
   DeliveryRefinementFieldStatus,
   DeliveryRefinementPacket,
+  DeliveryRefinementTreeNode,
   DeliveryTone,
-  DeliveryWorkDesignDraftNode,
 } from "../../../../read-model/index.ts";
 
 import type {
@@ -27,8 +27,8 @@ export type RefinementMetadataTarget = {
   field: DeliveryRefinementDraftField;
   group: DeliveryRefinementDraftGroup;
   key: string;
-  node: DeliveryWorkDesignDraftNode;
-  path: DeliveryWorkDesignDraftNode[];
+  node: DeliveryRefinementTreeNode;
+  path: DeliveryRefinementTreeNode[];
   status: DeliveryRefinementFieldStatus;
   sourceValue: string;
 };
@@ -48,11 +48,11 @@ export function refinementMetadataFieldIdentity(
 }
 
 export function refinementTargetNodes(
-  node: DeliveryWorkDesignDraftNode,
-  path: DeliveryWorkDesignDraftNode[] = [],
+  node: DeliveryRefinementTreeNode,
+  path: DeliveryRefinementTreeNode[] = [],
 ): Array<{
-  node: DeliveryWorkDesignDraftNode;
-  path: DeliveryWorkDesignDraftNode[];
+  node: DeliveryRefinementTreeNode;
+  path: DeliveryRefinementTreeNode[];
 }> {
   const nextPath = [...path, node];
 
@@ -149,7 +149,7 @@ function refinementFieldAppliesToNode({
   rootNodeId,
 }: {
   field: DeliveryRefinementDraftField;
-  node: DeliveryWorkDesignDraftNode;
+  node: DeliveryRefinementTreeNode;
   rootNodeId: string;
 }) {
   if (field.target_kinds?.length && !field.target_kinds.includes(node.kind)) {

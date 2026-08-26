@@ -26,6 +26,8 @@ export function DeliveryCatalogSurface({
           catalogValues={catalogState.catalogValues}
           catalogs={catalogState.catalogs}
           onSwitchCatalog={catalogState.switchCatalog}
+          runtimeMode={catalogState.runtimeMode}
+          runtimeStatus={catalogState.runtimeStatus}
         />
       }
       values={
@@ -35,6 +37,7 @@ export function DeliveryCatalogSurface({
           canMutate={catalogState.canMutateActiveCatalog}
           canRetire={catalogState.canRetireCatalogValue}
           catalogValues={catalogState.catalogValues}
+          emptyMessage={catalogState.projectionError ?? undefined}
           onAdd={catalogState.openAddDraft}
           onEdit={catalogState.openEditDraft}
           onRetire={catalogState.openRetireDraft}
@@ -64,6 +67,7 @@ export function DeliveryCatalogSurface({
         catalog={catalogState.activeCatalog}
         catalogValues={catalogState.catalogValues}
         mode={catalogState.mutationDraft?.mode ?? null}
+        mutationError={catalogState.mutationError}
         onClose={catalogState.closeMutationDraft}
         onSubmit={catalogState.submitCatalogDraft}
         open={Boolean(catalogState.mutationDraft)}

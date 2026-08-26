@@ -21,6 +21,7 @@ import type {
   DeliveryRefinementApplyReceipt,
   DeliveryRefinementPacket,
 } from "../../../../../read-model/index.ts";
+import type { RefinementOosRun } from "../../../../../live-runtime/refinement-live-types.ts";
 
 import {
   formatRefinementApplyTimestamp,
@@ -41,12 +42,16 @@ export function RefinementApplyView({
   deliveryPackage,
   onOpenHandoff,
   packet,
+  runtimeError,
+  runtimeRun,
 }: {
   activeReceipt: DeliveryRefinementApplyReceipt | null;
   canApply: boolean;
   deliveryPackage: DeliveryPackageSummary;
   onOpenHandoff: () => void;
   packet: DeliveryRefinementPacket;
+  runtimeError: string | null;
+  runtimeRun: RefinementOosRun | null;
 }) {
   const uniqueRoutes = Array.from(new Set(packet.apply_plan.expected_routes));
   const routeSummary = refinementApplyRouteSummary(uniqueRoutes);
@@ -62,12 +67,16 @@ export function RefinementApplyView({
   const logProjection = refinementApplyLogPanelProjection({
     applyRecorded,
     canApply,
+    runtimeError,
+    runtimeRun,
   });
   const runtimeLines = refinementApplyRuntimeLines({
     activeReceipt,
     canApply,
     packet,
     routeSummary,
+    runtimeError,
+    runtimeRun,
     uniqueRoutes,
   });
   const applyLogRows = refinementApplyLogRows(runtimeLines);
