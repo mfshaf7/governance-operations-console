@@ -75,6 +75,17 @@ Repository linking requires an exact WGCF readiness reference already exposed
 through canonical truth. The Console does not call WGCF, OpenProject, or the
 privileged Catalog adapter directly and does not synthesize missing readiness.
 
+The Delivery Execution work-session source exception is bounded to same-origin
+read, start, and continue adapters over OOS-owned session state. The browser
+cannot choose caller credentials or operator authority, read Git, call
+OpenProject, choose a source path or executor, derive progress or completion,
+or fabricate a receipt. The Console server rebuilds an accepted Landing Unit
+decision from the caller-bound OOS draft and bounded operator fields. Configured
+failure remains unavailable and never records a prototype-local success.
+Mutable `dev-integration` activation remains denied until Security Architecture
+binds the exact merged Console and OOS heads and accepts the admitted executor
+and composed proof.
+
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The
 baseline security findings remain expansion gates until separately reviewed

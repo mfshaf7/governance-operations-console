@@ -6,6 +6,16 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-08-27
+
+- Connected Delivery Execution Board `Start Work` to strict same-origin OOS
+  work-session projection, Landing Unit decision, start, continue, source
+  observation, and command-receipt contracts.
+- Added structured executable work-item identity and configured fail-closed
+  behavior without replacing the approved disconnected-preview action flow.
+- Kept source execution, in-flight adaptation, closeout, authenticated human
+  identity, and mutable dev-integration activation outside this source slice.
+
 ## 2026-08-26
 
 - Integrated Delivery Refinement with canonical OOS packet projection,

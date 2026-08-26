@@ -229,6 +229,10 @@ function buildFallbackActionIntent({
       action.scope === "execution_target" && packageTree
         ? packageTree.id
         : packageSummary.delivery_package_id,
+    target_work_item_id:
+      action.scope === "execution_target"
+        ? (packageTree?.legacy_work_package_id ?? packageSummary.legacy_epic_id)
+        : packageSummary.legacy_epic_id,
     target_type:
       action.scope === "execution_target" && packageTree
         ? packageTree.component_type

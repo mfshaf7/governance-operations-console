@@ -42,6 +42,7 @@ export const deliveryApplyIntentFixtures: DeliveryApplyIntent[] = [
     target_display_name:
       "User story #714 - Validate mutation draft before apply",
     target_id: "node-698-story-1",
+    target_work_item_id: 714,
     target_type: "User story",
   },
   {

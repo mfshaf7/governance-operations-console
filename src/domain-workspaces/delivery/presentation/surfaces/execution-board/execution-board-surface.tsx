@@ -47,6 +47,8 @@ import {
 } from "./execution-board-view-model.ts";
 import { ExecutionTreeEditView } from "./execution-tree-edit-view.tsx";
 import { ExecutionTreeEditSupportPanel } from "./execution-tree-edit-support-panel.tsx";
+import { useDeliveryWorkSessionLiveRuntime } from "../../../live-runtime/use-delivery-work-session-live-runtime.ts";
+import { ExecutionWorkSessionModal } from "./work-session/execution-work-session-modal.tsx";
 
 export type ExecutionTreeEditState = {
   active: boolean;
@@ -91,6 +93,7 @@ export function DeliveryExecutionBoard({
   const [treeAddMenuNodeId, setTreeAddMenuNodeId] = useState<string | null>(
     null,
   );
+  const [workSessionOpen, setWorkSessionOpen] = useState(false);
   const actionSession = useExecutionActionSession();
 
   useEffect(() => {
@@ -170,6 +173,35 @@ export function DeliveryExecutionBoard({
   const selectedActions = selectedPackage
     ? getAvailableActions(selectedPackage.delivery_package_id, model)
     : [];
+  const selectedStartIntent = selectedPackage
+    ? model.apply_intents.find(
+        (intent) =>
+          intent.action_type === "start-work" &&
+          intent.delivery_package_id === selectedPackage.delivery_package_id,
+      ) ?? null
+    : null;
+  const selectedWorkItemId = selectedStartIntent?.target_work_item_id ?? null;
+  const workSessionRuntime =
+    useDeliveryWorkSessionLiveRuntime(selectedWorkItemId);
+
+  useEffect(() => {
+    if (
+      !workSessionOpen ||
+      workSessionRuntime.mode !== "disconnected-preview"
+    ) {
+      return;
+    }
+    const startAction = selectedActions.find(
+      (action) => action.action_type === "start-work",
+    );
+    setWorkSessionOpen(false);
+    if (startAction) actionSession.openAction(startAction);
+  }, [
+    actionSession.openAction,
+    selectedActions,
+    workSessionOpen,
+    workSessionRuntime.mode,
+  ]);
   const selectedAuditEvents = selectedPackage
     ? getPackageAuditEvents(selectedPackage.delivery_package_id, model)
     : [];
@@ -263,12 +295,21 @@ export function DeliveryExecutionBoard({
       return;
     }
 
+    if (
+      action.action_type === "start-work" &&
+      workSessionRuntime.mode !== "disconnected-preview"
+    ) {
+      setWorkSessionOpen(true);
+      return;
+    }
+
     actionSession.openAction(action);
   }
 
   function handleSelectedPackageChange(nextPackageId: string) {
     if (nextPackageId !== selectedPackageId) {
       resetTreeEditDraft();
+      setWorkSessionOpen(false);
     }
 
     setSelectedPackageId(nextPackageId);
@@ -373,6 +414,14 @@ export function DeliveryExecutionBoard({
           packageTree={selectedTree}
           receipt={actionSession.receipt}
           submitting={actionSession.applying}
+        />
+      ) : null}
+      {selectedPackage && workSessionOpen ? (
+        <ExecutionWorkSessionModal
+          onClose={() => setWorkSessionOpen(false)}
+          packageSummary={selectedPackage}
+          runtime={workSessionRuntime}
+          workItemId={selectedWorkItemId}
         />
       ) : null}
       <TerasDraftCloseGuardDialog

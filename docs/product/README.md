@@ -79,6 +79,9 @@ current and future product changes.
 - `work-design-live-integration.md`
   - OOS-backed Delivery Work Design source projection, governed advice,
     canonical apply, reconciliation, and durable receipt readback.
+- `delivery-execution-work-sessions.md`
+  - OOS-backed Execution Board work-session projection, Landing Unit decision,
+    start, continue, retry, failure, and receipt behavior.
 
 Retired planning and audit records have been removed from the active record
 set. If an implementation question is not answered by the files above, stop and

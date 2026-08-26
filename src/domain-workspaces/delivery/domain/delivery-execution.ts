@@ -99,5 +99,6 @@ export type DeliveryApplyIntent = {
   source_revision: string;
   target_display_name: string;
   target_id: string;
+  target_work_item_id?: number;
   target_type: DeliveryComponentType;
 };
