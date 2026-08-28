@@ -79,6 +79,10 @@ first, recover through a truthful follow-up change in the same Landing Unit.
 Do not relabel merged pull-request work as a direct land or bypass OOS
 completion evidence.
 
+Evidence produced for an earlier source revision must be rerun or explicitly
+re-authored for the follow-up head before OOS can generate a replacement
+Review Packet.
+
 Closeout and in-flight plan adaptation are separate Delivery ART fronts. This
 adapter does not add those controls prematurely.
 
