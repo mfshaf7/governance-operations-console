@@ -105,11 +105,11 @@ export function executionActionReceiptMetadata({
     },
     { label: "Package", value: packageSummary.source_ref },
     { label: "Action", value: action.label },
-    { label: "Authority", value: "prototype-local" },
+    { label: "Authority", value: receipt?.authority ?? "Not recorded" },
     { label: "Recorded At", value: receipt?.recordedAt ?? "Not recorded" },
     {
       label: "Projection Result",
-      value: actionContract.receiptProjection,
+      value: receipt?.projectionResult ?? actionContract.receiptProjection,
     },
   ];
 }

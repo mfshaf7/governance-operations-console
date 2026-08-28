@@ -3,10 +3,11 @@
 ## Current Posture
 
 The approved Console source baseline is graduated. Proposal, the bounded
-Prototype-to-Delivery application, and Delivery Work Design, Refinement, and
-Catalog are separately governed external-system adapters: the browser calls
-same-origin Console routes and the server-side adapters authenticate to OOS.
-These source changes do not themselves grant deployment or security acceptance.
+Prototype-to-Delivery application, and Delivery Work Design, Refinement,
+Catalog, Execution work sessions, and in-flight Delivery change control are
+separately governed external-system adapters: the browser calls same-origin
+Console routes and the server-side adapters authenticate to OOS. These source
+changes do not themselves grant deployment or security acceptance.
 
 The current security evidence is:
 
@@ -85,6 +86,17 @@ failure remains unavailable and never records a prototype-local success.
 Mutable `dev-integration` activation remains denied until Security Architecture
 binds the exact merged Console and OOS heads and accepts the admitted executor
 and composed proof.
+
+The Delivery in-flight change exception is bounded to same-origin canonical
+projection and reviewed command routes over OOS-owned change control. Caller
+credentials, accountable operator construction, and accepted-command records
+remain server-side. The browser may submit only a bounded operation, expected
+source revision, replay-safe command identity, and acceptance note. OOS retains
+mutation semantics, OpenProject access, replay, receipts, rollback disposition,
+and exact next actions. Repository creation remains in Repository operation and
+Owner Repo value admission remains in Delivery Catalog. Configured read or
+write failure, stale revision, rejection, partial failure, or malformed truth
+must stop the action and must never become a prototype-local success.
 
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The

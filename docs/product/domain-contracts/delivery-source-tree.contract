@@ -256,12 +256,15 @@ local-runtime/transitions/transition-record.ts
 local-runtime/transitions/work-design-transition.ts
 live-runtime/catalog-live-contract.ts
 live-runtime/catalog-live-types.ts
+live-runtime/delivery-change-live-contract.ts
+live-runtime/delivery-change-live-types.ts
 live-runtime/delivery-live-identity.ts
 live-runtime/delivery-work-session-live-contract.ts
 live-runtime/delivery-work-session-live-types.ts
 live-runtime/refinement-live-contract.ts
 live-runtime/refinement-live-types.ts
 live-runtime/use-catalog-live-runtime.ts
+live-runtime/use-delivery-change-live-runtime.ts
 live-runtime/use-delivery-work-session-live-runtime.ts
 live-runtime/use-refinement-live-runtime.ts
 live-runtime/use-work-design-live-runtime.ts
@@ -293,6 +296,7 @@ presentation/surfaces/execution-board/action-session/use-execution-action-sessio
 presentation/surfaces/execution-board/execution-board-surface.tsx
 presentation/surfaces/execution-board/execution-board-view-model.ts
 presentation/surfaces/execution-board/execution-selected-package-panel.tsx
+presentation/surfaces/execution-board/execution-tree-change-review-dialog.tsx
 presentation/surfaces/execution-board/execution-tree-edit-support-panel.tsx
 presentation/surfaces/execution-board/execution-tree-edit-view.tsx
 presentation/surfaces/execution-board/work-session/execution-work-session-modal.tsx
@@ -495,6 +499,8 @@ read-model/selectors/delivery-attention-selector.ts
 read-model/selectors/workflow-package-selectors.ts
 read-model/terms/copy.ts
 server/delivery-oos-client.ts
+server/delivery-change-api-routes.ts
+server/delivery-change-oos-client.ts
 server/delivery-work-session-api-routes.ts
 server/delivery-work-session-oos-client.ts
 server/refinement-catalog-api-routes.ts
@@ -511,6 +517,8 @@ work-model/closeout/delivery-closeout-model.ts
 work-model/execution/execution-action-contracts.ts
 work-model/execution/execution-action-eligibility.ts
 work-model/execution/execution-action-intent.ts
+work-model/execution/execution-change-operation.ts
+work-model/execution/execution-tree-change-plan.ts
 work-model/ingress/proposal-delivery-entry-packet.ts
 work-model/ingress/prototype-movement-entry-packet.ts
 work-model/refinement/refinement-types.ts

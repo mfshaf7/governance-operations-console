@@ -56,6 +56,7 @@ export function ExecutionActionModal({
   auditEvents,
   canSubmit,
   details,
+  error,
   model,
   onApplyAction,
   onClose,
@@ -63,6 +64,7 @@ export function ExecutionActionModal({
   packageSummary,
   packageTree,
   receipt,
+  sourceRevision,
   submitting,
 }: {
   action: DeliveryAvailableAction;
@@ -70,6 +72,7 @@ export function ExecutionActionModal({
   auditEvents: ReturnType<typeof getPackageAuditEvents>;
   canSubmit: boolean;
   details: ReturnType<typeof getPackageDetailsById>;
+  error: string | null;
   model: DeliveryReadModel;
   onApplyAction: (input: {
     action: DeliveryAvailableAction;
@@ -82,6 +85,7 @@ export function ExecutionActionModal({
   packageSummary: DeliveryPackageSummary;
   packageTree: DeliveryArtNode | null;
   receipt: ExecutionActionReceipt | null;
+  sourceRevision?: string;
   submitting: boolean;
 }) {
   const actionContract = executionActionContracts[action.action_type];
@@ -92,6 +96,7 @@ export function ExecutionActionModal({
     packageSummary,
     packageTree,
     sourceRevision:
+      sourceRevision ??
       details?.source_revision ??
       `mock-delivery-v1:${packageSummary.delivery_package_id}`,
   });
@@ -361,6 +366,16 @@ export function ExecutionActionModal({
                   />
                 ))}
               </TerasList>
+              {error ? (
+                <TerasList frame="contained">
+                  <TerasSignalItem
+                    detail={error}
+                    label="Apply stopped"
+                    title="Canonical Delivery change was not completed"
+                    tone="danger"
+                  />
+                </TerasList>
+              ) : null}
             </TerasPanel>
           </TerasTrayStack>
         ) : null}
@@ -374,7 +389,7 @@ export function ExecutionActionModal({
               tone="ok"
             >
               <TerasPanelHeader
-                kicker="Prototype-Local Receipt"
+                kicker="Action Receipt"
                 title={actionContract.receiptTitle}
                 description={actionContract.receiptDescription}
               />

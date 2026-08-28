@@ -27,8 +27,11 @@ separately governed OOS integration slices:
   apply polling, canonical readback, and receipt projection
 - Delivery Catalog projection and reviewed add, edit, or retire mutation with
   source revision, canonical readback, and repository-readiness enforcement
+- Delivery Execution in-flight change projection, reviewed tree and package
+  commands, exact next actions, receipts, and repository-custody routing
 
-Prototype source discovery and all other operational workflows remain:
+Prototype source discovery and operational workflows without a named live
+integration contract remain:
 
 - private and operator-local
 - loopback-only for local preview
@@ -78,6 +81,8 @@ The Delivery Work Design boundary is documented in
 [`docs/product/work-design-live-integration.md`](docs/product/work-design-live-integration.md).
 The Delivery Refinement and Catalog boundary is documented in
 [`docs/product/refinement-catalog-live-integration.md`](docs/product/refinement-catalog-live-integration.md).
+The Delivery in-flight adaptation boundary is documented in
+[`docs/product/delivery-change-control-live-integration.md`](docs/product/delivery-change-control-live-integration.md).
 
 ## Authority Map
 

@@ -98,12 +98,14 @@ Implemented in source:
 - explicit disconnected preview and configured fail-closed behavior
 - Execution Board interaction without direct browser source authority
 
-Still separate:
+Still separate from the work-session adapter:
 
 - admitted source-executor activation and allowlisted source roots
 - composed positive and negative `dev-integration` proof
 - authenticated human identity beyond configured local attribution
-- in-flight change control, acceptance, closeout, and terminal cleanup
+- in-flight change control, documented in
+  `delivery-change-control-live-integration.md`, plus closeout and terminal
+  cleanup
 - stage, production, release, and Portfolio authority
 
 ## Validation

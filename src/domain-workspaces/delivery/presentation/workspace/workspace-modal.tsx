@@ -331,8 +331,8 @@ export function DeliveryWorkspaceModal({
       <TerasDraftCloseGuardDialog
         description={
           pendingWorkspaceExit?.type === "close"
-            ? `A local execution tree draft${executionTreeEditState.packageLabel ? ` for ${executionTreeEditState.packageLabel}` : ""} has unsaved changes. Closing Delivery Workspace will discard it from this prototype session.`
-            : `A local execution tree draft${executionTreeEditState.packageLabel ? ` for ${executionTreeEditState.packageLabel}` : ""} has unsaved changes. Switching Delivery areas will discard it from this prototype session.`
+            ? `An execution tree draft${executionTreeEditState.packageLabel ? ` for ${executionTreeEditState.packageLabel}` : ""} has unsaved changes. Closing Delivery Workspace will discard it.`
+            : `An execution tree draft${executionTreeEditState.packageLabel ? ` for ${executionTreeEditState.packageLabel}` : ""} has unsaved changes. Switching Delivery areas will discard it.`
         }
         kicker="Execution Tree Draft"
         keepEditingLabel="Keep Editing"
@@ -423,6 +423,7 @@ function DeliveryWorkspaceSurfaceContent({
       <DeliveryExecutionBoard
         focusPackageId={executionFocusPackageId}
         model={model}
+        onOpenCatalog={() => onActiveSurfaceChange("catalog")}
         onTreeEditStateChange={onExecutionTreeEditStateChange}
         showIntro={false}
       />

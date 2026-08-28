@@ -15,6 +15,7 @@ import {
 } from "@/product-apps/build-tree";
 import type { ControlBoardTreeNode } from "@/product-apps/control-board";
 import type { TerasMetadataItem } from "@/teras";
+import type { DeliveryChangeNode } from "../../../live-runtime/delivery-change-live-types.ts";
 
 import type {
   DeliveryActiveBlockerProjection,
@@ -202,6 +203,25 @@ export function executionTreeDraftFromArtNode(
         : `WP #${node.legacy_work_package_id}`,
     title: node.title,
     tone: node.tone,
+  };
+}
+
+export function executionTreeDraftFromChangeNode(
+  node: DeliveryChangeNode,
+): ExecutionTreeDraftNode {
+  const backendStatus = deliveryChangeBackendStatus(node.status);
+  return {
+    backendStatus,
+    children: node.children.map(executionTreeDraftFromChangeNode),
+    description: "",
+    draftBody: "",
+    id: `node-${node.id}`,
+    kind: deliveryChangeNodeType(node.type),
+    legacyWorkPackageId: node.id,
+    metadataStatus: "complete",
+    remark: `WP #${node.id}`,
+    title: node.subject,
+    tone: deliveryChangeTone(backendStatus),
   };
 }
 
@@ -444,7 +464,7 @@ export function createExecutionTreeChildNode({
     backendStatus: "new",
     children: [],
     description:
-      "Local execution tree draft. Future live wiring will create this through OOS work-item routes.",
+      "New execution tree draft. Review and apply it through Delivery change control.",
     draftBody: "",
     id: `${parent.id}-${kind.toLowerCase().replace(/\s+/g, "-")}-local-${Date.now()}`,
     kind,
@@ -466,4 +486,53 @@ export function normalizeExecutionTreeTitlePrefix(
     .replace(/^user story/i, "User Story")
     .replace(/^pi objective/i, "PI Objective")
     .replace(new RegExp(`^${kindLabel}`, "i"), kindLabel);
+}
+
+function deliveryChangeBackendStatus(value: string) {
+  const normalized = value.toLowerCase().replaceAll("_", "-");
+  if (
+    normalized === "blocked" ||
+    normalized === "done" ||
+    normalized === "in-progress" ||
+    normalized === "new" ||
+    normalized === "parked" ||
+    normalized === "ready" ||
+    normalized === "retired"
+  ) {
+    return normalized;
+  }
+  return "new";
+}
+
+function deliveryChangeNodeType(value: string): DeliveryComponentType {
+  if (
+    value === "Defect" ||
+    value === "Epic" ||
+    value === "Feature" ||
+    value === "Milestone" ||
+    value === "PI Objective" ||
+    value === "Risk" ||
+    value === "Task" ||
+    value === "User story"
+  ) {
+    return value;
+  }
+  throw new Error(`Unsupported Delivery work-item type: ${value}`);
+}
+
+function deliveryChangeTone(
+  status: ReturnType<typeof deliveryChangeBackendStatus>,
+): DeliveryTone {
+  switch (status) {
+    case "blocked":
+      return "danger";
+    case "done":
+      return "ok";
+    case "parked":
+      return "warn";
+    case "retired":
+      return "muted";
+    default:
+      return "info";
+  }
 }

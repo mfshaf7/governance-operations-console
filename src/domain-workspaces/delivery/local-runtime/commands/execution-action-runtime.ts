@@ -70,6 +70,7 @@ const executionActionRuntime = createLocalOperationRuntimeAdapter<
       actionLabel: command.command.action.label,
       actionType: command.command.action.action_type,
       appliedIntent: cloneExecutionApplyIntent(command.command.applyIntent),
+      authority: "prototype-local",
       category:
         command.command.applyIntent.receipt_category ??
         command.command.actionContract.receiptCategory,

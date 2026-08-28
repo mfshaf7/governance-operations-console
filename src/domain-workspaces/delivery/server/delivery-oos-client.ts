@@ -12,11 +12,26 @@ export type DeliveryOosConfig = {
 
 export class DeliveryOosError extends Error {
   readonly code: string;
+  readonly details: unknown;
+  readonly nextAction: Record<string, unknown> | null;
+  readonly retryable: boolean;
   readonly status: number;
 
-  constructor(message: string, code: string, status: number) {
+  constructor(
+    message: string,
+    code: string,
+    status: number,
+    options: {
+      details?: unknown;
+      nextAction?: Record<string, unknown> | null;
+      retryable?: boolean;
+    } = {},
+  ) {
     super(message);
     this.code = code;
+    this.details = options.details;
+    this.nextAction = options.nextAction ?? null;
+    this.retryable = options.retryable ?? false;
     this.status = status;
   }
 }
@@ -103,7 +118,17 @@ export async function deliveryOosRequest(
       isRecord(body) && typeof body.code === "string"
         ? body.code
         : "delivery_oos_rejected";
-    throw new DeliveryOosError(message, code, response.status);
+    throw new DeliveryOosError(message, code, response.status, {
+      details: isRecord(body) ? body.details : undefined,
+      nextAction:
+        isRecord(body) && isRecord(body.next_action)
+          ? body.next_action
+          : null,
+      retryable:
+        isRecord(body) && typeof body.retryable === "boolean"
+          ? body.retryable
+          : false,
+    });
   }
   return body;
 }
