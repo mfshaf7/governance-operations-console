@@ -182,7 +182,7 @@ export function ExecutionTreeEditView({
         actionsLayout="inline"
         kicker="Inline Edit"
         title="Execution Tree Draft"
-        description="Edit this selected ART tree directly. Live wiring will submit accepted changes through OOS work-item routes."
+        description="Edit this selected ART tree, then review and apply accepted changes through the governed Delivery route."
       />
       <BuildTreeEditorTree
         addMenuNodeId={addMenuNodeId}

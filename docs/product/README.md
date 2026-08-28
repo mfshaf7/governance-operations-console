@@ -82,6 +82,10 @@ current and future product changes.
 - `delivery-execution-work-sessions.md`
   - OOS-backed Execution Board work-session projection, Landing Unit decision,
     start, continue, retry, failure, and receipt behavior.
+- `delivery-change-control-live-integration.md`
+  - OOS-backed in-flight Delivery projection, reviewed change commands,
+    repository-custody routing, conflict handling, receipts, and rollback
+    disposition.
 
 Retired planning and audit records have been removed from the active record
 set. If an implementation question is not answered by the files above, stop and

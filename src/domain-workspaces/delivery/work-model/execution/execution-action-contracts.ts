@@ -39,6 +39,7 @@ export type ExecutionActionReceipt = {
   actionLabel: string;
   actionType: DeliveryAvailableAction["action_type"];
   appliedIntent: DeliveryApplyIntent;
+  authority: string;
   category: string;
   commandName: `delivery.execution.${DeliveryAvailableAction["action_type"]}`;
   packageId: string;
@@ -112,7 +113,7 @@ export const executionActionContracts: Record<
     receiptActionLabel: "Record Clear Receipt",
     receiptCategory: "accepted",
     receiptDescription:
-      "The prototype records the clear intent locally. Future wiring will bind it to blocker disposition evidence.",
+      "The accepted clear returns a receipt and the next canonical Delivery action.",
     receiptProjection: "package returns to the next eligible execution posture",
     receiptTitle: "Blocker Clear Intent Recorded",
     reviewActionLabel: "Review Clear",
@@ -133,7 +134,7 @@ export const executionActionContracts: Record<
     receiptActionLabel: "Record Continue Receipt",
     receiptCategory: "accepted",
     receiptDescription:
-      "The prototype records the decision to continue remaining work and keep the package nonterminal.",
+      "The accepted decision keeps the package nonterminal and returns canonical change evidence.",
     receiptProjection: "package stays in progress with remaining work visible",
     receiptTitle: "Continue Decision Recorded",
     reviewActionLabel: "Review Continue",
@@ -154,7 +155,7 @@ export const executionActionContracts: Record<
     receiptActionLabel: "Record Parking Receipt",
     receiptCategory: "accepted",
     receiptDescription:
-      "The prototype records the parking intent locally. Future OOS wiring will produce the durable receipt.",
+      "The accepted parking decision returns its runtime receipt and next action.",
     receiptProjection: "package projects as deferred after read-model refresh",
     receiptTitle: "Parking Intent Recorded",
     reviewActionLabel: "Review Parking",
@@ -175,8 +176,8 @@ export const executionActionContracts: Record<
     receiptActionLabel: "Back to Board",
     receiptCategory: "accepted",
     receiptDescription:
-      "Inline tree edits stay as local draft state until future OOS work-item write wiring exists.",
-    receiptProjection: "local tree draft only",
+      "Inline tree edits remain a draft until the operator reviews and applies them through Delivery change control.",
+    receiptProjection: "reviewed tree changes applied through Delivery change control",
     receiptTitle: "Inline Edit Draft",
     reviewActionLabel: "Open ART Tree",
     reviewable: false,
@@ -254,7 +255,7 @@ export const executionActionContracts: Record<
     receiptActionLabel: "Record Resume Receipt",
     receiptCategory: "accepted",
     receiptDescription:
-      "The prototype records the resume intent locally. Future OOS wiring will refresh package posture.",
+      "The accepted resume decision returns its runtime receipt and refreshed package posture.",
     receiptProjection: "package projects as ready after read-model refresh",
     receiptTitle: "Resume Intent Recorded",
     reviewActionLabel: "Review Resume",
@@ -275,7 +276,7 @@ export const executionActionContracts: Record<
     receiptActionLabel: "Record Retirement Receipt",
     receiptCategory: "accepted",
     receiptDescription:
-      "The prototype records the retirement intent locally. Future OOS wiring will return durable evidence.",
+      "The accepted retirement returns its runtime receipt and canonical next action.",
     receiptProjection: "package projects as retired after read-model refresh",
     receiptTitle: "Retirement Intent Recorded",
     reviewActionLabel: "Review Retirement",
@@ -313,12 +314,12 @@ export const executionActionContracts: Record<
     family: "source-custody",
     familyLabel: "Source Custody",
     modalDescription:
-      "Owner Repo repair records the execution gap without pretending the backend catalog add/link/sync route exists yet.",
+      "Owner Repo repair opens the Delivery Catalog path that owns add, link, and sync review.",
     modalKicker: "Source Custody",
     receiptActionLabel: "Record Sync Requirement",
     receiptCategory: "projection_sync_required",
     receiptDescription:
-      "The prototype records that a manual Catalog Owner Repo add/link/sync workflow is required before the OOS work-item update can apply the admitted repository.",
+      "Delivery Catalog owns the reviewed add, link, and sync step before OOS updates the Delivery work item.",
     receiptProjection:
       "package remains blocked until Catalog adds, links, and syncs the Owner Repo value",
     receiptTitle: "Owner Repo Sync Requirement Recorded",

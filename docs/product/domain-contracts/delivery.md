@@ -175,10 +175,11 @@ promotion removes it from `intake-register.yaml` and creates exactly one active
 perform either canonical mutation and must not treat the classification receipt
 as closeout, active registration, or Portfolio publication.
 
-The flow is not a claim that every mutation is live-backend wired. Prototype
-execution mode uses mock read-model data, local transition helpers,
+The flow is not a claim that every mutation is live-backend wired. Explicitly
+disconnected execution mode uses mock read-model data, local transition helpers,
 localStorage-backed session persistence through `local-runtime/`, and local
-receipts to make the operator path exercisable.
+receipts to make the operator path exercisable. Named live adapters replace
+only their admitted workflow boundary and fail closed when configured.
 
 ## Projection Authority And Live Failover
 
@@ -298,16 +299,19 @@ must not accept a free-text repository slug as the source of truth. The Catalog
 value label and key derive from the selected Repository record; the request
 receipt keeps the repository ref so the later backend sync has a clear link.
 
-The current backend supports the final Delivery work-item `owner_repo` update.
-The backend Owner Repo catalog add/link/sync route is a future capability
-requirement and must not be presented as live-supported until that route exists.
+The Delivery change-control contract supports the final work-item `owner_repo`
+update through `link_repository`. Repository remains the creation/admission
+authority and Catalog remains the Owner Repo add/link/sync authority. A partial
+Catalog/Delivery result must remain visible and route to reconciliation.
 
 If active execution discovers that the work tree itself is missing a child,
 uses the wrong parent, or needs bounded item metadata repair, Execution owns the
-operator-facing edit action. Future live wiring must use the existing OOS
-Delivery work-item create, update, and move routes. Repository and Catalog are
-not involved unless the edit also requires a missing repository or catalog
-value.
+operator-facing edit action. Configured live execution uses the OOS Delivery
+change projection and typed create, update, move, dependency, blocker, parking,
+repository, and rollback operations. The Console applies one accepted mutation
+at a time and refreshes canonical truth between commands. Repository and
+Catalog are not involved unless the edit also requires a missing repository or
+catalog value.
 
 ## Source Shape
 
@@ -768,6 +772,9 @@ Rules:
   same-origin server adapter; the browser does not derive those facts
 - disconnected preview may retain the explicitly local action simulator, but a
   configured live failure must not fall back to its receipt or projection
+- configured in-flight adaptation reads OOS change truth before editing,
+  requires explicit review, sends one typed command per source revision, and
+  projects OOS status, receipt, rollback disposition, and exact next action
 - in-flight adaptation and closeout remain separate action families and must
   not be folded into the initial work-session adapter
 

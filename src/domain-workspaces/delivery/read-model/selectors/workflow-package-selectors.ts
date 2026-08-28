@@ -75,7 +75,7 @@ export const deliveryActionDefinitions: Record<
     action_type: "edit-work-tree",
     default_label: "Edit Work",
     description:
-      "Edit the selected execution tree draft inline before future OOS work-item writes.",
+      "Edit the selected execution tree inline, then review the governed Delivery changes.",
     mutable: true,
     tone: "info",
   },

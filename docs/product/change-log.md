@@ -729,3 +729,8 @@ lives in `surface-contracts/lifecycle-transitions.md`.
   aggregate health, a scrollable active-runtime roster, runtime details, and
   optional versioned Model Operations profile references without moving profile
   authority into Agent Console.
+- Connected Execution Board in-flight editing and package actions to OOS
+  Delivery change control. Added canonical pre-edit projection, explicit tree
+  review, sequential source-revision commands, fail-closed conflict/reject
+  handling, durable receipt authority, and Repository/Catalog custody routing
+  without changing the established board design.
