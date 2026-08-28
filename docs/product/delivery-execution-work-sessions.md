@@ -67,6 +67,18 @@ authoritative reads; other OOS Console calls retain their shorter timeout.
    operator action. If the network outcome is unknown, retry retains the same
    command identity so OOS can replay the retained result safely.
 
+## Source Landing Order
+
+Keep the Landing Unit pull request open until OOS reports that its exact head
+has a durable merge-ready Review Packet. Merge only after that gate passes,
+then continue the same work session to bind the real merge commit and finalize
+operating evidence.
+
+If a runtime interruption prevents packet authoring and the source lands
+first, recover through a truthful follow-up change in the same Landing Unit.
+Do not relabel merged pull-request work as a direct land or bypass OOS
+completion evidence.
+
 Closeout and in-flight plan adaptation are separate Delivery ART fronts. This
 adapter does not add those controls prematurely.
 
