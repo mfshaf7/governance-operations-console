@@ -151,6 +151,7 @@ presentation/surfaces
 presentation/surfaces/catalog
 presentation/surfaces/execution-board
 presentation/surfaces/execution-board/action-session
+presentation/surfaces/execution-board/action-session/closeout
 presentation/surfaces/execution-board/work-session
 presentation/surfaces/home
 presentation/surfaces/intake
@@ -256,6 +257,8 @@ local-runtime/transitions/transition-record.ts
 local-runtime/transitions/work-design-transition.ts
 live-runtime/catalog-live-contract.ts
 live-runtime/catalog-live-types.ts
+live-runtime/delivery-closeout-live-contract.ts
+live-runtime/delivery-closeout-live-types.ts
 live-runtime/delivery-change-live-contract.ts
 live-runtime/delivery-change-live-types.ts
 live-runtime/delivery-live-identity.ts
@@ -264,6 +267,7 @@ live-runtime/delivery-work-session-live-types.ts
 live-runtime/refinement-live-contract.ts
 live-runtime/refinement-live-types.ts
 live-runtime/use-catalog-live-runtime.ts
+live-runtime/use-delivery-closeout-live-runtime.ts
 live-runtime/use-delivery-change-live-runtime.ts
 live-runtime/use-delivery-work-session-live-runtime.ts
 live-runtime/use-refinement-live-runtime.ts
@@ -293,6 +297,9 @@ presentation/surfaces/catalog/use-catalog-control-state.ts
 presentation/surfaces/execution-board/action-session/execution-action-modal.tsx
 presentation/surfaces/execution-board/action-session/execution-action-view-model.ts
 presentation/surfaces/execution-board/action-session/use-execution-action-session.ts
+presentation/surfaces/execution-board/action-session/closeout/execution-closeout-dialogs.tsx
+presentation/surfaces/execution-board/action-session/closeout/execution-closeout-modal.tsx
+presentation/surfaces/execution-board/action-session/closeout/execution-closeout-model.ts
 presentation/surfaces/execution-board/execution-board-surface.tsx
 presentation/surfaces/execution-board/execution-board-view-model.ts
 presentation/surfaces/execution-board/execution-selected-package-panel.tsx
@@ -499,6 +506,8 @@ read-model/selectors/delivery-attention-selector.ts
 read-model/selectors/workflow-package-selectors.ts
 read-model/terms/copy.ts
 server/delivery-oos-client.ts
+server/delivery-closeout-api-routes.ts
+server/delivery-closeout-oos-client.ts
 server/delivery-change-api-routes.ts
 server/delivery-change-oos-client.ts
 server/delivery-work-session-api-routes.ts

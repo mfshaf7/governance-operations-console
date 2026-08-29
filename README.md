@@ -29,6 +29,8 @@ separately governed OOS integration slices:
   source revision, canonical readback, and repository-readiness enforcement
 - Delivery Execution in-flight change projection, reviewed tree and package
   commands, exact next actions, receipts, and repository-custody routing
+- Delivery closeout readiness, reviewed evidence and impact, terminal command,
+  durable outcome history, replay, receipts, and reconciliation projection
 
 Prototype source discovery and operational workflows without a named live
 integration contract remain:
@@ -83,6 +85,8 @@ The Delivery Refinement and Catalog boundary is documented in
 [`docs/product/refinement-catalog-live-integration.md`](docs/product/refinement-catalog-live-integration.md).
 The Delivery in-flight adaptation boundary is documented in
 [`docs/product/delivery-change-control-live-integration.md`](docs/product/delivery-change-control-live-integration.md).
+The Delivery terminal closeout boundary is documented in
+[`docs/product/delivery-closeout-live-integration.md`](docs/product/delivery-closeout-live-integration.md).
 
 ## Authority Map
 

@@ -98,6 +98,17 @@ Owner Repo value admission remains in Delivery Catalog. Configured read or
 write failure, stale revision, rejection, partial failure, or malformed truth
 must stop the action and must never become a prototype-local success.
 
+The Delivery closeout exception is bounded to same-origin readiness,
+package-scoped outcome history, and reviewed terminal command routes over the
+OOS-owned closeout contract. The browser supplies only the bounded evidence and
+impact operation, expected source revision, replay-safe command identity, and
+acceptance note. Caller credentials, accountable operator construction,
+accepted intent, OpenProject mutation, replay, durable outcome events,
+receipts, partial-failure disposition, and exact next action remain outside the
+browser. A configured read or write failure, stale source, rejection,
+reconciliation state, partial failure, or malformed result must stay explicit
+and must never fall back to a local closeout receipt.
+
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The
 baseline security findings remain expansion gates until separately reviewed

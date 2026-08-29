@@ -456,10 +456,10 @@ capabilities:
       live_adapter: partial
       delivery_phase: post-baseline
     post_baseline_work:
-      - Extend the implemented Work Design, Refinement, Catalog, and inactive Execution work-session adapters to the Delivery register, Intake, remaining Execution actions, and closeout through OOS and WGCF.
+      - Extend the implemented Work Design, Refinement, Catalog, Execution work-session, in-flight change, and closeout adapters to the Delivery register, Intake, and remaining Execution actions through OOS and WGCF.
       - Activate Execution work sessions only after exact-head Security review and admitted source-executor proof.
       - Add missing controlled-value add, repository link, and sync adapters.
-      - Connect the Console-local closeout contract to OOS readiness, close, and downstream Workspace Intake or product-owner adapters.
+      - Connect closeout outcome handoffs to separately admitted downstream Workspace Intake or product-owner adapters without moving their authority into Delivery.
 
   prototype:
     label: Prototype

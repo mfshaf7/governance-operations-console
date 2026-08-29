@@ -6,6 +6,17 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-08-29
+
+- Connected Delivery `Open Closeout` to OOS-owned readiness, reviewed evidence
+  and impact, exact-source terminal command, durable outcome history, replay,
+  receipt, partial-failure, and reconciliation contracts.
+- Kept caller credentials, accountable operator construction, OpenProject
+  mutation, accepted intent, and durable outcomes outside the browser, with no
+  local fallback when configured live truth fails.
+- Preserved the established disconnected-preview action and routed only the
+  admitted live closeout path through the dedicated three-step Teras wizard.
+
 ## 2026-08-27
 
 - Connected Delivery Execution Board `Start Work` to strict same-origin OOS

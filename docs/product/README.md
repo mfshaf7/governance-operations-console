@@ -86,6 +86,10 @@ current and future product changes.
   - OOS-backed in-flight Delivery projection, reviewed change commands,
     repository-custody routing, conflict handling, receipts, and rollback
     disposition.
+- `delivery-closeout-live-integration.md`
+  - OOS-backed Delivery readiness, complete evidence and impact review,
+    terminal closeout command, durable outcome history, receipt, replay, and
+    reconciliation behavior.
 
 Retired planning and audit records have been removed from the active record
 set. If an implementation question is not answered by the files above, stop and
