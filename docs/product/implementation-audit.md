@@ -172,23 +172,24 @@ lifecycle transitions, Model Operations, Orchestration, and Prototype.
 The shared operation runtime preserves deterministic prototype-local actor and
 session attribution through command, run, and receipt envelopes.
 
-## Deliberate Prototype Boundaries
+## Deliberate Integration Boundaries
 
-The following remain intentionally outside this prototype completion claim:
+Outside the separately documented Proposal, Prototype Delivery, Delivery Work
+Design, Refinement, Catalog, Execution work-session, in-flight change, and
+closeout adapters, the following remain intentionally outside the current
+completion claim:
 
-- live backend reads or mutations
 - durable database ownership in the Console
-- OOS or Temporal execution
-- live OpenProject, WGCF, repository, platform, security, release, or product
-  registry adapters
+- direct browser access to OOS, OpenProject, WGCF, repository, platform,
+  security, release, or product-registry authority
 - authentication and production identity wiring
 - stage or production deployment
 - baseline approval, graduation, or source landing
 
 The Console may retain browser-local continuity and structured fixtures while
-the prototype is being evaluated. Future live wiring must replace adapters at
-the read-model, command, receipt, and subscription boundaries without moving
-canonical authority into React or a Console-owned database.
+an operation has no admitted live contract. Named live adapters replace those
+fixtures only at read-model, command, receipt, and subscription boundaries and
+must not move canonical authority into React or a Console-owned database.
 
 ## Audit Result
 

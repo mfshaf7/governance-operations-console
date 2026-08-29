@@ -777,6 +777,17 @@ Rules:
   projects OOS status, receipt, rollback disposition, and exact next action
 - in-flight adaptation and closeout remain separate action families and must
   not be folded into the initial work-session adapter
+- configured live `Open Closeout` reads OOS-owned readiness and outcome
+  history, collects the complete bounded evidence contract, requires reviewed
+  impact and operator acceptance, and submits the exact projected source
+  revision through a same-origin server adapter
+- OOS owns closeout admission, accountable acceptance, replay, OpenProject
+  mutation, durable outcome events, receipts, partial failure, reconciliation,
+  and exact next action; the Console owns only the operator draft and bounded
+  projection
+- disconnected preview may keep the existing local closeout simulator, but a
+  configured read, validation, or command failure must remain unavailable and
+  must never fall back to local completion
 
 ## Catalog
 

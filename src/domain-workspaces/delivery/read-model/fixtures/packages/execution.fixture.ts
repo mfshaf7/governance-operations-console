@@ -133,7 +133,7 @@ export const deliveryExecutionPackageFixtures: DeliveryPackageFixture[] = [
         action_type: "open-closeout",
         enabled: true,
         expected_backend_route:
-          "GET /v1/delivery-initiatives/{delivery_id}/closeout-readiness",
+          "GET /v1/delivery-initiatives/{delivery_id}/closeout",
         label: "Open Closeout",
         reason: "Completed child work needs closeout evidence review.",
         scope: "package_with_children",

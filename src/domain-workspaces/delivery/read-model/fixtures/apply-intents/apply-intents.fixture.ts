@@ -242,7 +242,7 @@ export const deliveryApplyIntentFixtures: DeliveryApplyIntent[] = [
     delivery_package_id: "pkg-681",
     dirty_state: "clean",
     expected_backend_route:
-      "GET /v1/delivery-initiatives/{delivery_id}/closeout-readiness",
+      "GET /v1/delivery-initiatives/{delivery_id}/closeout",
     gate_checks: [
       {
         label: "Completion evidence available",

@@ -21,16 +21,6 @@ const forbiddenBackendRoutePatterns = [
       /POST \/v1\/delivery-initiatives\/\{delivery_id\}\/parking\/resume/,
   },
   {
-    label: "GET /v1/delivery-initiatives/{delivery_id}/closeout",
-    pattern:
-      /GET \/v1\/delivery-initiatives\/\{delivery_id\}\/closeout(?!-readiness)/,
-  },
-  {
-    label: "POST /v1/delivery-initiatives/{delivery_id}/closeout/continue",
-    pattern:
-      /POST \/v1\/delivery-initiatives\/\{delivery_id\}\/closeout\/continue/,
-  },
-  {
     label: "Future backend capability:",
     pattern: /Future backend capability:/,
   },

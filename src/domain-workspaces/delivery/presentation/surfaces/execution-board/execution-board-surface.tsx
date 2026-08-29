@@ -56,6 +56,7 @@ import { ExecutionTreeEditSupportPanel } from "./execution-tree-edit-support-pan
 import { useDeliveryWorkSessionLiveRuntime } from "../../../live-runtime/use-delivery-work-session-live-runtime.ts";
 import { ExecutionWorkSessionModal } from "./work-session/execution-work-session-modal.tsx";
 import { useDeliveryChangeLiveRuntime } from "../../../live-runtime/use-delivery-change-live-runtime.ts";
+import { useDeliveryCloseoutLiveRuntime } from "../../../live-runtime/use-delivery-closeout-live-runtime.ts";
 import {
   buildExecutionTreeChangePlan,
   createdWorkItemId,
@@ -65,6 +66,7 @@ import {
   deliveryChangeOperationForExecutionAction,
   executionActionReceiptFromDeliveryChange,
 } from "../../../work-model/execution/execution-change-operation.ts";
+import { ExecutionCloseoutModal } from "./action-session/closeout/execution-closeout-modal.tsx";
 
 export type ExecutionTreeEditState = {
   active: boolean;
@@ -123,6 +125,7 @@ export function DeliveryExecutionBoard({
     null,
   );
   const [workSessionOpen, setWorkSessionOpen] = useState(false);
+  const [closeoutOpen, setCloseoutOpen] = useState(false);
 
   useEffect(() => {
     if (
@@ -155,6 +158,9 @@ export function DeliveryExecutionBoard({
     : null;
   const deliveryChangeRuntime = useDeliveryChangeLiveRuntime(
     selectedPackage?.legacy_epic_id ?? null,
+  );
+  const deliveryCloseoutRuntime = useDeliveryCloseoutLiveRuntime(
+    closeoutOpen ? (selectedPackage?.legacy_epic_id ?? null) : null,
   );
   const submitLiveExecutionAction = useCallback(
     async (submission: ExecutionActionSubmission) => {
@@ -285,6 +291,25 @@ export function DeliveryExecutionBoard({
     selectedActions,
     workSessionOpen,
     workSessionRuntime.mode,
+  ]);
+
+  useEffect(() => {
+    if (
+      !closeoutOpen ||
+      deliveryCloseoutRuntime.mode !== "disconnected-preview"
+    ) {
+      return;
+    }
+    const closeoutAction = selectedActions.find(
+      (action) => action.action_type === "open-closeout",
+    );
+    setCloseoutOpen(false);
+    if (closeoutAction) actionSession.openAction(closeoutAction);
+  }, [
+    actionSession.openAction,
+    closeoutOpen,
+    deliveryCloseoutRuntime.mode,
+    selectedActions,
   ]);
   const selectedAuditEvents = selectedPackage
     ? getPackageAuditEvents(selectedPackage.delivery_package_id, model)
@@ -432,6 +457,11 @@ export function DeliveryExecutionBoard({
       return;
     }
 
+    if (action.action_type === "open-closeout") {
+      setCloseoutOpen(true);
+      return;
+    }
+
     actionSession.openAction(action);
   }
 
@@ -439,6 +469,7 @@ export function DeliveryExecutionBoard({
     if (nextPackageId !== selectedPackageId) {
       resetTreeEditDraft();
       setWorkSessionOpen(false);
+      setCloseoutOpen(false);
     }
 
     setSelectedPackageId(nextPackageId);
@@ -648,6 +679,13 @@ export function DeliveryExecutionBoard({
           packageSummary={selectedPackage}
           runtime={workSessionRuntime}
           workItemId={selectedWorkItemId}
+        />
+      ) : null}
+      {selectedPackage && closeoutOpen ? (
+        <ExecutionCloseoutModal
+          onClose={() => setCloseoutOpen(false)}
+          packageSummary={selectedPackage}
+          runtime={deliveryCloseoutRuntime}
         />
       ) : null}
       <ExecutionTreeChangeReviewDialog
