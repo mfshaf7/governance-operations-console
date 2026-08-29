@@ -20,15 +20,18 @@ export function RepositoryControlDialogStack({
       <RepositoryRequestDialog
         canSubmit={controller.request.canSubmit}
         draft={controller.request.draft}
+        error={controller.request.error}
         onClose={controller.request.close}
         onSubmit={controller.request.onSubmit}
         onUpdateDraft={controller.request.onUpdateDraft}
         open={controller.request.open}
+        pending={controller.request.pending}
+        result={controller.request.result}
       />
 
       <TerasDraftCloseGuardDialog
-        description="This repository request has unsaved local fields. Leaving will discard the draft from this prototype session."
-        kicker="Repository Request"
+        description="This repository provisioning request has unsaved reviewed fields. Leaving will discard the current draft."
+        kicker="Repository Provisioning"
         leaveLabel="Discard Draft"
         onKeepEditing={controller.request.keepEditing}
         onLeave={controller.request.discard}

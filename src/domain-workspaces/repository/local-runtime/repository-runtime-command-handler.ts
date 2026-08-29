@@ -33,10 +33,6 @@ export function repositoryRuntimeRunFromCommand(
   return {
     progress,
     run: {
-      record:
-        command.command.kind === "submit-request"
-          ? command.command.record
-          : undefined,
       submittedAt: command.submittedAt,
       summary,
     },
@@ -55,19 +51,6 @@ export function repositoryRuntimeReceiptFromRun({
   const receiptId = `repository-${command.command.kind}-${run.runId}`;
 
   switch (command.command.kind) {
-    case "submit-request":
-      return {
-        ...repositoryLocalReceipt({
-          actionLabel: "Submit Repository Request",
-          command,
-          commandName: "repository.submit-request",
-          receiptId,
-          run,
-        }),
-        appliedDraft: { ...command.command.draft },
-        kind: "request",
-        requestedRecord: command.command.record,
-      };
     case "record-admission":
       return {
         ...repositoryLocalReceipt({
@@ -144,8 +127,6 @@ function repositoryLocalReceipt<TCommandName extends string>({
 
 function repositoryCommandSummary(kind: RepositoryRuntimeCommand["kind"]) {
   switch (kind) {
-    case "submit-request":
-      return "Prototype-local repository request record created.";
     case "record-admission":
       return "Prototype-local repository admission review receipt recorded.";
     case "record-retirement-request":

@@ -9,14 +9,12 @@ import {
 } from "../../local-runtime/ingress/repository-ingress-runtime.ts";
 import { recordProposalRepositoryGateResolution } from "../../../operation-integrations/proposal-repository-request-projection.ts";
 import {
-  createRepositoryRequestId,
   getRepositoryRuntimeProjectionSnapshot,
   getRepositoryRuntimeCapabilities,
   recordRepositoryAdmissionCommand,
   recordRepositoryProposalGateResolutionCommand,
   recordRepositoryRetirementRequestCommand,
   subscribeRepositoryRuntimeProjection,
-  submitRepositoryRequestCommand,
 } from "../../local-runtime/repository-runtime.ts";
 import {
   emptyRepositoryRequestDraft,
@@ -41,11 +39,16 @@ import {
   repositorySummaryFromRecords,
 } from "../shared/repository-control-projection.ts";
 import { useRepositoryCustodyLiveRuntime } from "../../live-runtime/use-repository-custody-live-runtime.ts";
-import { projectRepositoryCustodyResults } from "../../live-runtime/repository-custody-live-projection.ts";
+import {
+  projectRepositoryCustodyResults,
+  projectRepositoryProvisioningResults,
+  repositoryProvisionedRecordId,
+} from "../../live-runtime/repository-custody-live-projection.ts";
 import type { RepositoryCustodyLinkIntent } from "../../live-runtime/repository-custody-live-types.ts";
 import {
   repositoryRequestDraftComplete,
   repositoryRequestDraftDirty,
+  repositoryProvisionIntentFromDraft,
 } from "../dialogs/request/repository-request-view-model.ts";
 
 const defaultRepositoryId =
@@ -82,12 +85,21 @@ export function useRepositoryControlController({
     [proposalRequestRecords, repositoryRuntimeProjection],
   );
   const records = useMemo(
-    () =>
-      projectRepositoryCustodyResults(
+    () => {
+      const provisionedRecords = projectRepositoryProvisioningResults(
         recordProjections.map((projection) => projection.record),
+        custodyRuntime.provisioningResultsByRequestId,
+      );
+      return projectRepositoryCustodyResults(
+        provisionedRecords,
         custodyRuntime.resultsByRepositoryId,
-      ),
-    [custodyRuntime.resultsByRepositoryId, recordProjections],
+      );
+    },
+    [
+      custodyRuntime.provisioningResultsByRequestId,
+      custodyRuntime.resultsByRepositoryId,
+      recordProjections,
+    ],
   );
   const recordProjectionById = useMemo(
     () =>
@@ -110,7 +122,10 @@ export function useRepositoryControlController({
   );
   const [requestCloseGuardOpen, setRequestCloseGuardOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
-  const [requestId, setRequestId] = useState(createRepositoryRequestId);
+  const [requestId, setRequestId] = useState(createRepositoryProvisionRequestId);
+  const [requestRequestedAt, setRequestRequestedAt] = useState(() =>
+    new Date().toISOString(),
+  );
   const [requestDraft, setRequestDraft] = useState<RepositoryRequestDraft>(
     emptyRepositoryRequestDraft,
   );
@@ -244,9 +259,16 @@ export function useRepositoryControlController({
     [records],
   );
   const requestDraftDirty = repositoryRequestDraftDirty(requestDraft);
+  const requestResult = custodyRuntime.provisioningResultsByRequestId[requestId];
+  const requestError = custodyRuntime.provisioningErrorsByRequestId[requestId];
+  const requestPending = custodyRuntime.pendingProvisioningRequestId === requestId;
   const requestDraftCanSubmit =
-    runtimeCapabilities.canSubmit &&
-    repositoryRequestDraftComplete(requestDraft);
+    !requestPending &&
+    repositoryRequestDraftComplete(requestDraft) &&
+    requestResult?.status !== "succeeded" &&
+    (!requestResult ||
+      requestResult.retryable ||
+      requestResult.status === "applying");
 
   useEffect(() => {
     if (!entryIntent) {
@@ -276,13 +298,32 @@ export function useRepositoryControlController({
 
   function updateRepositoryRequestDraft(
     field: keyof RepositoryRequestDraft,
-    value: string,
+    value: RepositoryRequestDraft[keyof RepositoryRequestDraft],
   ) {
-    setRequestDraft((current) => ({ ...current, [field]: value }));
+    if (requestResult) {
+      setRequestId(createRepositoryProvisionRequestId());
+      setRequestRequestedAt(new Date().toISOString());
+    }
+    setRequestDraft((current) => {
+      const next = { ...current, [field]: value } as RepositoryRequestDraft;
+      if (
+        field === "name" &&
+        typeof value === "string" &&
+        (!current.workspaceOwnerRef ||
+          current.workspaceOwnerRef === `repo:${current.name}`)
+      ) {
+        next.workspaceOwnerRef = value.trim() ? `repo:${value.trim()}` : "";
+      }
+      return next;
+    });
     setRequestSubmittedAt(null);
   }
 
   function requestRepositoryDraftClose() {
+    if (requestResult?.status === "succeeded") {
+      closeRepositoryRequestDraft({ discard: true });
+      return;
+    }
     if (requestDraftDirty) {
       setRequestCloseGuardOpen(true);
       return;
@@ -298,6 +339,8 @@ export function useRepositoryControlController({
     if (discard) {
       setRequestDraft(emptyRepositoryRequestDraft);
       setRequestSubmittedAt(null);
+      setRequestId(createRepositoryProvisionRequestId());
+      setRequestRequestedAt(new Date().toISOString());
     }
   }
 
@@ -306,16 +349,21 @@ export function useRepositoryControlController({
       return;
     }
 
-    const result = await submitRepositoryRequestCommand(requestDraft, {
-      requestId,
-    });
-
-    setSelectedRepositoryId(result.record.id);
-    setRequestSubmittedAt(result.submittedAt);
-    setRequestDraft(emptyRepositoryRequestDraft);
-    setRequestId(createRepositoryRequestId());
-    setRequestCloseGuardOpen(false);
-    setRequestDialogOpen(false);
+    const result =
+      requestResult?.status === "applying"
+        ? await custodyRuntime.readProvisioning(requestId)
+        : await custodyRuntime.provision(
+            repositoryProvisionIntentFromDraft(requestDraft, {
+              requestedAt: requestRequestedAt,
+              requestId,
+            }),
+          );
+    if (result.status === "succeeded") {
+      const recordId = repositoryProvisionedRecordId(result);
+      if (recordId) setSelectedRepositoryId(recordId);
+      setRequestSubmittedAt(result.receipt?.completed_at ?? new Date().toISOString());
+      setRequestCloseGuardOpen(false);
+    }
   }
 
   function inspectRepository(record: RepositoryWorkspaceRecord) {
@@ -492,10 +540,13 @@ export function useRepositoryControlController({
       closeGuardOpen: requestCloseGuardOpen,
       discard: () => closeRepositoryRequestDraft({ discard: true }),
       draft: requestDraft,
+      error: requestError,
       keepEditing: () => setRequestCloseGuardOpen(false),
       onSubmit: submitRepositoryRequestDraft,
       onUpdateDraft: updateRepositoryRequestDraft,
       open: requestDialogOpen,
+      pending: requestPending,
+      result: requestResult,
     },
     retirement: {
       close: () => {
@@ -538,3 +589,7 @@ export function useRepositoryControlController({
 export type RepositoryControlController = ReturnType<
   typeof useRepositoryControlController
 >;
+
+function createRepositoryProvisionRequestId() {
+  return `repository-custody-request:console-${crypto.randomUUID()}`;
+}

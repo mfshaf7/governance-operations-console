@@ -71,7 +71,13 @@ export type RepositoryWorkspaceCustody = {
     | "external-repo"
     | "incubation-repo"
     | "shared-owner-repo";
-  state: "archived" | "linked" | "observed" | "retired" | "unrecorded";
+  state:
+    | "archived"
+    | "linked"
+    | "observed"
+    | "provisioned"
+    | "retired"
+    | "unrecorded";
   workspaceOwnerRef: string;
 };
 

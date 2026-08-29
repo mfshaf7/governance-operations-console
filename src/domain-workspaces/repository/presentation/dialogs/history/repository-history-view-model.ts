@@ -69,7 +69,6 @@ export function repositoryHistoryControlFacts(
 export function repositoryHistoryReceiptFacts(
   receipts: RepositoryRuntimeReceipt[],
 ): TerasMetadataItem[] {
-  const requestReceipt = latestRepositoryReceipt(receipts, "request");
   const admissionReceipt = latestRepositoryReceipt(receipts, "admission");
   const gateReceipt = latestRepositoryReceipt(
     receipts,
@@ -81,13 +80,6 @@ export function repositoryHistoryReceiptFacts(
   );
 
   return [
-    {
-      label: "Request",
-      title: requestReceipt?.receiptId,
-      value: requestReceipt
-        ? repositoryReceiptReference(requestReceipt)
-        : "No local request receipt",
-    },
     {
       label: "Admission",
       title: admissionReceipt?.receiptId,
@@ -129,14 +121,6 @@ function repositoryReceiptTimelineRow(
   receipt: RepositoryRuntimeReceipt,
 ): RepositoryHistoryTimelineRow {
   switch (receipt.kind) {
-    case "request":
-      return {
-        detail: receipt.summary,
-        label: "Repository Request",
-        status: receipt.resultState,
-        timestamp: receipt.recordedAt,
-        tone: "ok",
-      };
     case "admission":
       return {
         detail: receipt.summary,

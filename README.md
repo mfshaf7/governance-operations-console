@@ -34,6 +34,9 @@ separately governed OOS integration slices:
 - Repository existing-source custody linkage through OOS, with immutable
   provider identity, WGCF decision evidence, provider readback, and a terminal
   custody receipt
+- Repository provisioning through OOS, with server-held GitHub App authority,
+  exact reviewed settings, provider-operation projection, and a terminal
+  provisioning receipt
 
 Prototype source discovery and operational workflows without a named live
 integration contract remain:
@@ -92,6 +95,8 @@ The Delivery terminal closeout boundary is documented in
 [`docs/product/delivery-closeout-live-integration.md`](docs/product/delivery-closeout-live-integration.md).
 The Repository custody linkage boundary is documented in
 [`docs/product/repository-custody-live-integration.md`](docs/product/repository-custody-live-integration.md).
+The Repository provisioning boundary is documented in
+[`docs/product/repository-provisioning-live-integration.md`](docs/product/repository-provisioning-live-integration.md).
 
 ## Authority Map
 

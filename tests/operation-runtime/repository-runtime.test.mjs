@@ -8,7 +8,6 @@ import {
   recordRepositoryAdmissionCommand,
   recordRepositoryProposalGateResolutionCommand,
   recordRepositoryRetirementRequestCommand,
-  submitRepositoryRequestCommand,
   subscribeRepositoryRuntimeProjection,
 } from "../../src/domain-workspaces/repository/local-runtime/repository-runtime.ts";
 
@@ -16,72 +15,10 @@ test("repository runtime declares submit capability", () => {
   assert.equal(getRepositoryRuntimeCapabilities().canSubmit, true);
 });
 
-const requestDraft = {
-  name: "Runtime Contract Repository",
-  ownerDomain: "governance-operations",
-  purpose: "Prove repository command identity and durable local evidence.",
-  repoClass: "product",
-};
-
-test("repository request retries reuse one record and receipt", async () => {
-  const requestId = "repository-runtime-request-idempotency";
-  const first = await submitRepositoryRequestCommand(requestDraft, {
-    requestId,
-    submittedAt: "2026-07-10T04:00:00.000Z",
-  });
-  const snapshotAfterFirst = getRepositoryRuntimeProjectionSnapshot();
-  let duplicateEmissions = 0;
-  const unsubscribe = subscribeRepositoryRuntimeProjection(() => {
-    duplicateEmissions += 1;
-  });
-  const repeated = await submitRepositoryRequestCommand(requestDraft, {
-    requestId,
-    submittedAt: "2026-07-10T04:05:00.000Z",
-  });
-  unsubscribe();
-  const receipts = await listRepositoryRuntimeReceipts(first.record.id);
-  const projection = getRepositoryRuntimeProjectionSnapshot();
-
-  assert.equal(first.record.id, repeated.record.id);
-  assert.equal(first.receipt.receiptId, repeated.receipt.receiptId);
-  assert.equal(projection, snapshotAfterFirst);
-  assert.equal(duplicateEmissions, 0);
-  assert.equal(first.receipt.commandName, "repository.submit-request");
-  assert.equal(first.receipt.resultState, "recorded");
-  assert.equal(first.receipt.schemaVersion, 1);
-  assert.deepEqual(first.receipt.appliedDraft, requestDraft);
-  assert.equal(receipts.length, 1);
-  assert.deepEqual(
-    projection.receiptsByRecord[first.record.id].map((receipt) => receipt.kind),
-    ["request"],
-  );
-  assert.match(
-    receipts[0].sourceVersions[0].version,
-    /^local-projection-repository-operation-/,
-  );
-});
-
-test("repository request identity separates distinct captures", async () => {
-  const first = await submitRepositoryRequestCommand(requestDraft, {
-    requestId: "repository-runtime-request-first",
-    submittedAt: "2026-07-10T05:00:00.000Z",
-  });
-  const second = await submitRepositoryRequestCommand(requestDraft, {
-    requestId: "repository-runtime-request-second",
-    submittedAt: "2026-07-10T05:00:00.000Z",
-  });
-
-  assert.notEqual(first.record.id, second.record.id);
-  assert.notEqual(first.receipt.receiptId, second.receipt.receiptId);
-});
-
 test("repository admission retries reuse one receipt", async () => {
-  const request = await submitRepositoryRequestCommand(requestDraft, {
-    requestId: "repository-runtime-admission-idempotency",
-    submittedAt: "2026-07-10T06:00:00.000Z",
-  });
+  const record = { id: "repository-runtime-admission-idempotency" };
   const first = await recordRepositoryAdmissionCommand(
-    request.record,
+    record,
     "2026-07-10T06:05:00.000Z",
   );
   const snapshotAfterFirst = getRepositoryRuntimeProjectionSnapshot();
@@ -90,11 +27,11 @@ test("repository admission retries reuse one receipt", async () => {
     duplicateEmissions += 1;
   });
   const repeated = await recordRepositoryAdmissionCommand(
-    request.record,
+    record,
     "2026-07-10T06:10:00.000Z",
   );
   unsubscribe();
-  const receipts = await listRepositoryRuntimeReceipts(request.record.id);
+  const receipts = await listRepositoryRuntimeReceipts(record.id);
   const projection = getRepositoryRuntimeProjectionSnapshot();
   const admissionReceipts = receipts.filter(
     (receipt) => receipt.receipt.kind === "admission",
@@ -105,17 +42,17 @@ test("repository admission retries reuse one receipt", async () => {
   assert.equal(duplicateEmissions, 0);
   assert.equal(first.commandName, "repository.record-admission");
   assert.equal(first.resultState, "recorded");
-  assert.equal(first.reviewedRecord.id, request.record.id);
+  assert.equal(first.reviewedRecord.id, record.id);
   assert.deepEqual(
     first.runEvents.map((event) => event.sequence),
     [1, 2, 3, 4],
   );
   assert.equal(admissionReceipts.length, 1);
   assert.deepEqual(
-    projection.receiptsByRecord[request.record.id].map(
+    projection.receiptsByRecord[record.id].map(
       (receipt) => receipt.kind,
     ),
-    ["request", "admission"],
+    ["admission"],
   );
   assert.match(
     admissionReceipts[0].sourceVersions[0].version,
@@ -124,12 +61,9 @@ test("repository admission retries reuse one receipt", async () => {
 });
 
 test("repository retirement retries preserve one projection snapshot", async () => {
-  const request = await submitRepositoryRequestCommand(requestDraft, {
-    requestId: "repository-runtime-retirement-idempotency",
-    submittedAt: "2026-07-10T06:20:00.000Z",
-  });
+  const record = { id: "repository-runtime-retirement-idempotency" };
   const first = await recordRepositoryRetirementRequestCommand(
-    request.record,
+    record,
     "2026-07-10T06:25:00.000Z",
   );
   const snapshotAfterFirst = getRepositoryRuntimeProjectionSnapshot();
@@ -138,7 +72,7 @@ test("repository retirement retries preserve one projection snapshot", async () 
     duplicateEmissions += 1;
   });
   const repeated = await recordRepositoryRetirementRequestCommand(
-    request.record,
+    record,
     "2026-07-10T06:30:00.000Z",
   );
   unsubscribe();

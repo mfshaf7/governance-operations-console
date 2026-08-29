@@ -11,9 +11,7 @@ import type {
 import { repositoryOwnerRepoCatalogOptions } from "../../operation-integrations/repository-owner-repo-catalog-projection.ts";
 
 import type { RepositoryWorkspaceRecord } from "../read-model/repository-workspace-read-model.ts";
-import type { RepositoryRequestDraft } from "../work-model/request/repository-request-model.ts";
 import { assertRepositoryGateResolutionDraft } from "../work-model/gate-resolution/repository-gate-resolution-model.ts";
-import { repositoryRecordFromRequestDraft } from "./repository-request-record-factory.ts";
 import {
   repositoryRuntimeReceiptFromRun,
   repositoryRuntimeRunFromCommand,
@@ -27,9 +25,7 @@ import {
   type RepositoryRuntimeRun,
 } from "./repository-runtime-model.ts";
 import {
-  getRepositoryLocalRequestRecordCount,
   getRepositoryRuntimeProjectionSnapshot,
-  recordRepositoryLocalRequestRecord,
   recordRepositoryRuntimeReceipt,
   subscribeRepositoryRuntimeProjection,
 } from "./repository-runtime-store.ts";
@@ -37,22 +33,14 @@ import {
 export {
   type RepositoryAdmissionReceipt,
   type RepositoryProposalGateResolutionReceipt,
-  type RepositoryRequestReceipt,
   type RepositoryRetirementRequestReceipt,
   type RepositoryRuntimeReceipt,
   type RepositoryRuntimeProjectionSnapshot,
 } from "./repository-runtime-model.ts";
 export {
-  emptyRepositoryRequestDraft,
-  type RepositoryRequestDraft,
-} from "../work-model/request/repository-request-model.ts";
-export {
   getRepositoryRuntimeProjectionSnapshot,
   subscribeRepositoryRuntimeProjection,
 };
-
-const repositoryRecordIdByRequestId = new Map<string, string>();
-let repositoryRequestSequence = 0;
 
 const repositoryCommandRuntime = createLocalOperationRuntimeAdapter<
   RepositoryWorkspaceRecord,
@@ -74,44 +62,6 @@ const repositoryCommandRuntime = createLocalOperationRuntimeAdapter<
   },
   runtimeSource: repositoryRuntimeSource,
 });
-
-export function createRepositoryRequestId() {
-  repositoryRequestSequence += 1;
-  return `repository-request-${repositoryRequestSequence}`;
-}
-
-export async function submitRepositoryRequestCommand(
-  draft: RepositoryRequestDraft,
-  options: {
-    requestId?: string;
-    submittedAt?: string;
-  } = {},
-) {
-  const requestId = options.requestId ?? createRepositoryRequestId();
-  const submittedAt = options.submittedAt ?? repositoryTimestamp();
-  const localRecordIndex = repositoryRequestRecordIndex(requestId);
-  const localRecord = repositoryRecordFromRequestDraft(draft, localRecordIndex);
-  const { receipt, run } = await submitRepositoryRuntimeCommand({
-    command: {
-      draft,
-      kind: "submit-request",
-      record: localRecord,
-      requestId,
-    },
-    commandName: "repository.submit-request",
-    recordId: localRecord.id,
-    sourceRecordVersion: repositoryRecordSourceVersion(localRecord),
-    submittedAt,
-  });
-
-  recordRepositoryLocalRequestRecord(localRecord);
-
-  return {
-    receipt: repositoryReceiptOfKind(receipt, "request"),
-    record: run.run.record ?? localRecord,
-    submittedAt: receipt.recordedAt,
-  };
-}
 
 export async function recordRepositoryAdmissionCommand(
   record: RepositoryWorkspaceRecord,
@@ -266,18 +216,6 @@ function repositoryReceiptOfKind<
   }
 
   return envelope.receipt as Extract<RepositoryRuntimeReceipt, { kind: TKind }>;
-}
-
-function repositoryRequestRecordIndex(requestId: string) {
-  const existingRecordId = repositoryRecordIdByRequestId.get(requestId);
-  if (existingRecordId) {
-    return Number(existingRecordId.split("-").at(-1)) - 1;
-  }
-
-  const index = getRepositoryLocalRequestRecordCount();
-  const recordId = `repo-local-request-${String(index + 1).padStart(3, "0")}`;
-  repositoryRecordIdByRequestId.set(requestId, recordId);
-  return index;
 }
 
 function repositoryTimestamp() {

@@ -6,7 +6,6 @@ import { createLocalOperationProjectionVersion } from "../../operation-runtime/o
 import type { ProposalRepositoryGateResolution } from "../../operation-contracts/proposal-repository-request.ts";
 
 import type { RepositoryWorkspaceRecord } from "../read-model/repository-workspace-read-model.ts";
-import type { RepositoryRequestDraft } from "../work-model/request/repository-request-model.ts";
 
 type RepositoryLocalReceipt<
   TCommandName extends string,
@@ -24,13 +23,6 @@ type RepositoryLocalReceipt<
   sourceRecordVersion: string;
   summary: string;
 };
-
-export type RepositoryRequestReceipt =
-  RepositoryLocalReceipt<"repository.submit-request"> & {
-    appliedDraft: RepositoryRequestDraft;
-    kind: "request";
-    requestedRecord: RepositoryWorkspaceRecord;
-  };
 
 export type RepositoryAdmissionReceipt =
   RepositoryLocalReceipt<"repository.record-admission"> & {
@@ -53,12 +45,6 @@ export type RepositoryProposalGateResolutionReceipt =
 
 export type RepositoryRuntimeCommand =
   | {
-      draft: RepositoryRequestDraft;
-      kind: "submit-request";
-      record: RepositoryWorkspaceRecord;
-      requestId: string;
-    }
-  | {
       kind: "record-admission";
       record: RepositoryWorkspaceRecord;
     }
@@ -77,7 +63,6 @@ export type RepositoryRuntimeCommand =
     };
 
 export type RepositoryRuntimeRun = {
-  record?: RepositoryWorkspaceRecord;
   submittedAt: string;
   summary: string;
 };
@@ -85,11 +70,9 @@ export type RepositoryRuntimeRun = {
 export type RepositoryRuntimeReceipt =
   | RepositoryAdmissionReceipt
   | RepositoryProposalGateResolutionReceipt
-  | RepositoryRequestReceipt
   | RepositoryRetirementRequestReceipt;
 
 export type RepositoryRuntimeProjectionState = {
-  localRequestRecords: RepositoryWorkspaceRecord[];
   receiptsByRecord: Record<string, RepositoryRuntimeReceipt[]>;
 };
 

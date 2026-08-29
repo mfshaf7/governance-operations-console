@@ -9,6 +9,7 @@ import {
 import type {
   RepositoryCustodyLinkIntent,
   RepositoryCustodyWorkflowResult,
+  RepositoryProvisionIntent,
 } from "./repository-custody-live-types.ts";
 
 export class RepositoryCustodyClientError extends Error {
@@ -32,6 +33,12 @@ export function useRepositoryCustodyLiveRuntime() {
   const [pendingRepositoryId, setPendingRepositoryId] = useState<string | null>(
     null,
   );
+  const [provisioningErrorsByRequestId, setProvisioningErrorsByRequestId] =
+    useState<Readonly<Record<string, RepositoryCustodyClientError>>>({});
+  const [provisioningResultsByRequestId, setProvisioningResultsByRequestId] =
+    useState<Readonly<Record<string, RepositoryCustodyWorkflowResult>>>({});
+  const [pendingProvisioningRequestId, setPendingProvisioningRequestId] =
+    useState<string | null>(null);
 
   const link = useCallback(async (intent: RepositoryCustodyLinkIntent) => {
     setPendingRepositoryId(intent.repositoryId);
@@ -102,11 +109,89 @@ export function useRepositoryCustodyLiveRuntime() {
     [],
   );
 
+  const provision = useCallback(async (intent: RepositoryProvisionIntent) => {
+    setPendingProvisioningRequestId(intent.requestId);
+    setProvisioningErrorsByRequestId((current) =>
+      withoutKey(current, intent.requestId),
+    );
+    try {
+      const response = await fetch("/api/repositories/provisioning/requests", {
+        body: JSON.stringify(intent),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const body: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw clientError(body);
+      const result = assertRepositoryCustodyWorkflowResult(body);
+      if (result.request.action !== "provision-new") {
+        throw new RepositoryCustodyClientError(
+          "Repository provisioning returned the wrong workflow action.",
+          "repository_provisioning_action_mismatch",
+          false,
+        );
+      }
+      setProvisioningResultsByRequestId((current) => ({
+        ...current,
+        [intent.requestId]: result,
+      }));
+      return result;
+    } catch (error) {
+      const failure = normalizeClientError(error);
+      setProvisioningErrorsByRequestId((current) => ({
+        ...current,
+        [intent.requestId]: failure,
+      }));
+      throw failure;
+    } finally {
+      setPendingProvisioningRequestId(null);
+    }
+  }, []);
+
+  const readProvisioning = useCallback(async (requestId: string) => {
+    setPendingProvisioningRequestId(requestId);
+    setProvisioningErrorsByRequestId((current) => withoutKey(current, requestId));
+    try {
+      const response = await fetch(
+        `/api/repositories/provisioning/requests/${encodeURIComponent(requestId)}`,
+        { cache: "no-store" },
+      );
+      const body: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw clientError(body);
+      const result = assertRepositoryCustodyWorkflowResult(body);
+      if (result.request.action !== "provision-new") {
+        throw new RepositoryCustodyClientError(
+          "Repository provisioning projection returned the wrong workflow action.",
+          "repository_provisioning_action_mismatch",
+          false,
+        );
+      }
+      setProvisioningResultsByRequestId((current) => ({
+        ...current,
+        [requestId]: result,
+      }));
+      return result;
+    } catch (error) {
+      const failure = normalizeClientError(error);
+      setProvisioningErrorsByRequestId((current) => ({
+        ...current,
+        [requestId]: failure,
+      }));
+      throw failure;
+    } finally {
+      setPendingProvisioningRequestId(null);
+    }
+  }, []);
+
   return {
     errorsByRepositoryId,
     link,
     pendingRepositoryId,
+    pendingProvisioningRequestId,
+    provision,
+    provisioningErrorsByRequestId,
+    provisioningResultsByRequestId,
     read,
+    readProvisioning,
     resultsByRepositoryId,
   };
 }

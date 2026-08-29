@@ -36,7 +36,7 @@ export function repositoryCustodyResultMetadata(
         ? `${result.provider_readback.canonical_owner}/${result.provider_readback.canonical_name}`
         : "Not returned",
     },
-    { label: "Receipt", value: result.receipt.receipt_id },
+    { label: "Receipt", value: result.receipt?.receipt_id ?? "Pending" },
   ];
 }
 
@@ -51,6 +51,15 @@ export function repositoryCustodyResultProjection(
       statusLabel: result.replayed ? "Replayed" : "Linked",
       title: "Repository custody linked",
       tone: "ok" as const,
+    };
+  }
+  if (result?.status === "applying") {
+    return {
+      description:
+        "OOS retained the provider-operation checkpoint. Read the same request again before changing it.",
+      statusLabel: "Applying",
+      title: "Provider operation running",
+      tone: "warn" as const,
     };
   }
   if (result) {
@@ -115,7 +124,7 @@ export function repositoryCustodyChecks(
       tone:
         result?.status === "succeeded"
           ? ("ok" as const)
-          : result?.retryable
+          : result?.retryable || result?.status === "applying"
             ? ("warn" as const)
             : result
             ? ("danger" as const)

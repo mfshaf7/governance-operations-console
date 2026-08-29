@@ -6,18 +6,16 @@ import { repositoryRecordSourceVersion } from "../../src/domain-workspaces/repos
 
 test("Repository admission review evidence does not claim canonical admission", () => {
   const source = repositoryRecord("repo-1", "ready");
-  const local = { ...source, name: "Local request" };
   const records = projectRepositoryEffectiveRecords({
     proposalRequestRecords: [],
     runtimeProjection: {
-      localRequestRecords: [local],
       receiptsByRecord: {
         "repo-1": [{
           kind: "admission",
           receiptId: "admission-1",
           recordedAt: "2026-07-11",
           recordId: "repo-1",
-          sourceRecordVersion: repositoryRecordSourceVersion(local),
+          sourceRecordVersion: repositoryRecordSourceVersion(source),
         }],
       },
     },
@@ -25,7 +23,7 @@ test("Repository admission review evidence does not claim canonical admission", 
   });
 
   assert.equal(records.length, 1);
-  assert.equal(records[0].name, "Local request");
+  assert.equal(records[0].name, "Source record");
   assert.equal(records[0].admissionState, "ready");
   assert.match(records[0].lastValidation, /local admission review receipt/);
   assert.equal(records[0].admissionPosture[0].items[0].state, "pending");
@@ -36,7 +34,6 @@ test("Repository ignores stale local review evidence", () => {
   const records = projectRepositoryEffectiveRecords({
     proposalRequestRecords: [],
     runtimeProjection: {
-      localRequestRecords: [],
       receiptsByRecord: {
         "repo-stale": [{
           kind: "admission",
@@ -65,7 +62,6 @@ test("Repository replays chained admission and retirement evidence in source ord
   const [afterAdmission] = projectRepositoryEffectiveRecords({
     proposalRequestRecords: [],
     runtimeProjection: {
-      localRequestRecords: [],
       receiptsByRecord: {
         [source.id]: [admissionReceipt],
       },
@@ -82,7 +78,6 @@ test("Repository replays chained admission and retirement evidence in source ord
   const [effective] = projectRepositoryEffectiveRecords({
     proposalRequestRecords: [],
     runtimeProjection: {
-      localRequestRecords: [],
       receiptsByRecord: {
         [source.id]: [retirementReceipt, admissionReceipt],
       },

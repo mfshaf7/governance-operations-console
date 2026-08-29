@@ -1,11 +1,14 @@
 import type {
+  RepositoryApprovedProvisioning,
   RepositoryCustodyArtifactRef,
   RepositoryCustodyDecision,
   RepositoryCustodyLiveApiError,
   RepositoryCustodyReceipt,
   RepositoryCustodyRequest,
   RepositoryCustodyWorkflowResult,
+  RepositoryProviderOperation,
   RepositoryProviderReadback,
+  RepositoryProvisioningSettings,
 } from "./repository-custody-live-types.ts";
 
 const digestPattern = /^sha256:[a-f0-9]{64}$/;
@@ -22,10 +25,14 @@ export function assertRepositoryCustodyWorkflowResult(
   string(result.execution_id, "execution identity");
   boolean(result.replayed, "replay state");
   boolean(result.retryable, "retry state");
-  oneOf(result.status, ["denied", "failed", "succeeded"], "workflow status");
+  oneOf(
+    result.status,
+    ["applying", "denied", "failed", "succeeded"],
+    "workflow status",
+  );
   oneOf(
     result.next_action,
-    ["complete", "request-correction", "retry-provider"],
+    ["await-provider", "complete", "request-correction", "retry-provider"],
     "next action",
   );
 
@@ -37,6 +44,7 @@ export function assertRepositoryCustodyWorkflowResult(
     decision.integrity.content_digest,
     "decision reference digest",
   );
+  const operation = assertProviderOperation(result.provider_operation, request);
   const readback =
     result.provider_readback === null
       ? null
@@ -56,29 +64,52 @@ export function assertRepositoryCustodyWorkflowResult(
     exact(readbackRef, null, "provider readback reference");
   }
 
-  const receipt = assertReceipt(result.receipt, {
-    decisionRef,
-    readback,
-    readbackRef,
-    request,
-    status: result.status,
-  });
-  const receiptRef = artifactRef(result.receipt_ref, "receipt reference");
-  exact(
-    receiptRef.digest,
-    receipt.integrity.content_digest,
-    "receipt reference digest",
-  );
-
-  if (result.execution_id !== request.workflow.execution_id) {
-    invalid("Result execution identity does not match its request.");
+  const receipt =
+    result.receipt === null
+      ? null
+      : assertReceipt(result.receipt, {
+          decisionRef,
+          readback,
+          readbackRef,
+          request,
+          status: result.status,
+        });
+  const receiptRef = nullableArtifactRef(result.receipt_ref, "receipt reference");
+  if (receipt) {
+    required(receiptRef, "receipt reference");
+    exact(
+      receiptRef.digest,
+      receipt.integrity.content_digest,
+      "receipt reference digest",
+    );
+  } else {
+    exact(receiptRef, null, "receipt reference");
   }
-  if (result.status === "succeeded") {
+
+  exact(
+    result.execution_id,
+    request.workflow.execution_id,
+    "result execution identity",
+  );
+  if (result.status === "applying") {
+    exact(result.retryable, false, "applying retry state");
+    exact(result.failure, null, "applying failure state");
+    exact(result.next_action, "await-provider", "applying next action");
+    exact(receipt, null, "applying receipt");
+  } else if (result.status === "succeeded") {
     exact(result.retryable, false, "successful retry state");
     exact(result.failure, null, "successful failure state");
     exact(result.next_action, "complete", "successful next action");
     required(readback, "successful provider readback");
+    required(receipt, "successful receipt");
+    exact(operation.state, "verified", "successful provider operation state");
+    exact(
+      operation.provider_repository_id,
+      readback.repository_identity.provider_repository_id,
+      "successful provider operation identity",
+    );
   } else {
+    required(receipt, "terminal receipt");
     const failure = record(result.failure, "Repository custody failure");
     string(failure.code, "failure code");
     string(failure.message, "failure message");
@@ -103,7 +134,11 @@ export function assertRepositoryCustodyRequest(
     "repository_custody_request",
     "request artifact type",
   );
-  exact(request.action, "link-existing", "repository custody action");
+  oneOf(
+    request.action,
+    ["link-existing", "provision-new"],
+    "repository custody action",
+  );
   pattern(request.request_id, requestIdPattern, "request identity");
   dateTime(request.requested_at, "request timestamp");
   digest(request.request_digest, "request digest");
@@ -120,11 +155,20 @@ export function assertRepositoryCustodyRequest(
   exact(target.provider_host, "github.com", "repository provider host");
   string(target.owner, "repository owner");
   string(target.name, "repository name");
-  pattern(
-    target.provider_repository_id,
-    githubRepositoryIdPattern,
-    "provider repository identity",
-  );
+  if (request.action === "provision-new") {
+    exact(target.owner_scope, "organization", "repository owner scope");
+    exact(target.provider_repository_id, null, "new provider repository identity");
+    assertProvisioningSettings(request.provisioning, "provisioning settings");
+  } else {
+    pattern(
+      target.provider_repository_id,
+      githubRepositoryIdPattern,
+      "provider repository identity",
+    );
+    if (request.provisioning !== undefined) {
+      exact(request.provisioning, null, "link provisioning settings");
+    }
+  }
 
   const custody = record(
     request.requested_custody,
@@ -182,6 +226,7 @@ function assertDecision(
     "repository_custody_decision",
     "decision artifact type",
   );
+  exact(decision.action, request.action, "decision action");
   string(decision.decision_id, "decision identity");
   dateTime(decision.evaluated_at, "decision timestamp");
   string(decision.policy_version, "policy version");
@@ -192,10 +237,19 @@ function assertDecision(
   );
   oneOf(
     decision.next_action,
-    ["apply-custody", "read-provider", "request-correction", "stop"],
+    [
+      "apply-custody",
+      "create-provider",
+      "read-provider",
+      "request-correction",
+      "stop",
+    ],
     "decision next action",
   );
-  const requestRef = artifactRef(decision.request_ref, "decision request reference");
+  const requestRef = artifactRef(
+    decision.request_ref,
+    "decision request reference",
+  );
   exact(requestRef.digest, request.request_digest, "decision request digest");
   integrity(decision.integrity, "decision integrity");
   array(decision.findings, "decision findings").forEach((candidate) => {
@@ -211,17 +265,83 @@ function assertDecision(
   array(decision.obligations, "decision obligations").forEach((candidate) =>
     string(candidate, "decision obligation"),
   );
-  if (decision.outcome === "allowed") {
+
+  if (decision.outcome === "allowed" && request.action === "link-existing") {
     exact(decision.next_action, "read-provider", "allowed decision next action");
-    const identity = record(decision.resolved_identity, "Resolved repository identity");
+    exact(decision.approved_provisioning, null, "link provisioning approval");
+    const identity = record(
+      decision.resolved_identity,
+      "Resolved repository identity",
+    );
     exact(identity.provider, "github", "resolved provider");
     exact(
       identity.provider_repository_id,
       request.target.provider_repository_id,
       "resolved provider repository identity",
     );
+  } else if (
+    decision.outcome === "allowed" &&
+    request.action === "provision-new"
+  ) {
+    exact(decision.next_action, "create-provider", "provision decision action");
+    exact(decision.resolved_identity, null, "new repository identity");
+    const approved = assertApprovedProvisioning(decision.approved_provisioning);
+    const expected: RepositoryApprovedProvisioning = {
+      name: request.target.name,
+      owner: request.target.owner,
+      owner_scope: "organization",
+      provider: "github",
+      provider_host: "github.com",
+      settings: request.provisioning,
+    };
+    canonicalEqual(approved, expected, "approved provisioning");
+  } else if (decision.outcome !== "allowed") {
+    exact(decision.approved_provisioning, null, "denied provisioning approval");
+    if (decision.outcome === "denied") {
+      exact(decision.next_action, "stop", "denied next action");
+    }
   }
   return value as RepositoryCustodyDecision;
+}
+
+function assertProviderOperation(
+  value: unknown,
+  request: RepositoryCustodyRequest,
+): RepositoryProviderOperation {
+  const operation = record(value, "Repository provider operation");
+  exact(
+    operation.command,
+    request.action === "provision-new" ? "create-provider" : "read-provider",
+    "provider operation command",
+  );
+  oneOf(
+    operation.state,
+    [
+      "not-started",
+      "command-issued",
+      "provider-acknowledged",
+      "recovery-required",
+      "verified",
+    ],
+    "provider operation state",
+  );
+  integer(operation.attempt_count, "provider attempt count");
+  if (operation.attempt_count < 0) invalid("Provider attempt count is invalid.");
+  if (operation.completion_path !== null) {
+    oneOf(
+      operation.completion_path,
+      ["created", "read-existing", "recovered"],
+      "provider completion path",
+    );
+  }
+  if (operation.provider_repository_id !== null) {
+    pattern(
+      operation.provider_repository_id,
+      githubRepositoryIdPattern,
+      "provider operation repository identity",
+    );
+  }
+  return value as RepositoryProviderOperation;
 }
 
 function assertProviderReadback(
@@ -235,6 +355,7 @@ function assertProviderReadback(
     "repository_provider_readback",
     "readback artifact type",
   );
+  exact(readback.action, request.action, "readback action");
   string(readback.readback_id, "readback identity");
   dateTime(readback.observed_at, "readback timestamp");
   string(readback.canonical_owner, "canonical owner");
@@ -248,24 +369,70 @@ function assertProviderReadback(
     ["active", "archived", "unavailable"],
     "provider lifecycle",
   );
-  const requestRef = artifactRef(readback.request_ref, "readback request reference");
+  const requestRef = artifactRef(
+    readback.request_ref,
+    "readback request reference",
+  );
   exact(requestRef.digest, request.request_digest, "readback request digest");
-  const identity = record(readback.repository_identity, "Readback repository identity");
+  const identity = record(
+    readback.repository_identity,
+    "Readback repository identity",
+  );
   exact(identity.provider, "github", "readback provider");
-  exact(
+  pattern(
     identity.provider_repository_id,
-    request.target.provider_repository_id,
+    githubRepositoryIdPattern,
     "readback provider repository identity",
   );
   const binding = artifactRef(
     readback.credential_binding_ref,
     "readback credential binding reference",
   );
-  exact(
-    binding.digest,
-    request.authority.credential_binding_ref.digest,
-    "readback credential binding digest",
+  canonicalEqual(
+    binding,
+    request.authority.credential_binding_ref,
+    "readback credential binding",
   );
+
+  if (request.action === "link-existing") {
+    exact(
+      identity.provider_repository_id,
+      request.target.provider_repository_id,
+      "readback provider repository identity",
+    );
+    exact(readback.applied_provisioning, null, "link applied provisioning");
+  } else {
+    caseInsensitiveExact(
+      readback.canonical_owner,
+      request.target.owner,
+      "provisioned repository owner",
+    );
+    caseInsensitiveExact(
+      readback.canonical_name,
+      request.target.name,
+      "provisioned repository name",
+    );
+    exact(
+      readback.visibility,
+      request.provisioning.visibility,
+      "provisioned visibility",
+    );
+    const applied = record(
+      readback.applied_provisioning,
+      "Applied provisioning",
+    );
+    exact(applied.owner_scope, "organization", "applied owner scope");
+    exact(
+      applied.initialization_state,
+      "initialized",
+      "repository initialization",
+    );
+    canonicalEqual(
+      assertProvisioningSettings(applied.settings, "applied settings"),
+      request.provisioning,
+      "applied provisioning settings",
+    );
+  }
   integrity(readback.integrity, "readback integrity");
   return value as RepositoryProviderReadback;
 }
@@ -287,21 +454,31 @@ function assertReceipt(
     "repository_custody_receipt",
     "receipt artifact type",
   );
-  exact(receipt.action, "link-existing", "receipt action");
+  exact(receipt.action, context.request.action, "receipt action");
   string(receipt.receipt_id, "receipt identity");
   dateTime(receipt.completed_at, "receipt timestamp");
   oneOf(receipt.outcome, ["denied", "failed", "succeeded"], "receipt outcome");
   exact(receipt.outcome, context.status, "receipt outcome binding");
   exact(receipt.workflow_status, context.status, "receipt workflow status");
-  const requestRef = artifactRef(receipt.request_ref, "receipt request reference");
+  const requestRef = artifactRef(
+    receipt.request_ref,
+    "receipt request reference",
+  );
   exact(requestRef.digest, context.request.request_digest, "receipt request digest");
-  const decisionRef = artifactRef(receipt.decision_ref, "receipt decision reference");
-  exact(decisionRef.digest, context.decisionRef.digest, "receipt decision digest");
+  const decisionRef = artifactRef(
+    receipt.decision_ref,
+    "receipt decision reference",
+  );
+  canonicalEqual(decisionRef, context.decisionRef, "receipt decision reference");
   const readbackRef = nullableArtifactRef(
     receipt.provider_readback_ref,
     "receipt provider readback reference",
   );
-  exact(readbackRef?.digest ?? null, context.readbackRef?.digest ?? null, "receipt readback digest");
+  canonicalEqual(
+    readbackRef,
+    context.readbackRef,
+    "receipt readback digest reference",
+  );
   const custody = record(receipt.custody, "Receipt custody");
   exact(custody.before, "unrecorded", "custody before state");
   exact(
@@ -310,7 +487,11 @@ function assertReceipt(
     "custody owner binding",
   );
   if (context.status === "succeeded") {
-    exact(custody.after, "linked", "successful custody state");
+    exact(
+      custody.after,
+      context.request.action === "provision-new" ? "provisioned" : "linked",
+      "successful custody state",
+    );
     required(context.readback, "successful receipt provider readback");
     const identity = record(
       receipt.repository_identity,
@@ -319,7 +500,7 @@ function assertReceipt(
     exact(identity.provider, "github", "receipt repository provider");
     exact(
       identity.provider_repository_id,
-      context.request.target.provider_repository_id,
+      context.readback.repository_identity.provider_repository_id,
       "receipt provider repository identity",
     );
   } else {
@@ -349,6 +530,48 @@ function assertReceipt(
   return value as RepositoryCustodyReceipt;
 }
 
+function assertApprovedProvisioning(value: unknown) {
+  const approved = record(value, "Approved provisioning");
+  exact(approved.provider, "github", "approved provider");
+  exact(approved.provider_host, "github.com", "approved provider host");
+  exact(approved.owner_scope, "organization", "approved owner scope");
+  string(approved.owner, "approved owner");
+  string(approved.name, "approved name");
+  assertProvisioningSettings(approved.settings, "approved settings");
+  return value as RepositoryApprovedProvisioning;
+}
+
+function assertProvisioningSettings(
+  value: unknown,
+  label: string,
+): RepositoryProvisioningSettings {
+  const settings = record(value, label);
+  if (settings.description !== null) {
+    string(settings.description, `${label} description`);
+    if (settings.description.length > 350) invalid(`${label} description is invalid.`);
+  }
+  oneOf(
+    settings.visibility,
+    ["internal", "private", "public"],
+    `${label} visibility`,
+  );
+  exact(settings.initialize_with_readme, true, `${label} initialization`);
+  const features = record(settings.features, `${label} features`);
+  for (const key of ["discussions", "issues", "projects", "wiki"]) {
+    boolean(features[key], `${label} ${key}`);
+  }
+  const mergePolicy = record(settings.merge_policy, `${label} merge policy`);
+  for (const key of [
+    "allow_merge_commit",
+    "allow_rebase_merge",
+    "allow_squash_merge",
+    "delete_branch_on_merge",
+  ]) {
+    boolean(mergePolicy[key], `${label} ${key}`);
+  }
+  return value as RepositoryProvisioningSettings;
+}
+
 function artifactRef(value: unknown, label: string): RepositoryCustodyArtifactRef {
   const reference = record(value, label);
   string(reference.uri, `${label} URI`);
@@ -370,6 +593,29 @@ function integrity(value: unknown, label: string) {
   digest(candidate.content_digest, `${label} digest`);
 }
 
+function canonicalEqual(value: unknown, expected: unknown, label: string) {
+  if (canonicalStringify(value) !== canonicalStringify(expected)) {
+    invalid(`${label} is invalid.`);
+  }
+}
+
+function canonicalStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalStringify).join(",")}]`;
+  if (value && typeof value === "object") {
+    const item = value as Record<string, unknown>;
+    return `{${Object.keys(item)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalStringify(item[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function caseInsensitiveExact(value: unknown, expected: string, label: string) {
+  string(value, label);
+  if (value.toLowerCase() !== expected.toLowerCase()) invalid(`${label} is invalid.`);
+}
+
 function record(value: unknown, label: string): Record<string, unknown> {
   if (!isRecord(value)) invalid(`${label} is invalid.`);
   return value;
@@ -386,6 +632,10 @@ function string(value: unknown, label: string): asserts value is string {
 
 function boolean(value: unknown, label: string): asserts value is boolean {
   if (typeof value !== "boolean") invalid(`${label} is invalid.`);
+}
+
+function integer(value: unknown, label: string): asserts value is number {
+  if (!Number.isInteger(value)) invalid(`${label} is invalid.`);
 }
 
 function digest(value: unknown, label: string): asserts value is string {
