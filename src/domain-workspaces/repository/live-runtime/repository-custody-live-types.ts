@@ -9,6 +9,26 @@ export type RepositoryCustodyKind =
   | "incubation-repo"
   | "external-repo";
 
+export type RepositoryVisibility = "internal" | "private" | "public";
+
+export type RepositoryProvisioningSettings = Readonly<{
+  description: string | null;
+  features: Readonly<{
+    discussions: boolean;
+    issues: boolean;
+    projects: boolean;
+    wiki: boolean;
+  }>;
+  initialize_with_readme: true;
+  merge_policy: Readonly<{
+    allow_merge_commit: boolean;
+    allow_rebase_merge: boolean;
+    allow_squash_merge: boolean;
+    delete_branch_on_merge: boolean;
+  }>;
+  visibility: RepositoryVisibility;
+}>;
+
 export type RepositoryCustodyLinkIntent = Readonly<{
   approvalNote: string;
   custodyKind: RepositoryCustodyKind;
@@ -22,8 +42,20 @@ export type RepositoryCustodyLinkIntent = Readonly<{
   workspaceOwnerRef: string;
 }>;
 
-export type RepositoryCustodyRequest = Readonly<{
-  action: "link-existing";
+export type RepositoryProvisionIntent = Readonly<{
+  approvalNote: string;
+  custodyKind: RepositoryCustodyKind;
+  repositoryDescription: string;
+  repositoryName: string;
+  repositoryOwner: string;
+  requestedAt: string;
+  requestId: string;
+  templateReviewed: true;
+  visibility: RepositoryVisibility;
+  workspaceOwnerRef: string;
+}>;
+
+type RepositoryCustodyRequestBase = Readonly<{
   artifact_type: "repository_custody_request";
   authority: Readonly<{
     approval_ref: RepositoryCustodyArtifactRef;
@@ -44,19 +76,42 @@ export type RepositoryCustodyRequest = Readonly<{
     workspace_owner_ref: string;
   }>;
   schema_version: 1;
-  target: Readonly<{
-    name: string;
-    owner: string;
-    provider: "github";
-    provider_host: string;
-    provider_repository_id: string;
-  }>;
   workflow: Readonly<{
     execution_id: string;
     workflow_id: "repository-custody";
     workflow_version: "1";
   }>;
 }>;
+
+export type RepositoryCustodyLinkRequest = RepositoryCustodyRequestBase &
+  Readonly<{
+    action: "link-existing";
+    target: Readonly<{
+      name: string;
+      owner: string;
+      provider: "github";
+      provider_host: "github.com";
+      provider_repository_id: string;
+    }>;
+  }>;
+
+export type RepositoryProvisionRequest = RepositoryCustodyRequestBase &
+  Readonly<{
+    action: "provision-new";
+    provisioning: RepositoryProvisioningSettings;
+    target: Readonly<{
+      name: string;
+      owner: string;
+      owner_scope: "organization";
+      provider: "github";
+      provider_host: "github.com";
+      provider_repository_id: null;
+    }>;
+  }>;
+
+export type RepositoryCustodyRequest =
+  | RepositoryCustodyLinkRequest
+  | RepositoryProvisionRequest;
 
 export type RepositoryCustodyFinding = Readonly<{
   code: string;
@@ -70,13 +125,29 @@ export type RepositoryCustodyIntegrity = Readonly<{
   content_digest: string;
 }>;
 
+export type RepositoryApprovedProvisioning = Readonly<{
+  name: string;
+  owner: string;
+  owner_scope: "organization";
+  provider: "github";
+  provider_host: "github.com";
+  settings: RepositoryProvisioningSettings;
+}>;
+
 export type RepositoryCustodyDecision = Readonly<{
+  action: "link-existing" | "provision-new";
+  approved_provisioning: RepositoryApprovedProvisioning | null;
   artifact_type: "repository_custody_decision";
   decision_id: string;
   evaluated_at: string;
   findings: readonly RepositoryCustodyFinding[];
   integrity: RepositoryCustodyIntegrity;
-  next_action: "apply-custody" | "read-provider" | "request-correction" | "stop";
+  next_action:
+    | "apply-custody"
+    | "create-provider"
+    | "read-provider"
+    | "request-correction"
+    | "stop";
   obligations: readonly string[];
   outcome: "allowed" | "denied" | "requires-action";
   policy_version: string;
@@ -89,6 +160,12 @@ export type RepositoryCustodyDecision = Readonly<{
 }>;
 
 export type RepositoryProviderReadback = Readonly<{
+  action: "link-existing" | "provision-new";
+  applied_provisioning: Readonly<{
+    initialization_state: "initialized";
+    owner_scope: "organization";
+    settings: RepositoryProvisioningSettings;
+  }> | null;
   artifact_type: "repository_provider_readback";
   canonical_name: string;
   canonical_owner: string;
@@ -106,15 +183,15 @@ export type RepositoryProviderReadback = Readonly<{
   }>;
   request_ref: RepositoryCustodyArtifactRef;
   schema_version: 1;
-  visibility: "internal" | "private" | "public";
+  visibility: RepositoryVisibility;
 }>;
 
 export type RepositoryCustodyReceipt = Readonly<{
-  action: "link-existing";
+  action: "link-existing" | "provision-new";
   artifact_type: "repository_custody_receipt";
   completed_at: string;
   custody: Readonly<{
-    after: "linked" | "unrecorded";
+    after: "linked" | "provisioned" | "unrecorded";
     before: "unrecorded";
     workspace_owner_ref: string;
   }>;
@@ -139,6 +216,19 @@ export type RepositoryCustodyReceipt = Readonly<{
   workflow_status: "denied" | "failed" | "succeeded";
 }>;
 
+export type RepositoryProviderOperation = Readonly<{
+  attempt_count: number;
+  command: "create-provider" | "read-provider";
+  completion_path: "created" | "read-existing" | "recovered" | null;
+  provider_repository_id: string | null;
+  state:
+    | "not-started"
+    | "command-issued"
+    | "provider-acknowledged"
+    | "recovery-required"
+    | "verified";
+}>;
+
 export type RepositoryCustodyWorkflowResult = Readonly<{
   decision: RepositoryCustodyDecision;
   decision_ref: RepositoryCustodyArtifactRef;
@@ -148,16 +238,21 @@ export type RepositoryCustodyWorkflowResult = Readonly<{
     message: string;
     retryable: boolean;
   }> | null;
-  next_action: "complete" | "request-correction" | "retry-provider";
+  next_action:
+    | "await-provider"
+    | "complete"
+    | "request-correction"
+    | "retry-provider";
+  provider_operation: RepositoryProviderOperation;
   provider_readback: RepositoryProviderReadback | null;
   provider_readback_ref: RepositoryCustodyArtifactRef | null;
-  receipt: RepositoryCustodyReceipt;
-  receipt_ref: RepositoryCustodyArtifactRef;
+  receipt: RepositoryCustodyReceipt | null;
+  receipt_ref: RepositoryCustodyArtifactRef | null;
   replayed: boolean;
   request: RepositoryCustodyRequest;
   retryable: boolean;
   schema_version: 1;
-  status: "denied" | "failed" | "succeeded";
+  status: "applying" | "denied" | "failed" | "succeeded";
   workflow_id: "repository-custody";
   workflow_version: "1";
 }>;

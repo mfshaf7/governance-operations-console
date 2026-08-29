@@ -304,6 +304,8 @@ function successfulResult(request, { replayed = false } = {}) {
   };
   return {
     decision: {
+      action: "link-existing",
+      approved_provisioning: null,
       artifact_type: "repository_custody_decision",
       decision_id: "repository-custody-decision:test-001",
       evaluated_at: "2026-08-29T10:00:01.000Z",
@@ -324,7 +326,16 @@ function successfulResult(request, { replayed = false } = {}) {
     execution_id: request.workflow.execution_id,
     failure: null,
     next_action: "complete",
+    provider_operation: {
+      attempt_count: 1,
+      command: "read-provider",
+      completion_path: "read-existing",
+      provider_repository_id: request.target.provider_repository_id,
+      state: "verified",
+    },
     provider_readback: {
+      action: "link-existing",
+      applied_provisioning: null,
       artifact_type: "repository_provider_readback",
       canonical_name: request.target.name,
       canonical_owner: request.target.owner,

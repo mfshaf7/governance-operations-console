@@ -8,12 +8,14 @@ Catalog, Execution work sessions, and in-flight Delivery change control are
 separately governed external-system adapters: the browser calls same-origin
 Console routes and the server-side adapters authenticate to OOS. These source
 changes do not themselves grant deployment or security acceptance. Repository
-existing-source custody linkage follows the same server-only OOS boundary.
+existing-source custody linkage and new-source provisioning follow the same
+server-only OOS boundary.
 
 The current security evidence is:
 
 - [Security review checklist](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/security-review-checklist.md)
 - [Refinement and Catalog dev-integration boundary review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-08-26-refinement-catalog-dev-integration-boundary.md)
+- [Repository provisioning authority review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-08-29-repository-provisioning-authority.md)
 - [Governance Operations Console source-graduation security delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-31-governance-operations-console-source-graduation.md)
 - [Governance Operations Console owner-repository admission review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-31-governance-operations-console-owner-repository-admission.md)
 - [Governance Operations Console baseline security delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-30-governance-operations-console-baseline-security-delta.md)
@@ -110,16 +112,23 @@ browser. A configured read or write failure, stale source, rejection,
 reconciliation state, partial failure, or malformed result must stay explicit
 and must never fall back to a local closeout receipt.
 
-The Repository custody exception is bounded to one `link-existing` workflow.
-The browser submits reviewed operator fields only to same-origin Console
-routes. The Console server adds caller identity, operator attribution, current
-policy reference, approval reference, and provider credential-binding
-reference before calling OOS. OOS owns WGCF evaluation, provider readback,
-idempotency, and the terminal receipt. The Console rejects missing authority,
-invalid immutable provider identity, stale or mismatched artifacts, and OOS
-failure without calling GitHub or WGCF directly and without fixture fallback.
-Provisioning, Workspace Intake, active inventory, Delivery Catalog linkage,
-and product admission remain separate authority-owned actions.
+The Repository authority exception is bounded to `link-existing` and
+`provision-new` workflows. The browser submits reviewed operator fields only to
+same-origin Console routes. The Console server adds caller identity, operator
+attribution, current policy reference, approval reference, and the
+action-specific provider credential-binding reference before calling OOS. OOS
+owns WGCF evaluation, provider interaction and readback, recovery, idempotency,
+and the terminal receipt. Provider credentials, GitHub App tokens, policy
+authority, and provider calls never enter browser code or operator fields.
+
+The Console rejects missing authority, invalid identity, stale or mismatched
+artifacts, mismatched provisioning settings, and OOS failure without calling
+GitHub or WGCF directly and without fixture fallback. Successful provisioning
+means only that the exact repository exists under the reviewed provider
+settings and is ready for Repository onboarding. Workspace Intake, active
+inventory, Delivery Catalog linkage, product admission, and completed
+onboarding remain separate authority-owned actions. Normal live activation
+remains gated by accepted Security Architecture operating evidence.
 
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The

@@ -44,27 +44,26 @@ export function RepositoryControlOverviewPanel({
             onClick={onOpenRepositoryRequestDraft}
           >
             <Plus aria-hidden="true" size={14} />
-            New Repository Request
+            Provision Repository
           </TerasActionButton>
         }
         boundary={
           <>
-            Repository request, admission, and retire actions are modeled
-            locally in this control. The current OOS route surface does not
-            expose durable repository mutation yet.
+            OOS owns provisioning, WGCF owns readiness, and GitHub provides
+            provider truth. Workspace Intake and active inventory remain
+            separate governed actions.
           </>
         }
         boundaryKicker="Mutation Boundary"
-        description="Prototype-local ingress for a repository request before real OOS/WGCF workflow wiring exists."
-        kicker="Repository Ingress"
+        description="Governed organization-repository creation with exact provider readback and a terminal receipt."
+        kicker="Repository Provisioning"
         receipt={
           requestSubmittedAt
             ? {
                 content: (
                   <>
-                    Request captured locally at {requestSubmittedAt}. It is
-                    visible in the register as a prototype-local proposed
-                    repository record.
+                    Repository provisioned at {requestSubmittedAt}. Provider
+                    identity is visible in the register for separate onboarding.
                   </>
                 ),
                 props: {
@@ -73,7 +72,7 @@ export function RepositoryControlOverviewPanel({
               }
             : null
         }
-        title="Request a repository"
+        title="Provision a repository"
         tone="info"
       />
     </TerasRecordControlOverviewGrid>

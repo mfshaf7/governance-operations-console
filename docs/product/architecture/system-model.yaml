@@ -403,11 +403,12 @@ capabilities:
     design_status: approved-target
     implementation:
       console: implemented
-      backend_support: partial
-      live_adapter: missing
-      delivery_phase: post-baseline
+      backend_support: implemented-dev-integration
+      live_adapter: implemented
+      delivery_phase: dev-integration
     post_baseline_work:
-      - Add an admitted repository request and projection API without moving inventory authority out of Workspace Governance.
+      - Complete normal runtime activation only after composed operating evidence and Security acceptance.
+      - Add the separate Workspace Intake and active-inventory handoff without moving inventory authority out of Workspace Governance.
 
   model-operations:
     label: Model Operations

@@ -1,6 +1,5 @@
 import { createLocalOperationProjectionStore } from "../../operation-runtime/local-operation-projection-store.ts";
 
-import type { RepositoryWorkspaceRecord } from "../read-model/repository-workspace-read-model.ts";
 import type {
   RepositoryRuntimeReceipt,
   RepositoryRuntimeProjectionSnapshot,
@@ -13,7 +12,6 @@ const repositoryRuntimeStore = createLocalOperationProjectionStore<
   RepositoryRuntimeProjectionSnapshot
 >({
   initialState: {
-    localRequestRecords: [],
     receiptsByRecord: {},
   },
   projectSnapshot: (state) => state,
@@ -26,29 +24,6 @@ export function subscribeRepositoryRuntimeProjection(listener: () => void) {
 
 export function getRepositoryRuntimeProjectionSnapshot() {
   return repositoryRuntimeStore.getSnapshot();
-}
-
-export function getRepositoryLocalRequestRecordCount() {
-  return repositoryRuntimeStore.getState().localRequestRecords.length;
-}
-
-export function recordRepositoryLocalRequestRecord(
-  localRecord: RepositoryWorkspaceRecord,
-) {
-  repositoryRuntimeStore.updateState((currentState) => {
-    if (
-      currentState.localRequestRecords.some(
-        (record) => record.id === localRecord.id,
-      )
-    ) {
-      return currentState;
-    }
-
-    return {
-      ...currentState,
-      localRequestRecords: [localRecord, ...currentState.localRequestRecords],
-    };
-  });
 }
 
 export function recordRepositoryRuntimeReceipt(

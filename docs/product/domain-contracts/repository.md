@@ -30,17 +30,18 @@ The repository surface owns the repository-side resolution.
 ## Source Of Truth
 
 Repository source truth belongs to the repository admission/control path and
-eventual owner repo. The console may prepare prototype-local requests and
-display registry projection, but it must not pretend page-local state created
-or admitted a repository.
+eventual owner repo. The Console may display registry and OOS result projection,
+but it must not pretend page-local state created or admitted a repository.
 
-Existing-repository custody linkage is the first bounded live Repository
-workflow. The Console submits a reviewed `link-existing` intent through a
-same-origin server route. The server constructs the canonical request with the
-configured policy and provider credential-binding references; OOS owns WGCF
-readiness, provider readback, replay, and the terminal receipt. A missing,
-rejected, stale, or malformed authority result remains unavailable and never
-falls back to local Repository state.
+Repository has two bounded live OOS actions. Existing-source linkage submits a
+reviewed `link-existing` intent with immutable provider identity. New-source
+provisioning submits a reviewed `provision-new` intent with organization,
+repository name, visibility, custody target, and the fixed baseline repository
+settings. Both use same-origin server routes. The server constructs the
+canonical request with current policy and provider credential-binding
+references; OOS owns WGCF readiness, provider interaction, replay, recovery,
+and the terminal receipt. A missing, rejected, stale, or malformed authority
+result remains unavailable and never falls back to local Repository state.
 
 Repository admission may produce the repo owner/ref needed by Delivery, Proposal,
 Prototype, or another operation. It does not directly mutate Delivery ART
@@ -55,12 +56,14 @@ catalog add/link/sync route is not yet proven live. Repository must expose that
 as a future backend integration requirement rather than claiming the repo
 admission itself updates Delivery catalog metadata.
 
-Repository provisioning and Repository-local onboarding do not classify the
-repository into Workspace Governance. After a physical repository is ready,
-Repository may prepare a generic repository entrant packet for the separate
-Workspace Intake classification workflow. An `admitted` intake decision still
-does not add the repository to active `repos.yaml`; the active-inventory
-promotion workflow owns that later governed change and receipt.
+Successful provisioning projects the provider repository as ready for
+Repository onboarding. Provisioning and Repository-local onboarding do not
+classify the repository into Workspace Governance. After a physical repository
+is ready, Repository may prepare a generic repository entrant packet for the
+separate Workspace Intake classification workflow. An `admitted` intake
+decision still does not add the repository to active `repos.yaml`; the
+active-inventory promotion workflow owns that later governed change and
+receipt.
 
 Visible Repository summary cards must be computed from the current merged
 repository records and prototype-local receipt overlays. The control surface
@@ -108,8 +111,8 @@ Implementation ownership is:
   `work-model/request/repository-request-model.ts`
 - prototype-local runtime public commands in
   `local-runtime/repository-runtime.ts`
-- prototype-local runtime command handling, model, projection store, and
-  request-record factory in role-specific `local-runtime` files
+- prototype-local admission, gate-resolution, and retirement command handling,
+  model, and projection store in role-specific `local-runtime` files
 - same-origin OOS request construction and route handling in `server`
 
 Root-level implementation files, stale root CSS, and convenience internal
@@ -181,10 +184,13 @@ Repository must not:
 - classify Workspace Intake or promote active Workspace inventory
 - show unrelated posture sections as active blockers
 - use legacy inline comparison paths after final failover
-- imply repository creation is complete from local prototype state alone
+- imply repository creation is complete without exact OOS and provider
+  readback evidence
 - call GitHub or WGCF directly from the browser or Console server
 - treat custody linkage as Workspace Intake, active inventory, Catalog linkage,
   product admission, or repository provisioning
+- treat successful provisioning as Workspace Intake, active inventory, Catalog
+  linkage, product admission, or completed onboarding
 
 ## Sources
 
@@ -192,3 +198,4 @@ Repository must not:
 - `../system-design.md`
 - `../teras-contract.md`
 - `../repository-custody-live-integration.md`
+- `../repository-provisioning-live-integration.md`

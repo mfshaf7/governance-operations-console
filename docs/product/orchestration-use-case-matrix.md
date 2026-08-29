@@ -25,9 +25,10 @@ Concrete definition contracts are indexed in
 | Proposal | Disposition, park, reject, or resume | `synchronous` | Record one authoritative proposal decision. |
 | Proposal | Handoff preparation and repository gate | `synchronous` | Packet preparation and pre-command eligibility are domain state, not a running orchestration. |
 | Proposal | Dispatch handoff and wait for target application receipt | `conditional` | Promote only when dispatch and target receipt waiting become asynchronous and require durable recovery. |
-| Repository | Request and admission review | `synchronous` | Collect and review a repository request without performing cross-system fulfillment. |
+| Repository | Request and admission review | `synchronous` | Collect and review repository intent before the operator submits an external effect. |
+| Repository | Provision provider repository | `durable-candidate` | OOS now provides create-once checkpoints, provider recovery, exact readback, and a terminal receipt; normal runtime admission remains gated by composed operating evidence and Security acceptance. |
 | Repository | Proposal-gate resolution | `synchronous` | Record one gate decision and projection. |
-| Repository | Repository onboarding fulfillment | `durable-candidate` | Future creation, registration, contract updates, checks, and reconciliation cross several non-atomic boundaries. |
+| Repository | Repository onboarding fulfillment | `durable-candidate` | Workspace classification, active inventory, contract updates, checks, and reconciliation remain separate non-atomic boundaries after provider provisioning. |
 | Repository | Retirement request | `synchronous` | Record the requested retirement intent. |
 | Repository | Repository retirement fulfillment | `durable-candidate` | Future custody, registry, access, archive, and reconciliation work needs recoverable execution. |
 | Delivery Intake | Consume accepted source | `conditional` | Keep synchronous while creation and backlinking are reliably bounded; reevaluate if partial recovery becomes operationally real. |

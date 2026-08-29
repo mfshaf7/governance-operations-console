@@ -26,7 +26,6 @@ export function projectRepositoryEffectiveRecordProjections({
 }: RepositoryEffectiveProjectionInput): RepositoryEffectiveRecordProjection[] {
   const records = uniqueRepositoryRecords([
     ...proposalRequestRecords,
-    ...runtimeProjection.localRequestRecords,
     ...sourceRecords,
   ]);
 

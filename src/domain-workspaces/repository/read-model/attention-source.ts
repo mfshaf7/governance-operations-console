@@ -69,16 +69,11 @@ function projectRepositoryAttentionSnapshot(
     sourceRecords: repositoryWorkspaceReadModel.records,
   });
   const projectedAt = latestRepositoryTimestamp(runtime);
-  const localRecordIds = new Set(
-    runtime.localRequestRecords.map((record) => record.id),
-  );
 
   return {
     candidates: records.flatMap((record) => {
       const candidate = repositoryAttentionCandidate({
-        local:
-          localRecordIds.has(record.id) ||
-          Boolean(runtime.receiptsByRecord[record.id]?.length),
+        local: Boolean(runtime.receiptsByRecord[record.id]?.length),
         projectedAt,
         receiptRefs:
           runtime.receiptsByRecord[record.id]?.map(
