@@ -34,6 +34,14 @@ eventual owner repo. The console may prepare prototype-local requests and
 display registry projection, but it must not pretend page-local state created
 or admitted a repository.
 
+Existing-repository custody linkage is the first bounded live Repository
+workflow. The Console submits a reviewed `link-existing` intent through a
+same-origin server route. The server constructs the canonical request with the
+configured policy and provider credential-binding references; OOS owns WGCF
+readiness, provider readback, replay, and the terminal receipt. A missing,
+rejected, stale, or malformed authority result remains unavailable and never
+falls back to local Repository state.
+
 Repository admission may produce the repo owner/ref needed by Delivery, Proposal,
 Prototype, or another operation. It does not directly mutate Delivery ART
 metadata. When Delivery needs the admitted repository as an `owner_repo` value,
@@ -85,6 +93,7 @@ Repository uses the Operation Workbench `compact-control` profile.
 Implementation ownership is:
 
 - canonical repository record and lifecycle types in `domain`
+- live result validation and browser state in `live-runtime`
 - public boundary and entry shell in `presentation/workspace`
 - control surface, overview, register, and surface view model in
   `presentation/surface`
@@ -101,6 +110,7 @@ Implementation ownership is:
   `local-runtime/repository-runtime.ts`
 - prototype-local runtime command handling, model, projection store, and
   request-record factory in role-specific `local-runtime` files
+- same-origin OOS request construction and route handling in `server`
 
 Root-level implementation files, stale root CSS, and convenience internal
 barrels are not part of the Repository source model.
@@ -172,9 +182,13 @@ Repository must not:
 - show unrelated posture sections as active blockers
 - use legacy inline comparison paths after final failover
 - imply repository creation is complete from local prototype state alone
+- call GitHub or WGCF directly from the browser or Console server
+- treat custody linkage as Workspace Intake, active inventory, Catalog linkage,
+  product admission, or repository provisioning
 
 ## Sources
 
 - `../operation-workbench-contract.md`
 - `../system-design.md`
 - `../teras-contract.md`
+- `../repository-custody-live-integration.md`

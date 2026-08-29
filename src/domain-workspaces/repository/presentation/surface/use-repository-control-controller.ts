@@ -35,10 +35,14 @@ import {
 } from "../shared/repository-display-model.ts";
 import type { RepositoryGateResolutionDraft } from "../dialogs/gate-resolution/repository-gate-resolution-view-model.ts";
 import {
+  repositoryCanLinkCustody,
   repositoryCanOpenRepositoryReview,
   repositoryCanResolveProposalGate,
   repositorySummaryFromRecords,
 } from "../shared/repository-control-projection.ts";
+import { useRepositoryCustodyLiveRuntime } from "../../live-runtime/use-repository-custody-live-runtime.ts";
+import { projectRepositoryCustodyResults } from "../../live-runtime/repository-custody-live-projection.ts";
+import type { RepositoryCustodyLinkIntent } from "../../live-runtime/repository-custody-live-types.ts";
 import {
   repositoryRequestDraftComplete,
   repositoryRequestDraftDirty,
@@ -57,6 +61,7 @@ export function useRepositoryControlController({
   entryIntent?: ConsoleSurfaceEntryIntent | null;
 }) {
   const runtimeCapabilities = getRepositoryRuntimeCapabilities();
+  const custodyRuntime = useRepositoryCustodyLiveRuntime();
   const proposalRequestRecords = useSyncExternalStore(
     subscribeProposalRepositoryRequestRecords,
     getProposalRepositoryRequestRecords,
@@ -77,8 +82,12 @@ export function useRepositoryControlController({
     [proposalRequestRecords, repositoryRuntimeProjection],
   );
   const records = useMemo(
-    () => recordProjections.map((projection) => projection.record),
-    [recordProjections],
+    () =>
+      projectRepositoryCustodyResults(
+        recordProjections.map((projection) => projection.record),
+        custodyRuntime.resultsByRepositoryId,
+      ),
+    [custodyRuntime.resultsByRepositoryId, recordProjections],
   );
   const recordProjectionById = useMemo(
     () =>
@@ -93,6 +102,9 @@ export function useRepositoryControlController({
   const [inspectedRepositoryId, setInspectedRepositoryId] = useState<
     string | null
   >(null);
+  const [custodyRepositoryId, setCustodyRepositoryId] = useState<string | null>(
+    null,
+  );
   const [historyRepositoryId, setHistoryRepositoryId] = useState<string | null>(
     null,
   );
@@ -174,6 +186,13 @@ export function useRepositoryControlController({
           null)
         : null,
     [inspectedRepositoryId, records],
+  );
+  const custodyRepository = useMemo(
+    () =>
+      custodyRepositoryId
+        ? (records.find((record) => record.id === custodyRepositoryId) ?? null)
+        : null,
+    [custodyRepositoryId, records],
   );
   const historyRepository = useMemo(
     () =>
@@ -307,6 +326,11 @@ export function useRepositoryControlController({
       return;
     }
 
+    if (repositoryCanLinkCustody(record)) {
+      setCustodyRepositoryId(record.id);
+      return;
+    }
+
     if (repositoryCanOpenRepositoryReview(record)) {
       setAdmissionRepositoryId(record.id);
       return;
@@ -321,6 +345,10 @@ export function useRepositoryControlController({
     }
 
     await recordRepositoryAdmissionCommand(record);
+  }
+
+  async function linkRepositoryCustody(intent: RepositoryCustodyLinkIntent) {
+    await custodyRuntime.link(intent);
   }
 
   function startRepositoryAdmissionRun(record: RepositoryWorkspaceRecord) {
@@ -384,6 +412,18 @@ export function useRepositoryControlController({
   }
 
   return {
+    custody: {
+      close: () => setCustodyRepositoryId(null),
+      error: custodyRepository
+        ? custodyRuntime.errorsByRepositoryId[custodyRepository.id]
+        : undefined,
+      onLink: linkRepositoryCustody,
+      pending: custodyRuntime.pendingRepositoryId === custodyRepository?.id,
+      repository: custodyRepository,
+      result: custodyRepository
+        ? custodyRuntime.resultsByRepositoryId[custodyRepository.id]
+        : undefined,
+    },
     admission: {
       close: () => setAdmissionRepositoryId(null),
       onOpenHistory: openRepositoryHistory,
@@ -476,6 +516,8 @@ export function useRepositoryControlController({
       repository: retirementRequestRepository,
     },
     selectedRepository,
+    selectedRepositoryCustodyResult:
+      custodyRuntime.resultsByRepositoryId[selectedRepository?.id ?? ""],
     selectedRepositoryAction: {
       open: () => {
         if (!selectedRepository) {

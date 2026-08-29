@@ -113,10 +113,16 @@ export function RepositoryControlSurface({
                   onClick={controller.selectedRepositoryAction.open}
                   emphasis="primary"
                 >
-                  {repositorySelectedActionLabel(selectedRepository)}
+                  {repositorySelectedActionLabel(
+                    selectedRepository,
+                    controller.selectedRepositoryCustodyResult,
+                  )}
                 </TerasActionButton>
               ),
-              title: repositorySelectedActionTitle(selectedRepository),
+              title: repositorySelectedActionTitle(
+                selectedRepository,
+                controller.selectedRepositoryCustodyResult,
+              ),
             }}
             description={selectedRepository.purpose}
             kicker="Repository Context"

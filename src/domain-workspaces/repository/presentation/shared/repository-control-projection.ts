@@ -1,4 +1,5 @@
 import type { RepositoryWorkspaceRecord } from "../../read-model/repository-workspace-read-model.ts";
+import type { RepositoryCustodyWorkflowResult } from "../../live-runtime/repository-custody-live-types.ts";
 
 export function repositoryCanOpenRepositoryReview(
   record: RepositoryWorkspaceRecord,
@@ -15,11 +16,25 @@ export function repositoryCanResolveProposalGate(
   return record.proposalGate?.status === "pending";
 }
 
+export function repositoryCanLinkCustody(record: RepositoryWorkspaceRecord) {
+  return Boolean(
+    record.custody?.state === "unrecorded" &&
+      record.providerIdentity?.repositoryId,
+  );
+}
+
 export function repositorySelectedActionLabel(
   record: RepositoryWorkspaceRecord,
+  custodyResult?: RepositoryCustodyWorkflowResult,
 ) {
   if (repositoryCanResolveProposalGate(record)) {
     return "Resolve Repository Gate";
+  }
+
+  if (repositoryCanLinkCustody(record)) {
+    return custodyResult?.status === "succeeded"
+      ? "Review Custody"
+      : "Link Existing Repository";
   }
 
   if (repositoryIsAdmissionReady(record)) {
@@ -35,9 +50,16 @@ export function repositorySelectedActionLabel(
 
 export function repositorySelectedActionTitle(
   record: RepositoryWorkspaceRecord,
+  custodyResult?: RepositoryCustodyWorkflowResult,
 ) {
   if (repositoryCanResolveProposalGate(record)) {
     return "Blocked";
+  }
+
+  if (repositoryCanLinkCustody(record)) {
+    return custodyResult?.status === "succeeded"
+      ? "Custody Linked"
+      : "Custody Required";
   }
 
   if (repositoryIsAdmissionReady(record)) {

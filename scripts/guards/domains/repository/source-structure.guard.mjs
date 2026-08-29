@@ -14,15 +14,21 @@ export const guard = {
     assertDomainOwnershipRoot(failures, "repository", {
       allowedLayers: [
         "domain",
+        "live-runtime",
         "local-runtime",
         "presentation",
         "read-model",
+        "server",
         "work-model",
       ],
     });
 
     for (const path of [
       `${root}/domain/repository-types.ts`,
+      `${root}/live-runtime/repository-custody-live-contract.ts`,
+      `${root}/live-runtime/repository-custody-live-projection.ts`,
+      `${root}/live-runtime/repository-custody-live-types.ts`,
+      `${root}/live-runtime/use-repository-custody-live-runtime.ts`,
       `${root}/presentation/workspace/index.ts`,
       `${root}/presentation/workspace/workspace.tsx`,
       `${root}/presentation/workspace/workspace-contract.ts`,
@@ -40,6 +46,8 @@ export const guard = {
       `${root}/local-runtime/repository-runtime.ts`,
       `${root}/local-runtime/repository-effective-projection.ts`,
       `${root}/local-runtime/ingress/repository-ingress-runtime.ts`,
+      `${root}/server/repository-custody-api-routes.ts`,
+      `${root}/server/repository-custody-oos-client.ts`,
     ]) {
       assertAppFile(failures, path);
     }

@@ -90,6 +90,9 @@ current and future product changes.
   - OOS-backed Delivery readiness, complete evidence and impact review,
     terminal closeout command, durable outcome history, receipt, replay, and
     reconciliation behavior.
+- `repository-custody-live-integration.md`
+  - OOS-backed existing-repository custody linkage, exact provider identity,
+    WGCF decision evidence, provider readback, replay, and terminal receipt.
 
 Retired planning and audit records have been removed from the active record
 set. If an implementation question is not answered by the files above, stop and
