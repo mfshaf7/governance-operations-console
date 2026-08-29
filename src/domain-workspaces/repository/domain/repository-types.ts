@@ -46,6 +46,7 @@ export type RepositoryWorkspaceRecord = {
   admissionState: RepositoryAdmissionState;
   blockers: RepositoryWorkspaceRecordBlocker[];
   boundary: string;
+  custody?: RepositoryWorkspaceCustody;
   githubUrl: string;
   id: string;
   lastValidation: string;
@@ -55,12 +56,31 @@ export type RepositoryWorkspaceRecord = {
   owner: string;
   proposalGate?: RepositoryWorkspaceProposalGate;
   purpose: string;
+  providerIdentity?: RepositoryWorkspaceProviderIdentity;
   repoClass: string;
   role: string;
   routeSource: string;
   runtimeLane: RepositoryWorkspaceRuntimeLane;
   securityBinding: RepositoryWorkspaceSecurityBinding;
   tone: RepositoryWorkspaceRecordTone;
+};
+
+export type RepositoryWorkspaceCustody = {
+  kind:
+    | "dedicated-owner-repo"
+    | "external-repo"
+    | "incubation-repo"
+    | "shared-owner-repo";
+  state: "archived" | "linked" | "observed" | "retired" | "unrecorded";
+  workspaceOwnerRef: string;
+};
+
+export type RepositoryWorkspaceProviderIdentity = {
+  host: "github.com";
+  name: string;
+  owner: string;
+  provider: "github";
+  repositoryId: string;
 };
 
 export type RepositoryWorkspaceProposalGate = {

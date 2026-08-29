@@ -7,7 +7,8 @@ Prototype-to-Delivery application, and Delivery Work Design, Refinement,
 Catalog, Execution work sessions, and in-flight Delivery change control are
 separately governed external-system adapters: the browser calls same-origin
 Console routes and the server-side adapters authenticate to OOS. These source
-changes do not themselves grant deployment or security acceptance.
+changes do not themselves grant deployment or security acceptance. Repository
+existing-source custody linkage follows the same server-only OOS boundary.
 
 The current security evidence is:
 
@@ -108,6 +109,17 @@ receipts, partial-failure disposition, and exact next action remain outside the
 browser. A configured read or write failure, stale source, rejection,
 reconciliation state, partial failure, or malformed result must stay explicit
 and must never fall back to a local closeout receipt.
+
+The Repository custody exception is bounded to one `link-existing` workflow.
+The browser submits reviewed operator fields only to same-origin Console
+routes. The Console server adds caller identity, operator attribution, current
+policy reference, approval reference, and provider credential-binding
+reference before calling OOS. OOS owns WGCF evaluation, provider readback,
+idempotency, and the terminal receipt. The Console rejects missing authority,
+invalid immutable provider identity, stale or mismatched artifacts, and OOS
+failure without calling GitHub or WGCF directly and without fixture fallback.
+Provisioning, Workspace Intake, active inventory, Delivery Catalog linkage,
+and product admission remain separate authority-owned actions.
 
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The

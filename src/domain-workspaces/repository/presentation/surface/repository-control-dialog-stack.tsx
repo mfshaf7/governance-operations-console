@@ -2,6 +2,7 @@ import { TerasDraftCloseGuardDialog } from "@/teras";
 
 import { RepositoryAdmissionDialog } from "../dialogs/admission/repository-admission-dialog.tsx";
 import { RepositoryAdmissionRunDialog } from "../dialogs/admission/repository-admission-run-dialog.tsx";
+import { RepositoryCustodyDialog } from "../dialogs/custody/repository-custody-dialog.tsx";
 import { RepositoryDetailDialog } from "../dialogs/details/repository-detail-dialog.tsx";
 import { RepositoryGateResolutionDialog } from "../dialogs/gate-resolution/repository-gate-resolution-dialog.tsx";
 import { RepositoryHistoryDialog } from "../dialogs/history/repository-history-dialog.tsx";
@@ -57,6 +58,15 @@ export function RepositoryControlDialogStack({
         onStart={controller.admission.onStart}
         receipt={controller.admission.receipt}
         repository={controller.admission.repository}
+      />
+      <RepositoryCustodyDialog
+        error={controller.custody.error}
+        key={controller.custody.repository?.id ?? "repository-custody"}
+        onClose={controller.custody.close}
+        onLink={controller.custody.onLink}
+        pending={controller.custody.pending}
+        repository={controller.custody.repository}
+        result={controller.custody.result}
       />
       <RepositoryHistoryDialog
         onClose={controller.history.close}

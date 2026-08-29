@@ -6,6 +6,54 @@ import {
 } from "../repository-fixture-builders.ts";
 
 export const repositoryContractRecords: RepositoryWorkspaceRecord[] = [
+  {
+    ...contractAdmittedRepositoryRecord({
+      boundary:
+        "Durable Governance Operations Console product source and product-local validation.",
+      catalogRefs: "component-contracts, review-coverage.",
+      graphRole: "product-runtime-source",
+      lastValidation: "product check / passing",
+      mustNotOwn:
+        "Workspace contracts, workflow authority, platform release authority, or security acceptance.",
+      name: "governance-operations-console",
+      nextAction:
+        "Link the immutable GitHub repository identity to its existing workspace owner record.",
+      owner: "Governance Operations Console",
+      owns: "Durable Console source, product-local validation, operator documentation, and same-origin workflow adapters.",
+      purpose:
+        "Governed operator interface for workspace operations and evidence projection.",
+      repoClass: "product-source",
+      role: "operator-console",
+      routeSource: "workspace-governance/contracts/repos.yaml",
+      runtimeLane: runtimeLane(
+        "dev-integration-required",
+        "profile-managed",
+        "Console workflow adapters use the admitted local dev-integration composition before governed runtime promotion.",
+        "info",
+        "accepted-idea-delivery",
+      ),
+      securityBinding: securityBinding(
+        true,
+        true,
+        "review-coverage",
+        "The graduated source and bounded OOS integrations have explicit Security Architecture review coverage.",
+        "ok",
+      ),
+      validationPosture: "covered-by-owner-repo",
+    }),
+    custody: {
+      kind: "dedicated-owner-repo",
+      state: "unrecorded",
+      workspaceOwnerRef: "repo:governance-operations-console",
+    },
+    providerIdentity: {
+      host: "github.com",
+      name: "governance-operations-console",
+      owner: "mfshaf7",
+      provider: "github",
+      repositoryId: "1317781281",
+    },
+  },
   contractAdmittedRepositoryRecord({
     boundary:
       "WGCF runtime implementation for governance graph, validation planning, readiness evaluation, receipts, and ledger behavior.",

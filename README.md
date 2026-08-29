@@ -31,6 +31,9 @@ separately governed OOS integration slices:
   commands, exact next actions, receipts, and repository-custody routing
 - Delivery closeout readiness, reviewed evidence and impact, terminal command,
   durable outcome history, replay, receipts, and reconciliation projection
+- Repository existing-source custody linkage through OOS, with immutable
+  provider identity, WGCF decision evidence, provider readback, and a terminal
+  custody receipt
 
 Prototype source discovery and operational workflows without a named live
 integration contract remain:
@@ -87,6 +90,8 @@ The Delivery in-flight adaptation boundary is documented in
 [`docs/product/delivery-change-control-live-integration.md`](docs/product/delivery-change-control-live-integration.md).
 The Delivery terminal closeout boundary is documented in
 [`docs/product/delivery-closeout-live-integration.md`](docs/product/delivery-closeout-live-integration.md).
+The Repository custody linkage boundary is documented in
+[`docs/product/repository-custody-live-integration.md`](docs/product/repository-custody-live-integration.md).
 
 ## Authority Map
 

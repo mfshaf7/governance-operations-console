@@ -24,6 +24,16 @@ export const guard = {
       `${root}/local-runtime/repository-runtime-model.ts`;
     const runtime =
       `${root}/local-runtime/repository-runtime.ts`;
+    const custodyClient =
+      `${root}/server/repository-custody-oos-client.ts`;
+    const custodyContract =
+      `${root}/live-runtime/repository-custody-live-contract.ts`;
+    const custodyHook =
+      `${root}/live-runtime/use-repository-custody-live-runtime.ts`;
+    const custodyProjection =
+      `${root}/live-runtime/repository-custody-live-projection.ts`;
+    const custodyDialog =
+      `${root}/presentation/dialogs/custody/repository-custody-dialog.tsx`;
 
     for (const path of [
       `${root}/read-model/repository-workspace-read-model.ts`,
@@ -33,6 +43,11 @@ export const guard = {
       ingressRuntime,
       packetProjection,
       controller,
+      custodyClient,
+      custodyContract,
+      custodyHook,
+      custodyProjection,
+      custodyDialog,
       integration,
     ]) {
       assertAppFile(failures, path);
@@ -74,6 +89,43 @@ export const guard = {
     assertIncludes(failures, runtime, [
       "record.proposalGate.sourceVersion",
       "sourceRecordVersion",
+    ]);
+
+    assertIncludes(failures, custodyClient, [
+      '"/v1/repository-custody/requests"',
+      '"x-oos-caller-id"',
+      '"x-oos-caller-secret"',
+      "REPOSITORY_CUSTODY_POLICY_PROFILE_DIGEST",
+      "REPOSITORY_CUSTODY_CREDENTIAL_BINDING_DIGEST",
+      "assertRepositoryCustodyWorkflowResult",
+      "assertCanonicalRepositoryCustodyRequest",
+      "canonicalStringify(result.request) !== canonicalStringify(request)",
+    ]);
+    assertOmits(failures, custodyClient, [
+      "api.github.com",
+      "WGCF_REPOSITORY_CUSTODY_BASE_URL",
+    ]);
+    assertIncludes(failures, custodyContract, [
+      "assertRepositoryCustodyWorkflowResult",
+      "readback provider repository identity",
+      "receipt provider repository identity",
+      "receipt readback digest",
+    ]);
+    assertIncludes(failures, custodyHook, [
+      'fetch("/api/repositories/custody/requests"',
+      "assertRepositoryCustodyWorkflowResult",
+    ]);
+    assertOmits(failures, custodyHook, ["OOS_CALLER_SECRET", "fixtures/"]);
+    assertIncludes(failures, custodyProjection, [
+      "projectRepositoryCustodyResults",
+      'result?.status !== "succeeded"',
+      "record.providerIdentity.repositoryId",
+      'state: "linked"',
+    ]);
+    assertIncludes(failures, custodyDialog, [
+      "RepositoryCustodyDialog",
+      "Link Existing Repository",
+      "Back to Register",
     ]);
 
     assertIncludes(failures, integration, [

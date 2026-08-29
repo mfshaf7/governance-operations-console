@@ -121,5 +121,10 @@ export function repositoryContextMetadata(
 export function repositorySelectedPanelMetadata(
   repository: RepositoryWorkspaceRecord,
 ): TerasMetadataItem[] {
-  return repositoryContextMetadata(repository);
+  return [
+    ...repositoryContextMetadata(repository),
+    ...(repository.custody
+      ? [{ label: "Custody", value: repository.custody.state }]
+      : []),
+  ];
 }
