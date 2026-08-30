@@ -34,11 +34,13 @@ import {
 export function RepositoryDetailDialog({
   onClose,
   onOpenHistory,
+  onOpenLifecycle,
   onResolveProposalGate,
   repository,
 }: {
   onClose: () => void;
   onOpenHistory: (repository: RepositoryWorkspaceRecord) => void;
+  onOpenLifecycle: (repository: RepositoryWorkspaceRecord) => void;
   onResolveProposalGate: (repository: RepositoryWorkspaceRecord) => void;
   repository: RepositoryWorkspaceRecord | null;
 }) {
@@ -76,6 +78,14 @@ export function RepositoryDetailDialog({
               >
                 View History
               </TerasActionButton>
+              {isRetiredRecord && repository.providerIdentity ? (
+                <TerasActionButton
+                  data-repository-lifecycle-open="true"
+                  onClick={() => onOpenLifecycle(repository)}
+                >
+                  Manage Lifecycle
+                </TerasActionButton>
+              ) : null}
               {isBlockedRecord && canResolveProposalGate ? (
                 <TerasActionButton
                   data-repository-gate-resolution-open="true"
@@ -121,7 +131,7 @@ export function RepositoryDetailDialog({
               </TerasPanel>
               {isRetiredRecord ? (
                 <TerasContentTray
-                  description="This repository is already retired. The console should not offer another retirement action for it. Reopening or reversing retirement requires an explicit workspace-governance decision outside this prototype."
+                  description="This workspace record is retired. The governed lifecycle action can restore it from the receipt being reversed."
                   kicker="Retirement Handling"
                 />
               ) : null}
