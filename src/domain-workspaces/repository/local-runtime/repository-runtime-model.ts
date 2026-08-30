@@ -49,6 +49,10 @@ export type RepositoryRuntimeCommand =
       record: RepositoryWorkspaceRecord;
     }
   | {
+      kind: "record-retirement-request";
+      record: RepositoryWorkspaceRecord;
+    }
+  | {
       kind: "resolve-proposal-gate";
       notes: string;
       proposalId: string;

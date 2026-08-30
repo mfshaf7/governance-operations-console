@@ -4,15 +4,13 @@ Status: completed current-shape compact-control contract, not full-console
 baseline approval.
 
 Repository owns repository admission, onboarding, blocked admission posture,
-and operator review for governed repository lifecycle actions. OOS owns
-lifecycle execution, replay, recovery, and receipts.
+and retirement handling for source custody.
 
 ## Surface Purpose
 
 The operator uses Repository to request new repositories, inspect repository
 ownership and lifecycle, prepare onboarding, resolve repository gates, and
-review guarded custody, provider archive, workspace retirement, and reversal
-actions.
+request retirement.
 
 Repository is a focused control modal. It is not a Delivery fullscreen
 workspace and not a Proposal-style workflow ladder.
@@ -35,7 +33,7 @@ Repository source truth belongs to the repository admission/control path and
 eventual owner repo. The Console may display registry and OOS result projection,
 but it must not pretend page-local state created or admitted a repository.
 
-Repository has three bounded live OOS workflows. Existing-source linkage submits a
+Repository has two bounded live OOS actions. Existing-source linkage submits a
 reviewed `link-existing` intent with immutable provider identity. New-source
 provisioning submits a reviewed `provision-new` intent with organization,
 repository name, visibility, custody target, and the fixed baseline repository
@@ -44,17 +42,6 @@ canonical request with current policy and provider credential-binding
 references; OOS owns WGCF readiness, provider interaction, replay, recovery,
 and the terminal receipt. A missing, rejected, stale, or malformed authority
 result remains unavailable and never falls back to local Repository state.
-
-Repository lifecycle submits one of five guarded intents through the
-same-origin Console boundary: `transfer-workspace-custody`,
-`archive-provider`, `unarchive-provider`, `retire-workspace-record`, or
-`restore-workspace-record`. The browser supplies reviewed operator intent only.
-The Console server re-reads OOS lifecycle audit state, constructs authority and
-impact references, and submits the exact request. OOS owns current-state checks,
-WGCF decision use, provider credentials, mutation, readback, replay, reversal
-binding, receipts, and audit history. A first lifecycle action may initialize
-only from an exact successful OOS custody result; fixture or page-local state is
-never live authority.
 
 Repository admission may produce the repo owner/ref needed by Delivery, Proposal,
 Prototype, or another operation. It does not directly mutate Delivery ART
@@ -79,14 +66,12 @@ active-inventory promotion workflow owns that later governed change and
 receipt.
 
 Visible Repository summary cards must be computed from the current merged
-repository records and retained local setup receipt overlays. The control surface
+repository records and prototype-local receipt overlays. The control surface
 must not read fixture `summary` directly as live posture.
 `projectRepositoryEffectiveRecords` is the sole merge boundary for source
 records, Proposal request records, local Repository requests, and admission or
-gate-resolution receipt overlays. Summary, filters, register rows, selected
-context, and dialogs consume the same effective record collection. OOS
-lifecycle state remains a separate authoritative projection; it is not folded
-into fixture truth.
+retirement receipt overlays. Summary, filters, register rows, selected context,
+and dialogs consume the same effective record collection.
 
 ## Primary Surfaces
 
@@ -98,7 +83,7 @@ Repository Control uses:
 - selected-record action panel
 - details/onboarding modal
 - blocked admission inspection
-- guarded lifecycle wizard with Action, Review, and Result
+- guarded retirement request
 - posture section details
 
 The selected panel follows the compact control selected-panel pattern used by
@@ -115,8 +100,7 @@ Implementation ownership is:
 - public boundary and entry shell in `presentation/workspace`
 - control surface, overview, register, and surface view model in
   `presentation/surface`
-- focused admission, custody, details, gate-resolution, history, lifecycle, and
-  request dialogs
+- focused admission, details, gate-resolution, request, and retirement dialogs
   in `presentation/dialogs`
 - repository registry scenario truth in `read-model`
 - read-model labels in `read-model/repository-workspace-labels.ts`
@@ -127,7 +111,7 @@ Implementation ownership is:
   `work-model/request/repository-request-model.ts`
 - prototype-local runtime public commands in
   `local-runtime/repository-runtime.ts`
-- prototype-local admission and gate-resolution command handling,
+- prototype-local admission, gate-resolution, and retirement command handling,
   model, and projection store in role-specific `local-runtime` files
 - same-origin OOS request construction and route handling in `server`
 
@@ -171,27 +155,11 @@ manufacture waiting, ready, or completed log lines from current UI state.
 
 The second step uses a back action, not a close-only path.
 
-## Repository Lifecycle
+## Retirement
 
-Lifecycle actions are available only for records with immutable provider
-identity. The wizard shows all five actions and disables those incompatible
-with the current lifecycle state. Transfer requires source and target owner
-acceptance. Provider archive and unarchive require a server-held credential
-binding. Retirement and restore apply only to the workspace record and never
-delete the provider repository. Unarchive and restore bind the exact successful
-receipt they reverse.
-
-The Review step records impact disposition when a blocking finding exists,
-requires an approval note, and requires explicit confirmation of the exact
-action. The Result step displays only validated OOS decision, execution,
-receipt, and audit truth. Repository History combines OOS lifecycle audit
-entries with retained local setup receipts without converting either source
-into the other.
-
-Disconnected preview is read-only. A configured live failure, missing initial
-OOS state, stale state, malformed result, or denied action remains explicit and
-never falls back to the retired prototype-local request command. Retired
-records remain inspectable and can enter only the guarded restore action.
+Retirement is available only for onboarded records. It is a guarded operation
+and must not be presented as the primary shape for already retired records.
+Retired records inspect like onboarded records but read-only.
 
 ## Proposal Gate Resolution
 
@@ -219,9 +187,6 @@ Repository must not:
 - imply repository creation is complete without exact OOS and provider
   readback evidence
 - call GitHub or WGCF directly from the browser or Console server
-- expose provider credentials, construct provider authority in the browser, or
-  treat a fixture record as current lifecycle state
-- hard-delete a provider repository or workspace record
 - treat custody linkage as Workspace Intake, active inventory, Catalog linkage,
   product admission, or repository provisioning
 - treat successful provisioning as Workspace Intake, active inventory, Catalog
@@ -234,4 +199,3 @@ Repository must not:
 - `../teras-contract.md`
 - `../repository-custody-live-integration.md`
 - `../repository-provisioning-live-integration.md`
-- `../repository-lifecycle-live-integration.md`

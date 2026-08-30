@@ -34,18 +34,6 @@ export const guard = {
       `${root}/live-runtime/repository-custody-live-projection.ts`;
     const custodyDialog =
       `${root}/presentation/dialogs/custody/repository-custody-dialog.tsx`;
-    const lifecycleClient =
-      `${root}/server/repository-lifecycle-oos-client.ts`;
-    const lifecycleRoutes =
-      `${root}/server/repository-lifecycle-api-routes.ts`;
-    const lifecycleContract =
-      `${root}/live-runtime/repository-lifecycle-live-contract.ts`;
-    const lifecycleHook =
-      `${root}/live-runtime/use-repository-lifecycle-live-runtime.ts`;
-    const lifecycleDialog =
-      `${root}/presentation/dialogs/lifecycle/repository-lifecycle-dialog.tsx`;
-    const historyDialog =
-      `${root}/presentation/dialogs/history/repository-history-dialog.tsx`;
 
     for (const path of [
       `${root}/read-model/repository-workspace-read-model.ts`,
@@ -60,12 +48,6 @@ export const guard = {
       custodyHook,
       custodyProjection,
       custodyDialog,
-      lifecycleClient,
-      lifecycleRoutes,
-      lifecycleContract,
-      lifecycleHook,
-      lifecycleDialog,
-      historyDialog,
       integration,
     ]) {
       assertAppFile(failures, path);
@@ -75,8 +57,6 @@ export const guard = {
       "projectRepositoryEffectiveRecordProjections",
       "recordProjectionById",
       "repositorySummaryFromRecords(records)",
-      "useRepositoryLifecycleLiveRuntime",
-      "openRepositoryLifecycle",
       "runtimeProjection: repositoryRuntimeProjection",
       "sourceRecords: repositoryWorkspaceReadModel.records",
     ]);
@@ -109,9 +89,6 @@ export const guard = {
     assertIncludes(failures, runtime, [
       "record.proposalGate.sourceVersion",
       "sourceRecordVersion",
-    ]);
-    assertOmits(failures, runtime, [
-      "recordRepositoryRetirementRequestCommand",
     ]);
 
     assertIncludes(failures, custodyClient, [
@@ -150,44 +127,6 @@ export const guard = {
       "Link Existing Repository",
       "Back to Register",
     ]);
-    assertIncludes(failures, lifecycleClient, [
-      '"/v1/repository-lifecycle/requests"',
-      '"x-oos-caller-id"',
-      '"x-oos-caller-secret"',
-      "REPOSITORY_LIFECYCLE_POLICY_PROFILE_DIGEST",
-      "REPOSITORY_LIFECYCLE_PROVIDER_CREDENTIAL_BINDING_DIGEST",
-      "assertRepositoryLifecycleWorkflowResult",
-      "repository_lifecycle_source_state_missing",
-      "canonicalStringify(result.request) !== canonicalStringify(request)",
-    ]);
-    assertOmits(failures, lifecycleClient, ["api.github.com", "octokit"]);
-    assertIncludes(failures, lifecycleRoutes, [
-      "repositoryLifecycleOosConfigured",
-      "repository_lifecycle_live_mode_required",
-      "executeRepositoryLifecycleAction",
-      "readRepositoryLifecycleAudit",
-    ]);
-    assertIncludes(failures, lifecycleContract, [
-      "assertRepositoryLifecycleWorkflowResult",
-      "operation action binding",
-      "provider readback repository identity",
-      "receipt operator approval",
-      "terminal audit repository identity",
-    ]);
-    assertIncludes(failures, lifecycleHook, [
-      'fetch("/api/repositories/lifecycle/requests"',
-      "assertRepositoryLifecycleWorkflowResult",
-      "assertRepositoryLifecycleLiveSnapshot",
-    ]);
-    assertOmits(failures, lifecycleHook, ["OOS_CALLER_SECRET", "fixtures/"]);
-    assertIncludes(failures, lifecycleDialog, [
-      "RepositoryLifecycleDialog",
-      "TerasWizardModal",
-      "Apply Lifecycle Action",
-      "I confirm this exact lifecycle action",
-      "View History",
-    ]);
-    assertIncludes(failures, historyDialog, ["lifecycleAudit"]);
 
     assertIncludes(failures, integration, [
       "createLocalOperationCrossDomainPacket",

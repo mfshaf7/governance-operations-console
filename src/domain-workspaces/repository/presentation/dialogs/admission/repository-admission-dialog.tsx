@@ -34,14 +34,14 @@ import {
 export function RepositoryAdmissionDialog({
   onClose,
   onOpenHistory,
-  onOpenLifecycle,
+  onOpenRetirementRequest,
   onStart,
   receipt,
   repository,
 }: {
   onClose: () => void;
   onOpenHistory: (repository: RepositoryWorkspaceRecord) => void;
-  onOpenLifecycle: (repository: RepositoryWorkspaceRecord) => void;
+  onOpenRetirementRequest: (repository: RepositoryWorkspaceRecord) => void;
   onStart: (repository: RepositoryWorkspaceRecord) => void;
   receipt?: RepositoryAdmissionReceipt;
   repository: RepositoryWorkspaceRecord | null;
@@ -55,7 +55,7 @@ export function RepositoryAdmissionDialog({
     repository.admissionState === "ready" &&
     !receipt,
   );
-  const canManageLifecycle = Boolean(
+  const canRequestRetirement = Boolean(
     repository && repository.admissionState === "admitted",
   );
   const isAdmittedRecord = repository?.admissionState === "admitted";
@@ -97,15 +97,16 @@ export function RepositoryAdmissionDialog({
             >
               View History
             </TerasActionButton>
-            {canManageLifecycle ? (
+            {canRequestRetirement ? (
               <TerasActionButton
-                data-repository-lifecycle-open="true"
+                data-repository-retirement-request-open="true"
                 onClick={() => {
-                  onOpenLifecycle(repository);
+                  onOpenRetirementRequest(repository);
                 }}
+                tone="danger"
                 emphasis="primary"
               >
-                Manage Lifecycle
+                Request Retirement
               </TerasActionButton>
             ) : (
               <TerasActionButton

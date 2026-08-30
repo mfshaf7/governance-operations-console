@@ -6,8 +6,8 @@ import { RepositoryCustodyDialog } from "../dialogs/custody/repository-custody-d
 import { RepositoryDetailDialog } from "../dialogs/details/repository-detail-dialog.tsx";
 import { RepositoryGateResolutionDialog } from "../dialogs/gate-resolution/repository-gate-resolution-dialog.tsx";
 import { RepositoryHistoryDialog } from "../dialogs/history/repository-history-dialog.tsx";
-import { RepositoryLifecycleDialog } from "../dialogs/lifecycle/repository-lifecycle-dialog.tsx";
 import { RepositoryRequestDialog } from "../dialogs/request/repository-request-dialog.tsx";
+import { RepositoryRetirementRequestDialog } from "../dialogs/retirement/repository-retirement-request-dialog.tsx";
 import type { RepositoryControlController } from "./use-repository-control-controller.ts";
 
 export function RepositoryControlDialogStack({
@@ -42,7 +42,6 @@ export function RepositoryControlDialogStack({
       <RepositoryDetailDialog
         onClose={controller.details.close}
         onOpenHistory={controller.details.onOpenHistory}
-        onOpenLifecycle={controller.details.onOpenLifecycle}
         onResolveProposalGate={controller.details.onResolveProposalGate}
         repository={controller.details.repository}
       />
@@ -58,7 +57,7 @@ export function RepositoryControlDialogStack({
       <RepositoryAdmissionDialog
         onClose={controller.admission.close}
         onOpenHistory={controller.admission.onOpenHistory}
-        onOpenLifecycle={controller.admission.onOpenLifecycle}
+        onOpenRetirementRequest={controller.admission.onOpenRetirementRequest}
         onStart={controller.admission.onStart}
         receipt={controller.admission.receipt}
         repository={controller.admission.repository}
@@ -73,7 +72,6 @@ export function RepositoryControlDialogStack({
         result={controller.custody.result}
       />
       <RepositoryHistoryDialog
-        lifecycleAudit={controller.history.lifecycleAudit}
         onClose={controller.history.close}
         receipts={controller.history.receipts}
         repository={controller.history.repository}
@@ -85,18 +83,21 @@ export function RepositoryControlDialogStack({
         receipt={controller.admissionRun.receipt}
         repository={controller.admissionRun.repository}
       />
-      <RepositoryLifecycleDialog
-        custodyResult={controller.lifecycle.custodyResult}
-        error={controller.lifecycle.error}
-        initialAction={controller.lifecycle.initialAction}
-        key={controller.lifecycle.repository?.id ?? "repository-lifecycle"}
-        onClose={controller.lifecycle.close}
-        onExecute={controller.lifecycle.onExecute}
-        onOpenHistory={controller.lifecycle.onOpenHistory}
-        pending={controller.lifecycle.pending}
-        repository={controller.lifecycle.repository}
-        result={controller.lifecycle.result}
-        snapshot={controller.lifecycle.snapshot}
+      <RepositoryRetirementRequestDialog
+        onClose={controller.retirement.close}
+        onRequestRecord={controller.retirement.onRequestRecord}
+        receipt={controller.retirement.receipt}
+        repository={controller.retirement.repository}
+      />
+      <TerasDraftCloseGuardDialog
+        description={controller.retirement.guardDescription}
+        keepEditingLabel="Back"
+        kicker="Repository Retirement"
+        leaveLabel="Record Retirement Request"
+        onKeepEditing={controller.retirement.onKeepEditing}
+        onLeave={controller.retirement.onRecordRequest}
+        open={controller.retirement.guardOpen}
+        title="Confirm Retirement Request?"
       />
     </>
   );

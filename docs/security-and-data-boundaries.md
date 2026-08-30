@@ -16,7 +16,6 @@ The current security evidence is:
 - [Security review checklist](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/security-review-checklist.md)
 - [Refinement and Catalog dev-integration boundary review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-08-26-refinement-catalog-dev-integration-boundary.md)
 - [Repository provisioning authority review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-08-29-repository-provisioning-authority.md)
-- [Repository lifecycle authority review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-08-30-repository-lifecycle-authority.md)
 - [Governance Operations Console source-graduation security delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-31-governance-operations-console-source-graduation.md)
 - [Governance Operations Console owner-repository admission review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-31-governance-operations-console-owner-repository-admission.md)
 - [Governance Operations Console baseline security delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-07-30-governance-operations-console-baseline-security-delta.md)
@@ -113,24 +112,14 @@ browser. A configured read or write failure, stale source, rejection,
 reconciliation state, partial failure, or malformed result must stay explicit
 and must never fall back to a local closeout receipt.
 
-The Repository authority exception is bounded to `link-existing`,
-`provision-new`, and the five-action repository lifecycle workflow. The
-browser submits reviewed operator fields only to
+The Repository authority exception is bounded to `link-existing` and
+`provision-new` workflows. The browser submits reviewed operator fields only to
 same-origin Console routes. The Console server adds caller identity, operator
 attribution, current policy reference, approval reference, and the
 action-specific provider credential-binding reference before calling OOS. OOS
 owns WGCF evaluation, provider interaction and readback, recovery, idempotency,
 and the terminal receipt. Provider credentials, GitHub App tokens, policy
 authority, and provider calls never enter browser code or operator fields.
-
-For lifecycle actions, the Console server re-reads OOS audit state and may
-initialize a first action only from an exact successful OOS custody result.
-Transfer requires source and target acceptance artifacts. Provider archive and
-unarchive require the governed provider credential binding. Workspace retire
-and restore do not mutate the provider repository, and reversal actions bind
-the exact receipt being reversed. Hard delete and downstream auto-mutation are
-outside the Console contract. OOS remains the only lifecycle execution and
-audit authority; fixture records cannot initialize or complete live actions.
 
 The Console rejects missing authority, invalid identity, stale or mismatched
 artifacts, mismatched provisioning settings, and OOS failure without calling
