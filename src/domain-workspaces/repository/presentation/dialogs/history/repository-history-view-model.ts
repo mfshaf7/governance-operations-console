@@ -1,6 +1,7 @@
 import type { TerasMetadataItem, TerasTone } from "@/teras";
 
 import type { RepositoryRuntimeReceipt } from "../../../local-runtime/repository-runtime.ts";
+import type { RepositoryLifecycleAudit } from "../../../live-runtime/repository-lifecycle-live-types.ts";
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import {
   repositoryRecordStatusLabel,
@@ -18,14 +19,28 @@ export type RepositoryHistoryTimelineRow = {
 
 export function repositoryHistoryTimelineRows(
   receipts: RepositoryRuntimeReceipt[],
+  lifecycleAudit: RepositoryLifecycleAudit | null = null,
 ): RepositoryHistoryTimelineRow[] {
-  return [...receipts]
+  return [
+    ...receipts.map(repositoryReceiptTimelineRow),
+    ...(lifecycleAudit?.history.map((item) => ({
+      detail: `OOS lifecycle receipt ${item.receipt_ref.digest.slice(-12)}.`,
+      label: repositoryLifecycleHistoryLabel(item.action),
+      status: item.outcome,
+      timestamp: item.completed_at,
+      tone:
+        item.outcome === "succeeded"
+          ? ("ok" as const)
+          : item.outcome === "failed" || item.outcome === "denied"
+            ? ("danger" as const)
+            : ("muted" as const),
+    })) ?? []),
+  ]
     .sort(
       (left, right) =>
-        left.recordedAt.localeCompare(right.recordedAt) ||
-        left.receiptId.localeCompare(right.receiptId),
-    )
-    .map(repositoryReceiptTimelineRow);
+        left.timestamp.localeCompare(right.timestamp) ||
+        left.label.localeCompare(right.label),
+    );
 }
 
 export function repositoryHistoryRecordFacts(
@@ -68,6 +83,7 @@ export function repositoryHistoryControlFacts(
 
 export function repositoryHistoryReceiptFacts(
   receipts: RepositoryRuntimeReceipt[],
+  lifecycleAudit: RepositoryLifecycleAudit | null = null,
 ): TerasMetadataItem[] {
   const admissionReceipt = latestRepositoryReceipt(receipts, "admission");
   const gateReceipt = latestRepositoryReceipt(
@@ -95,22 +111,46 @@ export function repositoryHistoryReceiptFacts(
         : "No local gate receipt",
     },
     {
-      label: "Retirement Request",
-      title: retirementReceipt?.receiptId,
-      value: retirementReceipt
-        ? repositoryReceiptReference(retirementReceipt)
-        : "No local retirement receipt",
+      label: "Lifecycle",
+      title: lifecycleAudit?.latest_terminal_receipt_ref?.uri,
+      value:
+        lifecycleAudit?.latest_terminal_receipt_ref?.digest ??
+        (retirementReceipt
+          ? repositoryReceiptReference(retirementReceipt)
+          : "No OOS lifecycle receipt"),
     },
     {
       label: "Last Receipt",
       value:
-        repositoryHistoryTimelineRows(receipts).at(-1)?.timestamp ?? "none",
+        repositoryHistoryTimelineRows(receipts, lifecycleAudit).at(-1)
+          ?.timestamp ?? "none",
     },
     {
       label: "Source",
-      value: receipts.length > 0 ? "local runtime" : "source record",
+      value: lifecycleAudit
+        ? "operator-orchestration-service"
+        : receipts.length > 0
+          ? "local runtime"
+          : "source record",
     },
   ];
+}
+
+function repositoryLifecycleHistoryLabel(
+  action: RepositoryLifecycleAudit["history"][number]["action"],
+) {
+  switch (action) {
+    case "transfer-workspace-custody":
+      return "Workspace Custody Transfer";
+    case "archive-provider":
+      return "Provider Archive";
+    case "unarchive-provider":
+      return "Provider Unarchive";
+    case "retire-workspace-record":
+      return "Workspace Record Retirement";
+    case "restore-workspace-record":
+      return "Workspace Record Restore";
+  }
 }
 
 function repositoryReceiptReference(receipt: RepositoryRuntimeReceipt) {

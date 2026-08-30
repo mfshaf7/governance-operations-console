@@ -82,28 +82,6 @@ export async function recordRepositoryAdmissionCommand(
   return admissionReceipt;
 }
 
-export async function recordRepositoryRetirementRequestCommand(
-  record: RepositoryWorkspaceRecord,
-  submittedAt = repositoryTimestamp(),
-) {
-  const { receipt } = await submitRepositoryRuntimeCommand({
-    command: {
-      kind: "record-retirement-request",
-      record,
-    },
-    commandName: "repository.record-retirement-request",
-    recordId: record.id,
-    sourceRecordVersion: repositoryRecordSourceVersion(record),
-    submittedAt,
-  });
-  const retirementReceipt = repositoryReceiptOfKind(
-    receipt,
-    "retirement-request",
-  );
-
-  return retirementReceipt;
-}
-
 export async function recordRepositoryProposalGateResolutionCommand({
   notes,
   record,
