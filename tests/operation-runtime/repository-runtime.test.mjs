@@ -7,6 +7,7 @@ import {
   listRepositoryRuntimeReceipts,
   recordRepositoryAdmissionCommand,
   recordRepositoryProposalGateResolutionCommand,
+  recordRepositoryRetirementRequestCommand,
   subscribeRepositoryRuntimeProjection,
 } from "../../src/domain-workspaces/repository/local-runtime/repository-runtime.ts";
 
@@ -57,6 +58,28 @@ test("repository admission retries reuse one receipt", async () => {
     admissionReceipts[0].sourceVersions[0].version,
     /^local-projection-repository-operation-/,
   );
+});
+
+test("repository retirement retries preserve one projection snapshot", async () => {
+  const record = { id: "repository-runtime-retirement-idempotency" };
+  const first = await recordRepositoryRetirementRequestCommand(
+    record,
+    "2026-07-10T06:25:00.000Z",
+  );
+  const snapshotAfterFirst = getRepositoryRuntimeProjectionSnapshot();
+  let duplicateEmissions = 0;
+  const unsubscribe = subscribeRepositoryRuntimeProjection(() => {
+    duplicateEmissions += 1;
+  });
+  const repeated = await recordRepositoryRetirementRequestCommand(
+    record,
+    "2026-07-10T06:30:00.000Z",
+  );
+  unsubscribe();
+
+  assert.equal(repeated.receiptId, first.receiptId);
+  assert.equal(getRepositoryRuntimeProjectionSnapshot(), snapshotAfterFirst);
+  assert.equal(duplicateEmissions, 0);
 });
 
 test("repository gate resolution is an idempotent runtime receipt", async () => {

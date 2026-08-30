@@ -93,9 +93,6 @@ current and future product changes.
 - `repository-custody-live-integration.md`
   - OOS-backed existing-repository custody linkage, exact provider identity,
     WGCF decision evidence, provider readback, replay, and terminal receipt.
-- `repository-lifecycle-live-integration.md`
-  - OOS-backed guarded custody transfer, provider archive/unarchive, workspace
-    retirement/restore, replay, reversal evidence, receipts, and audit history.
 
 Retired planning and audit records have been removed from the active record
 set. If an implementation question is not answered by the files above, stop and

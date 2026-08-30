@@ -13,6 +13,7 @@ import {
   getRepositoryRuntimeCapabilities,
   recordRepositoryAdmissionCommand,
   recordRepositoryProposalGateResolutionCommand,
+  recordRepositoryRetirementRequestCommand,
   subscribeRepositoryRuntimeProjection,
 } from "../../local-runtime/repository-runtime.ts";
 import {
@@ -44,11 +45,6 @@ import {
   repositoryProvisionedRecordId,
 } from "../../live-runtime/repository-custody-live-projection.ts";
 import type { RepositoryCustodyLinkIntent } from "../../live-runtime/repository-custody-live-types.ts";
-import type {
-  RepositoryLifecycleAction,
-  RepositoryLifecycleCommandIntent,
-} from "../../live-runtime/repository-lifecycle-live-types.ts";
-import { useRepositoryLifecycleLiveRuntime } from "../../live-runtime/use-repository-lifecycle-live-runtime.ts";
 import {
   repositoryRequestDraftComplete,
   repositoryRequestDraftDirty,
@@ -69,7 +65,6 @@ export function useRepositoryControlController({
 }) {
   const runtimeCapabilities = getRepositoryRuntimeCapabilities();
   const custodyRuntime = useRepositoryCustodyLiveRuntime();
-  const lifecycleRuntime = useRepositoryLifecycleLiveRuntime();
   const proposalRequestRecords = useSyncExternalStore(
     subscribeProposalRepositoryRequestRecords,
     getProposalRepositoryRequestRecords,
@@ -152,12 +147,10 @@ export function useRepositoryControlController({
     repositoryGateResolutionRepositoryId,
     setRepositoryGateResolutionRepositoryId,
   ] = useState<string | null>(null);
-  const [lifecycleRepositoryId, setLifecycleRepositoryId] = useState<
-    string | null
-  >(null);
-  const [lifecycleInitialAction, setLifecycleInitialAction] = useState<
-    RepositoryLifecycleAction | undefined
-  >(undefined);
+  const [retirementRequestGuardOpen, setRetirementRequestGuardOpen] =
+    useState(false);
+  const [retirementRequestRepositoryId, setRetirementRequestRepositoryId] =
+    useState<string | null>(null);
   const normalizedSearch = search.trim().toLowerCase();
   const filteredRecords = useMemo(
     () =>
@@ -248,14 +241,14 @@ export function useRepositoryControlController({
         : null,
     [records, repositoryGateResolutionRepositoryId],
   );
-  const lifecycleRepository = useMemo(
+  const retirementRequestRepository = useMemo(
     () =>
-      lifecycleRepositoryId
+      retirementRequestRepositoryId
         ? (records.find(
-            (record) => record.id === lifecycleRepositoryId,
+            (record) => record.id === retirementRequestRepositoryId,
           ) ?? null)
         : null,
-    [lifecycleRepositoryId, records],
+    [records, retirementRequestRepositoryId],
   );
   const statusOptions = useMemo(
     () => repositoryStatusFilterOptions(records),
@@ -418,22 +411,10 @@ export function useRepositoryControlController({
     setAdmissionRepositoryId(record?.id ?? null);
   }
 
-  function openRepositoryLifecycle(
-    record: RepositoryWorkspaceRecord,
-    initialAction?: RepositoryLifecycleAction,
-  ) {
-    if (!record.providerIdentity) return;
+  function openRepositoryRetirementRequest(record: RepositoryWorkspaceRecord) {
     setAdmissionRepositoryId(null);
-    setInspectedRepositoryId(null);
-    setLifecycleInitialAction(initialAction);
-    setLifecycleRepositoryId(record.id);
-    void lifecycleRuntime
-      .refresh({
-        provider: record.providerIdentity.provider,
-        providerRepositoryId: record.providerIdentity.repositoryId,
-        repositoryId: record.id,
-      })
-      .catch(() => undefined);
+    setRetirementRequestRepositoryId(record.id);
+    setRetirementRequestGuardOpen(false);
   }
 
   function openRepositoryGateResolution(record: RepositoryWorkspaceRecord) {
@@ -442,19 +423,7 @@ export function useRepositoryControlController({
   }
 
   function openRepositoryHistory(record: RepositoryWorkspaceRecord) {
-    setAdmissionRepositoryId(null);
-    setInspectedRepositoryId(null);
-    setLifecycleRepositoryId(null);
     setHistoryRepositoryId(record.id);
-    if (record.providerIdentity) {
-      void lifecycleRuntime
-        .refresh({
-          provider: record.providerIdentity.provider,
-          providerRepositoryId: record.providerIdentity.repositoryId,
-          repositoryId: record.id,
-        })
-        .catch(() => undefined);
-    }
   }
 
   async function resolveRepositoryGate(
@@ -477,10 +446,17 @@ export function useRepositoryControlController({
     setRepositoryGateResolutionRepositoryId(null);
   }
 
-  async function executeRepositoryLifecycle(
-    intent: RepositoryLifecycleCommandIntent,
-  ) {
-    await lifecycleRuntime.execute(intent);
+  function requestRepositoryRetirementRecord() {
+    setRetirementRequestGuardOpen(true);
+  }
+
+  async function recordRepositoryRetirementRequest() {
+    if (!runtimeCapabilities.canSubmit || !retirementRequestRepository) {
+      return;
+    }
+
+    await recordRepositoryRetirementRequestCommand(retirementRequestRepository);
+    setRetirementRequestGuardOpen(false);
   }
 
   return {
@@ -499,8 +475,7 @@ export function useRepositoryControlController({
     admission: {
       close: () => setAdmissionRepositoryId(null),
       onOpenHistory: openRepositoryHistory,
-      onOpenLifecycle: (record: RepositoryWorkspaceRecord) =>
-        openRepositoryLifecycle(record, "retire-workspace-record"),
+      onOpenRetirementRequest: openRepositoryRetirementRequest,
       onStart: startRepositoryAdmissionRun,
       receipt: admissionRepository
         ? (recordProjectionById.get(admissionRepository.id)?.admissionReceipt ??
@@ -521,7 +496,6 @@ export function useRepositoryControlController({
     details: {
       close: () => setInspectedRepositoryId(null),
       onOpenHistory: openRepositoryHistory,
-      onOpenLifecycle: openRepositoryLifecycle,
       onResolveProposalGate: openRepositoryGateResolution,
       repository: inspectedRepository,
     },
@@ -538,11 +512,6 @@ export function useRepositoryControlController({
       repository: repositoryGateResolutionRepository,
     },
     history: {
-      lifecycleAudit: historyRepository
-        ? lifecycleRuntime.snapshotsByRepositoryId[historyRepository.id]?.audit ??
-          lifecycleRuntime.resultsByRepositoryId[historyRepository.id]?.audit ??
-          null
-        : null,
       close: () => setHistoryRepositoryId(null),
       receipts: historyRepository
         ? (repositoryRuntimeProjection.receiptsByRecord[historyRepository.id] ??
@@ -579,26 +548,23 @@ export function useRepositoryControlController({
       pending: requestPending,
       result: requestResult,
     },
-    lifecycle: {
-      close: () => setLifecycleRepositoryId(null),
-      custodyResult: lifecycleRepository
-        ? custodyRuntime.resultsByRepositoryId[lifecycleRepository.id]
+    retirement: {
+      close: () => {
+        setRetirementRequestRepositoryId(null);
+        setRetirementRequestGuardOpen(false);
+      },
+      guardDescription: retirementRequestRepository
+        ? `Recording this request keeps ${retirementRequestRepository.name} admitted in the prototype projection, but marks a retirement request receipt for later owner-routed handling.`
+        : "Recording this request creates a prototype-local retirement request receipt.",
+      guardOpen: retirementRequestGuardOpen,
+      onKeepEditing: () => setRetirementRequestGuardOpen(false),
+      onRecordRequest: recordRepositoryRetirementRequest,
+      onRequestRecord: requestRepositoryRetirementRecord,
+      receipt: retirementRequestRepository
+        ? (recordProjectionById.get(retirementRequestRepository.id)
+            ?.retirementRequestReceipt ?? undefined)
         : undefined,
-      error: lifecycleRepository
-        ? lifecycleRuntime.errorsByRepositoryId[lifecycleRepository.id]
-        : undefined,
-      initialAction: lifecycleInitialAction,
-      onExecute: executeRepositoryLifecycle,
-      onOpenHistory: openRepositoryHistory,
-      pending:
-        lifecycleRuntime.pendingRepositoryId === lifecycleRepository?.id,
-      repository: lifecycleRepository,
-      result: lifecycleRepository
-        ? lifecycleRuntime.resultsByRepositoryId[lifecycleRepository.id]
-        : undefined,
-      snapshot: lifecycleRepository
-        ? lifecycleRuntime.snapshotsByRepositoryId[lifecycleRepository.id]
-        : undefined,
+      repository: retirementRequestRepository,
     },
     selectedRepository,
     selectedRepositoryCustodyResult:
