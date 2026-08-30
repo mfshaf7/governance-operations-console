@@ -79,6 +79,17 @@ reversal receipt selection remain on the server.
 - The Console never calls GitHub or WGCF directly and never fabricates a
   lifecycle receipt.
 
+## Source Landing And Runtime Activation
+
+- Source landing evidence must bind the current pull-request head and the CI
+  run that validated that exact revision.
+- Merging the Console integration proves the product source is reviewable and
+  buildable; it does not activate repository lifecycle mutation.
+- The Console remains in `disconnected-preview` until the composed OOS, WGCF,
+  Platform, and Security activation evidence is separately approved.
+- Runtime activation must not be inferred from a merged pull request, a local
+  sandbox result, or the presence of server configuration alone.
+
 ## Validation
 
 Run:
