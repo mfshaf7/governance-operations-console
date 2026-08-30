@@ -7,12 +7,12 @@ export function getRepositoryOperationWorkbenchContract(): OperationWorkbenchDom
     handoff:
       "Prepare repository admission, custody, and ownership evidence for the source or target workflow that requested it.",
     localState:
-      "Repository-local selected record, registry filters, detail modal, admission draft, and prototype receipts.",
-    mutationBoundary: "prototype-local / future OOS-mediated",
+      "Repository-local selected record, registry filters, detail modal, admission draft, and retained setup receipts.",
+    mutationBoundary: "local admission drafts / OOS-mediated lifecycle actions",
     surfacePurpose:
-      "Inspect repository inventory, ownership posture, admission state, and retirement readiness.",
+      "Inspect repository inventory, ownership posture, admission state, and governed lifecycle readiness.",
     readModel: "Fixture-backed normalized Repository read model",
     sourceOfTruth:
-      "Workspace repository registry and governance repository contracts",
+      "Workspace repository registry, OOS lifecycle audit, and governance repository contracts",
   };
 }

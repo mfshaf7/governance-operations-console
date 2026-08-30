@@ -22,7 +22,7 @@ export function RepositoryWorkspace({
   return (
     <TerasModalShell
       bodyLayout="fill"
-      description="Focused repository control for request, register inspection, admission readiness, and retirement requests."
+      description="Focused repository control for request, register inspection, admission readiness, and governed lifecycle actions."
       kicker="Repository Control"
       modalAttributes={getOperationWorkbenchSurfaceAttributes(contract)}
       onClose={onClose}

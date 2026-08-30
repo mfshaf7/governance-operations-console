@@ -94,6 +94,8 @@ def main() -> int:
         if rel_path in CONTENT_SCAN_EXCLUSIONS:
             continue
         path = REPO_ROOT / rel_path
+        if not path.is_file():
+            continue
         try:
             content = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:

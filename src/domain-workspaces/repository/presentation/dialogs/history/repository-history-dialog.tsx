@@ -14,6 +14,7 @@ import {
 } from "@/teras";
 
 import type { RepositoryRuntimeReceipt } from "../../../local-runtime/repository-runtime.ts";
+import type { RepositoryLifecycleAudit } from "../../../live-runtime/repository-lifecycle-live-types.ts";
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import {
   repositoryHistoryControlFacts,
@@ -27,10 +28,12 @@ import {
 } from "../../shared/repository-display-model.ts";
 
 export function RepositoryHistoryDialog({
+  lifecycleAudit,
   onClose,
   receipts,
   repository,
 }: {
+  lifecycleAudit: RepositoryLifecycleAudit | null;
   onClose: () => void;
   receipts: RepositoryRuntimeReceipt[];
   repository: RepositoryWorkspaceRecord | null;
@@ -39,14 +42,14 @@ export function RepositoryHistoryDialog({
     return null;
   }
 
-  const timelineRows = repositoryHistoryTimelineRows(receipts);
+  const timelineRows = repositoryHistoryTimelineRows(receipts, lifecycleAudit);
   const recordTone = repositoryRecordTone(repository);
-  const receiptTone = receipts.length > 0 ? "ok" : "muted";
+  const receiptTone = timelineRows.length > 0 ? "ok" : "muted";
 
   return (
     <TerasDialog
       closeLabel="Close Repository history"
-      description="Read-only record of Repository actions and their retained local receipts."
+      description="Read-only Repository actions from OOS lifecycle audit and retained local setup receipts."
       kicker="Repository Archive"
       onClose={onClose}
       open
@@ -108,7 +111,7 @@ export function RepositoryHistoryDialog({
               </TerasTimeline>
             ) : (
               <TerasEmptyState fill>
-                No local Repository receipts are recorded.
+                No Repository receipts are recorded.
               </TerasEmptyState>
             )}
           </TerasPanel>
@@ -149,7 +152,7 @@ export function RepositoryHistoryDialog({
             <TerasPanelHeader
               actions={
                 <TerasStatusPill tone={receiptTone}>
-                  {receipts.length > 0 ? "recorded" : "source only"}
+                  {timelineRows.length > 0 ? "recorded" : "source only"}
                 </TerasStatusPill>
               }
               actionsLayout="inline"
@@ -158,7 +161,7 @@ export function RepositoryHistoryDialog({
               title="Receipt coverage"
             />
             <TerasMetadataList
-              items={repositoryHistoryReceiptFacts(receipts)}
+              items={repositoryHistoryReceiptFacts(receipts, lifecycleAudit)}
               topOffset="compact"
             />
           </TerasPanel>
