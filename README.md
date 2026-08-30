@@ -37,6 +37,9 @@ separately governed OOS integration slices:
 - Repository provisioning through OOS, with server-held GitHub App authority,
   exact reviewed settings, provider-operation projection, and a terminal
   provisioning receipt
+- Repository lifecycle control through OOS, with guarded custody transfer,
+  provider archive/unarchive, workspace retirement/restore, reversal binding,
+  replay, terminal receipts, and read-only audit history
 
 Prototype source discovery and operational workflows without a named live
 integration contract remain:
@@ -97,6 +100,8 @@ The Repository custody linkage boundary is documented in
 [`docs/product/repository-custody-live-integration.md`](docs/product/repository-custody-live-integration.md).
 The Repository provisioning boundary is documented in
 [`docs/product/repository-provisioning-live-integration.md`](docs/product/repository-provisioning-live-integration.md).
+The Repository lifecycle boundary is documented in
+[`docs/product/repository-lifecycle-live-integration.md`](docs/product/repository-lifecycle-live-integration.md).
 
 ## Authority Map
 

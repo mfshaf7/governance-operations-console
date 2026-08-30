@@ -76,7 +76,7 @@ Current operation shapes:
 | --- | --- | --- |
 | Delivery | fullscreen workspace | Domain, read model, work model, local runtime, presentation, and product adapters are separated; its exact source tree is guarded. |
 | Proposal | compact control | Capture, register, hub, triage/disposition/handoff sessions, local receipts, and cross-domain custody are separated. |
-| Repository | compact control | Request, admission, gate resolution, details, retirement, catalog linking, and local receipts are separated. |
+| Repository | compact control | Request, admission, gate resolution, details, OOS lifecycle control, catalog linking, and retained local setup receipts are separated. |
 | Model Operations | compact control with dashboard | Governed profile/readiness projection remains read-oriented and separate from Agent Console runtime health. |
 | Prototype | compact control with dashboards | Request, dashboard, Preview Runtime, landing, candidate promotion, baseline promotion, transition intent, closeout, and history are separated. |
 | Portfolio | fullscreen workspace | Products, Publication, Product Dashboard, and Curation follow the managed-product contract; Portfolio requires active product inventory and owns no intake classification or active registration. |

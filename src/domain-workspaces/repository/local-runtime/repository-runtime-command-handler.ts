@@ -64,18 +64,6 @@ export function repositoryRuntimeReceiptFromRun({
         reviewedRecord: command.command.record,
         runEvents: [...run.events],
       };
-    case "record-retirement-request":
-      return {
-        ...repositoryLocalReceipt({
-          actionLabel: "Record Retirement Request",
-          command,
-          commandName: "repository.record-retirement-request",
-          receiptId,
-          run,
-        }),
-        kind: "retirement-request",
-        requestedRecord: command.command.record,
-      };
     case "resolve-proposal-gate":
       return {
         ...repositoryLocalReceipt({
@@ -129,8 +117,6 @@ function repositoryCommandSummary(kind: RepositoryRuntimeCommand["kind"]) {
   switch (kind) {
     case "record-admission":
       return "Prototype-local repository admission review receipt recorded.";
-    case "record-retirement-request":
-      return "Prototype-local repository retirement request recorded.";
     case "resolve-proposal-gate":
       return "Prototype-local Proposal repository gate resolution recorded.";
   }
