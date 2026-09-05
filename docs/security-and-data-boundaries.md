@@ -113,6 +113,17 @@ browser. A configured read or write failure, stale source, rejection,
 reconciliation state, partial failure, or malformed result must stay explicit
 and must never fall back to a local closeout receipt.
 
+The Workspace Intake exception begins only from a typed source candidate. The
+browser may select a classification and confirm the reviewed preparation, but
+it cannot supply caller identity, service credentials, authority revision,
+canonical digest, request/decision digest, or provider mutation. The Console
+server re-reads preparation before constructing the v2 command and rejects a
+stale review. OOS owns durable execution, WGCF evaluation, source review,
+readback, and receipts. Provider merge remains a human review action. Missing
+configuration, malformed evidence, conflict, rejection, or dependency failure
+stays unavailable and never falls back to fixture mutation. Live activation is
+blocked pending Security `#1066` and Platform identity activation `#1082`.
+
 The Repository authority exception is bounded to `link-existing`,
 `provision-new`, and the five-action repository lifecycle workflow. The
 browser submits reviewed operator fields only to

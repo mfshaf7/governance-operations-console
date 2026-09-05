@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { WorkspaceIntakeDialog } from "@/console-integration/workspace-intake/presentation/workspace-intake-dialog.tsx";
 import {
   TerasActionButton,
   TerasChoiceGroup,
@@ -36,6 +37,7 @@ import {
   type ExecutionCloseoutDraft,
   type ExecutionCloseoutImpactKind,
 } from "./execution-closeout-model.ts";
+import { deliveryWorkspaceIntakeCandidate } from "./delivery-workspace-intake-candidate.ts";
 
 type ExecutionCloseoutStep = "evidence" | "result" | "review";
 type DeliveryCloseoutRuntime = ReturnType<
@@ -61,12 +63,16 @@ export function ExecutionCloseoutModal({
   const [closeGuardOpen, setCloseGuardOpen] = useState(false);
   const [evidenceDialogOpen, setEvidenceDialogOpen] = useState(false);
   const [impactDialogOpen, setImpactDialogOpen] = useState(false);
+  const [intakeDialogOpen, setIntakeDialogOpen] = useState(false);
   const projection = runtime.projection;
   const result = runtime.lastResult;
   const evidenceComplete = executionCloseoutEvidenceComplete(draft);
   const impactComplete = executionCloseoutImpactComplete(draft);
   const readyToApply = executionCloseoutReadyToApply({ draft, projection });
   const existingHistory = projection?.outcome_history ?? [];
+  const intakeCandidate = deliveryWorkspaceIntakeCandidate(
+    result?.event ?? existingHistory.at(-1) ?? null,
+  );
 
   useEffect(() => {
     if (
@@ -135,6 +141,15 @@ export function ExecutionCloseoutModal({
     } finally {
       setApplying(false);
     }
+  }
+
+  if (intakeDialogOpen && intakeCandidate) {
+    return (
+      <WorkspaceIntakeDialog
+        candidate={intakeCandidate}
+        onClose={() => setIntakeDialogOpen(false)}
+      />
+    );
   }
 
   return (
@@ -217,6 +232,7 @@ export function ExecutionCloseoutModal({
             projection={projection}
             result={result}
             runtime={runtime}
+            onOpenIntake={() => setIntakeDialogOpen(true)}
           />
         }
         surfaceId="delivery-execution-closeout"
@@ -389,6 +405,7 @@ function ExecutionCloseoutSupport({
   impactComplete,
   onDraftChange,
   onOpenImpact,
+  onOpenIntake,
   projection,
   result,
   runtime,
@@ -400,6 +417,7 @@ function ExecutionCloseoutSupport({
   impactComplete: boolean;
   onDraftChange: (draft: ExecutionCloseoutDraft) => void;
   onOpenImpact: () => void;
+  onOpenIntake: () => void;
   projection: DeliveryCloseoutRuntime["projection"];
   result: DeliveryCloseoutRuntime["lastResult"];
   runtime: DeliveryCloseoutRuntime;
@@ -555,6 +573,15 @@ function ExecutionCloseoutSupport({
       ) : null}
       {activeStep === "result" ? (
         <TerasWizardPanel
+          actions={
+            deliveryWorkspaceIntakeCandidate(
+              result?.event ?? projection.outcome_history.at(-1) ?? null,
+            ) ? (
+              <TerasActionButton onClick={onOpenIntake}>
+                Classify Candidate
+              </TerasActionButton>
+            ) : undefined
+          }
           description="Use the exact authority and action returned with the durable outcome."
           fit="content"
           kicker="Next Action"

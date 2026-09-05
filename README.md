@@ -40,6 +40,9 @@ separately governed OOS integration slices:
 - Repository lifecycle control through OOS, with guarded custody transfer,
   provider archive/unarchive, workspace retirement/restore, reversal binding,
   replay, terminal receipts, and read-only audit history
+- Workspace Intake classification from typed source candidates through
+  server-built OOS commands, exact authority review, durable progress, and
+  merged-authority receipt projection
 
 Prototype source discovery and operational workflows without a named live
 integration contract remain:
@@ -102,6 +105,8 @@ The Repository provisioning boundary is documented in
 [`docs/product/repository-provisioning-live-integration.md`](docs/product/repository-provisioning-live-integration.md).
 The Repository lifecycle boundary is documented in
 [`docs/product/repository-lifecycle-live-integration.md`](docs/product/repository-lifecycle-live-integration.md).
+The Workspace Intake boundary is documented in
+[`docs/product/workspace-intake-live-integration.md`](docs/product/workspace-intake-live-integration.md).
 
 ## Authority Map
 

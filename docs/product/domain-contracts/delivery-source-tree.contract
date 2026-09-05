@@ -300,6 +300,7 @@ presentation/surfaces/execution-board/action-session/use-execution-action-sessio
 presentation/surfaces/execution-board/action-session/closeout/execution-closeout-dialogs.tsx
 presentation/surfaces/execution-board/action-session/closeout/execution-closeout-modal.tsx
 presentation/surfaces/execution-board/action-session/closeout/execution-closeout-model.ts
+presentation/surfaces/execution-board/action-session/closeout/delivery-workspace-intake-candidate.ts
 presentation/surfaces/execution-board/execution-board-surface.tsx
 presentation/surfaces/execution-board/execution-board-view-model.ts
 presentation/surfaces/execution-board/execution-selected-package-panel.tsx
