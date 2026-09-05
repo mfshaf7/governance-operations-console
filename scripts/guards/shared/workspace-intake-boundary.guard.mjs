@@ -1,4 +1,5 @@
 import {
+  assertAppFile,
   assertAppPathAbsent,
   assertIncludes,
   assertOmits,
@@ -18,6 +19,13 @@ const classificationDefinition =
   "docs/product/orchestration-definitions/workspace-entrant-classification.md";
 const promotionDefinition =
   "docs/product/orchestration-definitions/workspace-entrant-promotion.md";
+const integrationDoc = "docs/product/workspace-intake-live-integration.md";
+const browserRuntime =
+  "src/console-integration/workspace-intake/live-runtime/use-workspace-intake-live-runtime.ts";
+const serverAdapter =
+  "src/console-integration/workspace-intake/server/workspace-intake-oos-client.ts";
+const intakeDialog =
+  "src/console-integration/workspace-intake/presentation/workspace-intake-dialog.tsx";
 
 const staleTerms = [
   "workspace-product-intake",
@@ -94,12 +102,39 @@ export const guard = {
     for (const path of [classificationDefinition, promotionDefinition]) {
       assertRepoFile(failures, path);
     }
+    for (const path of [browserRuntime, serverAdapter, intakeDialog]) {
+      assertAppFile(failures, path);
+    }
     assertRepoIncludes(failures, classificationDefinition, [
       "Definition id: `workspace.entrant.classify`",
-      "Classification: `synchronous`",
       "workspace-governance/contracts/intake-register.yaml",
       "Classification is not active registration.",
       "no standalone Product Intake operation",
+      "Classification: `durable`",
+      "live-inactive",
+    ]);
+    assertRepoIncludes(failures, integrationDoc, [
+      "same-origin `/api/workspace-intake/*`",
+      "merged-authority",
+      "Security `#1066`",
+      "Platform `#1082`",
+    ]);
+    assertIncludes(failures, serverAdapter, [
+      "OOS_CALLER_SECRET",
+      "sameWorkspaceIntakePreparation",
+      '"x-oos-caller-secret"',
+    ]);
+    assertIncludes(failures, intakeDialog, [
+      "TerasWizardModal",
+      "Decision",
+      "Review",
+      "Result",
+    ]);
+    assertOmits(failures, browserRuntime, [
+      "OOS_CALLER_SECRET",
+      "x-oos-caller-secret",
+      "api.github.com",
+      "contracts/intake-register.yaml",
     ]);
     assertRepoIncludes(failures, promotionDefinition, [
       "Definition id: `workspace.entrant.promote`",

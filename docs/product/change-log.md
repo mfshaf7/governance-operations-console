@@ -6,6 +6,17 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-09-06
+
+- Added the shared Workspace Intake Console adapter with server-only OOS
+  command construction, fresh authority preparation, strict stale-review
+  rejection, and same-origin browser routes.
+- Connected successful Delivery closeout Workspace candidates to the embedded
+  classification wizard and durable OOS progress, review, and receipt
+  projection without adding a standalone Workbench domain.
+- Kept the source live-inactive pending Security `#1066`, Platform identity
+  activation `#1082`, and operating conformance `#1069`.
+
 ## 2026-08-29
 
 - Connected Delivery `Open Closeout` to OOS-owned readiness, reviewed evidence
