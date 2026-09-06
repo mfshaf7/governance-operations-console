@@ -40,7 +40,8 @@ All capabilities and transitions in this view are `approved-target`.
 | Dev Integration | implemented | implemented | missing | post-baseline |
 | Governed Releases | implemented | partial | missing | post-baseline |
 | Workspace Intake Classification | partial | implemented | missing | post-baseline |
-| Workspace Active Inventory | partial | implemented | missing | post-baseline |
+| Workspace Registry | implemented | partial | partial | post-baseline |
+| Workspace Active Inventory | implemented | implemented | partial | post-baseline |
 | Teras | implemented | not-required | not-required | pre-baseline |
 | Context Board | implemented | not-required | not-required | pre-baseline |
 | Build Tree | implemented | not-required | not-required | pre-baseline |

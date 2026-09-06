@@ -31,6 +31,7 @@ flowchart TB
   Workbench --> Orchestration["Orchestration"]
 
   Dedicated --> Transitions["Lifecycle Transitions"]
+  Dedicated --> Registry["Workspace Registry"]
   Dedicated --> DevInt["Dev Integration"]
   Dedicated --> Releases["Governed Releases"]
 
@@ -53,7 +54,7 @@ flowchart TB
 | --- | --- | --- | --- |
 | Console overview | Command Center, Workspace Pulse, Governance Activity, Operator Account, Agent Console, Runtime Readiness | Orient, inspect, and route attention across the system. | Does not execute domain work or own source history. |
 | Operation Workbench | Proposal, Repository, Model, Delivery, Prototype, Portfolio, Orchestration | Enter one domain-owned control surface with its register, dashboard, workflow, and history shapes as required. | The Workbench host owns selection and mounting only. |
-| Dedicated workspaces | Lifecycle Transitions, Dev Integration, Governed Releases | Handle large cross-domain or environment concerns that would overload the overview. | They project owner state and route commands; they do not acquire owner authority. |
+| Dedicated workspaces | Lifecycle Transitions, Workspace Registry, Dev Integration, Governed Releases | Handle large cross-domain, authority, or environment concerns that would overload the overview. | They project owner state and route commands; they do not acquire owner authority. |
 | Embedded authority workflows | Workspace Intake classification and active-inventory promotion | Let the originating workflow submit a generic repo, product, or component candidate and reconcile the Workspace Governance receipt. | No standalone Product Intake operation; direct or unresolved entrants may justify a future generic queue. |
 | Incubating product apps | Context Board, Build Tree, Control Board | Supply reusable authoring and projection behavior consumed first by Delivery. | They remain product-neutral and do not own Delivery semantics. |
 | Interface infrastructure | Teras | Supply neutral primitives and composition grammar. | It contains no domain language, lifecycle, or business behavior. |
@@ -67,9 +68,12 @@ flowchart TB
 - A dashboard is a stable record-oriented control surface. A workflow is a
   bounded mutation or decision path. A history view is an immutable projection.
   These roles must not be mixed.
-- Lifecycle Transitions, Dev Integration, and Governed Releases are first-class
+- Lifecycle Transitions, Workspace Registry, Dev Integration, and Governed Releases are first-class
   workspaces because their registers and controls need more room than the main
   Console panel can safely provide.
+- Workspace Registry is the central read and promotion control for active
+  Workspace Inventory. Its writes still execute through OOS against Workspace
+  Governance authority.
 - Workspace Intake is not direct Workbench navigation. Its operator decision
   appears in the workflow that discovered the entrant, while Orchestration may
   expose only the technical run when durable execution is required.

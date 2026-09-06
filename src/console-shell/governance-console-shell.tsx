@@ -15,6 +15,7 @@ import { LifecycleTransitionsWorkspace } from "../lifecycle-transitions";
 import { OperationWorkbenchSelector } from "../operation-workbench/operation-workbench-selector";
 import { operationWorkbenchSelectorEntries } from "../operation-workbench/operation-workbench-selector-model";
 import { WslResourceUsage } from "../runtime-readiness";
+import { WorkspaceRegistryWorkspace } from "../workspace-registry/presentation/workspace-registry-workspace";
 import { ConsoleShellFrame } from "./console-shell-frame";
 import type { AgentContextCandidate } from "./context/agent-context-candidate";
 import { ConsolePrimaryNavigation } from "./navigation/console-primary-navigation";
@@ -80,6 +81,7 @@ function GovernanceConsoleContent({
           selectedWorkbenchSurface={controller.selectedWorkbenchSurface}
           workspaceEntries={[
             "lifecycle-transitions",
+            "workspace-registry",
             "dev-integration",
             "governed-releases",
           ]}
@@ -174,6 +176,12 @@ function GovernanceConsoleContent({
           onClose={controller.closeConsoleWorkspace}
           onOpenWorkbenchSurface={controller.openWorkbenchSurface}
           transitions={controller.lifecycleTransitions}
+        />
+      ) : null}
+      {controller.activeConsoleWorkspaceId === "workspace-registry" ? (
+        <WorkspaceRegistryWorkspace
+          consoleDevMode={controller.consoleDevMode}
+          onClose={controller.closeConsoleWorkspace}
         />
       ) : null}
       {controller.activeConsoleWorkspaceId === "dev-integration" ||

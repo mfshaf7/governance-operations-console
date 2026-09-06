@@ -4,6 +4,7 @@ export const guardRegistry = {
     "./shared/operation-authority-contract.guard.mjs",
     "./shared/authority-decision-boundary.guard.mjs",
     "./shared/workspace-intake-boundary.guard.mjs",
+    "./shared/workspace-registry-boundary.guard.mjs",
     "./shared/lifecycle-transitions-boundary.guard.mjs",
     "./shared/environment-lifecycle-boundary.guard.mjs",
     "./shared/operation-workbench-host.guard.mjs",

@@ -6,11 +6,15 @@ import { lifecycleTransitionProjectionFixtures } from "../../src/lifecycle-trans
 import { operationWorkbenchDomainRegistry } from "../../src/operation-workbench/operation-workbench-domain-registry.ts";
 import { operationWorkbenchSelectorEntries } from "../../src/operation-workbench/operation-workbench-selector-model.ts";
 import { runtimeReadinessFixture } from "../../src/runtime-readiness/fixtures/runtime-readiness.fixture.ts";
+import { workspaceRegistryFixture } from "../../src/workspace-registry/fixtures/workspace-registry.fixture.ts";
 
 test("whole-console fixtures stay bounded by capability", () => {
   assert.equal(workspacePulseFixture.signals.length, 4);
   assert.equal(runtimeReadinessFixture.componentObservations.length, 12);
   assert.equal(lifecycleTransitionProjectionFixtures.length, 6);
+  assert.equal(workspaceRegistryFixture.records.length, 3);
+  assert.equal(workspaceRegistryFixture.eligible_promotions.length, 1);
+  assert.equal(workspaceRegistryFixture.canonical_mutation, false);
   assert.deepEqual(
     [
       ...new Set(

@@ -43,6 +43,8 @@ separately governed OOS integration slices:
 - Workspace Intake classification from typed source candidates through
   server-built OOS commands, exact authority review, durable progress, and
   merged-authority receipt projection
+- Workspace Registry inspection and active-inventory promotion through a
+  server-only, stale-safe OOS adapter with explicit fixture isolation
 
 Prototype source discovery and operational workflows without a named live
 integration contract remain:
@@ -107,6 +109,8 @@ The Repository lifecycle boundary is documented in
 [`docs/product/repository-lifecycle-live-integration.md`](docs/product/repository-lifecycle-live-integration.md).
 The Workspace Intake boundary is documented in
 [`docs/product/workspace-intake-live-integration.md`](docs/product/workspace-intake-live-integration.md).
+The Workspace Registry boundary is documented in
+[`docs/product/workspace-registry-live-integration.md`](docs/product/workspace-registry-live-integration.md).
 
 ## Authority Map
 
