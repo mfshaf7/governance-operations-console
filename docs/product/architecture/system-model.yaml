@@ -568,6 +568,33 @@ capabilities:
       live_adapter: missing
       delivery_phase: post-baseline
 
+  workspace-registry:
+    label: Workspace Registry
+    plane: cross-domain-control
+    kind: authority-workspace
+    role: Inspect canonical active Workspace Inventory and promote approved intake entrants through OOS.
+    authority_refs:
+      - workspace-governance
+      - workspace-governance-control-fabric
+      - operator-orchestration-service
+    canonical_records:
+      - workspace-governance/contracts/intake-register.yaml
+      - workspace-governance/contracts/repos.yaml
+      - workspace-governance/contracts/products.yaml
+      - workspace-governance/contracts/components.yaml
+    must_not_own:
+      - Intake classification, canonical source mutation, provider review merge, product source, runtime execution, or security acceptance.
+    design_status: approved-target
+    implementation:
+      console: implemented
+      backend_support: partial
+      live_adapter: partial
+      delivery_phase: post-baseline
+    operator_visibility: >
+      Active inventory and eligible entrants are separate views. Fixture mode
+      is read-only; live promotion requires current OOS preparation and merged
+      Workspace Governance receipt evidence.
+
   dev-integration:
     label: Dev Integration
     plane: cross-domain-control
@@ -655,9 +682,9 @@ capabilities:
       - Source implementation, runtime execution, Portfolio listing state, Delivery work state, or security acceptance.
     design_status: approved-target
     implementation:
-      console: partial
+      console: implemented
       backend_support: implemented
-      live_adapter: missing
+      live_adapter: partial
       delivery_phase: post-baseline
     operator_visibility: >
       Owner-domain surfaces consume typed active-inventory projections. Intake
@@ -1209,6 +1236,7 @@ views:
       - console-shell
       - operation-workbench
       - lifecycle-transitions
+      - workspace-registry
       - dev-integration
       - governed-releases
       - runtime-readiness
@@ -1237,6 +1265,7 @@ views:
       - portfolio
       - orchestration
       - lifecycle-transitions
+      - workspace-registry
       - dev-integration
       - governed-releases
       - teras
@@ -1318,6 +1347,7 @@ views:
       - portfolio
       - orchestration
       - lifecycle-transitions
+      - workspace-registry
       - dev-integration
       - governed-releases
       - workspace-intake
@@ -1400,6 +1430,7 @@ views:
       - portfolio
       - orchestration
       - lifecycle-transitions
+      - workspace-registry
       - dev-integration
       - governed-releases
       - workspace-intake

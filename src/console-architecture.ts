@@ -25,7 +25,8 @@ export type ConsoleSurfaceEntryIntent = Readonly<{
 export type ConsoleWorkspaceId =
   | "dev-integration"
   | "governed-releases"
-  | "lifecycle-transitions";
+  | "lifecycle-transitions"
+  | "workspace-registry";
 
 export type ConsoleNavigationTarget =
   | Readonly<{

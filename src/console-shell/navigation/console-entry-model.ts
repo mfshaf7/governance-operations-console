@@ -26,6 +26,12 @@ export const consoleWorkspaceEntryById = {
     id: "lifecycle-transitions",
     label: "Lifecycle Transitions",
   },
+  "workspace-registry": {
+    description: "Inspect canonical inventory.",
+    group: "work",
+    id: "workspace-registry",
+    label: "Workspace Registry",
+  },
   "dev-integration": {
     description: "Manage integration profiles.",
     group: "environment",

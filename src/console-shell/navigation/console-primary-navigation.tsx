@@ -3,6 +3,7 @@
 import {
   Blocks,
   Cable,
+  Database,
   GitPullRequestArrow,
   LayoutDashboard,
   Rocket,
@@ -37,6 +38,9 @@ export function ConsolePrimaryNavigation({
   const lifecycleTransitionsAvailable = workspaceEntries.includes(
     "lifecycle-transitions",
   );
+  const workspaceRegistryAvailable = workspaceEntries.includes(
+    "workspace-registry",
+  );
   const devIntegrationAvailable = workspaceEntries.includes("dev-integration");
   const governedReleasesAvailable =
     workspaceEntries.includes("governed-releases");
@@ -44,6 +48,7 @@ export function ConsolePrimaryNavigation({
     1 +
     workbenchEntries.length +
     Number(lifecycleTransitionsAvailable) +
+    Number(workspaceRegistryAvailable) +
     Number(devIntegrationAvailable) +
     Number(governedReleasesAvailable);
 
@@ -146,7 +151,7 @@ export function ConsolePrimaryNavigation({
             </div>
           </section>
 
-          {lifecycleTransitionsAvailable ? (
+          {lifecycleTransitionsAvailable || workspaceRegistryAvailable ? (
             <section
               aria-labelledby="console-navigation-coordination"
               className={styles.group}
@@ -157,37 +162,44 @@ export function ConsolePrimaryNavigation({
               >
                 Coordination
               </p>
-              <button
-                aria-current={
-                  activeWorkspaceId === "lifecycle-transitions"
-                    ? "page"
-                    : undefined
-                }
-                className={styles.entry}
-                data-current={
-                  activeWorkspaceId === "lifecycle-transitions"
-                    ? "true"
-                    : "false"
-                }
-                onClick={() => onOpenWorkspace("lifecycle-transitions")}
-                title={consoleWorkspaceEntryById["lifecycle-transitions"].label}
-                type="button"
-              >
-                <span className={styles.entryIcon}>
-                  <GitPullRequestArrow aria-hidden="true" size={17} />
-                </span>
-                <span className={styles.entryCopy}>
-                  <span className={styles.entryLabel}>
-                    {consoleWorkspaceEntryById["lifecycle-transitions"].label}
-                  </span>
-                  <span className={styles.entryDescription}>
-                    {
-                      consoleWorkspaceEntryById["lifecycle-transitions"]
-                        .description
-                    }
-                  </span>
-                </span>
-              </button>
+              <div className={styles.environmentList}>
+                {lifecycleTransitionsAvailable ? (
+                  <button
+                    aria-current={activeWorkspaceId === "lifecycle-transitions" ? "page" : undefined}
+                    className={styles.entry}
+                    data-current={activeWorkspaceId === "lifecycle-transitions" ? "true" : "false"}
+                    onClick={() => onOpenWorkspace("lifecycle-transitions")}
+                    title={consoleWorkspaceEntryById["lifecycle-transitions"].label}
+                    type="button"
+                  >
+                    <span className={styles.entryIcon}>
+                      <GitPullRequestArrow aria-hidden="true" size={17} />
+                    </span>
+                    <span className={styles.entryCopy}>
+                      <span className={styles.entryLabel}>{consoleWorkspaceEntryById["lifecycle-transitions"].label}</span>
+                      <span className={styles.entryDescription}>{consoleWorkspaceEntryById["lifecycle-transitions"].description}</span>
+                    </span>
+                  </button>
+                ) : null}
+                {workspaceRegistryAvailable ? (
+                  <button
+                    aria-current={activeWorkspaceId === "workspace-registry" ? "page" : undefined}
+                    className={styles.entry}
+                    data-current={activeWorkspaceId === "workspace-registry" ? "true" : "false"}
+                    onClick={() => onOpenWorkspace("workspace-registry")}
+                    title={consoleWorkspaceEntryById["workspace-registry"].label}
+                    type="button"
+                  >
+                    <span className={styles.entryIcon}>
+                      <Database aria-hidden="true" size={17} />
+                    </span>
+                    <span className={styles.entryCopy}>
+                      <span className={styles.entryLabel}>{consoleWorkspaceEntryById["workspace-registry"].label}</span>
+                      <span className={styles.entryDescription}>{consoleWorkspaceEntryById["workspace-registry"].description}</span>
+                    </span>
+                  </button>
+                ) : null}
+              </div>
             </section>
           ) : null}
 

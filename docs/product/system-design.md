@@ -88,6 +88,7 @@ Governance Operations Console
           Model
           Orchestration
         Lifecycle Transitions
+        Workspace Registry
       Environment
         Dev Integration
         Governed Releases
@@ -568,7 +569,7 @@ that acceptance.
 | Repository | Accepted request, admission, posture, retirement, history, and repository-link semantics using structured fixtures. | Live repository-control and owner-repo adapters. | Accepted current shape. |
 | Delivery | Accepted Intake, Work Design, Refinement, Execution, Catalog, history, correction, and package-context behavior. | Live OpenProject/OOS mutation, reconciliation, and subscriptions. | Accepted current shape. |
 | Prototype | Accepted request, landing, dashboard, preview runtime, lifecycle workflows, history, and transition-intent behavior. | Live prototype registry adapters, durable runtime control, and graduation mutation. | Accepted current shape. |
-| Workspace entrant classification and active-inventory promotion | Versioned generic repo, product, and component candidate contracts; canonical-schema intake and active-record shapes; explicit Workspace Intake decision; separate dependency-checked promotion; no overlap between intake and active inventory; synchronized lifecycle and handoff diagrams; isolated command and receipt proof. | Live source adapters, authenticated Workspace Governance decision path, OOS commands, reviewed canonical mutation, and authority readback. | Architecture, workflow definitions, production-shaped Console contracts, and local simulation accepted; no standalone Workbench surface or live adapter. |
+| Workspace entrant classification and active-inventory promotion | Versioned generic repo, product, and component candidate contracts; canonical-schema intake and active-record shapes; explicit Workspace Intake decision; separate dependency-checked promotion; no overlap between intake and active inventory; synchronized lifecycle and handoff diagrams; isolated command and receipt proof. | Composed OOS registry-read activation and authenticated Workspace Governance review path. | Workspace Intake and the dedicated Workspace Registry use server-only, stale-safe Console adapters; live Registry activation remains fail-closed pending composed proof. |
 | Product Portfolio | Accepted catalog, Product Dashboard, publication validation, curation, availability, release, and Delivery-history behavior over active products using authority-shaped fixtures and command models. | Live product-registry, product-manifest, WGCF, Platform, Security, Delivery, and release adapters. | Accepted current shape. Publication cannot create, classify, or actively register product identity. |
 | Model Operations | Accepted caller-specific profile posture, dashboard, request placeholder, capability gates, and unavailable states. | Governed model-profile request API and invocation-plane wiring. | Current shape accepted; live request path unavailable by design. |
 | Orchestration | Accepted Home, Definitions, and Runs responsibilities; versioned definition, run, wait, recovery, receipt, and advisor semantics. | OOS catalog expansion, executable source, workers, broker/runtime wiring, and qualified Temporal execution. | Accepted current shape; all seven local implementation phases and focused definition/run proof are complete. |

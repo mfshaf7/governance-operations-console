@@ -124,6 +124,16 @@ configuration, malformed evidence, conflict, rejection, or dependency failure
 stays unavailable and never falls back to fixture mutation. Live activation is
 blocked pending Security `#1066` and Platform identity activation `#1082`.
 
+The Workspace Registry exception is bounded to a same-origin canonical list
+projection and reviewed active-inventory promotion through OOS. The browser
+cannot read Workspace Governance files, choose caller identity, hold service
+credentials, construct the canonical command, or merge provider review. The
+Console server re-reads registry and preparation state before submission and
+rejects stale authority, candidate, or expected-state evidence. Success
+requires merged-authority readback and a validated promotion receipt. Fixture
+mode remains visibly read-only, and live activation remains unavailable until
+the composed OOS registry-read proof in ART `#1075` is complete.
+
 The Repository authority exception is bounded to `link-existing`,
 `provision-new`, and the five-action repository lifecycle workflow. The
 browser submits reviewed operator fields only to

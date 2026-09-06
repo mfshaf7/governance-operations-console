@@ -8,6 +8,13 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-09-06
 
+- Added the dedicated Workspace Registry with canonical active-inventory and
+  eligible-entrant views, bounded review/apply/result promotion, strict
+  fixture isolation, and server-only OOS credentials.
+- Added fresh registry and preparation checks before submission plus strict
+  result, readback, and merged-authority receipt projection. Live registry read
+  activation remains fail-closed pending ART `#1075` composed proof.
+
 - Added the shared Workspace Intake Console adapter with server-only OOS
   command construction, fresh authority preparation, strict stale-review
   rejection, and same-origin browser routes.
