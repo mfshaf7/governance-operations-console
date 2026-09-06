@@ -1,5 +1,7 @@
 import type {
+  WorkspaceInventoryLifecyclePreparation,
   WorkspaceInventoryResult,
+  WorkspaceRegistryRecord,
   WorkspaceRegistrySnapshot,
 } from "../model/workspace-registry-types.ts";
 
@@ -114,6 +116,106 @@ export const workspaceInventoryResultFixture = {
   status: "accepted",
   workflow_id: "workspace-inventory-promotion",
 } as const satisfies WorkspaceInventoryResult;
+
+export function workspaceInventoryLifecyclePreparationFixture(
+  record: WorkspaceRegistryRecord,
+): WorkspaceInventoryLifecyclePreparation {
+  return {
+    authority_revision: authorityRevision,
+    canonical_authority: {
+      branch: "main",
+      history_path: "contracts/workspace-inventory-history.yaml",
+      inventory_path: ({
+        component: "contracts/components.yaml",
+        product: "contracts/products.yaml",
+        repo: "contracts/repos.yaml",
+      } as const)[record.kind],
+      repo: "workspace-governance",
+    },
+    canonical_mutation: false,
+    current_record: fixtureCurrentRecord(record),
+    expected_state: {
+      active_inventory_digest: `sha256:${"6".repeat(64)}`,
+      history_digest: `sha256:${"7".repeat(64)}`,
+      posture: record.posture,
+      record_digest: record.record_digest,
+      record_version: record.version,
+    },
+    latest_event_ref: null,
+    schema_version: 1,
+    target: { kind: record.kind, name: record.name, record_id: record.id },
+    workflow_id: "workspace-inventory-lifecycle",
+  };
+}
+
+function fixtureCurrentRecord(record: WorkspaceRegistryRecord) {
+  const envelope = {
+    id: record.id,
+    last_mutation: {
+      ...record.last_mutation,
+      idempotency_key: `fixture:${record.id}`,
+      readiness_digest: null,
+      request_digest: null,
+    },
+    lineage: record.lineage,
+    version: record.version,
+  };
+  if (record.kind === "product") {
+    return {
+      governed_prod_promotion: false,
+      highest_real_endpoint: "owner-repository-local-preview",
+      lifecycle: record.maturity ?? "owner-managed",
+      maturity: record.maturity ?? "owner-managed",
+      platform_owner: "platform-engineering",
+      posture: record.posture,
+      record: envelope,
+      runtime_owner: record.owner_refs[0],
+      security_owner: "security-architecture",
+      source_owners: record.owner_refs,
+      stage_supported: false,
+      validation_behavior: {
+        catalog_refs: ["component-contracts", "review-coverage"],
+        notes: "Fixture-backed product inventory for interface verification.",
+        posture: "covered-by-owner-repo",
+        wgcf_graph_role: "product-readiness-aggregate",
+      },
+    };
+  }
+  if (record.kind === "component") {
+    return {
+      component_class: "shared-platform",
+      lifecycle: record.posture,
+      owner_repo: record.owner_refs[0],
+      posture: record.posture,
+      product: null,
+      record: envelope,
+      security_owner: "security-architecture",
+      validation_behavior: {
+        catalog_refs: ["component-contracts"],
+        notes: "Fixture-backed component inventory for interface verification.",
+        posture: "covered-by-owner-repo",
+        wgcf_graph_role: "shared-platform-component",
+      },
+    };
+  }
+  return {
+    allowed_authoritative_refs: record.owner_refs,
+    lifecycle: record.posture,
+    must_not_own: ["unapproved cross-repo authority"],
+    owns: ["fixture-backed workspace responsibility"],
+    posture: record.posture,
+    record: envelope,
+    repo_class: "governance",
+    requires_security_bindings: false,
+    security_review_subject: true,
+    validation_behavior: {
+      catalog_refs: ["contract-model"],
+      notes: "Fixture-backed repository inventory for interface verification.",
+      posture: "catalog-owner",
+      wgcf_graph_role: "catalog-authority-source",
+    },
+  };
+}
 
 function registryRecord({
   id,

@@ -3,14 +3,20 @@
 import { useCallback, useState } from "react";
 
 import {
+  assertWorkspaceInventoryLifecyclePreparation,
+  assertWorkspaceInventoryLifecycleResult,
   assertWorkspaceInventoryPreparation,
   assertWorkspaceInventoryResult,
   assertWorkspaceRegistrySnapshot,
 } from "../workspace-registry-contract.ts";
 import type {
+  WorkspaceInventoryLifecycleAction,
+  WorkspaceInventoryLifecyclePreparation,
+  WorkspaceInventoryLifecycleResult,
   WorkspaceInventoryPreparation,
   WorkspaceInventoryResult,
   WorkspaceRegistryCandidate,
+  WorkspaceRegistryRecord,
   WorkspaceRegistrySnapshot,
 } from "../model/workspace-registry-types.ts";
 
@@ -30,6 +36,10 @@ export function useWorkspaceRegistryLiveRuntime() {
   const [preparation, setPreparation] =
     useState<WorkspaceInventoryPreparation | null>(null);
   const [result, setResult] = useState<WorkspaceInventoryResult | null>(null);
+  const [lifecyclePreparation, setLifecyclePreparation] =
+    useState<WorkspaceInventoryLifecyclePreparation | null>(null);
+  const [lifecycleResult, setLifecycleResult] =
+    useState<WorkspaceInventoryLifecycleResult | null>(null);
   const [error, setError] = useState<WorkspaceRegistryClientError | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -88,6 +98,89 @@ export function useWorkspaceRegistryLiveRuntime() {
     [preparation, snapshot],
   );
 
+  const prepareLifecycle = useCallback(async (record: WorkspaceRegistryRecord) => {
+    return run(async () => {
+      const next = assertWorkspaceInventoryLifecyclePreparation(
+        await jsonRequest("/api/workspace-registry/lifecycle/preparations", {
+          body: JSON.stringify({
+            target: { kind: record.kind, name: record.name, record_id: record.id },
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        }),
+      );
+      setLifecyclePreparation(next);
+      setLifecycleResult(null);
+      return next;
+    });
+  }, []);
+
+  const submitLifecycle = useCallback(
+    async ({
+      action,
+      approvalRefs,
+      impactAcknowledgements,
+      reason,
+      requestId,
+      requestedValue,
+    }: {
+      action: WorkspaceInventoryLifecycleAction;
+      approvalRefs: readonly string[];
+      impactAcknowledgements: readonly string[];
+      reason: string;
+      requestId: string;
+      requestedValue: Readonly<Record<string, unknown>> | null;
+    }) => {
+      if (!snapshot || !lifecyclePreparation) {
+        throw new WorkspaceRegistryClientError(
+          "Review the current Registry lifecycle preparation before applying an action.",
+          "workspace_registry_lifecycle_review_required",
+        );
+      }
+      return runLifecycleResult(
+        () =>
+          jsonRequest("/api/workspace-registry/lifecycle/requests", {
+            body: JSON.stringify({
+              action,
+              approval_refs: approvalRefs,
+              impact_acknowledgements: impactAcknowledgements,
+              reason,
+              request_id: requestId,
+              requested_value: requestedValue,
+              reviewed_preparation: lifecyclePreparation,
+              reviewed_projection: {
+                authority_revision: snapshot.authority_revision,
+                projection_digest: snapshot.projection_digest,
+              },
+            }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          }),
+        requestId,
+      );
+    },
+    [lifecyclePreparation, snapshot],
+  );
+
+  const readLifecycle = useCallback(async (requestId: string) => {
+    return runLifecycleResult(
+      () =>
+        jsonRequest(
+          `/api/workspace-registry/lifecycle/requests/${encodeURIComponent(requestId)}`,
+          { cache: "no-store", method: "GET" },
+        ),
+      requestId,
+    );
+  }, []);
+
+  const continueLifecycle = useCallback(async (requestId: string) => {
+    return lifecycleCommand(requestId, "continue");
+  }, []);
+
+  const cancelLifecycle = useCallback(async (requestId: string) => {
+    return lifecycleCommand(requestId, "cancel");
+  }, []);
+
   const read = useCallback(async (requestId: string) => {
     return runResult(
       () =>
@@ -109,6 +202,8 @@ export function useWorkspaceRegistryLiveRuntime() {
 
   const reset = useCallback(() => {
     setError(null);
+    setLifecyclePreparation(null);
+    setLifecycleResult(null);
     setPreparation(null);
     setResult(null);
   }, []);
@@ -118,6 +213,24 @@ export function useWorkspaceRegistryLiveRuntime() {
       () =>
         jsonRequest(
           `/api/workspace-registry/promotions/${encodeURIComponent(requestId)}/${action}`,
+          {
+            body: "{}",
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          },
+        ),
+      requestId,
+    );
+  }
+
+  async function lifecycleCommand(
+    requestId: string,
+    action: "cancel" | "continue",
+  ) {
+    return runLifecycleResult(
+      () =>
+        jsonRequest(
+          `/api/workspace-registry/lifecycle/requests/${encodeURIComponent(requestId)}/${action}`,
           {
             body: "{}",
             headers: { "Content-Type": "application/json" },
@@ -142,6 +255,23 @@ export function useWorkspaceRegistryLiveRuntime() {
     });
   }
 
+  async function runLifecycleResult(
+    operation: () => Promise<unknown>,
+    requestId: string,
+  ) {
+    return run(async () => {
+      const next = assertWorkspaceInventoryLifecycleResult(
+        await operation(),
+        requestId,
+      );
+      setLifecycleResult(next);
+      if (next.status === "succeeded") {
+        await load();
+      }
+      return next;
+    });
+  }
+
   async function run<T>(operation: () => Promise<T>) {
     setPending(true);
     setError(null);
@@ -158,17 +288,24 @@ export function useWorkspaceRegistryLiveRuntime() {
 
   return {
     cancel,
+    cancelLifecycle,
     continuePromotion,
+    continueLifecycle,
     error,
+    lifecyclePreparation,
+    lifecycleResult,
     load,
     pending,
     preparation,
     prepare,
+    prepareLifecycle,
     read,
+    readLifecycle,
     reset,
     result,
     snapshot,
     submit,
+    submitLifecycle,
   };
 }
 

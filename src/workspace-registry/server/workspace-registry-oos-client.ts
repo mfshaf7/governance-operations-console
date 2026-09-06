@@ -1,16 +1,23 @@
 import { createHash } from "node:crypto";
 
 import {
+  assertWorkspaceInventoryLifecyclePreparation,
+  assertWorkspaceInventoryLifecycleRequestId,
+  assertWorkspaceInventoryLifecycleResult,
+  assertWorkspaceInventoryLifecycleSubmissionIntent,
   assertWorkspaceInventoryPreparation,
   assertWorkspaceInventoryRequestId,
   assertWorkspaceInventoryResult,
   assertWorkspaceInventorySubmissionIntent,
   assertWorkspaceRegistrySnapshot,
+  sameWorkspaceInventoryLifecyclePreparation,
   sameWorkspaceInventoryPreparation,
   sameWorkspaceRegistrySnapshot,
   WorkspaceRegistryContractError,
 } from "../workspace-registry-contract.ts";
 import type {
+  WorkspaceInventoryLifecyclePreparation,
+  WorkspaceInventoryLifecycleSubmissionIntent,
   WorkspaceInventoryPreparation,
   WorkspaceInventorySubmissionIntent,
   WorkspaceRegistrySnapshot,
@@ -68,6 +75,108 @@ export async function prepareWorkspaceInventoryPromotion(
       options,
     ),
   );
+}
+
+export async function prepareWorkspaceInventoryLifecycle(
+  target: WorkspaceRegistryTarget,
+  options: RequestOptions = {},
+): Promise<WorkspaceInventoryLifecyclePreparation> {
+  return assertWorkspaceInventoryLifecyclePreparation(
+    await request(
+      "/v1/workspace-inventory/lifecycle/preparations",
+      {
+        body: JSON.stringify({ target: { kind: target.kind, name: target.name } }),
+        method: "POST",
+      },
+      options,
+    ),
+  );
+}
+
+export async function submitWorkspaceInventoryLifecycle(
+  value: unknown,
+  options: RequestOptions = {},
+) {
+  const intent = assertWorkspaceInventoryLifecycleSubmissionIntent(value);
+  const currentSnapshot = await readWorkspaceRegistry(options);
+  const currentRecord = currentSnapshot.records.find(
+    (record) => record.id === intent.reviewed_preparation.target.record_id,
+  );
+  if (
+    !currentRecord ||
+    !sameWorkspaceRegistrySnapshot(
+      currentSnapshot,
+      reviewedLifecycleSnapshot(intent, currentSnapshot),
+    ) ||
+    currentRecord.version !== intent.reviewed_preparation.expected_state.record_version ||
+    currentRecord.record_digest !== intent.reviewed_preparation.expected_state.record_digest ||
+    currentRecord.posture !== intent.reviewed_preparation.expected_state.posture
+  ) {
+    throw new WorkspaceRegistryOosError(
+      "Workspace Registry authority changed after lifecycle review. Refresh before applying the action.",
+      "workspace_inventory_lifecycle_review_stale",
+      409,
+    );
+  }
+  const currentPreparation = await prepareWorkspaceInventoryLifecycle(
+    intent.reviewed_preparation.target,
+    options,
+  );
+  if (
+    !sameWorkspaceInventoryLifecyclePreparation(
+      intent.reviewed_preparation,
+      currentPreparation,
+    )
+  ) {
+    throw new WorkspaceRegistryOosError(
+      "Workspace Inventory lifecycle preparation changed after review. Refresh before applying the action.",
+      "workspace_inventory_lifecycle_preparation_stale",
+      409,
+    );
+  }
+  const config = options.config ?? resolveConfig();
+  const command = buildLifecycleCommand(
+    intent,
+    currentPreparation,
+    config.callerId,
+    options.now?.() ?? new Date(),
+  );
+  const response = await request(
+    "/v1/workspace-inventory/lifecycle/requests",
+    { body: JSON.stringify(command), method: "POST" },
+    { ...options, config },
+  );
+  assertReturnedBinding(response, command);
+  return assertWorkspaceInventoryLifecycleResult(response, intent.request_id);
+}
+
+export async function readWorkspaceInventoryLifecycle(
+  requestId: string,
+  options: RequestOptions = {},
+) {
+  const id = assertWorkspaceInventoryLifecycleRequestId(requestId);
+  return assertWorkspaceInventoryLifecycleResult(
+    await request(
+      `/v1/workspace-inventory/lifecycle/requests/${encodeURIComponent(id)}`,
+      { method: "GET" },
+      options,
+    ),
+    id,
+  );
+}
+
+export async function continueWorkspaceInventoryLifecycle(
+  requestId: string,
+  options: RequestOptions = {},
+) {
+  return commandWorkspaceInventoryLifecycle(requestId, "continue", options);
+}
+
+export async function cancelWorkspaceInventoryLifecycle(
+  requestId: string,
+  options: RequestOptions = {},
+) {
+  return commandWorkspaceInventoryLifecycle(requestId, "cancel", options);
 }
 
 export async function submitWorkspaceInventoryPromotion(
@@ -166,6 +275,22 @@ async function commandWorkspaceInventoryPromotion(
   );
 }
 
+async function commandWorkspaceInventoryLifecycle(
+  requestId: string,
+  action: "cancel" | "continue",
+  options: RequestOptions,
+) {
+  const id = assertWorkspaceInventoryLifecycleRequestId(requestId);
+  return assertWorkspaceInventoryLifecycleResult(
+    await request(
+      `/v1/workspace-inventory/lifecycle/requests/${encodeURIComponent(id)}/${action}`,
+      { body: "{}", method: "POST" },
+      options,
+    ),
+    id,
+  );
+}
+
 function buildCommand(
   intent: WorkspaceInventorySubmissionIntent,
   candidate: WorkspaceRegistrySnapshot["eligible_promotions"][number],
@@ -198,9 +323,46 @@ function buildCommand(
   };
 }
 
+function buildLifecycleCommand(
+  intent: WorkspaceInventoryLifecycleSubmissionIntent,
+  preparation: WorkspaceInventoryLifecyclePreparation,
+  callerId: string,
+  now: Date,
+) {
+  const request = bindDigest(
+    {
+      action: intent.action,
+      approval_refs: intent.approval_refs,
+      artifact_type: "workspace-inventory-lifecycle-request",
+      correlation_ref: `console:workspace-registry:${preparation.target.record_id}`,
+      expected_state: preparation.expected_state,
+      idempotency_key: `${intent.request_id}:v1`,
+      impact_acknowledgements: intent.impact_acknowledgements,
+      operator_ref: callerId,
+      prior_event_ref:
+        intent.action === "restore" ? preparation.latest_event_ref : null,
+      reason: intent.reason,
+      request_id: intent.request_id,
+      requested_at: now.toISOString(),
+      requested_value: intent.action === "update" ? intent.requested_value : null,
+      schema_version: 1,
+      target: preparation.target,
+    },
+    "request_digest",
+  );
+  return {
+    authority_revision: preparation.authority_revision,
+    execution_ref: `console://workspace-registry/lifecycle/executions/${encodeURIComponent(intent.request_id)}`,
+    request,
+    session_ref: `console://workspace-registry/lifecycle/sessions/${encodeURIComponent(intent.request_id)}`,
+  };
+}
+
 function assertReturnedBinding(
   value: unknown,
-  command: ReturnType<typeof buildCommand>,
+  command: Readonly<{
+    request: Readonly<{ request_digest: string; request_id: string }>;
+  }>,
 ) {
   if (
     !isRecord(value) ||
@@ -216,6 +378,17 @@ function assertReturnedBinding(
 
 function reviewedSnapshot(
   intent: WorkspaceInventorySubmissionIntent,
+  current: WorkspaceRegistrySnapshot,
+): WorkspaceRegistrySnapshot {
+  return {
+    ...current,
+    authority_revision: intent.reviewed_projection.authority_revision,
+    projection_digest: intent.reviewed_projection.projection_digest,
+  };
+}
+
+function reviewedLifecycleSnapshot(
+  intent: WorkspaceInventoryLifecycleSubmissionIntent,
   current: WorkspaceRegistrySnapshot,
 ): WorkspaceRegistrySnapshot {
   return {

@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
+  assertWorkspaceInventoryLifecycleRequestId,
   assertWorkspaceInventoryRequestId,
   assertWorkspaceRegistryTarget,
   WorkspaceRegistryContractError,
 } from "../workspace-registry-contract.ts";
 import {
+  cancelWorkspaceInventoryLifecycle,
   cancelWorkspaceInventoryPromotion,
+  continueWorkspaceInventoryLifecycle,
   continueWorkspaceInventoryPromotion,
+  prepareWorkspaceInventoryLifecycle,
   prepareWorkspaceInventoryPromotion,
+  readWorkspaceInventoryLifecycle,
   readWorkspaceInventoryPromotion,
   readWorkspaceRegistry,
+  submitWorkspaceInventoryLifecycle,
   submitWorkspaceInventoryPromotion,
   workspaceRegistryOosConfigured,
   WorkspaceRegistryOosError,
@@ -42,6 +48,60 @@ export async function submitWorkspaceInventoryRoute(request: NextRequest) {
       await request.json().catch(() => null),
     );
   }, 202);
+}
+
+export async function prepareWorkspaceInventoryLifecycleRoute(
+  request: NextRequest,
+) {
+  return execute(async () => {
+    requireConfigured();
+    const input = parseRecord(await request.json().catch(() => null));
+    return prepareWorkspaceInventoryLifecycle(
+      assertWorkspaceRegistryTarget(input.target),
+    );
+  });
+}
+
+export async function submitWorkspaceInventoryLifecycleRoute(
+  request: NextRequest,
+) {
+  return execute(async () => {
+    requireConfigured();
+    return submitWorkspaceInventoryLifecycle(
+      await request.json().catch(() => null),
+    );
+  }, 202);
+}
+
+export async function readWorkspaceInventoryLifecycleRoute(requestId: string) {
+  return execute(async () => {
+    requireConfigured();
+    return readWorkspaceInventoryLifecycle(
+      assertWorkspaceInventoryLifecycleRequestId(requestId),
+    );
+  });
+}
+
+export async function continueWorkspaceInventoryLifecycleRoute(
+  requestId: string,
+) {
+  return execute(async () => {
+    requireConfigured();
+    return continueWorkspaceInventoryLifecycle(
+      assertWorkspaceInventoryLifecycleRequestId(requestId),
+    );
+  });
+}
+
+export async function cancelWorkspaceInventoryLifecycleRoute(
+  requestId: string,
+) {
+  return execute(async () => {
+    requireConfigured();
+    return cancelWorkspaceInventoryLifecycle(
+      assertWorkspaceInventoryLifecycleRequestId(requestId),
+    );
+  });
 }
 
 export async function readWorkspaceInventoryRoute(requestId: string) {
