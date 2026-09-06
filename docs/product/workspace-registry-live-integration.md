@@ -55,6 +55,11 @@ fail-closed whenever they are unavailable.
 6. Continue durable progress when OOS requires it and retain the returned
    review, readback, history, and receipt evidence.
 
+Lifecycle completion is deliberately stricter than request acceptance. The
+Console reports a canonical change only when the exact reviewed source is
+merged and OOS returns matching merged-state, readback, receipt, and immutable
+history-event evidence. An accepted or in-progress request remains pending.
+
 For an active inventory record:
 
 1. Open `Manage Lifecycle` from the selected record.
