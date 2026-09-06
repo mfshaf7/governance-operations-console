@@ -32,12 +32,14 @@ type KindFilter = "all" | WorkspaceRegistryKind;
 
 export function WorkspaceRegistrySurface({
   fixtureMode,
+  onLifecycle,
   onPromote,
   runtime,
   snapshot,
   view,
 }: {
   fixtureMode: boolean;
+  onLifecycle: (record: WorkspaceRegistryRecord) => void;
   onPromote: (candidate: WorkspaceRegistryCandidate) => void;
   runtime: WorkspaceRegistryLiveRuntime;
   snapshot: WorkspaceRegistrySnapshot | null;
@@ -134,7 +136,11 @@ export function WorkspaceRegistrySurface({
       selected={
         selected ? (
           view === "registry" ? (
-            <RegistryRecordSelected record={selected as WorkspaceRegistryRecord} />
+            <RegistryRecordSelected
+              fixtureMode={fixtureMode}
+              onLifecycle={onLifecycle}
+              record={selected as WorkspaceRegistryRecord}
+            />
           ) : (
             <PromotionCandidateSelected
               candidate={selected as WorkspaceRegistryCandidate}
@@ -150,10 +156,30 @@ export function WorkspaceRegistrySurface({
   );
 }
 
-function RegistryRecordSelected({ record }: { record: WorkspaceRegistryRecord }) {
+function RegistryRecordSelected({
+  fixtureMode,
+  onLifecycle,
+  record,
+}: {
+  fixtureMode: boolean;
+  onLifecycle: (record: WorkspaceRegistryRecord) => void;
+  record: WorkspaceRegistryRecord;
+}) {
   return (
     <TerasPanelStack fill="last">
       <TerasSelectedPanel
+        action={{
+          description: fixtureMode
+            ? "Inspect the lifecycle flow; fixture mode cannot mutate canonical inventory."
+            : "Review current authority before updating metadata or changing posture through OOS.",
+          kicker: "Available Action",
+          node: (
+            <TerasActionButton onClick={() => onLifecycle(record)}>
+              Manage Lifecycle
+            </TerasActionButton>
+          ),
+          title: "Lifecycle control",
+        }}
         description="Canonical inventory identity and current ownership posture."
         facts={[
           { label: "Type", value: record.kind },

@@ -6,14 +6,25 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-09-07
+
+- Added Workspace Registry lifecycle control for update, suspend, restore, and
+  retire actions against current canonical preparation.
+- Added stale-review rejection, server-built caller and digest bindings,
+  same-origin lifecycle routes, ordered OOS progress and readiness projection,
+  and terminal merged-state, readback, receipt, and history evidence.
+- Kept fixture mode read-only and preserved Workspace Governance as the only
+  inventory and append-only history authority.
+
 ## 2026-09-06
 
 - Added the dedicated Workspace Registry with canonical active-inventory and
   eligible-entrant views, bounded review/apply/result promotion, strict
   fixture isolation, and server-only OOS credentials.
 - Added fresh registry and preparation checks before submission plus strict
-  result, readback, and merged-authority receipt projection. Live registry read
-  activation remains fail-closed pending ART `#1075` composed proof.
+  result, readback, and merged-authority receipt projection. Runtime activation
+  remains separately gated by admitted OOS, identity, Platform, and Security
+  evidence.
 
 - Added the shared Workspace Intake Console adapter with server-only OOS
   command construction, fresh authority preparation, strict stale-review

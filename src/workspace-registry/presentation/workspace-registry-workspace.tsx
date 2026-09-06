@@ -12,7 +12,11 @@ import {
 
 import { workspaceRegistryFixture } from "../fixtures/workspace-registry.fixture";
 import { useWorkspaceRegistryLiveRuntime } from "../live-runtime/use-workspace-registry-live-runtime";
-import type { WorkspaceRegistryCandidate } from "../model/workspace-registry-types";
+import type {
+  WorkspaceRegistryCandidate,
+  WorkspaceRegistryRecord,
+} from "../model/workspace-registry-types";
+import { WorkspaceRegistryLifecycleWorkflow } from "./workspace-registry-lifecycle-workflow";
 import { WorkspaceRegistryPromotionWorkflow } from "./workspace-registry-promotion-workflow";
 import { WorkspaceRegistrySurface } from "./workspace-registry-surface";
 
@@ -29,6 +33,8 @@ export function WorkspaceRegistryWorkspace({
   const [view, setView] = useState<RegistryView>("registry");
   const [promotionCandidate, setPromotionCandidate] =
     useState<WorkspaceRegistryCandidate | null>(null);
+  const [lifecycleRecord, setLifecycleRecord] =
+    useState<WorkspaceRegistryRecord | null>(null);
   const snapshot = consoleDevMode ? workspaceRegistryFixture : runtime.snapshot;
   const owners = useMemo(
     () => new Set(snapshot?.records.flatMap((record) => record.owner_refs) ?? []).size,
@@ -110,6 +116,7 @@ export function WorkspaceRegistryWorkspace({
         >
           <WorkspaceRegistrySurface
             fixtureMode={consoleDevMode}
+            onLifecycle={setLifecycleRecord}
             onPromote={setPromotionCandidate}
             runtime={runtime}
             snapshot={snapshot}
@@ -125,6 +132,17 @@ export function WorkspaceRegistryWorkspace({
             runtime.reset();
             setPromotionCandidate(null);
           }}
+          runtime={runtime}
+        />
+      ) : null}
+      {lifecycleRecord ? (
+        <WorkspaceRegistryLifecycleWorkflow
+          fixtureMode={consoleDevMode}
+          onClose={() => {
+            runtime.reset();
+            setLifecycleRecord(null);
+          }}
+          record={lifecycleRecord}
           runtime={runtime}
         />
       ) : null}

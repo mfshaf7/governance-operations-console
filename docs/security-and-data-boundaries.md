@@ -125,14 +125,21 @@ stays unavailable and never falls back to fixture mutation. Live activation is
 blocked pending Security `#1066` and Platform identity activation `#1082`.
 
 The Workspace Registry exception is bounded to a same-origin canonical list
-projection and reviewed active-inventory promotion through OOS. The browser
-cannot read Workspace Governance files, choose caller identity, hold service
-credentials, construct the canonical command, or merge provider review. The
-Console server re-reads registry and preparation state before submission and
-rejects stale authority, candidate, or expected-state evidence. Success
-requires merged-authority readback and a validated promotion receipt. Fixture
-mode remains visibly read-only, and live activation remains unavailable until
-the composed OOS registry-read proof in ART `#1075` is complete.
+projection plus reviewed active-inventory promotion and lifecycle control
+through OOS. The browser cannot read Workspace Governance files, choose caller
+identity, hold service credentials, construct the canonical command, mutate
+history, or merge provider review. The Console server re-reads Registry and
+action-specific preparation state before submission and rejects stale
+authority, candidate, record digest, version, posture, or expected-state
+evidence. Lifecycle update, suspension, restoration, and retirement preserve
+identity; restoration binds the latest canonical lifecycle event and no action
+performs hard deletion. Promotion success requires merged-authority readback
+and its validated receipt. Lifecycle success requires merged human-reviewed
+source, matching readback and merged state, its review-branch receipt, and an
+immutable canonical history event. Fixture mode remains visibly read-only.
+Runtime activation remains separately gated by admitted OOS, Workspace
+Governance provider identity, Platform, and Security evidence; this source
+change grants none of those authorities.
 
 The Repository authority exception is bounded to `link-existing`,
 `provision-new`, and the five-action repository lifecycle workflow. The
