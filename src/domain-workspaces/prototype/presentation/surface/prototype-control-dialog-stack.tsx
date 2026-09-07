@@ -20,8 +20,9 @@ import type { PrototypeProjectedReceipt } from "../../read-model/prototype-works
 import type { PrototypeLandingCommandInput } from "../../work-model/workflows/landing/prototype-landing-model.ts";
 import type {
   PrototypeLandingSimulationInput,
-  PrototypeLandingSimulationResult,
 } from "../../local-runtime/prototype-landing-runtime.ts";
+import type { PrototypeLandingRunResult } from "../../live-runtime/prototype-landing-live-types.ts";
+import type { PrototypeLandingLiveProjection } from "../../live-runtime/prototype-landing-live-types.ts";
 import type { PrototypeCommandId } from "../../work-model/commands/prototype-command-model.ts";
 import type { PrototypeRecord } from "../../read-model/prototype-workspace-read-model.ts";
 import type { PrototypeRequestDraft } from "../../work-model/entry/prototype-request-model.ts";
@@ -37,6 +38,7 @@ type PrototypeControlDialogStackProps = {
   canSubmitRequest: boolean;
   previewReceipts: PrototypeProjectedReceipt[];
   receipts: PrototypeProjectedReceipt[];
+  landingProjection: PrototypeLandingLiveProjection | null;
   sourceDeliveryPacket: PrototypeDeliveryPacketProjection | null;
   onBackToDashboard: () => void;
   onCloseDialog: () => void;
@@ -51,7 +53,10 @@ type PrototypeControlDialogStackProps = {
   ) => void | Promise<void>;
   onRunLanding: (
     input: PrototypeLandingSimulationInput,
-  ) => Promise<PrototypeLandingSimulationResult>;
+  ) => Promise<PrototypeLandingRunResult>;
+  onCancelLanding: (
+    input: PrototypeLandingSimulationInput,
+  ) => Promise<PrototypeLandingRunResult | null>;
   onOpenDialog: (route: PrototypeDialogRoute, record?: PrototypeRecord) => void;
   onPreviewCheck: (record: PrototypeRecord) => void | Promise<void>;
   onPreviewProfileAction: (
@@ -95,8 +100,10 @@ export function PrototypeControlDialogStack({
   canSubmitRequest,
   previewReceipts,
   receipts,
+  landingProjection,
   sourceDeliveryPacket,
   onBackToDashboard,
+  onCancelLanding,
   onCloseDialog,
   onDraftChange,
   onLandPrototype,
@@ -141,10 +148,12 @@ export function PrototypeControlDialogStack({
       />
       <PrototypeLandingModal
         onBackToDashboard={onBackToDashboard}
+        onCancelLanding={onCancelLanding}
         onClose={onCloseDialog}
         onOpenDashboard={() => onOpenDialog("dashboard")}
         onLandPrototype={onLandPrototype}
         onRunLanding={onRunLanding}
+        liveProjection={landingProjection}
         record={activeDialog === "landing" ? activeRecord : null}
       />
       <PrototypePreviewRuntimeModal

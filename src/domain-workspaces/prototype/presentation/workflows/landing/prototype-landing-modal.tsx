@@ -7,6 +7,7 @@ import {
   TerasWizardFooter,
   TerasWizardModal,
 } from "@/teras";
+import { openExternalConsoleRoute } from "@/console-integration/external-route";
 
 import type { PrototypeCommandId } from "../../../work-model/commands/prototype-command-model.ts";
 import { getPrototypeCommandView } from "../../../work-model/commands/prototype-command-model.ts";
@@ -62,19 +63,28 @@ import {
 } from "../shared/prototype-workflow-modal-model.ts";
 import type {
   PrototypeLandingSimulationInput,
-  PrototypeLandingSimulationResult,
 } from "../../../local-runtime/prototype-landing-runtime.ts";
+import type {
+  PrototypeLandingLiveProjection,
+  PrototypeLandingRunResult,
+} from "../../../live-runtime/prototype-landing-live-types.ts";
 import type { PrototypeLandingCommandInput } from "../../../work-model/workflows/landing/prototype-landing-model.ts";
 
 export function PrototypeLandingModal({
+  liveProjection,
   onBackToDashboard,
+  onCancelLanding,
   onClose,
   onOpenDashboard,
   onLandPrototype,
   onRunLanding,
   record,
 }: {
+  liveProjection: PrototypeLandingLiveProjection | null;
   onBackToDashboard: () => void;
+  onCancelLanding: (
+    input: PrototypeLandingSimulationInput,
+  ) => Promise<PrototypeLandingRunResult | null>;
   onClose: () => void;
   onOpenDashboard: () => void;
   onLandPrototype: (
@@ -84,7 +94,7 @@ export function PrototypeLandingModal({
   ) => void;
   onRunLanding: (
     input: PrototypeLandingSimulationInput,
-  ) => Promise<PrototypeLandingSimulationResult>;
+  ) => Promise<PrototypeLandingRunResult>;
   record: PrototypeRecord | null;
 }) {
   const [activeStep, setActiveStep] =
@@ -97,16 +107,29 @@ export function PrototypeLandingModal({
   const [landingDraft, setLandingDraft] =
     useState<PrototypeLandingDraft | null>(null);
   const [landingRunResult, setLandingRunResult] =
-    useState<PrototypeLandingSimulationResult | null>(null);
+    useState<PrototypeLandingRunResult | null>(null);
+  const [landingRunError, setLandingRunError] = useState<string | null>(null);
   const [landingRunSubmitting, setLandingRunSubmitting] = useState(false);
 
   useEffect(() => {
     if (record) {
-      const nextDraft = prototypeLandingDraftFromRecord(record);
+      const nextDraft =
+        liveProjection?.recordId === record.id
+          ? liveProjection.draft
+          : prototypeLandingDraftFromRecord(record);
 
       setActiveStep(prototypeLandingActiveStep(record));
       setCloseGuardIntent(null);
-      setLandingRunResult(null);
+      setLandingRunResult(
+        liveProjection?.recordId === record.id
+          ? {
+              draftKey: liveProjection.draftKey,
+              mode: "live",
+              result: liveProjection.result,
+            }
+          : null,
+      );
+      setLandingRunError(null);
       setLandingRunSubmitting(false);
       setSupportGuideOpen(false);
       setLandingDraft(nextDraft);
@@ -118,6 +141,15 @@ export function PrototypeLandingModal({
     }
   }, [record]);
 
+  useEffect(() => {
+    if (!record || liveProjection?.recordId !== record.id) return;
+    setLandingRunResult({
+      draftKey: liveProjection.draftKey,
+      mode: "live",
+      result: liveProjection.result,
+    });
+  }, [liveProjection, record]);
+
   if (!record) {
     return null;
   }
@@ -127,7 +159,9 @@ export function PrototypeLandingModal({
     landingDraft ?? prototypeLandingDraftFromRecord(record);
   const activeLandingDraftKey = prototypeLandingDraftKey(activeLandingDraft);
   const sourceLandingDraftKey = prototypeLandingDraftKey(
-    prototypeLandingDraftFromRecord(record),
+    liveProjection?.recordId === record.id
+      ? liveProjection.draft
+      : prototypeLandingDraftFromRecord(record),
   );
   const command = getPrototypeCommandView(record, "land-prototype-request");
   const landingMove = prototypeLandingMove(record);
@@ -165,29 +199,57 @@ export function PrototypeLandingModal({
     Boolean(record.landing.lastLandingReceiptRef) ||
     record.landing.state === "blocked" ||
     record.landing.state === "landed";
+  const currentRunResult =
+    landingRunResult?.draftKey === activeLandingDraftKey
+      ? landingRunResult
+      : null;
+  const liveResult = currentRunResult?.mode === "live" ? currentRunResult.result : null;
+  const localRunComplete = currentRunResult?.mode === "local";
+  const liveRunComplete = liveResult?.status === "succeeded";
   const landingRunComplete =
     (landingRunRecorded && !landingDraftDirty) ||
-    landingRunResult?.draftKey === activeLandingDraftKey;
+    localRunComplete ||
+    liveRunComplete;
+  const liveRunCanAdvance =
+    !liveResult ||
+    new Set(["accepted", "evaluating", "preparing", "review-required"]).has(
+      liveResult.status,
+    );
   const landingRunActionAvailable =
     activeStep === "result" &&
     landingDraftMutable &&
     !command.disabledReason &&
     !landingRunSubmitting &&
-    (!landingRunComplete || landingDraftDirty);
+    (!landingRunComplete || landingDraftDirty) &&
+    liveRunCanAdvance;
   const landingRecordActionVisible =
     activeStep === "result" &&
     record.landing.state !== "landed" &&
+    currentRunResult?.mode !== "live" &&
     (!landingRunRecorded || landingDraftDirty);
   const landingRecordActionDisabled =
     !landingRunComplete || Boolean(command.disabledReason);
-  const landingRunStatus = prototypeLandingRunStatus({
-    landingBlocked,
-    landingDraftDirty,
-    landingRunComplete,
-  });
-  const landingRunActionStatus = prototypeLandingRunActionStatus(
-    landingRunActionAvailable,
-  );
+  const landingRunStatus = liveResult
+    ? prototypeLandingLiveStatus(liveResult.status)
+    : landingRunError
+      ? { label: "Unavailable", tone: "warn" as const }
+      : prototypeLandingRunStatus({
+          landingBlocked,
+          landingDraftDirty,
+          landingRunComplete,
+        });
+  const landingRunActionStatus = liveResult
+    ? {
+        emphasis: "primary" as const,
+        label:
+          liveResult.status === "review-required"
+            ? "Continue Landing"
+            : liveRunComplete
+              ? "Landing Complete"
+              : "Continue Landing",
+        tone: liveRunComplete ? ("ok" as const) : ("info" as const),
+      }
+    : prototypeLandingRunActionStatus(landingRunActionAvailable);
   const landingCanOpenDashboard =
     record.landing.state === "landed" ||
     Boolean(command.disabledReason) ||
@@ -232,8 +294,32 @@ export function PrototypeLandingModal({
     record,
     setupItemsDraft,
     supportRowsDraft: activeLandingDraft.supportRows,
-    runEvents: landingRunResult?.run.events,
+    runEvents:
+      currentRunResult?.mode === "local" ? currentRunResult.run.events : undefined,
   });
+  const visibleLandingLogRows = liveResult
+    ? liveResult.history.map((event) => ({
+        detail:
+          event.details && typeof event.details.message === "string"
+            ? event.details.message
+            : prototypeLandingLiveEventDetail(event.status),
+        formattedTimestamp: `event ${String(event.sequence).padStart(2, "0")}`,
+        marker: prototypeLandingLiveEventMarker(event.status),
+        timestamp: event.at,
+        tone: prototypeLandingLiveStatus(event.status).tone,
+      }))
+    : landingRunError
+      ? [
+          ...landingRunLogRows,
+          {
+            detail: landingRunError,
+            formattedTimestamp: "error",
+            marker: "FAIL",
+            timestamp: "",
+            tone: "warn" as const,
+          },
+        ]
+      : landingRunLogRows;
 
   function requestBackToDashboard() {
     if (landingDraftDirty && landingDraftMutable) {
@@ -258,6 +344,7 @@ export function PrototypeLandingModal({
 
     setLandingDraft(prototypeLandingDraftFromRecord(activeRecord));
     setLandingRunResult(null);
+    setLandingRunError(null);
     setCloseGuardIntent(null);
 
     if (intent === "back") {
@@ -298,6 +385,7 @@ export function PrototypeLandingModal({
   function recordLanding() {
     if (
       !landingRunResult ||
+      landingRunResult.mode !== "local" ||
       landingRunResult.draftKey !== activeLandingDraftKey
     ) {
       return;
@@ -320,6 +408,7 @@ export function PrototypeLandingModal({
     }
 
     setLandingRunSubmitting(true);
+    setLandingRunError(null);
     try {
       const result = await onRunLanding({
         draft: activeLandingDraft,
@@ -327,6 +416,30 @@ export function PrototypeLandingModal({
         record: activeRecord,
       });
       setLandingRunResult(result);
+    } catch (error) {
+      setLandingRunError(
+        error instanceof Error ? error.message : "Prototype Landing failed.",
+      );
+    } finally {
+      setLandingRunSubmitting(false);
+    }
+  }
+
+  async function cancelLanding() {
+    if (!liveResult || landingRunSubmitting) return;
+    setLandingRunSubmitting(true);
+    setLandingRunError(null);
+    try {
+      const result = await onCancelLanding({
+        draft: activeLandingDraft,
+        draftKey: activeLandingDraftKey,
+        record: activeRecord,
+      });
+      if (result) setLandingRunResult(result);
+    } catch (error) {
+      setLandingRunError(
+        error instanceof Error ? error.message : "Prototype Landing cancellation failed.",
+      );
     } finally {
       setLandingRunSubmitting(false);
     }
@@ -337,6 +450,7 @@ export function PrototypeLandingModal({
     value: PrototypeLandingDraft[Field],
   ) {
     setLandingRunResult(null);
+    setLandingRunError(null);
     setLandingDraft((currentDraft) => {
       const nextDraft = {
         ...(currentDraft ?? prototypeLandingDraftFromRecord(activeRecord)),
@@ -370,7 +484,7 @@ export function PrototypeLandingModal({
     <>
       <TerasWizardModal
         activeStepId={activeStep}
-        description="Record the local Prototype Studio landing shape before candidate, baseline, or movement work starts."
+        description="Review and apply the Prototype Studio landing shape before candidate, baseline, or movement work starts."
         footer={
           <TerasWizardFooter
             back={{
@@ -446,9 +560,24 @@ export function PrototypeLandingModal({
               landingRunActionAvailable={landingRunActionAvailable}
               landingRunActionStatus={landingRunActionStatus}
               landingRunComplete={landingRunComplete}
-              landingRunLogRows={landingRunLogRows}
+              landingRunLogRows={visibleLandingLogRows}
               landingRunStatus={landingRunStatus}
+              onCancelLanding={
+                liveResult && !new Set(["cancelled", "succeeded"]).has(liveResult.status)
+                  ? cancelLanding
+                  : undefined
+              }
+              onOpenReview={
+                liveResult?.review?.url
+                  ? () => openExternalConsoleRoute(liveResult.review?.url)
+                  : undefined
+              }
               onRunLanding={runLanding}
+              runDescription={
+                liveResult
+                  ? "Continue the durable Landing run or review its source change before merged authority can be recorded."
+                  : "Run the local landing setup before the footer can record the landing result."
+              }
             />
           )
         }
@@ -483,13 +612,14 @@ export function PrototypeLandingModal({
             landingPlan={landingPlan}
             landingBlocked={landingBlocked}
             landingRunComplete={landingRunComplete}
+            liveResult={liveResult}
             record={record}
             setupItemsDraft={setupItemsDraft}
           />
         )}
       </TerasWizardModal>
       <TerasDraftCloseGuardDialog
-        description="This local Prototype Landing support draft has changes that are not recorded. Leaving now will discard those row edits."
+        description="This Prototype Landing support draft has changes that are not recorded. Leaving now will discard those row edits."
         kicker="Prototype Landing"
         leaveLabel="Discard Draft"
         onKeepEditing={() => setCloseGuardIntent(null)}
@@ -503,4 +633,50 @@ export function PrototypeLandingModal({
       />
     </>
   );
+}
+
+function prototypeLandingLiveStatus(status: string) {
+  switch (status) {
+    case "succeeded":
+      return { label: "Done", tone: "ok" as const };
+    case "review-required":
+      return { label: "Review Required", tone: "info" as const };
+    case "rejected":
+    case "requires-action":
+      return { label: "Needs Action", tone: "warn" as const };
+    case "cancelled":
+    case "cancelling":
+      return { label: "Cancelled", tone: "muted" as const };
+    default:
+      return { label: "Running", tone: "info" as const };
+  }
+}
+
+function prototypeLandingLiveEventMarker(status: string) {
+  switch (status) {
+    case "succeeded":
+      return "DONE";
+    case "rejected":
+    case "requires-action":
+      return "FAIL";
+    case "cancelled":
+    case "cancelling":
+      return "STOP";
+    default:
+      return "RUN";
+  }
+}
+
+function prototypeLandingLiveEventDetail(status: string) {
+  return {
+    accepted: "OOS durably accepted the Landing request.",
+    cancelled: "OOS retained the cancellation result.",
+    cancelling: "OOS is reconciling the Landing cancellation.",
+    evaluating: "WGCF is evaluating the accepted Landing artifacts.",
+    preparing: "Prototype Studio source is being prepared for review.",
+    rejected: "The Landing request was rejected without source mutation.",
+    "requires-action": "Landing stopped on an authority finding.",
+    "review-required": "The exact source change is ready for human review and merge.",
+    succeeded: "Merged Prototype Studio authority and the terminal receipt agree.",
+  }[status] ?? `Landing recorded ${status}.`;
 }

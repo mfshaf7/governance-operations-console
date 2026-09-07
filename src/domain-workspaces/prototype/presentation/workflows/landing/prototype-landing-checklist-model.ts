@@ -15,6 +15,68 @@ import type {
   PrototypeLandingRunLogRow,
 } from "./prototype-landing-types.ts";
 import type { OperationCommandRunEvent } from "@/domain-workspaces/operation-runtime";
+import type { PrototypeLandingResult } from "../../../live-runtime/prototype-landing-live-types.ts";
+
+export function prototypeLandingLiveRunChecklistRows(
+  result: PrototypeLandingResult,
+): PrototypeLandingChecklistRow[] {
+  const readiness = result.readiness as { outcome?: unknown } | null;
+  const readinessState =
+    readiness?.outcome === "ready"
+      ? "ready"
+      : readiness?.outcome === "blocked" || readiness?.outcome === "stale"
+        ? String(readiness.outcome)
+        : "pending";
+  const reviewReady = Boolean(result.review);
+  const merged = result.review?.merged === true;
+  const succeeded = result.status === "succeeded";
+  return prototypeLandingIndexedRows([
+    {
+      detail: result.request_id,
+      id: "live-request",
+      label: "Accepted request",
+      status: "recorded",
+      tone: "ok",
+    },
+    {
+      detail: "WGCF checks the exact accepted request and Prototype Studio revision.",
+      id: "live-readiness",
+      label: "Readiness",
+      status: readinessState,
+      tone:
+        readinessState === "ready"
+          ? "ok"
+          : readinessState === "blocked" || readinessState === "stale"
+            ? "warn"
+            : "info",
+    },
+    {
+      detail: reviewReady
+        ? result.review?.url
+        : "Source preparation starts only after readiness passes.",
+      id: "live-review",
+      label: "Source review",
+      status: merged ? "merged" : reviewReady ? "open" : "pending",
+      tone: merged ? "ok" : reviewReady ? "info" : "muted",
+    },
+    {
+      detail: succeeded
+        ? result.readback?.source_revision
+        : "Merged main readback is required before Landing can complete.",
+      id: "live-readback",
+      label: "Merged authority",
+      status: succeeded ? "verified" : "pending",
+      tone: succeeded ? "ok" : "muted",
+    },
+    {
+      detail: result.receipt?.receipt_id ?? "Terminal receipt not recorded.",
+      id: "live-receipt",
+      label: "Landing receipt",
+      status: succeeded ? "recorded" : "pending",
+      tone: succeeded ? "ok" : "muted",
+    },
+  ]);
+}
 
 export function prototypeLandingRunChecklistRows({
   landingBlocked,

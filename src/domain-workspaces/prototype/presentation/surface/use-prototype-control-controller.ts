@@ -47,6 +47,10 @@ import { type PrototypeCloseoutInput } from "../../work-model/workflows/closeout
 import { type PrototypeMovementRequestDraftInput } from "../../work-model/workflows/movement-request/prototype-movement-request-model.ts";
 import { usePrototypeDeliveryLiveRuntime } from "../../live-runtime/use-prototype-delivery-live-runtime.ts";
 import {
+  prototypeLandingAllowsLocalFallback,
+  usePrototypeLandingLiveRuntime,
+} from "../../live-runtime/use-prototype-landing-live-runtime.ts";
+import {
   type PrototypePreviewProfileDraft,
   type PrototypePreviewProfileMutationActionId,
   type PrototypePreviewRuntimeMutationActionId,
@@ -67,6 +71,7 @@ export function usePrototypeControlController({
 } = {}) {
   const runtimeCapabilities = getPrototypeRuntimeCapabilities();
   const deliveryRuntime = usePrototypeDeliveryLiveRuntime();
+  const landingRuntime = usePrototypeLandingLiveRuntime();
   const sourceReadModel = getPrototypeWorkspaceReadModel();
   const state = usePrototypeControlState(sourceReadModel);
   const [requestDraft, setRequestDraft] = useState<PrototypeRequestDraft>(
@@ -93,12 +98,14 @@ export function usePrototypeControlController({
       projectPrototypeEffectiveReadModel({
         deliveryApplicationsByPrototypeId:
           deliveryRuntime.projectionsByPrototypeId,
+        landingProjectionsByRecordId: landingRuntime.projectionsByRecordId,
         proposalEntryRecords,
         runtimeProjection: state.runtimeProjection,
         sourceReadModel,
       }),
     [
       deliveryRuntime.projectionsByPrototypeId,
+      landingRuntime.projectionsByRecordId,
       proposalEntryRecords,
       sourceReadModel,
       state.runtimeProjection,
@@ -228,7 +235,20 @@ export function usePrototypeControlController({
   }
 
   async function runLandingSimulation(input: PrototypeLandingSimulationInput) {
-    return runPrototypeLandingSimulation(input);
+    try {
+      return await landingRuntime.run(input);
+    } catch (error) {
+      if (prototypeLandingAllowsLocalFallback(error)) {
+        return runPrototypeLandingSimulation(input);
+      }
+      throw error;
+    }
+  }
+
+  async function cancelLanding(input: PrototypeLandingSimulationInput) {
+    const projection = landingRuntime.projectionsByRecordId[input.record.id];
+    if (!projection || projection.draftKey !== input.draftKey) return null;
+    return landingRuntime.cancel(input, projection.result.request_id);
   }
 
   async function recordBaselinePromotion(
@@ -361,6 +381,9 @@ export function usePrototypeControlController({
     },
     selectedPreviewReceipts,
     selectedReceipts,
+    selectedLandingProjection: activeRecord
+      ? (landingRuntime.projectionsByRecordId[activeRecord.id] ?? null)
+      : null,
     selectedRecord,
     selectedSourceDeliveryPacket: activeRecord
       ? (sourceReadModel.deliveryPacketsByPrototypeId?.[activeRecord.id] ?? null)
@@ -369,6 +392,7 @@ export function usePrototypeControlController({
     workflowActions: {
       backToDashboard: () => openDialog("dashboard"),
       landPrototypeRequest,
+      cancelLanding,
       runLandingSimulation,
       recordBaselinePromotion,
       recordCandidatePromotion,

@@ -126,8 +126,10 @@ export function PrototypeControlSurface({
         canSubmitRequest={controller.request.canSubmit}
         previewReceipts={controller.selectedPreviewReceipts}
         receipts={controller.selectedReceipts}
+        landingProjection={controller.selectedLandingProjection}
         sourceDeliveryPacket={controller.selectedSourceDeliveryPacket}
         onBackToDashboard={controller.workflowActions.backToDashboard}
+        onCancelLanding={controller.workflowActions.cancelLanding}
         onCloseDialog={controller.closeDialog}
         onDraftChange={controller.request.onDraftChange}
         onLandPrototype={controller.workflowActions.landPrototypeRequest}

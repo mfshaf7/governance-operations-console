@@ -6,12 +6,15 @@ import type {
   PrototypeLandingPlan,
 } from "../../../work-model/workflows/landing/prototype-landing-model.ts";
 import { prototypeLandingRunChecklistRows } from "./prototype-landing-view-model.ts";
+import { prototypeLandingLiveRunChecklistRows } from "./prototype-landing-checklist-model.ts";
+import type { PrototypeLandingResult } from "../../../live-runtime/prototype-landing-live-types.ts";
 
 export function PrototypeLandingRunStepPanel({
   activeLandingDraft,
   landingPlan,
   landingBlocked,
   landingRunComplete,
+  liveResult,
   record,
   setupItemsDraft,
 }: {
@@ -19,24 +22,28 @@ export function PrototypeLandingRunStepPanel({
   landingPlan: PrototypeLandingPlan;
   landingBlocked: boolean;
   landingRunComplete: boolean;
+  liveResult: PrototypeLandingResult | null;
   record: PrototypeRecord;
   setupItemsDraft: string[];
 }) {
   return (
     <TerasWizardPanel
-      description="Run rows show what the local landing action will record, then flip to done or blocked after the run is recorded."
+      description="Run rows show the Landing phases and the evidence currently available for each one."
       kicker="Landing Run"
       title="Run checklist"
     >
       <TerasList frame="contained">
-        {prototypeLandingRunChecklistRows({
-          landingBlocked,
-          landingPlan,
-          landingRunComplete,
-          record,
-          setupItemsDraft,
-          supportRowsDraft: activeLandingDraft.supportRows,
-        }).map((row) => (
+        {(liveResult
+          ? prototypeLandingLiveRunChecklistRows(liveResult)
+          : prototypeLandingRunChecklistRows({
+              landingBlocked,
+              landingPlan,
+              landingRunComplete,
+              record,
+              setupItemsDraft,
+              supportRowsDraft: activeLandingDraft.supportRows,
+            })
+        ).map((row) => (
           <TerasStatusItem
             tone={row.tone}
             detail={row.detail}
