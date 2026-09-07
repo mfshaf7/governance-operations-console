@@ -51,13 +51,17 @@ projection, command, and history routes. OOS credentials and configured
 operator attribution are server-only. Configured OOS failure disables Proposal
 writes and never falls back to synthetic records.
 
-The Prototype exception is narrower. The Console may submit an exact
-source-authoritative Prototype Delivery packet to OOS and project only the
-validated application result and durable receipt. The browser cannot supply
-OOS caller identity or credentials, the Console does not create the canonical
-packet, and neither browser nor server mutates OpenProject or WGCF directly.
-If no Workspace Prototype Studio packet is available, the existing fixture
-workflow remains explicitly local and cannot invoke the live adapter.
+The Prototype exception covers two separate OOS boundaries. Prototype Landing
+accepts the reviewed operator draft, re-reads exact Studio preparation on the
+server, and constructs the canonical digest-bound command without exposing OOS
+credentials or caller authority to the browser. Only a human-reviewed merge,
+merged Studio readback, and terminal receipt may project `landed`; configured
+failure never falls back to local success. The Prototype Delivery boundary may
+submit an exact source-authoritative packet and project only its validated OOS
+application result and durable receipt. The Console does not create that
+Delivery packet, and neither boundary calls OpenProject, WGCF, or the source
+provider directly. Disconnected fixture behavior remains explicitly local and
+cannot claim source mutation or live Delivery application.
 
 The Delivery Work Design exception is bounded to canonical source projection,
 governed context and tree advice, canonical apply, reconciliation, and durable

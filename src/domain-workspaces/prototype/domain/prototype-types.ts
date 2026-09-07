@@ -302,12 +302,26 @@ export type PrototypeRecord = {
   projectionVersion: string;
   receipts: PrototypeReceiptRef[];
   sourcePath: string;
+  sourceEvidence?: {
+    authority: string;
+    importedContentDigest: string | null;
+    originDigest: string | null;
+    posture: PrototypeLandingSourcePosture;
+    revision: string | null;
+  };
   sourceRef: string;
   summary: string;
   tone: OperationTone;
   visibilityTier: PrototypeVisibilityTier;
   movementRequest: PrototypeMovementRequestDraft;
 };
+
+export type PrototypeLandingSourcePosture =
+  | "create-studio-source"
+  | "import-to-studio"
+  | "reference-dedicated-owner-source"
+  | "reference-shared-owner-source"
+  | "use-existing-studio-source";
 
 export type PrototypeWorkspaceSource = {
   lastRead: string;

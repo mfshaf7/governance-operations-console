@@ -8,6 +8,8 @@ import { prototypeProjectedReceipts } from "./prototype-receipt-projection.ts";
 import type { PrototypeProjectedReceipt } from "../read-model/prototype-workspace-read-model.ts";
 import { projectPrototypeDeliveryApplication } from "../live-runtime/prototype-delivery-live-projection.ts";
 import type { PrototypeDeliveryApplicationProjection } from "../live-runtime/prototype-delivery-live-types.ts";
+import { projectPrototypeLanding } from "../live-runtime/prototype-landing-live-projection.ts";
+import type { PrototypeLandingLiveProjection } from "../live-runtime/prototype-landing-live-types.ts";
 
 export type PrototypeEffectiveProjection = {
   readModel: PrototypeWorkspaceReadModel;
@@ -16,12 +18,16 @@ export type PrototypeEffectiveProjection = {
 
 export function projectPrototypeEffectiveReadModel({
   deliveryApplicationsByPrototypeId = {},
+  landingProjectionsByRecordId = {},
   proposalEntryRecords,
   runtimeProjection,
   sourceReadModel,
 }: {
   deliveryApplicationsByPrototypeId?: Readonly<
     Record<string, PrototypeDeliveryApplicationProjection>
+  >;
+  landingProjectionsByRecordId?: Readonly<
+    Record<string, PrototypeLandingLiveProjection>
   >;
   proposalEntryRecords: PrototypeRecord[];
   runtimeProjection: PrototypeRuntimeProjectionSnapshot;
@@ -38,9 +44,13 @@ export function projectPrototypeEffectiveReadModel({
       receipts: runtimeProjection.receiptsByRecord[record.id] ?? [],
       record,
     });
+    const landedRecord = projectPrototypeLanding({
+      projection: landingProjectionsByRecordId[record.id],
+      record: localRecord,
+    });
     return projectPrototypeDeliveryApplication({
       projection: deliveryApplicationsByPrototypeId[record.id],
-      record: localRecord,
+      record: landedRecord,
     });
   });
   const readModel = {

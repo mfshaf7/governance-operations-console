@@ -73,6 +73,9 @@ current and future product changes.
 
 - `proposal-live-integration.md`
   - OOS-backed Proposal projection and command behavior.
+- `prototype-landing-live-integration.md`
+  - Reviewed preparation, durable OOS lifecycle, human source review, merged
+    Studio readback, and receipt-bound Landing projection.
 - `prototype-delivery-live-integration.md`
   - Exact source-packet application through OOS and receipt-bound Prototype
     graduation projection.

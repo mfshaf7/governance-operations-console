@@ -55,6 +55,7 @@ export type PrototypeLandingSimulationReceipt = {
 
 export type PrototypeLandingSimulationResult = {
   draftKey: string;
+  mode: "local";
   receipt: OperationReceiptEnvelope<PrototypeLandingSimulationReceipt>;
   run: OperationCommandRunEnvelope<PrototypeLandingRuntimeRun>;
 };
@@ -160,7 +161,7 @@ export async function runPrototypeLandingSimulation({
     );
   }
 
-  return { draftKey, receipt, run };
+  return { draftKey, mode: "local", receipt, run };
 }
 
 export function getPrototypeLandingRuntimeCapabilities() {

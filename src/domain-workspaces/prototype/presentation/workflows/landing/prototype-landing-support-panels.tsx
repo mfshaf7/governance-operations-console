@@ -123,19 +123,25 @@ export function PrototypeLandingRunSupportPanels({
   landingRunComplete,
   landingRunLogRows,
   landingRunStatus,
+  onCancelLanding,
+  onOpenReview,
   onRunLanding,
+  runDescription,
 }: {
   landingRunActionAvailable: boolean;
   landingRunActionStatus: PrototypeLandingStatusProjection;
   landingRunComplete: boolean;
   landingRunLogRows: PrototypeLandingRunLogRow[];
   landingRunStatus: PrototypeLandingStatusProjection;
+  onCancelLanding?: () => void;
+  onOpenReview?: () => void;
   onRunLanding: () => void;
+  runDescription: string;
 }) {
   return (
     <TerasPanelStack fill="last">
       <TerasWizardPanel
-        description="Run the local landing setup before the footer can record the landing result."
+        description={runDescription}
         treatment="rail"
         fit="content"
         kicker="Landing Action"
@@ -147,8 +153,8 @@ export function PrototypeLandingRunSupportPanels({
             tone={landingRunStatus.tone}
             detail={
               landingRunComplete
-                ? "Current draft has been run and is ready for footer recording."
-                : "Run the current draft before recording the landing result."
+                ? "The current Landing run is complete."
+                : "Run the current draft to complete the Landing boundary."
             }
             label="Run state"
             status={landingRunStatus.label}
@@ -166,10 +172,24 @@ export function PrototypeLandingRunSupportPanels({
           >
             {landingRunActionStatus.label}
           </TerasActionButton>
+          {onOpenReview ? (
+            <TerasActionButton emphasis="secondary" onClick={onOpenReview}>
+              Open Review
+            </TerasActionButton>
+          ) : null}
+          {onCancelLanding ? (
+            <TerasActionButton
+              emphasis="secondary"
+              onClick={onCancelLanding}
+              tone="danger"
+            >
+              Cancel Landing
+            </TerasActionButton>
+          ) : null}
         </TerasActionRow>
       </TerasWizardPanel>
       <TerasActivityLogPanel
-        description="Shows the local Landing setup before the footer records the result."
+        description={runDescription}
         kicker="Landing Run"
         rows={landingRunLogRows}
         statusLabel={landingRunStatus.label}
