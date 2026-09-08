@@ -102,6 +102,8 @@ test("Prototype Landing rejects stale authority before command submission", asyn
           ...reviewed,
           expected_state: {
             ...reviewed.expected_state,
+            record_digest: digest("4"),
+            record_present: true,
             registry_digest: digest("3"),
           },
         });
@@ -204,9 +206,15 @@ test("Prototype Landing fails closed on false success and unsupported source evi
     () =>
       assertPrototypeLandingResult({
         ...prepared,
-        readback: { ...prepared.readback, source_revision: "7".repeat(40) },
+        preparation: {
+          ...prepared.preparation,
+          readback: {
+            ...prepared.preparation.readback,
+            source_revision: "git-tree:" + "7".repeat(40),
+          },
+        },
       }),
-    /prepared source evidence/i,
+    /source preparation projection/i,
   );
 
   assert.throws(
@@ -304,11 +312,18 @@ function result(command, status) {
   const successful = status === "succeeded";
   const sourcePrepared = successful || status === "review-required";
   const reviewValue = sourcePrepared ? review(successful) : null;
-  const readback = sourcePrepared
-    ? readbackFixture(command, reviewValue, successful)
+  const preparedReview = sourcePrepared ? review(false) : null;
+  const preparedReadback = sourcePrepared
+    ? readbackFixture(command, preparedReview, false)
     : null;
-  const receipt = sourcePrepared
-    ? receiptFixture(command, readback, reviewValue, successful)
+  const preparedReceipt = sourcePrepared
+    ? receiptFixture(command, preparedReadback, preparedReview, false)
+    : null;
+  const readback = successful
+    ? readbackFixture(command, reviewValue, true)
+    : null;
+  const receipt = successful
+    ? receiptFixture(command, readback, reviewValue, true)
     : null;
   return {
     apply: sourcePrepared ? { artifact_type: "prototype-landing-apply" } : null,
@@ -330,7 +345,17 @@ function result(command, status) {
         ? "review-and-merge"
         : "continue",
     plan: command.plan,
-    preparation: sourcePrepared ? { branch: reviewValue.branch } : null,
+    preparation: sourcePrepared
+      ? {
+          base_commit: preparedReview.base_commit,
+          branch: preparedReview.branch,
+          changed_paths: ["prototypes.yaml"],
+          content_digest: digest("3"),
+          file_count: 1,
+          readback: preparedReadback,
+          receipt: preparedReceipt,
+        }
+      : null,
     prototype_id: command.request.prototype.id,
     readback,
     readiness: sourcePrepared ? { outcome: "ready" } : null,
