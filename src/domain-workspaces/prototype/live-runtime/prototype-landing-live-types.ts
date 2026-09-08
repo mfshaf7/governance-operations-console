@@ -23,8 +23,8 @@ export type PrototypeLandingCanonicalSupportProfile =
   | "simple";
 
 export type PrototypeLandingExpectedState = Readonly<{
-  record_digest: null;
-  record_present: false;
+  record_digest: string | null;
+  record_present: boolean;
   registry_digest: string;
   source_revision: string | null;
 }>;
@@ -159,6 +159,16 @@ export type PrototypeLandingReadback = Readonly<{
   source_revision: string;
 }>;
 
+export type PrototypeLandingSourcePreparation = Readonly<{
+  base_commit: string;
+  branch: string;
+  changed_paths: readonly string[];
+  content_digest: string;
+  file_count: number;
+  readback: PrototypeLandingReadback;
+  receipt: PrototypeLandingReceipt;
+}>;
+
 export type PrototypeLandingResult = Readonly<{
   apply: Readonly<Record<string, unknown>> | null;
   canonical_mutation: boolean;
@@ -175,7 +185,7 @@ export type PrototypeLandingResult = Readonly<{
     | "review-and-merge"
     | "submit-corrected-request";
   plan: Readonly<Record<string, unknown>>;
-  preparation: Readonly<Record<string, unknown>> | null;
+  preparation: PrototypeLandingSourcePreparation | null;
   prototype_id: string;
   readback: PrototypeLandingReadback | null;
   readiness: Readonly<Record<string, unknown>> | null;

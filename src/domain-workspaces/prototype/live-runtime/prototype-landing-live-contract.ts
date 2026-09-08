@@ -5,6 +5,7 @@ import type {
   PrototypeLandingReceipt,
   PrototypeLandingResult,
   PrototypeLandingReview,
+  PrototypeLandingSourcePreparation,
   PrototypeLandingSubmissionIntent,
 } from "./prototype-landing-live-types.ts";
 
@@ -98,8 +99,9 @@ export function assertPrototypeLandingPreparation(
     !prototypeIdPattern.test(String(preparation.prototype_id)) ||
     !commitPattern.test(String(preparation.authority_revision)) ||
     !digestPattern.test(String(expected.registry_digest)) ||
-    expected.record_present !== false ||
-    expected.record_digest !== null ||
+    typeof expected.record_present !== "boolean" ||
+    !nullableDigest(expected.record_digest) ||
+    Boolean(expected.record_digest) !== expected.record_present ||
     !nullableText(expected.source_revision) ||
     expected.source_revision !== preparation.authority_revision ||
     authority.repo !== "workspace-prototype-studio" ||
@@ -126,6 +128,8 @@ export function assertPrototypeLandingSubmissionIntent(
   const requestId = assertPrototypeLandingRequestId(intent.request_id);
   if (
     reviewed.prototype_id !== prototypeId ||
+    reviewed.expected_state.record_present !== false ||
+    reviewed.expected_state.record_digest !== null ||
     !requestId.startsWith(
       `prototype-landing-request:${prototypeId.slice("prototype:".length)}:`,
     ) ||
@@ -270,6 +274,10 @@ export function assertPrototypeLandingResult(
   const receipt = result.receipt === null ? null : assertReceipt(result.receipt);
   const readback =
     result.readback === null ? null : assertReadback(result.readback);
+  const preparation =
+    result.preparation === null
+      ? null
+      : assertSourcePreparation(result.preparation);
   const failure =
     result.failure === null ? null : assertFailure(result.failure);
 
@@ -316,19 +324,13 @@ export function assertPrototypeLandingResult(
     result.status === "review-required" &&
     (!result.readiness ||
       !result.apply ||
-      !result.preparation ||
-      !receipt ||
-      !readback ||
+      !preparation ||
+      receipt !== null ||
+      readback !== null ||
       review?.state !== "open" ||
       review.merged ||
-      receipt.phase === "merged-authority" ||
-      readback.authority_state !== "review-branch" ||
-      receipt.source_result.branch !== review.branch ||
-      readback.source_branch !== review.branch ||
-      receipt.source_result.revision !== review.head_commit ||
-      readback.source_revision !== review.head_commit ||
-      readback.registry_digest !== receipt.source_result.registry_digest ||
-      readback.record_digest !== receipt.source_result.record_digest)
+      preparation.branch !== review.branch ||
+      preparation.base_commit !== review.base_commit)
   ) {
     throw invalid("Prototype Landing review state lacks prepared source evidence.");
   }
@@ -336,6 +338,38 @@ export function assertPrototypeLandingResult(
     throw invalid("Successful Prototype Landing cannot carry a failure.");
   }
   return value as PrototypeLandingResult;
+}
+
+function assertSourcePreparation(
+  value: unknown,
+): PrototypeLandingSourcePreparation {
+  const preparation = record(value, "source preparation");
+  const readback = assertReadback(preparation.readback);
+  const receipt = assertReceipt(preparation.receipt);
+  if (
+    !text(preparation.branch) ||
+    !commitPattern.test(String(preparation.base_commit)) ||
+    !Number.isInteger(preparation.file_count) ||
+    Number(preparation.file_count) < 1 ||
+    Number(preparation.file_count) > 520 ||
+    !Array.isArray(preparation.changed_paths) ||
+    preparation.changed_paths.length < 1 ||
+    preparation.changed_paths.length > 520 ||
+    new Set(preparation.changed_paths).size !== preparation.changed_paths.length ||
+    preparation.changed_paths.some((path) => !text(path)) ||
+    !digestPattern.test(String(preparation.content_digest)) ||
+    readback.authority_state !== "review-branch" ||
+    readback.source_branch !== preparation.branch ||
+    receipt.phase === "merged-authority" ||
+    receipt.next_action.code !== "review-source" ||
+    receipt.source_result.branch !== preparation.branch ||
+    receipt.source_result.revision !== readback.source_revision ||
+    receipt.source_result.registry_digest !== readback.registry_digest ||
+    receipt.source_result.record_digest !== readback.record_digest
+  ) {
+    throw invalid("Prototype Landing source preparation projection is invalid.");
+  }
+  return value as PrototypeLandingSourcePreparation;
 }
 
 function assertReview(value: unknown): PrototypeLandingReview {
