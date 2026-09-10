@@ -51,12 +51,15 @@ projection, command, and history routes. OOS credentials and configured
 operator attribution are server-only. Configured OOS failure disables Proposal
 writes and never falls back to synthetic records.
 
-The Prototype exception covers two separate OOS boundaries. Prototype Landing
+The Prototype exception covers three separate OOS boundaries. Prototype Landing
 accepts the reviewed operator draft, re-reads exact Studio preparation on the
 server, and constructs the canonical digest-bound command without exposing OOS
 credentials or caller authority to the browser. Only a human-reviewed merge,
 merged Studio readback, and terminal receipt may project `landed`; configured
-failure never falls back to local success. The Prototype Delivery boundary may
+failure never falls back to local success. Prototype Maturity applies the same
+server-only and terminal-evidence boundary to Candidate and Baseline decisions;
+only merged Studio readback may change lifecycle, while block and closeout
+receipts preserve source state. The Prototype Delivery boundary may
 submit an exact source-authoritative packet and project only its validated OOS
 application result and durable receipt. The Console does not create that
 Delivery packet, and neither boundary calls OpenProject, WGCF, or the source

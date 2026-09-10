@@ -76,6 +76,9 @@ current and future product changes.
 - `prototype-landing-live-integration.md`
   - Reviewed preparation, durable OOS lifecycle, human source review, merged
     Studio readback, and receipt-bound Landing projection.
+- `prototype-maturity-live-integration.md`
+  - Candidate and Baseline preparation, readiness, operator decision, human
+    source review, and terminal maturity projection.
 - `prototype-delivery-live-integration.md`
   - Exact source-packet application through OOS and receipt-bound Prototype
     graduation projection.

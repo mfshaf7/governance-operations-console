@@ -51,6 +51,11 @@ import {
   usePrototypeLandingLiveRuntime,
 } from "../../live-runtime/use-prototype-landing-live-runtime.ts";
 import {
+  prototypeMaturityAllowsLocalFallback,
+  prototypeMaturityInputKey,
+  usePrototypeMaturityLiveRuntime,
+} from "../../live-runtime/use-prototype-maturity-live-runtime.ts";
+import {
   type PrototypePreviewProfileDraft,
   type PrototypePreviewProfileMutationActionId,
   type PrototypePreviewRuntimeMutationActionId,
@@ -72,6 +77,7 @@ export function usePrototypeControlController({
   const runtimeCapabilities = getPrototypeRuntimeCapabilities();
   const deliveryRuntime = usePrototypeDeliveryLiveRuntime();
   const landingRuntime = usePrototypeLandingLiveRuntime();
+  const maturityRuntime = usePrototypeMaturityLiveRuntime();
   const sourceReadModel = getPrototypeWorkspaceReadModel();
   const state = usePrototypeControlState(sourceReadModel);
   const [requestDraft, setRequestDraft] = useState<PrototypeRequestDraft>(
@@ -99,6 +105,7 @@ export function usePrototypeControlController({
         deliveryApplicationsByPrototypeId:
           deliveryRuntime.projectionsByPrototypeId,
         landingProjectionsByRecordId: landingRuntime.projectionsByRecordId,
+        maturityProjectionsByRecordId: maturityRuntime.projectionsByRecordId,
         proposalEntryRecords,
         runtimeProjection: state.runtimeProjection,
         sourceReadModel,
@@ -106,6 +113,7 @@ export function usePrototypeControlController({
     [
       deliveryRuntime.projectionsByPrototypeId,
       landingRuntime.projectionsByRecordId,
+      maturityRuntime.projectionsByRecordId,
       proposalEntryRecords,
       sourceReadModel,
       state.runtimeProjection,
@@ -263,7 +271,23 @@ export function usePrototypeControlController({
       return;
     }
 
-    await recordPrototypeProjection(record, commandId, input);
+    const maturityInput = {
+      input,
+      transition: "baseline-promotion" as const,
+    };
+    try {
+      await maturityRuntime.run({
+        input: maturityInput,
+        inputKey: prototypeMaturityInputKey(maturityInput),
+        record,
+      });
+    } catch (error) {
+      if (prototypeMaturityAllowsLocalFallback(error)) {
+        await recordPrototypeProjection(record, commandId, input);
+      } else {
+        throw error;
+      }
+    }
 
     if (input.decision === "route-closeout") {
       state.setActiveDialog("closeout-retirement");
@@ -279,7 +303,23 @@ export function usePrototypeControlController({
       return;
     }
 
-    await recordPrototypeProjection(record, commandId, input);
+    const maturityInput = {
+      input,
+      transition: "candidate-promotion" as const,
+    };
+    try {
+      await maturityRuntime.run({
+        input: maturityInput,
+        inputKey: prototypeMaturityInputKey(maturityInput),
+        record,
+      });
+    } catch (error) {
+      if (prototypeMaturityAllowsLocalFallback(error)) {
+        await recordPrototypeProjection(record, commandId, input);
+      } else {
+        throw error;
+      }
+    }
 
     if (input.decision === "route-closeout") {
       state.setActiveDialog("closeout-retirement");

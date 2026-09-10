@@ -494,7 +494,11 @@ export function canRecordPrototypeBaselinePromotion(
     return false;
   }
 
-  if (decision === "block-baseline" || decision === "route-closeout") {
+  if (decision === "block-baseline") {
+    return record.openIssues.some((issue) => issue.status === "blocked");
+  }
+
+  if (decision === "route-closeout") {
     return true;
   }
 
