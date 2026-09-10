@@ -407,6 +407,21 @@ test("the Console foundation carries a synthetic product through every catalogue
     });
     assert.equal(candidate.nextRecord.lifecycle, "candidate");
 
+    const blockedBaselineRecord = {
+      ...structuredClone(candidate.nextRecord),
+      openIssues: [
+        ...candidate.nextRecord.openIssues,
+        {
+          id: "focus-timer-baseline-blocker",
+          owner: productManifest.ownership.product_owner_ref,
+          requiredFix:
+            "Correct the baseline statement before movement preparation.",
+          status: "blocked",
+          title: "Baseline statement needs correction",
+          tone: "danger",
+        },
+      ],
+    };
     const blockedBaseline = await submitPrototypeProjectionCommand({
       commandId: "record-baseline-promotion",
       input: {
@@ -415,7 +430,7 @@ test("the Console foundation carries a synthetic product through every catalogue
         issueDisposition:
           "The baseline statement needs a bounded correction before movement.",
       },
-      record: candidate.nextRecord,
+      record: blockedBaselineRecord,
       submittedAt: nextTimestamp(),
     });
     assert.equal(blockedBaseline.nextRecord.baseline.state, "blocked");

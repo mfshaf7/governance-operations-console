@@ -60,8 +60,14 @@ export const guard = {
       `${root}/live-runtime/prototype-delivery-live-projection.ts`,
       `${root}/live-runtime/prototype-delivery-live-types.ts`,
       `${root}/live-runtime/use-prototype-delivery-live-runtime.ts`,
+      `${root}/live-runtime/prototype-maturity-live-contract.ts`,
+      `${root}/live-runtime/prototype-maturity-live-projection.ts`,
+      `${root}/live-runtime/prototype-maturity-live-types.ts`,
+      `${root}/live-runtime/use-prototype-maturity-live-runtime.ts`,
       `${root}/server/prototype-delivery-api-routes.ts`,
       `${root}/server/prototype-delivery-oos-client.ts`,
+      `${root}/server/prototype-maturity-api-routes.ts`,
+      `${root}/server/prototype-maturity-oos-client.ts`,
     ]) {
       assertAppFile(failures, path);
     }

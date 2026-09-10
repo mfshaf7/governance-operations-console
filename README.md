@@ -93,6 +93,8 @@ boundary documented in
 [`docs/product/proposal-live-integration.md`](docs/product/proposal-live-integration.md).
 The Prototype Landing boundary is documented in
 [`docs/product/prototype-landing-live-integration.md`](docs/product/prototype-landing-live-integration.md).
+The Prototype Maturity boundary is documented in
+[`docs/product/prototype-maturity-live-integration.md`](docs/product/prototype-maturity-live-integration.md).
 The Prototype Delivery application boundary is documented in
 [`docs/product/prototype-delivery-live-integration.md`](docs/product/prototype-delivery-live-integration.md).
 The Delivery Work Design boundary is documented in

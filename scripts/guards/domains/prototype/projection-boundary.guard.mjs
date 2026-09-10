@@ -26,6 +26,16 @@ const serverRoutes =
   `${prototypeRoot}/server/prototype-delivery-api-routes.ts`;
 const oosClient =
   `${prototypeRoot}/server/prototype-delivery-oos-client.ts`;
+const maturityContract =
+  `${prototypeRoot}/live-runtime/prototype-maturity-live-contract.ts`;
+const maturityProjection =
+  `${prototypeRoot}/live-runtime/prototype-maturity-live-projection.ts`;
+const maturityRuntime =
+  `${prototypeRoot}/live-runtime/use-prototype-maturity-live-runtime.ts`;
+const maturityServerRoutes =
+  `${prototypeRoot}/server/prototype-maturity-api-routes.ts`;
+const maturityOosClient =
+  `${prototypeRoot}/server/prototype-maturity-oos-client.ts`;
 
 export const guard = {
   id: "prototype/projection-boundary",
@@ -57,6 +67,11 @@ export const guard = {
       liveRuntime,
       serverRoutes,
       oosClient,
+      maturityContract,
+      maturityProjection,
+      maturityRuntime,
+      maturityServerRoutes,
+      maturityOosClient,
       `${prototypeRoot}/presentation/dialogs/history/prototype-history-view-model.ts`,
       `${prototypeRoot}/presentation/dashboards/prototype-dashboard/prototype-dashboard-view-model.ts`,
       `${prototypeRoot}/presentation/dashboards/prototype-dashboard/prototype-dashboard-status-area-dialog.tsx`,
@@ -86,6 +101,8 @@ export const guard = {
       "uniquePrototypeRecords",
       "projectPrototypeDeliveryApplication",
       "deliveryApplicationsByPrototypeId",
+      "projectPrototypeMaturity",
+      "maturityProjectionsByRecordId",
     ]);
     assertOmits(failures, effectiveProjection, [
       "runtimeProjection.localRecords",
@@ -215,6 +232,50 @@ export const guard = {
       "fixtures/",
       "OOS_CALLER_SECRET",
       "openproject",
+    ]);
+    assertIncludes(failures, maturityContract, [
+      "assertPrototypeMaturityPreparation",
+      "assertPrototypeMaturitySubmissionIntent",
+      "assertPrototypeMaturityResult",
+      "Terminal Prototype Maturity evidence does not bind one outcome.",
+    ]);
+    assertIncludes(failures, maturityProjection, [
+      "assertPrototypeMaturityResult",
+      "prototypeRecordAfterCandidatePromotion",
+      "prototypeRecordAfterBaselinePromotion",
+      'authority: "source-projected"',
+      "result.receipt.receipt_digest",
+    ]);
+    assertIncludes(failures, maturityRuntime, [
+      'fetch(path',
+      '"/api/prototypes/maturity/preparations"',
+      '"decision-required"',
+      '"review-required"',
+      "prototype_maturity_live_mode_required",
+      "projectionsByRecordId",
+    ]);
+    assertOmits(failures, maturityRuntime, [
+      "OOS_CALLER_SECRET",
+      "x-oos-caller-secret",
+      "openproject",
+    ]);
+    assertIncludes(failures, maturityServerRoutes, [
+      "preparePrototypeMaturity",
+      "submitPrototypeMaturity",
+      "decidePrototypeMaturity",
+      "continuePrototypeMaturity",
+      "cancelPrototypeMaturity",
+      "prototype_maturity_live_mode_required",
+    ]);
+    assertIncludes(failures, maturityOosClient, [
+      '"/v1/prototype-maturity/preparations"',
+      '"/v1/prototype-maturity/requests"',
+      '"x-oos-caller-id"',
+      '"x-oos-caller-secret"',
+      'cache: "no-store"',
+      "AbortSignal.timeout",
+      "samePrototypeMaturityPreparation",
+      "assertReturnedBinding",
     ]);
     assertIncludes(failures, serverRoutes, [
       "applyPrototypeDeliveryApplication",

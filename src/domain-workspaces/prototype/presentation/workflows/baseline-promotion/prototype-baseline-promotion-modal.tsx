@@ -127,6 +127,8 @@ export function PrototypeBaselinePromotionModal({
   const applyDisabled =
     Boolean(command.disabledReason) ||
     !draftComplete ||
+    (draft.decision === "block-baseline" &&
+      !record.openIssues.some((issue) => issue.status === "blocked")) ||
     (draft.decision === "approve-baseline" && !reviewReady);
   const evidenceChecklistRows = baselineEvidenceChecklistRows(record);
 
