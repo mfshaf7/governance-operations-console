@@ -166,6 +166,46 @@ test("Prototype Maturity rejects a blocking Baseline decision without a visible 
   );
 });
 
+test("Prototype Maturity sends local blocker identities as bounded source references", () => {
+  const runInput = candidateRunInput();
+  const input = {
+    ...runInput,
+    input: {
+      ...runInput.input,
+      input: {
+        ...runInput.input.input,
+        decision: "block-promotion",
+      },
+    },
+    record: {
+      ...runInput.record,
+      openIssues: [
+        {
+          id: "issue-client-boundary",
+          owner: "Prototype Studio",
+          requiredFix: "Resolve the client visibility boundary.",
+          status: "blocked",
+          title: "Client boundary",
+          tone: "danger",
+        },
+      ],
+    },
+  };
+  const intent = prototypeMaturitySubmissionIntent(
+    input,
+    {
+      acceptedAt: "2026-09-10T04:00:00.000Z",
+      requestId: "prototype-maturity-request:sample-tool:6",
+    },
+    preparation(),
+  );
+
+  assert.equal(
+    intent.record.blocker.issue_ref,
+    "console://prototype/issues/issue-client-boundary",
+  );
+});
+
 test("Prototype Maturity projects lifecycle only from merged terminal authority", () => {
   const input = candidateRunInput();
   const intent = prototypeMaturitySubmissionIntent(

@@ -153,7 +153,7 @@ export function prototypeMaturitySubmissionIntent(
         decision === "block-promotion" || decision === "block-baseline"
           ? blocker
             ? {
-                issue_ref: blocker.id,
+                issue_ref: prototypeIssueRef(blocker.id),
                 owner_ref: blocker.owner,
                 required_fix: blocker.requiredFix,
               }
@@ -220,6 +220,11 @@ function prototypeSlug(record: PrototypeRecord) {
     .replace(/^-+|-+$/g, "");
   if (!slug) throw new Error("Prototype Maturity requires a stable Prototype id.");
   return slug;
+}
+
+function prototypeIssueRef(issueId: string) {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(issueId)) return issueId;
+  return `console://prototype/issues/${encodeURIComponent(issueId)}`;
 }
 
 function terminal(status: string) {
