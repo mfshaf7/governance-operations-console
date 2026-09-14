@@ -2,8 +2,7 @@ import { PrototypeBaselinePromotionModal } from "../workflows/baseline-promotion
 import type { PrototypeBaselinePromotionInput } from "../../work-model/workflows/baseline-promotion/prototype-baseline-promotion-model.ts";
 import { PrototypeCandidatePromotionModal } from "../workflows/candidate-promotion/prototype-candidate-promotion-modal.tsx";
 import type { PrototypeCandidatePromotionInput } from "../../work-model/workflows/candidate-promotion/prototype-candidate-promotion-model.ts";
-import { PrototypeCloseoutRetirementModal } from "../workflows/closeout-retirement/prototype-closeout-retirement-modal.tsx";
-import type { PrototypeCloseoutInput } from "../../work-model/workflows/closeout-retirement/prototype-closeout-retirement-model.ts";
+import { PrototypeClosureModal } from "../workflows/closeout-retirement/prototype-closure-modal.tsx";
 import { PrototypeLandingModal } from "../workflows/landing/prototype-landing-modal.tsx";
 import { PrototypeMovementRequestModal } from "../workflows/movement-request/prototype-movement-request-modal.tsx";
 import type { PrototypeMovementRequestDraftInput } from "../../work-model/workflows/movement-request/prototype-movement-request-model.ts";
@@ -25,6 +24,7 @@ import type { PrototypeLandingRunResult } from "../../live-runtime/prototype-lan
 import type { PrototypeLandingLiveProjection } from "../../live-runtime/prototype-landing-live-types.ts";
 import type { PrototypeCommandId } from "../../work-model/commands/prototype-command-model.ts";
 import type { PrototypeRecord } from "../../read-model/prototype-workspace-read-model.ts";
+import type { PrototypeControlController } from "./use-prototype-control-controller.ts";
 import type { PrototypeRequestDraft } from "../../work-model/entry/prototype-request-model.ts";
 import type { PrototypeDeliveryPacketProjection } from "../../domain/prototype-delivery.ts";
 import {
@@ -33,6 +33,8 @@ import {
 } from "./use-prototype-control-state.ts";
 
 type PrototypeControlDialogStackProps = {
+  closure: PrototypeControlController["selectedClosure"];
+  closureActions: PrototypeControlController["workflowActions"]["closure"];
   activeDialog: PrototypeDialogRoute | null;
   activeRecord: PrototypeRecord | null;
   canSubmitRequest: boolean;
@@ -78,11 +80,6 @@ type PrototypeControlDialogStackProps = {
     commandId: PrototypeCommandId,
     input: PrototypeCandidatePromotionInput,
   ) => void | Promise<void>;
-  onRecordCloseoutRetirement: (
-    record: PrototypeRecord,
-    commandId: PrototypeCommandId,
-    input: PrototypeCloseoutInput,
-  ) => void | Promise<void>;
   onRecordMovementRequest: (
     record: PrototypeRecord,
     commandId: PrototypeCommandId,
@@ -95,6 +92,8 @@ type PrototypeControlDialogStackProps = {
 };
 
 export function PrototypeControlDialogStack({
+  closure,
+  closureActions,
   activeDialog,
   activeRecord,
   canSubmitRequest,
@@ -114,7 +113,6 @@ export function PrototypeControlDialogStack({
   onPreviewRuntimeAction,
   onRecordBaselinePromotion,
   onRecordCandidatePromotion,
-  onRecordCloseoutRetirement,
   onRecordMovementRequest,
   onRequestClose,
   onRequestSubmit,
@@ -124,6 +122,7 @@ export function PrototypeControlDialogStack({
   return (
     <>
       <PrototypeDashboardModal
+        closure={closure}
         receipts={receipts}
         onClose={onCloseDialog}
         onOpenCurrentAction={(record) =>
@@ -134,10 +133,12 @@ export function PrototypeControlDialogStack({
         onOpenPreviewRuntime={() => onOpenDialog("preview-runtime")}
         record={activeDialog === "dashboard" ? activeRecord : null}
       />
-      <PrototypeCloseoutRetirementModal
+      <PrototypeClosureModal
         onBackToDashboard={onBackToDashboard}
         onClose={onCloseDialog}
-        onRecordReceipt={onRecordCloseoutRetirement}
+        onOpenHistory={(record) => onOpenDialog("history", record)}
+        closure={closure}
+        actions={closureActions}
         record={activeDialog === "closeout-retirement" ? activeRecord : null}
       />
       <PrototypeCandidatePromotionModal
@@ -180,8 +181,11 @@ export function PrototypeControlDialogStack({
         sourceDeliveryPacket={sourceDeliveryPacket}
       />
       <PrototypeHistoryModal
+        closure={closure}
+        closureActions={closureActions}
         receipts={receipts}
         onClose={onCloseDialog}
+        onOpenClosure={(record) => onOpenDialog("closeout-retirement", record)}
         record={activeDialog === "history" ? activeRecord : null}
       />
       <PrototypeRequestModal

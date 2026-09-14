@@ -6,18 +6,21 @@ import {
 } from "@/teras";
 
 import type { PrototypeRecord } from "../../../read-model/prototype-workspace-read-model.ts";
+import type { PrototypeClosureLifecycle } from "../../../live-runtime/prototype-closure-live-types.ts";
 
 export function PrototypeDashboardLifecyclePanel({
+  lifecycle,
   onOpenCloseout,
   onOpenHistory,
   record,
 }: {
+  lifecycle: PrototypeClosureLifecycle;
   onOpenCloseout: (record: PrototypeRecord) => void;
   onOpenHistory: (record: PrototypeRecord) => void;
   record: PrototypeRecord;
 }) {
   const isTerminal =
-    record.lifecycle === "retired" || record.lifecycle === "graduated";
+    lifecycle === "retired" || lifecycle === "graduated";
 
   if (isTerminal) {
     return (
@@ -29,7 +32,7 @@ export function PrototypeDashboardLifecyclePanel({
         spacing="normal"
       >
         <TerasPanelHeader
-          description="Review retained receipts and closeout evidence."
+          description="Review Studio lifecycle events and Closure receipts."
           kicker="History"
           title="Review archive"
         />
@@ -55,18 +58,17 @@ export function PrototypeDashboardLifecyclePanel({
       spacing="normal"
     >
       <TerasPanelHeader
-        description="Prepare lifecycle closeout when this prototype should stop."
-        kicker="Closeout"
-        title="Closeout / Retirement"
+        description="Review the source and request a governed lifecycle change."
+        kicker="Closure"
+        title="Prototype Closure"
       />
       <TerasActionRow spacing="normal">
         <TerasActionButton
-          disabled={record.landing.state !== "landed"}
           onClick={() => onOpenCloseout(record)}
 
           emphasis="secondary"
         >
-          Open Closeout
+          Open Closure
         </TerasActionButton>
       </TerasActionRow>
     </TerasPanel>

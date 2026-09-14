@@ -25,6 +25,7 @@ import type {
   PrototypeProjectedReceipt,
   PrototypeRecord,
 } from "../../../read-model/prototype-workspace-read-model.ts";
+import type { PrototypeClosureViewState } from "../../shared/prototype-closure-presentation-model.ts";
 import {
   prototypeDashboardAreas,
   prototypeDashboardCards,
@@ -43,6 +44,7 @@ import { PrototypeDashboardLifecyclePanel } from "./prototype-dashboard-lifecycl
 import { PrototypeStatusAreaDialog } from "./prototype-dashboard-status-area-dialog.tsx";
 
 export function PrototypeDashboardModal({
+  closure,
   receipts,
   onClose,
   onOpenCloseout,
@@ -51,6 +53,7 @@ export function PrototypeDashboardModal({
   onOpenPreviewRuntime,
   record,
 }: {
+  closure: PrototypeClosureViewState | null;
   receipts: PrototypeProjectedReceipt[];
   onClose: () => void;
   onOpenCloseout: (record: PrototypeRecord) => void;
@@ -66,12 +69,14 @@ export function PrototypeDashboardModal({
     return null;
   }
 
-  const selectedStatus = prototypeSelectedPanelStatus(record);
-  const previewStatus = prototypePreviewStatus(record);
+  const sourceLifecycle = closure?.preparation?.expected_state.lifecycle;
+  const displayRecord = sourceLifecycle ? { ...record, lifecycle: sourceLifecycle } : record;
+  const selectedStatus = prototypeSelectedPanelStatus(displayRecord);
+  const previewStatus = prototypePreviewStatus(displayRecord);
   const landingStatus = prototypeLandingStatus(record);
   const openIssueTone = prototypeOpenIssueTone(record);
   const isTerminal =
-    record.lifecycle === "retired" || record.lifecycle === "graduated";
+    displayRecord.lifecycle === "retired" || displayRecord.lifecycle === "graduated";
   const statusAreas = prototypeDashboardAreas(record, receipts);
   const openIssuesScrollable = record.openIssues.length > 2;
 
@@ -113,7 +118,7 @@ export function PrototypeDashboardModal({
                   title={record.name}
                 />
                 <TerasMetadataList
-                  items={prototypeSelectedPanelMeta(record)}
+                  items={prototypeSelectedPanelMeta(displayRecord)}
                   shape="line"
                   topOffset="compact"
                   treatment="chip"
@@ -122,7 +127,7 @@ export function PrototypeDashboardModal({
               </TerasPanel>
 
               <TerasSummaryCardGrid columns={5}>
-                {prototypeDashboardCards(record).map((card) => (
+                {prototypeDashboardCards(displayRecord).map((card) => (
                   <TerasSummaryCard
                     key={card.label}
                     label={card.label}
@@ -148,12 +153,13 @@ export function PrototypeDashboardModal({
                     </TerasStatusPill>
                   }
                   actionsLayout="inline"
-                  description="Canonical lifecycle, visibility, data, boundary, and source fields."
+                  description={sourceLifecycle ? "Studio lifecycle with local preview posture for the remaining fields." :
+                    "Local preview posture; Studio lifecycle is not verified."}
                   kicker="Record Status"
                   title="Project posture"
                 />
                 <TerasMetadataList
-                  items={prototypeDashboardPostureFacts(record)}
+                  items={prototypeDashboardPostureFacts(displayRecord)}
                   topOffset="compact"
                 />
               </TerasPanel>
@@ -195,7 +201,7 @@ export function PrototypeDashboardModal({
           }
           sideFill={
             <TerasZone fit="content">
-              {!isTerminal ? (
+              {!isTerminal && (!sourceLifecycle || sourceLifecycle === record.lifecycle) ? (
                 <TerasPanel
                   fit="content"
                   frame="padded"
@@ -294,6 +300,7 @@ export function PrototypeDashboardModal({
               </TerasPanel>
 
               <PrototypeDashboardLifecyclePanel
+                lifecycle={displayRecord.lifecycle}
                 onOpenCloseout={onOpenCloseout}
                 onOpenHistory={onOpenHistory}
                 record={record}
