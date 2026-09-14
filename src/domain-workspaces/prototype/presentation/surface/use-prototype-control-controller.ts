@@ -43,9 +43,9 @@ import {
   type PrototypeBaselinePromotionInput,
 } from "../../work-model/workflows/baseline-promotion/prototype-baseline-promotion-model.ts";
 import { type PrototypeCandidatePromotionInput } from "../../work-model/workflows/candidate-promotion/prototype-candidate-promotion-model.ts";
-import { type PrototypeCloseoutInput } from "../../work-model/workflows/closeout-retirement/prototype-closeout-retirement-model.ts";
 import { type PrototypeMovementRequestDraftInput } from "../../work-model/workflows/movement-request/prototype-movement-request-model.ts";
 import { usePrototypeDeliveryLiveRuntime } from "../../live-runtime/use-prototype-delivery-live-runtime.ts";
+import { usePrototypeClosureLiveRuntime } from "../../live-runtime/use-prototype-closure-live-runtime.ts";
 import {
   prototypeLandingAllowsLocalFallback,
   usePrototypeLandingLiveRuntime,
@@ -76,6 +76,7 @@ export function usePrototypeControlController({
 } = {}) {
   const runtimeCapabilities = getPrototypeRuntimeCapabilities();
   const deliveryRuntime = usePrototypeDeliveryLiveRuntime();
+  const closureRuntime = usePrototypeClosureLiveRuntime();
   const landingRuntime = usePrototypeLandingLiveRuntime();
   const maturityRuntime = usePrototypeMaturityLiveRuntime();
   const sourceReadModel = getPrototypeWorkspaceReadModel();
@@ -129,6 +130,11 @@ export function usePrototypeControlController({
     [readModel, state.selectedRecordId],
   );
   const activeRecord = selectedRecord;
+
+  useEffect(() => {
+    if (!activeRecord || !["dashboard", "closeout-retirement", "history"].includes(state.activeDialog ?? "")) return;
+    void closureRuntime.load(activeRecord).catch(() => undefined);
+  }, [activeRecord?.id, state.activeDialog, closureRuntime.load]);
   const selectedReceipts = activeRecord
     ? (effectiveProjection.receiptsByRecord[activeRecord.id] ?? [])
     : [];
@@ -352,18 +358,6 @@ export function usePrototypeControlController({
     }
   }
 
-  async function recordCloseoutRetirement(
-    record: PrototypeRecord,
-    commandId: PrototypeCommandId,
-    input: PrototypeCloseoutInput,
-  ) {
-    if (commandId !== "record-closeout-retirement") {
-      return;
-    }
-
-    await recordPrototypeProjection(record, commandId, input);
-  }
-
   async function recordPreviewRuntimeAction(
     record: PrototypeRecord,
     actionId: PrototypePreviewRuntimeMutationActionId,
@@ -421,6 +415,12 @@ export function usePrototypeControlController({
     },
     selectedPreviewReceipts,
     selectedReceipts,
+    selectedClosure: activeRecord ? {
+      preparation: closureRuntime.preparations[activeRecord.id] ?? null,
+      result: closureRuntime.results[activeRecord.id] ?? null,
+      error: closureRuntime.errors[activeRecord.id] ?? null,
+      pending: closureRuntime.pending[activeRecord.id] === true,
+    } : null,
     selectedLandingProjection: activeRecord
       ? (landingRuntime.projectionsByRecordId[activeRecord.id] ?? null)
       : null,
@@ -436,11 +436,17 @@ export function usePrototypeControlController({
       runLandingSimulation,
       recordBaselinePromotion,
       recordCandidatePromotion,
-      recordCloseoutRetirement,
       recordMovementRequest,
       recordPreviewCheck,
       recordPreviewProfileAction,
       recordPreviewRuntimeAction,
+      closure: {
+        load: closureRuntime.load,
+        submit: closureRuntime.submit,
+        read: closureRuntime.read,
+        inspect: closureRuntime.inspect,
+        command: closureRuntime.command,
+      },
     },
   };
 }

@@ -126,6 +126,8 @@ export function PrototypeControlSurface({
         canSubmitRequest={controller.request.canSubmit}
         previewReceipts={controller.selectedPreviewReceipts}
         receipts={controller.selectedReceipts}
+        closure={controller.selectedClosure}
+        closureActions={controller.workflowActions.closure}
         landingProjection={controller.selectedLandingProjection}
         sourceDeliveryPacket={controller.selectedSourceDeliveryPacket}
         onBackToDashboard={controller.workflowActions.backToDashboard}
@@ -147,9 +149,6 @@ export function PrototypeControlSurface({
         }
         onRecordCandidatePromotion={
           controller.workflowActions.recordCandidatePromotion
-        }
-        onRecordCloseoutRetirement={
-          controller.workflowActions.recordCloseoutRetirement
         }
         onRecordMovementRequest={
           controller.workflowActions.recordMovementRequest
