@@ -128,6 +128,7 @@ export function PrototypeControlSurface({
         receipts={controller.selectedReceipts}
         closure={controller.selectedClosure}
         closureActions={controller.workflowActions.closure}
+        closureOwnerEvidence={controller.selectedClosureOwnerEvidence}
         landingProjection={controller.selectedLandingProjection}
         sourceDeliveryPacket={controller.selectedSourceDeliveryPacket}
         onBackToDashboard={controller.workflowActions.backToDashboard}

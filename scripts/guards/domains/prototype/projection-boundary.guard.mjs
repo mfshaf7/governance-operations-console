@@ -218,7 +218,8 @@ export const guard = {
     ]);
     assertIncludes(failures, liveProjection, [
       "assertPrototypeDeliveryResultMatchesPacket",
-      'lifecycle: "graduated"',
+      'lifecycle: "baseline-approved"',
+      'id: "closeout-retirement"',
       'authority: "source-projected"',
       "result.receipt.receipt_ref",
       "result.target.record_ref",

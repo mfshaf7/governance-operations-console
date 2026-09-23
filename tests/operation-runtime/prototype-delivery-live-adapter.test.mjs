@@ -108,7 +108,9 @@ test("case:ingress-protocol-positive applies, replays, reads, and projects sourc
     record: sourceRecord,
   });
 
-  assert.equal(projected.lifecycle, "graduated");
+  assert.equal(projected.lifecycle, "baseline-approved");
+  assert.equal(projected.currentMove.id, "closeout-retirement");
+  assert.equal(projected.currentMove.actionLabel, "Apply Delivery");
   assert.equal(projected.movementRequest.state, "receipt-projected");
   assert.equal(projected.lastMovementReceiptRef, created.receipt.receipt_ref);
   assert.equal(projected.projectionFreshness, "current OOS Delivery application");

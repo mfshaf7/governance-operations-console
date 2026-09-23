@@ -55,7 +55,7 @@ export type PrototypeClosurePreparation = Readonly<{
 
 export type PrototypeClosureRequestFields = Readonly<{
   accepted_baseline_receipt_ref?: string;
-  target_kind?: "new-delivery-epic" | "existing-delivery-item";
+  target_kind?: "new-delivery-epic";
   target_delivery_ref?: string;
   accepted_delivery_target_receipt_ref?: string;
   durable_owner_ref?: string;
@@ -150,7 +150,7 @@ export type PrototypeClosureResult = Readonly<{
     ref: string;
   }> | null;
   canonical_mutation: boolean;
-  runtime_activation: false;
+  runtime_activation: true;
   receipt: Readonly<{
     receipt_id: string;
     outcome: "completed" | "denied" | "failed";

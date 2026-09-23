@@ -26,7 +26,8 @@ export function preparePrototypeClosureRoute(request: NextRequest) {
 }
 
 export function submitPrototypeClosureRoute(request: NextRequest) {
-  return execute(() => submitPrototypeClosure(request.json().catch(() => null)), 202);
+  return execute(async () =>
+    submitPrototypeClosure(await request.json().catch(() => null)), 202);
 }
 
 export function readPrototypeClosureRoute(requestId: string) {
@@ -34,8 +35,10 @@ export function readPrototypeClosureRoute(requestId: string) {
 }
 
 export function decidePrototypeClosureRoute(request: NextRequest, requestId: string) {
-  return execute(() => decidePrototypeClosure(assertPrototypeClosureRequestId(requestId),
-    request.json().catch(() => null)));
+  return execute(async () => decidePrototypeClosure(
+    assertPrototypeClosureRequestId(requestId),
+    await request.json().catch(() => null),
+  ));
 }
 
 export function continuePrototypeClosureRoute(requestId: string) {

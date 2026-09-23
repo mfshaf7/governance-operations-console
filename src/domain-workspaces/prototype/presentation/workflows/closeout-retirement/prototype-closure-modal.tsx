@@ -12,6 +12,7 @@ import {
   TerasNoteField,
   TerasPanel,
   TerasPanelHeader,
+  TerasReadoutField,
   TerasStatusItem,
   TerasStatusPill,
   TerasTextField,
@@ -49,6 +50,7 @@ export function PrototypeClosureModal({
   onBackToDashboard,
   onClose,
   onOpenHistory,
+  ownerEvidence,
   record,
 }: {
   actions: ClosureActions;
@@ -56,6 +58,7 @@ export function PrototypeClosureModal({
   onBackToDashboard: () => void;
   onClose: () => void;
   onOpenHistory: (record: PrototypeRecord) => void;
+  ownerEvidence: PrototypeClosureRequestFields;
   record: PrototypeRecord | null;
 }) {
   const [step, setStep] = useState<Step>("prepare");
@@ -70,7 +73,9 @@ export function PrototypeClosureModal({
   const result = closure?.result ?? null;
   const available = preparation ? closureActionsForLifecycle(preparation.expected_state.lifecycle) : [];
   const selectedAction = available.includes(action) ? action : available[0] ?? action;
-  const selectedFields = selectedAction === action ? fields : initialClosureFields(selectedAction);
+  const selectedFields = selectedAction === action
+    ? fields
+    : initialClosureFields(selectedAction, ownerEvidence);
   const complete = available.length > 0 && closureFieldsComplete(selectedAction, selectedFields);
 
   useEffect(() => {
@@ -90,7 +95,7 @@ export function PrototypeClosureModal({
 
   function chooseAction(next: PrototypeClosureAction) {
     setAction(next);
-    setFields(initialClosureFields(next));
+    setFields(initialClosureFields(next, ownerEvidence));
     setDirty(true);
     setMessage(null);
   }
@@ -247,15 +252,6 @@ export function PrototypeClosureModal({
               options={available.map((id) => ({ id, label: closureActionLabels[id],
                 tone: id === "retire-incubation" ? "danger" as const : "info" as const }))}
               selectedId={selectedAction} onSelect={chooseAction} />
-            {selectedAction === "apply-delivery" ? <TerasChoiceGroup
-              ariaLabel="Delivery target kind" frame="tray" label="Delivery target"
-              options={[{ id: "new-delivery-epic", label: "New Delivery epic", tone: "info" },
-                { id: "existing-delivery-item", label: "Existing Delivery item", tone: "info" }]}
-              selectedId={selectedFields.target_kind ?? "new-delivery-epic"}
-              onSelect={(target_kind) => {
-                setFields(({ target_delivery_ref: _old, ...current }) => ({ ...current, target_kind }));
-                setDirty(true);
-              }} /> : null}
             {selectedAction === "graduate-source" ? <TerasChoiceGroup
               ariaLabel="Source transfer strategy" frame="tray" label="Source transfer"
               options={[{ id: "transfer", label: "Transfer source", tone: "info" },
@@ -267,6 +263,9 @@ export function PrototypeClosureModal({
               }} /> : null}
             <TerasFieldGrid columns={2} spacing="normal">
               {closureFieldsForAction(selectedAction, selectedFields).map((spec) =>
+                selectedAction === "apply-delivery" ? <TerasReadoutField
+                  key={spec.key} label={spec.label} fit="content"
+                  value={selectedFields[spec.key] ?? "Complete Delivery ingress first"} /> :
                 spec.key === "retirement_reason" ? <TerasNoteField key={spec.key}
                   label={spec.label} value={selectedFields[spec.key] ?? ""}
                   onValueChange={(value) => updateField(spec.key, value)}

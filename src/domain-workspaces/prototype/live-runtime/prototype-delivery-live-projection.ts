@@ -2,6 +2,13 @@ import type { PrototypeRecord } from "../read-model/prototype-workspace-read-mod
 import { assertPrototypeDeliveryResultMatchesPacket } from "./prototype-delivery-live-contract.ts";
 import type { PrototypeDeliveryApplicationProjection } from "./prototype-delivery-live-types.ts";
 
+export function prototypeRecordSourceId(record: PrototypeRecord) {
+  const sourceMatch = /^prototypes\.yaml\/([a-z0-9][a-z0-9-]*)$/.exec(
+    record.sourceRef,
+  );
+  return sourceMatch?.[1] ?? record.id.replace(/^prototype-/, "");
+}
+
 export function projectPrototypeDeliveryApplication({
   projection,
   record,
@@ -14,7 +21,7 @@ export function projectPrototypeDeliveryApplication({
   const { packet, result } = projection;
   assertPrototypeDeliveryResultMatchesPacket({ packet, result });
   if (
-    packet.content.source.prototype_id !== record.id ||
+    packet.content.source.prototype_id !== prototypeRecordSourceId(record) ||
     packet.content.source.record_ref !== record.sourceRef
   ) {
     throw new Error(
@@ -32,15 +39,15 @@ export function projectPrototypeDeliveryApplication({
   return {
     ...record,
     currentMove: {
-      actionLabel: "View History",
+      actionLabel: "Apply Delivery",
       detail:
-        "OOS applied the source-authoritative packet to Workspace Delivery ART and retained the durable target receipt.",
-      id: "history",
-      label: "Review Delivery handoff",
-      tone: "ok",
+        "OOS created the Delivery target and retained its receipt. Apply the verified handoff to Prototype Studio next.",
+      id: "closeout-retirement",
+      label: "Complete Delivery handoff",
+      tone: "warn",
     },
     lastMovementReceiptRef: result.receipt.receipt_ref,
-    lifecycle: "graduated",
+    lifecycle: "baseline-approved",
     linkedRecords: targetExists
       ? record.linkedRecords
       : [

@@ -35,6 +35,7 @@ import {
 type PrototypeControlDialogStackProps = {
   closure: PrototypeControlController["selectedClosure"];
   closureActions: PrototypeControlController["workflowActions"]["closure"];
+  closureOwnerEvidence: PrototypeControlController["selectedClosureOwnerEvidence"];
   activeDialog: PrototypeDialogRoute | null;
   activeRecord: PrototypeRecord | null;
   canSubmitRequest: boolean;
@@ -94,6 +95,7 @@ type PrototypeControlDialogStackProps = {
 export function PrototypeControlDialogStack({
   closure,
   closureActions,
+  closureOwnerEvidence,
   activeDialog,
   activeRecord,
   canSubmitRequest,
@@ -138,6 +140,7 @@ export function PrototypeControlDialogStack({
         onClose={onCloseDialog}
         onOpenHistory={(record) => onOpenDialog("history", record)}
         closure={closure}
+        ownerEvidence={closureOwnerEvidence}
         actions={closureActions}
         record={activeDialog === "closeout-retirement" ? activeRecord : null}
       />

@@ -45,6 +45,7 @@ import {
 import { type PrototypeCandidatePromotionInput } from "../../work-model/workflows/candidate-promotion/prototype-candidate-promotion-model.ts";
 import { type PrototypeMovementRequestDraftInput } from "../../work-model/workflows/movement-request/prototype-movement-request-model.ts";
 import { usePrototypeDeliveryLiveRuntime } from "../../live-runtime/use-prototype-delivery-live-runtime.ts";
+import { prototypeRecordSourceId } from "../../live-runtime/prototype-delivery-live-projection.ts";
 import { usePrototypeClosureLiveRuntime } from "../../live-runtime/use-prototype-closure-live-runtime.ts";
 import {
   prototypeLandingAllowsLocalFallback,
@@ -141,6 +142,35 @@ export function usePrototypeControlController({
   const selectedPreviewReceipts = selectedReceipts.filter(
     (receipt) => receipt.authority === "prototype-local",
   );
+  const selectedDeliveryApplication = activeRecord
+    ? (deliveryRuntime.projectionsByPrototypeId[
+        prototypeRecordSourceId(activeRecord)
+      ] ?? null)
+    : null;
+  const acceptedBaselineReceipt = selectedReceipts.find(
+    (receipt) =>
+      receipt.authority === "source-projected" &&
+      receipt.commandId === "record-baseline-promotion" &&
+      /^prototype-maturity-receipt:[a-z0-9][a-z0-9._-]*:[0-9]+$/.test(
+        receipt.id,
+      ),
+  );
+  const selectedClosureOwnerEvidence = {
+    ...(acceptedBaselineReceipt
+      ? {
+          accepted_baseline_receipt_ref:
+            `oos://receipts/prototype-maturity/${acceptedBaselineReceipt.id}`,
+        }
+      : {}),
+    ...(selectedDeliveryApplication
+      ? {
+          accepted_delivery_target_receipt_ref:
+            selectedDeliveryApplication.result.receipt.receipt_ref,
+          target_delivery_ref:
+            selectedDeliveryApplication.result.target.record_ref,
+        }
+      : {}),
+  };
   const stats = getPrototypeWorkspaceStats(readModel.records);
   const workspaceStatus = prototypeWorkspaceStatus(readModel, stats);
   const canSubmitRequest = prototypeRequestDraftComplete(requestDraft);
@@ -421,6 +451,7 @@ export function usePrototypeControlController({
       error: closureRuntime.errors[activeRecord.id] ?? null,
       pending: closureRuntime.pending[activeRecord.id] === true,
     } : null,
+    selectedClosureOwnerEvidence,
     selectedLandingProjection: activeRecord
       ? (landingRuntime.projectionsByRecordId[activeRecord.id] ?? null)
       : null,

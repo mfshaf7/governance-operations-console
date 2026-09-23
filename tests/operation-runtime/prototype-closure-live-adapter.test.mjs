@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -20,6 +21,8 @@ import {
 import {
   closureActionsForLifecycle,
   closureFieldsComplete,
+  closureFieldsForAction,
+  initialClosureFields,
 } from "../../src/domain-workspaces/prototype/work-model/workflows/closeout-retirement/prototype-closure-work-model.ts";
 import {
   clearPrototypeClosureRequestPointer,
@@ -101,7 +104,7 @@ function acceptedResult(command) {
     failure: null,
     history: [{ sequence: 1, at: "2026-09-14T01:00:00Z", status: "accepted", details: null }],
     canonical_mutation: false,
-    runtime_activation: false,
+    runtime_activation: true,
   };
 }
 
@@ -149,6 +152,66 @@ test("Prototype Closure rejects cross-action fields and unsafe references", () =
   assert.deepEqual(closureActionsForLifecycle("graduated"), []);
 });
 
+test("Prototype Closure requires ingress owner evidence before Delivery apply", () => {
+  const ownerEvidence = {
+    accepted_baseline_receipt_ref:
+      "oos://receipts/prototype-maturity/prototype-maturity-receipt:sample-tool:3",
+    accepted_delivery_target_receipt_ref:
+      "oos://receipts/prototype-delivery-application/sample-tool",
+    target_delivery_ref: "openproject://work_packages/901",
+  };
+  const fields = initialClosureFields("apply-delivery", ownerEvidence);
+  assert.deepEqual(fields, {
+    ...ownerEvidence,
+    target_kind: "new-delivery-epic",
+  });
+  assert.equal(closureFieldsComplete("apply-delivery", fields), true);
+  assert.deepEqual(
+    closureFieldsForAction("apply-delivery", fields).map((field) => field.key),
+    [
+      "accepted_baseline_receipt_ref",
+      "target_delivery_ref",
+      "accepted_delivery_target_receipt_ref",
+    ],
+  );
+  assert.equal(
+    closureFieldsComplete("apply-delivery", {
+      ...fields,
+      accepted_delivery_target_receipt_ref: undefined,
+    }),
+    false,
+  );
+  assert.throws(
+    () =>
+      assertPrototypeClosureIntent({
+        action: "apply-delivery",
+        fields: {
+          accepted_baseline_receipt_ref:
+            ownerEvidence.accepted_baseline_receipt_ref,
+          target_delivery_ref: ownerEvidence.target_delivery_ref,
+          target_kind: "new-delivery-epic",
+        },
+        preparation: preparation({
+          expected_state: {
+            ...preparation().expected_state,
+            lifecycle: "baseline-approved",
+          },
+        }),
+        request_id: requestId,
+      }),
+    /lacks action evidence/,
+  );
+});
+
+test("Prototype Closure Console routes resolve JSON before validation", () => {
+  const source = readFileSync(new URL(
+    "../../src/domain-workspaces/prototype/server/prototype-closure-api-routes.ts",
+    import.meta.url,
+  ), "utf8");
+  assert.match(source, /submitPrototypeClosure\(await request\.json\(\)/);
+  assert.match(source, /decidePrototypeClosure\([\s\S]*await request\.json\(\)/);
+});
+
 test("Prototype Closure rejects false terminal claims without receipt and readback", () => {
   const command = buildPrototypeClosureCommand(assertPrototypeClosureIntent(intent()), config.callerId);
   assert.throws(() => assertPrototypeClosureResult({ ...acceptedResult(command),
@@ -167,7 +230,10 @@ test("Prototype Closure projects a reviewed and merged terminal receipt", () => 
       evidence_refs: ["studio://authority/sample-tool"] },
       runtime_disposition_proof_ref: "platform://disposition/sample-tool" },
     review: { number: 42, url: "https://github.com/example/repo/pull/42", state: "closed",
-      merged: true, merge_commit: "3".repeat(40), human_reviewed: true },
+      head_commit: "2".repeat(40), merged: true, merge_commit: "3".repeat(40),
+      delegated_approval: { review_ref: "https://github.com/example/repo/pull/42#pullrequestreview-7",
+        head_commit: "2".repeat(40), reviewer_login: "example",
+        execution: "agent-gary-delegated" } },
     readback: { merged_source_revision: "3".repeat(40), observed_lifecycle: "retired",
       observed_source_custody: "incubation-repo" },
     receipt: { receipt_id: "prototype-closure-receipt:sample-tool", outcome: "completed",
@@ -180,6 +246,10 @@ test("Prototype Closure projects a reviewed and merged terminal receipt", () => 
     "platform://disposition/sample-tool");
   assert.equal(result.review?.human_reviewed, true);
   assert.throws(() => assertPrototypeClosureResult({ ...result,
+    review: { ...result.review, head_commit: "2".repeat(40),
+      delegated_approval: { review_ref: "https://github.com/example/repo/pull/42#pullrequestreview-7",
+        head_commit: "2".repeat(40), reviewer_login: "example",
+        execution: "agent-gary-delegated" } },
     readback: { ...result.readback, merged_source_revision: "4".repeat(40) },
   }, requestId), /reviewed source readback/);
 });
