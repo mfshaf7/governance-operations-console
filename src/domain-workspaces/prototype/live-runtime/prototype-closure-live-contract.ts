@@ -50,7 +50,12 @@ const fieldNames = [
   "prior_retirement_receipt_ref",
 ] as const;
 const requiredFields: Record<PrototypeClosureAction, readonly string[]> = {
-  "apply-delivery": ["accepted_baseline_receipt_ref", "target_kind"],
+  "apply-delivery": [
+    "accepted_baseline_receipt_ref",
+    "target_kind",
+    "target_delivery_ref",
+    "accepted_delivery_target_receipt_ref",
+  ],
   "graduate-source": [
     "accepted_delivery_target_receipt_ref",
     "durable_owner_ref",
@@ -66,7 +71,12 @@ const requiredFields: Record<PrototypeClosureAction, readonly string[]> = {
   "reopen-incubation": ["prior_retirement_receipt_ref"],
 };
 const allowedFields: Record<PrototypeClosureAction, readonly string[]> = {
-  "apply-delivery": ["accepted_baseline_receipt_ref", "target_kind", "target_delivery_ref"],
+  "apply-delivery": [
+    "accepted_baseline_receipt_ref",
+    "target_kind",
+    "target_delivery_ref",
+    "accepted_delivery_target_receipt_ref",
+  ],
   "graduate-source": ["accepted_delivery_target_receipt_ref", "durable_owner_ref",
     "durable_repo_ref", "durable_owner_acceptance_ref", "transfer_strategy",
     "already_owned_source_proof_ref"],
@@ -223,13 +233,7 @@ export function assertPrototypeClosureIntent(value: unknown): PrototypeClosureIn
     fail("Closure submission lacks action evidence.");
   }
   if (action === "apply-delivery") {
-    oneOf(fields.target_kind, ["new-delivery-epic", "existing-delivery-item"], "Delivery target kind");
-    if (fields.target_kind === "existing-delivery-item" && !fields.target_delivery_ref) {
-      fail("Existing Delivery target reference is required.");
-    }
-    if (fields.target_kind !== "existing-delivery-item" && fields.target_delivery_ref) {
-      fail("A new Delivery target must not carry an existing item reference.");
-    }
+    oneOf(fields.target_kind, ["new-delivery-epic"], "Delivery target kind");
   }
   if (action === "graduate-source") {
     oneOf(fields.transfer_strategy, ["transfer", "already-owned"], "Source transfer strategy");
@@ -267,7 +271,7 @@ export function assertPrototypeClosureResult(
     result.schema_version !== 1 ||
     result.workflow_id !== "prototype-closure" ||
     result.request_id !== requestId ||
-    result.runtime_activation !== false ||
+    result.runtime_activation !== true ||
     typeof result.canonical_mutation !== "boolean"
   ) fail("Closure result lost its request or authority binding.");
   assertPrototypeClosureId(result.prototype_id);
@@ -336,9 +340,30 @@ export function assertPrototypeClosureResult(
     }
   }
   const review = result.review === null ? null : record(result.review);
+  let humanReviewed = false;
   if (review) {
+    const headCommit = text(review.head_commit, "Closure review head", 40);
+    if (!/^[0-9a-f]{40}$/.test(headCommit)) fail("Closure review head is invalid.");
+    const delegatedApproval = review.delegated_approval === null
+      ? null
+      : record(review.delegated_approval);
+    if (delegatedApproval) {
+      const approvalHead = text(
+        delegatedApproval.head_commit,
+        "Closure approval head",
+        40,
+      );
+      if (
+        approvalHead !== headCommit ||
+        !/^[0-9a-f]{40}$/.test(approvalHead) ||
+        delegatedApproval.execution !== "agent-gary-delegated"
+      ) fail("Closure delegated approval is invalid.");
+      text(delegatedApproval.review_ref, "Closure approval reference");
+      text(delegatedApproval.reviewer_login, "Closure reviewer");
+      humanReviewed = true;
+    }
     if (!Number.isSafeInteger(review.number) || (review.number as number) < 1 ||
-        typeof review.merged !== "boolean" || typeof review.human_reviewed !== "boolean") {
+        typeof review.merged !== "boolean") {
       fail("Closure source review is invalid.");
     }
     text(review.url, "Closure source review URL");
@@ -374,7 +399,7 @@ export function assertPrototypeClosureResult(
     fail("Closure terminal state and receipt outcome disagree.");
   }
   if (status === "succeeded" && (!receipt || receipt.outcome !== "completed" ||
-      !sourceSnapshot || !readback || !review?.merged || !review.human_reviewed ||
+      !sourceSnapshot || !readback || !review?.merged || !humanReviewed ||
       readback.merged_source_revision !== review.merge_commit ||
       !resolved ||
       (result.action === "graduate-source" && !disposition))) {
@@ -415,7 +440,7 @@ export function assertPrototypeClosureResult(
     review: review ? { number: review.number as number, url: review.url as string,
       state: review.state as string, merged: review.merged as boolean,
       merge_commit: review.merge_commit as string | null,
-      human_reviewed: review.human_reviewed as boolean } : null,
+      human_reviewed: humanReviewed } : null,
     readback: readback ? {
       merged_source_revision: readback.merged_source_revision as string,
       observed_lifecycle: readback.observed_lifecycle as PrototypeClosureResult["request"]["expected_lifecycle"],
@@ -424,6 +449,6 @@ export function assertPrototypeClosureResult(
     runtime_disposition: disposition ? { state: "accepted", disposition:
       disposition.disposition as "revoked" | "absent", ref: disposition.ref as string } : null, receipt,
     failure: failure ? { code: failure.code as string, message: failure.message as string } : null,
-    canonical_mutation: result.canonical_mutation as boolean, runtime_activation: false,
+    canonical_mutation: result.canonical_mutation as boolean, runtime_activation: true,
   };
 }

@@ -8,7 +8,7 @@ import type {
   PrototypeDeliveryApplicationResult,
 } from "../live-runtime/prototype-delivery-live-types.ts";
 
-const prototypeDeliveryOosTimeoutMs = 8_000;
+const prototypeDeliveryOosTimeoutMs = 30_000;
 
 type PrototypeDeliveryOosConfig = {
   baseUrl: string;

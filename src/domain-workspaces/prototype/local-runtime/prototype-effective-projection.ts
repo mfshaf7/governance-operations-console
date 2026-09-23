@@ -6,7 +6,10 @@ import type { PrototypeRuntimeProjectionSnapshot } from "./prototype-runtime.ts"
 import { prototypeRecordSourceVersion } from "./prototype-runtime-model.ts";
 import { prototypeProjectedReceipts } from "./prototype-receipt-projection.ts";
 import type { PrototypeProjectedReceipt } from "../read-model/prototype-workspace-read-model.ts";
-import { projectPrototypeDeliveryApplication } from "../live-runtime/prototype-delivery-live-projection.ts";
+import {
+  projectPrototypeDeliveryApplication,
+  prototypeRecordSourceId,
+} from "../live-runtime/prototype-delivery-live-projection.ts";
 import type { PrototypeDeliveryApplicationProjection } from "../live-runtime/prototype-delivery-live-types.ts";
 import { projectPrototypeLanding } from "../live-runtime/prototype-landing-live-projection.ts";
 import type { PrototypeLandingLiveProjection } from "../live-runtime/prototype-landing-live-types.ts";
@@ -59,7 +62,7 @@ export function projectPrototypeEffectiveReadModel({
       record: landedRecord,
     });
     return projectPrototypeDeliveryApplication({
-      projection: deliveryApplicationsByPrototypeId[record.id],
+      projection: deliveryApplicationsByPrototypeId[prototypeRecordSourceId(record)],
       record: maturityRecord,
     });
   });

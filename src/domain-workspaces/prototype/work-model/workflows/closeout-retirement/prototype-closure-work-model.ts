@@ -50,7 +50,7 @@ const specs: Record<ClosureFieldKey, ClosureFieldSpec> = {
 export function closureFieldsForAction(action: PrototypeClosureAction, fields: PrototypeClosureRequestFields): ClosureFieldSpec[] {
   switch (action) {
     case "apply-delivery": return [specs.accepted_baseline_receipt_ref,
-      ...(fields.target_kind === "existing-delivery-item" ? [specs.target_delivery_ref] : [])];
+      specs.target_delivery_ref, specs.accepted_delivery_target_receipt_ref];
     case "graduate-source": return [specs.accepted_delivery_target_receipt_ref,
       specs.durable_owner_ref, specs.durable_repo_ref, specs.durable_owner_acceptance_ref,
       ...(fields.transfer_strategy === "already-owned" ? [specs.already_owned_source_proof_ref] : [])];
@@ -60,14 +60,29 @@ export function closureFieldsForAction(action: PrototypeClosureAction, fields: P
   }
 }
 
-export function initialClosureFields(action: PrototypeClosureAction): PrototypeClosureRequestFields {
-  return action === "apply-delivery" ? { target_kind: "new-delivery-epic" } :
-    action === "graduate-source" ? { transfer_strategy: "transfer" } : {};
+export function initialClosureFields(
+  action: PrototypeClosureAction,
+  ownerEvidence: PrototypeClosureRequestFields = {},
+): PrototypeClosureRequestFields {
+  return action === "apply-delivery" ? {
+    accepted_baseline_receipt_ref: ownerEvidence.accepted_baseline_receipt_ref,
+    accepted_delivery_target_receipt_ref:
+      ownerEvidence.accepted_delivery_target_receipt_ref,
+    target_delivery_ref: ownerEvidence.target_delivery_ref,
+    target_kind: "new-delivery-epic",
+  } : action === "graduate-source" ? {
+    accepted_delivery_target_receipt_ref:
+      ownerEvidence.accepted_delivery_target_receipt_ref,
+    transfer_strategy: "transfer",
+  } : {};
 }
 
 const safeRef = /^[a-z][a-z0-9+.-]*:\/\/[A-Za-z0-9][A-Za-z0-9._~:/%+=-]*$/;
 
 export function closureFieldsComplete(action: PrototypeClosureAction, fields: PrototypeClosureRequestFields) {
+  if (action === "apply-delivery" && fields.target_kind !== "new-delivery-epic") {
+    return false;
+  }
   return closureFieldsForAction(action, fields).every((spec) => {
     const value = fields[spec.key];
     return typeof value === "string" && value.trim().length > 0 && value.length <= 512 &&
