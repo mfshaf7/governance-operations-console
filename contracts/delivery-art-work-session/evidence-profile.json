@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "profile_id": "governance-console-delivery-art-evidence-v1",
+  "owner_repo": "governance-operations-console",
+  "commands": [
+    {
+      "id": "locked-dependency-install",
+      "kind": "validations",
+      "name": "Locked dependency installation",
+      "executable": "npm",
+      "args": ["ci", "--ignore-scripts"],
+      "fidelity": "sandbox-runtime",
+      "conformance_binding": "none",
+      "timeout_seconds": 600
+    },
+    {
+      "id": "semantic-test-suite",
+      "kind": "tests",
+      "name": "Console semantic test suite",
+      "executable": "npm",
+      "args": ["run", "test:semantics"],
+      "fidelity": "real-git",
+      "conformance_binding": "matching-fidelity",
+      "timeout_seconds": 900
+    },
+    {
+      "id": "repository-safety-validation",
+      "kind": "validations",
+      "name": "Repository structure and public-source validation",
+      "executable": "python3",
+      "args": ["scripts/validate_repository.py"],
+      "fidelity": "filesystem",
+      "conformance_binding": "none",
+      "timeout_seconds": 300
+    },
+    {
+      "id": "architecture-validation",
+      "kind": "validations",
+      "name": "Console architecture guards",
+      "executable": "npm",
+      "args": ["run", "architecture"],
+      "fidelity": "filesystem",
+      "conformance_binding": "none",
+      "timeout_seconds": 300
+    },
+    {
+      "id": "type-validation",
+      "kind": "validations",
+      "name": "TypeScript validation",
+      "executable": "npm",
+      "args": ["run", "typecheck"],
+      "fidelity": "filesystem",
+      "conformance_binding": "none",
+      "timeout_seconds": 300
+    },
+    {
+      "id": "production-build",
+      "kind": "validations",
+      "name": "Next production build",
+      "executable": "npm",
+      "args": ["run", "build"],
+      "fidelity": "sandbox-runtime",
+      "conformance_binding": "none",
+      "timeout_seconds": 900
+    },
+    {
+      "id": "source-diff-validation",
+      "kind": "validations",
+      "name": "Source diff whitespace validation",
+      "executable": "git",
+      "args": ["diff", "--check", "{{base_commit}}...{{head_commit}}"],
+      "fidelity": "real-git",
+      "conformance_binding": "none",
+      "timeout_seconds": 60
+    }
+  ]
+}
