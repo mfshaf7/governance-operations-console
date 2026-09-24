@@ -91,6 +91,26 @@ Evidence produced for an earlier source revision must be rerun or explicitly
 re-authored for the follow-up head before OOS can generate a replacement
 Review Packet.
 
+## Owner Evidence Profile
+
+The accepted Console base owns its Delivery ART evidence profile at
+`contracts/delivery-art-work-session/evidence-profile.json`. OOS reads that
+profile from the work session's recorded base commit and executes it against
+the exact clean pushed source revision through the authenticated source
+executor. Candidate branches cannot replace the policy used to validate
+themselves.
+
+The profile installs only lockfile-pinned dependencies and runs the semantic
+suite, repository safety validator, architecture guards, type validation,
+production build, and exact source-diff check without a shell. OOS validates
+the profile schema, command allowlist, source bindings, results, and receipt
+before projecting evidence into a Review Packet. The profile grants no merge,
+ART, platform, Security, stage, or production authority.
+
+The first profile landing is a controlled bootstrap through the existing
+reviewed evidence path. Automated owner evidence is valid only for later work
+sessions whose recorded base already contains the accepted profile.
+
 In-flight plan adaptation and Delivery package closeout retain their own
 authority surfaces. This adapter performs only the exact work-session merge,
 evidence finalization, ART child closeout, and terminal cleanup action projected
