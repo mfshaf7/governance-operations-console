@@ -22,7 +22,7 @@ type DeliveryWorkSessionClientOptions = {
   fetchImpl?: typeof fetch;
 };
 
-const deliveryWorkSessionReadTimeoutMs = 45_000;
+const deliveryWorkSessionReadTimeoutMs = 75_000;
 const deliveryWorkSessionCommandTimeoutMs = 75_000;
 
 export function deliveryWorkSessionOosConfigured(
