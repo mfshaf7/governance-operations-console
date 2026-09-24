@@ -3,9 +3,11 @@
 ## Purpose
 
 This is the primary Console instruction surface for running a governed Delivery
-work session from Execution Board. The board keeps its
-approved package and action presentation; the `Start Work` action switches to
-authoritative OOS state only when live integration is configured.
+work session from Execution Board. The board keeps its approved package and
+action presentation. `Start Work` opens the package-bound target, while
+`Open Work Item` accepts an exact ART reference for work that is not yet
+represented by a Delivery package. Both routes switch to authoritative OOS
+state only when live integration is configured.
 
 OOS owns session semantics, exact next action, revisions, source observations,
 evidence acquisition, merge and closeout legality, terminal cleanup, command
@@ -49,8 +51,10 @@ authoritative reads; other OOS Console calls retain their shorter timeout.
 ## Operator Flow
 
 1. Select a Delivery package whose structured action intent identifies an
-   executable OpenProject work item.
-2. Open `Start Work`.
+   executable OpenProject work item and open `Start Work`, or choose
+   `Open Work Item` and enter the exact ART work-item reference.
+2. Wait for the Console to read that target from OOS. Direct entry is only a
+   routing key; it does not create package truth or grant work eligibility.
 3. In disconnected preview, use the established local action flow. In live
    mode, wait for the OOS work-session projection.
 4. If no session exists, choose `Prepare Session`. OOS returns the
@@ -121,6 +125,8 @@ by OOS; it does not replace those domain workflows.
 Implemented in source:
 
 - structured execution-target work-item identity
+- exact direct ART target entry with local syntax validation and authoritative
+  OOS eligibility readback before mutation
 - strict work-session projection, decision, source, and receipt validation
 - same-origin read, start, continue, merge, and close routes
 - caller/operator binding and server-only credentials

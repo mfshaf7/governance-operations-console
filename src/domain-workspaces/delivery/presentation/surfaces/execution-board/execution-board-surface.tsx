@@ -15,6 +15,8 @@ import {
 } from "../../../read-model/index.ts";
 
 import {
+  TerasActionButton,
+  TerasActionRow,
   TerasDraftCloseGuardDialog,
   TerasDialog,
   TerasEmptyState,
@@ -55,6 +57,12 @@ import { ExecutionTreeEditView } from "./execution-tree-edit-view.tsx";
 import { ExecutionTreeEditSupportPanel } from "./execution-tree-edit-support-panel.tsx";
 import { useDeliveryWorkSessionLiveRuntime } from "../../../live-runtime/use-delivery-work-session-live-runtime.ts";
 import { ExecutionWorkSessionModal } from "./work-session/execution-work-session-modal.tsx";
+import { ExecutionWorkSessionTargetDialog } from "./work-session/execution-work-session-target-dialog.tsx";
+import {
+  directExecutionWorkSessionTarget,
+  packageExecutionWorkSessionTarget,
+  type ExecutionWorkSessionTarget,
+} from "./work-session/execution-work-session-target.ts";
 import { useDeliveryChangeLiveRuntime } from "../../../live-runtime/use-delivery-change-live-runtime.ts";
 import { useDeliveryCloseoutLiveRuntime } from "../../../live-runtime/use-delivery-closeout-live-runtime.ts";
 import {
@@ -125,6 +133,10 @@ export function DeliveryExecutionBoard({
     null,
   );
   const [workSessionOpen, setWorkSessionOpen] = useState(false);
+  const [workSessionTarget, setWorkSessionTarget] =
+    useState<ExecutionWorkSessionTarget | null>(null);
+  const [workSessionTargetDialogOpen, setWorkSessionTargetDialogOpen] =
+    useState(false);
   const [closeoutOpen, setCloseoutOpen] = useState(false);
 
   useEffect(() => {
@@ -272,7 +284,7 @@ export function DeliveryExecutionBoard({
     : null;
   const selectedWorkItemId = selectedStartIntent?.target_work_item_id ?? null;
   const workSessionRuntime =
-    useDeliveryWorkSessionLiveRuntime(selectedWorkItemId);
+    useDeliveryWorkSessionLiveRuntime(workSessionTarget?.workItemId ?? null);
 
   useEffect(() => {
     if (
@@ -285,12 +297,20 @@ export function DeliveryExecutionBoard({
       (action) => action.action_type === "start-work",
     );
     setWorkSessionOpen(false);
-    if (startAction) actionSession.openAction(startAction);
+    if (workSessionTarget?.entry === "package" && startAction) {
+      actionSession.openAction(startAction);
+    } else {
+      setTreeEditEntryError(
+        "Direct ART work-item entry requires the live OOS work-session adapter.",
+      );
+    }
+    setWorkSessionTarget(null);
   }, [
     actionSession.openAction,
     selectedActions,
     workSessionOpen,
     workSessionRuntime.mode,
+    workSessionTarget?.entry,
   ]);
 
   useEffect(() => {
@@ -314,29 +334,38 @@ export function DeliveryExecutionBoard({
   const selectedAuditEvents = selectedPackage
     ? getPackageAuditEvents(selectedPackage.delivery_package_id, model)
     : [];
-  const boardViewSwitcher = (
-    <TerasSegmentedControl
-      ariaLabel={
-        treeEditActive
-          ? "Execution Board views locked during tree edit"
-          : "Execution Board views"
-      }
-      disabled={Boolean(treeEditActive)}
-      onValueChange={(nextView) => {
-        if (!treeEditActive) {
-          setActiveView(nextView);
+  const boardHeaderActions = (
+    <TerasActionRow spacing="tight">
+      <TerasActionButton
+        disabled={Boolean(treeEditActive)}
+        emphasis="secondary"
+        onClick={() => setWorkSessionTargetDialogOpen(true)}
+      >
+        Open Work Item
+      </TerasActionButton>
+      <TerasSegmentedControl
+        ariaLabel={
+          treeEditActive
+            ? "Execution Board views locked during tree edit"
+            : "Execution Board views"
         }
-      }}
-      options={controlBoardViewOptions.map((option) => ({
-        label: option.label,
-        value: option.view,
-      }))}
-      value={activeView}
-    />
+        disabled={Boolean(treeEditActive)}
+        onValueChange={(nextView) => {
+          if (!treeEditActive) {
+            setActiveView(nextView);
+          }
+        }}
+        options={controlBoardViewOptions.map((option) => ({
+          label: option.label,
+          value: option.view,
+        }))}
+        value={activeView}
+      />
+    </TerasActionRow>
   );
   const boardHeader = showIntro ? (
     <ControlBoardWorkspaceHeader
-      actions={boardViewSwitcher}
+      actions={boardHeaderActions}
       kicker="Execution Board"
       title="Delivery Package Control"
       description={
@@ -347,7 +376,7 @@ export function DeliveryExecutionBoard({
     />
   ) : (
     <ControlBoardThinHeader
-      actions={boardViewSwitcher}
+      actions={boardHeaderActions}
       kicker="Board View"
       description={
         treeEditActive
@@ -453,6 +482,10 @@ export function DeliveryExecutionBoard({
       action.action_type === "start-work" &&
       workSessionRuntime.mode !== "disconnected-preview"
     ) {
+      if (!selectedPackage) return;
+      setWorkSessionTarget(
+        packageExecutionWorkSessionTarget(selectedPackage, selectedWorkItemId),
+      );
       setWorkSessionOpen(true);
       return;
     }
@@ -469,6 +502,7 @@ export function DeliveryExecutionBoard({
     if (nextPackageId !== selectedPackageId) {
       resetTreeEditDraft();
       setWorkSessionOpen(false);
+      setWorkSessionTarget(null);
       setCloseoutOpen(false);
     }
 
@@ -673,14 +707,25 @@ export function DeliveryExecutionBoard({
           submitting={actionSession.applying}
         />
       ) : null}
-      {selectedPackage && workSessionOpen ? (
+      {workSessionTarget && workSessionOpen ? (
         <ExecutionWorkSessionModal
-          onClose={() => setWorkSessionOpen(false)}
-          packageSummary={selectedPackage}
+          onClose={() => {
+            setWorkSessionOpen(false);
+            setWorkSessionTarget(null);
+          }}
           runtime={workSessionRuntime}
-          workItemId={selectedWorkItemId}
+          target={workSessionTarget}
         />
       ) : null}
+      <ExecutionWorkSessionTargetDialog
+        onClose={() => setWorkSessionTargetDialogOpen(false)}
+        onOpenTarget={(workItemId) => {
+          setWorkSessionTarget(directExecutionWorkSessionTarget(workItemId));
+          setWorkSessionTargetDialogOpen(false);
+          setWorkSessionOpen(true);
+        }}
+        open={workSessionTargetDialogOpen}
+      />
       {selectedPackage && closeoutOpen ? (
         <ExecutionCloseoutModal
           onClose={() => setCloseoutOpen(false)}

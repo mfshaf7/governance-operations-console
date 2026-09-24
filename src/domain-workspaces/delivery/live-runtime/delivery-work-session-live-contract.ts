@@ -14,7 +14,7 @@ const repoPattern = /^[a-z0-9][a-z0-9-]*$/;
 const workItemIdPattern = /^work-item-[1-9][0-9]*$/;
 
 export function deliveryWorkSessionTargetId(value: unknown) {
-  if (!Number.isInteger(value) || Number(value) < 1) {
+  if (!Number.isSafeInteger(value) || Number(value) < 1) {
     invalid("Delivery work-session target is invalid.");
   }
   return Number(value);
