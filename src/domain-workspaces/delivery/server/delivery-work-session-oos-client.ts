@@ -96,6 +96,28 @@ export async function continueDeliveryWorkSession(
   );
 }
 
+export async function mergeDeliveryWorkSession(
+  workItemId: number,
+  command: {
+    commandId: string;
+    expectedSessionRevision: string;
+  },
+  options: DeliveryWorkSessionClientOptions = {},
+) {
+  return commandDeliveryWorkSession(workItemId, "merge", command, options);
+}
+
+export async function closeDeliveryWorkSession(
+  workItemId: number,
+  command: {
+    commandId: string;
+    expectedSessionRevision: string;
+  },
+  options: DeliveryWorkSessionClientOptions = {},
+) {
+  return commandDeliveryWorkSession(workItemId, "close", command, options);
+}
+
 export function deliveryWorkSessionOperator(
   env: NodeJS.ProcessEnv = process.env,
 ) {
@@ -150,6 +172,31 @@ export async function prepareDeliveryWorkSessionDecision(
 function preparationCommandIdentity(commandId: string) {
   const digest = createHash("sha256").update(commandId).digest("hex");
   return `work-session-command:console-prepare-${digest}`;
+}
+
+function commandDeliveryWorkSession(
+  workItemId: number,
+  action: "close" | "merge",
+  command: {
+    commandId: string;
+    expectedSessionRevision: string;
+  },
+  options: DeliveryWorkSessionClientOptions,
+) {
+  return requestWorkSession(
+    workItemId,
+    `/${action}`,
+    {
+      body: JSON.stringify({
+        command: {
+          command_id: command.commandId,
+          expected_session_revision: command.expectedSessionRevision,
+        },
+      }),
+      method: "POST",
+    },
+    options,
+  );
 }
 
 async function requestWorkSession(

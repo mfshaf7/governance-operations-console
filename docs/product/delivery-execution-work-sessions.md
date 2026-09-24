@@ -2,13 +2,14 @@
 
 ## Purpose
 
-This is the primary Console instruction surface for starting and continuing a
-governed Delivery work session from Execution Board. The board keeps its
+This is the primary Console instruction surface for running a governed Delivery
+work session from Execution Board. The board keeps its
 approved package and action presentation; the `Start Work` action switches to
 authoritative OOS state only when live integration is configured.
 
 OOS owns session semantics, exact next action, revisions, source observations,
-command outcomes, and receipts. The Console owns operator interaction,
+evidence acquisition, merge and closeout legality, terminal cleanup, command
+outcomes, and receipts. The Console owns operator interaction,
 same-origin routing, decision entry, strict response validation, and bounded
 presentation. The browser does not read Git, call OpenProject, hold OOS
 credentials, or derive progress and completion.
@@ -41,8 +42,8 @@ The browser calls only same-origin
 `/api/delivery/execution/{workItemId}/work-session` routes. The server assembles
 credentials and the server-owned operator header. The application caller and
 accountable operator are distinct bindings; neither is supplied by the browser.
-Work-session reads use a bounded 45-second server timeout. Start and continue
-commands use 75 seconds because the local ART backend may perform two sequential
+Work-session reads use a bounded 45-second server timeout. Start, continue,
+merge, and close commands use 75 seconds because the local ART backend may perform two sequential
 authoritative reads; other OOS Console calls retain their shorter timeout.
 
 ## Operator Flow
@@ -61,9 +62,16 @@ authoritative reads; other OOS Console calls retain their shorter timeout.
    caller-bound draft requested when the accepted decision is submitted.
 6. Choose `Start Work Session`. OOS validates the exact decision and returns
    the next projection and immutable command receipt.
-7. Choose `Continue Work Session` only for the next OOS-projected transition.
-   OOS remains responsible for deciding whether that transition can run.
-8. If OOS reports an explicit rejection, correct the input and issue a new
+7. Use the action shown for the exact OOS projection. Automatable transitions
+   include source-workspace preparation, source publication, evidence checks,
+   Review Packet preparation, readiness evaluation, and finalization.
+8. Human review, Security, architecture, source-work, exception, and other
+   authority gates remain read-only. The Console shows their owner and reason
+   instead of presenting a bypass action.
+9. `Merge Source` appears only for `source-merge-approval-required`.
+   `Close Work` appears only for `art-closeout-required`; a failed terminal
+   cleanup exposes `Retry Cleanup` against the same OOS close command.
+10. If OOS reports an explicit rejection, correct the input and issue a new
    operator action. If the network outcome is unknown, retry retains the same
    command identity so OOS can replay the retained result safely.
 
@@ -83,8 +91,10 @@ Evidence produced for an earlier source revision must be rerun or explicitly
 re-authored for the follow-up head before OOS can generate a replacement
 Review Packet.
 
-Closeout and in-flight plan adaptation are separate Delivery ART fronts. This
-adapter does not add those controls prematurely.
+In-flight plan adaptation and Delivery package closeout retain their own
+authority surfaces. This adapter performs only the exact work-session merge,
+evidence finalization, ART child closeout, and terminal cleanup action projected
+by OOS; it does not replace those domain workflows.
 
 ## Current Boundary
 
@@ -92,9 +102,13 @@ Implemented in source:
 
 - structured execution-target work-item identity
 - strict work-session projection, decision, source, and receipt validation
-- same-origin read, start, and continue routes
+- same-origin read, start, continue, merge, and close routes
 - caller/operator binding and server-only credentials
 - stable retry identities and exact session revisions
+- exact-action controls that keep human gates read-only
+- authoritative lifecycle, source, evidence, Review Packet, readiness, and
+  cleanup projection
+- command and terminal cleanup receipt presentation
 - explicit disconnected preview and configured fail-closed behavior
 - Execution Board interaction without direct browser source authority
 
@@ -103,9 +117,9 @@ Still separate from the work-session adapter:
 - admitted source-executor activation and allowlisted source roots
 - composed positive and negative `dev-integration` proof
 - authenticated human identity beyond configured local attribution
-- in-flight change control, documented in
-  `delivery-change-control-live-integration.md`, plus closeout and terminal
-  cleanup
+- in-flight change control and Delivery package closeout, documented in
+  `delivery-change-control-live-integration.md` and
+  `delivery-closeout-live-integration.md`
 - stage, production, release, and Portfolio authority
 
 ## Validation
