@@ -5,8 +5,10 @@ import {
   deliveryWorkSessionTargetId,
 } from "../live-runtime/delivery-work-session-live-contract.ts";
 import {
+  closeDeliveryWorkSession,
   continueDeliveryWorkSession,
   deliveryWorkSessionOosConfigured,
+  mergeDeliveryWorkSession,
   prepareDeliveryWorkSessionDecision,
   readDeliveryWorkSession,
   startDeliveryWorkSession,
@@ -77,11 +79,45 @@ export async function continueDeliveryWorkSessionRoute(
   request: NextRequest,
   workItemIdInput: string,
 ) {
+  return commandDeliveryWorkSessionRoute(
+    request,
+    workItemIdInput,
+    continueDeliveryWorkSession,
+  );
+}
+
+export async function mergeDeliveryWorkSessionRoute(
+  request: NextRequest,
+  workItemIdInput: string,
+) {
+  return commandDeliveryWorkSessionRoute(
+    request,
+    workItemIdInput,
+    mergeDeliveryWorkSession,
+  );
+}
+
+export async function closeDeliveryWorkSessionRoute(
+  request: NextRequest,
+  workItemIdInput: string,
+) {
+  return commandDeliveryWorkSessionRoute(
+    request,
+    workItemIdInput,
+    closeDeliveryWorkSession,
+  );
+}
+
+async function commandDeliveryWorkSessionRoute(
+  request: NextRequest,
+  workItemIdInput: string,
+  command: typeof continueDeliveryWorkSession,
+) {
   try {
     requireLiveMode();
     const workItemId = routeWorkItemId(workItemIdInput);
     const body = record(await request.json().catch(() => null));
-    const projection = await continueDeliveryWorkSession(workItemId, {
+    const projection = await command(workItemId, {
       commandId: commandIdentity(body.commandId),
       expectedSessionRevision: requiredDateTime(
         body.expectedSessionRevision,

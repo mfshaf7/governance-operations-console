@@ -122,30 +122,36 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
     [refresh, snapshot, workItemId],
   );
 
-  const continueWork = useCallback(async () => {
+  const command = useCallback(async (action: "close" | "continue" | "merge") => {
     const current = await currentSnapshot(snapshot, refresh);
     if (current.mode === "disconnected-preview") return current;
     const revision = current.projection?.session_revision;
     if (!revision) {
       throw new DeliveryWorkSessionLiveRuntimeError(
-        "Start the work session before continuing it.",
+        "Start the work session before running a lifecycle command.",
         "delivery_work_session_not_started",
       );
     }
     return mutate({
-      action: "continue",
+      action,
       body: { expectedSessionRevision: revision },
-      path: `${workSessionPath(requiredTarget(workItemId))}/continue`,
+      path: `${workSessionPath(requiredTarget(workItemId))}/${action}`,
       pendingCommands,
       setSnapshot,
     });
   }, [refresh, snapshot, workItemId]);
 
+  const continueWork = useCallback(() => command("continue"), [command]);
+  const mergeWork = useCallback(() => command("merge"), [command]);
+  const closeWork = useCallback(() => command("close"), [command]);
+
   const projectionStatus: DeliveryWorkSessionSnapshot["status"] | "loading" =
     snapshot?.status ?? "loading";
 
   return {
+    closeWork,
     continueWork,
+    mergeWork,
     mode: snapshot?.mode ?? null,
     prepare,
     projection: snapshot?.projection ?? null,

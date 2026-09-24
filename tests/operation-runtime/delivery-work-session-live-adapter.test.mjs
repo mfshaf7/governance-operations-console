@@ -9,8 +9,10 @@ import {
   deliveryWorkSessionTargetId,
 } from "../../src/domain-workspaces/delivery/live-runtime/delivery-work-session-live-contract.ts";
 import {
+  closeDeliveryWorkSession,
   continueDeliveryWorkSession,
   deliveryWorkSessionOperator,
+  mergeDeliveryWorkSession,
   prepareDeliveryWorkSessionDecision,
   readDeliveryWorkSession,
   startDeliveryWorkSession,
@@ -109,6 +111,32 @@ test("case:delivery-work-session-start preserves the reviewed decision and comma
   });
 });
 
+test("case:delivery-work-session-terminal-actions preserve exact revision and bounded routes", async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ body: JSON.parse(String(init.body)), url: String(url) });
+    return jsonResponse(projection({ receipt: true }));
+  };
+  const command = {
+    commandId: "work-session-command:console-terminal-714-1",
+    expectedSessionRevision: "2026-08-27T02:00:00.000Z",
+  };
+
+  await mergeDeliveryWorkSession(714, command, { env, fetchImpl });
+  await closeDeliveryWorkSession(714, command, { env, fetchImpl });
+
+  assert.match(calls[0].url, /\/work-session\/merge$/);
+  assert.match(calls[1].url, /\/work-session\/close$/);
+  for (const call of calls) {
+    assert.deepEqual(call.body, {
+      command: {
+        command_id: command.commandId,
+        expected_session_revision: command.expectedSessionRevision,
+      },
+    });
+  }
+});
+
 test("case:delivery-execution-end-to-end-positive rebuilds accepted input from a fresh OOS-owned draft", async () => {
   const calls = [];
   const fetchImpl = async (url, init) => {
@@ -183,7 +211,15 @@ test("case:delivery-execution-end-to-end-negative keeps browser authority bounde
   }
   assert.match(hookSource, /work-session-command:console-/);
   assert.match(hookSource, /expectedSessionRevision/);
+  assert.match(hookSource, /command\("merge"\)/);
+  assert.match(hookSource, /command\("close"\)/);
   assert.match(modalSource, /projection\.command_receipt/);
+  assert.match(modalSource, /source-merge-approval-required/);
+  assert.match(modalSource, /art-closeout-required/);
+  assert.match(modalSource, /draft-finalization/);
+  assert.match(modalSource, /project-review-evidence/);
+  assert.match(modalSource, /cleanup-required/);
+  assert.match(modalSource, /cleanup-retry-required/);
 });
 
 test("Delivery work-session contracts accept incomplete OOS drafts but require accepted decisions", () => {
@@ -210,6 +246,48 @@ test("Delivery work-session contracts accept incomplete OOS drafts but require a
       status: "current",
     }).status,
     "current",
+  );
+});
+
+test("Delivery work-session contracts validate lifecycle and terminal evidence projections", () => {
+  const terminal = {
+    ...projection(),
+    cleanup_receipt: { outcome: "complete" },
+    lifecycle_context: {
+      commissioned: true,
+      default_mode: "packet",
+      latest_binding: null,
+      measurements: {
+        denied_count: 0,
+        packet_count: 2,
+        raw_fallback_count: 0,
+      },
+    },
+    projection: {
+      complete: true,
+      gate: null,
+      state: "complete",
+      summary: "Source and evidence are complete.",
+    },
+    pull_request: { state: "merged" },
+  };
+  assert.equal(
+    assertDeliveryWorkSessionProjection(terminal).cleanup_receipt.outcome,
+    "complete",
+  );
+  assert.throws(
+    () =>
+      assertDeliveryWorkSessionProjection({
+        ...terminal,
+        lifecycle_context: {
+          ...terminal.lifecycle_context,
+          measurements: {
+            ...terminal.lifecycle_context.measurements,
+            raw_fallback_count: -1,
+          },
+        },
+      }),
+    /raw_fallback_count is invalid/i,
   );
 });
 

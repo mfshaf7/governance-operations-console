@@ -24,7 +24,9 @@ import type {
 } from "../../../../live-runtime/delivery-work-session-live-types.ts";
 
 type WorkSessionRuntime = {
+  closeWork: () => Promise<unknown>;
   continueWork: () => Promise<unknown>;
+  mergeWork: () => Promise<unknown>;
   mode: "disconnected-preview" | "live" | null;
   prepare: () => Promise<unknown>;
   projection: DeliveryWorkSessionProjection | null;
@@ -66,6 +68,7 @@ export function ExecutionWorkSessionModal({
   );
   const projection = runtime.projection;
   const nextAction = projection?.next_action ?? null;
+  const projectedCommand = workSessionCommand(nextAction?.code);
   const canPrepare =
     runtime.mode === "live" &&
     runtime.projectionStatus === "current" &&
@@ -75,10 +78,14 @@ export function ExecutionWorkSessionModal({
     runtime.mode === "live" &&
     runtime.projectionStatus === "current" &&
     Boolean(draft && decisionReady);
-  const canContinue =
+  const canRunProjectedCommand =
     runtime.mode === "live" &&
     runtime.projectionStatus === "current" &&
-    Boolean(projection?.session_id && projection.session_revision && nextAction);
+    Boolean(
+      projection?.session_id &&
+        projection.session_revision &&
+        projectedCommand,
+    );
 
   async function run(command: () => Promise<unknown>) {
     setSubmitting(true);
@@ -92,10 +99,16 @@ export function ExecutionWorkSessionModal({
     }
   }
 
+  function runProjectedCommand() {
+    if (projectedCommand === "merge") return runtime.mergeWork();
+    if (projectedCommand === "close") return runtime.closeWork();
+    return runtime.continueWork();
+  }
+
   return (
     <TerasModalShell
       bodyLayout="scroll"
-      description="Start or continue governed source work from authoritative OOS session state."
+      description="Run the governed source lifecycle from authoritative OOS state, gates, and receipts."
       footer={
         <TerasActionButton emphasis="secondary" onClick={onClose}>
           Back to Board
@@ -249,6 +262,22 @@ export function ExecutionWorkSessionModal({
               </TerasFieldStack>
             </TerasPanel>
           ) : null}
+
+          {projection?.session_id ? (
+            <TerasPanel
+              frame="padded"
+              layout="header-body"
+              tone="info"
+              treatment="state"
+            >
+              <TerasPanelHeader
+                description="Authoritative source, evidence, review, and cleanup posture for this work session."
+                kicker="Lifecycle Evidence"
+                title="Governed State"
+              />
+              <TerasMetadataList items={workSessionEvidence(projection)} />
+            </TerasPanel>
+          ) : null}
         </TerasZone>
 
         <TerasZone fit="content">
@@ -321,21 +350,31 @@ export function ExecutionWorkSessionModal({
                   tone="info"
                 />
               </TerasList>
-            ) : canContinue ? (
+            ) : canRunProjectedCommand && nextAction ? (
               <TerasList frame="contained">
                 <TerasSignalItem
                   actions={
                     <TerasActionButton
                       disabled={submitting}
-                      onClick={() => run(runtime.continueWork)}
+                      onClick={() => run(runProjectedCommand)}
                     >
-                      Continue Work Session
+                      {workSessionCommandLabel(nextAction.code)}
                     </TerasActionButton>
                   }
-                  detail={nextAction?.reason ?? "Continue the exact OOS-projected move."}
+                  detail={nextAction.reason}
                   label="Operator action"
-                  title={nextAction ? nextActionLabel(nextAction.code) : "Continue"}
+                  title={nextActionLabel(nextAction.code)}
                   tone="info"
+                />
+              </TerasList>
+            ) : nextAction ? (
+              <TerasList frame="contained">
+                <TerasSignalItem
+                  detail={nextAction.reason}
+                  label={nextAction.authority}
+                  statusLabel="Waiting"
+                  title={nextActionLabel(nextAction.code)}
+                  tone="warn"
                 />
               </TerasList>
             ) : runtime.mode === null ? (
@@ -364,6 +403,33 @@ export function ExecutionWorkSessionModal({
                   { label: "Result", value: projection.command_receipt.result_state },
                   { label: "Executor", value: projection.command_receipt.executor_id },
                   { label: "Receipt", value: projection.command_receipt.ref },
+                ]}
+              />
+            </TerasPanel>
+          ) : null}
+
+          {projection?.cleanup_receipt ? (
+            <TerasPanel
+              frame="padded"
+              layout="header-body"
+              tone="ok"
+              treatment="state"
+            >
+              <TerasPanelHeader
+                description="Durable OOS evidence for terminal work-session resource retirement."
+                kicker="Cleanup Receipt"
+                title="Terminal Result"
+              />
+              <TerasMetadataList
+                items={[
+                  {
+                    label: "Outcome",
+                    value: projection.cleanup_receipt.outcome,
+                  },
+                  {
+                    label: "State",
+                    value: projection.state,
+                  },
                 ]}
               />
             </TerasPanel>
@@ -401,6 +467,87 @@ function nextActionLabel(code: string) {
     .split("-")
     .map((word) => `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`)
     .join(" ");
+}
+
+const continueCommandLabels: Record<string, string> = {
+  "agent-source-publish-required": "Publish Source",
+  "draft-finalization": "Prepare Final Evidence",
+  "draft-review-packet": "Draft Review Packet",
+  "draft-work-start": "Draft Work Start",
+  "evaluate-work-start": "Evaluate Work Start",
+  "finalize-review-packet": "Finalize Review Packet",
+  "issue-operating-readiness": "Evaluate Operating Readiness",
+  "mark-merge-ready": "Evaluate Merge Readiness",
+  "owner-evidence-acquisition-required": "Run Evidence Checks",
+  "persist-architecture": "Persist Architecture",
+  "project-review-evidence": "Project Evidence",
+  "source-worktree-required": "Prepare Source Workspace",
+};
+
+function workSessionCommand(code: string | null | undefined) {
+  if (!code) return null;
+  if (code === "source-merge-approval-required") return "merge" as const;
+  if (
+    ["art-closeout-required", "cleanup-required", "cleanup-retry-required"].includes(
+      code,
+    )
+  ) {
+    return "close" as const;
+  }
+  return continueCommandLabels[code] ? ("continue" as const) : null;
+}
+
+function workSessionCommandLabel(code: string) {
+  if (code === "source-merge-approval-required") return "Merge Source";
+  if (code === "art-closeout-required") return "Close Work";
+  if (code === "cleanup-required") return "Finish Cleanup";
+  if (code === "cleanup-retry-required") return "Retry Cleanup";
+  return continueCommandLabels[code] ?? "Continue";
+}
+
+function workSessionEvidence(projection: DeliveryWorkSessionProjection) {
+  const facts = projection.facts ?? {};
+  const context = projection.lifecycle_context;
+  const contextValue = context
+    ? `${context.measurements.packet_count} packet, ${context.measurements.raw_fallback_count} raw fallback`
+    : "Not observed";
+  return [
+    {
+      label: "Lifecycle",
+      value: projection.projection?.state ?? projection.state,
+    },
+    {
+      label: "Source",
+      value: facts.source ?? projection.source?.state ?? "Not observed",
+    },
+    {
+      label: "Pull request",
+      value: facts.pull_request ?? projection.pull_request?.state ?? "Not observed",
+    },
+    {
+      label: "Evidence",
+      value: facts.evidence ?? "Not observed",
+    },
+    {
+      label: "Review packet",
+      value: facts.review_packet ?? "Not observed",
+    },
+    {
+      label: "Readiness",
+      value: facts.readiness_receipt ?? "Not observed",
+    },
+    {
+      label: "Context",
+      value: contextValue,
+    },
+    {
+      label: "Cleanup",
+      value:
+        projection.cleanup_receipt?.outcome ??
+        projection.cleanup?.state ??
+        "Not started",
+    },
+  ];
 }
 
 function updateArchitectureLocation(

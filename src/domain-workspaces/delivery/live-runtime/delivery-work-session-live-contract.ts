@@ -56,6 +56,9 @@ export function assertDeliveryWorkSessionProjection(
     text(action.authority, "next-action authority");
     text(action.code, "next-action code");
     text(action.reason, "next-action reason");
+    if (action.inputs !== undefined) {
+      record(action.inputs, "next-action inputs");
+    }
   }
   if (projection.decision_draft !== undefined) {
     assertDeliveryWorkSessionDecision(projection.decision_draft, true);
@@ -70,6 +73,86 @@ export function assertDeliveryWorkSessionProjection(
     if (source.upstream_commit !== null) {
       match(source.upstream_commit, gitCommitPattern, "source upstream commit");
     }
+  }
+  if (projection.facts !== undefined) {
+    const facts = record(projection.facts, "projection facts");
+    for (const value of Object.values(facts)) {
+      text(value, "projection fact");
+    }
+  }
+  if (projection.projection !== undefined) {
+    const lifecycle = record(
+      projection.projection,
+      "lifecycle projection",
+    );
+    if (lifecycle.complete !== undefined && typeof lifecycle.complete !== "boolean") {
+      invalid("Lifecycle projection completion is invalid.");
+    }
+    if (lifecycle.gate !== undefined && lifecycle.gate !== null) {
+      text(lifecycle.gate, "lifecycle projection gate");
+    }
+    if (lifecycle.state !== undefined) {
+      text(lifecycle.state, "lifecycle projection state");
+    }
+    if (lifecycle.summary !== undefined) {
+      text(lifecycle.summary, "lifecycle projection summary");
+    }
+  }
+  if (projection.pull_request !== undefined) {
+    const pullRequest = record(projection.pull_request, "pull-request projection");
+    text(pullRequest.state, "pull-request state");
+  }
+  if (projection.agent_source !== undefined) {
+    const agentSource = record(projection.agent_source, "Agent source projection");
+    text(agentSource.state, "Agent source state");
+  }
+  if (projection.cleanup !== undefined) {
+    const cleanup = record(projection.cleanup, "cleanup projection");
+    text(cleanup.state, "cleanup state");
+    if (cleanup.attempt !== undefined) {
+      nonNegativeInteger(cleanup.attempt, "cleanup attempt");
+    }
+    if (cleanup.resources !== undefined) {
+      if (!Array.isArray(cleanup.resources)) {
+        invalid("Cleanup resources are invalid.");
+      }
+      for (const value of cleanup.resources) {
+        const resource = record(value, "cleanup resource");
+        for (const key of ["outcome", "resource_id", "resource_type"] as const) {
+          if (resource[key] !== undefined) text(resource[key], `cleanup resource ${key}`);
+        }
+        if (resource.last_error !== undefined && resource.last_error !== null) {
+          text(resource.last_error, "cleanup resource error");
+        }
+      }
+    }
+  }
+  if (projection.cleanup_receipt !== undefined) {
+    const receipt = record(projection.cleanup_receipt, "cleanup receipt");
+    text(receipt.outcome, "cleanup receipt outcome");
+  }
+  if (projection.lifecycle_context !== undefined) {
+    const context = record(projection.lifecycle_context, "lifecycle context");
+    if (typeof context.commissioned !== "boolean") {
+      invalid("Lifecycle context commissioning state is invalid.");
+    }
+    exact(context.default_mode, "packet", "lifecycle context mode");
+    if (context.latest_binding !== null) {
+      record(context.latest_binding, "lifecycle context binding");
+    }
+    const measurements = record(
+      context.measurements,
+      "lifecycle context measurements",
+    );
+    for (const key of ["denied_count", "packet_count", "raw_fallback_count"] as const) {
+      nonNegativeInteger(measurements[key], `lifecycle context ${key}`);
+    }
+  }
+  if (projection.configured_path !== undefined) {
+    record(projection.configured_path, "configured path projection");
+  }
+  if (projection.work_contract !== undefined) {
+    record(projection.work_contract, "work contract projection");
   }
   if (projection.command_receipt !== undefined) {
     const receipt = record(
@@ -232,6 +315,12 @@ function match(value: unknown, pattern: RegExp, label: string) {
 
 function nullableDateTime(value: unknown, label: string) {
   if (value !== null) dateTime(value, label);
+}
+
+function nonNegativeInteger(value: unknown, label: string) {
+  if (!Number.isInteger(value) || Number(value) < 0) {
+    invalid(`${label} is invalid.`);
+  }
 }
 
 function nullableText(value: unknown, label: string) {
