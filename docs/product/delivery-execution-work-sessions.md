@@ -44,9 +44,9 @@ The browser calls only same-origin
 `/api/delivery/execution/{workItemId}/work-session` routes. The server assembles
 credentials and the server-owned operator header. The application caller and
 accountable operator are distinct bindings; neither is supplied by the browser.
-Work-session reads use a bounded 45-second server timeout. Start, continue,
-merge, and close commands use 75 seconds because the local ART backend may perform two sequential
-authoritative reads; other OOS Console calls retain their shorter timeout.
+Work-session reads and commands use a bounded 75-second server timeout because
+the local ART backend may perform sequential authoritative reads. Other OOS
+Console calls retain their shorter timeout.
 
 ## Operator Flow
 
