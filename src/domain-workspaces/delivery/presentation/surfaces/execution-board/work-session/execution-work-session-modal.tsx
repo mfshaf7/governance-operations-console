@@ -17,11 +17,11 @@ import {
   TerasZone,
   TerasZoneLayout,
 } from "@/teras";
-import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
 import type {
   DeliveryWorkSessionDecisionInput,
   DeliveryWorkSessionProjection,
 } from "../../../../live-runtime/delivery-work-session-live-types.ts";
+import type { ExecutionWorkSessionTarget } from "./execution-work-session-target.ts";
 
 type WorkSessionRuntime = {
   closeWork: () => Promise<unknown>;
@@ -38,14 +38,12 @@ type WorkSessionRuntime = {
 
 export function ExecutionWorkSessionModal({
   onClose,
-  packageSummary,
   runtime,
-  workItemId,
+  target,
 }: {
   onClose: () => void;
-  packageSummary: DeliveryPackageSummary;
   runtime: WorkSessionRuntime;
-  workItemId: number | null;
+  target: ExecutionWorkSessionTarget;
 }) {
   const draft = runtime.projection?.decision_draft ?? null;
   const [decision, setDecision] = useState<DeliveryWorkSessionDecisionInput | null>(
@@ -73,7 +71,8 @@ export function ExecutionWorkSessionModal({
     runtime.mode === "live" &&
     runtime.projectionStatus === "current" &&
     !projection?.session_id &&
-    !draft;
+    !draft &&
+    nextAction?.code === "work-session-start-required";
   const canStart =
     runtime.mode === "live" &&
     runtime.projectionStatus === "current" &&
@@ -130,19 +129,21 @@ export function ExecutionWorkSessionModal({
             treatment="state"
           >
             <TerasPanelHeader
-              description={packageSummary.summary}
+              description={target.description}
               kicker="Selected Target"
-              title={packageSummary.display_name}
+              title={target.title}
             />
             <TerasMetadataList
               items={[
                 {
-                  label: "Package",
-                  value: packageSummary.source_ref,
+                  label: target.sourceLabel,
+                  value: target.sourceValue,
                 },
                 {
                   label: "Execution target",
-                  value: workItemId ? `OpenProject work item #${workItemId}` : "Unavailable",
+                  value: target.workItemId
+                    ? `OpenProject work item #${target.workItemId}`
+                    : "Unavailable",
                 },
                 {
                   label: "Session",

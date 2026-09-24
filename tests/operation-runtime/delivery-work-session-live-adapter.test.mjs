@@ -18,6 +18,11 @@ import {
   startDeliveryWorkSession,
 } from "../../src/domain-workspaces/delivery/server/delivery-work-session-oos-client.ts";
 import { DeliveryOosError } from "../../src/domain-workspaces/delivery/server/delivery-oos-client.ts";
+import {
+  directExecutionWorkSessionTarget,
+  packageExecutionWorkSessionTarget,
+  parseExecutionWorkItemReference,
+} from "../../src/domain-workspaces/delivery/presentation/surfaces/execution-board/work-session/execution-work-session-target.ts";
 
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:console-owner",
@@ -184,6 +189,48 @@ test("case:delivery-execution-source-provenance-negative rejects mismatched sour
     /architecture must name/i,
   );
   assert.throws(() => deliveryWorkSessionTargetId(0), /target is invalid/i);
+  assert.throws(
+    () => deliveryWorkSessionTargetId(Number.MAX_SAFE_INTEGER + 1),
+    /target is invalid/i,
+  );
+});
+
+test("Delivery work-session target entry normalizes exact ART references without inventing package truth", () => {
+  assert.equal(parseExecutionWorkItemReference("1175"), 1175);
+  assert.equal(parseExecutionWorkItemReference(" #1175 "), 1175);
+  assert.equal(parseExecutionWorkItemReference("work-item-1175"), 1175);
+  for (const invalid of ["", "#0", "item-1175", "1175 extra", "9007199254740992"]) {
+    assert.throws(() => parseExecutionWorkItemReference(invalid), /valid ART work item/i);
+  }
+
+  assert.deepEqual(directExecutionWorkSessionTarget(1175), {
+    description:
+      "Authoritative OOS state determines whether this Delivery work item can start or continue.",
+    entry: "direct",
+    sourceLabel: "Entry route",
+    sourceValue: "Direct ART target",
+    title: "ART Work Item #1175",
+    workItemId: 1175,
+  });
+  assert.deepEqual(
+    packageExecutionWorkSessionTarget(
+      {
+        delivery_package_id: "package-1",
+        display_name: "Selected package",
+        source_ref: "openproject://work_packages/714",
+        summary: "Package-owned execution target.",
+      },
+      714,
+    ),
+    {
+      description: "Package-owned execution target.",
+      entry: "package",
+      sourceLabel: "Package",
+      sourceValue: "openproject://work_packages/714",
+      title: "Selected package",
+      workItemId: 714,
+    },
+  );
 });
 
 test("case:delivery-execution-end-to-end-negative keeps browser authority bounded", () => {
