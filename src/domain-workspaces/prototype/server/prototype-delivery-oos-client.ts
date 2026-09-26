@@ -1,3 +1,5 @@
+import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+
 import {
   assertPrototypeDeliveryApplicationResult,
   assertPrototypeDeliveryPacket,
@@ -138,6 +140,7 @@ async function prototypeDeliveryOosRequest(
       ...init,
       cache: "no-store",
       headers: {
+        ...consoleMutationAttributionHeaders(),
         Accept: "application/json",
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,

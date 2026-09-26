@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { consoleMutationAttributionHeaders } from "../../identity/server/console-session-authorization.ts";
+
 import {
   assertWorkspaceIntakePreparation,
   assertWorkspaceIntakeResult,
@@ -240,6 +242,7 @@ async function request(path: string, init: RequestInit, options: RequestOptions)
       ...init,
       cache: "no-store",
       headers: {
+        ...consoleMutationAttributionHeaders(),
         Accept: "application/json",
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,

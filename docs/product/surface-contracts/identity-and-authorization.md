@@ -1,6 +1,7 @@
 # Operator Account, Identity, And Authorization
 
-Status: accepted local-baseline cross-surface contract.
+Status: implemented source boundary; normal live activation remains gated by
+Security Architecture review.
 
 ## Purpose
 
@@ -78,9 +79,12 @@ session truth.
 
 ## Trust Projection
 
-The current source is structured synthetic data. It displays
+Disconnected preview continues to use structured synthetic data. It displays
 `PROTOTYPE LOCAL` and `Not authenticated`; it is never trusted for live
-authorization.
+authorization. When configured, the Console server instead reads the private
+Platform-owned `console-operator-identity/v1` projection through
+`GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH`. The projection path and its
+contents remain server-only.
 
 A projection is verified only when all of these source-issued facts exist:
 
@@ -93,6 +97,35 @@ A projection is verified only when all of these source-issued facts exist:
 Synthetic, source-projected, stale, expired, incomplete, or unavailable input
 fails closed. Client time may format source values but cannot issue or repair
 session truth.
+
+The server also requires the configured `GOVERNANCE_CONSOLE_OPERATOR_ID` to
+match the verified principal exactly. A mismatch is a conflicting authority
+source and denies the command.
+
+## Mutable Route Enforcement
+
+Canonical mutations in Proposal, Delivery, Prototype, Repository, Workspace
+Intake, and Workspace Registry pass through one Console-owned authorization
+boundary before their owner adapter runs. The boundary requires:
+
+- a regular, operator-owned `0600` projection file
+- the exact projection schema with no unknown fields
+- Platform Engineering as source authority
+- `live`, `current`, and `authenticated` posture
+- a current unexpired session with ordered source timestamps
+- the `Operator` role and `Workspace owner` named authority
+- an exact match between the projected principal and configured OOS operator
+
+The accepted request establishes a server-generated correlation identifier and
+forwards only display-safe principal, role, authority, session-expiry, source,
+and canonical-owner references to OOS. The browser cannot supply or override
+those headers. OOS still owns workflow authorization, expected-state checks,
+mutation, readback, and receipts.
+
+Read-only routes, preparation reads, suggestion-only assist routes, and the
+local Agent Console interaction route are not reclassified as canonical domain
+mutations by this boundary. The architecture guard rejects any new canonical
+POST route that omits the shared authorization entry point.
 
 ## Operator Surfaces
 
@@ -168,21 +201,20 @@ do not dominate the account center and the dialog has no footer action.
 The Console owns no identity database, credential store, token cache, browser
 authorization authority, or alternate authentication service.
 
-## Post-Baseline Wiring
+## Remaining Activation Work
 
-Live Integration and Deployment replaces synthetic account and identity sources through server-side
-adapters while preserving the account and identity boundaries. The browser
-receives display-safe posture and references only; it does not receive raw
-tokens, credentials, secret claims, or policy internals.
+The Platform projection consumer and mutable-route enforcement are implemented
+in source. The browser receives no raw tokens, credentials, secret claims, or
+policy internals. Normal `dev-integration` activation remains denied until
+Security Architecture reviews the exact Platform, Console, and OOS revisions.
 
-Live Integration and Deployment must define:
+Later federated identity work must still define:
 
 - federated identity provider and platform owner
 - server session and profile-preference contracts
 - group-to-role and named-authority mapping
 - access-request workflow and approval authority
 - expiry, refresh, revocation, stale, and unavailable behavior
-- server-side authorization checks for every mutable command family
 - actor, session, correlation, and approval identity in receipts and audit
 - security delta review and operating evidence
 

@@ -23,6 +23,18 @@ The current security evidence is:
 - [Workspace Prototype Studio incubation security baseline](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-05-06-workspace-prototype-studio-product-incubation-baseline.md)
 - [Workspace Prototype Studio security architecture](https://github.com/mfshaf7/security-architecture/blob/main/docs/architecture/components/workspace-prototype-studio/README.md)
 
+The Console identity source exception is bounded to a private, non-secret
+Platform session projection read by the Console server. Canonical mutation
+routes require the exact current projection, the `Operator` role, `Workspace
+owner` named authority, and an exact configured-operator match before an OOS
+adapter can run. Accepted requests carry only non-secret attribution and a
+server-generated correlation identifier. Missing, malformed, non-private,
+stale, expired, unavailable, or conflicting identity fails closed. The browser
+cannot submit credentials, identity claims, roles, named authority, source
+references, or trusted correlation headers. This source implementation does
+not grant normal activation; Security Architecture review under ART #1181
+remains required.
+
 ## Authority Boundaries
 
 - Workspace Governance owns classification and cross-repo contract truth.

@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+
 const deliveryOosTimeoutMs = 12_000;
 
 export type DeliveryOosConfig = {
@@ -91,6 +93,7 @@ export async function deliveryOosRequest(
       cache: "no-store",
       headers: {
         ...Object.fromEntries(new Headers(init.headers).entries()),
+        ...consoleMutationAttributionHeaders(),
         Accept: "application/json",
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,
