@@ -647,6 +647,25 @@ Runtime artifact classes:
 - Preference/cache state: non-authoritative state that can be deleted and
   rebuilt without losing business truth.
 
+Canonical live projections use the machine contract in
+`contracts/source-authority/`. The envelope binds the authority, source owner,
+source reference, record reference, source revision, event cursor, event
+sequence, observation time, validity window, and freshness state. A durable
+result that the Console presents as authoritative also binds its receipt to the
+same source coordinates.
+
+The Console validates this envelope before using a live projection. Missing or
+unavailable authority, expired or non-current freshness, an unexpected owner,
+an older event sequence, conflicting state at one sequence, malformed evidence,
+or a receipt bound to another revision fails closed. Re-reading the exact same
+coordinates is an unchanged observation, not a second business action.
+
+This contract does not activate a backend and does not remove disconnected
+preview fixtures. OOS projection and event adoption belongs to the live adapter
+integration, while removal of configured-live fixture fallback is a separate
+Console cutover. Until both land, existing adapters retain their declared
+runtime modes without claiming canonical coverage from this contract alone.
+
 Operation surfaces must access persistence through a runtime boundary instead
 of calling `localStorage`, mutating local receipt arrays, or embedding backend
 details directly in views.

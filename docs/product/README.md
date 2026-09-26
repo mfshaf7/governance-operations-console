@@ -20,6 +20,8 @@ current and future product changes.
 3. `operation-workbench-contract.md`
    - Shared Operation Workbench engineering, visual, workflow, panel, Teras,
      and drift-control rules.
+   - Defines the canonical projection adoption rule and points to the executable
+     source-authority and freshness contract under `contracts/source-authority/`.
 4. `source-structure-discipline.md`
    - Product-wide source ownership, module-boundary, naming, extraction,
      styling, and validation rules.
