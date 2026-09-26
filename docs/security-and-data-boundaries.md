@@ -47,6 +47,14 @@ remains required.
 The Console may project evidence from those authorities. It must not replace
 them or imply that a local UI state is an authority decision.
 
+Canonical live projection trust is bounded by the product-owned machine
+contract in `contracts/source-authority/`. A Console adapter must verify the
+expected authority, source and record identity, source revision, event ordering,
+freshness interval, and any displayed durable receipt before treating a
+projection as current. Missing, unavailable, stale, replayed, conflicting, or
+malformed source evidence fails closed. The contract grants no backend,
+deployment, mutation, or activation authority by itself.
+
 ## Graduated Baseline Boundary
 
 The transferred baseline remains limited to:
