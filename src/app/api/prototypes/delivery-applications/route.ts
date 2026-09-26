@@ -1,9 +1,12 @@
 import type { NextRequest } from "next/server";
 
+import { authorizeConsoleMutation } from "@/console-integration/identity/server/console-session-authorization";
 import { applyPrototypeDeliveryApplicationRoute } from "../../../../domain-workspaces/prototype/server/prototype-delivery-api-routes.ts";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  return applyPrototypeDeliveryApplicationRoute(request);
+  return authorizeConsoleMutation(request, () =>
+    applyPrototypeDeliveryApplicationRoute(request),
+  );
 }

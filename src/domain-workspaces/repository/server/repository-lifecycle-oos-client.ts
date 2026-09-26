@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+
 import { assertRepositoryCustodyWorkflowResult } from "../live-runtime/repository-custody-live-contract.ts";
 import {
   assertRepositoryLifecycleAudit,
@@ -576,6 +578,7 @@ async function repositoryLifecycleOosRequest(
     response = await fetchImpl(`${config.baseUrl}${path}`, {
       ...init,
       headers: {
+        ...consoleMutationAttributionHeaders(),
         Accept: "application/json",
         ...(init.body ? { "Content-Type": "application/json" } : {}),
         "x-oos-caller-id": config.callerId,

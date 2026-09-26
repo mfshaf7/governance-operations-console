@@ -1,3 +1,5 @@
+import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+
 import {
   assertPrototypeClosureId,
   assertPrototypeClosureIntent,
@@ -152,7 +154,7 @@ async function request(path: string, init: RequestInit, options: Options) {
   try {
     response = await (options.fetchImpl ?? fetch)(`${config.baseUrl}${path}`, {
       ...init, cache: "no-store",
-      headers: { Accept: "application/json", "Content-Type": "application/json",
+      headers: { ...consoleMutationAttributionHeaders(), Accept: "application/json", "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId, "x-oos-caller-secret": config.callerSecret },
       signal: AbortSignal.timeout(timeoutMs),
     });

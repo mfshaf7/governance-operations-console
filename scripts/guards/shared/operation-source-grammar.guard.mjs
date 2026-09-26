@@ -112,6 +112,7 @@ const allowedIndexPaths = new Set([
   "src/domain-workspaces/portfolio/presentation/workspace/index.ts",
   "src/domain-workspaces/prototype/index.ts",
   "src/domain-workspaces/prototype/presentation/workspace/index.ts",
+  "src/domain-workspaces/prototype/server/index.ts",
   "src/domain-workspaces/repository/index.ts",
   "src/domain-workspaces/repository/presentation/workspace/index.ts",
   "src/domain-workspaces/orchestration/index.ts",

@@ -6,6 +6,16 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-09-27
+
+- Added one server-owned authorization boundary for canonical Console
+  mutations using the exact private Platform session projection.
+- Required the verified operator role, named authority, and configured
+  principal binding before owner adapters run, then forwarded only non-secret
+  attribution and a server-issued correlation reference to OOS.
+- Added route and transport guards, fail-closed projection tests, and explicit
+  Security review gating before normal live activation.
+
 ## 2026-09-07
 
 - Added Workspace Registry lifecycle control for update, suspend, restore, and

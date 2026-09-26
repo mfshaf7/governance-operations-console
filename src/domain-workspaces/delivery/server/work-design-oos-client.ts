@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+
 import {
   assertWorkDesignOosApplyResult,
   assertWorkDesignOosAssistResult,
@@ -286,6 +288,7 @@ async function workDesignOosRequest(
       ...init,
       cache: "no-store",
       headers: {
+        ...consoleMutationAttributionHeaders(),
         Accept: "application/json",
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,

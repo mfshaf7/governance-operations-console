@@ -21,7 +21,8 @@ function privateDomainImport(specifier) {
     .replace(/^@\//, "")
     .replace(/^\.\.\/domain-workspaces\//, "domain-workspaces/")
     .replace(/^\.\.\/\.\.\/domain-workspaces\//, "domain-workspaces/");
-  return /^domain-workspaces\/[^/]+\/.+/.test(normalized);
+  if (!/^domain-workspaces\/[^/]+(?:\/.+)?$/.test(normalized)) return false;
+  return !/^domain-workspaces\/[^/]+(?:\/server)?$/.test(normalized);
 }
 
 export const guard = {

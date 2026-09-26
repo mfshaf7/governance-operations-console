@@ -10,8 +10,10 @@ export const guard = {
   run() {
     const failures = [];
     const indexPath = "src/domain-workspaces/prototype/index.ts";
+    const serverIndexPath = "src/domain-workspaces/prototype/server/index.ts";
 
     assertAppFile(failures, indexPath);
+    assertAppFile(failures, serverIndexPath);
     assertOnlyAllowedSpecifiers(
       failures,
       indexPath,
@@ -36,6 +38,20 @@ export const guard = {
       ".module.css",
       "PrototypeControlSurface",
       "getPrototypeWorkspaceReadModel",
+    ]);
+    assertOnlyAllowedSpecifiers(
+      failures,
+      serverIndexPath,
+      "./",
+      ["./prototype-closure-api-routes"],
+    );
+    assertIncludes(failures, serverIndexPath, [
+      "cancelPrototypeClosureRoute",
+      "continuePrototypeClosureRoute",
+      "decidePrototypeClosureRoute",
+      "preparePrototypeClosureRoute",
+      "readPrototypeClosureRoute",
+      "submitPrototypeClosureRoute",
     ]);
 
     return failures;
