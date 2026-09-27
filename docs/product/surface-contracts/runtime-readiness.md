@@ -35,6 +35,13 @@ declare:
 - freshness
 - alert eligibility
 
+Configured component posture comes from the private Platform-owned
+`console-runtime-observations/v1` projection through the Console server. The
+browser receives a bounded safe projection rather than Kubernetes references,
+recovery paths, filesystem paths, or collector diagnostics. A configured
+source that is missing, malformed, stale, contradictory, or unreadable is
+unavailable; it must not recover through catalog or scenario fixtures.
+
 Synthetic scenarios are presentation fixtures. They must remain visibly
 synthetic and must not create normal runtime alerts.
 

@@ -17,6 +17,8 @@ separately governed OOS integration slices:
 - server-only OOS caller credentials and operator attribution
 - centralized governed runtime configuration with a non-secret capability
   projection and fail-closed partial-configuration handling
+- Platform-owned runtime observation consumption with private server-side
+  validation, browser-safe component posture, and fail-closed freshness
 - server-issued correlation across every same-origin API response, authorized
   OOS attribution, denied actions, and bounded owner failures
 - versioned canonical source envelopes for admitted live GET projections, with

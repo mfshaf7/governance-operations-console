@@ -148,6 +148,7 @@ function GovernanceConsoleContent({
           activeComponentScenario={controller.activeComponentScenario}
           activeResourceScenario={controller.activeResourceScenario}
           componentScenarioId={controller.componentScenarioId}
+          componentSourceError={controller.componentSourceError}
           consoleDevMode={controller.consoleDevMode}
           onComponentScenarioChange={controller.setComponentScenario}
           onSelectAlert={controller.selectAlert}

@@ -59,12 +59,14 @@ function resourceSourceMetadata(
 }
 
 export function buildRuntimeAlerts({
+  componentSourceError = null,
   components,
   error,
   latestSample,
   resourceSourceLabel,
   resourceSourceState,
 }: {
+  componentSourceError?: string | null;
   components: RuntimeComponentObservation[];
   error: string | null;
   latestSample: WslResourceSample | undefined;
@@ -108,6 +110,24 @@ export function buildRuntimeAlerts({
       : [];
 
   return [
+    ...(componentSourceError
+      ? [
+          {
+            detail: "The configured Platform observation source is not current.",
+            evidence: componentSourceError,
+            freshness: "unavailable" as ObservationFreshness,
+            id: "component-observation-source-unavailable",
+            label: "Component observations unavailable",
+            nextMove: "Restore the Platform-owned observation projection before relying on component posture.",
+            observedAt: null,
+            scope: "Platform runtime observations",
+            source: "platform-engineering",
+            sourceMode: "unavailable" as ObservationSourceMode,
+            status: "unavailable",
+            tone: "warn" as Tone,
+          },
+        ]
+      : []),
     ...offlineComponents.map((component) => ({
       detail: `${component.surface} / ${component.status}`,
       evidence: `${component.label} was observed as ${component.status} at ${component.surface}.`,

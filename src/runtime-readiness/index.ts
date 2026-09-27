@@ -6,6 +6,7 @@ export {
   ResourceMetricFocus,
 } from "./presentation/runtime-focus-surfaces";
 export { WslResourceUsage } from "./presentation/runtime-readiness-panel";
+export { useRuntimeComponentObservations } from "./state/use-runtime-component-observations";
 export {
   componentStatusScenarios,
   resourceUsageScenarios,
@@ -30,6 +31,7 @@ export const runtimeReadinessBoundary: ConsoleBoundary = {
   owns: [
     "local WSL resource telemetry",
     "declared component observation catalog",
+    "bounded Platform runtime observation consumption",
     "source-qualified advisory runtime alerts",
   ],
   status: "active-contract",
