@@ -1,15 +1,19 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { randomUUID } from "node:crypto";
 import { lstat, readFile } from "node:fs/promises";
-import { isAbsolute } from "node:path";
-
-import { NextResponse } from "next/server.js";
 
 import type { OperatorIdentitySnapshot } from "../../../console-shell/identity/operator-identity-model";
+import {
+  ConsoleRuntimeConfigurationError,
+  resolveConsoleOperatorBinding,
+  resolveConsoleSessionProjectionPath,
+} from "../../configuration/console-runtime-configuration.ts";
+import {
+  bindConsoleCorrelation,
+  consoleCorrelationIdForRequest,
+  consoleOperationFailureResponse,
+} from "../../observability/console-operation-correlation.ts";
 
 const maxProjectionBytes = 32 * 1024;
-const noStoreHeaders = { "Cache-Control": "no-store" };
-
 type ConsoleMutationContext = Readonly<{
   authorities: readonly string[];
   canonicalOwner: "operator-orchestration-service";
@@ -45,6 +49,7 @@ export async function authorizeConsoleMutation(
   operation: () => Promise<Response>,
   options: MutationAuthorizationOptions = {},
 ) {
+  const correlationId = consoleCorrelationIdForRequest(request);
   let context: ConsoleMutationContext;
   try {
     const snapshot = await readVerifiedConsoleSession();
@@ -65,8 +70,11 @@ export async function authorizeConsoleMutation(
       );
     }
 
-    const configuredOperator = process.env.GOVERNANCE_CONSOLE_OPERATOR_ID?.trim();
-    if (!configuredOperator) {
+    let configuredOperator: string;
+    try {
+      configuredOperator = resolveConsoleOperatorBinding();
+    } catch (error) {
+      if (!(error instanceof ConsoleRuntimeConfigurationError)) throw error;
       throw new ConsoleSessionAuthorizationError(
         "The Console operator binding is unavailable.",
         "console_operator_binding_unavailable",
@@ -85,7 +93,7 @@ export async function authorizeConsoleMutation(
       authorities: snapshot.access.authorities,
       canonicalOwner:
         options.canonicalOwner ?? "operator-orchestration-service",
-      correlationId: randomUUID(),
+      correlationId,
       expiresAt: snapshot.session.expiresAt!,
       principalReference: snapshot.principal.reference,
       roles: snapshot.access.roles,
@@ -102,18 +110,29 @@ export async function authorizeConsoleMutation(
             "console_session_unavailable",
             401,
           );
-    return NextResponse.json(
-      {
-        code: known.code,
-        error: known.message,
-        requestPath: new URL(request.url).pathname,
-        status: "denied",
-      },
-      { headers: noStoreHeaders, status: known.status },
-    );
+    return consoleOperationFailureResponse({
+      code: known.code,
+      correlationId,
+      message: known.message,
+      outcome: "denied",
+      request,
+      status: known.status,
+    });
   }
 
-  return mutationContext.run(context, operation);
+  try {
+    const response = await mutationContext.run(context, operation);
+    return bindConsoleCorrelation(response, correlationId);
+  } catch {
+    return consoleOperationFailureResponse({
+      code: "console_owner_operation_failed",
+      correlationId,
+      message: "The canonical owner operation failed before a response was returned.",
+      outcome: "failed",
+      request,
+      status: 502,
+    });
+  }
 }
 
 export function consoleMutationAttributionHeaders(): Record<string, string> {
@@ -136,8 +155,11 @@ export async function readVerifiedConsoleSession(
   env: NodeJS.ProcessEnv = process.env,
   now = new Date(),
 ): Promise<OperatorIdentitySnapshot> {
-  const projectionPath = env.GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH?.trim();
-  if (!projectionPath || !isAbsolute(projectionPath)) {
+  let projectionPath: string;
+  try {
+    projectionPath = resolveConsoleSessionProjectionPath(env);
+  } catch (error) {
+    if (!(error instanceof ConsoleRuntimeConfigurationError)) throw error;
     throw new ConsoleSessionAuthorizationError(
       "The Platform session projection is not configured.",
       "console_session_projection_unavailable",

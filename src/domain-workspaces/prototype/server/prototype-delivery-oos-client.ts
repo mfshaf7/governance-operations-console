@@ -1,3 +1,9 @@
+import {
+  consoleOosModeSelected,
+  resolveConsoleOosConnection,
+  type ConsoleOosConnection,
+  ConsoleRuntimeConfigurationError,
+} from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 
 import {
@@ -12,11 +18,7 @@ import type {
 
 const prototypeDeliveryOosTimeoutMs = 30_000;
 
-type PrototypeDeliveryOosConfig = {
-  baseUrl: string;
-  callerId: string;
-  callerSecret: string;
-};
+type PrototypeDeliveryOosConfig = ConsoleOosConnection;
 
 export class PrototypeDeliveryOosError extends Error {
   readonly code: string;
@@ -32,7 +34,7 @@ export class PrototypeDeliveryOosError extends Error {
 export function prototypeDeliveryOosConfigured(
   env: NodeJS.ProcessEnv = process.env,
 ) {
-  return Boolean(env.OOS_BASE_URL?.trim());
+  return consoleOosModeSelected(env);
 }
 
 export async function applyPrototypeDeliveryApplication(
@@ -102,30 +104,22 @@ export function assertPrototypeDeliveryApplicationId(value: unknown) {
 function resolvePrototypeDeliveryOosConfig(
   env: NodeJS.ProcessEnv,
 ): PrototypeDeliveryOosConfig {
-  const baseUrl = env.OOS_BASE_URL?.trim();
-  const callerSecret = env.OOS_CALLER_SECRET?.trim();
-  const callerId =
-    env.OOS_CALLER_ID?.trim() || "governance-operations-console";
-  if (!baseUrl || !callerSecret) {
+  try {
+    return resolveConsoleOosConnection(env);
+  } catch (error) {
+    const invalidUrl =
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_oos_url_invalid";
     throw new PrototypeDeliveryOosError(
-      "Prototype Delivery live integration is missing its OOS endpoint or caller secret.",
-      "prototype_delivery_oos_not_configured",
+      error instanceof Error
+        ? error.message
+        : "Prototype Delivery configuration is invalid.",
+      invalidUrl
+        ? "prototype_delivery_oos_url_invalid"
+        : "prototype_delivery_oos_not_configured",
       503,
     );
   }
-  const parsed = new URL(baseUrl);
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new PrototypeDeliveryOosError(
-      "Prototype Delivery OOS endpoint must use HTTP or HTTPS.",
-      "prototype_delivery_oos_url_invalid",
-      503,
-    );
-  }
-  return {
-    baseUrl: parsed.toString().replace(/\/$/, ""),
-    callerId,
-    callerSecret,
-  };
 }
 
 async function prototypeDeliveryOosRequest(

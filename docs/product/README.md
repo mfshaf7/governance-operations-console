@@ -73,6 +73,10 @@ current and future product changes.
 
 ## Live Integration Surfaces
 
+- `console-runtime-operability.md`
+  - Central server configuration, non-secret capability projection,
+    server-issued API correlation, bounded errors, and canonical owner-audit
+    readback rules.
 - `proposal-live-integration.md`
   - OOS-backed Proposal projection and command behavior.
 - `prototype-landing-live-integration.md`

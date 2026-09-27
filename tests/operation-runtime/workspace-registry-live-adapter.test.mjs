@@ -154,7 +154,7 @@ test("case:workspace-registry browser runtime contains no authority credentials 
 
   assert.doesNotMatch(browser, /OOS_CALLER_SECRET|x-oos-caller-secret|api\.github\.com/i);
   assert.doesNotMatch(workspace, /api\.github\.com|contracts\/(repos|products|components)\.yaml/i);
-  assert.match(server, /OOS_CALLER_SECRET/);
+  assert.match(server, /resolveConsoleOosConnection/);
   assert.match(server, /sameWorkspaceInventoryPreparation/);
   assert.match(server, /sameWorkspaceInventoryLifecyclePreparation/);
   assert.match(workspace, /consoleDevMode \? workspaceRegistryFixture : runtime\.snapshot/);

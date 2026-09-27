@@ -289,7 +289,7 @@ test("Prototype Landing permits local simulation only for explicit missing confi
     "../../src/domain-workspaces/prototype/server/prototype-landing-oos-client.ts",
   );
   assert.doesNotMatch(browserSource, /OOS_CALLER_SECRET|x-oos-caller-secret/);
-  assert.match(serverSource, /OOS_CALLER_SECRET/);
+  assert.match(serverSource, /resolveConsoleOosConnection/);
   assert.doesNotMatch(serverSource, /api\.github\.com|openproject.*(?:POST|PUT|PATCH|DELETE)/is);
 });
 

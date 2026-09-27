@@ -11,6 +11,8 @@ export const guardRegistry = {
     "./shared/whole-console-source.guard.mjs",
     "./shared/command-center-boundary.guard.mjs",
     "./shared/console-shell-composition.guard.mjs",
+    "./shared/console-runtime-configuration.guard.mjs",
+    "./shared/console-operation-observability.guard.mjs",
     "./shared/console-session-authorization.guard.mjs",
     "./shared/runtime-readiness-boundary.guard.mjs",
     "./shared/agent-console-boundary.guard.mjs",

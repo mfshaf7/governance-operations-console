@@ -15,6 +15,10 @@ The graduated baseline remains private and loopback-only. The Console now has
 separately governed OOS integration slices:
 
 - server-only OOS caller credentials and operator attribution
+- centralized governed runtime configuration with a non-secret capability
+  projection and fail-closed partial-configuration handling
+- server-issued correlation across every same-origin API response, authorized
+  OOS attribution, denied actions, and bounded owner failures
 - versioned canonical source envelopes for admitted live GET projections, with
   owner, identity, freshness, and ordering validation before use
 - canonical Proposal list, capture, projection, command, and history paths
@@ -125,6 +129,9 @@ The Workspace Intake boundary is documented in
 [`docs/product/workspace-intake-live-integration.md`](docs/product/workspace-intake-live-integration.md).
 The Workspace Registry boundary is documented in
 [`docs/product/workspace-registry-live-integration.md`](docs/product/workspace-registry-live-integration.md).
+The shared runtime configuration, capability, correlation, and audit boundary
+is documented in
+[`docs/product/console-runtime-operability.md`](docs/product/console-runtime-operability.md).
 
 ## Authority Map
 

@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
 
+import {
+  consoleOosModeSelected,
+  ConsoleRuntimeConfigurationError,
+  resolveConsoleOosConnection,
+  type ConsoleOosConnection,
+} from "../../configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../identity/server/console-session-authorization.ts";
 import {
   acceptCurrentConsoleSourceProjection,
@@ -25,11 +31,7 @@ import type {
 const timeoutMs = 12_000;
 const maxResponseBytes = 1_048_576;
 
-type WorkspaceIntakeOosConfig = Readonly<{
-  baseUrl: string;
-  callerId: string;
-  callerSecret: string;
-}>;
+type WorkspaceIntakeOosConfig = ConsoleOosConnection;
 
 export class WorkspaceIntakeOosError extends Error {
   readonly code: string;
@@ -45,7 +47,7 @@ export class WorkspaceIntakeOosError extends Error {
 }
 
 export function workspaceIntakeOosConfigured(env = process.env) {
-  return Boolean(env.OOS_BASE_URL?.trim() && env.OOS_CALLER_SECRET?.trim());
+  return consoleOosModeSelected(env);
 }
 
 export async function prepareWorkspaceIntake(
@@ -216,37 +218,22 @@ function assertReturnedBinding(value: unknown, command: ReturnType<typeof buildC
 }
 
 function resolveConfig(env = process.env): WorkspaceIntakeOosConfig {
-  const baseUrl = env.OOS_BASE_URL?.trim();
-  const callerSecret = env.OOS_CALLER_SECRET?.trim();
-  if (!baseUrl || !callerSecret) {
-    throw new WorkspaceIntakeOosError(
-      "Workspace Intake is unavailable until the approved OOS integration is configured.",
-      "workspace_intake_oos_not_configured",
-      503,
-    );
-  }
-  let url: URL;
   try {
-    url = new URL(baseUrl);
-  } catch {
+    return resolveConsoleOosConnection(env);
+  } catch (error) {
+    const invalidUrl =
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_oos_url_invalid";
     throw new WorkspaceIntakeOosError(
-      "Workspace Intake OOS endpoint is invalid.",
-      "workspace_intake_oos_url_invalid",
+      invalidUrl
+        ? "Workspace Intake OOS endpoint is invalid."
+        : "Workspace Intake is unavailable until the approved OOS integration is configured.",
+      invalidUrl
+        ? "workspace_intake_oos_url_invalid"
+        : "workspace_intake_oos_not_configured",
       503,
     );
   }
-  if (!new Set(["http:", "https:"]).has(url.protocol)) {
-    throw new WorkspaceIntakeOosError(
-      "Workspace Intake OOS endpoint is invalid.",
-      "workspace_intake_oos_url_invalid",
-      503,
-    );
-  }
-  return {
-    baseUrl: url.toString().replace(/\/$/, ""),
-    callerId: env.OOS_CALLER_ID?.trim() || "governance-operations-console",
-    callerSecret,
-  };
 }
 
 async function request(

@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
 
+import {
+  consoleOosModeSelected,
+  resolveConsoleOosOperatorConfiguration,
+  type ConsoleOosOperatorConfiguration,
+  ConsoleRuntimeConfigurationError,
+} from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 import {
   acceptCurrentConsoleSourceProjection,
@@ -26,13 +32,7 @@ import type {
 
 const workDesignOosTimeoutMs = 12_000;
 
-type WorkDesignOosConfig = {
-  baseUrl: string;
-  callerId: string;
-  callerSecret: string;
-  operatorHandle?: string;
-  operatorId: string;
-};
+type WorkDesignOosConfig = ConsoleOosOperatorConfiguration;
 
 export class WorkDesignOosError extends Error {
   readonly code: string;
@@ -46,7 +46,7 @@ export class WorkDesignOosError extends Error {
 }
 
 export function workDesignOosConfigured(env: NodeJS.ProcessEnv = process.env) {
-  return Boolean(env.OOS_BASE_URL?.trim());
+  return consoleOosModeSelected(env);
 }
 
 export async function readWorkDesignProjection(
@@ -253,31 +253,22 @@ async function requestWorkDesignAdvice(
 }
 
 function resolveWorkDesignOosConfig(env: NodeJS.ProcessEnv): WorkDesignOosConfig {
-  const baseUrl = env.OOS_BASE_URL?.trim();
-  const callerSecret = env.OOS_CALLER_SECRET?.trim();
-  const operatorId = env.GOVERNANCE_CONSOLE_OPERATOR_ID?.trim();
-  if (!baseUrl || !callerSecret || !operatorId) {
+  try {
+    return resolveConsoleOosOperatorConfiguration(env);
+  } catch (error) {
+    const invalidUrl =
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_oos_url_invalid";
     throw new WorkDesignOosError(
-      "Work Design live integration is missing its OOS endpoint, caller secret, or operator identity.",
-      "work_design_oos_not_configured",
+      error instanceof Error
+        ? error.message
+        : "Work Design live integration configuration is invalid.",
+      invalidUrl
+        ? "work_design_oos_url_invalid"
+        : "work_design_oos_not_configured",
       503,
     );
   }
-  const parsed = new URL(baseUrl);
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new WorkDesignOosError(
-      "Work Design OOS endpoint must use HTTP or HTTPS.",
-      "work_design_oos_url_invalid",
-      503,
-    );
-  }
-  return {
-    baseUrl: parsed.toString().replace(/\/$/, ""),
-    callerId: env.OOS_CALLER_ID?.trim() || "governance-operations-console",
-    callerSecret,
-    operatorHandle: env.GOVERNANCE_CONSOLE_OPERATOR_HANDLE?.trim() || undefined,
-    operatorId,
-  };
 }
 
 function workDesignOperator(config: WorkDesignOosConfig) {

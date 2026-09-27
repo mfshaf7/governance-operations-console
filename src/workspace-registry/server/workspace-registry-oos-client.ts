@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
 
+import {
+  consoleOosModeSelected,
+  ConsoleRuntimeConfigurationError,
+  resolveConsoleOosConnection,
+  type ConsoleOosConnection,
+} from "../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../console-integration/identity/server/console-session-authorization.ts";
 import {
   acceptCurrentConsoleSourceProjection,
@@ -35,11 +41,7 @@ import type {
 const maxResponseBytes = 2_097_152;
 const timeoutMs = 12_000;
 
-type WorkspaceRegistryOosConfig = Readonly<{
-  baseUrl: string;
-  callerId: string;
-  callerSecret: string;
-}>;
+type WorkspaceRegistryOosConfig = ConsoleOosConnection;
 
 type RequestOptions = Readonly<{
   config?: WorkspaceRegistryOosConfig;
@@ -61,7 +63,7 @@ export class WorkspaceRegistryOosError extends Error {
 }
 
 export function workspaceRegistryOosConfigured(env = process.env) {
-  return Boolean(env.OOS_BASE_URL?.trim() && env.OOS_CALLER_SECRET?.trim());
+  return consoleOosModeSelected(env);
 }
 
 export async function readWorkspaceRegistry(
@@ -426,37 +428,22 @@ function reviewedLifecycleSnapshot(
 }
 
 function resolveConfig(env = process.env): WorkspaceRegistryOosConfig {
-  const baseUrl = env.OOS_BASE_URL?.trim();
-  const callerSecret = env.OOS_CALLER_SECRET?.trim();
-  if (!baseUrl || !callerSecret) {
-    throw new WorkspaceRegistryOosError(
-      "Workspace Registry is unavailable until the approved OOS integration is configured.",
-      "workspace_registry_oos_not_configured",
-      503,
-    );
-  }
-  let url: URL;
   try {
-    url = new URL(baseUrl);
-  } catch {
+    return resolveConsoleOosConnection(env);
+  } catch (error) {
+    const invalidUrl =
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_oos_url_invalid";
     throw new WorkspaceRegistryOosError(
-      "Workspace Registry OOS endpoint is invalid.",
-      "workspace_registry_oos_url_invalid",
+      invalidUrl
+        ? "Workspace Registry OOS endpoint is invalid."
+        : "Workspace Registry is unavailable until the approved OOS integration is configured.",
+      invalidUrl
+        ? "workspace_registry_oos_url_invalid"
+        : "workspace_registry_oos_not_configured",
       503,
     );
   }
-  if (!new Set(["http:", "https:"]).has(url.protocol)) {
-    throw new WorkspaceRegistryOosError(
-      "Workspace Registry OOS endpoint is invalid.",
-      "workspace_registry_oos_url_invalid",
-      503,
-    );
-  }
-  return {
-    baseUrl: url.toString().replace(/\/$/, ""),
-    callerId: env.OOS_CALLER_ID?.trim() || "governance-operations-console",
-    callerSecret,
-  };
 }
 
 async function request(

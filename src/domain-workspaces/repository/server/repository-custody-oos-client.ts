@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
 
+import {
+  ConsoleRuntimeConfigurationError,
+  resolveConsoleArtifactReference,
+  resolveConsoleOosOperatorConfiguration,
+  type ConsoleOosOperatorConfiguration,
+} from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 import {
   acceptCurrentConsoleSourceProjection,
@@ -22,17 +28,13 @@ import type {
 } from "../live-runtime/repository-custody-live-types.ts";
 
 const repositoryCustodyOosTimeoutMs = 12_000;
-const digestPattern = /^sha256:[a-f0-9]{64}$/;
 const requestIdPattern = /^repository-custody-request:[A-Za-z0-9._:-]+$/;
 const repositoryIdPattern = /^[1-9][0-9]*$/;
 const repositoryCoordinatePattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 
-type RepositoryCustodyOosConfig = Readonly<{
-  baseUrl: string;
-  callerId: string;
-  callerSecret: string;
+type RepositoryCustodyOosConfig = ConsoleOosOperatorConfiguration &
+  Readonly<{
   credentialBindingRef: RepositoryCustodyArtifactRef;
-  operatorId: string;
   policyProfileRef: RepositoryCustodyArtifactRef;
 }>;
 
@@ -390,9 +392,6 @@ function resolveRepositoryCustodyOosConfig(
   env: NodeJS.ProcessEnv,
   credentialKind: "custody" | "provisioning" = "custody",
 ): RepositoryCustodyOosConfig {
-  const baseUrl = env.OOS_BASE_URL?.trim();
-  const callerSecret = env.OOS_CALLER_SECRET?.trim();
-  const operatorId = env.GOVERNANCE_CONSOLE_OPERATOR_ID?.trim();
   const policyProfileRef = configuredArtifactRef(env, {
     digestName: "REPOSITORY_CUSTODY_POLICY_PROFILE_DIGEST",
     label: "repository custody policy profile",
@@ -412,27 +411,26 @@ function resolveRepositoryCustodyOosConfig(
         ? "REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_URI"
         : "REPOSITORY_CUSTODY_CREDENTIAL_BINDING_URI",
   });
-  if (!baseUrl || !callerSecret || !operatorId) {
+  let common: ConsoleOosOperatorConfiguration;
+  try {
+    common = resolveConsoleOosOperatorConfiguration(env);
+  } catch (error) {
+    const invalidUrl =
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_oos_url_invalid";
     throw new RepositoryCustodyOosError(
-      "Repository custody live integration is missing its OOS endpoint, caller secret, or operator identity.",
-      "repository_custody_oos_not_configured",
-      503,
-    );
-  }
-  const parsed = new URL(baseUrl);
-  if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new RepositoryCustodyOosError(
-      "Repository custody OOS endpoint must use HTTP or HTTPS.",
-      "repository_custody_oos_url_invalid",
+      invalidUrl
+        ? "Repository custody OOS endpoint must use HTTP or HTTPS."
+        : "Repository custody live integration is missing its OOS endpoint, caller secret, or operator identity.",
+      invalidUrl
+        ? "repository_custody_oos_url_invalid"
+        : "repository_custody_oos_not_configured",
       503,
     );
   }
   return {
-    baseUrl: parsed.toString().replace(/\/$/, ""),
-    callerId: env.OOS_CALLER_ID?.trim() || "governance-operations-console",
-    callerSecret,
+    ...common,
     credentialBindingRef,
-    operatorId,
     policyProfileRef,
   };
 }
@@ -441,25 +439,15 @@ function configuredArtifactRef(
   env: NodeJS.ProcessEnv,
   names: { digestName: string; label: string; uriName: string },
 ): RepositoryCustodyArtifactRef {
-  const digest = env[names.digestName]?.trim();
-  const uri = env[names.uriName]?.trim();
-  if (!digest || !digestPattern.test(digest) || !uri) {
-    throw new RepositoryCustodyOosError(
-      `Repository custody live integration is missing its ${names.label} reference.`,
-      "repository_custody_authority_not_configured",
-      503,
-    );
-  }
   try {
-    new URL(uri);
+    return resolveConsoleArtifactReference(env, names);
   } catch {
     throw new RepositoryCustodyOosError(
-      `Repository custody ${names.label} URI is invalid.`,
+      `Repository custody live integration is missing or has an invalid ${names.label} reference.`,
       "repository_custody_authority_not_configured",
       503,
     );
   }
-  return { digest, uri };
 }
 
 async function repositoryCustodyOosRequest(

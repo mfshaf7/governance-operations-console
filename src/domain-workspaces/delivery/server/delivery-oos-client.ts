@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
 
+import {
+  consoleOosModeSelected,
+  resolveConsoleOosOperatorConfiguration,
+  type ConsoleOosOperatorConfiguration,
+  ConsoleRuntimeConfigurationError,
+} from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 import {
   acceptCurrentConsoleSourceProjection,
@@ -10,13 +16,7 @@ import {
 
 const deliveryOosTimeoutMs = 12_000;
 
-export type DeliveryOosConfig = {
-  baseUrl: string;
-  callerId: string;
-  callerSecret: string;
-  operatorHandle?: string;
-  operatorId: string;
-};
+export type DeliveryOosConfig = ConsoleOosOperatorConfiguration;
 
 export class DeliveryOosError extends Error {
   readonly code: string;
@@ -45,37 +45,26 @@ export class DeliveryOosError extends Error {
 }
 
 export function deliveryOosConfigured(env: NodeJS.ProcessEnv = process.env) {
-  return Boolean(env.OOS_BASE_URL?.trim());
+  return consoleOosModeSelected(env);
 }
 
 export function resolveDeliveryOosConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): DeliveryOosConfig {
-  const baseUrl = env.OOS_BASE_URL?.trim();
-  const callerSecret = env.OOS_CALLER_SECRET?.trim();
-  const operatorId = env.GOVERNANCE_CONSOLE_OPERATOR_ID?.trim();
-  if (!baseUrl || !callerSecret || !operatorId) {
+  try {
+    return resolveConsoleOosOperatorConfiguration(env);
+  } catch (error) {
+    const invalidUrl =
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_oos_url_invalid";
     throw new DeliveryOosError(
-      "Delivery live integration is missing its OOS endpoint, caller secret, or operator identity.",
-      "delivery_oos_not_configured",
+      error instanceof Error
+        ? error.message
+        : "Delivery live integration configuration is invalid.",
+      invalidUrl ? "delivery_oos_url_invalid" : "delivery_oos_not_configured",
       503,
     );
   }
-  const parsed = new URL(baseUrl);
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new DeliveryOosError(
-      "Delivery OOS endpoint must use HTTP or HTTPS.",
-      "delivery_oos_url_invalid",
-      503,
-    );
-  }
-  return {
-    baseUrl: parsed.toString().replace(/\/$/, ""),
-    callerId: env.OOS_CALLER_ID?.trim() || "governance-operations-console",
-    callerSecret,
-    operatorHandle: env.GOVERNANCE_CONSOLE_OPERATOR_HANDLE?.trim() || undefined,
-    operatorId,
-  };
 }
 
 export function deliveryOosOperator(config: DeliveryOosConfig) {

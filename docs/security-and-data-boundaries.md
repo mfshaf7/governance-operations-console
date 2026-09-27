@@ -208,6 +208,20 @@ inventory, Delivery Catalog linkage, product admission, and completed
 onboarding remain separate authority-owned actions. Normal live activation
 remains gated by accepted Security Architecture operating evidence.
 
+Governed Console runtime configuration is resolved only through the shared
+server configuration boundary. The non-secret capability projection may expose
+capability state and stable reason codes, but it must not expose endpoints,
+paths, principals, credentials, or artifact-reference values. Partial live
+configuration fails closed.
+
+Every same-origin Console API request receives a fresh server-issued
+correlation identity. Authorized mutations propagate that identity to OOS and
+return it on success or failure. Correlation grants no authority. Unexpected
+owner failures are reduced to a bounded public error; private owner diagnostics
+remain server-side. Canonical audit truth remains the validated owner receipt,
+event, or readback. The Console must not create a second durable audit ledger
+or promote prototype-local activity into canonical evidence.
+
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The
 baseline security findings remain expansion gates until separately reviewed

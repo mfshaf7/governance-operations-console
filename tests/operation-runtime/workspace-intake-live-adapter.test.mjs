@@ -243,7 +243,7 @@ test("case:workspace-intake-delivery-source maps a durable closeout candidate wi
   );
   assert.doesNotMatch(browser, /OOS_CALLER_SECRET|x-oos-caller-secret/i);
   assert.doesNotMatch(browser, /workspace-governance\/contracts|api\.github\.com/i);
-  assert.match(server, /OOS_CALLER_SECRET/);
+  assert.match(server, /resolveConsoleOosConnection/);
   assert.match(server, /sameWorkspaceIntakePreparation/);
   assert.match(dialog, /Decision[\s\S]*Review[\s\S]*Result/);
   assert.match(closeout, /Classify Candidate/);
