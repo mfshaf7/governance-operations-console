@@ -164,7 +164,7 @@ function GovernanceConsoleContent({
           contextCandidate={controller.activeAgentContextCandidate}
           providerStatus={providerStatus}
         />
-        <ConsoleActivityPanel events={controller.consoleActivity} />
+        <ConsoleActivityPanel snapshot={controller.consoleActivity} />
       </div>
       <DockingAgent
         contextCandidate={controller.activeAgentContextCandidate}

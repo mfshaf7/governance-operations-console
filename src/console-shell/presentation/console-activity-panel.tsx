@@ -9,6 +9,7 @@ import {
   TerasUtilityButton,
 } from "@/teras";
 import { downloadConsoleBlob } from "@/console-integration/browser-download";
+import type { GovernanceActivitySnapshot } from "@/governance-activity/governance-activity-types";
 
 import {
   consoleActivityOutcomeLabels,
@@ -46,10 +47,11 @@ const fullDateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
 });
 
 export function ConsoleActivityPanel({
-  events,
+  snapshot,
 }: {
-  events: readonly ConsoleActivityEvent[];
+  snapshot: GovernanceActivitySnapshot;
 }) {
+  const { events } = snapshot;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [outcome, setOutcome] = useState<ConsoleActivityOutcome | "all">("all");
   const [query, setQuery] = useState("");
@@ -121,9 +123,14 @@ export function ConsoleActivityPanel({
         query: query.trim(),
         source,
       },
-      schemaVersion: 1,
+      observedAt: snapshot.observedAt,
+      projectionMode: snapshot.mode,
+      projectionStatus: snapshot.status,
+      schemaVersion: 2,
       scope: "governance-activity",
       source: "governance-operations-console",
+      sources: snapshot.sources,
+      truncated: snapshot.truncated,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
@@ -144,8 +151,7 @@ export function ConsoleActivityPanel({
               title="Material system events"
             />
             <p className={styles.description}>
-              Commands, receipts, state changes, blockers, and runtime changes
-              projected from their owning console domains.
+              {activityDescription(snapshot)}
             </p>
           </div>
           <button
@@ -371,6 +377,14 @@ function ActivityDetail({
         <p title={event.source.ref}>{event.source.ref}</p>
       </div>
 
+      {event.nextActions && event.nextActions.length > 0 ? (
+        <div className={styles.sourceBlock}>
+          <span>Next action</span>
+          <strong>{humanize(event.nextActions[0].action)}</strong>
+          <p>{event.nextActions[0].ownerRef}</p>
+        </div>
+      ) : null}
+
       {references.length > 0 ? (
         <div className={styles.references}>
           <span>References</span>
@@ -398,4 +412,22 @@ function OutcomePill({ outcome }: { outcome: ConsoleActivityOutcome }) {
 
 function humanize(value: string) {
   return value.replaceAll("-", " ");
+}
+
+function activityDescription(snapshot: GovernanceActivitySnapshot) {
+  if (snapshot.mode === "disconnected-preview") {
+    return "Disconnected preview of commands, receipts, state changes, blockers, and runtime changes.";
+  }
+  if (snapshot.status === "offline") {
+    return "Owner activity projections are unavailable. No preview events are substituted.";
+  }
+  if (snapshot.status === "partial") {
+    const unavailable = snapshot.sources
+      .filter((source) => source.state !== "current" || source.truncated)
+      .map((source) => source.label);
+    return unavailable.length > 0
+      ? `Live owner activity is partial: ${unavailable.join(", ")}.`
+      : "Live owner activity is partial or truncated.";
+  }
+  return "Live commands, receipts, state changes, blockers, and runtime changes from their owning systems.";
 }

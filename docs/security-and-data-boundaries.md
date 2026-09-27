@@ -47,6 +47,15 @@ remains required.
 The Console may project evidence from those authorities. It must not replace
 them or imply that a local UI state is an authority decision.
 
+Governance Activity is a server-only read composition over the OOS workflow
+activity and WGCF governance-history projections. Each owner uses a distinct
+runtime credential. Reads are bounded, payloads are contract-validated, and
+identity conflicts fail closed. The browser receives only normalized events,
+source posture, and owner evidence routes. Configured failure never falls back
+to fixture events, and export excludes owner endpoints, credentials, raw
+payloads, and private diagnostics. The Console stores no audit ledger and does
+not treat WGCF history as approval authority.
+
 Canonical live projection trust is bounded by the product-owned machine
 contract in `contracts/source-authority/`. A Console adapter must verify the
 expected authority, source and record identity, source revision, event ordering,

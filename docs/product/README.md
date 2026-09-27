@@ -77,6 +77,9 @@ current and future product changes.
   - Central server configuration, non-secret capability projection,
     server-issued API correlation, bounded errors, and canonical owner-audit
     readback rules.
+- `governance-activity-live-integration.md`
+  - Bounded in-memory composition of canonical OOS workflow activity and WGCF
+    governance history with owner evidence routes and explicit source posture.
 - `proposal-live-integration.md`
   - OOS-backed Proposal projection and command behavior.
 - `prototype-landing-live-integration.md`
