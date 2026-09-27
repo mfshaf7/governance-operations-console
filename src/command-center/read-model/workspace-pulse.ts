@@ -1,4 +1,8 @@
 import type { ConsoleNavigationTarget } from "../../console-architecture";
+import type {
+  CommandCenterAttentionCandidate,
+  CommandCenterAttentionSnapshot,
+} from "./command-center-attention.ts";
 
 export type WorkspacePulseTone =
   | "danger"
@@ -49,7 +53,7 @@ export type WorkspacePulseRoute = Readonly<{
 export type WorkspacePulseRecord = Readonly<{
   id: string;
   owner: string;
-  route: WorkspacePulseRoute;
+  route: WorkspacePulseRoute | null;
   signalId: Exclude<WorkspacePulseSignalId, "source-coverage">;
   sourceId: string;
   stateLabel: string;
@@ -416,4 +420,167 @@ export function projectWorkspacePulseSnapshot(
     sourceSummary,
     sources: input.sources,
   };
+}
+
+export function projectWorkspacePulseFromAttention(
+  attention: CommandCenterAttentionSnapshot,
+): WorkspacePulseSnapshot {
+  const sourceIdByCandidateId = new Map<string, string>();
+  for (const source of attention.sources) {
+    for (const candidate of source.candidates) {
+      if (!sourceIdByCandidateId.has(candidate.candidateId)) {
+        sourceIdByCandidateId.set(
+          candidate.candidateId,
+          source.registration.id,
+        );
+      }
+    }
+  }
+
+  const issueSourceIds = new Set(
+    attention.issues.map((issue) => issue.sourceId),
+  );
+  const sources = attention.sources.map((source) => {
+    const candidate = attention.candidates.find(
+      (item) =>
+        sourceIdByCandidateId.get(item.candidateId) === source.registration.id &&
+        item.route.availability === "available" &&
+        item.route.entryIntent,
+    );
+    return {
+      authority: source.source.authority,
+      id: source.registration.id,
+      intendedAuthority: source.source.authority,
+      label: source.registration.label,
+      mode: pulseProjectionMode(source.source.mode),
+      observedAt: source.source.observedAt,
+      reference: source.source.ref,
+      route: candidate?.route.entryIntent
+        ? {
+            label: candidate.route.label,
+            target: candidate.route.entryIntent.target,
+          }
+        : null,
+      state: issueSourceIds.has(source.registration.id)
+        ? ("unverified" as const)
+        : source.source.freshness,
+    };
+  });
+  const records = attention.candidates.map((candidate) =>
+    attentionCandidatePulseRecord(
+      candidate,
+      sourceIdByCandidateId.get(candidate.candidateId) ?? "unknown-source",
+    ),
+  );
+  const projectionMode = attentionProjectionMode(attention);
+
+  return projectWorkspacePulseSnapshot({
+    projectionAuthority: "command-center-attention-composition",
+    projectedAt: attention.projectedAt,
+    projectionMode,
+    records,
+    schemaVersion: 1,
+    sources,
+  });
+}
+
+function pulseProjectionMode(
+  mode: CommandCenterAttentionCandidate["source"]["mode"],
+): WorkspacePulseProjectionMode {
+  switch (mode) {
+    case "live":
+    case "source-projected":
+      return "live";
+    case "prototype-local":
+      return "cached";
+    case "synthetic":
+      return "synthetic";
+  }
+}
+
+function attentionProjectionMode(
+  attention: CommandCenterAttentionSnapshot,
+): WorkspacePulseProjectionMode {
+  const modes = attention.sources.map((source) =>
+    pulseProjectionMode(source.source.mode),
+  );
+  if (modes.includes("live")) return "live";
+  if (modes.includes("cached")) return "cached";
+  return "synthetic";
+}
+
+function attentionCandidatePulseRecord(
+  candidate: CommandCenterAttentionCandidate,
+  sourceId: string,
+): WorkspacePulseRecord {
+  const signalId = candidatePulseSignal(candidate);
+  return {
+    id: `attention:${candidate.candidateId}`,
+    owner: candidate.owner.label,
+    route: candidate.route.entryIntent
+      ? {
+          label: candidate.route.label,
+          target: candidate.route.entryIntent.target,
+        }
+      : null,
+    signalId,
+    sourceId,
+    stateLabel: candidatePulseState(candidate),
+    summary: candidate.reason,
+    timingLabel: candidatePulseTiming(candidate),
+    title: candidate.subject.title,
+    tone: candidatePulseTone(candidate),
+  };
+}
+
+function candidatePulseSignal(
+  candidate: CommandCenterAttentionCandidate,
+): WorkspacePulseRecord["signalId"] {
+  switch (candidate.attentionClass) {
+    case "recovery":
+      return "blocked-operations";
+    case "decision":
+    case "review":
+      return "required-decisions";
+    case "external-follow-up":
+    case "required-action":
+      return "active-operations";
+  }
+}
+
+function candidatePulseState(candidate: CommandCenterAttentionCandidate) {
+  switch (candidate.attentionClass) {
+    case "recovery":
+      return "BLOCKED";
+    case "decision":
+    case "review":
+      return "DECISION";
+    case "external-follow-up":
+      return "FOLLOW UP";
+    case "required-action":
+      return "ACTIVE";
+  }
+}
+
+function candidatePulseTone(
+  candidate: CommandCenterAttentionCandidate,
+): WorkspacePulseTone {
+  if (candidate.source.freshness !== "current") return "stale";
+  if (candidate.attentionClass === "recovery") return "danger";
+  if (
+    candidate.attentionClass === "decision" ||
+    candidate.attentionClass === "review"
+  ) {
+    return "warn";
+  }
+  return candidate.urgency === "low" ? "muted" : "info";
+}
+
+function candidatePulseTiming(candidate: CommandCenterAttentionCandidate) {
+  if (candidate.dueAt) return `Due ${candidate.dueAt}`;
+  if (candidate.reviewAt) return `Review ${candidate.reviewAt}`;
+  if (candidate.route.availability !== "available") {
+    return "Route unavailable";
+  }
+  return "Owner action available";
 }

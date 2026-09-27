@@ -344,8 +344,9 @@ function PulseRecordList({
               <span className={styles.recordCopy}>
                 <strong>{source.label}</strong>
                 <small>
-                  Fixture owner: {source.authority} · Live authority:{" "}
-                  {source.intendedAuthority}
+                  {source.mode === "synthetic"
+                    ? `Fixture owner: ${source.authority} · Live authority: ${source.intendedAuthority}`
+                    : `Authority: ${source.authority}`}
                 </small>
                 <span>{source.reference}</span>
               </span>
@@ -403,7 +404,11 @@ function PulseRecordList({
               </span>
             </span>
             <span className={styles.recordAction}>
-              <RouteButton route={record.route} onOpen={onOpenRoute} />
+              {record.route ? (
+                <RouteButton route={record.route} onOpen={onOpenRoute} />
+              ) : (
+                <small>Route unavailable</small>
+              )}
             </span>
           </article>
         );

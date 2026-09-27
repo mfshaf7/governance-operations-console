@@ -38,6 +38,7 @@ export type {
   CommandCenterAttentionUrgency,
 } from "./read-model/command-center-attention";
 export {
+  projectWorkspacePulseFromAttention,
   projectWorkspacePulseSnapshot,
 } from "./read-model/workspace-pulse";
 export type {
