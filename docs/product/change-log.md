@@ -8,6 +8,11 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-09-28
 
+- Connected Command Center Focus to canonical Lifecycle Transition attention
+  and derived Workspace Pulse from the same normalized, deduplicated snapshot.
+- Suppressed synthetic and prototype-local candidates in configured live mode,
+  preserved explicit disconnected preview, and made partial or unavailable
+  sources non-actionable without changing the accepted interface.
 - Connected Lifecycle Transitions to bounded canonical OOS journal pages while
   preserving the accepted full-viewport workspace.
 - Enforced current source envelopes, route ownership, monotonic revision,

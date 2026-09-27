@@ -1,6 +1,6 @@
 # Command Center Focus
 
-Status: accepted local-baseline surface contract.
+Status: accepted surface contract with owner-attention live composition.
 
 ## Recommendation Posture
 
@@ -71,6 +71,12 @@ The Console has no Command Center business database. Pre-baseline continuity
 is derived from structured fixtures and prototype-local domain runtimes.
 Post-baseline adapters read owner systems and preserve the same candidate
 contract.
+
+Configured live composition does not mix those fixture candidates into live
+truth. Synthetic and prototype-local sources remain visible as unavailable
+coverage until an owner-backed adapter exists. Explicit disconnected preview
+retains the synthetic design state. Workspace Pulse derives its aggregate from
+the same validated and deduplicated attention snapshot used by Focus.
 
 ## Source Admission
 

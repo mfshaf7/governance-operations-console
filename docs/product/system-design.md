@@ -318,7 +318,11 @@ cross-capability focus routing and decides whether the focus slot shows Command
 Center, Runtime Readiness, or an Operation Workbench domain. Command Center
 must not import or switch on domain workspace implementations. The complete
 source, ranking, navigation, layout, and live-wiring boundary is defined in
-`surface-contracts/command-center-focus.md`.
+`surface-contracts/command-center-focus.md`. Workspace Pulse derives from the
+same validated and deduplicated attention snapshot as Focus; it does not keep
+a competing live aggregate. Configured live composition suppresses synthetic
+and prototype-local candidates, while explicit disconnected preview remains
+labelled synthetic.
 
 Operation Workbench owns selector identity and presentation plus exhaustive
 domain mounting. Console Shell owns which selector entry is active and routes

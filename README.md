@@ -53,6 +53,8 @@ separately governed OOS integration slices:
   merged-authority receipt projection
 - Workspace Registry inspection and active-inventory promotion through a
   server-only, stale-safe OOS adapter with explicit fixture isolation
+- owner-backed Command Center Focus and Workspace Pulse composition from one
+  freshness-aware, deduplicated attention snapshot
 
 Prototype source discovery and operational workflows without a named live
 integration contract remain:
@@ -134,6 +136,8 @@ The Workspace Registry boundary is documented in
 The shared runtime configuration, capability, correlation, and audit boundary
 is documented in
 [`docs/product/console-runtime-operability.md`](docs/product/console-runtime-operability.md).
+The owner-attention composition boundary is documented in
+[`docs/product/owner-attention-live-integration.md`](docs/product/owner-attention-live-integration.md).
 
 ## Authority Map
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  projectWorkspacePulseFromAttention,
   resolveWorkspacePulseFixture,
   useCommandCenterAttention,
   workspacePulseDesignScenarios,
@@ -85,13 +86,19 @@ export function useConsoleShellController() {
     resourceUsageScenarios.find(
       (scenario) => scenario.id === resourceScenarioId,
     ) ?? resourceUsageScenarios[0];
+  const attentionSnapshot = useCommandCenterAttention({
+    disconnectedPreview: consoleDevMode,
+    lifecycleSnapshot: lifecycleTransitionSnapshot,
+  });
   const workspacePulseSnapshot = useMemo(
-    () => resolveWorkspacePulseFixture(pulseScenarioSelections),
-    [pulseScenarioSelections],
+    () =>
+      consoleDevMode
+        ? resolveWorkspacePulseFixture(pulseScenarioSelections)
+        : projectWorkspacePulseFromAttention(attentionSnapshot),
+    [attentionSnapshot, consoleDevMode, pulseScenarioSelections],
   );
   const pulseSignals = workspacePulseSnapshot.signals;
   const systemMood = workspacePulseSnapshot.posture;
-  const attentionSnapshot = useCommandCenterAttention();
   const selectedAttentionCandidate = useMemo(
     () =>
       attentionSnapshot.candidates.find(
