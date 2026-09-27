@@ -4,6 +4,12 @@ export {
   lifecycleTransitionProjectionFixtures,
 } from "./fixtures/lifecycle-transition-projections.fixture.ts";
 export {
+  useLifecycleTransitionLiveRuntime,
+} from "./live-runtime/use-lifecycle-transition-live-runtime.ts";
+export type {
+  LifecycleTransitionRuntimePosture,
+} from "./live-runtime/lifecycle-transition-live-types.ts";
+export {
   LifecycleTransitionsWorkspace,
 } from "./presentation/workspace/lifecycle-transitions-workspace.tsx";
 export type {

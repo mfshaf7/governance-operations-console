@@ -9,6 +9,7 @@ export type ConsoleRuntimeCapabilityId =
   | "delivery-refinement"
   | "delivery-work-design"
   | "delivery-work-session"
+  | "lifecycle-transitions"
   | "proposal"
   | "prototype-closure"
   | "prototype-delivery"
@@ -108,6 +109,7 @@ const capabilityDefinitions: readonly Readonly<{
   { id: "delivery-work-session", label: "Delivery Work Session" },
   { id: "delivery-change-control", label: "Delivery Change Control" },
   { id: "delivery-closeout", label: "Delivery Closeout" },
+  { id: "lifecycle-transitions", label: "Lifecycle Transitions" },
   {
     id: "repository-custody",
     label: "Repository Custody",

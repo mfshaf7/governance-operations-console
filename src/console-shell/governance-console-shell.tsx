@@ -176,6 +176,7 @@ function GovernanceConsoleContent({
           entryIntent={controller.activeConsoleEntryIntent}
           onClose={controller.closeConsoleWorkspace}
           onOpenWorkbenchSurface={controller.openWorkbenchSurface}
+          runtimePosture={controller.lifecycleTransitionRuntimePosture}
           transitions={controller.lifecycleTransitions}
         />
       ) : null}

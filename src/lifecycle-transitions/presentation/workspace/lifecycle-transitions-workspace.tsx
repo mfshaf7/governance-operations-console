@@ -20,6 +20,9 @@ import type {
 import type {
   LifecycleTransitionProjection,
 } from "../../read-model/lifecycle-transition-projection-types";
+import type {
+  LifecycleTransitionRuntimePosture,
+} from "../../live-runtime/lifecycle-transition-live-types";
 import {
   buildLifecycleTransitionRouteOverviews,
 } from "../lifecycle-transition-overview-view-model";
@@ -34,11 +37,13 @@ export function LifecycleTransitionsWorkspace({
   entryIntent,
   onClose,
   onOpenWorkbenchSurface,
+  runtimePosture,
   transitions,
 }: {
   entryIntent?: ConsoleEntryIntent | null;
   onClose: () => void;
   onOpenWorkbenchSurface: (surfaceLabel: OperationWorkbenchPathLabel) => void;
+  runtimePosture: LifecycleTransitionRuntimePosture | null;
   transitions: readonly LifecycleTransitionProjection[];
 }) {
   const routes = buildLifecycleTransitionRouteOverviews(transitions);
@@ -100,7 +105,10 @@ export function LifecycleTransitionsWorkspace({
           <TerasSurfaceSummaryHeader
             ariaLabel="Lifecycle transition route summary"
             metrics={lifecycleTransitionWorkspaceMetrics(activeRoute)}
-            statuses={lifecycleTransitionWorkspaceStatus(activeRoute)}
+            statuses={lifecycleTransitionWorkspaceStatus(
+              activeRoute,
+              runtimePosture,
+            )}
             title={`${activeRoute.sourceLabel} to ${activeRoute.targetLabel}`}
             titleKicker="Route Summary"
           />

@@ -610,7 +610,7 @@ function lifecycleTransitionSourceEvents(
   transitions: readonly LifecycleTransitionProjection[],
 ): ConsoleActivityEvent[] {
   return transitions.flatMap((transition) =>
-    transition.history.map((artifact) =>
+    (transition.activityArtifacts ?? []).map((artifact) =>
       lifecycleArtifactEvent(transition, artifact),
     ),
   );
