@@ -284,3 +284,26 @@ export function createStaticCommandCenterAttentionSource(
     subscribe: () => () => undefined,
   };
 }
+
+export function normalizeCommandCenterAttentionSourceForRuntime(
+  snapshot: CommandCenterAttentionSourceSnapshot,
+  runtimeMode: "disconnected-preview" | "live",
+): CommandCenterAttentionSourceSnapshot {
+  if (
+    runtimeMode === "disconnected-preview" ||
+    (snapshot.source.mode !== "synthetic" &&
+      snapshot.source.mode !== "prototype-local")
+  ) {
+    return snapshot;
+  }
+
+  return {
+    ...snapshot,
+    candidates: [],
+    source: {
+      ...snapshot.source,
+      freshness: "unavailable",
+      version: `${snapshot.source.version}:live-source-unavailable`,
+    },
+  };
+}

@@ -7,6 +7,7 @@ export {
   useLifecycleTransitionLiveRuntime,
 } from "./live-runtime/use-lifecycle-transition-live-runtime.ts";
 export type {
+  LifecycleTransitionLiveSnapshot,
   LifecycleTransitionRuntimePosture,
 } from "./live-runtime/lifecycle-transition-live-types.ts";
 export {
@@ -20,6 +21,7 @@ export type {
 } from "./read-model/lifecycle-transition-projection-types.ts";
 export {
   lifecycleTransitionAttentionSource,
+  projectLifecycleTransitionAttentionSnapshot,
 } from "./read-model/attention-source.ts";
 
 export const lifecycleTransitionsBoundary: ConsoleBoundary = {

@@ -12,21 +12,43 @@ import {
   devIntegrationAttentionSource,
   governedReleaseAttentionSource,
 } from "../../environment-lifecycle";
-import { lifecycleTransitionAttentionSource } from "../../lifecycle-transitions";
-import { projectCommandCenterAttention } from "./command-center-attention";
+import {
+  projectLifecycleTransitionAttentionSnapshot,
+  type LifecycleTransitionLiveSnapshot,
+} from "../../lifecycle-transitions";
+import {
+  normalizeCommandCenterAttentionSourceForRuntime,
+  projectCommandCenterAttention,
+} from "./command-center-attention";
 
-export function useCommandCenterAttention() {
+export function useCommandCenterAttention({
+  disconnectedPreview = false,
+  lifecycleSnapshot = null,
+}: {
+  disconnectedPreview?: boolean;
+  lifecycleSnapshot?: LifecycleTransitionLiveSnapshot | null;
+} = {}) {
   const proposal = useAttentionSource(proposalAttentionSource);
   const repository = useAttentionSource(repositoryAttentionSource);
   const delivery = useAttentionSource(deliveryAttentionSource);
   const prototype = useAttentionSource(prototypeAttentionSource);
   const portfolio = useAttentionSource(portfolioAttentionSource);
   const orchestration = useAttentionSource(orchestrationAttentionSource);
-  const lifecycle = useAttentionSource(lifecycleTransitionAttentionSource);
+  const lifecycle = useMemo(
+    () =>
+      projectLifecycleTransitionAttentionSnapshot(lifecycleSnapshot, {
+        allowSyntheticPreview: disconnectedPreview,
+      }),
+    [disconnectedPreview, lifecycleSnapshot],
+  );
   const devIntegration = useAttentionSource(devIntegrationAttentionSource);
   const governedReleases = useAttentionSource(governedReleaseAttentionSource);
 
   return useMemo(() => {
+    const runtimeMode =
+      disconnectedPreview || lifecycleSnapshot?.mode === "disconnected-preview"
+        ? "disconnected-preview"
+        : "live";
     const sources = [
       proposal,
       repository,
@@ -37,7 +59,9 @@ export function useCommandCenterAttention() {
       lifecycle,
       devIntegration,
       governedReleases,
-    ];
+    ].map((source) =>
+      normalizeCommandCenterAttentionSourceForRuntime(source, runtimeMode),
+    );
     const projectedAt =
       sources
         .map((source) => source.source.projectedAt)
@@ -55,6 +79,8 @@ export function useCommandCenterAttention() {
     proposal,
     prototype,
     repository,
+    disconnectedPreview,
+    lifecycleSnapshot?.mode,
   ]);
 }
 
@@ -63,7 +89,6 @@ function useAttentionSource(
     | typeof deliveryAttentionSource
     | typeof devIntegrationAttentionSource
     | typeof governedReleaseAttentionSource
-    | typeof lifecycleTransitionAttentionSource
     | typeof orchestrationAttentionSource
     | typeof portfolioAttentionSource
     | typeof proposalAttentionSource

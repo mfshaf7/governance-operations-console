@@ -139,7 +139,7 @@ export const guard = {
       "prototypeAttentionSource",
       "portfolioAttentionSource",
       "orchestrationAttentionSource",
-      "lifecycleTransitionAttentionSource",
+      "projectLifecycleTransitionAttentionSnapshot",
       "devIntegrationAttentionSource",
       "governedReleaseAttentionSource",
     ]);

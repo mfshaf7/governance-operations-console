@@ -3,39 +3,21 @@ import type {
   ConsoleAttentionClass,
   ConsoleAttentionSource,
   ConsoleAttentionUrgency,
-} from "../../console-integration/attention-contract";
-import { consoleAttentionSourceRegistrations } from "../../console-integration/attention-source-registry";
-import { lifecycleTransitionProjectionFixtures } from "../fixtures/lifecycle-transition-projections.fixture";
-import type { LifecycleTransitionNextActionCode } from "../model/lifecycle-transition-types";
-import type { LifecycleTransitionProjection } from "./lifecycle-transition-projection-types";
-import { selectLifecycleTransitionsRequiringAction } from "./lifecycle-transition-selectors";
+} from "../../console-integration/attention-contract.ts";
+import { consoleAttentionSourceRegistrations } from "../../console-integration/attention-source-registry.ts";
+import { lifecycleTransitionProjectionFixtures } from "../fixtures/lifecycle-transition-projections.fixture.ts";
+import type { LifecycleTransitionLiveSnapshot } from "../live-runtime/lifecycle-transition-live-types.ts";
+import type { LifecycleTransitionNextActionCode } from "../model/lifecycle-transition-types.ts";
+import type { LifecycleTransitionProjection } from "./lifecycle-transition-projection-types.ts";
+import { selectLifecycleTransitionsRequiringAction } from "./lifecycle-transition-selectors.ts";
 
 const registration =
   consoleAttentionSourceRegistrations.lifecycleTransitions;
-const actionableTransitions = selectLifecycleTransitionsRequiringAction(
-  lifecycleTransitionProjectionFixtures,
-);
-const projectedAt =
-  lifecycleTransitionProjectionFixtures
-    .map((transition) => transition.updatedAt)
-    .sort()
-    .at(-1) ?? "2026-07-28T00:00:00.000Z";
-const lifecycleTransitionAttentionSnapshot = {
-  candidates: actionableTransitions.map((transition) =>
-    lifecycleTransitionAttentionCandidate(transition),
-  ),
-  registration,
-  schemaVersion: 1,
-  source: {
-    authority: "lifecycle-transition-projection",
-    freshness: "current",
-    mode: "synthetic",
-    observedAt: projectedAt,
-    projectedAt,
-    ref: "lifecycle-transition://attention-projection",
-    version: `lifecycle-transition-attention-v1:${lifecycleTransitionProjectionFixtures.length}`,
-  },
-} as const;
+const pendingProjectionTime = "1970-01-01T00:00:00.000Z";
+const lifecycleTransitionAttentionSnapshot =
+  projectLifecycleTransitionAttentionSnapshot(null, {
+    allowSyntheticPreview: true,
+  });
 
 export const lifecycleTransitionAttentionSource: ConsoleAttentionSource = {
   getSnapshot: () => lifecycleTransitionAttentionSnapshot,
@@ -43,8 +25,84 @@ export const lifecycleTransitionAttentionSource: ConsoleAttentionSource = {
   subscribe: () => () => undefined,
 };
 
+export function projectLifecycleTransitionAttentionSnapshot(
+  snapshot: LifecycleTransitionLiveSnapshot | null,
+  { allowSyntheticPreview = false }: { allowSyntheticPreview?: boolean } = {},
+): ReturnType<ConsoleAttentionSource["getSnapshot"]> {
+  if (
+    allowSyntheticPreview ||
+    snapshot?.mode === "disconnected-preview"
+  ) {
+    const projectedAt = latestTransitionUpdate(
+      lifecycleTransitionProjectionFixtures,
+    );
+    const source = {
+      authority: "workspace-prototype-studio",
+      freshness: "current" as const,
+      mode: "synthetic" as const,
+      observedAt: null,
+      projectedAt,
+      ref: "fixture://lifecycle-transitions/attention",
+      version: `lifecycle-transition-attention-preview-v1:${lifecycleTransitionProjectionFixtures.length}`,
+    };
+    return {
+      candidates: selectLifecycleTransitionsRequiringAction(
+        lifecycleTransitionProjectionFixtures,
+      ).map((transition) =>
+        lifecycleTransitionAttentionCandidate(transition, source),
+      ),
+      registration,
+      schemaVersion: 1,
+      source,
+    };
+  }
+
+  if (!snapshot || snapshot.status === "offline") {
+    const projectedAt = snapshot?.observedAt ?? pendingProjectionTime;
+    return {
+      candidates: [],
+      registration,
+      schemaVersion: 1,
+      source: {
+        authority: "operator-orchestration-service",
+        freshness: snapshot ? "unavailable" : "unverified",
+        mode: "source-projected",
+        observedAt: snapshot?.observedAt ?? null,
+        projectedAt,
+        ref: "oos://lifecycle-transitions",
+        version: snapshot
+          ? `lifecycle-transition-attention-offline-v1:${snapshot.observedAt}`
+          : "lifecycle-transition-attention-pending-v1",
+      },
+    };
+  }
+
+  const freshness = snapshot.truncated ? "unverified" : "current";
+  const source = {
+    authority: "operator-orchestration-service",
+    freshness,
+    mode: "source-projected" as const,
+    observedAt: snapshot.observedAt,
+    projectedAt: snapshot.observedAt,
+    ref: "oos://lifecycle-transitions",
+    version: lifecycleTransitionAttentionVersion(snapshot.transitions),
+  } as const;
+
+  return {
+    candidates: selectLifecycleTransitionsRequiringAction(
+      snapshot.transitions,
+    ).map((transition) =>
+      lifecycleTransitionAttentionCandidate(transition, source),
+    ),
+    registration,
+    schemaVersion: 1,
+    source,
+  };
+}
+
 function lifecycleTransitionAttentionCandidate(
   transition: LifecycleTransitionProjection,
+  source: ReturnType<ConsoleAttentionSource["getSnapshot"]>["source"],
 ): ConsoleAttentionCandidate {
   const nextAction = transition.nextAction;
   if (!nextAction) {
@@ -100,11 +158,11 @@ function lifecycleTransitionAttentionCandidate(
     },
     schemaVersion: 1,
     source: {
-      authority: "lifecycle-transition-projection",
-      freshness: "current",
-      mode: "synthetic",
+      authority: source.authority,
+      freshness: source.freshness,
+      mode: source.mode,
       observedAt: transition.updatedAt,
-      projectedAt,
+      projectedAt: source.projectedAt,
       ref: `lifecycle-transition://${transition.transitionId}`,
       version: `${transition.state}:${transition.updatedAt}`,
     },
@@ -115,6 +173,28 @@ function lifecycleTransitionAttentionCandidate(
     },
     urgency: lifecycleTransitionUrgency(transition),
   };
+}
+
+function latestTransitionUpdate(
+  transitions: readonly LifecycleTransitionProjection[],
+) {
+  return (
+    transitions.map((transition) => transition.updatedAt).sort().at(-1) ??
+    pendingProjectionTime
+  );
+}
+
+function lifecycleTransitionAttentionVersion(
+  transitions: readonly LifecycleTransitionProjection[],
+) {
+  const identity = transitions
+    .map(
+      (transition) =>
+        `${transition.transitionId}:${transition.state}:${transition.updatedAt}`,
+    )
+    .sort()
+    .join("|");
+  return `lifecycle-transition-attention-v1:${identity || "empty"}`;
 }
 
 function lifecycleTransitionAttentionClass(
