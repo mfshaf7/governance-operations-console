@@ -33,4 +33,3 @@ truth in live mode.
 No Console business database, aggregate mutation API, direct WGCF credential,
 or background authority is introduced. The accepted Command Center and Pulse
 layout remains unchanged.
-
