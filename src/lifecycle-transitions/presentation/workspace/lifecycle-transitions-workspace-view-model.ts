@@ -12,6 +12,9 @@ import type {
   LifecycleTransitionRouteId,
   LifecycleTransitionState,
 } from "../../model/lifecycle-transition-types";
+import type {
+  LifecycleTransitionRuntimePosture,
+} from "../../live-runtime/lifecycle-transition-live-types";
 
 export function lifecycleTransitionWorkspaceMetrics(
   route: LifecycleTransitionRouteOverview,
@@ -51,8 +54,9 @@ export function lifecycleTransitionWorkspaceMetrics(
 
 export function lifecycleTransitionWorkspaceStatus(
   route: LifecycleTransitionRouteOverview,
+  runtimePosture?: LifecycleTransitionRuntimePosture | null,
 ): TerasSurfaceStatusItem[] {
-  return [
+  const statuses: TerasSurfaceStatusItem[] = [
     {
       detail: route.description,
       facts: [
@@ -71,6 +75,32 @@ export function lifecycleTransitionWorkspaceStatus(
       tone: route.tone,
     },
   ];
+
+  if (runtimePosture) {
+    const preview = runtimePosture.mode === "disconnected-preview";
+    const current = runtimePosture.status === "current";
+    statuses.push({
+      detail: runtimePosture.truncated
+        ? "The bounded owner projection has more records than this page."
+        : preview
+          ? "Disconnected preview uses synthetic lifecycle fixtures."
+          : current
+            ? "OOS journal truth with WGCF validation evidence."
+            : "Canonical Lifecycle Transition state is unavailable.",
+      facts: [
+        {
+          label: "Observed",
+          value: lifecycleTransitionTimestamp(runtimePosture.observedAt),
+        },
+      ],
+      id: "source",
+      label: "Source",
+      stateLabel: preview ? "Preview" : current ? "OOS current" : "Unavailable",
+      tone: preview ? "info" : current ? "ok" : "danger",
+    });
+  }
+
+  return statuses;
 }
 
 export function lifecycleTransitionRouteNavLabel(

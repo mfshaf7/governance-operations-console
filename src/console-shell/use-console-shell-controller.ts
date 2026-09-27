@@ -20,6 +20,7 @@ import type {
 import { openExternalConsoleRoute } from "../console-integration/external-route";
 import {
   lifecycleTransitionProjectionFixtures,
+  useLifecycleTransitionLiveRuntime,
 } from "../lifecycle-transitions";
 import {
   devIntegrationProfileHistoryFixtures,
@@ -67,6 +68,18 @@ export function useConsoleShellController() {
     consoleDevMode,
     scenarioId: componentScenarioId,
   });
+  const lifecycleTransitionRuntime = useLifecycleTransitionLiveRuntime();
+  const lifecycleTransitionSnapshot = lifecycleTransitionRuntime.snapshot;
+  const lifecycleTransitions = useMemo(
+    () =>
+      consoleDevMode ||
+      lifecycleTransitionSnapshot?.mode === "disconnected-preview"
+        ? lifecycleTransitionProjectionFixtures
+        : lifecycleTransitionSnapshot?.status === "current"
+          ? lifecycleTransitionSnapshot.transitions
+          : [],
+    [consoleDevMode, lifecycleTransitionSnapshot],
+  );
   const activeComponentScenario = componentObservations.activeScenario;
   const activeResourceScenario =
     resourceUsageScenarios.find(
@@ -312,7 +325,16 @@ export function useConsoleShellController() {
     devIntegrationProfileHistory: devIntegrationProfileHistoryFixtures,
     devIntegrationProfiles: devIntegrationProfileFixtures,
     environmentLifecycleProducts: productReleaseCapabilityFixtures,
-    lifecycleTransitions: lifecycleTransitionProjectionFixtures,
+    lifecycleTransitionRuntimePosture: lifecycleTransitionSnapshot
+      ? {
+          error: lifecycleTransitionSnapshot.error,
+          mode: lifecycleTransitionSnapshot.mode,
+          observedAt: lifecycleTransitionSnapshot.observedAt,
+          status: lifecycleTransitionSnapshot.status,
+          truncated: lifecycleTransitionSnapshot.truncated,
+        }
+      : null,
+    lifecycleTransitions,
     openConsoleHome,
     openAttentionCandidate,
     openConsoleEntryIntent,

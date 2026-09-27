@@ -1,6 +1,5 @@
 import type {
   LifecycleTransitionArtifact,
-  LifecycleTransitionSourcePacketPreparedArtifact,
 } from "../model/lifecycle-transition-artifacts.ts";
 import type {
   LifecycleTransitionRouteDefinition,
@@ -10,7 +9,9 @@ import type {
   LifecycleTransitionCorrection,
   LifecycleTransitionGateSnapshot,
   LifecycleTransitionNextAction,
+  LifecycleTransitionSource,
   LifecycleTransitionState,
+  LifecycleTransitionTarget,
 } from "../model/lifecycle-transition-types.ts";
 
 export type LifecycleTransitionValidationProjection = Readonly<{
@@ -54,7 +55,24 @@ export type LifecycleTransitionApplicationProjection = Readonly<{
   targetRecordRef: string | null;
 }>;
 
+export type LifecycleTransitionHistoryProjection = Readonly<{
+  artifactId: string;
+  artifactKind: LifecycleTransitionArtifact["artifactKind"];
+  authority: LifecycleTransitionArtifact["authority"];
+  evidenceRefs: readonly string[];
+  outcome:
+    | "blocked"
+    | "failed"
+    | "informational"
+    | "started"
+    | "succeeded"
+    | "waiting";
+  recordedAt: string;
+  sequence: number;
+}>;
+
 export type LifecycleTransitionProjection = Readonly<{
+  activityArtifacts?: readonly LifecycleTransitionArtifact[];
   admission: LifecycleTransitionAdmissionProjection;
   application: LifecycleTransitionApplicationProjection;
   authorityDecisions: readonly LifecycleTransitionAuthorityDecisionProjection[];
@@ -67,21 +85,23 @@ export type LifecycleTransitionProjection = Readonly<{
     reasonCode: string;
     reviewAt: string;
   }> | null;
-  history: readonly LifecycleTransitionArtifact[];
+  history: readonly LifecycleTransitionHistoryProjection[];
   idempotencyKey: string;
   nextAction: LifecycleTransitionNextAction | null;
-  packet: LifecycleTransitionSourcePacketPreparedArtifact["packet"];
-  reason: LifecycleTransitionSourcePacketPreparedArtifact["reason"];
+  reason: Readonly<{
+    code: string;
+    detail: string;
+  }>;
   rejection: Readonly<{
     reasonCode: string;
     reasonDetail: string;
   }> | null;
   route: LifecycleTransitionRouteDefinition;
-  source: LifecycleTransitionSourcePacketPreparedArtifact["source"];
+  source: LifecycleTransitionSource;
   state: LifecycleTransitionState;
   supersededByTransitionId: string | null;
   supersedesTransitionId: string | null;
-  target: LifecycleTransitionSourcePacketPreparedArtifact["target"];
+  target: LifecycleTransitionTarget;
   transitionId: string;
   updatedAt: string;
   validation: LifecycleTransitionValidationProjection;

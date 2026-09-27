@@ -6,6 +6,18 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-09-28
+
+- Connected Lifecycle Transitions to bounded canonical OOS journal pages while
+  preserving the accepted full-viewport workspace.
+- Enforced current source envelopes, route ownership, monotonic revision,
+  deterministic identity, and configured fail-closed behavior.
+- Projected WGCF receipts, blocked gates, required fixes, and exact next-owner
+  actions through OOS without adding direct Console-to-WGCF access or a Console
+  business store.
+- Kept fixtures only for explicit disconnected preview and design mode, and
+  added source posture plus bounded-page visibility to the existing summary.
+
 ## 2026-09-27
 
 - Centralized governed OOS, operator, session, and repository authority

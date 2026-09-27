@@ -457,9 +457,19 @@ Lifecycle Transition Control must not:
 - require manual review for every cross-domain packet
 - become a bootstrap migration surface for the Console's own historical state
 
+## Live Projection
+
+The implemented read path is defined in
+`../lifecycle-transitions-live-integration.md`. The Console reads bounded,
+current OOS source envelopes through its server boundary. WGCF evidence enters
+the surface only through the OOS transition projection; the Console does not
+call WGCF directly. Unconfigured runtime remains an explicit disconnected
+preview, while configured live failure never falls back to fixtures.
+
 ## Sources
 
 - `../system-design.md`
 - `../architecture/README.md`
 - `../operation-workbench-contract.md`
 - `../orchestration-boundary-contract.md`
+- `../lifecycle-transitions-live-integration.md`

@@ -14,6 +14,7 @@ import {
   projectLifecycleTransitionNextAction,
 } from "./lifecycle-transition-next-action.ts";
 import type {
+  LifecycleTransitionHistoryProjection,
   LifecycleTransitionProjection,
 } from "./lifecycle-transition-projection-types.ts";
 import {
@@ -59,6 +60,7 @@ export function projectLifecycleTransition(
   }
 
   return {
+    activityArtifacts: history,
     admission: projection.admission,
     application: projection.application,
     authorityDecisions: projection.authorityDecisions,
@@ -67,10 +69,17 @@ export function projectLifecycleTransition(
     correlationId: packet.correlationId,
     correction: projection.correction,
     deferred: projection.deferred,
-    history,
+    history: history.map((artifact) => ({
+      artifactId: artifact.artifactId,
+      artifactKind: artifact.artifactKind,
+      authority: artifact.authority,
+      evidenceRefs: lifecycleTransitionArtifactEvidenceRefs(artifact),
+      outcome: lifecycleTransitionArtifactOutcome(artifact),
+      recordedAt: artifact.recordedAt,
+      sequence: artifact.sequence,
+    })),
     idempotencyKey: packet.idempotencyKey,
     nextAction: projectLifecycleTransitionNextAction(projection, route),
-    packet: packet.packet,
     reason: packet.reason,
     rejection: projection.rejection,
     route,
@@ -83,6 +92,66 @@ export function projectLifecycleTransition(
     updatedAt: projection.updatedAt,
     validation: projection.validation,
   };
+}
+
+function lifecycleTransitionArtifactEvidenceRefs(
+  artifact: LifecycleTransitionArtifact,
+): readonly string[] {
+  switch (artifact.artifactKind) {
+    case "application-failed":
+    case "application-started":
+      return [artifact.runRef];
+    case "authority-decision-recorded":
+    case "source-correction-returned":
+    case "target-admission-recorded":
+    case "target-application-recorded":
+    case "transition-cancelled":
+    case "transition-superseded":
+      return [artifact.receiptRef];
+    case "gate-blocked":
+      return artifact.gate.evidenceRef ? [artifact.gate.evidenceRef] : [];
+    case "source-packet-prepared":
+      return [artifact.packet.packetRef, artifact.packet.producerReceiptRef];
+    case "transition-deferred":
+      return [];
+    case "validation-completed":
+      return [artifact.receiptRef];
+    case "validation-started":
+      return [artifact.validationRunRef];
+  }
+}
+
+function lifecycleTransitionArtifactOutcome(
+  artifact: LifecycleTransitionArtifact,
+): LifecycleTransitionHistoryProjection["outcome"] {
+  switch (artifact.artifactKind) {
+    case "source-packet-prepared":
+    case "validation-started":
+    case "application-started":
+      return "started";
+    case "gate-blocked":
+    case "source-correction-returned":
+      return "blocked";
+    case "application-failed":
+      return "failed";
+    case "transition-deferred":
+      return "waiting";
+    case "transition-cancelled":
+    case "transition-superseded":
+      return "informational";
+    case "validation-completed":
+      return artifact.outcome === "passed"
+        ? "succeeded"
+        : artifact.outcome === "blocked"
+          ? "blocked"
+          : "waiting";
+    case "target-admission-recorded":
+      return artifact.result === "admitted" ? "succeeded" : "failed";
+    case "authority-decision-recorded":
+      return artifact.decision === "approved" ? "succeeded" : "waiting";
+    case "target-application-recorded":
+      return "succeeded";
+  }
 }
 
 export function projectLifecycleTransitions(
