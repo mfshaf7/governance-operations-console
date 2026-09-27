@@ -10,10 +10,16 @@ import {
   prepareWorkspaceInventoryLifecycle,
   prepareWorkspaceInventoryPromotion,
   readWorkspaceRegistry,
+  readWorkspaceInventoryLifecycle,
+  readWorkspaceInventoryPromotion,
   submitWorkspaceInventoryLifecycle,
   submitWorkspaceInventoryPromotion,
   WorkspaceRegistryOosError,
 } from "../../src/workspace-registry/server/workspace-registry-oos-client.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
 const config = {
@@ -27,8 +33,18 @@ test("case:workspace-registry reads canonical records and submits a digest-bound
   let submitted;
   const fetchImpl = async (url, init) => {
     calls.push({ init, url: String(url) });
-    if (String(url).endsWith("/registry")) return json(workspaceRegistryFixture);
+    if (String(url).endsWith("/registry")) {
+      assertCanonicalSourceRequest(init);
+      return registryResponse(workspaceRegistryFixture);
+    }
     if (String(url).endsWith("/preparations")) return json(preparation());
+    if (init.method === "GET") {
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(result(submitted), {
+        recordRef: `oos://workspace-inventory/promotions/${submitted.request.request_id}`,
+        sourceOwner: "workspace-governance",
+      });
+    }
     submitted = JSON.parse(String(init.body));
     return json(result(submitted), 202);
   };
@@ -44,9 +60,11 @@ test("case:workspace-registry reads canonical records and submits a digest-bound
     intent(candidate, prepared, snapshot),
     options,
   );
+  const read = await readWorkspaceInventoryPromotion(submitted.request.request_id, options);
 
   assert.equal(snapshot.canonical_mutation, false);
   assert.equal(projected.status, "accepted");
+  assert.equal(read.request_id, submitted.request.request_id);
   assert.equal(submitted.request.target.record_id, candidate.target.record_id);
   assert.equal(submitted.request.operator_ref, config.callerId);
   assert.match(submitted.request.request_digest, /^sha256:[a-f0-9]{64}$/);
@@ -68,9 +86,10 @@ test("case:workspace-registry rejects stale review before preparing or submittin
       intent(candidate, preparation(), reviewed),
       {
         config,
-        fetchImpl: async (url) => {
+        fetchImpl: async (url, init) => {
           if (!String(url).endsWith("/registry")) writeCalls += 1;
-          return json(stale);
+          assertCanonicalSourceRequest(init);
+          return registryResponse(stale);
         },
       },
     ),
@@ -86,7 +105,10 @@ test("case:workspace-registry fails closed on malformed registry and incomplete 
   await assert.rejects(
     readWorkspaceRegistry({
       config,
-      fetchImpl: async () => json({ records: [] }),
+      fetchImpl: async (_url, init) => {
+        assertCanonicalSourceRequest(init);
+        return registryResponse({ records: [] });
+      },
     }),
     (error) =>
       error instanceof WorkspaceRegistryOosError &&
@@ -100,7 +122,10 @@ test("case:workspace-registry fails closed on malformed registry and incomplete 
       {
         config,
         fetchImpl: async (url, init) => {
-          if (String(url).endsWith("/registry")) return json(workspaceRegistryFixture);
+          if (String(url).endsWith("/registry")) {
+            assertCanonicalSourceRequest(init);
+            return registryResponse(workspaceRegistryFixture);
+          }
           if (String(url).endsWith("/preparations")) return json(preparation());
           const submitted = JSON.parse(String(init.body));
           return json({
@@ -142,8 +167,18 @@ test("case:console-adapters-positive submits a caller-bound Workspace Registry l
   const preparedFixture = workspaceInventoryLifecyclePreparationFixture(record);
   const fetchImpl = async (url, init) => {
     calls.push({ init, url: String(url) });
-    if (String(url).endsWith("/registry")) return json(workspaceRegistryFixture);
+    if (String(url).endsWith("/registry")) {
+      assertCanonicalSourceRequest(init);
+      return registryResponse(workspaceRegistryFixture);
+    }
     if (String(url).endsWith("/lifecycle/preparations")) return json(preparedFixture);
+    if (init.method === "GET") {
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(lifecycleResult(submitted), {
+        recordRef: `oos://workspace-inventory/lifecycle/requests/${submitted.request.request_id}`,
+        sourceOwner: "workspace-governance",
+      });
+    }
     submitted = JSON.parse(String(init.body));
     return json(lifecycleResult(submitted), 202);
   };
@@ -161,8 +196,13 @@ test("case:console-adapters-positive submits a caller-bound Workspace Registry l
     lifecycleIntent(prepared, workspaceRegistryFixture),
     options,
   );
+  const read = await readWorkspaceInventoryLifecycle(
+    submitted.request.request_id,
+    options,
+  );
 
   assert.equal(projected.workflow_id, "workspace-inventory-lifecycle");
+  assert.equal(read.request_id, submitted.request.request_id);
   assert.equal(submitted.request.action, "suspend");
   assert.equal(submitted.request.operator_ref, config.callerId);
   assert.equal(submitted.request.requested_value, null);
@@ -188,9 +228,10 @@ test("case:console-adapters-negative rejects stale Workspace Registry lifecycle 
       lifecycleIntent(prepared, workspaceRegistryFixture),
       {
         config,
-        fetchImpl: async (url) => {
+        fetchImpl: async (url, init) => {
           if (String(url).includes("/lifecycle/")) lifecycleCalls += 1;
-          return json(stale);
+          assertCanonicalSourceRequest(init);
+          return registryResponse(stale);
         },
       },
     ),
@@ -211,7 +252,10 @@ test("case:console-adapters-negative rejects incomplete Workspace Registry lifec
       {
         config,
         fetchImpl: async (url, init) => {
-          if (String(url).endsWith("/registry")) return json(workspaceRegistryFixture);
+          if (String(url).endsWith("/registry")) {
+            assertCanonicalSourceRequest(init);
+            return registryResponse(workspaceRegistryFixture);
+          }
           if (String(url).endsWith("/lifecycle/preparations")) return json(prepared);
           const command = JSON.parse(String(init.body));
           return json({
@@ -237,6 +281,13 @@ function intent(candidate, reviewedPreparation, snapshot) {
       projection_digest: snapshot.projection_digest,
     },
   };
+}
+
+function registryResponse(projection) {
+  return canonicalSourceResponse(projection, {
+    recordRef: "repo://workspace-governance/contracts/inventory",
+    sourceOwner: "workspace-governance",
+  });
 }
 
 function preparation() {

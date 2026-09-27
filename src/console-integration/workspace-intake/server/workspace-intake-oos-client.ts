@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 
 import { consoleMutationAttributionHeaders } from "../../identity/server/console-session-authorization.ts";
+import {
+  acceptCurrentConsoleSourceProjection,
+  consoleSourceProjectionHeaders,
+  ConsoleSourceAuthorityError,
+  type ConsoleSourceAuthorityExpectation,
+} from "../../source-authority/console-source-authority.ts";
 
 import {
   assertWorkspaceIntakePreparation,
@@ -83,7 +89,16 @@ export async function readWorkspaceIntake(
   options: RequestOptions = {},
 ) {
   return projectResult(
-    await request(`/v1/workspace-intake/requests/${encodeURIComponent(requestId)}`, { method: "GET" }, options),
+    await request(
+      `/v1/workspace-intake/requests/${encodeURIComponent(requestId)}`,
+      { method: "GET" },
+      options,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: `oos://workspace-intake/requests/${requestId}`,
+        sourceOwner: "operator-orchestration-service",
+      },
+    ),
     requestId,
   );
 }
@@ -234,7 +249,12 @@ function resolveConfig(env = process.env): WorkspaceIntakeOosConfig {
   };
 }
 
-async function request(path: string, init: RequestInit, options: RequestOptions) {
+async function request(
+  path: string,
+  init: RequestInit,
+  options: RequestOptions,
+  sourceExpectation?: ConsoleSourceAuthorityExpectation,
+) {
   const config = options.config ?? resolveConfig();
   let response: Response;
   try {
@@ -242,8 +262,11 @@ async function request(path: string, init: RequestInit, options: RequestOptions)
       ...init,
       cache: "no-store",
       headers: {
+        ...(sourceExpectation
+          ? consoleSourceProjectionHeaders(init.headers)
+          : Object.fromEntries(new Headers(init.headers).entries())),
         ...consoleMutationAttributionHeaders(),
-        Accept: "application/json",
+        ...(!sourceExpectation ? { Accept: "application/json" } : {}),
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
@@ -289,7 +312,15 @@ async function request(path: string, init: RequestInit, options: RequestOptions)
       source.retryable === true,
     );
   }
-  return body;
+  if (!sourceExpectation) return body;
+  try {
+    return acceptCurrentConsoleSourceProjection(body, sourceExpectation);
+  } catch (error) {
+    if (error instanceof ConsoleSourceAuthorityError) {
+      throw new WorkspaceIntakeOosError(error.message, error.code, 502);
+    }
+    throw error;
+  }
 }
 
 function bindDigest<T extends Record<string, unknown>, K extends string>(value: T, field: K) {

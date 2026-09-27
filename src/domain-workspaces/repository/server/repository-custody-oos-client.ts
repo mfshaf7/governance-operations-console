@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+import {
+  acceptCurrentConsoleSourceProjection,
+  consoleSourceProjectionHeaders,
+  ConsoleSourceAuthorityError,
+  type ConsoleSourceAuthorityExpectation,
+} from "../../../console-integration/source-authority/console-source-authority.ts";
 
 import {
   assertRepositoryCustodyWorkflowResult,
@@ -138,6 +144,11 @@ export async function readRepositoryCustodyResult(
       `/v1/repository-custody/requests/${encodeURIComponent(requestId)}`,
       { method: "GET" },
       fetchImpl,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: `oos://repository-custody/requests/${requestId}`,
+        sourceOwner: "operator-orchestration-service",
+      },
     ),
   );
   assertCanonicalRepositoryCustodyRequest(result.request);
@@ -456,6 +467,7 @@ async function repositoryCustodyOosRequest(
   path: string,
   init: RequestInit,
   fetchImpl: typeof fetch,
+  sourceExpectation?: ConsoleSourceAuthorityExpectation,
 ) {
   let response: Response;
   try {
@@ -463,8 +475,11 @@ async function repositoryCustodyOosRequest(
       ...init,
       cache: "no-store",
       headers: {
+        ...(sourceExpectation
+          ? consoleSourceProjectionHeaders(init.headers)
+          : Object.fromEntries(new Headers(init.headers).entries())),
         ...consoleMutationAttributionHeaders(),
-        Accept: "application/json",
+        ...(!sourceExpectation ? { Accept: "application/json" } : {}),
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
@@ -495,7 +510,15 @@ async function repositoryCustodyOosRequest(
       { retryable: item.retryable === true },
     );
   }
-  return body;
+  if (!sourceExpectation) return body;
+  try {
+    return acceptCurrentConsoleSourceProjection(body, sourceExpectation);
+  } catch (error) {
+    if (error instanceof ConsoleSourceAuthorityError) {
+      throw new RepositoryCustodyOosError(error.message, error.code, 502);
+    }
+    throw error;
+  }
 }
 
 function artifactReference(uri: string, content: unknown) {

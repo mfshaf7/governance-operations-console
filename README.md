@@ -15,6 +15,8 @@ The graduated baseline remains private and loopback-only. The Console now has
 separately governed OOS integration slices:
 
 - server-only OOS caller credentials and operator attribution
+- versioned canonical source envelopes for admitted live GET projections, with
+  owner, identity, freshness, and ordering validation before use
 - canonical Proposal list, capture, projection, command, and history paths
 - bounded visible-page polling with fail-closed writes
 - explicit disconnected preview when no OOS endpoint is configured
@@ -54,6 +56,12 @@ integration contract remain:
 - fixture-backed or synthetic unless their own contract says otherwise
 - read-only for bounded local host telemetry
 - prototype-local for simulated writes and receipts outside Proposal live mode
+
+When an admitted live integration is configured, its canonical GET projection
+must use the Console source-projection media type. Legacy JSON, stale or
+conflicting ordering, unavailable authority, and owner mismatch fail closed;
+the adapter does not fall back to fixtures. Explicit disconnected preview
+remains available only when that live integration is not configured.
 
 Source graduation does not grant:
 

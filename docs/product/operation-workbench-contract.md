@@ -661,10 +661,12 @@ or a receipt bound to another revision fails closed. Re-reading the exact same
 coordinates is an unchanged observation, not a second business action.
 
 This contract does not activate a backend and does not remove disconnected
-preview fixtures. OOS projection and event adoption belongs to the live adapter
-integration, while removal of configured-live fixture fallback is a separate
-Console cutover. Until both land, existing adapters retain their declared
-runtime modes without claiming canonical coverage from this contract alone.
+preview fixtures. Admitted live GET adapters now request the versioned canonical
+source-projection media type and validate the returned envelope before exposing
+its payload. When live mode is configured, legacy JSON, stale or unavailable
+authority, owner conflict, conflicting sequence state, and replay fail closed
+without fixture fallback. Explicit disconnected preview remains available only
+when the corresponding live integration is not configured.
 
 Operation surfaces must access persistence through a runtime boundary instead
 of calling `localStorage`, mutating local receipt arrays, or embedding backend

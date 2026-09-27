@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+import {
+  acceptCurrentConsoleSourceProjection,
+  consoleSourceProjectionHeaders,
+  ConsoleSourceAuthorityError,
+  type ConsoleSourceAuthorityExpectation,
+} from "../../../console-integration/source-authority/console-source-authority.ts";
 
 import {
   assertWorkDesignOosApplyResult,
@@ -57,6 +63,11 @@ export async function readWorkDesignProjection(
     `/v1/delivery-work-design/${encodeURIComponent(packageRef)}/projection?source_ref=${encodeURIComponent(identity.sourceRef)}`,
     { method: "GET" },
     fetchImpl,
+    {
+      authority: "operator-orchestration-service",
+      recordRef: identity.sourceRef,
+      sourceOwner: "workspace-delivery-art",
+    },
   );
   const projection = assertWorkDesignOosProjection(value);
   if (
@@ -281,6 +292,7 @@ async function workDesignOosRequest(
   path: string,
   init: RequestInit,
   fetchImpl: typeof fetch,
+  sourceExpectation?: ConsoleSourceAuthorityExpectation,
 ) {
   let response: Response;
   try {
@@ -288,8 +300,11 @@ async function workDesignOosRequest(
       ...init,
       cache: "no-store",
       headers: {
+        ...(sourceExpectation
+          ? consoleSourceProjectionHeaders(init.headers)
+          : Object.fromEntries(new Headers(init.headers).entries())),
         ...consoleMutationAttributionHeaders(),
-        Accept: "application/json",
+        ...(!sourceExpectation ? { Accept: "application/json" } : {}),
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
@@ -317,7 +332,15 @@ async function workDesignOosRequest(
         : "work_design_oos_rejected";
     throw new WorkDesignOosError(message, code, response.status);
   }
-  return body;
+  if (!sourceExpectation) return body;
+  try {
+    return acceptCurrentConsoleSourceProjection(body, sourceExpectation);
+  } catch (error) {
+    if (error instanceof ConsoleSourceAuthorityError) {
+      throw new WorkDesignOosError(error.message, error.code, 502);
+    }
+    throw error;
+  }
 }
 
 function canonicalDigest(value: unknown) {

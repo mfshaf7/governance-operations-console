@@ -23,6 +23,10 @@ import {
   packageExecutionWorkSessionTarget,
   parseExecutionWorkItemReference,
 } from "../../src/domain-workspaces/delivery/presentation/surfaces/execution-board/work-session/execution-work-session-target.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:console-owner",
@@ -36,15 +40,21 @@ test("case:delivery-execution-source-provenance-positive reads and advances only
   const fetchImpl = async (url, init) => {
     const body = init.body ? JSON.parse(String(init.body)) : null;
     calls.push({ body, headers: init.headers, method: init.method, url: String(url) });
-    return jsonResponse(
-      projection({
+    const value = projection({
         receipt: init.method === "POST",
         revision:
           init.method === "POST"
             ? "2026-08-27T02:01:00.000Z"
             : "2026-08-27T02:00:00.000Z",
-      }),
-    );
+      });
+    if (init.method === "GET") {
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(value, {
+        recordRef: "openproject://work_packages/714",
+        sourceOwner: "workspace-delivery-art",
+      });
+    }
+    return jsonResponse(value);
   };
 
   const current = await readDeliveryWorkSession(714, { env, fetchImpl });
@@ -173,8 +183,16 @@ test("case:delivery-execution-source-provenance-negative rejects mismatched sour
   await assert.rejects(
     readDeliveryWorkSession(714, {
       env,
-      fetchImpl: async () =>
-        jsonResponse({ ...projection(), work_item_id: "work-item-715" }),
+      fetchImpl: async (_url, init) => {
+        assertCanonicalSourceRequest(init);
+        return canonicalSourceResponse(
+          { ...projection(), work_item_id: "work-item-715" },
+          {
+            recordRef: "openproject://work_packages/714",
+            sourceOwner: "workspace-delivery-art",
+          },
+        );
+      },
     }),
     (error) =>
       error instanceof DeliveryOosError &&

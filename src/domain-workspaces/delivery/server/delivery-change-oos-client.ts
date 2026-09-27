@@ -44,12 +44,21 @@ export async function readDeliveryChangeProjection(
       { method: "GET" },
       options.fetchImpl,
       deliveryChangeReadTimeoutMs,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: deliveryRecordRef(deliveryId),
+        sourceOwner: "workspace-delivery-art",
+      },
     ),
   );
   if (projection.delivery_id !== deliveryId) {
     throw new Error("OOS returned Delivery change truth for another initiative.");
   }
   return projection;
+}
+
+function deliveryRecordRef(deliveryId: string) {
+  return `openproject://work_packages/${deliveryId.replace(/^delivery-/, "")}`;
 }
 
 export async function submitDeliveryChangeCommand(

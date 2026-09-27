@@ -8,6 +8,12 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-09-27
 
+- Cut admitted live GET adapters over to the versioned canonical source
+  envelope and removed legacy JSON acceptance from configured-live reads.
+- Added owner, record, freshness, sequence, replay, and same-sequence conflict
+  enforcement while preserving explicit unconfigured disconnected preview.
+- Added cross-domain live-adapter conformance coverage for Proposal, Delivery,
+  Repository, Prototype, Workspace Intake, and Workspace Registry reads.
 - Added one server-owned authorization boundary for canonical Console
   mutations using the exact private Platform session projection.
 - Required the verified operator role, named authority, and configured

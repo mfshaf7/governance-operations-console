@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+import {
+  acceptCurrentConsoleSourceProjection,
+  consoleSourceProjectionHeaders,
+  ConsoleSourceAuthorityError,
+  type ConsoleSourceAuthorityExpectation,
+} from "../../../console-integration/source-authority/console-source-authority.ts";
 
 import { assertRepositoryCustodyWorkflowResult } from "../live-runtime/repository-custody-live-contract.ts";
 import {
@@ -133,6 +139,11 @@ export async function readRepositoryLifecycleResult(
       `/v1/repository-lifecycle/requests/${encodeURIComponent(requestId)}`,
       { method: "GET" },
       fetchImpl,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: `oos://repository-lifecycle/requests/${requestId}`,
+        sourceOwner: "operator-orchestration-service",
+      },
     ),
   );
   if (result.request.request_id !== requestId) {
@@ -572,14 +583,18 @@ async function repositoryLifecycleOosRequest(
   path: string,
   init: RequestInit,
   fetchImpl: typeof fetch,
+  sourceExpectation?: ConsoleSourceAuthorityExpectation,
 ) {
   let response: Response;
   try {
     response = await fetchImpl(`${config.baseUrl}${path}`, {
       ...init,
       headers: {
+        ...(sourceExpectation
+          ? consoleSourceProjectionHeaders(init.headers)
+          : Object.fromEntries(new Headers(init.headers).entries())),
         ...consoleMutationAttributionHeaders(),
-        Accept: "application/json",
+        ...(!sourceExpectation ? { Accept: "application/json" } : {}),
         ...(init.body ? { "Content-Type": "application/json" } : {}),
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
@@ -609,7 +624,15 @@ async function repositoryLifecycleOosRequest(
       { retryable: response.status === 429 || response.status >= 500 },
     );
   }
-  return body;
+  if (!sourceExpectation) return body;
+  try {
+    return acceptCurrentConsoleSourceProjection(body, sourceExpectation);
+  } catch (error) {
+    if (error instanceof ConsoleSourceAuthorityError) {
+      throw new RepositoryLifecycleOosError(error.message, error.code, 502);
+    }
+    throw error;
+  }
 }
 
 async function boundedJson(response: Response) {

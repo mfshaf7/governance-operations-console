@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+import {
+  acceptCurrentConsoleSourceProjection,
+  consoleSourceProjectionHeaders,
+  ConsoleSourceAuthorityError,
+  type ConsoleSourceAuthorityExpectation,
+} from "../../../console-integration/source-authority/console-source-authority.ts";
 
 const deliveryOosTimeoutMs = 12_000;
 
@@ -85,6 +91,7 @@ export async function deliveryOosRequest(
   init: RequestInit,
   fetchImpl: typeof fetch = fetch,
   timeoutMs = deliveryOosTimeoutMs,
+  sourceExpectation?: ConsoleSourceAuthorityExpectation,
 ) {
   let response: Response;
   try {
@@ -92,9 +99,11 @@ export async function deliveryOosRequest(
       ...init,
       cache: "no-store",
       headers: {
-        ...Object.fromEntries(new Headers(init.headers).entries()),
+        ...(sourceExpectation
+          ? consoleSourceProjectionHeaders(init.headers)
+          : Object.fromEntries(new Headers(init.headers).entries())),
         ...consoleMutationAttributionHeaders(),
-        Accept: "application/json",
+        ...(!sourceExpectation ? { Accept: "application/json" } : {}),
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
@@ -133,7 +142,15 @@ export async function deliveryOosRequest(
           : false,
     });
   }
-  return body;
+  if (!sourceExpectation) return body;
+  try {
+    return acceptCurrentConsoleSourceProjection(body, sourceExpectation);
+  } catch (error) {
+    if (error instanceof ConsoleSourceAuthorityError) {
+      throw new DeliveryOosError(error.message, error.code, 502);
+    }
+    throw error;
+  }
 }
 
 export function canonicalDigest(value: unknown) {

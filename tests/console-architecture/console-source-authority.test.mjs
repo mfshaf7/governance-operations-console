@@ -3,9 +3,12 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  CONSOLE_SOURCE_PROJECTION_MEDIA_TYPE,
   ConsoleSourceAuthorityError,
+  acceptCurrentConsoleSourceProjection,
   assertConsoleSourceReceiptBinding,
   compareConsoleSourceProgress,
+  consoleSourceProjectionHeaders,
   parseConsoleSourceProjection,
   requireCurrentConsoleSourceProjection,
 } from "../../src/console-integration/source-authority/console-source-authority.ts";
@@ -160,6 +163,131 @@ test("machine contract and runtime validator share the same artifact identity", 
   ]);
 });
 
+test("case:trusted-console-1184-positive requests and accepts only current canonical live projections", () => {
+  const liveExpectation = {
+    authority: "operator-orchestration-service",
+    recordRef: "openproject://work_packages/1184",
+    sourceOwner: "workspace-delivery-art",
+    sourceRef: "oos://delivery-art/work-items/1184",
+  };
+  const headers = consoleSourceProjectionHeaders({
+    Accept: "application/json",
+    "x-oos-caller-id": "governance-operations-console",
+  });
+  assert.equal(headers.Accept, CONSOLE_SOURCE_PROJECTION_MEDIA_TYPE);
+  assert.equal("accept" in headers, false);
+  assert.equal(headers["x-oos-caller-id"], "governance-operations-console");
+
+  const first = projection({
+    binding: liveBinding(),
+    projection: { state: "source-work", work_item_id: 1184 },
+    revision: liveRevision(84),
+  });
+  assert.deepEqual(
+    acceptCurrentConsoleSourceProjection(first, liveExpectation, { now }),
+    first.projection,
+  );
+  assert.deepEqual(
+    acceptCurrentConsoleSourceProjection(first, liveExpectation, { now }),
+    first.projection,
+  );
+
+  const advanced = projection({
+    binding: liveBinding(),
+    freshness: {
+      observed_at: "2026-09-27T00:00:10.000Z",
+      state: "current",
+      valid_until: "2026-09-27T00:05:10.000Z",
+    },
+    projection: { state: "review", work_item_id: 1184 },
+    revision: liveRevision(85),
+  });
+  assert.equal(
+    acceptCurrentConsoleSourceProjection(advanced, liveExpectation, {
+      now: new Date("2026-09-27T00:00:10.000Z"),
+    }).state,
+    "review",
+  );
+});
+
+test("case:trusted-console-1184-negative rejects legacy, stale, conflicting, and replayed live truth", () => {
+  const liveExpectation = {
+    authority: "operator-orchestration-service",
+    recordRef: "openproject://work_packages/1184-negative",
+    sourceOwner: "workspace-delivery-art",
+    sourceRef: "oos://delivery-art/work-items/1184-negative",
+  };
+  assertCode(
+    () =>
+      acceptCurrentConsoleSourceProjection(
+        { state: "source-work" },
+        liveExpectation,
+        { now },
+      ),
+    "source_authority_invalid",
+  );
+  assertCode(
+    () =>
+      acceptCurrentConsoleSourceProjection(
+        projection({
+          binding: negativeLiveBinding(),
+          freshness: { ...projection().freshness, state: "stale" },
+          revision: liveRevision(90),
+        }),
+        liveExpectation,
+        { now },
+      ),
+    "source_projection_stale",
+  );
+  assertCode(
+    () =>
+      acceptCurrentConsoleSourceProjection(
+        projection({
+          binding: { ...negativeLiveBinding(), source_owner: "fixture" },
+          revision: liveRevision(90),
+        }),
+        liveExpectation,
+        { now },
+      ),
+    "source_authority_conflict",
+  );
+
+  acceptCurrentConsoleSourceProjection(
+    projection({
+      binding: negativeLiveBinding(),
+      projection: { state: "source-work" },
+      revision: liveRevision(90),
+    }),
+    liveExpectation,
+    { now },
+  );
+  assertCode(
+    () =>
+      acceptCurrentConsoleSourceProjection(
+        projection({
+          binding: negativeLiveBinding(),
+          revision: liveRevision(89),
+        }),
+        liveExpectation,
+        { now },
+      ),
+    "source_projection_replayed",
+  );
+  assertCode(
+    () =>
+      acceptCurrentConsoleSourceProjection(
+        projection({
+          binding: negativeLiveBinding(),
+          projection: { state: "conflicting" },
+          revision: liveRevision(90),
+        }),
+        liveExpectation,
+        { now },
+      ),
+    "source_authority_conflict",
+  );
+});
+
 function projection(overrides = {}) {
   return {
     artifact_type: "console-source-projection",
@@ -195,6 +323,32 @@ function receipt(source, overrides = {}) {
     recorded_at: overrides.recorded_at ?? "2026-09-27T00:00:00.000Z",
     revision: { ...source.revision, ...overrides.revision },
     schema_version: 1,
+  };
+}
+
+function liveBinding() {
+  return {
+    authority: "operator-orchestration-service",
+    record_ref: "openproject://work_packages/1184",
+    source_owner: "workspace-delivery-art",
+    source_ref: "oos://delivery-art/work-items/1184",
+  };
+}
+
+function negativeLiveBinding() {
+  return {
+    authority: "operator-orchestration-service",
+    record_ref: "openproject://work_packages/1184-negative",
+    source_owner: "workspace-delivery-art",
+    source_ref: "oos://delivery-art/work-items/1184-negative",
+  };
+}
+
+function liveRevision(sequence) {
+  return {
+    event_cursor: `delivery-art:1184:${sequence}`,
+    event_sequence: sequence,
+    source_revision: `version-${sequence}`,
   };
 }
 

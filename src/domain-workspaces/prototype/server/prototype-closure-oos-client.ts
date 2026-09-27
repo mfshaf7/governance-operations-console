@@ -1,4 +1,10 @@
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+import {
+  acceptCurrentConsoleSourceProjection,
+  consoleSourceProjectionHeaders,
+  ConsoleSourceAuthorityError,
+  type ConsoleSourceAuthorityExpectation,
+} from "../../../console-integration/source-authority/console-source-authority.ts";
 
 import {
   assertPrototypeClosureId,
@@ -95,7 +101,8 @@ export function buildPrototypeClosureCommand(intent: PrototypeClosureIntent, cal
 export async function readPrototypeClosure(requestId: string, options: Options = {}) {
   const id = assertPrototypeClosureRequestId(requestId);
   return projectResult(await request(`/v1/prototype-closures/requests/${encodeURIComponent(id)}`,
-    { method: "GET" }, options), id);
+    { method: "GET" }, options,
+    prototypeSourceExpectation(id, "prototype-closure-request")), id);
 }
 
 export async function decidePrototypeClosure(requestId: string, value: unknown, options: Options = {}) {
@@ -148,13 +155,21 @@ function resolveConfig(env = process.env): Config {
     callerId: env.OOS_CALLER_ID?.trim() || "governance-operations-console", callerSecret };
 }
 
-async function request(path: string, init: RequestInit, options: Options) {
+async function request(
+  path: string,
+  init: RequestInit,
+  options: Options,
+  sourceExpectation?: ConsoleSourceAuthorityExpectation,
+) {
   const config = options.config ?? resolveConfig();
   let response: Response;
   try {
     response = await (options.fetchImpl ?? fetch)(`${config.baseUrl}${path}`, {
       ...init, cache: "no-store",
-      headers: { ...consoleMutationAttributionHeaders(), Accept: "application/json", "Content-Type": "application/json",
+      headers: { ...(sourceExpectation
+          ? consoleSourceProjectionHeaders(init.headers)
+          : Object.fromEntries(new Headers(init.headers).entries())),
+        ...consoleMutationAttributionHeaders(), ...(!sourceExpectation ? { Accept: "application/json" } : {}), "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId, "x-oos-caller-secret": config.callerSecret },
       signal: AbortSignal.timeout(timeoutMs),
     });
@@ -182,7 +197,27 @@ async function request(path: string, init: RequestInit, options: Options) {
       response.status, source.retryable === true || response.status >= 500,
     );
   }
-  return body;
+  if (!sourceExpectation) return body;
+  try {
+    return acceptCurrentConsoleSourceProjection(body, sourceExpectation);
+  } catch (error) {
+    if (error instanceof ConsoleSourceAuthorityError) {
+      throw new PrototypeClosureOosError(error.message, error.code, 502);
+    }
+    throw error;
+  }
+}
+
+function prototypeSourceExpectation(
+  requestId: string,
+  prefix: string,
+): ConsoleSourceAuthorityExpectation {
+  const slug = requestId.slice(`${prefix}:`.length).split(":", 1)[0];
+  return {
+    authority: "operator-orchestration-service",
+    recordRef: `prototype://prototype:${slug}`,
+    sourceOwner: "workspace-prototype-studio",
+  };
 }
 
 function projectPreparation(value: unknown) {

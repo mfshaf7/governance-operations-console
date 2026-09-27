@@ -15,8 +15,13 @@ import {
   buildPrototypeMaturityCommand,
   preparePrototypeMaturity,
   PrototypeMaturityOosError,
+  readPrototypeMaturity,
   submitPrototypeMaturity,
 } from "../../src/domain-workspaces/prototype/server/prototype-maturity-oos-client.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
 const revision = "1".repeat(40);
@@ -64,12 +69,31 @@ test("Prototype Maturity builds and submits one deterministic candidate command"
     config,
     fetchImpl: async (url, init) => {
       calls.push({ body: init.body, headers: init.headers, method: init.method, url });
+      if (init.method === "GET") {
+        assertCanonicalSourceRequest(init);
+        return canonicalSourceResponse(result, {
+          recordRef: "prototype://prototype:sample-tool",
+          sourceOwner: "workspace-prototype-studio",
+        });
+      }
       return Response.json(calls.length === 1 ? preparation() : result, {
         status: calls.length === 1 ? 200 : 202,
       });
     },
   });
+  const read = await readPrototypeMaturity(intent.request_id, {
+    config,
+    fetchImpl: async (url, init) => {
+      calls.push({ body: init.body, headers: init.headers, method: init.method, url });
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(result, {
+        recordRef: "prototype://prototype:sample-tool",
+        sourceOwner: "workspace-prototype-studio",
+      });
+    },
+  });
   assert.equal(submitted.request_id, intent.request_id);
+  assert.equal(read.request_id, intent.request_id);
   assert.equal(calls[0].url, `${config.baseUrl}/v1/prototype-maturity/preparations`);
   assert.equal(calls[1].url, `${config.baseUrl}/v1/prototype-maturity/requests`);
   assert.equal(calls[1].headers["x-oos-caller-secret"], config.callerSecret);
