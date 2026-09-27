@@ -330,7 +330,7 @@ test("Prototype Maturity keeps credentials server-only and exposes full lifecycl
     "utf8",
   );
   assert.doesNotMatch(hook, /OOS_CALLER_SECRET|x-oos-caller-secret/);
-  assert.match(server, /OOS_CALLER_SECRET/);
+  assert.match(server, /resolveConsoleOosConnection/);
   for (const path of [
     "preparations",
     "requests",

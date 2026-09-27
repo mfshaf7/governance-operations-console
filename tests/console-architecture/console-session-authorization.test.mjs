@@ -105,13 +105,17 @@ test("rejects stale, conflicting, malformed, and non-private projections", async
 
 test("authorizes a matching operator and binds non-secret OOS attribution", async () => {
   await withProjection(projection(), async (path) => {
+    const correlationId = "b4aa5208-b8e6-4ff7-b3eb-8cc98e25e7ea";
     const previousPath = process.env.GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH;
     const previousOperator = process.env.GOVERNANCE_CONSOLE_OPERATOR_ID;
     process.env.GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH = path;
     process.env.GOVERNANCE_CONSOLE_OPERATOR_ID = "operator:workspace-owner";
     try {
       const response = await authorizeConsoleMutation(
-        new Request("http://localhost/api/proposals", { method: "POST" }),
+        new Request("http://localhost/api/proposals", {
+          headers: { "x-console-correlation-id": correlationId },
+          method: "POST",
+        }),
         async () => {
           const headers = consoleMutationAttributionHeaders();
           assert.equal(
@@ -122,11 +126,18 @@ test("authorizes a matching operator and binds non-secret OOS attribution", asyn
             headers["x-console-canonical-owner"],
             "operator-orchestration-service",
           );
-          assert.match(headers["x-console-correlation-id"], /^[0-9a-f-]{36}$/);
-          return new Response(null, { status: 204 });
+          assert.equal(headers["x-console-correlation-id"], correlationId);
+          return Response.json({ receiptRef: "oos://receipts/proposal-1" });
         },
       );
-      assert.equal(response.status, 204);
+      assert.equal(response.status, 200);
+      assert.equal(
+        response.headers.get("x-console-correlation-id"),
+        correlationId,
+      );
+      assert.deepEqual(await response.json(), {
+        receiptRef: "oos://receipts/proposal-1",
+      });
     } finally {
       restoreEnv("GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH", previousPath);
       restoreEnv("GOVERNANCE_CONSOLE_OPERATOR_ID", previousOperator);
@@ -134,23 +145,28 @@ test("authorizes a matching operator and binds non-secret OOS attribution", asyn
   });
 });
 
-test("preserves downstream operation failures after authorization", async () => {
+test("returns one bounded correlation when the canonical owner fails", async () => {
   await withProjection(projection(), async (path) => {
     const previousPath = process.env.GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH;
     const previousOperator = process.env.GOVERNANCE_CONSOLE_OPERATOR_ID;
     process.env.GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH = path;
     process.env.GOVERNANCE_CONSOLE_OPERATOR_ID = "operator:workspace-owner";
-    const operationFailure = new Error("owner adapter unavailable");
     try {
-      await assert.rejects(
-        authorizeConsoleMutation(
-          new Request("http://localhost/api/proposals", { method: "POST" }),
-          async () => {
-            throw operationFailure;
-          },
-        ),
-        (error) => error === operationFailure,
+      const response = await authorizeConsoleMutation(
+        new Request("http://localhost/api/proposals", { method: "POST" }),
+        async () => {
+          throw new Error("private owner failure detail");
+        },
       );
+      assert.equal(response.status, 502);
+      const result = await response.json();
+      assert.equal(result.code, "console_owner_operation_failed");
+      assert.equal(result.status, "failed");
+      assert.equal(
+        result.correlationId,
+        response.headers.get("x-console-correlation-id"),
+      );
+      assert.doesNotMatch(result.error, /private owner failure detail/);
     } finally {
       restoreEnv("GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH", previousPath);
       restoreEnv("GOVERNANCE_CONSOLE_OPERATOR_ID", previousOperator);
@@ -179,7 +195,13 @@ test("fails closed before mutation on operator and authority mismatch", async ()
         );
         assert.equal(called, false);
         assert.equal(response.status, 403);
-        assert.equal((await response.json()).code, expectedCode);
+        const result = await response.json();
+        assert.equal(result.code, expectedCode);
+        assert.equal(result.status, "denied");
+        assert.equal(
+          result.correlationId,
+          response.headers.get("x-console-correlation-id"),
+        );
       } finally {
         restoreEnv("GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH", previousPath);
         restoreEnv("GOVERNANCE_CONSOLE_OPERATOR_ID", previousOperator);

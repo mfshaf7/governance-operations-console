@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
 
+import {
+  consoleOosModeSelected,
+  ConsoleRuntimeConfigurationError,
+  resolveConsoleArtifactReference,
+  resolveConsoleOosOperatorConfiguration,
+  type ConsoleOosOperatorConfiguration,
+} from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 import {
   acceptCurrentConsoleSourceProjection,
@@ -29,12 +36,7 @@ const repositoryIdPattern = /^[1-9][0-9]*$/;
 const lifecycleTimeoutMs = 12_000;
 const maxResponseBytes = 1_048_576;
 
-type RepositoryLifecycleOosConfig = Readonly<{
-  baseUrl: string;
-  callerId: string;
-  callerSecret: string;
-  operatorId: string;
-}>;
+type RepositoryLifecycleOosConfig = ConsoleOosOperatorConfiguration;
 
 export class RepositoryLifecycleOosError extends Error {
   readonly code: string;
@@ -57,11 +59,7 @@ export class RepositoryLifecycleOosError extends Error {
 export function repositoryLifecycleOosConfigured(
   env: NodeJS.ProcessEnv = process.env,
 ) {
-  return Boolean(
-    env.OOS_BASE_URL?.trim() &&
-      env.OOS_CALLER_SECRET?.trim() &&
-      env.GOVERNANCE_CONSOLE_OPERATOR_ID?.trim(),
-  );
+  return consoleOosModeSelected(env);
 }
 
 export async function readRepositoryLifecycleAudit(
@@ -72,7 +70,18 @@ export async function readRepositoryLifecycleAudit(
   }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
 ): Promise<RepositoryLifecycleAudit> {
   assertRepositoryLifecycleIdentity(identity);
-  const config = resolveRepositoryLifecycleConfig(env);
+  return readRepositoryLifecycleAuditWithConfig(
+    identity,
+    resolveRepositoryLifecycleConfig(env),
+    fetchImpl,
+  );
+}
+
+async function readRepositoryLifecycleAuditWithConfig(
+  identity: { provider: string; providerRepositoryId: string },
+  config: RepositoryLifecycleOosConfig,
+  fetchImpl: typeof fetch,
+): Promise<RepositoryLifecycleAudit> {
   const audit = assertRepositoryLifecycleAudit(
     await repositoryLifecycleOosRequest(
       config,
@@ -333,12 +342,13 @@ async function resolveCurrentLifecycleState(
   fetchImpl: typeof fetch,
 ) {
   try {
-    const audit = await readRepositoryLifecycleAudit(
+    const audit = await readRepositoryLifecycleAuditWithConfig(
       {
         provider: intent.provider,
         providerRepositoryId: intent.providerRepositoryId,
       },
-      { env: configAsEnv(config), fetchImpl },
+      config,
+      fetchImpl,
     );
     return { audit, state: audit.current_state };
   } catch (error) {
@@ -517,65 +527,37 @@ function acceptanceReference(
 function resolveRepositoryLifecycleConfig(
   env: NodeJS.ProcessEnv,
 ): RepositoryLifecycleOosConfig {
-  const baseUrl = env.OOS_BASE_URL?.trim();
-  const callerSecret = env.OOS_CALLER_SECRET?.trim();
-  const operatorId = env.GOVERNANCE_CONSOLE_OPERATOR_ID?.trim();
-  if (!baseUrl || !callerSecret || !operatorId) {
+  try {
+    return resolveConsoleOosOperatorConfiguration(env);
+  } catch (error) {
+    const invalidUrl =
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_oos_url_invalid";
     throw new RepositoryLifecycleOosError(
-      "Repository lifecycle live integration is missing its OOS endpoint, caller secret, or operator identity.",
-      "repository_lifecycle_oos_not_configured",
+      invalidUrl
+        ? "Repository lifecycle OOS endpoint must use HTTP or HTTPS."
+        : "Repository lifecycle live integration is missing its OOS endpoint, caller secret, or operator identity.",
+      invalidUrl
+        ? "repository_lifecycle_oos_url_invalid"
+        : "repository_lifecycle_oos_not_configured",
       503,
     );
   }
-  const parsed = new URL(baseUrl);
-  if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new RepositoryLifecycleOosError(
-      "Repository lifecycle OOS endpoint must use HTTP or HTTPS.",
-      "repository_lifecycle_oos_url_invalid",
-      503,
-    );
-  }
-  return {
-    baseUrl: parsed.toString().replace(/\/$/, ""),
-    callerId: env.OOS_CALLER_ID?.trim() || "governance-operations-console",
-    callerSecret,
-    operatorId,
-  };
-}
-
-function configAsEnv(config: RepositoryLifecycleOosConfig): NodeJS.ProcessEnv {
-  return {
-    NODE_ENV: process.env.NODE_ENV,
-    GOVERNANCE_CONSOLE_OPERATOR_ID: config.operatorId,
-    OOS_BASE_URL: config.baseUrl,
-    OOS_CALLER_ID: config.callerId,
-    OOS_CALLER_SECRET: config.callerSecret,
-  };
 }
 
 function configuredArtifactRef(
   env: NodeJS.ProcessEnv,
   names: { digestName: string; label: string; uriName: string },
 ): RepositoryLifecycleArtifactRef {
-  const digest = env[names.digestName]?.trim();
-  const uri = env[names.uriName]?.trim();
-  if (!digest || !/^sha256:[a-f0-9]{64}$/.test(digest) || !uri) {
-    throw new RepositoryLifecycleOosError(
-      `Repository lifecycle live integration is missing its ${names.label} reference.`,
-      "repository_lifecycle_authority_not_configured",
-      503,
-    );
-  }
   try {
-    new URL(uri);
+    return resolveConsoleArtifactReference(env, names);
   } catch {
     throw new RepositoryLifecycleOosError(
-      `Repository lifecycle ${names.label} URI is invalid.`,
+      `Repository lifecycle live integration is missing or has an invalid ${names.label} reference.`,
       "repository_lifecycle_authority_not_configured",
       503,
     );
   }
-  return { digest, uri };
 }
 
 async function repositoryLifecycleOosRequest(

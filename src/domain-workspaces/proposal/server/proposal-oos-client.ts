@@ -1,3 +1,9 @@
+import {
+  consoleOosModeSelected,
+  resolveConsoleOosOperatorConfiguration,
+  type ConsoleOosOperatorConfiguration,
+  ConsoleRuntimeConfigurationError,
+} from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 import {
   acceptCurrentConsoleSourceProjection,
@@ -27,13 +33,7 @@ import type {
 const proposalListLimit = 25;
 const proposalOosTimeoutMs = 8_000;
 
-type ProposalOosConfig = {
-  baseUrl: string;
-  callerId: string;
-  callerSecret: string;
-  operatorHandle?: string;
-  operatorId: string;
-};
+type ProposalOosConfig = ConsoleOosOperatorConfiguration;
 
 type ProposalIdeaListItem = {
   created_at?: string | null;
@@ -56,7 +56,7 @@ export class ProposalOosError extends Error {
 }
 
 export function proposalOosConfigured(env: NodeJS.ProcessEnv = process.env) {
-  return Boolean(env.OOS_BASE_URL?.trim());
+  return consoleOosModeSelected(env);
 }
 
 export async function listProposalLiveRecords({
@@ -336,31 +336,20 @@ function proposalOosRoute(
 }
 
 function resolveProposalOosConfig(env: NodeJS.ProcessEnv): ProposalOosConfig {
-  const baseUrl = env.OOS_BASE_URL?.trim();
-  const callerSecret = env.OOS_CALLER_SECRET?.trim();
-  const operatorId = env.GOVERNANCE_CONSOLE_OPERATOR_ID?.trim();
-  if (!baseUrl || !callerSecret || !operatorId) {
+  try {
+    return resolveConsoleOosOperatorConfiguration(env);
+  } catch (error) {
+    const invalidUrl =
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_oos_url_invalid";
     throw new ProposalOosError(
-      "Proposal live integration is missing its OOS endpoint, caller secret, or operator identity.",
-      "proposal_oos_not_configured",
+      error instanceof Error
+        ? error.message
+        : "Proposal live integration configuration is invalid.",
+      invalidUrl ? "proposal_oos_url_invalid" : "proposal_oos_not_configured",
       503,
     );
   }
-  const parsed = new URL(baseUrl);
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new ProposalOosError(
-      "Proposal OOS endpoint must use HTTP or HTTPS.",
-      "proposal_oos_url_invalid",
-      503,
-    );
-  }
-  return {
-    baseUrl: parsed.toString().replace(/\/$/, ""),
-    callerId: env.OOS_CALLER_ID?.trim() || "governance-operations-console",
-    callerSecret,
-    operatorHandle: env.GOVERNANCE_CONSOLE_OPERATOR_HANDLE?.trim() || undefined,
-    operatorId,
-  };
 }
 
 function proposalOperator(config: ProposalOosConfig) {

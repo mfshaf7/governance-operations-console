@@ -121,7 +121,7 @@ export const guard = {
     assertIncludes(failures, workDesignOosClient, [
       '"x-oos-caller-id"',
       '"x-oos-caller-secret"',
-      "GOVERNANCE_CONSOLE_OPERATOR_ID",
+      "resolveConsoleOosOperatorConfiguration",
       "AbortSignal.timeout",
       'cache: "no-store"',
     ]);

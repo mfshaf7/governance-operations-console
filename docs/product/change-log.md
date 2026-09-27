@@ -8,6 +8,14 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-09-27
 
+- Centralized governed OOS, operator, session, and repository authority
+  configuration behind one typed server boundary and added a secret-safe
+  capability projection for disconnected, invalid, and available states.
+- Added server-issued correlation to all same-origin API responses, propagated
+  the same identity through authorized OOS mutations, and bounded unexpected
+  owner failures without exposing private diagnostics.
+- Kept canonical Console audit truth on validated owner receipts and readback;
+  no competing Console-local durable audit ledger was introduced.
 - Cut admitted live GET adapters over to the versioned canonical source
   envelope and removed legacy JSON acceptance from configured-live reads.
 - Added owner, record, freshness, sequence, replay, and same-sequence conflict

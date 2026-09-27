@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
 
+import {
+  consoleOosModeSelected,
+  resolveConsoleOosConnection,
+  type ConsoleOosConnection,
+  ConsoleRuntimeConfigurationError,
+} from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 import {
   acceptCurrentConsoleSourceProjection,
@@ -30,11 +36,7 @@ import type {
 const timeoutMs = 12_000;
 const maxResponseBytes = 2_097_152;
 
-type PrototypeMaturityOosConfig = Readonly<{
-  baseUrl: string;
-  callerId: string;
-  callerSecret: string;
-}>;
+type PrototypeMaturityOosConfig = ConsoleOosConnection;
 
 type RequestOptions = Readonly<{
   config?: PrototypeMaturityOosConfig;
@@ -55,7 +57,7 @@ export class PrototypeMaturityOosError extends Error {
 }
 
 export function prototypeMaturityOosConfigured(env = process.env) {
-  return Boolean(env.OOS_BASE_URL?.trim() && env.OOS_CALLER_SECRET?.trim());
+  return consoleOosModeSelected(env);
 }
 
 export async function preparePrototypeMaturity(
@@ -358,37 +360,22 @@ function assertReturnedBinding(
 }
 
 function resolveConfig(env = process.env): PrototypeMaturityOosConfig {
-  const baseUrl = env.OOS_BASE_URL?.trim();
-  const callerSecret = env.OOS_CALLER_SECRET?.trim();
-  if (!baseUrl || !callerSecret) {
-    throw new PrototypeMaturityOosError(
-      "Prototype Maturity is unavailable until its approved OOS integration is configured.",
-      "prototype_maturity_oos_not_configured",
-      503,
-    );
-  }
-  let url: URL;
   try {
-    url = new URL(baseUrl);
-  } catch {
+    return resolveConsoleOosConnection(env);
+  } catch (error) {
+    const invalidUrl =
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_oos_url_invalid";
     throw new PrototypeMaturityOosError(
-      "Prototype Maturity OOS endpoint is invalid.",
-      "prototype_maturity_oos_url_invalid",
+      error instanceof Error
+        ? error.message
+        : "Prototype Maturity configuration is invalid.",
+      invalidUrl
+        ? "prototype_maturity_oos_url_invalid"
+        : "prototype_maturity_oos_not_configured",
       503,
     );
   }
-  if (!new Set(["http:", "https:"]).has(url.protocol)) {
-    throw new PrototypeMaturityOosError(
-      "Prototype Maturity OOS endpoint is invalid.",
-      "prototype_maturity_oos_url_invalid",
-      503,
-    );
-  }
-  return {
-    baseUrl: url.toString().replace(/\/$/, ""),
-    callerId: env.OOS_CALLER_ID?.trim() || "governance-operations-console",
-    callerSecret,
-  };
 }
 
 async function request(

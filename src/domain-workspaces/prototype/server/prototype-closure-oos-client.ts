@@ -1,3 +1,9 @@
+import {
+  consoleOosModeSelected,
+  resolveConsoleOosConnection,
+  type ConsoleOosConnection,
+  ConsoleRuntimeConfigurationError,
+} from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 import {
   acceptCurrentConsoleSourceProjection,
@@ -19,7 +25,7 @@ import type { PrototypeClosureIntent } from "../live-runtime/prototype-closure-l
 const timeoutMs = 12_000;
 const maxResponseBytes = 2_097_152;
 
-type Config = Readonly<{ baseUrl: string; callerId: string; callerSecret: string }>;
+type Config = ConsoleOosConnection;
 type Options = Readonly<{ config?: Config; fetchImpl?: typeof fetch }>;
 
 export class PrototypeClosureOosError extends Error {
@@ -41,7 +47,7 @@ export class PrototypeClosureOosError extends Error {
 }
 
 export function prototypeClosureOosConfigured(env = process.env) {
-  return Boolean(env.OOS_BASE_URL?.trim() && env.OOS_CALLER_SECRET?.trim());
+  return consoleOosModeSelected(env);
 }
 
 export async function preparePrototypeClosure(prototypeId: string, options: Options = {}) {
@@ -136,23 +142,17 @@ function decision(value: unknown) {
 }
 
 function resolveConfig(env = process.env): Config {
-  const baseUrl = env.OOS_BASE_URL?.trim();
-  const callerSecret = env.OOS_CALLER_SECRET?.trim();
-  if (!baseUrl || !callerSecret) {
-    throw new PrototypeClosureOosError("Prototype Closure is a disconnected local preview.",
-      "prototype_closure_live_mode_required", 503);
+  try {
+    return resolveConsoleOosConnection(env);
+  } catch (error) {
+    const invalidUrl = error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_oos_url_invalid";
+    throw new PrototypeClosureOosError(
+      error instanceof Error ? error.message : "Prototype Closure configuration is invalid.",
+      invalidUrl ? "prototype_closure_oos_url_invalid" : "prototype_closure_live_mode_required",
+      503,
+    );
   }
-  let url: URL;
-  try { url = new URL(baseUrl); } catch {
-    throw new PrototypeClosureOosError("Prototype Closure OOS endpoint is invalid.",
-      "prototype_closure_oos_url_invalid", 503);
-  }
-  if (!["http:", "https:"].includes(url.protocol)) {
-    throw new PrototypeClosureOosError("Prototype Closure OOS endpoint is invalid.",
-      "prototype_closure_oos_url_invalid", 503);
-  }
-  return { baseUrl: url.toString().replace(/\/$/, ""),
-    callerId: env.OOS_CALLER_ID?.trim() || "governance-operations-console", callerSecret };
 }
 
 async function request(

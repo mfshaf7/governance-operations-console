@@ -30,7 +30,7 @@ export const guard = {
       assertAppFile(failures, path);
     }
     assertIncludes(failures, serverAdapter, [
-      "OOS_CALLER_SECRET",
+      "resolveConsoleOosConnection",
       "sameWorkspaceInventoryPreparation",
       "sameWorkspaceInventoryLifecyclePreparation",
       '"x-oos-caller-secret"',

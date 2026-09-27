@@ -120,7 +120,7 @@ export const guard = {
       "Platform `#1082`",
     ]);
     assertIncludes(failures, serverAdapter, [
-      "OOS_CALLER_SECRET",
+      "resolveConsoleOosConnection",
       "sameWorkspaceIntakePreparation",
       '"x-oos-caller-secret"',
     ]);
