@@ -42,6 +42,10 @@ export type ConsoleSessionConfiguration = Readonly<{
   projectionPath: string;
 }>;
 
+export type ConsoleRuntimeObservationConfiguration = Readonly<{
+  projectionPath: string;
+}>;
+
 export type ConsoleArtifactReference = Readonly<{
   digest: string;
   uri: string;
@@ -210,6 +214,28 @@ export function resolveConsoleSessionConfiguration(
     operatorId: resolveConsoleOperatorBinding(env),
     projectionPath: resolveConsoleSessionProjectionPath(env),
   };
+}
+
+export function consoleRuntimeObservationModeSelected(
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  return Boolean(
+    env.GOVERNANCE_CONSOLE_RUNTIME_OBSERVATION_PATH?.trim(),
+  );
+}
+
+export function resolveConsoleRuntimeObservationConfiguration(
+  env: NodeJS.ProcessEnv = process.env,
+): ConsoleRuntimeObservationConfiguration {
+  const projectionPath =
+    env.GOVERNANCE_CONSOLE_RUNTIME_OBSERVATION_PATH?.trim();
+  if (!projectionPath || !isAbsolute(projectionPath)) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Platform runtime observation projection is not configured.",
+      "console_runtime_observation_projection_unavailable",
+    );
+  }
+  return { projectionPath };
 }
 
 export function resolveConsoleOperatorBinding(

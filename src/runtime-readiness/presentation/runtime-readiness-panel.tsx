@@ -38,16 +38,26 @@ import {
 
 function ComponentStatusView({
   components,
+  sourceUnavailable,
   onSelectComponent,
   selectedComponent,
 }: {
   components: RuntimeComponentObservation[];
+  sourceUnavailable: boolean;
   onSelectComponent: (component: RuntimeComponentObservation | null) => void;
   selectedComponent: RuntimeComponentObservation | null;
 }) {
   return (
     <div className="component-status-view mt-5 rounded-3xl p-3">
       <div className="component-status-list grid gap-2">
+        {sourceUnavailable ? (
+          <div className={statusCardClass("warn", "rounded-xl px-3 py-3")}>
+            <p className="text-sm font-semibold">Runtime observations unavailable</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--subtle)]">
+              The configured Platform source did not provide a current valid projection.
+            </p>
+          </div>
+        ) : null}
         {components.map((component) => (
           <button
             key={component.id}
@@ -92,6 +102,7 @@ function ComponentStatusView({
 }
 
 function AlertsView({
+  componentSourceError,
   components,
   error,
   latestSample,
@@ -100,6 +111,7 @@ function AlertsView({
   resourceSourceState,
   selectedAlert,
 }: {
+  componentSourceError: string | null;
   components: RuntimeComponentObservation[];
   error: string | null;
   latestSample: WslResourceSample | undefined;
@@ -109,6 +121,7 @@ function AlertsView({
   selectedAlert: RuntimeAlertItem | null;
 }) {
   const alerts = buildRuntimeAlerts({
+    componentSourceError,
     components,
     error,
     latestSample,
@@ -167,6 +180,7 @@ export function WslResourceUsage({
   activeComponentScenario,
   activeResourceScenario,
   componentScenarioId,
+  componentSourceError,
   consoleDevMode,
   onComponentScenarioChange,
   onSelectAlert,
@@ -181,6 +195,7 @@ export function WslResourceUsage({
   activeComponentScenario: ComponentStatusScenario;
   activeResourceScenario: ResourceUsageScenario;
   componentScenarioId: string;
+  componentSourceError: string | null;
   consoleDevMode: boolean;
   onComponentScenarioChange: (scenarioId: string) => void;
   onSelectAlert: (alert: RuntimeAlertItem | null) => void;
@@ -385,7 +400,11 @@ export function WslResourceUsage({
               <span className="component-status-count mono rounded-full px-2.5 py-1 text-[9px] uppercase tracking-[0.16em]">
                 {activeComponentScenario.mode === "synthetic"
                   ? "synthetic"
-                  : `${activeComponentScenario.components.length} catalog`}
+                  : activeComponentScenario.mode === "source-projected"
+                    ? `${activeComponentScenario.components.length} observed`
+                    : activeComponentScenario.mode === "unavailable"
+                      ? "unavailable"
+                      : `${activeComponentScenario.components.length} catalog`}
               </span>
             </div>
             <DevScenarioSwitch
@@ -398,6 +417,7 @@ export function WslResourceUsage({
             />
             <ComponentStatusView
               components={activeComponentScenario.components}
+              sourceUnavailable={activeComponentScenario.mode === "unavailable"}
               selectedComponent={selectedComponent}
               onSelectComponent={onSelectComponent}
             />
@@ -414,6 +434,7 @@ export function WslResourceUsage({
             </div>
             <AlertsView
               components={activeComponentScenario.components}
+              componentSourceError={componentSourceError}
               error={error}
               latestSample={latestSample}
               resourceSourceLabel={resourceSourceLabel}

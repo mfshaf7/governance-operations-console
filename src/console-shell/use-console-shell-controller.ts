@@ -37,6 +37,7 @@ import {
   type ResourceMetricDetail,
   type RuntimeAlertItem,
   type RuntimeComponentObservation,
+  useRuntimeComponentObservations,
 } from "../runtime-readiness";
 import { useConsoleActivity } from "./activity/use-console-activity";
 import { resolveConsoleAgentContextCandidate } from "./context/agent-context-candidates";
@@ -62,10 +63,11 @@ export function useConsoleShellController() {
   );
   const [activeConsoleEntryIntent, setActiveConsoleEntryIntent] =
     useState<ConsoleEntryIntent | null>(null);
-  const activeComponentScenario =
-    componentStatusScenarios.find(
-      (scenario) => scenario.id === componentScenarioId,
-    ) ?? componentStatusScenarios[0];
+  const componentObservations = useRuntimeComponentObservations({
+    consoleDevMode,
+    scenarioId: componentScenarioId,
+  });
+  const activeComponentScenario = componentObservations.activeScenario;
   const activeResourceScenario =
     resourceUsageScenarios.find(
       (scenario) => scenario.id === resourceScenarioId,
@@ -302,6 +304,7 @@ export function useConsoleShellController() {
     consoleHomeRef,
     commandCenterFocusRef,
     componentScenarioId,
+    componentSourceError: componentObservations.error,
     closeConsoleWorkspace,
     consoleActivity,
     consoleDevMode,

@@ -148,6 +148,23 @@ test("Runtime alerts exclude unavailable and synthetic component observations", 
   );
 });
 
+test("Runtime alerts expose a configured component-observation source failure", () => {
+  const alerts = buildRuntimeAlerts({
+    componentSourceError: "The Platform runtime observation expired before the latest poll.",
+    components: [],
+    error: null,
+    latestSample: undefined,
+    resourceSourceLabel: "local /proc",
+    resourceSourceState: "warming",
+  });
+
+  assert.deepEqual(alerts.map(({ id }) => id), [
+    "component-observation-source-unavailable",
+  ]);
+  assert.equal(alerts[0].source, "platform-engineering");
+  assert.equal(alerts[0].sourceMode, "unavailable");
+});
+
 test("Component detail exposes observation coverage without inventing environments", () => {
   const detail = buildComponentObservationDetail({
     alertEligible: false,

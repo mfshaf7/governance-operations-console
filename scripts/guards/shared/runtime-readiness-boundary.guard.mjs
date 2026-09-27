@@ -7,11 +7,18 @@ import {
 } from "../guard-lib.mjs";
 
 const appRoute = "src/app/api/wsl-resources/route.ts";
+const observationAppRoute = "src/app/api/runtime-observations/route.ts";
 const publicBoundary = "src/runtime-readiness/index.ts";
 const panel = "src/runtime-readiness/presentation/runtime-readiness-panel.tsx";
 const telemetry = "src/runtime-readiness/state/use-wsl-resource-telemetry.ts";
 const adapter = "src/runtime-readiness/server/wsl-resource-adapter.ts";
 const route = "src/runtime-readiness/server/wsl-resource-route.ts";
+const observationAdapter =
+  "src/runtime-readiness/server/platform-runtime-observation-adapter.ts";
+const observationRoute =
+  "src/runtime-readiness/server/platform-runtime-observation-route.ts";
+const observationState =
+  "src/runtime-readiness/state/use-runtime-component-observations.ts";
 const componentReadModel =
   "src/runtime-readiness/read-model/component-read-model.ts";
 const alertReadModel =
@@ -34,16 +41,20 @@ export const guard = {
 
     for (const path of [
       appRoute,
+      observationAppRoute,
       publicBoundary,
       "src/runtime-readiness/model/runtime-readiness-model.ts",
       fixture,
       ...readModels,
       telemetry,
+      observationState,
       "src/runtime-readiness/presentation/runtime-readiness-support.tsx",
       focus,
       panel,
       adapter,
       route,
+      observationAdapter,
+      observationRoute,
     ]) {
       assertAppFile(failures, path);
     }
@@ -65,6 +76,12 @@ export const guard = {
     if (lineCount(appRoute) > 5) {
       failures.push(`${appRoute}: app route must remain a thin mount`);
     }
+    assertIncludes(failures, observationAppRoute, [
+      'from "../../../runtime-readiness/server/platform-runtime-observation-route"',
+    ]);
+    if (lineCount(observationAppRoute) > 5) {
+      failures.push(`${observationAppRoute}: app route must remain a thin mount`);
+    }
 
     assertIncludes(failures, route, ["readWslResourceSnapshot", "NextResponse.json"]);
     assertOmits(failures, route, ["readFileSync", "statfsSync", "os.loadavg"]);
@@ -76,6 +93,26 @@ export const guard = {
       "os.uptime()",
     ]);
     assertOmits(failures, adapter, ["NextResponse", "className="]);
+    assertIncludes(failures, observationAdapter, [
+      "readRuntimeComponentProjection",
+      "console-runtime-observations/v1",
+      "platform-engineering",
+      "0o600",
+      "console_runtime_observation_replayed",
+      "console_runtime_observation_conflict",
+    ]);
+    assertOmits(failures, observationAdapter, ["NextResponse", "className="]);
+    assertIncludes(failures, observationRoute, [
+      "readRuntimeComponentProjection",
+      "unavailableRuntimeComponentProjection",
+      "NextResponse.json",
+    ]);
+    assertIncludes(failures, observationState, [
+      'fetch("/api/runtime-observations"',
+      "disconnected-preview",
+      "source-projected",
+    ]);
+    assertOmits(failures, observationState, ["NextResponse", "readFile"]);
 
     assertIncludes(failures, telemetry, [
       "useEffect",
@@ -87,6 +124,7 @@ export const guard = {
     assertOmits(failures, telemetry, ["className=", "NextResponse", "readFileSync"]);
     assertIncludes(failures, panel, [
       "useWslResourceTelemetry",
+      "componentSourceError",
       "buildRuntimeAlerts",
       "buildResourceMetricDetail",
       'label: "Uptime"',

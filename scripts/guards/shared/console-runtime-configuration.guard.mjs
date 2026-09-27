@@ -5,6 +5,7 @@ const configurationPath =
 const governedKeys = [
   "GOVERNANCE_CONSOLE_OPERATOR_HANDLE",
   "GOVERNANCE_CONSOLE_OPERATOR_ID",
+  "GOVERNANCE_CONSOLE_RUNTIME_OBSERVATION_PATH",
   "GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH",
   "OOS_BASE_URL",
   "OOS_CALLER_ID",
@@ -22,6 +23,7 @@ export const guard = {
       "resolveConsoleOosConnection",
       "resolveConsoleOosOperatorConfiguration",
       "resolveConsoleOperatorBinding",
+      "resolveConsoleRuntimeObservationConfiguration",
       "resolveConsoleSessionProjectionPath",
     ]);
 

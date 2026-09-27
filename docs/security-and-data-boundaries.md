@@ -222,6 +222,15 @@ remain server-side. Canonical audit truth remains the validated owner receipt,
 event, or readback. The Console must not create a second durable audit ledger
 or promote prototype-local activity into canonical evidence.
 
+The Runtime Readiness observation exception is read-only and bounded to a
+private `0600`, same-owner Platform projection. The Console server validates
+the `platform-engineering` authority, `dev-integration` lane, validity window,
+component and replica shape, capability posture, and recovery ownership. The
+browser receives no projection path, Kubernetes source reference, recovery
+path, credential, or collector diagnostic. Configured missing, malformed,
+stale, contradictory, or unavailable evidence fails closed and remains
+distinct from local host telemetry and Security activation approval.
+
 The source manifest is
 [`graduation/source-manifest.json`](graduation/source-manifest.json). The
 baseline security findings remain expansion gates until separately reviewed

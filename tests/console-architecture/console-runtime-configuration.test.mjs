@@ -3,10 +3,12 @@ import test from "node:test";
 
 import {
   consoleOosModeSelected,
+  consoleRuntimeObservationModeSelected,
   ConsoleRuntimeConfigurationError,
   projectConsoleRuntimeCapabilities,
   resolveConsoleArtifactReference,
   resolveConsoleOosConnection,
+  resolveConsoleRuntimeObservationConfiguration,
   resolveConsoleSessionConfiguration,
 } from "../../src/console-integration/configuration/console-runtime-configuration.ts";
 
@@ -49,6 +51,31 @@ test("partial or invalid live configuration fails closed", () => {
     (error) =>
       error instanceof ConsoleRuntimeConfigurationError &&
       error.code === "console_oos_url_invalid",
+  );
+});
+
+test("runtime observation configuration accepts only an absolute private-source path", () => {
+  assert.equal(consoleRuntimeObservationModeSelected({}), false);
+  assert.equal(
+    consoleRuntimeObservationModeSelected({
+      GOVERNANCE_CONSOLE_RUNTIME_OBSERVATION_PATH: "/run/user/1000/runtime.json",
+    }),
+    true,
+  );
+  assert.deepEqual(
+    resolveConsoleRuntimeObservationConfiguration({
+      GOVERNANCE_CONSOLE_RUNTIME_OBSERVATION_PATH: "/run/user/1000/runtime.json",
+    }),
+    { projectionPath: "/run/user/1000/runtime.json" },
+  );
+  assert.throws(
+    () =>
+      resolveConsoleRuntimeObservationConfiguration({
+        GOVERNANCE_CONSOLE_RUNTIME_OBSERVATION_PATH: "runtime.json",
+      }),
+    (error) =>
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_runtime_observation_projection_unavailable",
   );
 });
 

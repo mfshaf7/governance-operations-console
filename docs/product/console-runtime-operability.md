@@ -20,6 +20,31 @@ only product source allowed to read the governed OOS connection, Console
 operator binding, session-projection path, and repository authority-reference
 environment keys.
 
+The same boundary resolves
+`GOVERNANCE_CONSOLE_RUNTIME_OBSERVATION_PATH` for the private Platform-owned
+runtime observation projection. The path remains server-only and must be an
+absolute path to an operator-private regular file.
+
+## Runtime Observation Boundary
+
+Runtime Readiness consumes Platform's `console-runtime-observations/v1`
+projection through a same-origin, read-only Console route. The server verifies
+the exact authority, environment, source mode, validity window, component
+shape, replica posture, capability posture, and recovery ownership before it
+projects component availability.
+
+The browser receives only component identity, category, availability,
+freshness, observation time, and the opaque Platform observation reference.
+Kubernetes object references, recovery paths, filesystem paths, credentials,
+and private diagnostics remain server-side. Missing, malformed, stale,
+contradictory, non-private, or unreadable configured evidence projects an
+explicit unavailable state and never falls back to fixture success.
+
+When the runtime observation path is not configured, Runtime Readiness remains
+in explicit disconnected preview and may show its declared component catalog.
+Host CPU, memory, virtual memory, disk, network, and uptime continue through the
+separate local telemetry adapter; neither source substitutes for the other.
+
 Server adapters consume typed resolvers from that module. A partially supplied
 live configuration selects live mode and fails closed; it must not fall back to
 fixtures. The capability projection at `GET /api/console/capabilities` exposes

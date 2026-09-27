@@ -112,8 +112,27 @@ export type DevScenarioOption = {
 
 export type ComponentStatusScenario = DevScenarioOption & {
   components: RuntimeComponentObservation[];
-  mode: "catalog" | "synthetic";
+  mode: "catalog" | "source-projected" | "synthetic" | "unavailable";
 };
+
+export type RuntimeComponentProjectionMode =
+  | "disconnected-preview"
+  | "live"
+  | "unavailable";
+
+export type RuntimeComponentProjection = Readonly<{
+  artifactType: "console-runtime-component-projection";
+  components: readonly RuntimeComponentObservation[];
+  mode: RuntimeComponentProjectionMode;
+  reasonCode: string | null;
+  schemaVersion: 1;
+  source: Readonly<{
+    authority: "platform-engineering" | "none";
+    freshness: ObservationFreshness;
+    observedAt: string | null;
+    reference: string | null;
+  }>;
+}>;
 
 export type ResourceMetricCard = {
   detail: string;
