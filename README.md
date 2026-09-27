@@ -55,6 +55,8 @@ separately governed OOS integration slices:
   server-only, stale-safe OOS adapter with explicit fixture isolation
 - owner-backed Command Center Focus and Workspace Pulse composition from one
   freshness-aware, deduplicated attention snapshot
+- bounded Governance Activity composition from canonical OOS workflow activity
+  and WGCF governance history, with owner evidence routes and no Console ledger
 
 Prototype source discovery and operational workflows without a named live
 integration contract remain:
@@ -138,6 +140,8 @@ is documented in
 [`docs/product/console-runtime-operability.md`](docs/product/console-runtime-operability.md).
 The owner-attention composition boundary is documented in
 [`docs/product/owner-attention-live-integration.md`](docs/product/owner-attention-live-integration.md).
+The Governance Activity composition boundary is documented in
+[`docs/product/governance-activity-live-integration.md`](docs/product/governance-activity-live-integration.md).
 
 ## Authority Map
 

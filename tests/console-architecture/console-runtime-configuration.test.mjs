@@ -4,12 +4,14 @@ import test from "node:test";
 import {
   consoleOosModeSelected,
   consoleRuntimeObservationModeSelected,
+  consoleWgcfModeSelected,
   ConsoleRuntimeConfigurationError,
   projectConsoleRuntimeCapabilities,
   resolveConsoleArtifactReference,
   resolveConsoleOosConnection,
   resolveConsoleRuntimeObservationConfiguration,
   resolveConsoleSessionConfiguration,
+  resolveConsoleWgcfConnection,
 } from "../../src/console-integration/configuration/console-runtime-configuration.ts";
 
 const completeEnv = {
@@ -32,6 +34,26 @@ test("runtime configuration normalizes one OOS connection", () => {
     projectionPath:
       "/run/user/1000/platform-engineering/console-session/session.json",
   });
+});
+
+test("runtime configuration keeps WGCF read authority server-only and distinct", () => {
+  const env = {
+    WGCF_BASE_URL: "http://127.0.0.1:8090/",
+    WGCF_CALLER_ID: "console-history-reader",
+    WGCF_CALLER_SECRET: "wgcf-test-secret-never-project",
+  };
+  assert.equal(consoleWgcfModeSelected(env), true);
+  assert.deepEqual(resolveConsoleWgcfConnection(env), {
+    baseUrl: "http://127.0.0.1:8090",
+    callerId: "console-history-reader",
+    callerSecret: "wgcf-test-secret-never-project",
+  });
+  assert.throws(
+    () => resolveConsoleWgcfConnection({ WGCF_BASE_URL: "http://wgcf.test" }),
+    (error) =>
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_wgcf_configuration_incomplete",
+  );
 });
 
 test("partial or invalid live configuration fails closed", () => {

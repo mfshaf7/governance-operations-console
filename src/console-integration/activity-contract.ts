@@ -45,6 +45,11 @@ export type ConsoleActivityEvent = Readonly<{
   evidenceRefs: readonly string[];
   occurredAt: string;
   outcome: ConsoleActivityOutcome;
+  nextActions?: readonly Readonly<{
+    action: string;
+    ownerRef: string;
+    reviewAt: string | null;
+  }>[];
   receiptRef: string | null;
   source: Readonly<{
     authority: string;

@@ -14,6 +14,7 @@ import type {
 import type {
   LifecycleTransitionProjection,
 } from "@/lifecycle-transitions";
+import { useGovernanceActivityRuntime } from "@/governance-activity/use-governance-activity-runtime";
 
 import { projectConsoleActivity } from "./console-activity-model";
 import { projectConsoleActivitySources } from "./console-activity-sources";
@@ -25,6 +26,7 @@ export function useConsoleActivity({
   environmentHistory: readonly DevIntegrationProfileHistoryEvent[];
   lifecycleTransitions: readonly LifecycleTransitionProjection[];
 }) {
+  const liveRuntime = useGovernanceActivityRuntime();
   const delivery = useSyncExternalStore(
     deliveryActivitySource.subscribeRuntime,
     deliveryActivitySource.getRuntimeSnapshot,
@@ -56,10 +58,16 @@ export function useConsoleActivity({
     repositoryActivitySource.getRuntimeSnapshot,
   );
 
-  return useMemo(
-    () =>
-      projectConsoleActivity(
-        projectConsoleActivitySources({
+  return useMemo(() => {
+    if (liveRuntime.mode === "live") {
+      return {
+        ...liveRuntime,
+        events: projectConsoleActivity(liveRuntime.events),
+      };
+    }
+
+    const events = projectConsoleActivity(
+      projectConsoleActivitySources({
           environmentHistory,
           lifecycleTransitions,
           runtime: {
@@ -71,16 +79,39 @@ export function useConsoleActivity({
             repository,
           },
         }),
-      ),
-    [
+    );
+    const sourceOwners = new Map<string, { label: string; eventCount: number }>();
+    for (const event of events) {
+      const current = sourceOwners.get(event.source.owner);
+      sourceOwners.set(event.source.owner, {
+        eventCount: (current?.eventCount ?? 0) + 1,
+        label: event.source.label,
+      });
+    }
+    return {
+      ...liveRuntime,
+      events,
+      sources: [...sourceOwners.entries()].map(([owner, source]) => ({
+        authority: owner,
+        errorCode: null,
+        eventCount: source.eventCount,
+        label: source.label,
+        observedAt: liveRuntime.observedAt,
+        owner,
+        sourceId: `preview:${owner}`,
+        state: "current" as const,
+        truncated: false,
+      })),
+    };
+  }, [
       delivery,
       environmentHistory,
       lifecycleTransitions,
+      liveRuntime,
       orchestration,
       portfolio,
       proposal,
       prototype,
       repository,
-    ],
-  );
+    ]);
 }

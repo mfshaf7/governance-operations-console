@@ -32,6 +32,12 @@ export type ConsoleOosConnection = Readonly<{
   callerSecret: string;
 }>;
 
+export type ConsoleWgcfConnection = Readonly<{
+  baseUrl: string;
+  callerId: string;
+  callerSecret: string;
+}>;
+
 export type ConsoleOosOperatorConfiguration = ConsoleOosConnection &
   Readonly<{
     operatorHandle?: string;
@@ -193,6 +199,47 @@ export function resolveConsoleOosConnection(
   return {
     baseUrl: parsed.toString().replace(/\/$/, ""),
     callerId: env.OOS_CALLER_ID?.trim() || defaultCallerId,
+    callerSecret,
+  };
+}
+
+export function consoleWgcfModeSelected(
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  return Boolean(env.WGCF_BASE_URL?.trim() || env.WGCF_CALLER_SECRET?.trim());
+}
+
+export function resolveConsoleWgcfConnection(
+  env: NodeJS.ProcessEnv = process.env,
+): ConsoleWgcfConnection {
+  const baseUrl = env.WGCF_BASE_URL?.trim();
+  const callerSecret = env.WGCF_CALLER_SECRET?.trim();
+  if (!baseUrl || !callerSecret) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Console live integration requires its WGCF endpoint and caller secret.",
+      "console_wgcf_configuration_incomplete",
+    );
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Console WGCF endpoint is invalid.",
+      "console_wgcf_url_invalid",
+    );
+  }
+  if (!new Set(["http:", "https:"]).has(parsed.protocol)) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Console WGCF endpoint must use HTTP or HTTPS.",
+      "console_wgcf_url_invalid",
+    );
+  }
+
+  return {
+    baseUrl: parsed.toString().replace(/\/$/, ""),
+    callerId: env.WGCF_CALLER_ID?.trim() || defaultCallerId,
     callerSecret,
   };
 }
