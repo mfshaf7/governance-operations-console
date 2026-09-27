@@ -221,6 +221,13 @@ async function requestWorkSession(
     suffix === ""
       ? deliveryWorkSessionReadTimeoutMs
       : deliveryWorkSessionCommandTimeoutMs,
+    suffix === ""
+      ? {
+          authority: "operator-orchestration-service",
+          recordRef: `openproject://work_packages/${workItemId}`,
+          sourceOwner: "workspace-delivery-art",
+        }
+      : undefined,
   );
   const projection = assertDeliveryWorkSessionProjection(value);
   if (projection.work_item_id !== `work-item-${workItemId}`) {

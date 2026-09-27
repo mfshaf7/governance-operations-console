@@ -1,4 +1,10 @@
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+import {
+  acceptCurrentConsoleSourceProjection,
+  consoleSourceProjectionHeaders,
+  ConsoleSourceAuthorityError,
+  type ConsoleSourceAuthorityExpectation,
+} from "../../../console-integration/source-authority/console-source-authority.ts";
 
 import {
   assertProposalOosCommandResult,
@@ -199,6 +205,7 @@ export async function readProposalProjection(
     `/v1/proposals/${encodeURIComponent(proposalId)}/projection`,
     { method: "GET" },
     fetchImpl,
+    proposalSourceExpectation(proposalId),
   );
   return assertProposalOosProjection(value);
 }
@@ -213,6 +220,7 @@ export async function readProposalHistory(
     `/v1/proposals/${encodeURIComponent(proposalId)}/history`,
     { method: "GET" },
     fetchImpl,
+    proposalSourceExpectation(proposalId),
   );
   return assertProposalOosHistory(value);
 }
@@ -374,11 +382,25 @@ function proposalDeliveryApplicationId(proposalId: string) {
   return `proposal-application:${numericId}:delivery-1`;
 }
 
+function proposalSourceExpectation(
+  proposalId: string,
+): ConsoleSourceAuthorityExpectation {
+  const numericId = proposalId.match(/^idea-([1-9][0-9]*)$/)?.[1];
+  return {
+    authority: "operator-orchestration-service",
+    recordRef: numericId
+      ? `openproject://work_packages/${numericId}`
+      : `proposal://${proposalId}`,
+    sourceOwner: "workspace-proposals",
+  };
+}
+
 async function proposalOosRequest(
   config: ProposalOosConfig,
   path: string,
   init: RequestInit,
   fetchImpl: typeof fetch,
+  sourceExpectation?: ConsoleSourceAuthorityExpectation,
 ) {
   const signal = AbortSignal.timeout(proposalOosTimeoutMs);
   let response: Response;
@@ -387,8 +409,11 @@ async function proposalOosRequest(
       ...init,
       cache: "no-store",
       headers: {
+        ...(sourceExpectation
+          ? consoleSourceProjectionHeaders(init.headers)
+          : Object.fromEntries(new Headers(init.headers).entries())),
         ...consoleMutationAttributionHeaders(),
-        Accept: "application/json",
+        ...(!sourceExpectation ? { Accept: "application/json" } : {}),
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
@@ -408,7 +433,15 @@ async function proposalOosRequest(
     const code = isRecord(body) && typeof body.code === "string" ? body.code : "proposal_oos_rejected";
     throw new ProposalOosError(error || "OOS rejected the Proposal request.", code, response.status);
   }
-  return body;
+  if (!sourceExpectation) return body;
+  try {
+    return acceptCurrentConsoleSourceProjection(body, sourceExpectation);
+  } catch (error) {
+    if (error instanceof ConsoleSourceAuthorityError) {
+      throw new ProposalOosError(error.message, error.code, 502);
+    }
+    throw error;
+  }
 }
 
 function assertIdeaListItem(value: unknown): ProposalIdeaListItem {

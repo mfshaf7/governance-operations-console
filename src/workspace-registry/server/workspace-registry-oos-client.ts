@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 
 import { consoleMutationAttributionHeaders } from "../../console-integration/identity/server/console-session-authorization.ts";
+import {
+  acceptCurrentConsoleSourceProjection,
+  consoleSourceProjectionHeaders,
+  ConsoleSourceAuthorityError,
+  type ConsoleSourceAuthorityExpectation,
+} from "../../console-integration/source-authority/console-source-authority.ts";
 
 import {
   assertWorkspaceInventoryLifecyclePreparation,
@@ -62,7 +68,16 @@ export async function readWorkspaceRegistry(
   options: RequestOptions = {},
 ): Promise<WorkspaceRegistrySnapshot> {
   return projectSnapshot(
-    await request("/v1/workspace-inventory/registry", { method: "GET" }, options),
+    await request(
+      "/v1/workspace-inventory/registry",
+      { method: "GET" },
+      options,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: "repo://workspace-governance/contracts/inventory",
+        sourceOwner: "workspace-governance",
+      },
+    ),
   );
 }
 
@@ -162,6 +177,11 @@ export async function readWorkspaceInventoryLifecycle(
       `/v1/workspace-inventory/lifecycle/requests/${encodeURIComponent(id)}`,
       { method: "GET" },
       options,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: `oos://workspace-inventory/lifecycle/requests/${id}`,
+        sourceOwner: "workspace-governance",
+      },
     ),
     id,
   );
@@ -242,6 +262,11 @@ export async function readWorkspaceInventoryPromotion(
       `/v1/workspace-inventory/promotions/${encodeURIComponent(id)}`,
       { method: "GET" },
       options,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: `oos://workspace-inventory/promotions/${id}`,
+        sourceOwner: "workspace-governance",
+      },
     ),
     id,
   );
@@ -434,7 +459,12 @@ function resolveConfig(env = process.env): WorkspaceRegistryOosConfig {
   };
 }
 
-async function request(path: string, init: RequestInit, options: RequestOptions) {
+async function request(
+  path: string,
+  init: RequestInit,
+  options: RequestOptions,
+  sourceExpectation?: ConsoleSourceAuthorityExpectation,
+) {
   const config = options.config ?? resolveConfig();
   let response: Response;
   try {
@@ -442,8 +472,11 @@ async function request(path: string, init: RequestInit, options: RequestOptions)
       ...init,
       cache: "no-store",
       headers: {
+        ...(sourceExpectation
+          ? consoleSourceProjectionHeaders(init.headers)
+          : Object.fromEntries(new Headers(init.headers).entries())),
         ...consoleMutationAttributionHeaders(),
-        Accept: "application/json",
+        ...(!sourceExpectation ? { Accept: "application/json" } : {}),
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
@@ -491,7 +524,15 @@ async function request(path: string, init: RequestInit, options: RequestOptions)
       source.retryable === true,
     );
   }
-  return body;
+  if (!sourceExpectation) return body;
+  try {
+    return acceptCurrentConsoleSourceProjection(body, sourceExpectation);
+  } catch (error) {
+    if (error instanceof ConsoleSourceAuthorityError) {
+      throw new WorkspaceRegistryOosError(error.message, error.code, 502);
+    }
+    throw error;
+  }
 }
 
 function bindDigest<T extends Record<string, unknown>, K extends string>(

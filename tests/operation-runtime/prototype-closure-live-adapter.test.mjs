@@ -29,6 +29,10 @@ import {
   readPrototypeClosureRequestPointer,
   writePrototypeClosureRequestPointer,
 } from "../../src/domain-workspaces/prototype/local-runtime/prototype-closure-request-pointer.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const revision = "1".repeat(40);
 const digest = `sha256:${"2".repeat(64)}`;
@@ -257,8 +261,15 @@ test("Prototype Closure projects a reviewed and merged terminal receipt", () => 
 test("Prototype Closure reads and resumes the exact OOS request", async () => {
   const command = buildPrototypeClosureCommand(assertPrototypeClosureIntent(intent()), config.callerId);
   const urls = [];
-  const options = { config, fetchImpl: async (url) => {
+  const options = { config, fetchImpl: async (url, init) => {
     urls.push(url);
+    if (init.method === "GET") {
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(acceptedResult(command), {
+        recordRef: "prototype://prototype:sample-tool",
+        sourceOwner: "workspace-prototype-studio",
+      });
+    }
     return Response.json(acceptedResult(command));
   } };
   await readPrototypeClosure(requestId, options);

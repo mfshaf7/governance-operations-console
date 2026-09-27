@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+import {
+  acceptCurrentConsoleSourceProjection,
+  consoleSourceProjectionHeaders,
+  ConsoleSourceAuthorityError,
+  type ConsoleSourceAuthorityExpectation,
+} from "../../../console-integration/source-authority/console-source-authority.ts";
 
 import {
   assertPrototypeMaturityBlocker,
@@ -113,6 +119,7 @@ export async function readPrototypeMaturity(
       `/v1/prototype-maturity/requests/${encodeURIComponent(id)}`,
       { method: "GET" },
       options,
+      prototypeSourceExpectation(id, "prototype-maturity-request"),
     ),
     id,
   );
@@ -384,7 +391,12 @@ function resolveConfig(env = process.env): PrototypeMaturityOosConfig {
   };
 }
 
-async function request(path: string, init: RequestInit, options: RequestOptions) {
+async function request(
+  path: string,
+  init: RequestInit,
+  options: RequestOptions,
+  sourceExpectation?: ConsoleSourceAuthorityExpectation,
+) {
   const config = options.config ?? resolveConfig();
   let response: Response;
   try {
@@ -392,8 +404,11 @@ async function request(path: string, init: RequestInit, options: RequestOptions)
       ...init,
       cache: "no-store",
       headers: {
+        ...(sourceExpectation
+          ? consoleSourceProjectionHeaders(init.headers)
+          : Object.fromEntries(new Headers(init.headers).entries())),
         ...consoleMutationAttributionHeaders(),
-        Accept: "application/json",
+        ...(!sourceExpectation ? { Accept: "application/json" } : {}),
         "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
@@ -441,7 +456,27 @@ async function request(path: string, init: RequestInit, options: RequestOptions)
       source.retryable === true || response.status >= 500,
     );
   }
-  return body;
+  if (!sourceExpectation) return body;
+  try {
+    return acceptCurrentConsoleSourceProjection(body, sourceExpectation);
+  } catch (error) {
+    if (error instanceof ConsoleSourceAuthorityError) {
+      throw new PrototypeMaturityOosError(error.message, error.code, 502);
+    }
+    throw error;
+  }
+}
+
+function prototypeSourceExpectation(
+  requestId: string,
+  prefix: string,
+): ConsoleSourceAuthorityExpectation {
+  const slug = requestId.slice(`${prefix}:`.length).split(":", 1)[0];
+  return {
+    authority: "operator-orchestration-service",
+    recordRef: `prototype://prototype:${slug}`,
+    sourceOwner: "workspace-prototype-studio",
+  };
 }
 
 function projectPreparation(value: unknown) {

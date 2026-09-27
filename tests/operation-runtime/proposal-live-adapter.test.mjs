@@ -12,6 +12,10 @@ import {
   listProposalLiveRecords,
   ProposalOosError,
 } from "../../src/domain-workspaces/proposal/server/proposal-oos-client.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:console-owner",
@@ -30,8 +34,20 @@ test("case:console-proposal-adapter-positive projects OOS truth and submits a ve
         page: { count: 1, has_more: false },
       });
     }
-    if (String(url).endsWith("/projection")) return jsonResponse(proposalProjection());
-    if (String(url).endsWith("/history")) return jsonResponse(proposalHistory());
+    if (String(url).endsWith("/projection")) {
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(proposalProjection(), {
+        recordRef: "openproject://work_packages/851",
+        sourceOwner: "workspace-proposals",
+      });
+    }
+    if (String(url).endsWith("/history")) {
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(proposalHistory(), {
+        recordRef: "openproject://work_packages/851",
+        sourceOwner: "workspace-proposals",
+      });
+    }
     if (String(url).endsWith("/commands")) {
       const command = JSON.parse(String(init.body));
       assert.equal(command.authority.mutation_adapter, "operator-orchestration-service");

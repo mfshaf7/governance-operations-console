@@ -44,12 +44,21 @@ export async function readDeliveryCloseoutProjection(
       { method: "GET" },
       options.fetchImpl,
       closeoutReadTimeoutMs,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: deliveryRecordRef(deliveryId),
+        sourceOwner: "workspace-delivery-art",
+      },
     ),
   );
   if (projection.delivery_id !== deliveryId) {
     throw new Error("OOS returned closeout truth for another Delivery initiative.");
   }
   return projection;
+}
+
+function deliveryRecordRef(deliveryId: string) {
+  return `openproject://work_packages/${deliveryId.replace(/^delivery-/, "")}`;
 }
 
 export async function submitDeliveryCloseoutCommand(

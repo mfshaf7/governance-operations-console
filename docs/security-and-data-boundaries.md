@@ -55,6 +55,14 @@ projection as current. Missing, unavailable, stale, replayed, conflicting, or
 malformed source evidence fails closed. The contract grants no backend,
 deployment, mutation, or activation authority by itself.
 
+Admitted live GET adapters request only the versioned Console source-projection
+media type. A configured live adapter rejects legacy unwrapped JSON and never
+recovers by reading fixture truth. The accepted projection tracker retains a
+bounded process-local ordering checkpoint to reject older sequences and
+conflicting payloads at one sequence; durable ordering authority remains OOS or
+the named source owner. Disconnected fixture preview remains a separate,
+explicit unconfigured mode.
+
 ## Graduated Baseline Boundary
 
 The transferred baseline remains limited to:

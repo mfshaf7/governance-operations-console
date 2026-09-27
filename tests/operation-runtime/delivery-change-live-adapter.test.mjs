@@ -18,6 +18,11 @@ import {
   createdWorkItemId,
 } from "../../src/domain-workspaces/delivery/work-model/execution/execution-tree-change-plan.ts";
 import { deliveryChangeOperationForExecutionAction } from "../../src/domain-workspaces/delivery/work-model/execution/execution-change-operation.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+  consoleSourceProjectionMediaType,
+} from "../support/console-source-projection.mjs";
 
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_HANDLE: "console-owner",
@@ -31,7 +36,11 @@ test("case:delivery-change-source-provenance-positive reads only canonical OOS c
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ headers: init.headers, method: init.method, url: String(url) });
-    return jsonResponse(projection());
+    assertCanonicalSourceRequest(init);
+    return canonicalSourceResponse(projection(), {
+      recordRef: "openproject://work_packages/console-v1",
+      sourceOwner: "workspace-delivery-art",
+    });
   };
 
   const current = await readDeliveryChangeProjection("delivery-console-v1", {
@@ -43,7 +52,7 @@ test("case:delivery-change-source-provenance-positive reads only canonical OOS c
   assert.deepEqual(calls, [
     {
       headers: {
-        Accept: "application/json",
+        Accept: consoleSourceProjectionMediaType,
         "Content-Type": "application/json",
         "x-oos-caller-id": "governance-operations-console",
         "x-oos-caller-secret": "test-only-console-secret",

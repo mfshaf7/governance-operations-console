@@ -20,6 +20,11 @@ import {
   executionCloseoutReadyToApply,
   initialExecutionCloseoutDraft,
 } from "../../src/domain-workspaces/delivery/presentation/surfaces/execution-board/action-session/closeout/execution-closeout-model.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+  consoleSourceProjectionMediaType,
+} from "../support/console-source-projection.mjs";
 
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_HANDLE: "console-owner",
@@ -33,7 +38,11 @@ test("case:delivery-closeout-source-provenance-positive reads canonical OOS trut
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ headers: init.headers, method: init.method, url: String(url) });
-    return jsonResponse(projection());
+    assertCanonicalSourceRequest(init);
+    return canonicalSourceResponse(projection(), {
+      recordRef: "openproject://work_packages/886",
+      sourceOwner: "workspace-delivery-art",
+    });
   };
 
   const current = await readDeliveryCloseoutProjection("delivery-886", {
@@ -45,7 +54,7 @@ test("case:delivery-closeout-source-provenance-positive reads canonical OOS trut
   assert.deepEqual(calls, [
     {
       headers: {
-        Accept: "application/json",
+        Accept: consoleSourceProjectionMediaType,
         "Content-Type": "application/json",
         "x-oos-caller-id": "governance-operations-console",
         "x-oos-caller-secret": "test-only-console-secret",

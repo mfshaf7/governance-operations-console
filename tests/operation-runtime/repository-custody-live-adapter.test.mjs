@@ -11,6 +11,10 @@ import {
   readRepositoryCustodyResult,
   RepositoryCustodyOosError,
 } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
 const env = {
@@ -44,7 +48,14 @@ test("case:repository-custody-end-to-end-positive links, replays, reads, and pro
       decodeURIComponent(String(url)),
       `${env.OOS_BASE_URL}/v1/repository-custody/requests/${intent().requestId}`,
     );
-    return jsonResponse(successfulResult(canonicalRequest, { replayed: true }));
+    assertCanonicalSourceRequest(init);
+    return canonicalSourceResponse(
+      successfulResult(canonicalRequest, { replayed: true }),
+      {
+        recordRef: `oos://repository-custody/requests/${intent().requestId}`,
+        sourceOwner: "operator-orchestration-service",
+      },
+    );
   };
 
   const created = await linkExistingRepositoryCustody(intent(), {

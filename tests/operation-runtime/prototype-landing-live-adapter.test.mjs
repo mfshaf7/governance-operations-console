@@ -18,12 +18,17 @@ import {
   buildPrototypeLandingCommand,
   preparePrototypeLanding,
   PrototypeLandingOosError,
+  readPrototypeLanding,
   submitPrototypeLanding,
 } from "../../src/domain-workspaces/prototype/server/prototype-landing-oos-client.ts";
 import {
   prototypeLandingDraftFromRecord,
   prototypeLandingDraftKey,
 } from "../../src/domain-workspaces/prototype/work-model/workflows/landing/prototype-landing-model.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
 const authorityRevision = "1".repeat(40);
@@ -51,6 +56,13 @@ test("Prototype Landing prepares and submits a deterministic server-authorized c
   const fetchImpl = async (url, init) => {
     calls.push({ init, url: String(url) });
     if (String(url).endsWith("/preparations")) return json(prepared);
+    if (init.method === "GET") {
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(result(submitted, "accepted"), {
+        recordRef: "prototype://prototype:client-review-portal",
+        sourceOwner: "workspace-prototype-studio",
+      });
+    }
     submitted = JSON.parse(String(init.body));
     return json(result(submitted, "accepted"), 202);
   };
@@ -60,8 +72,10 @@ test("Prototype Landing prepares and submits a deterministic server-authorized c
     prepared,
   );
   const accepted = await submitPrototypeLanding(intent, { config, fetchImpl });
+  const read = await readPrototypeLanding(intent.request_id, { config, fetchImpl });
 
   assert.equal(accepted.status, "accepted");
+  assert.equal(read.request_id, intent.request_id);
   assert.equal(submitted.request.operator_ref, config.callerId);
   assert.equal(submitted.request.prototype.name, draft.name);
   assert.equal(submitted.request.setup.support_profile, "interactive");

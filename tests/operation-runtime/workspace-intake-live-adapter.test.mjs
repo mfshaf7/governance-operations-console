@@ -6,9 +6,14 @@ import { deliveryWorkspaceIntakeCandidate } from "../../src/domain-workspaces/de
 import {
   continueWorkspaceIntake,
   prepareWorkspaceIntake,
+  readWorkspaceIntake,
   submitWorkspaceIntake,
   WorkspaceIntakeOosError,
 } from "../../src/console-integration/workspace-intake/server/workspace-intake-oos-client.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
 const revision = "1".repeat(40);
@@ -27,6 +32,13 @@ test("case:console-adapters-positive prepares, submits, continues, and projects 
     if (String(url).endsWith("/continue")) {
       return json(result(submitted, "review-required", review()));
     }
+    if (init.method === "GET") {
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(result(submitted, "accepted"), {
+        recordRef: `oos://workspace-intake/requests/${intent(preparation()).request_id}`,
+        sourceOwner: "operator-orchestration-service",
+      });
+    }
     submitted = JSON.parse(String(init.body));
     return json(result(submitted, "accepted"), 202);
   };
@@ -38,6 +50,7 @@ test("case:console-adapters-positive prepares, submits, continues, and projects 
 
   const prepared = await prepareWorkspaceIntake(candidate().target, options);
   const accepted = await submitWorkspaceIntake(intent(prepared), options);
+  const read = await readWorkspaceIntake(intent(prepared).request_id, options);
   const progressed = await continueWorkspaceIntake(
     intent(prepared).request_id,
     options,
@@ -45,6 +58,7 @@ test("case:console-adapters-positive prepares, submits, continues, and projects 
 
   assert.equal(prepared.canonical_mutation, false);
   assert.equal(accepted.status, "accepted");
+  assert.equal(read.request_id, intent(prepared).request_id);
   assert.equal(progressed.status, "review-required");
   assert.equal(progressed.review.url, "https://github.com/mfshaf7/workspace-governance/pull/200");
   assert.equal(submitted.request.requester_ref, config.callerId);

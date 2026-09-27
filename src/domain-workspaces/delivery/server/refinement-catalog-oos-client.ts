@@ -41,6 +41,12 @@ export async function readRefinementProjection(
       `/v1/delivery-refinement/${encodeURIComponent(packageRef)}/projection?source_ref=${encodeURIComponent(identity.sourceRef)}`,
       { method: "GET" },
       options.fetchImpl,
+      undefined,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: identity.sourceRef,
+        sourceOwner: "workspace-delivery-art",
+      },
     ),
   );
   if (
@@ -196,13 +202,19 @@ export async function readRefinementRun(
   options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
 ): Promise<RefinementOosRun> {
   const config = resolveDeliveryOosConfig(options.env);
-  deliveryLiveIdentity(packageRef);
+  const identity = deliveryLiveIdentity(packageRef);
   const run = assertRefinementOosRun(
     await deliveryOosRequest(
       config,
       `/v1/delivery-refinement/${encodeURIComponent(packageRef)}/runs/${encodeURIComponent(runId)}`,
       { method: "GET" },
       options.fetchImpl,
+      undefined,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: identity.sourceRef,
+        sourceOwner: "workspace-delivery-art",
+      },
     ),
   );
   if (run.run_id !== runId) throw new Error("OOS returned a different Refinement run.");
@@ -219,6 +231,12 @@ export async function readCatalogProjection(
       "/v1/delivery-catalog/projection",
       { method: "GET" },
       options.fetchImpl,
+      undefined,
+      {
+        authority: "operator-orchestration-service",
+        recordRef: "openproject://projects/workspace-delivery-art",
+        sourceOwner: "workspace-delivery-art",
+      },
     ),
   );
 }

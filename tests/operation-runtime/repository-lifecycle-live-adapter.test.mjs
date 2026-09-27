@@ -10,6 +10,10 @@ import {
   readRepositoryLifecycleResult,
   RepositoryLifecycleOosError,
 } from "../../src/domain-workspaces/repository/server/repository-lifecycle-oos-client.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
 const env = {
@@ -43,7 +47,14 @@ test("case:repository-lifecycle-console-positive applies, replays, reads, and pr
         submissions > 1 ? 200 : 201,
       );
     }
-    return jsonResponse(successfulResult(request, { replayed: true }));
+    assertCanonicalSourceRequest(init);
+    return canonicalSourceResponse(
+      successfulResult(request, { replayed: true }),
+      {
+        recordRef: `oos://repository-lifecycle/requests/${intent().requestId}`,
+        sourceOwner: "operator-orchestration-service",
+      },
+    );
   };
 
   const created = await executeRepositoryLifecycleAction(intent(), {

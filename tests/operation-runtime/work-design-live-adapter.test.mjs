@@ -16,6 +16,10 @@ import {
   workDesignLiveIdentity,
   workDesignLivePackageRef,
 } from "../../src/domain-workspaces/delivery/live-runtime/work-design-live-contract.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_HANDLE: "Console Owner",
@@ -29,7 +33,14 @@ test("case:work-design-projection-positive reads canonical version-zero source a
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ init, url: String(url) });
-    return jsonResponse(projection({ sourceRevision: "version-0" }));
+    assertCanonicalSourceRequest(init);
+    return canonicalSourceResponse(
+      projection({ sourceRevision: "version-0" }),
+      {
+        recordRef: "openproject://work_packages/908",
+        sourceOwner: "workspace-delivery-art",
+      },
+    );
   };
 
   const result = await readWorkDesignProjection("delivery-package:908", {
@@ -166,7 +177,13 @@ test("case:work-design-adapter-negative rejects stale source and mismatched evid
   await assert.rejects(
     readWorkDesignProjection("delivery-package:908", {
       env,
-      fetchImpl: async () => jsonResponse(mismatched),
+      fetchImpl: async (_url, init) => {
+        assertCanonicalSourceRequest(init);
+        return canonicalSourceResponse(mismatched, {
+          recordRef: "openproject://work_packages/908",
+          sourceOwner: "workspace-delivery-art",
+        });
+      },
     }),
     /different source/i,
   );

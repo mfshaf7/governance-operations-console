@@ -1,4 +1,12 @@
 export const CONSOLE_SOURCE_AUTHORITY_SCHEMA_VERSION = 1 as const;
+export const CONSOLE_SOURCE_PROJECTION_MEDIA_TYPE =
+  "application/vnd.mfshaf7.console-source-projection+json; version=1";
+
+const maxTrackedSourceProjections = 500;
+const acceptedSourceProjections = new Map<
+  string,
+  ConsoleSourceProjection
+>();
 
 export type ConsoleSourceFreshnessState =
   | "current"
@@ -68,6 +76,43 @@ export class ConsoleSourceAuthorityError extends Error {
     this.name = "ConsoleSourceAuthorityError";
     this.code = code;
   }
+}
+
+export function consoleSourceProjectionHeaders(headers?: HeadersInit) {
+  const normalized = Object.fromEntries(new Headers(headers).entries());
+  delete normalized.accept;
+  return {
+    ...normalized,
+    Accept: CONSOLE_SOURCE_PROJECTION_MEDIA_TYPE,
+  };
+}
+
+export function acceptCurrentConsoleSourceProjection<TProjection = unknown>(
+  value: unknown,
+  expectation: ConsoleSourceAuthorityExpectation,
+  options: {
+    maxFutureClockSkewMs?: number;
+    now?: Date;
+  } = {},
+) {
+  const current = requireCurrentConsoleSourceProjection<TProjection>(
+    value,
+    expectation,
+    options,
+  );
+  const key = sourceProjectionKey(current.binding);
+  const previous = acceptedSourceProjections.get(key);
+  const progress = previous
+    ? compareConsoleSourceProgress(previous, current)
+    : "advanced";
+
+  if (progress === "advanced") {
+    acceptedSourceProjections.delete(key);
+    acceptedSourceProjections.set(key, current);
+    trimAcceptedSourceProjections();
+  }
+
+  return current.projection;
 }
 
 export function parseConsoleSourceProjection<TProjection = unknown>(
@@ -181,7 +226,9 @@ export function compareConsoleSourceProgress(
   if (current.revision.event_sequence === previous.revision.event_sequence) {
     if (
       current.revision.event_cursor !== previous.revision.event_cursor ||
-      current.revision.source_revision !== previous.revision.source_revision
+      current.revision.source_revision !== previous.revision.source_revision ||
+      canonicalStringify(current.projection) !==
+        canonicalStringify(previous.projection)
     ) {
       fail(
         "source_authority_conflict",
@@ -203,6 +250,37 @@ export function compareConsoleSourceProgress(
   }
 
   return "advanced";
+}
+
+function sourceProjectionKey(binding: ConsoleSourceBinding) {
+  return [
+    binding.authority,
+    binding.source_owner,
+    binding.record_ref,
+    binding.source_ref,
+  ].join("\u0000");
+}
+
+function trimAcceptedSourceProjections() {
+  while (acceptedSourceProjections.size > maxTrackedSourceProjections) {
+    const oldest = acceptedSourceProjections.keys().next().value;
+    if (oldest === undefined) return;
+    acceptedSourceProjections.delete(oldest);
+  }
+}
+
+function canonicalStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalStringify(item)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalStringify(record[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 export function assertConsoleSourceReceiptBinding(

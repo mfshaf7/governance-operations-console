@@ -12,6 +12,10 @@ import {
   readRepositoryCustodyResult,
   RepositoryCustodyOosError,
 } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
 const env = {
@@ -41,8 +45,13 @@ test("case:repository-provisioning-positive binds exact server authority, projec
         submissions > 1 ? 200 : 201,
       );
     }
-    return jsonResponse(
+    assertCanonicalSourceRequest(init);
+    return canonicalSourceResponse(
       provisioningResult(canonicalRequest, { replayed: true }),
+      {
+        recordRef: `oos://repository-custody/requests/${intent().requestId}`,
+        sourceOwner: "operator-orchestration-service",
+      },
     );
   };
 

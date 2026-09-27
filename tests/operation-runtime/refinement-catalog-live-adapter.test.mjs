@@ -19,6 +19,10 @@ import {
   assertCatalogMutationRequest,
   catalogReadModelFromProjection,
 } from "../../src/domain-workspaces/delivery/live-runtime/catalog-live-contract.ts";
+import {
+  assertCanonicalSourceRequest,
+  canonicalSourceResponse,
+} from "../support/console-source-projection.mjs";
 
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_HANDLE: "Console Owner",
@@ -45,9 +49,17 @@ test("case:refinement-live-positive reads, advises, applies, and polls canonical
       return jsonResponse(refinementRun(request.body));
     }
     if (request.url.includes("/runs/")) {
-      return jsonResponse(refinementRun());
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(refinementRun(), {
+        recordRef: "openproject://work_packages/846",
+        sourceOwner: "workspace-delivery-art",
+      });
     }
-    return jsonResponse(projection);
+    assertCanonicalSourceRequest(init);
+    return canonicalSourceResponse(projection, {
+      recordRef: "openproject://work_packages/846",
+      sourceOwner: "workspace-delivery-art",
+    });
   };
 
   const read = await readRefinementProjection("delivery-package:846", {
@@ -102,9 +114,14 @@ test("case:catalog-live-positive reads, mutates, and maps canonical readback", a
   const fetchImpl = async (url, init) => {
     const body = init.body ? JSON.parse(String(init.body)) : null;
     calls.push({ body, url: String(url) });
-    return String(url).includes("/mutations")
-      ? jsonResponse(catalogMutationResult(body))
-      : jsonResponse(projection);
+    if (String(url).includes("/mutations")) {
+      return jsonResponse(catalogMutationResult(body));
+    }
+    assertCanonicalSourceRequest(init);
+    return canonicalSourceResponse(projection, {
+      recordRef: "openproject://projects/workspace-delivery-art",
+      sourceOwner: "workspace-delivery-art",
+    });
   };
 
   const read = await readCatalogProjection({ env, fetchImpl });
@@ -134,7 +151,13 @@ test("case:refinement-catalog-negative rejects stale identity, missing readiness
   await assert.rejects(
     readRefinementProjection("delivery-package:846", {
       env,
-      fetchImpl: async () => jsonResponse(mismatchedProjection),
+      fetchImpl: async (_url, init) => {
+        assertCanonicalSourceRequest(init);
+        return canonicalSourceResponse(mismatchedProjection, {
+          recordRef: "openproject://work_packages/846",
+          sourceOwner: "workspace-delivery-art",
+        });
+      },
     }),
     /different source/i,
   );
