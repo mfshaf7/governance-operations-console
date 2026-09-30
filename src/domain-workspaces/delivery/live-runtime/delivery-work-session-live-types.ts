@@ -89,12 +89,31 @@ export type DeliveryWorkSessionCommandReceipt = {
   work_item_id: string;
 };
 
+export type DeliveryWorkSessionCloseout = {
+  completed: Array<Record<string, unknown> & {
+    status?: string | null;
+    work_item_id: string;
+  }>;
+  covered_work_item_ids: string[];
+  failed: Array<Record<string, unknown> & {
+    parent_id?: string;
+    work_item_id?: string;
+  }>;
+  packet_digest: string | null;
+  packet_id: string | null;
+  parent_closeouts: Array<Record<string, unknown> & { parent_id: string }>;
+  skipped_work_items: Array<Record<string, unknown> & { work_item_id: string }>;
+  state: "complete" | "partial_failure";
+};
+
 export type DeliveryWorkSessionProjection = {
   agent_source?: Record<string, unknown> & { state: string };
   cleanup?: DeliveryWorkSessionCleanup;
   cleanup_receipt?: DeliveryWorkSessionCleanupReceipt;
+  closeout?: DeliveryWorkSessionCloseout;
   command_receipt?: DeliveryWorkSessionCommandReceipt;
   configured_path?: Record<string, unknown>;
+  covered_work_item_ids?: string[];
   decision_draft?: DeliveryWorkSessionDecision;
   delivery_id: string | null;
   facts?: Record<string, string>;

@@ -73,8 +73,11 @@ Console calls retain their shorter timeout.
    authority gates remain read-only. The Console shows their owner and reason
    instead of presenting a bypass action.
 9. `Merge Source` appears only for `source-merge-approval-required`.
-   `Close Work` appears only for `art-closeout-required`; a failed terminal
-   cleanup exposes `Retry Cleanup` against the same OOS close command.
+   `Close Landing Unit` appears only for `art-closeout-required`. The selected
+   work item is a resumable alias; OOS closes the full Review Packet scope and
+   the Console shows the covered item count and structured result. A partial
+   closeout retains the session for retry, while failed terminal cleanup exposes
+   `Retry Cleanup` against the same OOS close command.
 10. If OOS reports an explicit rejection, correct the input and issue a new
    operator action. If the network outcome is unknown, retry retains the same
    command identity so OOS can replay the retained result safely.
@@ -135,6 +138,7 @@ Implemented in source:
 - authoritative lifecycle, source, evidence, Review Packet, readiness, and
   cleanup projection
 - command and terminal cleanup receipt presentation
+- exact Landing Unit scope and whole-scope closeout result presentation
 - explicit disconnected preview and configured fail-closed behavior
 - Execution Board interaction without direct browser source authority
 
