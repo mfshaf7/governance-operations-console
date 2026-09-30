@@ -140,10 +140,12 @@ export function assertDeliveryWorkSessionProjection(
     workItemIdList(closeout.covered_work_item_ids, "closeout covered work items");
     nullableText(closeout.packet_digest, "closeout packet digest");
     nullableText(closeout.packet_id, "closeout packet identity");
+    ancestorDispositions(closeout.ancestor_dispositions);
     closeoutEntries(closeout.completed, "completed closeout item", "work_item_id");
     closeoutEntries(closeout.failed, "failed closeout item", null);
     closeoutEntries(closeout.parent_closeouts, "parent closeout item", "parent_id");
     closeoutEntries(closeout.skipped_work_items, "skipped closeout item", "work_item_id");
+    initiativeDisposition(closeout.initiative_disposition);
   }
   if (projection.lifecycle_context !== undefined) {
     const context = record(projection.lifecycle_context, "lifecycle context");
@@ -322,6 +324,62 @@ function closeoutEntries(
       if (item[key] !== undefined) workItemId(item[key], `${label} ${key}`);
     }
   }
+}
+
+function ancestorDispositions(value: unknown) {
+  if (!Array.isArray(value)) invalid("Closeout ancestor disposition list is invalid.");
+  for (const entry of value) {
+    const item = record(entry, "closeout ancestor disposition");
+    workItemId(item.work_item_id, "closeout ancestor work item");
+    oneOf(
+      item.disposition,
+      [
+        "closed",
+        "initiative-readiness-evaluated-separately",
+        "read-failed",
+        "ready-for-closeout",
+        "retained",
+      ],
+      "closeout ancestor disposition",
+    );
+    if (item.open_descendant_count !== undefined) {
+      nonNegativeInteger(
+        item.open_descendant_count,
+        "closeout ancestor open descendant count",
+      );
+    }
+    for (const key of ["reason", "status", "subject", "type"] as const) {
+      if (item[key] !== undefined && item[key] !== null) {
+        text(item[key], `closeout ancestor ${key}`);
+      }
+    }
+  }
+}
+
+function initiativeDisposition(value: unknown) {
+  if (value === null) return;
+  const item = record(value, "closeout initiative disposition");
+  text(item.delivery_id, "closeout initiative delivery identity");
+  oneOf(
+    item.disposition,
+    [
+      "closed",
+      "ready-for-closeout",
+      "retained-closeout-gates",
+      "retained-open-work",
+    ],
+    "closeout initiative disposition",
+  );
+  for (const key of ["blocked_count", "open_descendant_count"] as const) {
+    if (item[key] !== null) {
+      nonNegativeInteger(item[key], `closeout initiative ${key}`);
+    }
+  }
+  nullableText(item.epic_status, "closeout initiative status");
+  if (typeof item.ready_for_closeout !== "boolean") {
+    invalid("Closeout initiative readiness is invalid.");
+  }
+  stringList(item.reasons, "closeout initiative reasons");
 }
 
 function exact(value: unknown, expected: unknown, label: string) {

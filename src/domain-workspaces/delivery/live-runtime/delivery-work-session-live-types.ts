@@ -89,7 +89,37 @@ export type DeliveryWorkSessionCommandReceipt = {
   work_item_id: string;
 };
 
+export type DeliveryWorkSessionAncestorDisposition = Record<string, unknown> & {
+  disposition:
+    | "closed"
+    | "initiative-readiness-evaluated-separately"
+    | "read-failed"
+    | "ready-for-closeout"
+    | "retained";
+  open_descendant_count?: number;
+  reason?: string;
+  status?: string | null;
+  subject?: string;
+  type?: string | null;
+  work_item_id: string;
+};
+
+export type DeliveryWorkSessionInitiativeDisposition = Record<string, unknown> & {
+  blocked_count: number | null;
+  delivery_id: string;
+  disposition:
+    | "closed"
+    | "ready-for-closeout"
+    | "retained-closeout-gates"
+    | "retained-open-work";
+  epic_status: string | null;
+  open_descendant_count: number | null;
+  ready_for_closeout: boolean;
+  reasons: string[];
+};
+
 export type DeliveryWorkSessionCloseout = {
+  ancestor_dispositions: DeliveryWorkSessionAncestorDisposition[];
   completed: Array<Record<string, unknown> & {
     status?: string | null;
     work_item_id: string;
@@ -102,6 +132,7 @@ export type DeliveryWorkSessionCloseout = {
   packet_digest: string | null;
   packet_id: string | null;
   parent_closeouts: Array<Record<string, unknown> & { parent_id: string }>;
+  initiative_disposition: DeliveryWorkSessionInitiativeDisposition | null;
   skipped_work_items: Array<Record<string, unknown> & { work_item_id: string }>;
   state: "complete" | "partial_failure";
 };
