@@ -5,11 +5,10 @@ Console.
 
 ## Current Status
 
-The approved Prototype Studio baseline is present in this repository as the
-source-graduation candidate for ART `openproject://work_packages/784`. The
-cross-repo graduation record establishes final custody after the source landing,
-Prototype Studio handoff, and Workspace Governance product promotion are all
-reviewed.
+The approved Prototype Studio baseline has graduated into this repository,
+which is now the durable Console source owner. The source manifest and
+cross-repo graduation record preserve its origin and reviewed custody transfer;
+Prototype Studio retains incubation history rather than active product source.
 
 The graduated baseline remains private and loopback-only. The Console now has
 separately governed OOS integration slices:
