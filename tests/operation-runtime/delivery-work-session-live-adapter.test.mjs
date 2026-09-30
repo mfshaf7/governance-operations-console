@@ -285,6 +285,8 @@ test("case:delivery-execution-end-to-end-negative keeps browser authority bounde
   assert.match(modalSource, /project-review-evidence/);
   assert.match(modalSource, /cleanup-required/);
   assert.match(modalSource, /cleanup-retry-required/);
+  assert.match(modalSource, /Close Landing Unit/);
+  assert.match(modalSource, /projection\.closeout/);
 });
 
 test("Delivery work-session contracts accept incomplete OOS drafts but require accepted decisions", () => {
@@ -335,10 +337,25 @@ test("Delivery work-session contracts validate lifecycle and terminal evidence p
       summary: "Source and evidence are complete.",
     },
     pull_request: { state: "merged" },
+    covered_work_item_ids: ["work-item-714", "work-item-715"],
+    closeout: {
+      completed: [{ status: "done", work_item_id: "work-item-714" }],
+      covered_work_item_ids: ["work-item-714", "work-item-715"],
+      failed: [{ work_item_id: "work-item-715" }],
+      packet_digest: `sha256:${"c".repeat(64)}`,
+      packet_id: "review-packet:delivery-698-work-item-714",
+      parent_closeouts: [],
+      skipped_work_items: [],
+      state: "partial_failure",
+    },
   };
   assert.equal(
     assertDeliveryWorkSessionProjection(terminal).cleanup_receipt.outcome,
     "complete",
+  );
+  assert.deepEqual(
+    assertDeliveryWorkSessionProjection(terminal).closeout.covered_work_item_ids,
+    ["work-item-714", "work-item-715"],
   );
   assert.throws(
     () =>
@@ -436,6 +453,7 @@ function projection({
         }
       : {}),
     delivery_id: "delivery-698",
+    covered_work_item_ids: ["work-item-714"],
     landing_unit_id: session ? "delivery-698-work-item-714" : null,
     next_action: {
       authority: "governance-operations-console",

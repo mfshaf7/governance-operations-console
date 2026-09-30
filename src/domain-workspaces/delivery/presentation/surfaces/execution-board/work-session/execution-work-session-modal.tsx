@@ -149,6 +149,10 @@ export function ExecutionWorkSessionModal({
                   label: "Session",
                   value: projection?.session_id ?? "Not started",
                 },
+                {
+                  label: "Landing unit scope",
+                  value: workSessionScope(projection),
+                },
               ]}
             />
           </TerasPanel>
@@ -409,6 +413,45 @@ export function ExecutionWorkSessionModal({
             </TerasPanel>
           ) : null}
 
+          {projection?.closeout ? (
+            <TerasPanel
+              frame="padded"
+              layout="header-body"
+              tone={projection.closeout.state === "complete" ? "ok" : "warn"}
+              treatment="state"
+            >
+              <TerasPanelHeader
+                description="Authoritative OOS result for every ART item covered by this Landing Unit."
+                kicker="Landing Unit Closeout"
+                statusLabel={
+                  projection.closeout.state === "complete" ? "Complete" : "Retry required"
+                }
+                statusTone={projection.closeout.state === "complete" ? "ok" : "warn"}
+                title="Covered Scope Result"
+              />
+              <TerasMetadataList
+                items={[
+                  {
+                    label: "Scope",
+                    value: `${projection.closeout.covered_work_item_ids.length} ART item${projection.closeout.covered_work_item_ids.length === 1 ? "" : "s"}`,
+                  },
+                  {
+                    label: "Completed",
+                    value: String(projection.closeout.completed.length),
+                  },
+                  {
+                    label: "Already closed",
+                    value: String(projection.closeout.skipped_work_items.length),
+                  },
+                  {
+                    label: "Failed",
+                    value: String(projection.closeout.failed.length),
+                  },
+                ]}
+              />
+            </TerasPanel>
+          ) : null}
+
           {projection?.cleanup_receipt ? (
             <TerasPanel
               frame="padded"
@@ -500,10 +543,21 @@ function workSessionCommand(code: string | null | undefined) {
 
 function workSessionCommandLabel(code: string) {
   if (code === "source-merge-approval-required") return "Merge Source";
-  if (code === "art-closeout-required") return "Close Work";
+  if (code === "art-closeout-required") return "Close Landing Unit";
   if (code === "cleanup-required") return "Finish Cleanup";
   if (code === "cleanup-retry-required") return "Retry Cleanup";
   return continueCommandLabels[code] ?? "Continue";
+}
+
+function workSessionScope(projection: DeliveryWorkSessionProjection | null) {
+  const workItemIds =
+    projection?.covered_work_item_ids ??
+    projection?.decision_draft?.covered_work_item_ids ??
+    (projection?.work_item_id ? [projection.work_item_id] : []);
+  if (workItemIds.length === 0) return "Not resolved";
+  return `${workItemIds.length} ART item${workItemIds.length === 1 ? "" : "s"} · ${workItemIds
+    .map((workItemId) => `#${workItemId.replace("work-item-", "")}`)
+    .join(", ")}`;
 }
 
 function workSessionEvidence(projection: DeliveryWorkSessionProjection) {

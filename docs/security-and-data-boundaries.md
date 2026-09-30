@@ -134,7 +134,10 @@ The Console server rebuilds an accepted Landing Unit
 decision from the caller-bound OOS draft and bounded operator fields. Configured
 failure remains unavailable and never records a prototype-local success.
 Merge and close are enabled only for the exact OOS-projected actions and session
-revision; terminal cleanup remains OOS-owned and receipt-backed.
+revision. The selected work item remains only a session alias: OOS derives the
+whole Landing Unit closeout scope from the finalized Review Packet, and partial
+completion retains the session. Terminal cleanup remains OOS-owned,
+receipt-backed, and unavailable until the complete covered scope is closed.
 Mutable `dev-integration` activation remains denied until Security Architecture
 binds the exact merged Console and OOS heads and accepts the admitted executor
 and composed proof.

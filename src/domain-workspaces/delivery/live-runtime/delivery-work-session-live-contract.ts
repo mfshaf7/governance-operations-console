@@ -46,6 +46,9 @@ export function assertDeliveryWorkSessionProjection(
     "projection workflow",
   );
   workItemId(projection.work_item_id, "projection work item");
+  if (projection.covered_work_item_ids !== undefined) {
+    workItemIdList(projection.covered_work_item_ids, "projection covered work items");
+  }
   nullableText(projection.delivery_id, "projection delivery identity");
   nullableText(projection.landing_unit_id, "projection Landing Unit identity");
   nullableText(projection.session_id, "projection session identity");
@@ -130,6 +133,17 @@ export function assertDeliveryWorkSessionProjection(
   if (projection.cleanup_receipt !== undefined) {
     const receipt = record(projection.cleanup_receipt, "cleanup receipt");
     text(receipt.outcome, "cleanup receipt outcome");
+  }
+  if (projection.closeout !== undefined) {
+    const closeout = record(projection.closeout, "Landing Unit closeout");
+    oneOf(closeout.state, ["complete", "partial_failure"], "closeout state");
+    workItemIdList(closeout.covered_work_item_ids, "closeout covered work items");
+    nullableText(closeout.packet_digest, "closeout packet digest");
+    nullableText(closeout.packet_id, "closeout packet identity");
+    closeoutEntries(closeout.completed, "completed closeout item", "work_item_id");
+    closeoutEntries(closeout.failed, "failed closeout item", null);
+    closeoutEntries(closeout.parent_closeouts, "parent closeout item", "parent_id");
+    closeoutEntries(closeout.skipped_work_items, "skipped closeout item", "work_item_id");
   }
   if (projection.lifecycle_context !== undefined) {
     const context = record(projection.lifecycle_context, "lifecycle context");
@@ -293,6 +307,21 @@ export function isDeliveryWorkSessionLiveApiError(
 function dateTime(value: unknown, label: string) {
   text(value, label);
   if (Number.isNaN(Date.parse(value as string))) invalid(`${label} is invalid.`);
+}
+
+function closeoutEntries(
+  value: unknown,
+  label: string,
+  requiredId: "parent_id" | "work_item_id" | null,
+) {
+  if (!Array.isArray(value)) invalid(`${label} list is invalid.`);
+  for (const entry of value) {
+    const item = record(entry, label);
+    if (requiredId) workItemId(item[requiredId], `${label} identity`);
+    for (const key of ["parent_id", "work_item_id"] as const) {
+      if (item[key] !== undefined) workItemId(item[key], `${label} ${key}`);
+    }
+  }
 }
 
 function exact(value: unknown, expected: unknown, label: string) {
