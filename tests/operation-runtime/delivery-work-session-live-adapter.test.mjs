@@ -339,9 +339,28 @@ test("Delivery work-session contracts validate lifecycle and terminal evidence p
     pull_request: { state: "merged" },
     covered_work_item_ids: ["work-item-714", "work-item-715"],
     closeout: {
+      ancestor_dispositions: [
+        {
+          disposition: "ready-for-closeout",
+          open_descendant_count: 0,
+          status: "In progress",
+          subject: "Delivery feature",
+          type: "Feature",
+          work_item_id: "work-item-700",
+        },
+      ],
       completed: [{ status: "done", work_item_id: "work-item-714" }],
       covered_work_item_ids: ["work-item-714", "work-item-715"],
       failed: [{ work_item_id: "work-item-715" }],
+      initiative_disposition: {
+        blocked_count: 0,
+        delivery_id: "delivery-698",
+        disposition: "retained-open-work",
+        epic_status: "In progress",
+        open_descendant_count: 1,
+        ready_for_closeout: false,
+        reasons: ["One descendant remains open."],
+      },
       packet_digest: `sha256:${"c".repeat(64)}`,
       packet_id: "review-packet:delivery-698-work-item-714",
       parent_closeouts: [],
@@ -357,6 +376,11 @@ test("Delivery work-session contracts validate lifecycle and terminal evidence p
     assertDeliveryWorkSessionProjection(terminal).closeout.covered_work_item_ids,
     ["work-item-714", "work-item-715"],
   );
+  assert.equal(
+    assertDeliveryWorkSessionProjection(terminal).closeout.initiative_disposition
+      .disposition,
+    "retained-open-work",
+  );
   assert.throws(
     () =>
       assertDeliveryWorkSessionProjection({
@@ -370,6 +394,22 @@ test("Delivery work-session contracts validate lifecycle and terminal evidence p
         },
       }),
     /raw_fallback_count is invalid/i,
+  );
+  assert.throws(
+    () =>
+      assertDeliveryWorkSessionProjection({
+        ...terminal,
+        closeout: {
+          ...terminal.closeout,
+          ancestor_dispositions: [
+            {
+              ...terminal.closeout.ancestor_dispositions[0],
+              disposition: "work-complete",
+            },
+          ],
+        },
+      }),
+    /ancestor disposition is invalid/i,
   );
 });
 
