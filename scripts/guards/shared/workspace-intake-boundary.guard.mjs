@@ -112,12 +112,18 @@ export const guard = {
       "no standalone Product Intake operation",
       "Classification: `durable`",
       "live-inactive",
+      "#1209",
+      "#1216",
+      "#1217",
+      "#1210",
     ]);
     assertRepoIncludes(failures, integrationDoc, [
       "same-origin `/api/workspace-intake/*`",
       "merged-authority",
-      "Security `#1066`",
-      "Platform `#1082`",
+      "ART `#1209`",
+      "Security `#1216`",
+      "Platform `#1217`",
+      "operating proof `#1210`",
     ]);
     assertIncludes(failures, serverAdapter, [
       "resolveConsoleOosConnection",
