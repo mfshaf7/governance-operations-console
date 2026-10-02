@@ -2,6 +2,7 @@ import {
   assertAppFile,
   assertIncludes,
   assertOmits,
+  assertRepoIncludes,
 } from "../guard-lib.mjs";
 
 const browserRuntime =
@@ -14,6 +15,7 @@ const workflow =
   "src/workspace-registry/presentation/workspace-registry-promotion-workflow.tsx";
 const lifecycleWorkflow =
   "src/workspace-registry/presentation/workspace-registry-lifecycle-workflow.tsx";
+const integrationDoc = "docs/product/workspace-registry-live-integration.md";
 
 export const guard = {
   id: "shared/workspace-registry-boundary",
@@ -52,6 +54,13 @@ export const guard = {
       'type LifecycleStep = "configure" | "result" | "review"',
       "Apply Lifecycle Action",
       "workspaceInventoryLifecycleActionOptions",
+    ]);
+    assertRepoIncludes(failures, integrationDoc, [
+      "ART `#1209`",
+      "Security `#1216`",
+      "Platform `#1217`",
+      "operating proof `#1210`",
+      "merged-authority",
     ]);
     assertOmits(failures, browserRuntime, [
       "OOS_CALLER_SECRET",

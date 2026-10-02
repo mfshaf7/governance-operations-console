@@ -1,7 +1,8 @@
 # Workspace Entrant Classification Definition
 
-Status: `source-implemented`, live activation blocked by Security `#1066` and
-Platform identity activation `#1082`.
+Status: `source-implemented` and revalidated under Console ART child `#1209`;
+live activation remains blocked by Security `#1216`, Platform activation
+`#1217`, and composed operating proof `#1210`.
 
 Definition id: `workspace.entrant.classify`
 
@@ -87,6 +88,7 @@ operator acceptance are both represented by the authority contract.
 The Console source includes the Delivery closeout adapter, same-origin API,
 server-only OOS client, embedded three-step wizard, and strict result
 projection. OOS, Workspace Governance, WGCF, and the Platform identity source
-are implemented but intentionally live-inactive pending `#1066` and `#1082`.
-Operating conformance belongs to `#1069`; this source slice does not claim live
-activation, deployment, or security acceptance.
+are implemented but intentionally live-inactive pending Security `#1216` and
+Platform activation `#1217`. Composed operating conformance belongs to `#1210`;
+this source slice does not claim live activation, deployment, or security
+acceptance.

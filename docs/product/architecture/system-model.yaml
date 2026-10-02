@@ -587,8 +587,8 @@ capabilities:
     design_status: approved-target
     implementation:
       console: implemented
-      backend_support: partial
-      live_adapter: partial
+      backend_support: implemented
+      live_adapter: connected
       delivery_phase: post-baseline
     operator_visibility: >
       Active inventory and eligible entrants are separate views. Fixture mode
@@ -656,9 +656,9 @@ capabilities:
       - Active inventory promotion, physical repository provisioning, product creation, Delivery execution, Portfolio publication, runtime access, or security acceptance.
     design_status: approved-target
     implementation:
-      console: partial
+      console: implemented
       backend_support: implemented
-      live_adapter: missing
+      live_adapter: connected
       delivery_phase: post-baseline
     operator_visibility: >
       The originating workflow exposes the candidate, explicit operator
@@ -684,7 +684,7 @@ capabilities:
     implementation:
       console: implemented
       backend_support: implemented
-      live_adapter: partial
+      live_adapter: connected
       delivery_phase: post-baseline
     operator_visibility: >
       Owner-domain surfaces consume typed active-inventory projections. Intake
@@ -928,9 +928,9 @@ transitions:
     target_completion: The entrant has one explicit intake-register decision; Delivery closeout and active inventory remain separate.
     design_status: approved-target
     implementation:
-      console: partial
-      backend_support: partial
-      live_adapter: missing
+      console: implemented
+      backend_support: implemented
+      live_adapter: connected
       delivery_phase: post-baseline
 
   workspace-intake-to-active-inventory:
@@ -947,9 +947,9 @@ transitions:
     target_completion: One governed change removes the entrant from intake-register.yaml, adds it to exactly one active inventory contract, validates cross-repo truth, and returns a canonical receipt.
     design_status: approved-target
     implementation:
-      console: partial
-      backend_support: partial
-      live_adapter: missing
+      console: implemented
+      backend_support: implemented
+      live_adapter: connected
       delivery_phase: post-baseline
 
   active-product-to-portfolio:

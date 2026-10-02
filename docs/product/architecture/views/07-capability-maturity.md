@@ -39,9 +39,9 @@ All capabilities and transitions in this view are `approved-target`.
 | Lifecycle Transitions | implemented | partial | missing | post-baseline |
 | Dev Integration | implemented | implemented | missing | post-baseline |
 | Governed Releases | implemented | partial | missing | post-baseline |
-| Workspace Intake Classification | partial | implemented | missing | post-baseline |
-| Workspace Registry | implemented | partial | partial | post-baseline |
-| Workspace Active Inventory | implemented | implemented | partial | post-baseline |
+| Workspace Intake Classification | implemented | implemented | connected | post-baseline |
+| Workspace Registry | implemented | implemented | connected | post-baseline |
+| Workspace Active Inventory | implemented | implemented | connected | post-baseline |
 | Teras | implemented | not-required | not-required | pre-baseline |
 | Context Board | implemented | not-required | not-required | pre-baseline |
 | Build Tree | implemented | not-required | not-required | pre-baseline |
@@ -59,8 +59,8 @@ All capabilities and transitions in this view are `approved-target`.
 | Delivery Owner Repo Catalog Link | prototype-only | partial | missing | post-baseline |
 | Repository to Workspace Intake | not-started | partial | missing | post-baseline |
 | Prototype to Workspace Intake | not-started | partial | missing | post-baseline |
-| Delivery to Workspace Intake | partial | partial | missing | post-baseline |
-| Workspace Intake to Active Inventory | partial | partial | missing | post-baseline |
+| Delivery to Workspace Intake | implemented | implemented | connected | post-baseline |
+| Workspace Intake to Active Inventory | implemented | implemented | connected | post-baseline |
 | Active Product to Portfolio | prototype-only | missing | missing | post-baseline |
 | Existing Product Update to Portfolio | partial | missing | missing | post-baseline |
 | Model Profile Request | not-started | missing | missing | post-baseline |
@@ -84,8 +84,8 @@ All capabilities and transitions in this view are `approved-target`.
 - Connect Workspace Prototype Studio packet discovery to the implemented
   Prototype-to-Delivery application without synthesizing packet truth in the
   Console.
-- Add a generic Workspace Governance adapter for repo, product, and component
-  intake classification plus a separate active-inventory promotion path.
+- Complete the remaining Repository and Prototype source-candidate handoffs
+  into the implemented generic Workspace Intake adapter.
 - Add Workspace Prototype Studio registry and graduation adapters.
 - Add Platform and Security projections and product-specific release adapters.
 - Add CGG context admission and governed model-access integration.
