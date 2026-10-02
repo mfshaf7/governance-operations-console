@@ -114,6 +114,11 @@ the profile schema, command allowlist, source bindings, results, and receipt
 before projecting evidence into a Review Packet. The profile grants no merge,
 ART, platform, Security, stage, or production authority.
 
+The architecture-guard command is the profile's filesystem conformance
+binding. The semantic suite retains the real-Git conformance binding, so an
+accepted base covers both fidelity classes required by source-backed Delivery
+architecture packets before implementation evidence is acquired.
+
 The first profile landing is a controlled bootstrap through the existing
 reviewed evidence path. Automated owner evidence is valid only for later work
 sessions whose recorded base already contains the accepted profile.
