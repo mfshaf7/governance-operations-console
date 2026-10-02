@@ -29,10 +29,8 @@ The server-only adapter uses:
 - `OOS_CALLER_SECRET`
 
 Missing configuration returns an unavailable response. It never enables a
-fixture-backed write path. The Console source adapter is reviewed under ART `#1209`;
-routine live use remains blocked until Security `#1216` accepts the
-exact merged Console and OOS revisions, Platform `#1217` activates their
-bounded composition, and operating proof `#1210` succeeds.
+fixture-backed write path. Live use remains blocked until Security `#1066` and
+Platform `#1082` approve and activate the exact source and caller identity.
 
 ## Operator Flow
 
