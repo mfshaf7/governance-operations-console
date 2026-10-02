@@ -45,6 +45,11 @@ admitted OOS service, Workspace Governance provider identity, Platform, and
 Security evidence. This adapter grants none of those authorities and remains
 fail-closed whenever they are unavailable.
 
+The Console source adapter is reviewed under ART `#1209`. Routine live use
+remains blocked until Security `#1216` accepts the exact merged Console and OOS
+revisions, Platform `#1217` activates their bounded composition, and the
+operating proof `#1210` succeeds.
+
 ## Operator Flow
 
 1. Open `Workspace Registry` from Console navigation.

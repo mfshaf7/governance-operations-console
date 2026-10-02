@@ -172,8 +172,9 @@ server re-reads preparation before constructing the v2 command and rejects a
 stale review. OOS owns durable execution, WGCF evaluation, source review,
 readback, and receipts. Provider merge remains a human review action. Missing
 configuration, malformed evidence, conflict, rejection, or dependency failure
-stays unavailable and never falls back to fixture mutation. Live activation is
-blocked pending Security `#1066` and Platform identity activation `#1082`.
+stays unavailable and never falls back to fixture mutation. The source adapter
+is reviewed under ART `#1209`; live activation remains blocked pending Security
+`#1216`, Platform composition `#1217`, and composed operating proof `#1210`.
 
 The Workspace Registry exception is bounded to a same-origin canonical list
 projection plus reviewed active-inventory promotion and lifecycle control
@@ -188,9 +189,10 @@ performs hard deletion. Promotion success requires merged-authority readback
 and its validated receipt. Lifecycle success requires merged human-reviewed
 source, matching readback and merged state, its review-branch receipt, and an
 immutable canonical history event. Fixture mode remains visibly read-only.
-Runtime activation remains separately gated by admitted OOS, Workspace
-Governance provider identity, Platform, and Security evidence; this source
-change grants none of those authorities.
+The source adapter is reviewed under ART `#1209`. Runtime activation remains
+separately gated by admitted OOS, Workspace Governance provider identity,
+Security `#1216`, Platform composition `#1217`, and composed operating proof
+`#1210`; this source change grants none of those authorities.
 
 The Repository authority exception is bounded to `link-existing`,
 `provision-new`, and the five-action repository lifecycle workflow. The

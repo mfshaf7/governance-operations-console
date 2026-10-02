@@ -6,6 +6,15 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-02
+
+- Revalidated the existing Workspace Intake and Workspace Registry Console
+  adapters against the current OOS operation boundary and ART `#1209`.
+- Reconciled capability and handoff maturity from missing or partial to the
+  implemented source adapters without claiming routine runtime activation.
+- Replaced obsolete activation references with the ordered Security `#1216`,
+  Platform `#1217`, and composed operating-proof `#1210` gates.
+
 ## 2026-09-28
 
 - Connected Command Center Focus to canonical Lifecycle Transition attention

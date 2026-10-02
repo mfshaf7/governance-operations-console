@@ -46,8 +46,8 @@ application or completion.
 | Delivery Owner Repo Catalog Link | Active Delivery needs an active workspace repo as `Owner Repo`; catalog add, link, sync, and work-item update reconcile. | prototype-only | partial | missing |
 | Repository to Workspace Intake | A provisioned repo emits a generic entrant packet; Workspace Governance records one explicit intake classification without creating active inventory. | not-started | partial | missing |
 | Prototype to Workspace Intake | Prototype establishes a new durable repo, product, or component boundary; the originating workflow submits a generic entrant packet. | not-started | partial | missing |
-| Delivery to Workspace Intake | Delivery discovers a new durable repo, product, or component boundary; the originating workflow submits a generic entrant packet. | partial | partial | missing |
-| Workspace Intake to Active Inventory | An admitted entrant satisfies type-specific requirements; one governed change removes it from intake and adds it to exactly one active inventory contract. | partial | partial | missing |
+| Delivery to Workspace Intake | Delivery discovers a new durable repo, product, or component boundary; the originating workflow submits a generic entrant packet. | implemented | implemented | connected |
+| Workspace Intake to Active Inventory | An admitted entrant satisfies type-specific requirements; one governed change removes it from intake and adds it to exactly one active inventory contract. | implemented | implemented | connected |
 | Active Product to Portfolio | An active `products.yaml` product has a product-owner publication packet and operating evidence; Portfolio projects one policy-permitted listing. | prototype-only | missing | missing |
 | Existing Product Update to Portfolio | Delivery closeout or a release produces outcome evidence against an active product ref; the product owner assembles the versioned publication packet and the existing listing updates without duplicate identity. | partial | missing | missing |
 
