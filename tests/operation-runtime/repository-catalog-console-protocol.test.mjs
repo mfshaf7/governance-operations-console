@@ -121,6 +121,27 @@ test("Repository Catalog browser bridge carries no backend credential or provide
   }
 });
 
+test("Repository workspace routes the exact admitted record into Catalog reconciliation", () => {
+  const files = [
+    "../../src/console-shell/presentation/console-focus-router.tsx",
+    "../../src/operation-workbench/operation-workbench-host.tsx",
+    "../../src/domain-workspaces/repository/presentation/dialogs/admission/repository-admission-dialog.tsx",
+    "../../src/domain-workspaces/repository/presentation/surface/use-repository-control-controller.ts",
+    "../../src/domain-workspaces/delivery/presentation/workspace/workspace-controller.tsx",
+    "../../src/domain-workspaces/delivery/presentation/surfaces/catalog/use-catalog-control-state.ts",
+  ].map((relativePath) =>
+    readFileSync(new URL(relativePath, import.meta.url), "utf8"),
+  );
+
+  assert.match(files[0], /delivery\.catalog\.repository-reconciliation/);
+  assert.match(files[1], /onOpenDeliveryCatalog/);
+  assert.match(files[2], /Reconcile Delivery Catalog/);
+  assert.match(files[3], /onOpenDeliveryCatalog\?\.\(record\.id\)/);
+  assert.match(files[4], /surfaceId === "catalog"/);
+  assert.match(files[5], /value_key === ownerRepository\.valueKey/);
+  assert.match(files[5], /setMutationDraft\(\{ mode: "add", valueId: null \}\)/);
+});
+
 function repositoryLinkOperation(catalogRequest) {
   return {
     payload: {

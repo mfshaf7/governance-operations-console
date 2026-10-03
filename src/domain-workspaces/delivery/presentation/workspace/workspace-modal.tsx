@@ -304,6 +304,12 @@ export function DeliveryWorkspaceModal({
         <DeliveryWorkspaceSurfaceContent
           activeSurfaceId={activeSurfaceId}
           catalogDeliveryLinkTarget={catalogDeliveryLinkTarget}
+          catalogRepositoryFocusId={
+            entryIntent?.requiredMoveRef ===
+            "delivery.catalog.repository-reconciliation"
+              ? entryIntent.subjectRef
+              : null
+          }
           executionFocusPackageId={
             entryIntent?.requiredMoveRef.startsWith("delivery.execution-board.")
               ? entryIntent.subjectRef
@@ -366,6 +372,7 @@ export function DeliveryWorkspaceModal({
 function DeliveryWorkspaceSurfaceContent({
   activeSurfaceId,
   catalogDeliveryLinkTarget,
+  catalogRepositoryFocusId,
   executionFocusPackageId,
   model,
   onActiveSurfaceChange,
@@ -382,6 +389,7 @@ function DeliveryWorkspaceSurfaceContent({
 }: {
   activeSurfaceId: DeliveryWorkspaceSurfaceId;
   catalogDeliveryLinkTarget: CatalogDeliveryLinkTarget | null;
+  catalogRepositoryFocusId: string | null;
   executionFocusPackageId: string | null;
   model: DeliveryReadModel;
   onActiveSurfaceChange: (surfaceId: DeliveryWorkspaceSurfaceId) => void;
@@ -424,6 +432,7 @@ function DeliveryWorkspaceSurfaceContent({
       <DeliveryCatalogSurface
         deliveryLinkTarget={catalogDeliveryLinkTarget}
         model={model}
+        repositoryFocusId={catalogRepositoryFocusId}
       />
     );
   }

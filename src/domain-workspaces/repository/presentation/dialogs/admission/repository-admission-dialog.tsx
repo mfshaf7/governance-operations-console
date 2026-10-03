@@ -33,6 +33,7 @@ import {
 
 export function RepositoryAdmissionDialog({
   onClose,
+  onOpenDeliveryCatalog,
   onOpenHistory,
   onOpenLifecycle,
   onStart,
@@ -40,6 +41,7 @@ export function RepositoryAdmissionDialog({
   repository,
 }: {
   onClose: () => void;
+  onOpenDeliveryCatalog: (repository: RepositoryWorkspaceRecord) => void;
   onOpenHistory: (repository: RepositoryWorkspaceRecord) => void;
   onOpenLifecycle: (repository: RepositoryWorkspaceRecord) => void;
   onStart: (repository: RepositoryWorkspaceRecord) => void;
@@ -98,15 +100,24 @@ export function RepositoryAdmissionDialog({
               View History
             </TerasActionButton>
             {canManageLifecycle ? (
-              <TerasActionButton
-                data-repository-lifecycle-open="true"
-                onClick={() => {
-                  onOpenLifecycle(repository);
-                }}
-                emphasis="primary"
-              >
-                Manage Lifecycle
-              </TerasActionButton>
+              <>
+                <TerasActionButton
+                  data-repository-catalog-reconcile="true"
+                  onClick={() => onOpenDeliveryCatalog(repository)}
+                  emphasis="secondary"
+                >
+                  Reconcile Delivery Catalog
+                </TerasActionButton>
+                <TerasActionButton
+                  data-repository-lifecycle-open="true"
+                  onClick={() => {
+                    onOpenLifecycle(repository);
+                  }}
+                  emphasis="primary"
+                >
+                  Manage Lifecycle
+                </TerasActionButton>
+              </>
             ) : (
               <TerasActionButton
                 disabled={!canStart}

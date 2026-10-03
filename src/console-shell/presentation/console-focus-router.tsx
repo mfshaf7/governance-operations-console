@@ -125,6 +125,13 @@ export function ConsoleFocusRouter({
                 : null
             }
             onClose={onCloseSelectedWorkbenchSurface}
+            onOpenDeliveryCatalog={(repositoryId) =>
+              onOpenWorkbenchSurface(operationWorkbenchPathLabels.delivery, {
+                mode: "resolve",
+                requiredMoveRef: "delivery.catalog.repository-reconciliation",
+                subjectRef: repositoryId,
+              })
+            }
             onOpenRepositorySurface={(proposalId) =>
               onOpenWorkbenchSurface(operationWorkbenchPathLabels.repository, {
                 mode: "resolve",

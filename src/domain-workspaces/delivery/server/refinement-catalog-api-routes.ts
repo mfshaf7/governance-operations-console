@@ -12,6 +12,7 @@ import {
 } from "./delivery-oos-client.ts";
 import {
   applyRefinementDraft,
+  bindCatalogRepositoryReadiness,
   mutateCatalogValue,
   readCatalogProjection,
   readRefinementProjection,
@@ -97,10 +98,11 @@ export async function mutateCatalogRoute(
       await request.json().catch(() => null),
     );
     const projection = await readCatalogProjection();
+    const preparedCommand = await bindCatalogRepositoryReadiness(command);
     const result = await mutateCatalogValue(
       requiredText(catalogItemId, "Catalog item identity"),
       projection,
-      command,
+      preparedCommand,
     );
     return NextResponse.json(result, { headers: noStoreHeaders });
   } catch (error) {

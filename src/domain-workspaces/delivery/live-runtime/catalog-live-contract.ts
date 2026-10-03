@@ -165,6 +165,12 @@ export function catalogRepositoryReadiness(
   return value?.repository_binding ?? null;
 }
 
+export function assertCatalogRepositoryReadiness(
+  value: unknown,
+): CatalogRepositoryReadiness {
+  return repositoryReadinessValue(value);
+}
+
 export function isCatalogLiveApiError(value: unknown): value is CatalogLiveApiError {
   return isRecord(value) && value.mode === "live" && value.status === "offline" && typeof value.code === "string" && typeof value.error === "string";
 }

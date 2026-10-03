@@ -12,12 +12,14 @@ export type RepositoryWorkspaceProps = {
   contract: OperationWorkbenchDomainContract;
   entryIntent?: ConsoleSurfaceEntryIntent | null;
   onClose: () => void;
+  onOpenDeliveryCatalog?: (repositoryId: string) => void;
 };
 
 export function RepositoryWorkspace({
   contract,
   entryIntent = null,
   onClose,
+  onOpenDeliveryCatalog,
 }: RepositoryWorkspaceProps) {
   return (
     <TerasModalShell
@@ -31,7 +33,10 @@ export function RepositoryWorkspace({
       title="Repository Control"
       width="large"
     >
-      <RepositoryControlSurface entryIntent={entryIntent} />
+      <RepositoryControlSurface
+        entryIntent={entryIntent}
+        onOpenDeliveryCatalog={onOpenDeliveryCatalog}
+      />
     </TerasModalShell>
   );
 }

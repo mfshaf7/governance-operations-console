@@ -39,11 +39,13 @@ function assertUnreachableOperationWorkbenchDomain(domain: never): never {
 export function OperationWorkbenchHost({
   entryIntent,
   onClose,
+  onOpenDeliveryCatalog,
   onOpenRepositorySurface,
   selected,
 }: {
   entryIntent: ConsoleSurfaceEntryIntent | null;
   onClose: () => void;
+  onOpenDeliveryCatalog: (repositoryId: string) => void;
   onOpenRepositorySurface: (proposalId: string) => void;
   selected: OperationWorkbenchSelectorEntry;
 }) {
@@ -73,6 +75,7 @@ export function OperationWorkbenchHost({
             contract={contract}
             entryIntent={entryIntent}
             onClose={onClose}
+            onOpenDeliveryCatalog={onOpenDeliveryCatalog}
           />
         </OperationWorkbench>
       );

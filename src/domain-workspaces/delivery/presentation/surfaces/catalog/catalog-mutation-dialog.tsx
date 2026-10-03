@@ -47,6 +47,7 @@ export function CatalogMutationDialog({
   onSubmit,
   open,
   ownerRepoOptions,
+  preferredOwnerRepoId,
   planningFacetSummary,
   targetPiValues,
   value,
@@ -59,6 +60,7 @@ export function CatalogMutationDialog({
   onSubmit: (draft: CatalogMutationSubmit) => void;
   open: boolean;
   ownerRepoOptions: OperationOwnerRepoCatalogOption[];
+  preferredOwnerRepoId?: string | null;
   planningFacetSummary: string;
   targetPiValues: DeliveryCatalogValue[];
   value: DeliveryCatalogValue | null;
@@ -169,7 +171,9 @@ export function CatalogMutationDialog({
         ? ownerRepoOptions.find((option) => option.valueKey === value.value_key)
         : null;
       const firstAvailableOwnerRepo =
-        ownerRepoSelectCandidates[0] ?? ownerRepoOptions[0] ?? null;
+        ownerRepoSelectCandidates.find(
+          (option) => option.id === preferredOwnerRepoId,
+        ) ?? ownerRepoSelectCandidates[0] ?? ownerRepoOptions[0] ?? null;
 
       setSelectedOwnerRepoId(
         matchingOwnerRepo?.id ?? firstAvailableOwnerRepo?.id ?? "",
@@ -191,6 +195,7 @@ export function CatalogMutationDialog({
     catalogValues,
     ownerRepoOptions,
     ownerRepoSelectCandidates,
+    preferredOwnerRepoId,
     targetPiOptions,
     value,
     open,
