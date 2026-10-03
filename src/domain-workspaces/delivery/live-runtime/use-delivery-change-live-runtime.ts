@@ -30,6 +30,7 @@ export class DeliveryChangeLiveRuntimeError extends Error {
 }
 
 type PendingCommand = {
+  acceptedAt: string;
   commandId: string;
   requestKey: string;
 };
@@ -138,9 +139,18 @@ export function useDeliveryChangeLiveRuntime(
         pending?.requestKey === requestKey
           ? pending.commandId
           : commandIdentity(operation.type);
-      pendingCommands.current[requestKey] = { commandId, requestKey };
+      const acceptedAt =
+        pending?.requestKey === requestKey
+          ? pending.acceptedAt
+          : new Date().toISOString();
+      pendingCommands.current[requestKey] = {
+        acceptedAt,
+        commandId,
+        requestKey,
+      };
       const response = await fetch(`${deliveryChangePath(deliveryId)}/commands`, {
         body: JSON.stringify({
+          acceptedAt,
           acceptanceNote,
           commandId,
           expectedSourceRevision: current.projection.source_revision,

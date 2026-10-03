@@ -289,6 +289,7 @@ presentation/surfaces/catalog/catalog-display-model.ts
 presentation/surfaces/catalog/catalog-inspector-panel.tsx
 presentation/surfaces/catalog/catalog-mutation-dialog.tsx
 presentation/surfaces/catalog/catalog-mutation-view-model.ts
+presentation/surfaces/catalog/catalog-repository-link-dialog.tsx
 presentation/surfaces/catalog/catalog-selector-panel.tsx
 presentation/surfaces/catalog/catalog-surface.tsx
 presentation/surfaces/catalog/catalog-values-panel.tsx

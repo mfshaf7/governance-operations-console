@@ -66,8 +66,13 @@ adds caller credentials and constructs the operator and acceptance records.
   value.
 - `link_repository` composes that Catalog mutation before the Delivery work-item
   update. A partial result stays explicit and routes to reconciliation.
-- The Execution Board Owner Repo action opens Delivery Catalog; it does not
-  create another repository or Catalog editor.
+- The Execution Board Owner Repo action opens Delivery Catalog with the exact
+  Delivery and work-item target. The operator selects an existing admitted
+  Owner Repo value with current WGCF readiness evidence, records acceptance,
+  and submits the composed `link_repository` command. The resulting Catalog
+  and Delivery receipts remain visible together.
+- The action does not create another repository or Catalog editor. Missing,
+  stale, or mismatched Repository readiness evidence keeps linking locked.
 
 ## Result Handling
 

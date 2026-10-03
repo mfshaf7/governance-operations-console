@@ -1,21 +1,25 @@
 "use client";
 
 import type { DeliveryReadModel } from "../../../read-model/index.ts";
+import type { CatalogDeliveryLinkTarget } from "../../../live-runtime/catalog-live-types.ts";
 
 import { TerasSelectorValueInspectorLayout } from "@/teras";
 
 import { CatalogInspectorPanel } from "./catalog-inspector-panel.tsx";
 import { CatalogMutationDialog } from "./catalog-mutation-dialog.tsx";
+import { CatalogRepositoryLinkDialog } from "./catalog-repository-link-dialog.tsx";
 import { CatalogSelectorPanel } from "./catalog-selector-panel.tsx";
 import { CatalogValuesPanel } from "./catalog-values-panel.tsx";
 import { useCatalogControlState } from "./use-catalog-control-state.ts";
 
 export function DeliveryCatalogSurface({
+  deliveryLinkTarget = null,
   model,
 }: {
+  deliveryLinkTarget?: CatalogDeliveryLinkTarget | null;
   model: DeliveryReadModel;
 }) {
-  const catalogState = useCatalogControlState(model);
+  const catalogState = useCatalogControlState(model, deliveryLinkTarget);
 
   return (
     <TerasSelectorValueInspectorLayout
@@ -53,7 +57,10 @@ export function DeliveryCatalogSurface({
           activeCatalog={catalogState.activeCatalog}
           canEditSelectedValue={catalogState.canEditSelectedValue}
           canRetireSelectedValue={catalogState.canRetireSelectedValue}
+          deliveryLinkTarget={catalogState.repositoryLink.target}
+          linkBlockedReason={catalogState.repositoryLink.blockedReason}
           onEdit={catalogState.openEditDraft}
+          onLinkToDelivery={catalogState.repositoryLink.onOpen}
           onRetire={catalogState.openRetireDraft}
           selectedDraftReceipt={catalogState.selectedDraftReceipt}
           selectedTargetPiPlanningFacetSummary={
@@ -75,6 +82,21 @@ export function DeliveryCatalogSurface({
         planningFacetSummary={catalogState.mutationPlanningFacetSummary}
         targetPiValues={catalogState.targetPiValues}
         value={catalogState.mutationValue}
+      />
+      <CatalogRepositoryLinkDialog
+        blockedReason={catalogState.repositoryLink.blockedReason}
+        error={catalogState.repositoryLink.error}
+        note={catalogState.repositoryLink.note}
+        onClose={catalogState.repositoryLink.close}
+        onNoteChange={catalogState.repositoryLink.onNoteChange}
+        onSubmit={catalogState.repositoryLink.onSubmit}
+        open={catalogState.repositoryLink.open}
+        pending={catalogState.repositoryLink.pending}
+        readiness={catalogState.repositoryLink.readiness}
+        repository={catalogState.repositoryLink.repository}
+        result={catalogState.repositoryLink.result}
+        target={catalogState.repositoryLink.target}
+        value={catalogState.selectedValue}
       />
     </TerasSelectorValueInspectorLayout>
   );

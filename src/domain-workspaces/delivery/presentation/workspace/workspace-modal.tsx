@@ -33,6 +33,7 @@ import { DeliveryCatalogSurface } from "../surfaces/catalog/catalog-surface.tsx"
 import { DeliveryRefinementSurface } from "../surfaces/refinement/refinement-surface.tsx";
 import { DeliveryWorkDesignSurface } from "../surfaces/work-design/work-design-surface.tsx";
 import type { WorkDesignApplyReceipt } from "../../work-model/work-design/work-design-types.ts";
+import type { CatalogDeliveryLinkTarget } from "../../live-runtime/catalog-live-types.ts";
 import { packageActionForSurface } from "../workflows/shared/package-actions/package-action-routing.ts";
 import type { DeliveryPackageActionState } from "../workflows/shared/package-actions/package-action-types.ts";
 import {
@@ -88,6 +89,8 @@ export function DeliveryWorkspaceModal({
 }) {
   const [workspacePackageAction, setWorkspacePackageAction] =
     useState<DeliveryPackageActionState | null>(null);
+  const [catalogDeliveryLinkTarget, setCatalogDeliveryLinkTarget] =
+    useState<CatalogDeliveryLinkTarget | null>(null);
   const [workspaceIntakeFocus, setWorkspaceIntakeFocus] = useState<{
     returnSurfaceId: DeliveryWorkspaceSurfaceId;
     sourceId: string;
@@ -170,6 +173,7 @@ export function DeliveryWorkspaceModal({
       return;
     }
 
+    if (surfaceId !== "catalog") setCatalogDeliveryLinkTarget(null);
     onActiveSurfaceChange(surfaceId);
   }
 
@@ -299,6 +303,7 @@ export function DeliveryWorkspaceModal({
       >
         <DeliveryWorkspaceSurfaceContent
           activeSurfaceId={activeSurfaceId}
+          catalogDeliveryLinkTarget={catalogDeliveryLinkTarget}
           executionFocusPackageId={
             entryIntent?.requiredMoveRef.startsWith("delivery.execution-board.")
               ? entryIntent.subjectRef
@@ -310,6 +315,10 @@ export function DeliveryWorkspaceModal({
           onCloseFocusedIntakeSource={closeFocusedIntakeSource}
           onConsumeSource={onConsumeSource}
           onExecutionTreeEditStateChange={recordExecutionTreeEditState}
+          onOpenCatalogForDelivery={(target) => {
+            setCatalogDeliveryLinkTarget(target);
+            onActiveSurfaceChange("catalog");
+          }}
           intakeFocus={workspaceIntakeFocus}
           onOpenPackageAction={openWorkspacePackageAction}
           onRequestPackageRegisterFocus={onRequestPackageRegisterFocus}
@@ -356,6 +365,7 @@ export function DeliveryWorkspaceModal({
 
 function DeliveryWorkspaceSurfaceContent({
   activeSurfaceId,
+  catalogDeliveryLinkTarget,
   executionFocusPackageId,
   model,
   onActiveSurfaceChange,
@@ -363,6 +373,7 @@ function DeliveryWorkspaceSurfaceContent({
   onCloseFocusedIntakeSource,
   onConsumeSource,
   onExecutionTreeEditStateChange,
+  onOpenCatalogForDelivery,
   intakeFocus,
   onOpenPackageAction,
   onRequestPackageRegisterFocus,
@@ -370,6 +381,7 @@ function DeliveryWorkspaceSurfaceContent({
   packageRegisterFocus,
 }: {
   activeSurfaceId: DeliveryWorkspaceSurfaceId;
+  catalogDeliveryLinkTarget: CatalogDeliveryLinkTarget | null;
   executionFocusPackageId: string | null;
   model: DeliveryReadModel;
   onActiveSurfaceChange: (surfaceId: DeliveryWorkspaceSurfaceId) => void;
@@ -377,6 +389,7 @@ function DeliveryWorkspaceSurfaceContent({
   onCloseFocusedIntakeSource: () => void;
   onConsumeSource: (source: DeliveryIntakeSource) => void;
   onExecutionTreeEditStateChange: (state: ExecutionTreeEditState) => void;
+  onOpenCatalogForDelivery: (target: CatalogDeliveryLinkTarget | null) => void;
   intakeFocus: {
     returnSurfaceId: DeliveryWorkspaceSurfaceId;
     sourceId: string;
@@ -407,7 +420,12 @@ function DeliveryWorkspaceSurfaceContent({
   }
 
   if (activeSurfaceId === "catalog") {
-    return <DeliveryCatalogSurface model={model} />;
+    return (
+      <DeliveryCatalogSurface
+        deliveryLinkTarget={catalogDeliveryLinkTarget}
+        model={model}
+      />
+    );
   }
 
   const activeSurface = deliverySurfaces.find(
@@ -423,7 +441,7 @@ function DeliveryWorkspaceSurfaceContent({
       <DeliveryExecutionBoard
         focusPackageId={executionFocusPackageId}
         model={model}
-        onOpenCatalog={() => onActiveSurfaceChange("catalog")}
+        onOpenCatalog={onOpenCatalogForDelivery}
         onTreeEditStateChange={onExecutionTreeEditStateChange}
         showIntro={false}
       />

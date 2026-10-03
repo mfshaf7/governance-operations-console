@@ -10,6 +10,12 @@ import type {
 
 export type CatalogLiveMode = "disconnected-preview" | "live";
 
+export type CatalogDeliveryLinkTarget = Readonly<{
+  deliveryId: string;
+  packageLabel: string;
+  workItemId: string;
+}>;
+
 export type CatalogRepositoryReadiness = {
   catalog_value_key: string;
   receipt: {
