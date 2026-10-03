@@ -120,9 +120,13 @@ fallback, and only a completed run with a validated receipt reports success.
 
 The Delivery Catalog exception is bounded to canonical group, item, and value
 projection plus reviewed add, edit, and retire mutations through OOS. Owner
-Repository linking requires an exact WGCF readiness reference already exposed
-through canonical truth. The Console does not call WGCF, OpenProject, or the
-privileged Catalog adapter directly and does not synthesize missing readiness.
+Repository linking requires an exact WGCF readiness reference. The Console
+reuses the reference already exposed through canonical Catalog truth or asks
+OOS to prepare one for the exact active Repository identity before mutation.
+OOS resolves current Workspace Governance authority, invokes WGCF, verifies
+the returned identity, and remains the only Catalog mutation authority. The
+Console does not call WGCF, OpenProject, or the privileged Catalog adapter
+directly and does not synthesize missing readiness.
 
 The Delivery Execution work-session source exception is bounded to same-origin
 read, start, continue, merge, and close adapters over OOS-owned session state.

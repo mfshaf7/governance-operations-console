@@ -30,7 +30,7 @@ All capabilities and transitions in this view are `approved-target`.
 | Runtime Readiness | implemented | implemented | connected | pre-baseline |
 | Operation Workbench | implemented | not-required | not-required | pre-baseline |
 | Proposal | implemented | implemented | connected | post-baseline |
-| Repository | implemented | partial | missing | post-baseline |
+| Repository | implemented | implemented | connected | dev-integration |
 | Model Operations | implemented | partial | missing | post-baseline |
 | Delivery | implemented | implemented | partial | post-baseline |
 | Prototype | partial | partial | partial | post-baseline |
@@ -54,9 +54,9 @@ All capabilities and transitions in this view are `approved-target`.
 | Proposal to Delivery | partial | implemented | partial | post-baseline |
 | Proposal to Prototype | partial | partial | partial | post-baseline |
 | Proposal Repository Gate | prototype-only | missing | missing | post-baseline |
-| Repository Request and Provisioning | prototype-only | partial | missing | post-baseline |
+| Repository Request and Provisioning | implemented | implemented | connected | dev-integration |
 | Prototype to Delivery | partial | implemented | partial | post-baseline |
-| Delivery Owner Repo Catalog Link | prototype-only | partial | missing | post-baseline |
+| Delivery Owner Repo Catalog Link | implemented | implemented | connected | dev-integration |
 | Repository to Workspace Intake | not-started | partial | missing | post-baseline |
 | Prototype to Workspace Intake | not-started | partial | missing | post-baseline |
 | Delivery to Workspace Intake | implemented | implemented | connected | post-baseline |

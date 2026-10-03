@@ -26,10 +26,15 @@ import { useRepositoryControlController } from "./use-repository-control-control
 
 export function RepositoryControlSurface({
   entryIntent = null,
+  onOpenDeliveryCatalog,
 }: {
   entryIntent?: ConsoleSurfaceEntryIntent | null;
+  onOpenDeliveryCatalog?: (repositoryId: string) => void;
 }) {
-  const controller = useRepositoryControlController({ entryIntent });
+  const controller = useRepositoryControlController({
+    entryIntent,
+    onOpenDeliveryCatalog,
+  });
   const selectedRepository = controller.selectedRepository;
 
   if (!selectedRepository) {

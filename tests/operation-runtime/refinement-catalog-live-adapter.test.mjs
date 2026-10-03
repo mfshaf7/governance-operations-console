@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   applyRefinementDraft,
+  bindCatalogRepositoryReadiness,
   mutateCatalogValue,
   readCatalogProjection,
   readRefinementProjection,
@@ -142,6 +143,38 @@ test("case:catalog-live-positive reads, mutates, and maps canonical readback", a
     "workspace-governance-control-fabric",
   );
   assert.equal(calls[1].body.acceptance.accepted_by, "operator:console-owner");
+});
+
+test("case:catalog-readiness-positive prepares the first Owner Repo binding through OOS", async () => {
+  const command = catalogMutationCommand();
+  command.repositoryReadiness = null;
+  const calls = [];
+  const prepared = await bindCatalogRepositoryReadiness(command, {
+    env,
+    fetchImpl: async (url, init) => {
+      calls.push({
+        body: JSON.parse(String(init.body)),
+        method: init.method,
+        url: String(url),
+      });
+      return jsonResponse({
+        repository_readiness_reference: repositoryReadiness(),
+        schema_version: 1,
+      });
+    },
+  });
+
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /\/v1\/delivery-catalog\/repository-readiness$/);
+  assert.equal(calls[0].method, "POST");
+  assert.deepEqual(calls[0].body, {
+    repo_name: "operator-orchestration-service",
+    schema_version: 1,
+  });
+  assert.equal(
+    prepared.repositoryReadiness.receipt.uri,
+    repositoryReadiness().receipt.uri,
+  );
 });
 
 test("case:refinement-catalog-negative rejects stale identity, missing readiness, and unsafe browser authority", async () => {

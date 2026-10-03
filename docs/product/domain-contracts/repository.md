@@ -60,14 +60,20 @@ Repository admission may produce the repo owner/ref needed by Delivery, Proposal
 Prototype, or another operation. It does not directly mutate Delivery ART
 metadata. When Delivery needs the admitted repository as an `owner_repo` value,
 the handoff goes through the Delivery Catalog Owner Repo add/link/sync workflow.
-The operator adds the catalog entry, links it to the admitted repository, and
-runs the backend value sync before Execution applies the value to a live work
-item.
+An admitted Repository record exposes `Reconcile Delivery Catalog`, which opens
+the Delivery Catalog at that exact repository. Existing values are selected;
+missing values open a reviewed add draft. The same-origin Console adapter asks
+OOS for a current WGCF repository-readiness reference when the canonical
+Catalog projection does not already carry one, then submits the reviewed
+Catalog mutation. OOS owns readiness evaluation and verification, Catalog
+mutation, canonical readback, and the durable receipt. A missing, denied,
+stale, malformed, or mismatched readiness result blocks the mutation without a
+local-success fallback.
 
-The current console may mock this handoff locally, but the backend Owner Repo
-catalog add/link/sync route is not yet proven live. Repository must expose that
-as a future backend integration requirement rather than claiming the repo
-admission itself updates Delivery catalog metadata.
+Catalog reconciliation remains separate from applying `owner_repo` to a live
+Delivery work item. Execution Board initiates that later reviewed link command,
+which binds the Catalog receipt, Delivery update, canonical readback, and
+operator acceptance.
 
 Successful provisioning projects the provider repository as ready for
 Repository onboarding. Provisioning and Repository-local onboarding do not
@@ -96,6 +102,7 @@ Repository Control uses:
 - repository request ingress panel
 - searchable/filterable register
 - selected-record action panel
+- admitted-repository handoff to exact Delivery Catalog reconciliation
 - details/onboarding modal
 - blocked admission inspection
 - guarded lifecycle wizard with Action, Review, and Result
@@ -218,7 +225,8 @@ Repository must not:
 - use legacy inline comparison paths after final failover
 - imply repository creation is complete without exact OOS and provider
   readback evidence
-- call GitHub or WGCF directly from the browser or Console server
+- call GitHub or WGCF directly from the browser or Console server; Catalog
+  readiness is obtained through OOS
 - expose provider credentials, construct provider authority in the browser, or
   treat a fixture record as current lifecycle state
 - hard-delete a provider repository or workspace record

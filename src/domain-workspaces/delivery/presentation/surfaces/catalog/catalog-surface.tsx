@@ -15,11 +15,17 @@ import { useCatalogControlState } from "./use-catalog-control-state.ts";
 export function DeliveryCatalogSurface({
   deliveryLinkTarget = null,
   model,
+  repositoryFocusId = null,
 }: {
   deliveryLinkTarget?: CatalogDeliveryLinkTarget | null;
   model: DeliveryReadModel;
+  repositoryFocusId?: string | null;
 }) {
-  const catalogState = useCatalogControlState(model, deliveryLinkTarget);
+  const catalogState = useCatalogControlState(
+    model,
+    deliveryLinkTarget,
+    repositoryFocusId,
+  );
 
   return (
     <TerasSelectorValueInspectorLayout
@@ -79,6 +85,7 @@ export function DeliveryCatalogSurface({
         onSubmit={catalogState.submitCatalogDraft}
         open={Boolean(catalogState.mutationDraft)}
         ownerRepoOptions={catalogState.ownerRepoOptions}
+        preferredOwnerRepoId={catalogState.preferredOwnerRepoId}
         planningFacetSummary={catalogState.mutationPlanningFacetSummary}
         targetPiValues={catalogState.targetPiValues}
         value={catalogState.mutationValue}

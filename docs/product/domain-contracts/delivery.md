@@ -298,6 +298,9 @@ The Owner Repo Catalog request must select an admitted Repository record. It
 must not accept a free-text repository slug as the source of truth. The Catalog
 value label and key derive from the selected Repository record; the request
 receipt keeps the repository ref so the later backend sync has a clear link.
+If canonical Catalog truth does not yet carry readiness for that repository,
+the Console server asks OOS to prepare the exact WGCF reference before sending
+the reviewed mutation. The browser and Console do not call WGCF directly.
 
 The Delivery change-control contract supports the final work-item `owner_repo`
 update through `link_repository`. Repository remains the creation/admission

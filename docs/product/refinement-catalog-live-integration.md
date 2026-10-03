@@ -66,15 +66,19 @@ The bounded security decision is the
 4. Owner Repo mutations require an exact admitted repository identity and its
    current WGCF readiness reference. Missing or mismatched evidence fails
    before mutation and does not call WGCF or OpenProject from the browser.
-5. The current Console Repository projection does not yet expose readiness
-   receipts for a newly admitted repository. Live Owner Repo linking therefore
-   remains locked unless canonical Catalog truth already carries the matching
-   readiness binding. No receipt is synthesized to bypass that boundary.
-6. When the operator enters Owner Repo Catalog from an Execution Board action,
+5. When canonical Catalog truth does not yet carry the matching binding, the
+   Console server asks OOS to prepare readiness for the exact Repository
+   identity. OOS resolves current Workspace Governance authority and invokes
+   WGCF; denied, stale, malformed, or mismatched evidence remains blocked. No
+   receipt is synthesized in the browser or Console.
+6. An admitted Repository record can open Owner Repo Catalog at that exact
+   repository. Existing values are selected and a missing value opens a
+   reviewed add draft; neither navigation nor draft creation mutates truth.
+7. When the operator enters Owner Repo Catalog from an Execution Board action,
    the Console retains the exact Delivery and work-item target. A reviewed
    `Link to Work Item` action sends the selected Catalog value and its current
    WGCF readiness binding through the OOS `link_repository` command.
-7. The Console server constructs the nested Catalog request and accountable
+8. The Console server constructs the nested Catalog request and accountable
    operator acceptance. The browser cannot supply OOS credentials or backend
    authority. Success requires both the Catalog receipt and the enclosing
    Delivery change receipt; partial failure remains visible with the OOS

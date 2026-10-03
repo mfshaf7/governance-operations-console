@@ -833,10 +833,10 @@ transitions:
     target_completion: A physical repository, owner evidence, README, and AGENTS baseline exist; no workspace intake or active inventory state is implied.
     design_status: approved-target
     implementation:
-      console: partial
-      backend_support: partial
-      live_adapter: partial
-      delivery_phase: post-baseline
+      console: implemented
+      backend_support: implemented-dev-integration
+      live_adapter: connected
+      delivery_phase: dev-integration
 
   prototype-to-delivery:
     label: Prototype To Delivery
@@ -862,7 +862,7 @@ transitions:
     source: repository
     target: delivery
     business_trigger: Active Delivery work discovers that an admitted repository must become a selectable Owner Repo value.
-    source_output: Admitted repository ref selected by the Delivery Catalog request.
+    source_output: Admitted repository ref and current WGCF readiness reference selected by the Delivery Catalog request.
     validation_owner: workspace-governance-control-fabric
     admission_owner: operator-orchestration-service
     execution_owner: operator-orchestration-service
@@ -871,10 +871,10 @@ transitions:
     target_completion: Catalog add, repository link, backend sync, and work-item owner_repo update all reconcile.
     design_status: approved-target
     implementation:
-      console: prototype-only
-      backend_support: partial
-      live_adapter: missing
-      delivery_phase: post-baseline
+      console: implemented
+      backend_support: implemented-dev-integration
+      live_adapter: connected
+      delivery_phase: dev-integration
 
   repository-to-workspace-intake:
     label: Repository To Workspace Intake

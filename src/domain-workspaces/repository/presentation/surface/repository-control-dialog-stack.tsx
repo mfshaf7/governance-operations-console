@@ -57,6 +57,7 @@ export function RepositoryControlDialogStack({
       />
       <RepositoryAdmissionDialog
         onClose={controller.admission.close}
+        onOpenDeliveryCatalog={controller.admission.onOpenDeliveryCatalog}
         onOpenHistory={controller.admission.onOpenHistory}
         onOpenLifecycle={controller.admission.onOpenLifecycle}
         onStart={controller.admission.onStart}

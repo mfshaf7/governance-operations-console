@@ -149,6 +149,7 @@ function deliverySurfaceIdFromRequiredMove(
 
   if (
     surfaceId === "execution-board" ||
+    surfaceId === "catalog" ||
     surfaceId === "intake" ||
     surfaceId === "refinement" ||
     surfaceId === "work-design"

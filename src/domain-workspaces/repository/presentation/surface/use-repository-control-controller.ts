@@ -64,8 +64,10 @@ const defaultRepositoryId =
 
 export function useRepositoryControlController({
   entryIntent = null,
+  onOpenDeliveryCatalog,
 }: {
   entryIntent?: ConsoleSurfaceEntryIntent | null;
+  onOpenDeliveryCatalog?: (repositoryId: string) => void;
 }) {
   const runtimeCapabilities = getRepositoryRuntimeCapabilities();
   const custodyRuntime = useRepositoryCustodyLiveRuntime();
@@ -498,6 +500,10 @@ export function useRepositoryControlController({
     },
     admission: {
       close: () => setAdmissionRepositoryId(null),
+      onOpenDeliveryCatalog: (record: RepositoryWorkspaceRecord) => {
+        setAdmissionRepositoryId(null);
+        onOpenDeliveryCatalog?.(record.id);
+      },
       onOpenHistory: openRepositoryHistory,
       onOpenLifecycle: (record: RepositoryWorkspaceRecord) =>
         openRepositoryLifecycle(record, "retire-workspace-record"),

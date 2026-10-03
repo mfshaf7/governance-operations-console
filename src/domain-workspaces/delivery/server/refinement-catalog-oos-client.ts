@@ -1,4 +1,5 @@
 import {
+  assertCatalogRepositoryReadiness,
   assertCatalogOosMutationResult,
   assertCatalogOosProjection,
 } from "../live-runtime/catalog-live-contract.ts";
@@ -279,6 +280,69 @@ export async function mutateCatalogValue(
     );
   }
   return result;
+}
+
+export async function prepareCatalogRepositoryReadiness(
+  repoName: string,
+  options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+) {
+  const config = resolveDeliveryOosConfig(options.env);
+  const result = await deliveryOosRequest(
+    config,
+    "/v1/delivery-catalog/repository-readiness",
+    {
+      body: JSON.stringify({ repo_name: repoName, schema_version: 1 }),
+      method: "POST",
+    },
+    options.fetchImpl,
+  );
+  if (
+    !result ||
+    typeof result !== "object" ||
+    (result as { schema_version?: unknown }).schema_version !== 1
+  ) {
+    throw new DeliveryOosError(
+      "OOS returned an invalid Repository readiness preparation.",
+      "catalog_repository_readiness_invalid",
+      502,
+    );
+  }
+  const reference = assertCatalogRepositoryReadiness(
+    (result as { repository_readiness_reference?: unknown })
+      .repository_readiness_reference,
+  );
+  if (
+    reference.repo_name !== repoName ||
+    reference.repo_ref !== `repo://${repoName}` ||
+    reference.catalog_value_key !== repoName
+  ) {
+    throw new DeliveryOosError(
+      "OOS returned Repository readiness for a different repository.",
+      "catalog_repository_readiness_mismatch",
+      502,
+    );
+  }
+  return reference;
+}
+
+export async function bindCatalogRepositoryReadiness(
+  command: CatalogMutationCommand & { acceptedAt: string; acceptanceId: string },
+  options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+) {
+  if (
+    command.mode === "retire" ||
+    !command.draft.linkedRepository ||
+    command.repositoryReadiness
+  ) {
+    return command;
+  }
+  return {
+    ...command,
+    repositoryReadiness: await prepareCatalogRepositoryReadiness(
+      command.draft.linkedRepository.valueKey,
+      options,
+    ),
+  };
 }
 
 export function buildCatalogMutationRequest(

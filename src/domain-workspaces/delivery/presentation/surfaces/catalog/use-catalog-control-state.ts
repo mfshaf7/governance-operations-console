@@ -37,6 +37,7 @@ import {
 export function useCatalogControlState(
   model: DeliveryReadModel,
   deliveryLinkTarget: CatalogDeliveryLinkTarget | null = null,
+  repositoryFocusId: string | null = null,
 ) {
   const localRuntimeCapabilities = getDeliveryCatalogRuntimeCapabilities();
   const liveRuntime = useCatalogLiveRuntime();
@@ -53,6 +54,7 @@ export function useCatalogControlState(
     acceptedAt: string;
     key: string;
   } | null>(null);
+  const appliedRepositoryFocusRef = useRef<string | null>(null);
   const sourceCatalog = liveRuntime.loading
     ? model.catalog
     : liveRuntime.mode === "disconnected-preview"
@@ -261,6 +263,44 @@ export function useCatalogControlState(
     repositoryLinkAcceptanceRef.current = null;
   }, [catalogs, deliveryLinkTarget, sourceKey]);
 
+  useEffect(() => {
+    if (
+      liveRuntime.loading ||
+      !repositoryFocusId ||
+      appliedRepositoryFocusRef.current === repositoryFocusId
+    ) {
+      return;
+    }
+    const ownerRepository = ownerRepoOptions.find(
+      (option) => option.id === repositoryFocusId,
+    );
+    const ownerRepoCatalog = catalogs.find(isOwnerRepoCatalog);
+    if (!ownerRepository || !ownerRepoCatalog) return;
+
+    const existingValue = sourceCatalog.values.find(
+      (value) =>
+        value.catalog_item_id === ownerRepoCatalog.catalog_item_id &&
+        value.value_key === ownerRepository.valueKey,
+    );
+    appliedRepositoryFocusRef.current = repositoryFocusId;
+    setActiveCatalogId(ownerRepoCatalog.catalog_item_id);
+    setSearch("");
+    if (existingValue) {
+      setSelectedValueId(existingValue.catalog_value_id);
+      setMutationDraft(null);
+    } else {
+      setSelectedValueId("");
+      setMutationError(null);
+      setMutationDraft({ mode: "add", valueId: null });
+    }
+  }, [
+    catalogs,
+    liveRuntime.loading,
+    ownerRepoOptions,
+    repositoryFocusId,
+    sourceCatalog.values,
+  ]);
+
   function switchCatalog(catalogId: string) {
     setActiveCatalogId(catalogId);
     const firstValue = catalogValues.find(
@@ -446,6 +486,7 @@ export function useCatalogControlState(
     openEditDraft,
     openRetireDraft,
     ownerRepoOptions,
+    preferredOwnerRepoId: repositoryFocusId,
     repositoryLink: {
       blockedReason: repositoryLinkBlockedReason,
       close: () => setRepositoryLinkOpen(false),
