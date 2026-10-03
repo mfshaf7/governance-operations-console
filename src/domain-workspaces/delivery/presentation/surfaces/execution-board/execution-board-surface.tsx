@@ -75,6 +75,7 @@ import {
   executionActionReceiptFromDeliveryChange,
 } from "../../../work-model/execution/execution-change-operation.ts";
 import { ExecutionCloseoutModal } from "./action-session/closeout/execution-closeout-modal.tsx";
+import type { CatalogDeliveryLinkTarget } from "../../../live-runtime/catalog-live-types.ts";
 
 export type ExecutionTreeEditState = {
   active: boolean;
@@ -91,7 +92,7 @@ export function DeliveryExecutionBoard({
 }: {
   focusPackageId?: string | null;
   model: DeliveryReadModel;
-  onOpenCatalog?: () => void;
+  onOpenCatalog?: (target: CatalogDeliveryLinkTarget | null) => void;
   onTreeEditStateChange?: (state: ExecutionTreeEditState) => void;
   showIntro?: boolean;
 }) {
@@ -456,7 +457,15 @@ export function DeliveryExecutionBoard({
   async function handleActionSelect(action: DeliveryAvailableAction) {
     if (action.action_type === "sync-owner-repo") {
       if (onOpenCatalog) {
-        onOpenCatalog();
+        onOpenCatalog(
+          selectedPackage?.legacy_epic_id && selectedWorkItemId
+            ? {
+                deliveryId: String(selectedPackage.legacy_epic_id),
+                packageLabel: selectedPackage.display_name,
+                workItemId: `work-item-${selectedWorkItemId}`,
+              }
+            : null,
+        );
       } else {
         setTreeEditEntryError(
           "Delivery Catalog is unavailable from this Execution Board.",

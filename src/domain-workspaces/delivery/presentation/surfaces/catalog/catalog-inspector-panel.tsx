@@ -2,6 +2,7 @@ import type {
   DeliveryCatalogItem,
   DeliveryCatalogValue,
 } from "../../../read-model/index.ts";
+import type { CatalogDeliveryLinkTarget } from "../../../live-runtime/catalog-live-types.ts";
 
 import {
   TerasActionButton,
@@ -30,6 +31,9 @@ export function CatalogInspectorPanel({
   activeCatalog,
   canEditSelectedValue,
   canRetireSelectedValue,
+  deliveryLinkTarget,
+  linkBlockedReason,
+  onLinkToDelivery,
   onEdit,
   onRetire,
   selectedDraftReceipt,
@@ -39,6 +43,9 @@ export function CatalogInspectorPanel({
   activeCatalog: DeliveryCatalogItem | null;
   canEditSelectedValue: boolean;
   canRetireSelectedValue: boolean;
+  deliveryLinkTarget: CatalogDeliveryLinkTarget | null;
+  linkBlockedReason: string | null;
+  onLinkToDelivery: () => void;
   onEdit: (value: DeliveryCatalogValue) => void;
   onRetire: (value: DeliveryCatalogValue) => void;
   selectedDraftReceipt: CatalogLocalDraftReceipt | null;
@@ -102,6 +109,16 @@ export function CatalogInspectorPanel({
           </TerasTrayStack>
 
           <TerasActionRow spacing="compact">
+            {deliveryLinkTarget ? (
+              <TerasActionButton
+                disabled={Boolean(linkBlockedReason)}
+                emphasis="primary"
+                onClick={onLinkToDelivery}
+                title={linkBlockedReason ?? undefined}
+              >
+                Link to Work Item
+              </TerasActionButton>
+            ) : null}
             <TerasActionButton
               disabled={!canRetireSelectedValue}
               onClick={() => onRetire(selectedValue)}

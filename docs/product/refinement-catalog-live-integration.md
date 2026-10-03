@@ -70,6 +70,15 @@ The bounded security decision is the
    receipts for a newly admitted repository. Live Owner Repo linking therefore
    remains locked unless canonical Catalog truth already carries the matching
    readiness binding. No receipt is synthesized to bypass that boundary.
+6. When the operator enters Owner Repo Catalog from an Execution Board action,
+   the Console retains the exact Delivery and work-item target. A reviewed
+   `Link to Work Item` action sends the selected Catalog value and its current
+   WGCF readiness binding through the OOS `link_repository` command.
+7. The Console server constructs the nested Catalog request and accountable
+   operator acceptance. The browser cannot supply OOS credentials or backend
+   authority. Success requires both the Catalog receipt and the enclosing
+   Delivery change receipt; partial failure remains visible with the OOS
+   reconciliation action.
 
 ## Validation
 

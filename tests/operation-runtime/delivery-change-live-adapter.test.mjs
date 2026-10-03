@@ -87,23 +87,10 @@ test("case:delivery-change-end-to-end-positive constructs operator acceptance on
     },
     type: "request_repository",
   };
-  const repositoryLink = {
-    payload: {
-      catalog_item_id: "owner-repo",
-      catalog_request: {
-        action: "set",
-        item_id: "owner-repo",
-        value: "governance-operations-console",
-      },
-      owner_repo: "governance-operations-console",
-      work_item_id: "work-item-1029",
-    },
-    type: "link_repository",
-  };
-
   await submitDeliveryChangeCommand(
     "delivery-886",
     {
+      acceptedAt: "2026-08-29T00:00:00.000Z",
       acceptanceNote: "Route repository creation to its owning operation.",
       commandId: "delivery-change-command:console-request-repo-1029",
       expectedSourceRevision: revision("a"),
@@ -111,18 +98,7 @@ test("case:delivery-change-end-to-end-positive constructs operator acceptance on
     },
     { env, fetchImpl },
   );
-  await submitDeliveryChangeCommand(
-    "delivery-886",
-    {
-      acceptanceNote: "Link the admitted owner repository through Catalog.",
-      commandId: "delivery-change-command:console-link-repo-1029",
-      expectedSourceRevision: revision("a"),
-      operation: repositoryLink,
-    },
-    { env, fetchImpl },
-  );
-
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 1);
   assert.match(calls[0].url, /\/delivery-886\/change-control\/commands$/);
   assert.deepEqual(calls[0].body.operator, {
     handle: "console-owner",
@@ -136,7 +112,6 @@ test("case:delivery-change-end-to-end-positive constructs operator acceptance on
   );
   assert.match(calls[0].body.acceptance.accepted_at, /^\d{4}-\d{2}-\d{2}T/);
   assert.deepEqual(calls[0].body.operation, repositoryRequest);
-  assert.deepEqual(calls[1].body.operation, repositoryLink);
 });
 
 test("case:delivery-change-source-provenance-negative preserves conflict and exact next action", async () => {

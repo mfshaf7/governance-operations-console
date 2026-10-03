@@ -55,6 +55,7 @@ export async function submitDeliveryChangeRoute(
     const deliveryId = deliveryChangeDeliveryId(deliveryIdInput);
     const body = record(await request.json().catch(() => null));
     const result = await submitDeliveryChangeCommand(deliveryId, {
+      acceptedAt: dateTime(body.acceptedAt),
       acceptanceNote: boundedNote(body.acceptanceNote),
       commandId: assertDeliveryChangeCommandId(body.commandId),
       expectedSourceRevision: assertDeliveryChangeSourceRevision(
@@ -75,6 +76,17 @@ export async function submitDeliveryChangeRoute(
   } catch (error) {
     return deliveryChangeErrorResponse(error);
   }
+}
+
+function dateTime(value: unknown) {
+  if (
+    typeof value !== "string" ||
+    Number.isNaN(Date.parse(value)) ||
+    value.length > 64
+  ) {
+    invalid("Delivery change acceptance time is invalid.");
+  }
+  return value;
 }
 
 function boundedNote(value: unknown) {

@@ -248,63 +248,12 @@ export async function mutateCatalogValue(
   options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
 ): Promise<CatalogOosMutationResult> {
   const config = resolveDeliveryOosConfig(options.env);
-  if (command.draft.linkedRepository && !command.repositoryReadiness) {
-    throw new DeliveryOosError(
-      "Owner Repo mutation requires current repository readiness evidence.",
-      "catalog_repository_readiness_required",
-      409,
-    );
-  }
-  if (
-    command.draft.linkedRepository &&
-    command.repositoryReadiness &&
-    (command.repositoryReadiness.repo_name !==
-      command.draft.linkedRepository.valueKey ||
-      command.repositoryReadiness.repo_ref !==
-        `repo://${command.draft.linkedRepository.valueKey}` ||
-      command.repositoryReadiness.catalog_value_key !==
-        command.draft.valueKey)
-  ) {
-    throw new DeliveryOosError(
-      "Repository readiness evidence does not match the selected Catalog value.",
-      "catalog_repository_readiness_mismatch",
-      409,
-    );
-  }
-  const request = {
-    schema_version: 1,
-    request_id: stableDigestId("console-catalog-request", command.acceptanceId),
-    correlation_id: stableDigestId("console-catalog-correlation", command.acceptanceId),
-    idempotency_key: stableDigestId("console-catalog-idempotency", {
-      catalogItemId,
-      draft: command.draft,
-      mode: command.mode,
-      sourceRevision: projection.source_revision,
-      targetValueId: command.targetValueId,
-    }),
-    source_revision: projection.source_revision,
-    catalog_item_id: catalogItemId,
-    mode: command.mode,
-    target_value_id: command.targetValueId,
-    operator: deliveryOosOperator(config),
-    acceptance: {
-      decision: "apply",
-      accepted_at: command.acceptedAt,
-      accepted_by: config.operatorId,
-      note: `Apply reviewed ${command.mode} mutation for ${catalogItemId}.`,
-    },
-    draft: {
-      value_key: command.draft.valueKey,
-      label: command.draft.label,
-      description: command.draft.description,
-      parent_catalog_value_key: command.draft.parentCatalogValueKey ?? null,
-      planning_window_start_date: command.draft.planningWindowStartDate || null,
-      planning_window_end_date: command.draft.planningWindowEndDate || null,
-      repository_binding: command.mode === "retire"
-        ? null
-        : command.repositoryReadiness ?? null,
-    },
-  };
+  const request = buildCatalogMutationRequest(
+    catalogItemId,
+    projection,
+    command,
+    { env: options.env },
+  );
   const result = assertCatalogOosMutationResult(
     await deliveryOosRequest(
       config,
@@ -330,4 +279,79 @@ export async function mutateCatalogValue(
     );
   }
   return result;
+}
+
+export function buildCatalogMutationRequest(
+  catalogItemId: string,
+  projection: CatalogOosProjection,
+  command: CatalogMutationCommand & { acceptedAt: string; acceptanceId: string },
+  options: {
+    acceptanceNote?: string;
+    acceptedAt?: string;
+    correlationId?: string;
+    env?: NodeJS.ProcessEnv;
+  } = {},
+) {
+  const config = resolveDeliveryOosConfig(options.env);
+  if (command.draft.linkedRepository && !command.repositoryReadiness) {
+    throw new DeliveryOosError(
+      "Owner Repo mutation requires current repository readiness evidence.",
+      "catalog_repository_readiness_required",
+      409,
+    );
+  }
+  if (
+    command.draft.linkedRepository &&
+    command.repositoryReadiness &&
+    (command.repositoryReadiness.repo_name !==
+      command.draft.linkedRepository.valueKey ||
+      command.repositoryReadiness.repo_ref !==
+        `repo://${command.draft.linkedRepository.valueKey}` ||
+      command.repositoryReadiness.catalog_value_key !==
+        command.draft.valueKey)
+  ) {
+    throw new DeliveryOosError(
+      "Repository readiness evidence does not match the selected Catalog value.",
+      "catalog_repository_readiness_mismatch",
+      409,
+    );
+  }
+  return {
+    schema_version: 1,
+    request_id: stableDigestId("console-catalog-request", command.acceptanceId),
+    correlation_id:
+      options.correlationId ??
+      stableDigestId("console-catalog-correlation", command.acceptanceId),
+    idempotency_key: stableDigestId("console-catalog-idempotency", {
+      catalogItemId,
+      draft: command.draft,
+      mode: command.mode,
+      sourceRevision: projection.source_revision,
+      targetValueId: command.targetValueId,
+    }),
+    source_revision: projection.source_revision,
+    catalog_item_id: catalogItemId,
+    mode: command.mode,
+    target_value_id: command.targetValueId,
+    operator: deliveryOosOperator(config),
+    acceptance: {
+      decision: "apply",
+      accepted_at: options.acceptedAt ?? command.acceptedAt,
+      accepted_by: config.operatorId,
+      note:
+        options.acceptanceNote ??
+        `Apply reviewed ${command.mode} mutation for ${catalogItemId}.`,
+    },
+    draft: {
+      value_key: command.draft.valueKey,
+      label: command.draft.label,
+      description: command.draft.description,
+      parent_catalog_value_key: command.draft.parentCatalogValueKey ?? null,
+      planning_window_start_date: command.draft.planningWindowStartDate || null,
+      planning_window_end_date: command.draft.planningWindowEndDate || null,
+      repository_binding: command.mode === "retire"
+        ? null
+        : command.repositoryReadiness ?? null,
+    },
+  };
 }

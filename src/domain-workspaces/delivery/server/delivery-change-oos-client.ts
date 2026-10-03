@@ -1,4 +1,7 @@
 import {
+  assertCatalogMutationRequest,
+} from "../live-runtime/catalog-live-contract.ts";
+import {
   assertDeliveryChangeOperation,
   assertDeliveryChangeProjection,
   assertDeliveryChangeResult,
@@ -16,6 +19,10 @@ import {
   deliveryOosRequest,
   resolveDeliveryOosConfig,
 } from "./delivery-oos-client.ts";
+import {
+  buildCatalogMutationRequest,
+  readCatalogProjection,
+} from "./refinement-catalog-oos-client.ts";
 
 type DeliveryChangeClientOptions = {
   env?: NodeJS.ProcessEnv;
@@ -64,6 +71,7 @@ function deliveryRecordRef(deliveryId: string) {
 export async function submitDeliveryChangeCommand(
   deliveryIdInput: number | string,
   command: {
+    acceptedAt: string;
     acceptanceNote: string;
     commandId: string;
     expectedSourceRevision: string;
@@ -74,7 +82,20 @@ export async function submitDeliveryChangeCommand(
   const deliveryId = deliveryChangeDeliveryId(deliveryIdInput);
   const config = resolveDeliveryOosConfig(options.env);
   const operator = deliveryOosOperator(config);
-  const operation = assertDeliveryChangeOperation(command.operation);
+  const acceptedAt = command.acceptedAt;
+  if (Number.isNaN(Date.parse(acceptedAt))) {
+    throw new Error("Delivery change acceptance time is invalid.");
+  }
+  const operation = await canonicalDeliveryChangeOperation(
+    assertDeliveryChangeOperation(command.operation),
+    {
+      acceptanceNote: command.acceptanceNote,
+      acceptedAt,
+      commandId: command.commandId,
+      env: options.env,
+      fetchImpl: options.fetchImpl,
+    },
+  );
   const expectedSourceRevision = assertDeliveryChangeSourceRevision(
     command.expectedSourceRevision,
   );
@@ -86,7 +107,7 @@ export async function submitDeliveryChangeCommand(
     operator,
     acceptance: {
       decision: "apply",
-      accepted_at: new Date().toISOString(),
+      accepted_at: acceptedAt,
       accepted_by: config.operatorId,
       note: command.acceptanceNote,
     },
@@ -105,4 +126,44 @@ export async function submitDeliveryChangeCommand(
     throw new Error("OOS returned a result for another Delivery change command.");
   }
   return result;
+}
+
+async function canonicalDeliveryChangeOperation(
+  operation: DeliveryChangeOperation,
+  options: {
+    acceptanceNote: string;
+    acceptedAt: string;
+    commandId: string;
+    env?: NodeJS.ProcessEnv;
+    fetchImpl?: typeof fetch;
+  },
+): Promise<DeliveryChangeOperation> {
+  if (operation.type !== "link_repository") return operation;
+
+  const consoleCatalogCommand = assertCatalogMutationRequest(
+    operation.payload.catalog_request,
+  );
+  const projection = await readCatalogProjection({
+    env: options.env,
+    fetchImpl: options.fetchImpl,
+  });
+  const catalogRequest = buildCatalogMutationRequest(
+    operation.payload.catalog_item_id,
+    projection,
+    consoleCatalogCommand,
+    {
+      acceptanceNote: options.acceptanceNote,
+      acceptedAt: options.acceptedAt,
+      correlationId: options.commandId,
+      env: options.env,
+    },
+  );
+
+  return {
+    ...operation,
+    payload: {
+      ...operation.payload,
+      catalog_request: catalogRequest,
+    },
+  };
 }
