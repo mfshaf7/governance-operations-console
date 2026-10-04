@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   applyRefinementDraft,
   bindCatalogRepositoryReadiness,
+  buildCatalogMutationRequest,
   mutateCatalogValue,
   readCatalogProjection,
   readRefinementProjection,
@@ -175,6 +176,31 @@ test("case:catalog-readiness-positive prepares the first Owner Repo binding thro
     prepared.repositoryReadiness.receipt.uri,
     repositoryReadiness().receipt.uri,
   );
+});
+
+test("case:catalog-idempotency scopes retries to one operator acceptance", () => {
+  const command = catalogMutationCommand();
+  const first = buildCatalogMutationRequest(
+    "catalog-owner-repo",
+    catalogProjection(),
+    command,
+    { env },
+  );
+  const retry = buildCatalogMutationRequest(
+    "catalog-owner-repo",
+    catalogProjection(),
+    command,
+    { env },
+  );
+  const laterAcceptance = buildCatalogMutationRequest(
+    "catalog-owner-repo",
+    catalogProjection(),
+    { ...command, acceptanceId: "catalog-acceptance:owner-repo-later" },
+    { env },
+  );
+
+  assert.equal(retry.idempotency_key, first.idempotency_key);
+  assert.notEqual(laterAcceptance.idempotency_key, first.idempotency_key);
 });
 
 test("case:refinement-catalog-negative rejects stale identity, missing readiness, and unsafe browser authority", async () => {
