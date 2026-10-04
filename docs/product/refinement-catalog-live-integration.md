@@ -60,7 +60,9 @@ The bounded security decision is the
 1. The Console reads Catalog items and values from the OOS projection and
    derives presentation tones locally.
 2. Add, edit, and retire commands bind the exact source revision, reviewed
-   draft, stable acceptance, and target value identity.
+   draft, stable acceptance, and target value identity. Retries within one
+   acceptance reuse its idempotency key; a later deliberate acceptance of the
+   same effective edit receives a distinct key.
 3. Success requires OOS canonical readback and a durable mutation receipt; the
    Console refreshes the projection before showing the new value set.
 4. Owner Repo mutations require an exact admitted repository identity and its

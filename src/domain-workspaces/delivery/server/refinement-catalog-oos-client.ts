@@ -387,6 +387,7 @@ export function buildCatalogMutationRequest(
       options.correlationId ??
       stableDigestId("console-catalog-correlation", command.acceptanceId),
     idempotency_key: stableDigestId("console-catalog-idempotency", {
+      acceptanceId: command.acceptanceId,
       catalogItemId,
       draft: command.draft,
       mode: command.mode,
