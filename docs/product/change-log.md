@@ -19,6 +19,9 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 - Serialized the semantic test files in the repository validation command so
   local governed evidence runs stay deterministic and memory-bounded under the
   persistent dev-integration workload.
+- Declared Node.js 22 and npm 10 as the owner-repository runtime baseline,
+  matching CI and preventing local evidence from drifting to an unreviewed
+  major runtime.
 
 ## 2026-10-02
 

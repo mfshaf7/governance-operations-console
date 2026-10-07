@@ -97,6 +97,9 @@ The approved design-baseline record is retained at
 
 ## Local Development
 
+Use Node.js 22 and npm 10, matching the repository CI and governed owner
+evidence runtime. With `nvm`, run `nvm use` from the repository root.
+
 ```bash
 npm ci
 npm run dev
@@ -171,6 +174,8 @@ adding source, runtime adapters, identity integration, external data, or
 deployment configuration.
 
 ## Validation
+
+Run validation with Node.js 22 and npm 10.
 
 Run:
 
