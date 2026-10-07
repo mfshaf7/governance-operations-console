@@ -16,6 +16,9 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 - Kept the source runtime-inactive pending exact-revision Security `#1235` and
   Platform commissioning `#1236`; no browser credential, source-provider
   authority, or Console-local success path was introduced.
+- Serialized the semantic test files in the repository validation command so
+  local governed evidence runs stay deterministic and memory-bounded under the
+  persistent dev-integration workload.
 
 ## 2026-10-02
 
