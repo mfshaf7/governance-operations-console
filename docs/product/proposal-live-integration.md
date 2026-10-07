@@ -4,7 +4,8 @@
 
 This is the primary operator and runtime instruction surface for the Console's
 OOS-backed Proposal integration. It covers Proposal list, capture, projection,
-versioned commands, Delivery handoff application, history, and bounded polling.
+versioned commands, Delivery handoff application, Proposal-to-Prototype target
+application, history, and bounded polling.
 
 ## Runtime Modes
 
@@ -50,8 +51,27 @@ authority declarations, and operator attribution are assembled server-side.
 8. The Console reports Delivery handoff completion only after OOS returns the
    target record and application receipt. A failed application refreshes the
    canonical blocked state and remains retryable with the same identity.
-9. Prototype handoff still stops at canonical preparation until a
-   Prototype-owned application adapter is admitted.
+9. An accepted Prototype route remains actionable while its handoff is merely
+   `ready`; Console no longer treats packet preparation as target application.
+10. The operator starts the Prototype target application from the existing
+    Handoff panel. The server re-reads the current Proposal, requires resolved
+    repository custody, reads the exact Prototype Studio preparation through
+    OOS, and constructs the caller-, session-, execution-, and replay-bound
+    command without accepting those authority fields from the browser.
+11. OOS opens the deterministic `workspace-prototype-studio` review and returns
+    `review-required`. Console displays its exact repository, review number,
+    and head, then uses the same application identity for reconciliation or
+    cancellation.
+12. Console records Handoff as applied only after OOS verifies the
+    human-reviewed merge, Studio readback and receipt, and the canonical
+    Proposal acknowledgement. Incomplete or malformed success evidence fails
+    closed without a local receipt.
+
+The target-application source remains runtime-inactive until Security ART
+`#1235` accepts the exact Console candidate and Platform ART `#1236` commissions
+the exact OOS and Console revisions. The accepted architecture authority is
+`architecture-packet:delivery-1203-v1`; this source slice does not create a new
+trust boundary, activation decision, or runtime authority.
 
 ## Local Validation
 

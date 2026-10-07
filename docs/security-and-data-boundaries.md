@@ -84,9 +84,17 @@ The transferred baseline remains limited to:
 - manual, suggestion-only local Ollama interaction with synthetic context
 
 The Proposal exception to that baseline is bounded to OOS list, capture,
-projection, command, and history routes. OOS credentials and configured
-operator attribution are server-only. Configured OOS failure disables Proposal
-writes and never falls back to synthetic records.
+projection, command, history, Delivery application, and Proposal-to-Prototype
+target-application routes. OOS credentials and configured operator attribution
+are server-only. For Prototype application the browser supplies only the
+current Proposal source binding and an explicit action. The Console server
+re-reads canonical Proposal and Studio preparation, constructs the immutable
+caller/session/execution/replay binding, and rejects unresolved repository
+custody before mutation. Only OOS-verified human merge, Studio receipt, and
+canonical Proposal acknowledgement may project success. Configured OOS failure
+or malformed partial evidence disables the action and never falls back to a
+synthetic receipt. The source remains inactive pending exact-revision Security
+ART `#1235` and Platform commissioning ART `#1236`.
 
 The Prototype exception covers three separate OOS boundaries. Prototype Landing
 accepts the reviewed operator draft, re-reads exact Studio preparation on the

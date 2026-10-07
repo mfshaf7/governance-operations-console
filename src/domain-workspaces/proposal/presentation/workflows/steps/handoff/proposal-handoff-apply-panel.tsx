@@ -15,12 +15,14 @@ import type { ProposalHandoffStepProjection } from "./proposal-handoff-step-view
 
 export function ProposalHandoffApplyPanel({
   draft,
+  onCancelTargetApplication,
   onApplyDraft,
   onNotesChange,
   projection,
   routeSelectionDraft,
 }: {
   draft: ProposalHandoffDraft;
+  onCancelTargetApplication: () => void;
   onApplyDraft: () => void;
   onNotesChange: (notes: string) => void;
   projection: ProposalHandoffStepProjection;
@@ -34,11 +36,16 @@ export function ProposalHandoffApplyPanel({
     handoffStatusLabel,
     handoffTone,
     normalizedNotes,
+    primaryActionLabel,
     repositoryGateBlocked,
     repositoryGateRef,
     reviewResultDetail,
     reviewResultStatus,
     routeHasRepositoryGate,
+    targetApplicationCanCancel,
+    targetApplicationDetail,
+    targetApplicationStatus,
+    targetApplicationTone,
     workflowBlocked,
   } = projection;
 
@@ -124,6 +131,15 @@ export function ProposalHandoffApplyPanel({
             label="Review Result"
             status={reviewResultStatus}
           />
+          {routeSelectionDraft.routeTarget === "Prototype" ? (
+            <TerasStatusItem
+              tone={targetApplicationTone}
+              detail={targetApplicationDetail}
+              index="05"
+              label="Target Application"
+              status={targetApplicationStatus}
+            />
+          ) : null}
         </TerasList>
         <TerasNoteField
           density="compact"
@@ -148,8 +164,17 @@ export function ProposalHandoffApplyPanel({
             onClick={onApplyDraft}
             tone={handoffTone === "danger" ? "danger" : "accent"}
           >
-            Apply Handoff
+            {primaryActionLabel}
           </TerasActionButton>
+          {targetApplicationCanCancel ? (
+            <TerasActionButton
+              emphasis="secondary"
+              onClick={onCancelTargetApplication}
+              tone="danger"
+            >
+              Cancel Target Review
+            </TerasActionButton>
+          ) : null}
         </TerasActionRow>
       </TerasFieldStack>
     </TerasPanel>

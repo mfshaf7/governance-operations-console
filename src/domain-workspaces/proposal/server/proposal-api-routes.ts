@@ -4,14 +4,17 @@ import type {
   ProposalLiveCaptureRequest,
   ProposalLiveCommandRequest,
   ProposalLiveHandoffApplicationRequest,
+  ProposalLiveTargetApplicationRequest,
 } from "../live-runtime/proposal-live-types.ts";
 import {
   applyProposalCommand,
   applyProposalDeliveryHandoff,
   captureProposal,
+  commandProposalTargetApplication,
   listProposalLiveRecords,
   proposalOosConfigured,
   ProposalOosError,
+  startProposalTargetApplication,
 } from "./proposal-oos-client.ts";
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
@@ -98,6 +101,36 @@ export async function applyProposalDeliveryHandoffRoute(
   }
 }
 
+export async function proposalTargetApplicationRoute(
+  request: NextRequest,
+  proposalId: string,
+) {
+  try {
+    if (request.method === "DELETE") {
+      return NextResponse.json(
+        await commandProposalTargetApplication(proposalId, "cancel"),
+        { headers: noStoreHeaders },
+      );
+    }
+    const value = await request.json().catch(() => null);
+    if (!isRecord(value) || !new Set(["continue", "start"]).has(String(value.action))) {
+      throw new ProposalOosError(
+        "Proposal target application action is invalid.",
+        "proposal_target_action_invalid",
+        400,
+      );
+    }
+    const result = value.action === "start"
+      ? await startProposalTargetApplication(
+          assertTargetApplicationRequest(value, proposalId),
+        )
+      : await commandProposalTargetApplication(proposalId, "continue");
+    return NextResponse.json(result, { headers: noStoreHeaders });
+  } catch (error) {
+    return proposalErrorResponse(error);
+  }
+}
+
 function assertCaptureRequest(value: unknown): ProposalLiveCaptureRequest {
   if (
     !isRecord(value) ||
@@ -157,6 +190,28 @@ function assertHandoffApplicationRequest(
     );
   }
   return value as unknown as ProposalLiveHandoffApplicationRequest;
+}
+
+function assertTargetApplicationRequest(
+  value: Record<string, unknown>,
+  proposalId: string,
+): ProposalLiveTargetApplicationRequest {
+  if (
+    value.action !== "start" ||
+    value.proposalId !== proposalId ||
+    !isRecord(value.source) ||
+    typeof value.source.handoffPacketRef !== "string" ||
+    typeof value.source.recordRef !== "string" ||
+    typeof value.source.recordVersion !== "string" ||
+    value.source.status !== "accepted"
+  ) {
+    throw new ProposalOosError(
+      "Proposal target application request is invalid.",
+      "proposal_target_application_invalid",
+      400,
+    );
+  }
+  return value as unknown as ProposalLiveTargetApplicationRequest;
 }
 
 function proposalErrorResponse(error: unknown) {

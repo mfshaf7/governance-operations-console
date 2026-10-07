@@ -17,6 +17,7 @@ import {
   assertProposalOosHandoffApplicationResult,
   assertProposalOosHistory,
   assertProposalOosProjection,
+  assertProposalTargetApplicationResult,
 } from "../live-runtime/proposal-live-contract.ts";
 import type {
   ProposalLiveCaptureRequest,
@@ -28,6 +29,8 @@ import type {
   ProposalOosHistory,
   ProposalOosProjection,
   ProposalOosRoute,
+  ProposalLiveTargetApplicationRequest,
+  ProposalTargetApplicationResult,
 } from "../live-runtime/proposal-live-types.ts";
 
 const proposalListLimit = 25;
@@ -193,6 +196,125 @@ export async function applyProposalDeliveryHandoff(
     fetchImpl,
   );
   return assertProposalOosHandoffApplicationResult(result);
+}
+
+export async function startProposalTargetApplication(
+  request: ProposalLiveTargetApplicationRequest,
+  {
+    env = process.env,
+    fetchImpl = fetch,
+  }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+): Promise<ProposalTargetApplicationResult> {
+  const config = resolveProposalOosConfig(env);
+  const projection = await readProposalProjection(
+    config,
+    request.proposalId,
+    fetchImpl,
+  );
+  assertProposalTargetApplicationSource(request, projection);
+  const prototypeId = proposalTargetPrototypeId(request.proposalId);
+  const preparation = assertProposalTargetPreparation(
+    await proposalOosRequest(
+      config,
+      "/v1/proposal-target-applications/preparations",
+      {
+        body: JSON.stringify({
+          proposal_id: request.proposalId,
+          prototype_id: prototypeId,
+        }),
+        method: "POST",
+      },
+      fetchImpl,
+    ),
+    request,
+    prototypeId,
+  );
+  const applicationId = proposalTargetApplicationId(request.proposalId);
+  const submitted = assertProposalTargetApplicationResult(
+    await proposalOosRequest(
+      config,
+      "/v1/proposal-target-applications",
+      {
+        body: JSON.stringify({
+          application_id: applicationId,
+          correlation_id: `console:proposal-target:${request.proposalId}`,
+          execution_ref: `console:proposal-target:${request.proposalId}:${request.source.recordVersion}`,
+          idempotency_key: applicationId,
+          operator_approval_ref: `console-approval:${config.operatorId}:${request.proposalId}:${request.source.recordVersion}`,
+          proposal: {
+            handoff_packet_digest:
+              preparation.proposal.handoff_packet_digest,
+            handoff_packet_ref: preparation.proposal.handoff_packet_ref,
+            proposal_id: preparation.proposal.proposal_id,
+            record_ref: preparation.proposal.record_ref,
+            record_version: preparation.proposal.record_version,
+          },
+          prototype: {
+            id: prototypeId,
+            suggested_name: projection.title,
+            suggested_objective:
+              projection.body ?? projection.route?.rationale ?? projection.title,
+          },
+          session_ref: `console-session:${request.proposalId}:${request.source.recordVersion}`,
+          target: {
+            authority_revision: preparation.authority_revision,
+            expected_state: preparation.expected_state,
+          },
+        }),
+        method: "POST",
+      },
+      fetchImpl,
+    ),
+  );
+  if (
+    submitted.application_id !== applicationId ||
+    submitted.proposal_id !== request.proposalId ||
+    submitted.prototype_id !== prototypeId
+  ) {
+    throw new ProposalOosError(
+      "OOS returned a different Proposal target application identity.",
+      "proposal_target_projection_invalid",
+      502,
+    );
+  }
+  return submitted.status === "accepted" || submitted.status === "preparing"
+    ? commandProposalTargetApplication(request.proposalId, "continue", {
+        env,
+        fetchImpl,
+      })
+    : submitted;
+}
+
+export async function commandProposalTargetApplication(
+  proposalId: string,
+  action: "cancel" | "continue",
+  {
+    env = process.env,
+    fetchImpl = fetch,
+  }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+) {
+  const config = resolveProposalOosConfig(env);
+  const applicationId = proposalTargetApplicationId(proposalId);
+  const result = assertProposalTargetApplicationResult(
+    await proposalOosRequest(
+      config,
+      `/v1/proposal-target-applications/${encodeURIComponent(applicationId)}/${action}`,
+      { body: "{}", method: "POST" },
+      fetchImpl,
+    ),
+  );
+  if (
+    result.application_id !== applicationId ||
+    result.proposal_id !== proposalId ||
+    result.prototype_id !== proposalTargetPrototypeId(proposalId)
+  ) {
+    throw new ProposalOosError(
+      "OOS returned a different Proposal target application binding.",
+      "proposal_target_projection_invalid",
+      502,
+    );
+  }
+  return result;
 }
 
 export async function readProposalProjection(
@@ -369,6 +491,99 @@ function proposalDeliveryApplicationId(proposalId: string) {
     );
   }
   return `proposal-application:${numericId}:delivery-1`;
+}
+
+export function proposalTargetApplicationId(proposalId: string) {
+  const numericId = proposalNumericId(proposalId);
+  return `proposal-prototype-application:proposal-${numericId}:${numericId}`;
+}
+
+function proposalTargetPrototypeId(proposalId: string) {
+  return `prototype:proposal-${proposalNumericId(proposalId)}`;
+}
+
+function proposalNumericId(proposalId: string) {
+  const numericId = proposalId.match(/^idea-([1-9][0-9]*)$/)?.[1];
+  if (!numericId) {
+    throw new ProposalOosError(
+      "Target application requires a canonical Proposal identity.",
+      "proposal_target_application_identity_invalid",
+      400,
+    );
+  }
+  return numericId;
+}
+
+function assertProposalTargetApplicationSource(
+  request: ProposalLiveTargetApplicationRequest,
+  projection: ProposalOosProjection,
+) {
+  if (
+    projection.proposal_id !== request.proposalId ||
+    projection.record_ref !== request.source.recordRef ||
+    projection.record_version !== request.source.recordVersion ||
+    projection.status !== request.source.status ||
+    projection.projection_state !== "current" ||
+    projection.route?.target !== "prototype" ||
+    projection.route.source_custody.repository_gate_state !== "resolved" ||
+    projection.handoff.state !== "ready" ||
+    projection.handoff.packet_ref !== request.source.handoffPacketRef
+  ) {
+    throw new ProposalOosError(
+      "Proposal target application requires the current accepted Prototype route, resolved repository gate, and exact prepared handoff.",
+      "proposal_target_source_stale",
+      409,
+    );
+  }
+}
+
+function assertProposalTargetPreparation(
+  value: unknown,
+  request: ProposalLiveTargetApplicationRequest,
+  prototypeId: string,
+) {
+  if (
+    !isRecord(value) ||
+    value.schema_version !== 1 ||
+    value.workflow_id !== "proposal-target-application" ||
+    value.prototype_id !== prototypeId ||
+    typeof value.authority_revision !== "string" ||
+    !/^[0-9a-f]{40}$/.test(value.authority_revision) ||
+    !isRecord(value.expected_state) ||
+    value.expected_state.source_revision !== value.authority_revision ||
+    typeof value.expected_state.registry_digest !== "string" ||
+    value.expected_state.record_present !== false ||
+    value.expected_state.record_digest !== null ||
+    !isRecord(value.proposal) ||
+    value.proposal.proposal_id !== request.proposalId ||
+    value.proposal.record_ref !== request.source.recordRef ||
+    value.proposal.record_version !== request.source.recordVersion ||
+    value.proposal.handoff_packet_ref !== request.source.handoffPacketRef ||
+    typeof value.proposal.handoff_packet_digest !== "string" ||
+    value.canonical_mutation !== false
+  ) {
+    throw new ProposalOosError(
+      "OOS returned invalid Proposal target preparation evidence.",
+      "proposal_target_preparation_invalid",
+      502,
+    );
+  }
+  return value as {
+    authority_revision: string;
+    expected_state: {
+      record_digest: null;
+      record_present: false;
+      registry_digest: string;
+      source_revision: string;
+    };
+    proposal: {
+      handoff_packet_digest: string;
+      handoff_packet_ref: string;
+      proposal_id: string;
+      record_ref: string;
+      record_version: string;
+    };
+  };
 }
 
 function proposalSourceExpectation(

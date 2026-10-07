@@ -23,6 +23,8 @@ separately governed OOS integration slices:
 - versioned canonical source envelopes for admitted live GET projections, with
   owner, identity, freshness, and ordering validation before use
 - canonical Proposal list, capture, projection, command, and history paths
+- Proposal-to-Prototype target application with repository-gate enforcement,
+  exact Studio review projection, and receipt-plus-acknowledgement completion
 - bounded visible-page polling with fail-closed writes
 - explicit disconnected preview when no OOS endpoint is configured
 - Prototype-to-Delivery application for an exact, source-authoritative
