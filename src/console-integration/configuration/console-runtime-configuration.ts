@@ -1,4 +1,4 @@
-import { isAbsolute } from "node:path";
+import { isAbsolute, relative } from "node:path";
 
 export const CONSOLE_RUNTIME_CAPABILITY_SCHEMA_VERSION = 1 as const;
 
@@ -15,6 +15,7 @@ export type ConsoleRuntimeCapabilityId =
   | "prototype-delivery"
   | "prototype-landing"
   | "prototype-maturity"
+  | "prototype-preview"
   | "repository-custody"
   | "repository-lifecycle"
   | "repository-provisioning"
@@ -53,6 +54,12 @@ export type ConsoleRuntimeObservationConfiguration = Readonly<{
   projectionPath: string;
 }>;
 
+export type ConsolePrototypePreviewConfiguration = Readonly<{
+  ownerRepoRoot: string;
+  sourceRevision: string;
+  stateRoot: string;
+}>;
+
 export type ConsoleArtifactReference = Readonly<{
   digest: string;
   uri: string;
@@ -71,7 +78,7 @@ export type ConsoleRuntimeCapability = Readonly<{
     reasonCode: string | null;
     state: ConsoleRuntimeCapabilityState;
   }>;
-  owner: "operator-orchestration-service";
+  owner: "operator-orchestration-service" | "workspace-prototype-studio";
   source: Readonly<{
     reasonCode: string | null;
     state: ConsoleRuntimeCapabilityState;
@@ -98,17 +105,26 @@ export class ConsoleRuntimeConfigurationError extends Error {
 
 const defaultCallerId = "governance-operations-console";
 const digestPattern = /^sha256:[a-f0-9]{64}$/;
+const gitRevisionPattern = /^[a-f0-9]{40}$/;
 
 const capabilityDefinitions: readonly Readonly<{
   id: ConsoleRuntimeCapabilityId;
   label: string;
   mutationArtifactReferences?: readonly ConsoleArtifactReferenceNames[];
+  owner?: "operator-orchestration-service" | "workspace-prototype-studio";
+  runtime?: "oos" | "prototype-preview";
 }>[] = [
   { id: "proposal", label: "Proposal" },
   { id: "prototype-landing", label: "Prototype Landing" },
   { id: "prototype-maturity", label: "Prototype Maturity" },
   { id: "prototype-closure", label: "Prototype Closure" },
   { id: "prototype-delivery", label: "Prototype Delivery" },
+  {
+    id: "prototype-preview",
+    label: "Prototype Preview Runtime",
+    owner: "workspace-prototype-studio",
+    runtime: "prototype-preview",
+  },
   { id: "delivery-work-design", label: "Delivery Work Design" },
   { id: "delivery-refinement", label: "Delivery Refinement" },
   { id: "delivery-catalog", label: "Delivery Catalog" },
@@ -287,6 +303,55 @@ export function resolveConsoleRuntimeObservationConfiguration(
   return { projectionPath };
 }
 
+export function consolePrototypePreviewModeSelected(
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  return Boolean(
+    env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_OWNER_REPO_ROOT?.trim() ||
+      env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_SOURCE_REVISION?.trim() ||
+      env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_STATE_ROOT?.trim(),
+  );
+}
+
+export function resolveConsolePrototypePreviewConfiguration(
+  env: NodeJS.ProcessEnv = process.env,
+): ConsolePrototypePreviewConfiguration {
+  const ownerRepoRoot =
+    env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_OWNER_REPO_ROOT?.trim();
+  const sourceRevision =
+    env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_SOURCE_REVISION?.trim();
+  const stateRoot =
+    env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_STATE_ROOT?.trim();
+  if (
+    !ownerRepoRoot ||
+    !stateRoot ||
+    !isAbsolute(ownerRepoRoot) ||
+    !isAbsolute(stateRoot)
+  ) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Studio Preview Runtime owner and state roots are not fully configured.",
+      "console_prototype_preview_configuration_incomplete",
+    );
+  }
+  if (!sourceRevision || !gitRevisionPattern.test(sourceRevision)) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Studio Preview Runtime source revision is invalid.",
+      "console_prototype_preview_source_revision_invalid",
+    );
+  }
+  const stateRelativeToSource = relative(ownerRepoRoot, stateRoot);
+  if (
+    stateRelativeToSource === "" ||
+    (!stateRelativeToSource.startsWith("..") && !isAbsolute(stateRelativeToSource))
+  ) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Studio Preview Runtime state root must stay outside owner source.",
+      "console_prototype_preview_state_root_invalid",
+    );
+  }
+  return { ownerRepoRoot, sourceRevision, stateRoot };
+}
+
 export function resolveConsoleOperatorBinding(
   env: NodeJS.ProcessEnv = process.env,
 ): string {
@@ -343,17 +408,33 @@ export function projectConsoleRuntimeCapabilities(
 ): ConsoleRuntimeCapabilityProjection {
   const source = projectSourceState(env);
   const mutation = projectMutationState(env, source);
-  const capabilities = capabilityDefinitions.map((definition) => ({
-    id: definition.id,
-    label: definition.label,
-    mutation: projectCapabilityMutationState(
-      env,
-      mutation,
-      definition.mutationArtifactReferences ?? [],
-    ),
-    owner: "operator-orchestration-service" as const,
-    source,
-  }));
+  const capabilities = capabilityDefinitions.map((definition) => {
+    if (definition.runtime === "prototype-preview") {
+      const previewSource = projectPrototypePreviewSourceState(env);
+      const previewMutation =
+        previewSource.state === "available"
+          ? projectMutationState(env, previewSource)
+          : previewSource;
+      return {
+        id: definition.id,
+        label: definition.label,
+        mutation: previewMutation,
+        owner: definition.owner ?? "workspace-prototype-studio",
+        source: previewSource,
+      };
+    }
+    return {
+      id: definition.id,
+      label: definition.label,
+      mutation: projectCapabilityMutationState(
+        env,
+        mutation,
+        definition.mutationArtifactReferences ?? [],
+      ),
+      owner: definition.owner ?? "operator-orchestration-service",
+      source,
+    };
+  });
   const states = capabilities.flatMap((capability) => [
     capability.source.state,
     capability.mutation.state,
@@ -363,14 +444,31 @@ export function projectConsoleRuntimeCapabilities(
     artifactType: "console-runtime-capability-projection",
     capabilities,
     generatedAt: now.toISOString(),
-    mode:
-      source.state === "invalid"
-        ? "invalid"
-        : states.every((state) => state === "disconnected")
-          ? "disconnected-preview"
-          : "live",
+    mode: capabilities.some((capability) => capability.source.state === "invalid")
+      ? "invalid"
+      : states.every((state) => state === "disconnected")
+        ? "disconnected-preview"
+        : "live",
     schemaVersion: CONSOLE_RUNTIME_CAPABILITY_SCHEMA_VERSION,
   };
+}
+
+function projectPrototypePreviewSourceState(env: NodeJS.ProcessEnv) {
+  if (!consolePrototypePreviewModeSelected(env)) {
+    return {
+      reasonCode: "console_prototype_preview_not_selected",
+      state: "disconnected" as const,
+    };
+  }
+  try {
+    resolveConsolePrototypePreviewConfiguration(env);
+    return { reasonCode: null, state: "available" as const };
+  } catch (error) {
+    return {
+      reasonCode: configurationErrorCode(error),
+      state: "invalid" as const,
+    };
+  }
 }
 
 function projectSourceState(env: NodeJS.ProcessEnv) {

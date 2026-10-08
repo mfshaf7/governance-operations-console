@@ -111,6 +111,18 @@ Delivery packet, and neither boundary calls OpenProject, WGCF, or the source
 provider directly. Disconnected fixture behavior remains explicitly local and
 cannot claim source mutation or live Delivery application.
 
+Prototype Preview Runtime is a separate server-only Workspace Prototype Studio
+owner boundary. When all three owner values are configured, the Console invokes
+only Studio's fixed preview command at the exact reviewed source revision; the
+browser may submit only a bounded lifecycle intent with the source, profile,
+runtime-state, and instance binding it reviewed. The Console accepts only
+loopback, no-network, no-mutation, mock-or-synthetic owner projections and
+digest-valid receipts and proof. Partial configuration, stale state, malformed
+owner output, or owner failure disables the live action and never falls back to
+a prototype-local success. This boundary grants no Platform, public-exposure,
+or Security acceptance; exact-revision operating evidence remains gated by
+Security ART `#1239`.
+
 The Delivery Work Design exception is bounded to canonical source projection,
 governed context and tree advice, canonical apply, reconciliation, and durable
 receipt readback through OOS. OOS credentials and configured operator

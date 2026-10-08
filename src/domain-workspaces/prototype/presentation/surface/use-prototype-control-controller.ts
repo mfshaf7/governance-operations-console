@@ -51,6 +51,11 @@ import {
   prototypeLandingAllowsLocalFallback,
   usePrototypeLandingLiveRuntime,
 } from "../../live-runtime/use-prototype-landing-live-runtime.ts";
+import { projectPrototypePreviewOwnerRecord } from "../../live-runtime/prototype-preview-live-projection.ts";
+import {
+  PrototypePreviewClientError,
+  usePrototypePreviewLiveRuntime,
+} from "../../live-runtime/use-prototype-preview-live-runtime.ts";
 import {
   prototypeMaturityAllowsLocalFallback,
   prototypeMaturityInputKey,
@@ -80,6 +85,7 @@ export function usePrototypeControlController({
   const closureRuntime = usePrototypeClosureLiveRuntime();
   const landingRuntime = usePrototypeLandingLiveRuntime();
   const maturityRuntime = usePrototypeMaturityLiveRuntime();
+  const previewRuntime = usePrototypePreviewLiveRuntime();
   const sourceReadModel = getPrototypeWorkspaceReadModel();
   const state = usePrototypeControlState(sourceReadModel);
   const [requestDraft, setRequestDraft] = useState<PrototypeRequestDraft>(
@@ -130,18 +136,43 @@ export function usePrototypeControlController({
     () => getSelectedPrototypeRecord(readModel, state.selectedRecordId),
     [readModel, state.selectedRecordId],
   );
-  const activeRecord = selectedRecord;
+  const selectedPreviewMode = selectedRecord
+    ? (previewRuntime.modeByRecord[selectedRecord.id] ??
+      (state.activeDialog === "preview-runtime" ? "loading" : "disconnected"))
+    : "disconnected";
+  const activeRecord = useMemo(() => {
+    if (!selectedRecord || selectedPreviewMode === "disconnected") return selectedRecord;
+    return projectPrototypePreviewOwnerRecord(
+      selectedRecord,
+      previewRuntime.projectionByRecord[selectedRecord.id] ?? null,
+      previewRuntime.proofByRecord[selectedRecord.id] ?? null,
+      selectedPreviewMode === "live"
+        ? "live"
+        : selectedPreviewMode === "error"
+          ? "error"
+          : "loading",
+    );
+  }, [
+    previewRuntime.projectionByRecord,
+    previewRuntime.proofByRecord,
+    selectedPreviewMode,
+    selectedRecord,
+  ]);
 
   useEffect(() => {
     if (!activeRecord || !["dashboard", "closeout-retirement", "history"].includes(state.activeDialog ?? "")) return;
     void closureRuntime.load(activeRecord).catch(() => undefined);
   }, [activeRecord?.id, state.activeDialog, closureRuntime.load]);
+  useEffect(() => {
+    if (!selectedRecord || state.activeDialog !== "preview-runtime") return;
+    void previewRuntime.load(selectedRecord).catch(() => undefined);
+  }, [selectedRecord?.id, state.activeDialog, previewRuntime.load]);
   const selectedReceipts = activeRecord
     ? (effectiveProjection.receiptsByRecord[activeRecord.id] ?? [])
     : [];
-  const selectedPreviewReceipts = selectedReceipts.filter(
-    (receipt) => receipt.authority === "prototype-local",
-  );
+  const selectedPreviewReceipts = activeRecord && selectedPreviewMode === "live"
+    ? (previewRuntime.receiptsByRecord[activeRecord.id] ?? [])
+    : selectedReceipts.filter((receipt) => receipt.authority === "prototype-local");
   const selectedDeliveryApplication = activeRecord
     ? (deliveryRuntime.projectionsByPrototypeId[
         prototypeRecordSourceId(activeRecord)
@@ -392,6 +423,18 @@ export function usePrototypeControlController({
     record: PrototypeRecord,
     actionId: PrototypePreviewRuntimeMutationActionId,
   ) {
+    const mode = previewRuntime.modeByRecord[record.id];
+    if (mode !== "disconnected") {
+      try {
+        await previewRuntime.command(
+          record,
+          actionId.replace("-preview", "") as "restart" | "start" | "stop",
+        );
+        return;
+      } catch (error) {
+        if (!previewFallbackAllowed(error)) throw error;
+      }
+    }
     await recordPrototypeProjection(record, actionId, {});
   }
 
@@ -400,10 +443,20 @@ export function usePrototypeControlController({
     draft: PrototypePreviewProfileDraft,
     actionId: PrototypePreviewProfileMutationActionId,
   ) {
+    if (previewRuntime.modeByRecord[record.id] === "live") return;
     await recordPrototypeProjection(record, actionId, draft);
   }
 
   async function recordPreviewCheck(record: PrototypeRecord) {
+    const mode = previewRuntime.modeByRecord[record.id];
+    if (mode !== "disconnected") {
+      try {
+        await previewRuntime.prove(record);
+        return;
+      } catch (error) {
+        if (!previewFallbackAllowed(error)) throw error;
+      }
+    }
     await recordPrototypeProjection(record, "refresh-preview-proof", {});
   }
 
@@ -444,6 +497,7 @@ export function usePrototypeControlController({
       open: requestOpen,
     },
     selectedPreviewReceipts,
+    selectedPreviewOwnerMode: selectedPreviewMode,
     selectedReceipts,
     selectedClosure: activeRecord ? {
       preparation: closureRuntime.preparations[activeRecord.id] ?? null,
@@ -480,6 +534,13 @@ export function usePrototypeControlController({
       },
     },
   };
+}
+
+function previewFallbackAllowed(error: unknown) {
+  return (
+    error instanceof PrototypePreviewClientError &&
+    error.code === "prototype_preview_live_mode_required"
+  );
 }
 
 export type PrototypeControlController = ReturnType<

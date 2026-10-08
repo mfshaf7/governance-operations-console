@@ -6,6 +6,18 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-08
+
+- Connected the existing Preview Runtime surface to the exact Workspace
+  Prototype Studio profile, bounded lifecycle command, safe projection, proof,
+  and digest-bound receipt contract through server-only same-origin routes.
+- Preserved disconnected prototype-local behavior only when owner integration
+  is wholly unconfigured; partial configuration and configured failures now
+  fail closed without fixture success.
+- Made Studio ownership, exact source revision, runtime state, and
+  source-projected command receipts visible without changing the accepted
+  Preview Runtime visual baseline.
+
 ## 2026-10-07
 
 - Connected accepted Prototype-routed Proposals to the OOS-owned target

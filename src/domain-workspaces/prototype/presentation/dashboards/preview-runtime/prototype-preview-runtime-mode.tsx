@@ -30,10 +30,12 @@ import {
 } from "./prototype-preview-runtime-model.ts";
 
 export function PrototypePreviewRuntimeMode({
+  ownerControlled,
   proofResult,
   record,
 }: {
   proofResult: ReturnType<typeof prototypePreviewProofResult>;
+  ownerControlled: boolean;
   record: PrototypeRecord;
 }) {
   return (
@@ -80,9 +82,17 @@ export function PrototypePreviewRuntimeMode({
         spacing="compact"
       >
         <TerasPanelHeader
-          actions={<TerasStatusPill tone="info">Local profile</TerasStatusPill>}
+          actions={
+            <TerasStatusPill tone="info">
+              {ownerControlled ? "Studio-owned" : "Local profile"}
+            </TerasStatusPill>
+          }
           actionsLayout="inline"
-          description="Launch command, working directory, and profile source used by the preview runtime."
+          description={
+            ownerControlled
+              ? "Exact owner revision, loopback endpoint, and bounded command projected by Workspace Prototype Studio."
+              : "Launch command, working directory, and profile source used by the preview runtime."
+          }
           kicker="Launch Context"
           title="Preview launch contract"
         />

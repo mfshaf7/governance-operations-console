@@ -49,7 +49,7 @@ Concrete definition contracts are indexed in
 | Prototype | Candidate Promotion | `synchronous` | Interview, review, and decision are bounded domain work. |
 | Prototype | Baseline Promotion decision | `synchronous` | Packet editing and the final operator decision do not themselves require a durable run. |
 | Prototype | Baseline readiness execution | `conditional` | Promote when external validation, context admission, security checks, or long-running evidence collection are implemented. |
-| Prototype Preview Runtime | Start, stop, restart, and check | `synchronous` | These are direct bounded host-control commands with their own command logs. |
+| Prototype Preview Runtime | Start, stop, restart, and check | `synchronous` | Disconnected mode is prototype-local; configured mode uses the fixed Workspace Prototype Studio owner command through the Console server and projects its digest-bound receipts. |
 | Prototype | Movement request preparation | `synchronous` | Prototype prepares intent; Lifecycle Transition Control owns later cross-boundary execution. |
 | Prototype | Local closeout or retirement | `synchronous` | Record one local lifecycle outcome; impacted cross-boundary cleanup requires separate qualification. |
 | Workspace Governance | Repository, product, or component entrant classification | `synchronous` | Validate one typed candidate and record one explicit `out-of-scope`, `proposed`, or `admitted` intake-register outcome; no active inventory is created. |

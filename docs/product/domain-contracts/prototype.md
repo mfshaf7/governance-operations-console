@@ -360,8 +360,11 @@ Persistent subsystem status belongs in stable subsystem modals:
 - Prototype Dashboard
 - Preview Runtime
 
-Preview Runtime owns runtime/profile/proof inspection and local preview runtime
-actions. A preview proof action may record prototype-local evidence, but
+Preview Runtime owns runtime/profile/proof inspection and bounded preview
+runtime actions. In disconnected mode, a preview proof action may record
+prototype-local evidence. When the Studio owner integration is configured, the
+same surface projects only exact-revision Studio status, proof, and receipts;
+it does not manufacture Console-local runtime success. In either mode,
 Preview Runtime itself is not a lifecycle workflow step and must not use
 workflow-session chrome. It does not use an advisor panel.
 
@@ -735,9 +738,11 @@ and recommend a decision with reasons. It must not auto-promote, silently edit
 drafts, invent source truth, hide uncertainty, or trigger movement/baseline
 actions. Operator action records the decision.
 
-Preview Runtime inspects the local preview profile, runtime status, logs, and
-proof path. It may record a prototype-local preview proof receipt from a
-Preview Runtime action. Baseline Promotion consumes preview proof when the baseline
+Preview Runtime inspects the preview profile, runtime status, logs, and proof
+path. Disconnected mode may record a prototype-local preview proof receipt.
+Configured live mode reads and commands the Workspace Prototype Studio owner
+through the Console server and projects only its exact-revision, digest-bound
+receipt and proof. Baseline Promotion consumes preview proof when the baseline
 requires it. Preview Runtime does not create platform runtime authority and is
 not a lifecycle transition workflow.
 
@@ -1004,8 +1009,10 @@ application authorities in the lifecycle-transition contract.
 
 ## Preview And Runtime Admission
 
-Preview runtime proof is local proof only. Landing or Preview Runtime must choose
-the smallest truthful preview mode:
+Preview runtime proof is bounded preview evidence only. It is either an
+explicit prototype-local disconnected proof or an exact-revision Workspace
+Prototype Studio owner proof. Landing or Preview Runtime must choose the
+smallest truthful preview mode:
 
 - no preview required
 - static or docs-only review
@@ -1033,8 +1040,12 @@ what the product permanently is.
 
 ## Command And Receipt Model
 
-Prototype commands are prototype-local unless a future backend command path is
-admitted.
+Prototype commands are prototype-local unless a named owner command path is
+admitted. Preview Runtime has one such bounded owner path when all Studio
+configuration is valid: the Console server invokes the fixed Studio command,
+while the browser supplies only a lifecycle intent and reviewed-state binding.
+Absent configuration remains explicitly prototype-local; partial or invalid
+configuration fails closed.
 
 Expected prototype-local commands:
 
@@ -1042,7 +1053,8 @@ Expected prototype-local commands:
 - land prototype request
 - record candidate promotion decision
 - save or confirm preview profile
-- start, stop, or restart preview runtime
+- start, stop, or restart preview runtime (prototype-local when disconnected;
+  Studio-owned when the admitted owner path is configured)
 - refresh preview proof
 - record baseline promotion
 - prepare source transition intent
@@ -1140,7 +1152,7 @@ The accepted replacement should add focused guards for:
   receipt
 - source transition-intent drafts use structured fields and gate snapshots,
   not prose alone
-- prototype-local receipts cannot be rendered as durable backend, platform,
+- prototype-local receipts cannot be rendered as Studio-owner, durable backend, platform,
   security, lifecycle-transition, or Delivery receipts
 - legacy `prebaseline` cannot re-enter accepted source after final cutover
 
