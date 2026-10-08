@@ -14,13 +14,20 @@ import {
 } from "@/domain-workspaces/operation-projections";
 
 import type { ModelOperationsSummaryMetric } from "../../read-model/types/model-operations-types.ts";
+import type { ModelProfileRequestProjection } from "../../live-runtime/model-operations-live-types.ts";
 
 export function ModelOperationsControlOverviewPanel({
   onOpenRequestSupport,
+  onOpenRequest,
+  requestAvailable,
+  latestRequest,
   summary,
   workspaceStatus,
 }: {
   onOpenRequestSupport: () => void;
+  onOpenRequest: () => void;
+  requestAvailable: boolean;
+  latestRequest: ModelProfileRequestProjection | null;
   summary: ModelOperationsSummaryMetric[];
   workspaceStatus: OperationSurfaceStatusModel;
 }) {
@@ -38,7 +45,7 @@ export function ModelOperationsControlOverviewPanel({
       <TerasRecordControlActionPanel
         action={
           <>
-            <TerasActionButton disabled>
+            <TerasActionButton disabled={!requestAvailable} onClick={onOpenRequest}>
               <Plus aria-hidden="true" size={14} />
               Request Profile
             </TerasActionButton>
@@ -51,12 +58,20 @@ export function ModelOperationsControlOverviewPanel({
             </TerasActionButton>
           </>
         }
-        boundary="No admitted request API, review projection, fulfillment command, or registry reconciliation receipt exists yet."
+        boundary={
+          requestAvailable
+            ? "Requests are written only through OOS. Platform owns fulfillment and source; Security owns acceptance."
+            : "The configured OOS and Platform projections must both be current before a request can be submitted."
+        }
         boundaryKicker="Capability Boundary"
-        description="The future request path will cover profile creation and lifecycle changes without direct registry mutation."
+        description={
+          latestRequest
+            ? `Latest request ${latestRequest.request_id} is ${latestRequest.review_state}; fulfillment is ${latestRequest.fulfillment_state}.`
+            : "The primary request path creates one profile intent without direct registry mutation."
+        }
         kicker="Profile Requests"
-        title="Request path is not available"
-        tone="warn"
+        title={requestAvailable ? "Request a governed profile" : "Request path is unavailable"}
+        tone={requestAvailable ? "info" : "warn"}
       />
     </TerasRecordControlOverviewGrid>
   );

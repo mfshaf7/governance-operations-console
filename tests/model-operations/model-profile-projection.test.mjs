@@ -50,16 +50,14 @@ test("dashboard checks preserve suspension and blocked evidence", () => {
   );
 });
 
-test("profile request remains a truthful unavailable capability", () => {
-  assert.equal(modelProfileRequestCapability.availability, "planned");
-  assert.equal(modelProfileRequestCapability.actionSemantic, "unavailable");
+test("profile request exposes the admitted OOS-mediated capability", () => {
+  assert.equal(modelProfileRequestCapability.availability, "available");
+  assert.equal(modelProfileRequestCapability.actionSemantic, "submit");
   assert.equal(
     modelProfileRequestCapability.workflowOwner,
     "operator-orchestration-service",
   );
-  assert.ok(
-    modelProfileRequestCapability.requiredBeforeEnable.includes(
-      "source-version reconciliation",
-    ),
-  );
+  assert.ok(modelProfileRequestCapability.controls.includes(
+    "Console stores no durable request or profile truth",
+  ));
 });

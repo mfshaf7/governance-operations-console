@@ -47,6 +47,21 @@ remains required.
 The Console may project evidence from those authorities. It must not replace
 them or imply that a local UI state is an authority decision.
 
+Model Operations is a same-origin, server-only composition over three distinct
+owners. OOS owns request and review state, Platform Engineering owns profile
+source, lifecycle application, and merged readback, and Security Architecture
+owns acceptance and exception decisions. The browser may submit only a bounded
+create intent; it cannot select a provider or model, supply caller authority or
+credentials, write Platform artifacts, approve its own request, or assert
+completion. The Console re-reads every OOS item through the canonical source
+envelope and accepts Platform evidence only from regular, same-owner `0600`
+files whose digests and cross-artifact bindings reconcile. Partial
+configuration, stale or conflicting OOS evidence, unsafe files, incomplete
+fulfillment, or owner failure blocks the live surface without fixture fallback.
+The read-only operating projection exists only after the exact approved OOS
+request, Platform lifecycle receipt, merged readback, and current profile
+projection agree; it grants the Console no profile mutation authority.
+
 Governance Activity is a server-only read composition over the OOS workflow
 activity and WGCF governance-history projections. Each owner uses a distinct
 runtime credential. Reads are bounded, payloads are contract-validated, and

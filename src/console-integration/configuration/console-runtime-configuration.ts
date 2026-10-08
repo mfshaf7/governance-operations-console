@@ -10,6 +10,7 @@ export type ConsoleRuntimeCapabilityId =
   | "delivery-work-design"
   | "delivery-work-session"
   | "lifecycle-transitions"
+  | "model-operations"
   | "proposal"
   | "prototype-closure"
   | "prototype-delivery"
@@ -53,6 +54,13 @@ export type ConsoleSessionConfiguration = Readonly<{
 export type ConsoleRuntimeObservationConfiguration = Readonly<{
   projectionPath: string;
 }>;
+
+export type ConsoleModelOperationsConfiguration = ConsoleOosOperatorConfiguration &
+  Readonly<{
+    lifecycleReceiptPath: string;
+    mergedReadbackPath: string;
+    sourceProjectionPath: string;
+  }>;
 
 export type ConsolePrototypePreviewConfiguration = Readonly<{
   ownerRepoRoot: string;
@@ -112,7 +120,7 @@ const capabilityDefinitions: readonly Readonly<{
   label: string;
   mutationArtifactReferences?: readonly ConsoleArtifactReferenceNames[];
   owner?: "operator-orchestration-service" | "workspace-prototype-studio";
-  runtime?: "oos" | "prototype-preview";
+  runtime?: "model-operations" | "oos" | "prototype-preview";
 }>[] = [
   { id: "proposal", label: "Proposal" },
   { id: "prototype-landing", label: "Prototype Landing" },
@@ -132,6 +140,11 @@ const capabilityDefinitions: readonly Readonly<{
   { id: "delivery-change-control", label: "Delivery Change Control" },
   { id: "delivery-closeout", label: "Delivery Closeout" },
   { id: "lifecycle-transitions", label: "Lifecycle Transitions" },
+  {
+    id: "model-operations",
+    label: "Model Operations",
+    runtime: "model-operations",
+  },
   {
     id: "repository-custody",
     label: "Repository Custody",
@@ -303,6 +316,39 @@ export function resolveConsoleRuntimeObservationConfiguration(
   return { projectionPath };
 }
 
+export function consoleModelOperationsModeSelected(
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  return Boolean(
+    env.GOVERNANCE_CONSOLE_MODEL_PROFILE_SOURCE_PROJECTION_PATH?.trim() ||
+      env.GOVERNANCE_CONSOLE_MODEL_PROFILE_LIFECYCLE_RECEIPT_PATH?.trim() ||
+      env.GOVERNANCE_CONSOLE_MODEL_PROFILE_MERGED_READBACK_PATH?.trim(),
+  );
+}
+
+export function resolveConsoleModelOperationsConfiguration(
+  env: NodeJS.ProcessEnv = process.env,
+): ConsoleModelOperationsConfiguration {
+  return {
+    ...resolveConsoleOosOperatorConfiguration(env),
+    sourceProjectionPath: absolutePath(
+      env.GOVERNANCE_CONSOLE_MODEL_PROFILE_SOURCE_PROJECTION_PATH,
+      "console_model_profile_source_projection_unavailable",
+      "The Platform model-profile source projection is not configured.",
+    ),
+    lifecycleReceiptPath: absolutePath(
+      env.GOVERNANCE_CONSOLE_MODEL_PROFILE_LIFECYCLE_RECEIPT_PATH,
+      "console_model_profile_lifecycle_receipt_unavailable",
+      "The Platform model-profile lifecycle receipt is not configured.",
+    ),
+    mergedReadbackPath: absolutePath(
+      env.GOVERNANCE_CONSOLE_MODEL_PROFILE_MERGED_READBACK_PATH,
+      "console_model_profile_merged_readback_unavailable",
+      "The Platform model-profile merged readback is not configured.",
+    ),
+  };
+}
+
 export function consolePrototypePreviewModeSelected(
   env: NodeJS.ProcessEnv = process.env,
 ) {
@@ -423,6 +469,19 @@ export function projectConsoleRuntimeCapabilities(
         source: previewSource,
       };
     }
+    if (definition.runtime === "model-operations") {
+      const modelOperationsSource = projectModelOperationsSourceState(env);
+      return {
+        id: definition.id,
+        label: definition.label,
+        mutation:
+          modelOperationsSource.state === "available"
+            ? projectMutationState(env, modelOperationsSource)
+            : modelOperationsSource,
+        owner: definition.owner ?? "operator-orchestration-service",
+        source: modelOperationsSource,
+      };
+    }
     return {
       id: definition.id,
       label: definition.label,
@@ -462,6 +521,24 @@ function projectPrototypePreviewSourceState(env: NodeJS.ProcessEnv) {
   }
   try {
     resolveConsolePrototypePreviewConfiguration(env);
+    return { reasonCode: null, state: "available" as const };
+  } catch (error) {
+    return {
+      reasonCode: configurationErrorCode(error),
+      state: "invalid" as const,
+    };
+  }
+}
+
+function projectModelOperationsSourceState(env: NodeJS.ProcessEnv) {
+  if (!consoleModelOperationsModeSelected(env)) {
+    return {
+      reasonCode: "console_model_operations_not_selected",
+      state: "disconnected" as const,
+    };
+  }
+  try {
+    resolveConsoleModelOperationsConfiguration(env);
     return { reasonCode: null, state: "available" as const };
   } catch (error) {
     return {
@@ -545,4 +622,16 @@ function artifactNames(
     label,
     uriName: `${prefix}_URI`,
   };
+}
+
+function absolutePath(
+  raw: string | undefined,
+  code: string,
+  message: string,
+) {
+  const value = raw?.trim();
+  if (!value || !isAbsolute(value)) {
+    throw new ConsoleRuntimeConfigurationError(message, code);
+  }
+  return value;
 }

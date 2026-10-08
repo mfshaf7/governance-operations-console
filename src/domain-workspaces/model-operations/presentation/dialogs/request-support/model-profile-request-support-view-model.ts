@@ -16,12 +16,12 @@ export function modelProfileRequestMetadata(
 export function modelProfileRequestRequirementRows(
   capability: ModelProfileRequestCapability,
 ) {
-  return capability.requiredBeforeEnable.map((requirement, index) => ({
-    detail: "Required before the Console can submit or track a profile change.",
+  return capability.controls.map((requirement, index) => ({
+    detail: "Enforced by the admitted Model Operations request and reconciliation boundary.",
     id: requirement,
     index: String(index + 1).padStart(2, "0"),
     label: requirement,
-    status: "Missing",
-    tone: "warn" as const,
+    status: "Active",
+    tone: "ok" as const,
   }));
 }

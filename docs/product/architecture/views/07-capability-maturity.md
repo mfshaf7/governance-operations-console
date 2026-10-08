@@ -31,7 +31,7 @@ All capabilities and transitions in this view are `approved-target`.
 | Operation Workbench | implemented | not-required | not-required | pre-baseline |
 | Proposal | implemented | implemented | connected | post-baseline |
 | Repository | implemented | implemented | connected | dev-integration |
-| Model Operations | implemented | partial | missing | post-baseline |
+| Model Operations | implemented | implemented | implemented | post-baseline |
 | Delivery | implemented | implemented | partial | post-baseline |
 | Prototype | partial | partial | partial | post-baseline |
 | Product Portfolio | implemented | partial | missing | post-baseline |

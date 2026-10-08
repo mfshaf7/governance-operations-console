@@ -427,12 +427,12 @@ capabilities:
     design_status: approved-target
     implementation:
       console: implemented
-      backend_support: partial
-      live_adapter: missing
+      backend_support: implemented
+      live_adapter: implemented
       delivery_phase: post-baseline
     post_baseline_work:
-      - Add read projections and an OOS-owned profile request workflow.
-      - Keep fulfillment, activation, suspension, and retirement source-backed and owner-routed.
+      - Complete exact Security acceptance and controlled runtime activation.
+      - Keep fulfillment, activation, suspension, and retirement source-backed and owner-routed; the Console only submits create requests and reconciles projections.
 
   delivery:
     label: Delivery

@@ -20,6 +20,7 @@ import { modelProfileAvailability } from "../../read-model/selectors/model-profi
 import { ModelProfileDashboard } from "../dashboards/model-profile/model-profile-dashboard.tsx";
 import { LocalExceptionRuntimeDialog } from "../dialogs/local-runtime/local-exception-runtime-dialog.tsx";
 import { ModelProfileRequestSupportDialog } from "../dialogs/request-support/model-profile-request-support-dialog.tsx";
+import { ModelProfileRequestModal } from "../workflows/profile-request/model-profile-request-modal.tsx";
 import {
   localExceptionRuntimeSummaryMetadata,
   localExceptionRuntimeTone,
@@ -40,15 +41,9 @@ export function ModelOperationsControlSurface() {
   const controller = useModelOperationsControlController();
   const selectedProfile = controller.selectedProfile;
 
-  if (!selectedProfile) {
-    return (
-      <TerasEmptyState fill>
-        No governed model profiles are available in the projection.
-      </TerasEmptyState>
-    );
-  }
-
-  const availability = modelProfileAvailability(selectedProfile);
+  const availability = selectedProfile
+    ? modelProfileAvailability(selectedProfile)
+    : null;
   const localRuntimeTone = localExceptionRuntimeTone(
     controller.readModel.localExceptionRuntime,
   );
@@ -61,7 +56,10 @@ export function ModelOperationsControlSurface() {
         mode="overview-register-selected"
         overview={
           <ModelOperationsControlOverviewPanel
+            latestRequest={controller.request.latest}
+            onOpenRequest={controller.request.show}
             onOpenRequestSupport={controller.requestSupport.show}
+            requestAvailable={controller.request.available}
             summary={controller.readModel.summary}
             workspaceStatus={controller.readModel.workspaceStatus}
           />
@@ -113,7 +111,7 @@ export function ModelOperationsControlSurface() {
                 onInspectProfile={controller.dashboard.open}
                 onSelectProfile={controller.selectProfile}
                 profiles={controller.profiles.filtered}
-                selectedProfileId={selectedProfile.policy.profileId}
+                selectedProfileId={selectedProfile?.policy.profileId ?? null}
               />
             ) : (
               <TerasEmptyState fill>
@@ -123,7 +121,7 @@ export function ModelOperationsControlSurface() {
           </TerasRegisterPanel>
         }
         selected={
-          <TerasPanelStack fill="last">
+          selectedProfile && availability ? <TerasPanelStack fill="last">
             <TerasSelectedPanel
               action={{
                 description: selectedProfile.requiredMove.detail,
@@ -198,7 +196,11 @@ export function ModelOperationsControlSurface() {
                 </TerasActionButton>
               </TerasActionRow>
             </TerasPanel>
-          </TerasPanelStack>
+          </TerasPanelStack> : (
+            <TerasEmptyState fill>
+              No governed model profiles are available from the current authority projection.
+            </TerasEmptyState>
+          )
         }
         selectedProps={{
           "data-model-operations-selected-profile": "true",
@@ -211,6 +213,18 @@ export function ModelOperationsControlSurface() {
       <ModelProfileRequestSupportDialog
         onClose={controller.requestSupport.close}
         open={controller.requestSupport.open}
+      />
+      <ModelProfileRequestModal
+        draft={controller.request.draft}
+        error={controller.request.error}
+        onClose={controller.request.close}
+        onStepChange={controller.request.onStepChange}
+        onSubmit={controller.request.submit}
+        onUpdateDraft={controller.request.updateDraft}
+        open={controller.request.open}
+        pending={controller.request.pending}
+        result={controller.request.result}
+        step={controller.request.step}
       />
       <LocalExceptionRuntimeDialog
         onClose={controller.localRuntime.close}

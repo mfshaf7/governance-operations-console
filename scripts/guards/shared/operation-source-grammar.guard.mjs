@@ -86,7 +86,7 @@ const completedDomains = [
   }),
   operationDomain({
     domain: "model-operations",
-    optionalLayers: ["local-runtime"],
+    optionalLayers: ["live-runtime", "local-runtime", "server"],
     requiredLayers: ["presentation", "read-model", "work-model"],
   }),
 ];
@@ -119,6 +119,7 @@ const allowedIndexPaths = new Set([
   "src/domain-workspaces/orchestration/presentation/workspace/index.ts",
   "src/domain-workspaces/model-operations/index.ts",
   "src/domain-workspaces/model-operations/presentation/workspace/index.ts",
+  "src/domain-workspaces/model-operations/server/index.ts",
 ]);
 
 function hasRawStyling(source) {
