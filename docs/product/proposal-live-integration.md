@@ -26,12 +26,17 @@ Do not expose them through `NEXT_PUBLIC_*` variables or commit concrete values.
 | --- | --- | --- |
 | `OOS_BASE_URL` | yes | OOS HTTP endpoint visible to the Console server. |
 | `OOS_CALLER_SECRET` | yes | Caller-authentication secret delivered by the runtime owner. |
-| `GOVERNANCE_CONSOLE_OPERATOR_ID` | yes | Fixed operator attribution until authenticated Console identity is admitted. |
+| `GOVERNANCE_CONSOLE_OPERATOR_ID` | yes | Verified same-origin Console session principal used to authorize browser mutations. |
 | `OOS_CALLER_ID` | no | Defaults to `governance-operations-console`. |
 | `GOVERNANCE_CONSOLE_OPERATOR_HANDLE` | no | Optional bounded display handle sent with operator attribution. |
 
 The browser calls only same-origin `/api/proposals` routes. Caller credentials,
 authority declarations, and operator attribution are assembled server-side.
+The verified Console session principal authorizes the same-origin mutation,
+while the OOS Proposal command records the authenticated `OOS_CALLER_ID` as its
+machine operator. The Console must not serialize the human session principal or
+display handle as OOS Proposal command attribution while the OOS Proposal
+contract requires caller/operator equality.
 
 ## Live Behavior
 

@@ -56,7 +56,8 @@ test("case:console-proposal-adapter-positive projects OOS truth and submits a ve
     if (String(url).endsWith("/commands")) {
       const command = JSON.parse(String(init.body));
       assert.equal(command.authority.mutation_adapter, "operator-orchestration-service");
-      assert.equal(command.operator.id, "operator:console-owner");
+      assert.equal(command.operator.id, "governance-operations-console");
+      assert.equal(command.operator.handle, undefined);
       assert.equal(command.source.record_version, "version-17");
       assert.equal(command.command.type, "triage");
       return jsonResponse(proposalCommandResult(), 201);
@@ -167,7 +168,8 @@ test("case:console-proposal-delivery-application submits a stable version-bound 
     "http://127.0.0.1:8080/v1/proposals/idea-851/handoff/apply",
   );
   assert.equal(application.application_id, "proposal-application:851:delivery-1");
-  assert.equal(application.operator.id, "operator:console-owner");
+  assert.equal(application.operator.id, "governance-operations-console");
+  assert.equal(application.operator.handle, undefined);
   assert.equal(application.source.handoff_packet_ref, "proposal-packet:851");
   assert.equal(application.source.record_version, "version-19");
   assert.equal(result.receipt.target_record_ref, "openproject://work_packages/901");

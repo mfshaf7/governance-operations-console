@@ -476,8 +476,7 @@ function resolveProposalOosConfig(env: NodeJS.ProcessEnv): ProposalOosConfig {
 
 function proposalOperator(config: ProposalOosConfig) {
   return {
-    ...(config.operatorHandle ? { handle: config.operatorHandle } : {}),
-    id: config.operatorId,
+    id: config.callerId,
   };
 }
 
