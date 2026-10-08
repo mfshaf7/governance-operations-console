@@ -6,6 +6,13 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-09
+
+- Bound every configured Preview Runtime mutation to the exact source digest,
+  revision, profile, runtime state, and instance reviewed by the operator.
+- Passed that binding into the Studio owner command for validation under the
+  owner mutation lock and rejected receipts that do not preserve it.
+
 ## 2026-10-08
 
 - Connected the existing Preview Runtime surface to the exact Workspace

@@ -33,6 +33,7 @@ export type PrototypePreviewOwnerReceipt = Readonly<{
   after_state: PrototypePreviewOwnerRuntimeState;
   before_state: PrototypePreviewOwnerRuntimeState;
   completed_at: string;
+  expected: PrototypePreviewExpectedState;
   outcome: "applied";
   profile_digest: string;
   profile_id: string;
@@ -69,6 +70,7 @@ export type PrototypePreviewExpectedState = Readonly<{
   instance_id: string | null;
   profile_digest: string;
   runtime_state: PrototypePreviewOwnerRuntimeState;
+  source_digest: string;
   source_revision: string;
 }>;
 

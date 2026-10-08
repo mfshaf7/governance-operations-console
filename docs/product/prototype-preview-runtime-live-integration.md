@@ -40,7 +40,8 @@ invoke an owner command.
    source revision. The owner profile is read-only in the Console.
 3. Use **Start Preview**, **Restart Preview**, or the guarded **Stop Preview**
    action. Each mutation binds the currently displayed profile digest, source
-   revision, runtime state, and instance identity.
+   digest, source revision, runtime state, and instance identity. Studio
+   rechecks that binding while holding the owner mutation lock.
 4. Refresh proof only while the owner projection is running. The Console
    accepts proof only when it binds the same projection and latest receipt.
 5. Review source-projected receipts in the existing command log.
@@ -50,6 +51,10 @@ If the owner state changes after review, the command returns
 timeout, malformed output, digest mismatch, wrong source revision, non-loopback
 endpoint, public ingress, external network, mutable boundary, real data, false
 receipt, or maturity overclaim fails closed without fixture fallback.
+
+Studio also rejects a dirty checkout or served file outside reviewed Git
+custody. The Console validates that the owner receipt contains the exact state
+binding it submitted and that `before_state` still matches the reviewed state.
 
 ## Security and maturity boundary
 

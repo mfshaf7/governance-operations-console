@@ -102,6 +102,7 @@ test("Console invokes only the fixed Studio command and binds receipt to readbac
         instance_id: null,
         profile_digest: profileDigest,
         runtime_state: "stopped",
+        source_digest: sourceDigest,
         source_revision: revision,
       },
       request_id: "console-preview:test:start:001",
@@ -116,6 +117,14 @@ test("Console invokes only the fixed Studio command and binds receipt to readbac
   assert.equal(JSON.stringify(calls).includes("OOS_CALLER_SECRET"), false);
   assert.ok(calls[1].args.includes("start"));
   assert.ok(calls[1].args.includes("console-preview:test:start:001"));
+  const expectedIndex = calls[1].args.indexOf("--expected-state");
+  assert.deepEqual(JSON.parse(calls[1].args[expectedIndex + 1]), {
+    instance_id: null,
+    profile_digest: profileDigest,
+    runtime_state: "stopped",
+    source_digest: sourceDigest,
+    source_revision: revision,
+  });
 });
 
 test("stale Console intent fails before Studio mutation", async () => {
@@ -126,9 +135,10 @@ test("stale Console intent fails before Studio mutation", async () => {
       {
         action: "start",
         expected: {
-          instance_id: "stale-instance",
+          instance_id: "ffffffffffffffffffffffff",
           profile_digest: profileDigest,
           runtime_state: "running",
+          source_digest: sourceDigest,
           source_revision: revision,
         },
         request_id: "console-preview:test:stale:001",
@@ -140,6 +150,45 @@ test("stale Console intent fails before Studio mutation", async () => {
       error.code === "prototype_preview_expected_state_stale",
   );
   assert.equal(calls.length, 1);
+});
+
+test("receipt must preserve the exact atomic expected-state binding", async () => {
+  const receipt = ownerReceipt();
+  const conflictingBody = {
+    ...receipt,
+    expected: {
+      ...receipt.expected,
+      source_digest: `sha256:${"f".repeat(64)}`,
+    },
+  };
+  delete conflictingBody.receipt_digest;
+  const conflicting = {
+    ...conflictingBody,
+    receipt_digest: canonicalDigest(conflictingBody),
+  };
+  await assert.rejects(
+    commandPrototypePreviewOwner(
+      "client-review-portal",
+      {
+        action: "start",
+        expected: receipt.expected,
+        request_id: receipt.request_id,
+      },
+      {
+        config,
+        runner: queuedRunner(
+          [
+            stoppedProjection(),
+            { receipt: conflicting, schema_version: 1, status: "applied" },
+          ],
+          [],
+        ),
+      },
+    ),
+    (error) =>
+      error instanceof PrototypePreviewOwnerError &&
+      error.code === "prototype_preview_owner_contract_invalid",
+  );
 });
 
 test("proof binds current owner projection, receipt, and Security gate", async () => {
@@ -263,6 +312,13 @@ function ownerReceipt() {
     after_state: "running",
     before_state: "stopped",
     completed_at: "2026-10-08T15:00:00Z",
+    expected: {
+      instance_id: null,
+      profile_digest: profileDigest,
+      runtime_state: "stopped",
+      source_digest: sourceDigest,
+      source_revision: revision,
+    },
     outcome: "applied",
     profile_digest: profileDigest,
     profile_id: "client-review-portal",

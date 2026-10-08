@@ -92,6 +92,7 @@ export function usePrototypePreviewLiveRuntime() {
               instance_id: current.instance_id,
               profile_digest: current.profile_digest,
               runtime_state: current.runtime_state,
+              source_digest: current.source_digest,
               source_revision: current.source_revision,
             },
             request_id: requestId,

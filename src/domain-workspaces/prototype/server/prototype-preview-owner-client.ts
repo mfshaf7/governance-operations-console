@@ -75,9 +75,13 @@ export async function provePrototypePreviewOwner(
       409,
     );
   }
-  const proof = assertPrototypePreviewProof(
-    await runJson(context, ["proof", "--profile", context.profilePath]),
-    projection,
+  const proofValue = await runJson(context, [
+    "proof",
+    "--profile",
+    context.profilePath,
+  ]);
+  const proof = ownerContract(() =>
+    assertPrototypePreviewProof(proofValue, projection),
   );
   return { projection, proof };
 }
@@ -97,19 +101,22 @@ export async function commandPrototypePreviewOwner(
       409,
     );
   }
-  const command = assertPrototypePreviewCommandResult(
-    await runJson(context, [
+  const commandValue = await runJson(context, [
       intent.action,
       "--profile",
       context.profilePath,
       "--request-id",
       intent.request_id,
-    ]),
-    {
+      "--expected-state",
+      JSON.stringify(intent.expected),
+    ]);
+  const command = ownerContract(() =>
+    assertPrototypePreviewCommandResult(commandValue, {
+      commandState: intent.expected,
       prototypeSlug: context.prototypeSlug,
       requestId: intent.request_id,
       sourceRevision: context.config.sourceRevision,
-    },
+    }),
   );
   if (command.receipt.action !== intent.action) {
     throw contractFailure("Studio Preview receipt action differs from the reviewed command.");
@@ -166,12 +173,12 @@ function ownerContext(prototypeId: string, options: OwnerOptions): OwnerContext 
 }
 
 async function runProjection(context: OwnerContext, action: "status") {
-  return assertPrototypePreviewProjection(
-    await runJson(context, [action, "--profile", context.profilePath]),
-    {
+  const value = await runJson(context, [action, "--profile", context.profilePath]);
+  return ownerContract(() =>
+    assertPrototypePreviewProjection(value, {
       prototypeSlug: context.prototypeSlug,
       sourceRevision: context.config.sourceRevision,
-    },
+    }),
   );
 }
 
@@ -226,7 +233,14 @@ function parseOwnerFailure(stdout: string | undefined) {
     return new PrototypePreviewOwnerError(
       typeof value.message === "string" ? value.message : "Studio Preview Runtime rejected the command.",
       value.code,
-      new Set(["runtime_already_running", "runtime_not_running", "request_replay_conflict", "request_replay_stale", "stale_runtime_state"]).has(value.code)
+      new Set([
+        "expected_state_stale",
+        "runtime_already_running",
+        "runtime_not_running",
+        "request_replay_conflict",
+        "request_replay_stale",
+        "stale_runtime_state",
+      ]).has(value.code)
         ? 409
         : 422,
     );
@@ -241,6 +255,17 @@ function contractFailure(message: string) {
     "prototype_preview_owner_contract_invalid",
     502,
   );
+}
+
+function ownerContract<Value>(operation: () => Value): Value {
+  try {
+    return operation();
+  } catch (error) {
+    if (error instanceof PrototypePreviewContractError) {
+      throw contractFailure(error.message);
+    }
+    throw error;
+  }
 }
 
 const defaultRunner: PrototypePreviewOwnerRunner = (executable, args, options) =>
