@@ -11,6 +11,7 @@ import type {
 } from "./prototype-preview-live-types.ts";
 
 const digestPattern = /^sha256:[a-f0-9]{64}$/;
+const instancePattern = /^[a-f0-9]{24}$/;
 const revisionPattern = /^[a-f0-9]{40}$/;
 const safeIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$/;
 const safeSlugPattern = /^[a-z0-9][a-z0-9-]{2,63}$/;
@@ -75,7 +76,12 @@ export function assertPrototypePreviewProjection(
     } catch {
       throw invalid("Running Preview projection has an invalid endpoint.");
     }
-    if (parsed.protocol !== "http:" || parsed.hostname !== "127.0.0.1" || !instanceId) {
+    if (
+      parsed.protocol !== "http:" ||
+      parsed.hostname !== "127.0.0.1" ||
+      !instanceId ||
+      !instancePattern.test(instanceId)
+    ) {
       throw invalid("Running Preview projection is not loopback and instance bound.");
     }
   } else if (endpoint !== null || instanceId !== null) {
@@ -98,16 +104,26 @@ export function assertPrototypePreviewCommandIntent(
     );
   }
   const sourceRevision = string(expected.source_revision, "expected.source_revision");
+  const sourceDigest = string(expected.source_digest, "expected.source_digest");
   const profileDigest = string(expected.profile_digest, "expected.profile_digest");
-  if (!revisionPattern.test(sourceRevision) || !digestPattern.test(profileDigest)) {
+  if (
+    !revisionPattern.test(sourceRevision) ||
+    !digestPattern.test(sourceDigest) ||
+    !digestPattern.test(profileDigest)
+  ) {
     throw invalid("Preview Runtime expected source binding is invalid.");
+  }
+  const instanceId = nullableString(expected.instance_id, "expected.instance_id");
+  if (instanceId !== null && !instancePattern.test(instanceId)) {
+    throw invalid("Preview Runtime expected instance binding is invalid.");
   }
   return {
     action: action as PrototypePreviewCommandIntent["action"],
     expected: {
-      instance_id: nullableString(expected.instance_id, "expected.instance_id"),
+      instance_id: instanceId,
       profile_digest: profileDigest,
       runtime_state: runtimeStateValue(expected.runtime_state),
+      source_digest: sourceDigest,
       source_revision: sourceRevision,
     },
     request_id: requestId,
@@ -122,13 +138,19 @@ export function samePrototypePreviewState(
     projection.instance_id === expected.instance_id &&
     projection.profile_digest === expected.profile_digest &&
     projection.runtime_state === expected.runtime_state &&
+    projection.source_digest === expected.source_digest &&
     projection.source_revision === expected.source_revision
   );
 }
 
 export function assertPrototypePreviewCommandResult(
   value: unknown,
-  expected: { prototypeSlug: string; requestId: string; sourceRevision: string },
+  expected: {
+    commandState: PrototypePreviewCommandIntent["expected"];
+    prototypeSlug: string;
+    requestId: string;
+    sourceRevision: string;
+  },
 ): PrototypePreviewOwnerCommandResult {
   const record = object(value, "Preview Runtime command result");
   const status = string(record.status, "status");
@@ -174,9 +196,15 @@ export function canonicalDigest(value: unknown) {
 
 function assertReceipt(
   value: unknown,
-  expected: { prototypeSlug: string; requestId: string; sourceRevision: string },
+  expected: {
+    commandState: PrototypePreviewCommandIntent["expected"];
+    prototypeSlug: string;
+    requestId: string;
+    sourceRevision: string;
+  },
 ): PrototypePreviewOwnerReceipt {
   const receipt = object(value, "Preview Runtime receipt");
+  const expectedState = assertExpectedState(receipt.expected);
   const body = { ...receipt };
   delete body.receipt_digest;
   if (
@@ -185,6 +213,11 @@ function assertReceipt(
     receipt.profile_id !== expected.prototypeSlug ||
     receipt.prototype_id !== `prototype:${expected.prototypeSlug}` ||
     receipt.source_revision !== expected.sourceRevision ||
+    !sameExpectedState(expectedState, expected.commandState) ||
+    receipt.before_state !== expected.commandState.runtime_state ||
+    receipt.profile_digest !== expected.commandState.profile_digest ||
+    receipt.source_digest !== expected.commandState.source_digest ||
+    receipt.after_state !== (receipt.action === "stop" ? "stopped" : "running") ||
     receipt.outcome !== "applied" ||
     !receiptActions.has(String(receipt.action)) ||
     !runtimeStates.has(String(receipt.before_state)) ||
@@ -199,6 +232,40 @@ function assertReceipt(
     throw invalid("Preview Runtime receipt is incomplete or digest-invalid.");
   }
   return receipt as PrototypePreviewOwnerReceipt;
+}
+
+function assertExpectedState(value: unknown): PrototypePreviewCommandIntent["expected"] {
+  const expected = object(value, "Preview Runtime receipt expected state");
+  const normalized = {
+    instance_id: nullableString(expected.instance_id, "receipt.expected.instance_id"),
+    profile_digest: string(expected.profile_digest, "receipt.expected.profile_digest"),
+    runtime_state: runtimeStateValue(expected.runtime_state),
+    source_digest: string(expected.source_digest, "receipt.expected.source_digest"),
+    source_revision: string(expected.source_revision, "receipt.expected.source_revision"),
+  };
+  if (
+    (normalized.instance_id !== null &&
+      !instancePattern.test(normalized.instance_id)) ||
+    !digestPattern.test(normalized.profile_digest) ||
+    !digestPattern.test(normalized.source_digest) ||
+    !revisionPattern.test(normalized.source_revision)
+  ) {
+    throw invalid("Preview Runtime receipt expected state is invalid.");
+  }
+  return normalized;
+}
+
+function sameExpectedState(
+  left: PrototypePreviewCommandIntent["expected"],
+  right: PrototypePreviewCommandIntent["expected"],
+) {
+  return (
+    left.instance_id === right.instance_id &&
+    left.profile_digest === right.profile_digest &&
+    left.runtime_state === right.runtime_state &&
+    left.source_digest === right.source_digest &&
+    left.source_revision === right.source_revision
+  );
 }
 
 function nullableReceiptRef(value: unknown): PrototypePreviewOwnerReceiptRef | null {
