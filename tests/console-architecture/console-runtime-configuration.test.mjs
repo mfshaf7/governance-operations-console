@@ -3,12 +3,14 @@ import test from "node:test";
 
 import {
   consoleOosModeSelected,
+  consolePrototypePreviewModeSelected,
   consoleRuntimeObservationModeSelected,
   consoleWgcfModeSelected,
   ConsoleRuntimeConfigurationError,
   projectConsoleRuntimeCapabilities,
   resolveConsoleArtifactReference,
   resolveConsoleOosConnection,
+  resolveConsolePrototypePreviewConfiguration,
   resolveConsoleRuntimeObservationConfiguration,
   resolveConsoleSessionConfiguration,
   resolveConsoleWgcfConnection,
@@ -101,6 +103,22 @@ test("runtime observation configuration accepts only an absolute private-source 
   );
 });
 
+test("Prototype Preview configuration binds exact Studio source and external state", () => {
+  const env = {
+    GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_OWNER_REPO_ROOT:
+      "/srv/workspace-prototype-studio",
+    GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_SOURCE_REVISION: "a".repeat(40),
+    GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_STATE_ROOT:
+      "/run/user/1000/workspace-prototype-studio/preview-runtime",
+  };
+  assert.equal(consolePrototypePreviewModeSelected(env), true);
+  assert.deepEqual(resolveConsolePrototypePreviewConfiguration(env), {
+    ownerRepoRoot: env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_OWNER_REPO_ROOT,
+    sourceRevision: env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_SOURCE_REVISION,
+    stateRoot: env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_STATE_ROOT,
+  });
+});
+
 test("capability projection distinguishes disconnected, invalid, and live state", () => {
   const disconnected = projectConsoleRuntimeCapabilities({}, new Date(0));
   assert.equal(disconnected.mode, "disconnected-preview");
@@ -117,10 +135,27 @@ test("capability projection distinguishes disconnected, invalid, and live state"
     new Date(0),
   );
   assert.equal(invalid.mode, "invalid");
-  assert.ok(
-    invalid.capabilities.every(
-      (capability) => capability.source.state === "invalid",
-    ),
+  assert.equal(
+    invalid.capabilities.find(({ id }) => id === "proposal")?.source.state,
+    "invalid",
+  );
+  assert.equal(
+    invalid.capabilities.find(({ id }) => id === "prototype-preview")?.source.state,
+    "disconnected",
+  );
+
+  const invalidPreview = projectConsoleRuntimeCapabilities(
+    {
+      ...completeEnv,
+      GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_OWNER_REPO_ROOT:
+        "/srv/workspace-prototype-studio",
+    },
+    new Date(0),
+  );
+  assert.equal(invalidPreview.mode, "invalid");
+  assert.equal(
+    invalidPreview.capabilities.find(({ id }) => id === "prototype-preview")?.source.state,
+    "invalid",
   );
 
   const live = projectConsoleRuntimeCapabilities(completeEnv, new Date(0));
@@ -133,6 +168,10 @@ test("capability projection distinguishes disconnected, invalid, and live state"
     live.capabilities.find(({ id }) => id === "repository-custody")?.mutation
       .state,
     "invalid",
+  );
+  assert.equal(
+    live.capabilities.find(({ id }) => id === "prototype-preview")?.owner,
+    "workspace-prototype-studio",
   );
 });
 

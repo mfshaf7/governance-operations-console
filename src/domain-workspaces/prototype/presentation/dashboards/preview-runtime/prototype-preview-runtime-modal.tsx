@@ -61,10 +61,12 @@ export function PrototypePreviewRuntimeModal({
   onPreviewCheck,
   onPreviewProfileAction,
   onPreviewRuntimeAction,
+  ownerMode,
   receipts,
   record,
 }: {
   receipts: PrototypeProjectedReceipt[];
+  ownerMode: "disconnected" | "error" | "live" | "loading";
   onBackToDashboard: () => void;
   onClose: () => void;
   onPreviewCheck: (record: PrototypeRecord) => void;
@@ -126,6 +128,7 @@ export function PrototypePreviewRuntimeModal({
   const modeStage =
     activeTab === "runtime" ? (
       <PrototypePreviewRuntimeMode
+        ownerControlled={ownerMode !== "disconnected"}
         proofResult={proofResult}
         record={selectedRecord}
       />
@@ -153,6 +156,7 @@ export function PrototypePreviewRuntimeModal({
       />
     ) : activeTab === "profile" ? (
       <PrototypePreviewProfileModeDock
+        ownerControlled={ownerMode !== "disconnected"}
         onEditProfile={() => setProfileEditorOpen(true)}
         previewTone={previewStatus.tone}
         record={selectedRecord}
@@ -173,7 +177,11 @@ export function PrototypePreviewRuntimeModal({
     <>
       <TerasModalShell
         height="fill"
-        description="Preview runtime, profile, and local proof control for the selected prototype."
+        description={
+          ownerMode === "disconnected"
+            ? "Disconnected local preview controls for the selected prototype."
+            : "Workspace Prototype Studio-owned runtime, profile, and proof control for the selected prototype."
+        }
         footer={
           <TerasActionButton
             onClick={onBackToDashboard}

@@ -58,6 +58,9 @@ separately governed OOS integration slices:
   freshness-aware, deduplicated attention snapshot
 - bounded Governance Activity composition from canonical OOS workflow activity
   and WGCF governance history, with owner evidence routes and no Console ledger
+- Workspace Prototype Studio-owned Preview Runtime status, bounded lifecycle
+  commands, exact-source proof, and digest-bound receipt projection through a
+  server-only local owner adapter
 
 Prototype source discovery and operational workflows without a named live
 integration contract remain:
@@ -66,7 +69,8 @@ integration contract remain:
 - loopback-only for local preview
 - fixture-backed or synthetic unless their own contract says otherwise
 - read-only for bounded local host telemetry
-- prototype-local for simulated writes and receipts outside Proposal live mode
+- prototype-local for simulated writes and receipts outside a named live owner
+  integration
 
 When an admitted live integration is configured, its canonical GET projection
 must use the Console source-projection media type. Legacy JSON, stale or
@@ -119,6 +123,8 @@ The Prototype Maturity boundary is documented in
 [`docs/product/prototype-maturity-live-integration.md`](docs/product/prototype-maturity-live-integration.md).
 The Prototype Closure and History boundary is documented in
 [`docs/product/prototype-closure-live-integration.md`](docs/product/prototype-closure-live-integration.md).
+The Prototype Preview Runtime owner boundary is documented in
+[`docs/product/prototype-preview-runtime-live-integration.md`](docs/product/prototype-preview-runtime-live-integration.md).
 The Prototype Delivery application boundary is documented in
 [`docs/product/prototype-delivery-live-integration.md`](docs/product/prototype-delivery-live-integration.md).
 The Delivery Work Design boundary is documented in

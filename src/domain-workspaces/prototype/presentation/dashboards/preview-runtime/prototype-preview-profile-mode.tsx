@@ -84,10 +84,12 @@ export function PrototypePreviewProfileMode({
 
 export function PrototypePreviewProfileModeDock({
   onEditProfile,
+  ownerControlled,
   previewTone,
   record,
 }: {
   onEditProfile: () => void;
+  ownerControlled: boolean;
   previewTone: TerasTone;
   record: PrototypeRecord;
 }) {
@@ -109,17 +111,22 @@ export function PrototypePreviewProfileModeDock({
             </TerasStatusPill>
           }
           actionsLayout="inline"
-          description="Open the profile editor only when the saved preview profile needs to change."
+          description={
+            ownerControlled
+              ? "The exact Workspace Prototype Studio profile is authoritative and read-only here."
+              : "Open the profile editor only when the saved preview profile needs to change."
+          }
           kicker="Profile Control"
           title={record.preview.profileRef}
         />
         <TerasContentTray kicker="Edit boundary">
-          Profile edits are explicit and prototype-local. Runtime uses the saved
-          profile shown on the left until a new draft is confirmed.
+          {ownerControlled
+            ? "Profile changes belong in Workspace Prototype Studio. The Console renders the exact owner projection and cannot replace it with a local draft."
+            : "Profile edits are explicit and prototype-local. Runtime uses the saved profile shown on the left until a new draft is confirmed."}
         </TerasContentTray>
         <TerasActionRow spacing="normal">
-          <TerasActionButton onClick={onEditProfile}>
-            Edit Profile
+          <TerasActionButton disabled={ownerControlled} onClick={onEditProfile}>
+            {ownerControlled ? "Studio-owned profile" : "Edit Profile"}
           </TerasActionButton>
         </TerasActionRow>
       </TerasPanel>

@@ -125,6 +125,7 @@ export function PrototypeControlSurface({
         activeRecord={controller.activeRecord}
         canSubmitRequest={controller.request.canSubmit}
         previewReceipts={controller.selectedPreviewReceipts}
+        previewOwnerMode={controller.selectedPreviewOwnerMode}
         receipts={controller.selectedReceipts}
         closure={controller.selectedClosure}
         closureActions={controller.workflowActions.closure}

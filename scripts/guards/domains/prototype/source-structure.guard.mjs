@@ -68,6 +68,12 @@ export const guard = {
       `${root}/server/prototype-delivery-oos-client.ts`,
       `${root}/server/prototype-maturity-api-routes.ts`,
       `${root}/server/prototype-maturity-oos-client.ts`,
+      `${root}/server/prototype-preview-api-routes.ts`,
+      `${root}/server/prototype-preview-owner-client.ts`,
+      `${root}/live-runtime/prototype-preview-live-contract.ts`,
+      `${root}/live-runtime/prototype-preview-live-projection.ts`,
+      `${root}/live-runtime/prototype-preview-live-types.ts`,
+      `${root}/live-runtime/use-prototype-preview-live-runtime.ts`,
     ]) {
       assertAppFile(failures, path);
     }

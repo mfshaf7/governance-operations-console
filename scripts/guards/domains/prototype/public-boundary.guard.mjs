@@ -43,7 +43,10 @@ export const guard = {
       failures,
       serverIndexPath,
       "./",
-      ["./prototype-closure-api-routes"],
+      [
+        "./prototype-closure-api-routes",
+        "./prototype-preview-api-routes",
+      ],
     );
     assertIncludes(failures, serverIndexPath, [
       "cancelPrototypeClosureRoute",
@@ -52,6 +55,9 @@ export const guard = {
       "preparePrototypeClosureRoute",
       "readPrototypeClosureRoute",
       "submitPrototypeClosureRoute",
+      "commandPrototypePreviewRoute",
+      "provePrototypePreviewRoute",
+      "readPrototypePreviewRoute",
     ]);
 
     return failures;

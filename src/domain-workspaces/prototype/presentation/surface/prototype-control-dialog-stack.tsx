@@ -40,6 +40,7 @@ type PrototypeControlDialogStackProps = {
   activeRecord: PrototypeRecord | null;
   canSubmitRequest: boolean;
   previewReceipts: PrototypeProjectedReceipt[];
+  previewOwnerMode: PrototypeControlController["selectedPreviewOwnerMode"];
   receipts: PrototypeProjectedReceipt[];
   landingProjection: PrototypeLandingLiveProjection | null;
   sourceDeliveryPacket: PrototypeDeliveryPacketProjection | null;
@@ -100,6 +101,7 @@ export function PrototypeControlDialogStack({
   activeRecord,
   canSubmitRequest,
   previewReceipts,
+  previewOwnerMode,
   receipts,
   landingProjection,
   sourceDeliveryPacket,
@@ -161,6 +163,7 @@ export function PrototypeControlDialogStack({
         record={activeDialog === "landing" ? activeRecord : null}
       />
       <PrototypePreviewRuntimeModal
+        ownerMode={previewOwnerMode}
         receipts={previewReceipts}
         onBackToDashboard={onBackToDashboard}
         onClose={onCloseDialog}
