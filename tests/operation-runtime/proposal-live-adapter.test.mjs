@@ -28,6 +28,8 @@ const env = {
   OOS_CALLER_ID: "governance-operations-console",
   OOS_CALLER_SECRET: "test-only-secret",
 };
+const handoffRef19 = "proposal-handoff:idea-851:version-19";
+const handoffRef21 = "proposal-handoff:idea-851:version-21";
 
 test("case:console-proposal-adapter-positive projects OOS truth and submits a version-bound command", async () => {
   const calls = [];
@@ -153,7 +155,7 @@ test("case:console-proposal-delivery-application submits a stable version-bound 
     {
       proposalId: "idea-851",
       source: {
-        handoffPacketRef: "proposal-packet:851",
+        handoffPacketRef: handoffRef19,
         recordRef: "openproject://work_packages/851",
         recordVersion: "version-19",
         status: "accepted",
@@ -170,7 +172,7 @@ test("case:console-proposal-delivery-application submits a stable version-bound 
   assert.equal(application.application_id, "proposal-application:851:delivery-1");
   assert.equal(application.operator.id, "governance-operations-console");
   assert.equal(application.operator.handle, undefined);
-  assert.equal(application.source.handoff_packet_ref, "proposal-packet:851");
+  assert.equal(application.source.handoff_packet_ref, handoffRef19);
   assert.equal(application.source.record_version, "version-19");
   assert.equal(result.receipt.target_record_ref, "openproject://work_packages/901");
   assert.equal(result.projection.handoff.state, "applied");
@@ -186,7 +188,7 @@ test("case:console-proposal-delivery-application rejects an unproven target resu
       {
         proposalId: "idea-851",
         source: {
-          handoffPacketRef: "proposal-packet:851",
+          handoffPacketRef: handoffRef19,
           recordRef: "openproject://work_packages/851",
           recordVersion: "version-19",
           status: "accepted",
@@ -207,7 +209,7 @@ test("case:proposal-target-console-protocol-positive prepares, submits, and proj
       return canonicalSourceResponse(proposalProjection({
         body: "Explore the accepted Proposal in Prototype Studio.",
         handoff: {
-          packet_ref: "proposal-packet:851",
+          packet_ref: handoffRef21,
           state: "ready",
           target_receipt_ref: null,
           target_record_ref: null,
@@ -254,7 +256,7 @@ test("case:proposal-target-console-protocol-positive prepares, submits, and proj
   const result = await startProposalTargetApplication({
     proposalId: "idea-851",
     source: {
-      handoffPacketRef: "proposal-packet:851",
+      handoffPacketRef: handoffRef21,
       recordRef: "openproject://work_packages/851",
       recordVersion: "version-21",
       status: "accepted",
@@ -276,7 +278,7 @@ test("case:proposal-target-console-protocol-negative blocks unresolved custody a
     assertCanonicalSourceRequest(init);
     return canonicalSourceResponse(proposalProjection({
       handoff: {
-        packet_ref: "proposal-packet:851",
+        packet_ref: handoffRef21,
         state: "ready",
         target_receipt_ref: null,
         target_record_ref: null,
@@ -301,7 +303,7 @@ test("case:proposal-target-console-protocol-negative blocks unresolved custody a
     startProposalTargetApplication({
       proposalId: "idea-851",
       source: {
-        handoffPacketRef: "proposal-packet:851",
+        handoffPacketRef: handoffRef21,
         recordRef: "openproject://work_packages/851",
         recordVersion: "version-21",
         status: "accepted",
@@ -387,7 +389,7 @@ test("Delivery handoff stays actionable until target application is proven", () 
     },
     projection: proposalProjection({
       handoff: {
-        packet_ref: "proposal-packet:851",
+        packet_ref: handoffRef19,
         state: "ready",
         target_receipt_ref: null,
         target_record_ref: null,
@@ -422,7 +424,7 @@ test("Delivery handoff stays actionable until target application is proven", () 
     },
     projection: proposalProjection({
       handoff: {
-        packet_ref: "proposal-packet:851",
+        packet_ref: handoffRef19,
         state: "applied",
         target_receipt_ref: "proposal-target-receipt:idea-851:abc123",
         target_record_ref: "openproject://work_packages/901",
@@ -464,7 +466,7 @@ test("Prototype handoff stays actionable until OOS records the target acknowledg
     },
     projection: proposalProjection({
       handoff: {
-        packet_ref: "proposal-packet:851",
+        packet_ref: handoffRef21,
         state: "ready",
         target_receipt_ref: null,
         target_record_ref: null,
@@ -497,7 +499,7 @@ test("Prototype handoff stays actionable until OOS records the target acknowledg
     },
     projection: proposalProjection({
       handoff: {
-        packet_ref: "proposal-packet:851",
+        packet_ref: handoffRef21,
         state: "applied",
         target_receipt_ref: receiptRef,
         target_record_ref: "record://prototype-captures/proposal-851",
@@ -634,7 +636,7 @@ function proposalHandoffApplicationResult() {
   const projection = proposalProjection({
     decision_notes: "Accepted for governed Delivery.",
     handoff: {
-      packet_ref: "proposal-packet:851",
+      packet_ref: handoffRef21,
       state: "applied",
       target_receipt_ref: "proposal-target-receipt:idea-851:abc123",
       target_record_ref: "openproject://work_packages/901",
@@ -713,7 +715,7 @@ function proposalTargetPreparation() {
       proposal_id: "idea-851",
       record_ref: "openproject://work_packages/851",
       record_version: "version-21",
-      handoff_packet_ref: "proposal-packet:851",
+      handoff_packet_ref: handoffRef21,
       handoff_packet_digest: `sha256:${"3".repeat(64)}`,
       route: prototypeRoute(),
     },
@@ -795,7 +797,7 @@ function proposalTargetResult({ status }) {
           replayed: false,
           projection: proposalProjection({
             handoff: {
-              packet_ref: "proposal-packet:851",
+              packet_ref: handoffRef21,
               state: "applied",
               target_receipt_ref: receipt.receipt_ref,
               target_record_ref: receipt.target_record_ref,
