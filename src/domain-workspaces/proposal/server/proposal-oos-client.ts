@@ -250,9 +250,6 @@ export async function startProposalTargetApplication(
           },
           prototype: {
             id: prototypeId,
-            suggested_name: projection.title,
-            suggested_objective:
-              projection.body ?? projection.route?.rationale ?? projection.title,
           },
           session_ref: `console-session:${request.proposalId}:${request.source.recordVersion}`,
           target: {
