@@ -8,6 +8,15 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-09
 
+- Connected Model Operations to caller-owned OOS request projections and the
+  exact Platform profile source, lifecycle receipt, and merged readback.
+- Enabled the existing two-step create request only under complete live
+  configuration and a verified Console operator session; provider/model
+  selection, Platform fulfillment, Security acceptance, and activation remain
+  outside Console authority.
+- Added the read-only, digest-bound operating projection needed for composed
+  evidence, plus fail-closed malformed, stale, conflicting, partial, and
+  unauthorized behavior without fixture fallback.
 - Bound every configured Preview Runtime mutation to the exact source digest,
   revision, profile, runtime state, and instance reviewed by the operator.
 - Passed that binding into the Studio owner command for validation under the

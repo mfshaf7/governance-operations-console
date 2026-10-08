@@ -25,6 +25,17 @@ The same boundary resolves
 runtime observation projection. The path remains server-only and must be an
 absolute path to an operator-private regular file.
 
+Model Operations resolves its OOS operator binding plus the three exact
+Platform evidence paths only through the same central module:
+
+- `GOVERNANCE_CONSOLE_MODEL_PROFILE_SOURCE_PROJECTION_PATH`
+- `GOVERNANCE_CONSOLE_MODEL_PROFILE_LIFECYCLE_RECEIPT_PATH`
+- `GOVERNANCE_CONSOLE_MODEL_PROFILE_MERGED_READBACK_PATH`
+
+Selecting any part of that live shape selects live mode. Missing, malformed,
+non-private, stale, or digest-conflicting evidence fails closed without fixture
+fallback. Browser responses never expose the file paths or OOS credential.
+
 ## Runtime Observation Boundary
 
 Runtime Readiness consumes Platform's `console-runtime-observations/v1`

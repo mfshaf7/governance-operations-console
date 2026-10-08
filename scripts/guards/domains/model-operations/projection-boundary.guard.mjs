@@ -9,6 +9,9 @@ const modelOperationsRoot = "src/domain-workspaces/model-operations";
 const profileFixture = `${modelOperationsRoot}/read-model/fixtures/model-profile-records.fixture.ts`;
 const profileSelectors = `${modelOperationsRoot}/read-model/selectors/model-profile-selectors.ts`;
 const requestCapability = `${modelOperationsRoot}/work-model/profile-requests/model-profile-request-capability.ts`;
+const oosClient = `${modelOperationsRoot}/server/model-operations-oos-client.ts`;
+const platformAdapter = `${modelOperationsRoot}/server/model-operations-platform-adapter.ts`;
+const operatingProjection = `${modelOperationsRoot}/live-runtime/model-operations-operating-projection.ts`;
 
 export const guard = {
   id: "model-operations/projection-boundary",
@@ -19,6 +22,9 @@ export const guard = {
       profileFixture,
       profileSelectors,
       requestCapability,
+      oosClient,
+      platformAdapter,
+      operatingProjection,
       `${modelOperationsRoot}/read-model/model-operations-read-model.ts`,
       `${modelOperationsRoot}/read-model/fixtures/model-operations-workspace.fixture.ts`,
       `${modelOperationsRoot}/read-model/fixtures/model-operations-workspace-status.fixture.ts`,
@@ -65,19 +71,35 @@ export const guard = {
       'label: "Retired"',
     ]);
     assertIncludes(failures, requestCapability, [
-      'actionSemantic: "unavailable"',
-      'availability: "planned"',
-      'backendOwner: "platform-engineering"',
-      'workflowOwner: "operator-orchestration-service"',
-      '"request schema"',
-      '"command and receipt contract"',
-      '"source-version reconciliation"',
-      '"projection refresh"',
-      '"rollback behavior"',
-    ]);
-    assertOmits(failures, requestCapability, [
       'actionSemantic: "submit"',
       'availability: "available"',
+      'backendOwner: "platform-engineering"',
+      'workflowOwner: "operator-orchestration-service"',
+      '"OOS owns request and review state"',
+      '"Console stores no durable request or profile truth"',
+    ]);
+    assertIncludes(failures, oosClient, [
+      '"x-oos-operator-id"',
+      "consoleSourceProjectionHeaders",
+      "acceptCurrentConsoleSourceProjection",
+      'intent: "create"',
+      "profile_id: null",
+      "source: null",
+    ]);
+    assertIncludes(failures, platformAdapter, [
+      "readPrivateJson",
+      "canonicalDigest(value, \"digest\")",
+      'value.owner_repo !== "platform-engineering"',
+      'fulfillment.state !== "applied"',
+    ]);
+    assertIncludes(failures, operatingProjection, [
+      'workflow_id: "model-operations-live-projection"',
+      'console_mutation_authority: false',
+      'request.next_action !== "refresh-authoritative-projections"',
+    ]);
+    assertOmits(failures, requestCapability, [
+      'actionSemantic: "unavailable"',
+      'availability: "planned"',
     ]);
     assertOmits(failures, profileFixture, [
       'lifecycle: "active"',

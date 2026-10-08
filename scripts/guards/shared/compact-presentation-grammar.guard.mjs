@@ -49,6 +49,7 @@ const compactDomains = [
       "dialogs",
       "shared",
       "surface",
+      "workflows",
       "workspace",
     ]),
   },

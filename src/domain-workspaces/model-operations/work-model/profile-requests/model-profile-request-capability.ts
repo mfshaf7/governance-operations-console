@@ -14,27 +14,24 @@ export type ModelProfileRequestFulfillmentState =
   "applied" | "failed" | "implementing" | "not-started";
 
 export type ModelProfileRequestCapability = {
-  actionSemantic: "unavailable";
-  availability: "planned";
+  actionSemantic: "submit";
+  availability: "available";
   backendOwner: "platform-engineering";
-  requiredBeforeEnable: string[];
+  controls: string[];
   securityOwner: "security-architecture";
   workflowOwner: "operator-orchestration-service";
 };
 
 export const modelProfileRequestCapability: ModelProfileRequestCapability = {
-  actionSemantic: "unavailable",
-  availability: "planned",
+  actionSemantic: "submit",
+  availability: "available",
   backendOwner: "platform-engineering",
-  requiredBeforeEnable: [
-    "request schema",
-    "operator workflow API",
-    "security review route",
-    "command and receipt contract",
-    "profile registry fulfillment adapter",
-    "source-version reconciliation",
-    "projection refresh",
-    "rollback behavior",
+  controls: [
+    "OOS owns request and review state",
+    "Platform owns source fulfillment and runtime selection",
+    "Security owns acceptance and exceptions",
+    "Console stores no durable request or profile truth",
+    "Activation remains a separate reviewed request",
   ],
   securityOwner: "security-architecture",
   workflowOwner: "operator-orchestration-service",

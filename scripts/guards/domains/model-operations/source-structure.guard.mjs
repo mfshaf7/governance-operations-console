@@ -16,8 +16,10 @@ const modelOperationsContract =
   "docs/product/domain-contracts/model-operations.md";
 const allowedRootEntries = new Set([
   "index.ts",
+  "live-runtime",
   "presentation",
   "read-model",
+  "server",
   "work-model",
 ]);
 
@@ -33,7 +35,7 @@ export const guard = {
       "The Console has no durable Model Operations business database.",
       "dashboards/",
       "model-profile/",
-      "completed current-shape reference",
+      "live OOS request and Platform source",
     ]);
 
     for (const requiredPath of [
@@ -61,6 +63,19 @@ export const guard = {
       `${modelOperationsRoot}/read-model/fixtures/model-operations-workspace.fixture.ts`,
       `${modelOperationsRoot}/read-model/fixtures/model-operations-workspace-status.fixture.ts`,
       `${modelOperationsRoot}/work-model/profile-requests/model-profile-request-capability.ts`,
+      `${modelOperationsRoot}/work-model/profile-requests/model-profile-request-model.ts`,
+      `${modelOperationsRoot}/live-runtime/model-operations-live-contract.ts`,
+      `${modelOperationsRoot}/live-runtime/model-operations-live-projection.ts`,
+      `${modelOperationsRoot}/live-runtime/model-operations-live-types.ts`,
+      `${modelOperationsRoot}/live-runtime/model-operations-operating-projection.ts`,
+      `${modelOperationsRoot}/live-runtime/use-model-operations-live-runtime.ts`,
+      `${modelOperationsRoot}/server/model-operations-api-routes.ts`,
+      `${modelOperationsRoot}/server/model-operations-oos-client.ts`,
+      `${modelOperationsRoot}/server/model-operations-platform-adapter.ts`,
+      `${modelOperationsRoot}/server/index.ts`,
+      `${modelOperationsRoot}/presentation/workflows/profile-request/model-profile-request-modal.tsx`,
+      "src/app/api/model-operations/route.ts",
+      "src/app/api/model-operations/operating-projection/[requestId]/route.ts",
     ]) {
       assertAppFile(failures, requiredPath);
     }

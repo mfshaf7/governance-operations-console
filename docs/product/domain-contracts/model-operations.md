@@ -1,8 +1,8 @@
 # Model Operations Domain Contract
 
-Status: locked domain contract with a completed current-shape reference
-implementation; backend request wiring remains unavailable and the Console is
-not baseline-approved.
+Status: locked domain contract with live OOS request and Platform source
+projection wiring; controlled runtime activation remains Security-gated and the
+Console is not a profile, lifecycle, or security authority.
 
 Surface mode: Compact Control Mode.
 
@@ -58,7 +58,7 @@ surface and is not mixed into governed profile truth.
 | Access-plane and provider-custody posture | Platform Engineering governed AI access plane | Read-only projection |
 | Security acceptance and exception evidence | Security Architecture | Read-only projection |
 | Registered consumer contract | Consumer owner plus workspace/platform contract | Read-only projection |
-| Future profile request workflow | Operator Orchestration Service after explicit admission | Unavailable capability until implemented |
+| Profile request workflow | Operator Orchestration Service | Server-authenticated request and review projection; no registry mutation |
 | Delivery implementation state | Workspace Delivery ART | Linked work-state projection |
 | Local provider inventory | Local runtime authority | Explicit non-governed exception-runtime projection |
 
@@ -81,10 +81,11 @@ The current platform contract proves:
 - human approval is required
 - access-plane profile activation remains disallowed
 
-No current backend proves a profile list API, profile request API, profile
-mutation API, activation workflow, ordered profile history, or unified
-eligibility projection. The prototype must not present those capabilities as
-live.
+OOS now proves the admitted request list, item, create, review-transition, and
+Platform fulfillment protocol. Platform now proves the source projection,
+lifecycle receipt, merged readback, and rollback binding. Neither backend
+grants the Console profile mutation, provider selection, Security acceptance,
+or activation authority.
 
 ## Read Model
 
@@ -152,7 +153,8 @@ The primary surface uses the standard compact-control structure:
 
 - summary cards: Available, Blocked, Suspended, Exception, Retired
 - one overall workspace-status pill based on projection health
-- disabled `Request Profile` capability cue until the backend exists
+- `Request Profile`, enabled only when the exact OOS and Platform projections
+  plus the verified Console operator session are current
 - searchable Governed Profiles register
 - lifecycle filter
 - access-readiness filter
@@ -245,11 +247,11 @@ facts. It must not:
 - display secrets or unrestricted backend output
 - compete visually with governed profile posture
 
-## Future Profile Requests
+## Live Profile Requests
 
 Recommendation posture is `extend`. No new control plane is approved.
 
-The future workflow extends:
+The implemented workflow extends:
 
 - Model Operations as the Console adapter
 - OOS as the operator workflow API and request-state owner
@@ -306,7 +308,7 @@ Provider credentials, secrets, raw provider routes, and final provider/model
 selection are not operator inputs. Canonical profile IDs and runtime selection
 remain platform-owned.
 
-The future operator flow is two steps plus a result receipt:
+The operator flow is two steps plus a result receipt:
 
 1. Profile Intent
    - purpose, callers, data boundary, output contract, and environment intent
@@ -355,26 +357,19 @@ durable evidence.
 
 ## Current Capability Cue
 
-Until the request backend exists, `Request Profile` remains visible but
-disabled and muted. Its support dialog explains:
+When the complete live configuration is absent or invalid, `Request Profile`
+remains visible but disabled and muted. Its support dialog explains:
 
-- that the capability is planned
-- which owners must implement it
+- which owner controls each request, fulfillment, acceptance, and source step
 - which request, review, command, receipt, and reconciliation contracts are
-  missing
+  enforced
 - that no profile or ART item was created
 
-The prototype must not open a fake request form, store a local request,
+Disconnected preview must not open a fake request form, store a local request,
 optimistically change profile posture, or manufacture a submission receipt.
+Configured live failure does not fall back to fixtures.
 
-The deferred capability is carried into baseline/graduation evidence as:
-
-- contract-defined
-- backend-unavailable
-- not a blocker to visual baseline approval
-- a blocker to any claim of live Model Operations mutation capability
-
-Future delivery acceptance requires:
+Delivery acceptance requires:
 
 - admitted request schema and workflow API
 - OOS request-state projection
@@ -389,7 +384,7 @@ Future delivery acceptance requires:
 
 The Console stores no durable request or profile business state.
 
-Future live flow is:
+The live flow is:
 
 1. Console submits a versioned request command to OOS.
 2. OOS records request state and links delivery work where required.
@@ -427,6 +422,8 @@ domain-workspaces/model-operations/
     model-operations-read-model.ts
   work-model/
     profile-requests/
+  live-runtime/
+  server/
   presentation/
     workspace/
     surface/
@@ -437,6 +434,8 @@ domain-workspaces/model-operations/
       local-runtime/
       profile-inspector/
       request-support/
+    workflows/
+      profile-request/
 ```
 
 The exact files follow real ownership grain. Empty folders, one-export barrels,

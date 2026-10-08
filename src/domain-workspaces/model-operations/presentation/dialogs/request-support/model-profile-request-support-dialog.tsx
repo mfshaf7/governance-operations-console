@@ -24,12 +24,12 @@ export function ModelProfileRequestSupportDialog({
     <TerasDialog
       contentOverflow="auto"
       height="content"
-      description="The profile request path is contract-defined but has not been admitted or implemented."
+      description="The live request path extends OOS, Platform, and Security authority without giving the Console profile or registry ownership."
       kicker="Model Operations"
       onClose={onClose}
       open={open}
       width="standard"
-      title="Model Profile Requests"
+      title="Model Profile Request Boundary"
     >
       <TerasMetadataList
         items={modelProfileRequestMetadata(modelProfileRequestCapability)}
