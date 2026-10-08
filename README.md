@@ -23,6 +23,8 @@ separately governed OOS integration slices:
 - versioned canonical source envelopes for admitted live GET projections, with
   owner, identity, freshness, and ordering validation before use
 - canonical Proposal list, capture, projection, command, and history paths
+- Proposal-to-Prototype target application with repository-gate enforcement,
+  exact Studio review projection, and receipt-plus-acknowledgement completion
 - bounded visible-page polling with fail-closed writes
 - explicit disconnected preview when no OOS endpoint is configured
 - Prototype-to-Delivery application for an exact, source-authoritative
@@ -94,6 +96,9 @@ The approved design-baseline record is retained at
 [`docs/graduation/approved-design-baseline.yaml`](docs/graduation/approved-design-baseline.yaml).
 
 ## Local Development
+
+Use Node.js 22 and npm 10, matching the repository CI and governed owner
+evidence runtime. With `nvm`, run `nvm use` from the repository root.
 
 ```bash
 npm ci
@@ -169,6 +174,8 @@ adding source, runtime adapters, identity integration, external data, or
 deployment configuration.
 
 ## Validation
+
+Run validation with Node.js 22 and npm 10.
 
 Run:
 

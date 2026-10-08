@@ -2,6 +2,10 @@
   "name": "governance-operations-console",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x",
+    "npm": "10.x"
+  },
   "scripts": {
     "dev": "NEXT_TELEMETRY_DISABLED=1 next dev --hostname 127.0.0.1 --port 3317",
     "build": "NEXT_TELEMETRY_DISABLED=1 next build",
@@ -15,7 +19,7 @@
     "test:lifecycle-transitions": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/lifecycle-transitions/*.test.mjs",
     "test:operation-runtime": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/operation-runtime/*.test.mjs",
     "test:system-simulation": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/system-simulation/*.test.mjs",
-    "test:semantics": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/console-architecture/*.test.mjs tests/environment-lifecycle/*.test.mjs tests/operation-workbench/*.test.mjs tests/operation-runtime/*.test.mjs tests/operation-projections/*.test.mjs tests/delivery/*.test.mjs tests/lifecycle-transitions/*.test.mjs tests/model-operations/*.test.mjs tests/orchestration/*.test.mjs tests/prototype/*.test.mjs tests/system-simulation/*.test.mjs",
+    "test:semantics": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test --test-concurrency=1 tests/console-architecture/*.test.mjs tests/environment-lifecycle/*.test.mjs tests/operation-workbench/*.test.mjs tests/operation-runtime/*.test.mjs tests/operation-projections/*.test.mjs tests/delivery/*.test.mjs tests/lifecycle-transitions/*.test.mjs tests/model-operations/*.test.mjs tests/orchestration/*.test.mjs tests/prototype/*.test.mjs tests/system-simulation/*.test.mjs",
     "check": "npm run architecture && npm run test:semantics && npm run typecheck && npm run build"
   },
   "dependencies": {
@@ -31,7 +35,8 @@
   },
   "overrides": {
     "postcss": "$postcss",
-    "sharp": "0.35.4"
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

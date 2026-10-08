@@ -202,11 +202,24 @@ export function useProposalControlController({
           liveRecord.projection.handoff.state === "blocked" ||
           liveRecord.projection.handoff.state === "ready" ||
           liveRecord.projection.handoff.state === "waiting-on-target");
+      const appliesToPrototype =
+        input.payload.step === "handoff" &&
+        liveRecord.projection.route?.target === "prototype" &&
+        input.payload.result === "ready";
       if (
         appliesToDelivery &&
         liveRecord.projection.handoff.state !== "not-requested"
       ) {
         return applyLiveDeliveryHandoff(
+          proposalLiveRuntime,
+          liveRecord.projection,
+        );
+      }
+      if (
+        appliesToPrototype &&
+        liveRecord.projection.handoff.state !== "not-requested"
+      ) {
+        return applyLivePrototypeHandoff(
           proposalLiveRuntime,
           liveRecord.projection,
         );
@@ -227,6 +240,9 @@ export function useProposalControlController({
           proposalLiveRuntime,
           result.projection,
         );
+      }
+      if (appliesToPrototype) {
+        return applyLivePrototypeHandoff(proposalLiveRuntime, result.projection);
       }
       return {
         receiptId: result.receipt.receipt_ref,
@@ -432,7 +448,15 @@ export function useProposalControlController({
           : Promise.resolve(),
       onApplyHandoffDraft: (draft) =>
         hubProposal
-          ? applyHandoffDraftReceipt(draft, hubProposal).then(() => undefined)
+          ? applyHandoffDraftReceipt(draft, hubProposal).then((receipt) => ({
+              complete: receipt.complete !== false,
+            }))
+          : Promise.resolve({ complete: false }),
+      onCancelTargetApplication: () =>
+        hubProposal
+          ? proposalLiveRuntime
+              .cancelTargetApplication(hubProposal.id)
+              .then(() => undefined)
           : Promise.resolve(),
       onApplyTriageDraft: (draft) =>
         hubProposal
@@ -459,6 +483,15 @@ export function useProposalControlController({
         ? (routeSelectionDrafts[hubProposal.id] ?? null)
         : null,
       triageDraft: hubProposal ? (triageDrafts[hubProposal.id] ?? null) : null,
+      targetApplication: hubProposal
+        ? (proposalLiveRuntime.targetApplications[hubProposal.id] ?? null)
+        : null,
+      targetApplicationError: hubProposal
+        ? (proposalLiveRuntime.targetApplicationErrors[hubProposal.id] ?? null)
+        : null,
+      targetApplicationPending: hubProposal
+        ? (proposalLiveRuntime.targetApplicationPending[hubProposal.id] ?? false)
+        : false,
       workflowReceipts: hubProposal
         ? (effectiveWorkflowReceipts[hubProposal.id] ?? [])
         : [],
@@ -475,6 +508,59 @@ export function useProposalControlController({
     selectedProposalHubProjection,
     summary,
     workspaceStatus: proposalLiveWorkspaceStatus(liveSnapshot),
+  };
+}
+
+async function applyLivePrototypeHandoff(
+  runtime: Pick<
+    ReturnType<typeof useProposalLiveRuntime>,
+    | "continueTargetApplication"
+    | "startTargetApplication"
+    | "targetApplications"
+  >,
+  projection: NonNullable<
+    ReturnType<typeof useProposalLiveRuntime>["snapshot"]
+  >["records"][number]["projection"],
+) {
+  if (
+    projection.status !== "accepted" ||
+    projection.route?.target !== "prototype" ||
+    projection.route.source_custody.repository_gate_state !== "resolved" ||
+    projection.handoff.state !== "ready" ||
+    !projection.handoff.packet_ref
+  ) {
+    throw new Error(
+      "Canonical Proposal state is not ready for Prototype target application.",
+    );
+  }
+  const current = runtime.targetApplications[projection.proposal_id];
+  const result = current
+    ? await runtime.continueTargetApplication(projection.proposal_id)
+    : await runtime.startTargetApplication({
+        proposalId: projection.proposal_id,
+        source: {
+          handoffPacketRef: projection.handoff.packet_ref,
+          recordRef: projection.record_ref,
+          recordVersion: projection.record_version,
+          status: projection.status,
+        },
+      });
+  if (
+    result.status !== "succeeded" ||
+    !result.target_result ||
+    !result.proposal_acknowledgement
+  ) {
+    const recordedAt = result.history.at(-1)?.at ?? new Date().toISOString();
+    return {
+      complete: false,
+      receiptId: result.application_id,
+      recordedAt,
+    };
+  }
+  return {
+    complete: true,
+    receiptId: result.target_result.receipt.receipt_ref,
+    recordedAt: result.target_result.receipt.recorded_at,
   };
 }
 

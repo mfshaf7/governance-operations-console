@@ -19,6 +19,7 @@ import {
   type ProposalWorkflowSourceSnapshot,
 } from "../../../work-model/proposal-source-projection-model.ts";
 type ProposalWorkflowDraftReceipt = {
+  complete?: boolean;
   receiptId: string;
   recordedAt: string;
 };
@@ -195,6 +196,9 @@ export function useProposalWorkflowDrafts({
       proposalId: draft.proposalId,
       source,
     });
+    if (receipt.complete === false) {
+      return receipt;
+    }
     const appliedAt = receipt.recordedAt;
 
     setHandoffDrafts((current) => ({

@@ -203,8 +203,10 @@ export function useProposalWorkflowSessionController({
       return;
     }
 
-    await onApplyHandoffDraft(activeHandoffDraft);
-    setActiveWorkflowStep("hub");
+    const result = await onApplyHandoffDraft(activeHandoffDraft);
+    if (result.complete) {
+      setActiveWorkflowStep("hub");
+    }
   };
   const runFooterMove = async () => {
     if (!footerMove || footerMove.disabled) {

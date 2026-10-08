@@ -13,6 +13,7 @@ import type { ProposalHandoffDraft } from "../../../../work-model/proposal-hando
 import type { ProposalRouteSelectionDraft } from "../../../../work-model/proposal-disposition-model.ts";
 import type { ProposalWorkflowNavigationTarget } from "../../../../work-model/proposal-workflow-navigation.ts";
 import type { ProposalWorkflowStepProjection } from "../../../../work-model/proposal-workflow-step-model.ts";
+import type { ProposalTargetApplicationResult } from "../../../../live-runtime/proposal-live-types.ts";
 import type { ProposalWorkspaceScenario } from "../../../../read-model/proposal-workspace-read-model.ts";
 import { ProposalWorkflowProgressPanel } from "../../session/proposal-workflow-progress-panel.tsx";
 import { proposalSubjectMetadata } from "../../../shared/proposal-display-model.ts";
@@ -24,6 +25,7 @@ import { proposalHandoffStepProjection } from "./proposal-handoff-step-view-mode
 export function ProposalHandoffStep({
   draft,
   onApplyDraft,
+  onCancelTargetApplication,
   onChangeDraft,
   onOpenDetails,
   onOpenRepositorySurface,
@@ -33,10 +35,14 @@ export function ProposalHandoffStep({
   readOnly = false,
   repositoryGateResolution,
   routeSelectionDraft,
+  targetApplication,
+  targetApplicationError,
+  targetApplicationPending = false,
   workflowReady = true,
 }: {
   draft: ProposalHandoffDraft;
   onApplyDraft: () => void;
+  onCancelTargetApplication: () => void;
   onChangeDraft: (draft: ProposalHandoffDraft) => void;
   onOpenDetails: () => void;
   onOpenRepositorySurface?: (proposalId: string) => void;
@@ -46,6 +52,9 @@ export function ProposalHandoffStep({
   readOnly?: boolean;
   repositoryGateResolution?: ProposalRepositoryGateResolution | null;
   routeSelectionDraft: ProposalRouteSelectionDraft;
+  targetApplication?: ProposalTargetApplicationResult | null;
+  targetApplicationError?: string | null;
+  targetApplicationPending?: boolean;
   workflowReady?: boolean;
 }) {
   const projection = proposalHandoffStepProjection({
@@ -53,6 +62,9 @@ export function ProposalHandoffStep({
     readOnly,
     repositoryGateResolution,
     routeSelectionDraft,
+    targetApplication,
+    targetApplicationError,
+    targetApplicationPending,
     workflowReady,
   });
   const {
@@ -140,6 +152,7 @@ export function ProposalHandoffStep({
         <TerasZone fit="fill">
           <ProposalHandoffApplyPanel
             draft={draft}
+            onCancelTargetApplication={onCancelTargetApplication}
             onApplyDraft={onApplyDraft}
             onNotesChange={(value) => updateDraft({ notes: value })}
             projection={projection}

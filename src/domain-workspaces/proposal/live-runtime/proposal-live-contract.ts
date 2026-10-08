@@ -6,6 +6,7 @@ import type {
   ProposalOosHandoffApplicationResult,
   ProposalOosHistory,
   ProposalOosProjection,
+  ProposalTargetApplicationResult,
 } from "./proposal-live-types.ts";
 
 export function assertProposalLiveSnapshot(value: unknown): ProposalLiveSnapshot {
@@ -80,6 +81,95 @@ export function assertProposalOosHandoffApplicationResult(
   assertProposalOosHistory(value.history);
   assertProposalOosEvent(value.event);
   return value as unknown as ProposalOosHandoffApplicationResult;
+}
+
+export function assertProposalTargetApplicationResult(
+  value: unknown,
+): ProposalTargetApplicationResult {
+  const statuses = new Set([
+    "accepted",
+    "cancelled",
+    "cancelling",
+    "preparing",
+    "rejected",
+    "requires-action",
+    "review-required",
+    "succeeded",
+  ]);
+  if (
+    !isRecord(value) ||
+    value.schema_version !== 1 ||
+    value.workflow_id !== "proposal-target-application" ||
+    typeof value.application_id !== "string" ||
+    typeof value.proposal_id !== "string" ||
+    typeof value.prototype_id !== "string" ||
+    typeof value.session_ref !== "string" ||
+    typeof value.execution_ref !== "string" ||
+    typeof value.status !== "string" ||
+    !statuses.has(value.status) ||
+    typeof value.next_action !== "string" ||
+    typeof value.revision !== "number" ||
+    !Array.isArray(value.history) ||
+    typeof value.canonical_target_mutation !== "boolean" ||
+    typeof value.proposal_mutation !== "boolean" ||
+    value.runtime_activation !== false
+  ) {
+    throw new Error("Proposal target application projection is invalid.");
+  }
+
+  if (value.status === "review-required") {
+    if (
+      !isRecord(value.review) ||
+      value.review.repository !== "workspace-prototype-studio" ||
+      typeof value.review.number !== "number" ||
+      value.review.state !== "open" ||
+      typeof value.review.head_commit !== "string" ||
+      value.review.merged !== false ||
+      value.canonical_target_mutation ||
+      value.proposal_mutation
+    ) {
+      throw new Error("Proposal target review projection is invalid.");
+    }
+  }
+
+  if (value.status === "succeeded") {
+    if (
+      !value.canonical_target_mutation ||
+      !value.proposal_mutation ||
+      !isRecord(value.target_result) ||
+      !isRecord(value.target_result.receipt) ||
+      value.target_result.receipt.owner !== "workspace-prototype-studio" ||
+      typeof value.target_result.receipt.receipt_ref !== "string" ||
+      typeof value.target_result.receipt.recorded_at !== "string" ||
+      !isRecord(value.proposal_acknowledgement) ||
+      !isRecord(value.proposal_acknowledgement.projection) ||
+      !isRecord(value.proposal_acknowledgement.projection.handoff) ||
+      value.proposal_acknowledgement.projection.handoff.state !== "applied" ||
+      value.proposal_acknowledgement.projection.handoff.target_receipt_ref !==
+        value.target_result.receipt.receipt_ref ||
+      value.proposal_acknowledgement.projection.handoff.target_record_ref !==
+        value.target_result.receipt.target_record_ref
+    ) {
+      throw new Error("Proposal target success evidence is incomplete.");
+    }
+    assertProposalOosProjection(value.proposal_acknowledgement.projection);
+  } else if (value.canonical_target_mutation || value.proposal_mutation) {
+    throw new Error("Incomplete Proposal target application claimed mutation.");
+  }
+
+  for (const entry of value.history) {
+    if (
+      !isRecord(entry) ||
+      typeof entry.sequence !== "number" ||
+      typeof entry.at !== "string" ||
+      typeof entry.status !== "string" ||
+      !statuses.has(entry.status)
+    ) {
+      throw new Error("Proposal target application history is invalid.");
+    }
+  }
+
+  return value as unknown as ProposalTargetApplicationResult;
 }
 
 export function isProposalLiveApiError(value: unknown): value is ProposalLiveApiError {

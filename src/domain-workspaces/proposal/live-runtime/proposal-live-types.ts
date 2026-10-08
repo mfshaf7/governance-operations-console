@@ -158,6 +158,93 @@ export type ProposalOosHandoffApplicationResult = {
   schema_version: 1;
 };
 
+export type ProposalTargetApplicationStatus =
+  | "accepted"
+  | "cancelled"
+  | "cancelling"
+  | "preparing"
+  | "rejected"
+  | "requires-action"
+  | "review-required"
+  | "succeeded";
+
+export type ProposalTargetApplicationResult = {
+  application_id: string;
+  canonical_target_mutation: boolean;
+  execution_ref: string;
+  failure: {
+    code: string;
+    message: string;
+    retryable: boolean;
+  } | null;
+  history: Array<{
+    at: string;
+    details: Record<string, unknown> | null;
+    sequence: number;
+    status: ProposalTargetApplicationStatus;
+  }>;
+  next_action:
+    | "complete"
+    | "continue"
+    | "inspect-review-or-cancel"
+    | "prototype-landing"
+    | "restore-dependency-and-retry"
+    | "review-and-merge"
+    | "submit-corrected-request";
+  preparation: {
+    base_commit: string;
+    branch: string;
+    changed_paths: string[];
+    content_digest: string;
+    file_count: number;
+  } | null;
+  proposal_acknowledgement: {
+    projection: ProposalOosProjection;
+    replayed: boolean;
+  } | null;
+  proposal_id: string;
+  proposal_mutation: boolean;
+  prototype_id: string;
+  review: {
+    base_branch: string;
+    base_commit: string;
+    branch: string;
+    head_commit: string;
+    human_reviewed: boolean;
+    merge_commit: string | null;
+    merged: boolean;
+    number: number;
+    repository: string;
+    state: "closed" | "open";
+  } | null;
+  revision: number;
+  runtime_activation: false;
+  schema_version: 1;
+  session_ref: string;
+  status: ProposalTargetApplicationStatus;
+  target_result: {
+    receipt: {
+      owner: "workspace-prototype-studio";
+      prototype_id: string;
+      receipt_ref: string;
+      recorded_at: string;
+      target_record_ref: string;
+    };
+    result_digest: string;
+  } | null;
+  workflow_id: "proposal-target-application";
+};
+
+export type ProposalLiveTargetApplicationRequest = {
+  proposalId: string;
+  source: {
+    handoffPacketRef: string;
+    recordRef: string;
+    recordVersion: string;
+    status: "accepted";
+  };
+};
+
 export type ProposalLiveCaptureRequest = {
   body: string;
   requestId: string;

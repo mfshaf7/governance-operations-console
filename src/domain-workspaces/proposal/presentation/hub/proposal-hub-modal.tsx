@@ -10,6 +10,7 @@ import type { ProposalHandoffDraft } from "../../work-model/proposal-handoff-mod
 import type { ProposalTriageDraft } from "../../work-model/proposal-triage-model.ts";
 import type { ProposalWorkspaceScenario } from "../../read-model/proposal-workspace-read-model.ts";
 import type { ProposalWorkflowLocalReceipt } from "../../local-runtime/proposal-runtime.ts";
+import type { ProposalTargetApplicationResult } from "../../live-runtime/proposal-live-types.ts";
 import { ProposalWorkflowFooter } from "../workflows/session/proposal-workflow-footer.tsx";
 import { useProposalWorkflowSessionController } from "../workflows/session/proposal-workflow-session-controller.ts";
 import { ProposalDispositionStep } from "../workflows/steps/disposition/proposal-disposition-step.tsx";
@@ -22,6 +23,7 @@ import { ProposalHubHome } from "./proposal-hub-home.tsx";
 export function ProposalHubModal({
   decisionDraft,
   handoffDraft,
+  onCancelTargetApplication,
   onApplyDispositionDraft,
   onApplyHandoffDraft,
   onApplyTriageDraft,
@@ -36,6 +38,9 @@ export function ProposalHubModal({
   repositoryGateResolution,
   routeSelectionDraft,
   triageDraft,
+  targetApplication,
+  targetApplicationError,
+  targetApplicationPending,
   workflowReceipts,
 }: {
   decisionDraft: ProposalDecisionDraft | null;
@@ -44,7 +49,10 @@ export function ProposalHubModal({
     decisionDraft: ProposalDecisionDraft;
     routeSelectionDraft: ProposalRouteSelectionDraft | null;
   }) => Promise<void>;
-  onApplyHandoffDraft: (draft: ProposalHandoffDraft) => Promise<void>;
+  onApplyHandoffDraft: (
+    draft: ProposalHandoffDraft,
+  ) => Promise<{ complete: boolean }>;
+  onCancelTargetApplication: () => Promise<void>;
   onApplyTriageDraft: (draft: ProposalTriageDraft) => Promise<void>;
   onChangeDecisionDraft: (draft: ProposalDecisionDraft) => void;
   onChangeHandoffDraft: (draft: ProposalHandoffDraft) => void;
@@ -57,6 +65,9 @@ export function ProposalHubModal({
   repositoryGateResolution: ProposalRepositoryGateResolution | null;
   routeSelectionDraft: ProposalRouteSelectionDraft | null;
   triageDraft: ProposalTriageDraft | null;
+  targetApplication: ProposalTargetApplicationResult | null;
+  targetApplicationError: string | null;
+  targetApplicationPending: boolean;
   workflowReceipts: ProposalWorkflowLocalReceipt[];
 }) {
   const controller = useProposalWorkflowSessionController({
@@ -175,6 +186,10 @@ export function ProposalHubModal({
             workflowReady={handoffStepAvailable}
             repositoryGateResolution={repositoryGateResolution}
             routeSelectionDraft={activeRouteSelectionDraft}
+            onCancelTargetApplication={onCancelTargetApplication}
+            targetApplication={targetApplication}
+            targetApplicationError={targetApplicationError}
+            targetApplicationPending={targetApplicationPending}
           />
           <TerasDraftCloseGuardDialog
             description="This local Proposal Handoff draft is autosaved but not applied. Leaving returns to the Proposal Hub; reopening this proposal restores the draft."

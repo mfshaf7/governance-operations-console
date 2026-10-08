@@ -6,6 +6,23 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-07
+
+- Connected accepted Prototype-routed Proposals to the OOS-owned target
+  application protocol from the existing Handoff panel.
+- Added server-built preparation and immutable command binding, explicit
+  repository-gate blocking, exact Studio review projection, reconciliation,
+  cancellation, and strict receipt-plus-Proposal-acknowledgement completion.
+- Kept the source runtime-inactive pending exact-revision Security `#1235` and
+  Platform commissioning `#1236`; no browser credential, source-provider
+  authority, or Console-local success path was introduced.
+- Serialized the semantic test files in the repository validation command so
+  local governed evidence runs stay deterministic and memory-bounded under the
+  persistent dev-integration workload.
+- Declared Node.js 22 and npm 10 as the owner-repository runtime baseline,
+  matching CI and preventing local evidence from drifting to an unreviewed
+  major runtime.
+
 ## 2026-10-02
 
 - Revalidated the existing Workspace Intake and Workspace Registry Console

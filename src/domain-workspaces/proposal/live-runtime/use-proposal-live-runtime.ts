@@ -6,6 +6,7 @@ import {
   assertProposalLiveSnapshot,
   assertProposalOosCommandResult,
   assertProposalOosHandoffApplicationResult,
+  assertProposalTargetApplicationResult,
   isProposalLiveApiError,
 } from "./proposal-live-contract.ts";
 import type {
@@ -15,12 +16,23 @@ import type {
   ProposalLiveSnapshot,
   ProposalOosCommandResult,
   ProposalOosHandoffApplicationResult,
+  ProposalLiveTargetApplicationRequest,
+  ProposalTargetApplicationResult,
 } from "./proposal-live-types.ts";
 
 const proposalPollIntervalMs = 15_000;
 
 export function useProposalLiveRuntime() {
   const [snapshot, setSnapshot] = useState<ProposalLiveSnapshot | null>(null);
+  const [targetApplications, setTargetApplications] = useState<
+    Record<string, ProposalTargetApplicationResult>
+  >({});
+  const [targetApplicationErrors, setTargetApplicationErrors] = useState<
+    Record<string, string | null>
+  >({});
+  const [targetApplicationPending, setTargetApplicationPending] = useState<
+    Record<string, boolean>
+  >({});
   const refreshSequence = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -120,7 +132,88 @@ export function useProposalLiveRuntime() {
     [refresh],
   );
 
-  return { applyDeliveryHandoff, capture, command, refresh, snapshot };
+  const targetApplicationCommand = useCallback(
+    async (
+      proposalId: string,
+      method: "DELETE" | "POST",
+      input?:
+        | (ProposalLiveTargetApplicationRequest & { action: "start" })
+        | { action: "continue" },
+    ) => {
+      setTargetApplicationPending((current) => ({
+        ...current,
+        [proposalId]: true,
+      }));
+      try {
+        const response = await fetch(
+          `/api/proposals/${encodeURIComponent(proposalId)}/target-application`,
+          {
+            ...(input ? { body: JSON.stringify(input) } : {}),
+            headers: { "Content-Type": "application/json" },
+            method,
+          },
+        );
+        const body: unknown = await response.json().catch(() => null);
+        if (!response.ok) throw proposalClientError(body);
+        const result = assertProposalTargetApplicationResult(body);
+        setTargetApplications((current) => ({
+          ...current,
+          [proposalId]: result,
+        }));
+        setTargetApplicationErrors((current) => ({
+          ...current,
+          [proposalId]: null,
+        }));
+        if (result.status === "succeeded") await refresh();
+        return result;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Target application failed.";
+        setTargetApplicationErrors((current) => ({
+          ...current,
+          [proposalId]: message,
+        }));
+        throw error;
+      } finally {
+        setTargetApplicationPending((current) => ({
+          ...current,
+          [proposalId]: false,
+        }));
+      }
+    },
+    [refresh],
+  );
+
+  const startTargetApplication = useCallback(
+    (request: ProposalLiveTargetApplicationRequest) =>
+      targetApplicationCommand(request.proposalId, "POST", {
+        ...request,
+        action: "start",
+      }),
+    [targetApplicationCommand],
+  );
+  const continueTargetApplication = useCallback(
+    (proposalId: string) =>
+      targetApplicationCommand(proposalId, "POST", { action: "continue" }),
+    [targetApplicationCommand],
+  );
+  const cancelTargetApplication = useCallback(
+    (proposalId: string) => targetApplicationCommand(proposalId, "DELETE"),
+    [targetApplicationCommand],
+  );
+  return {
+    applyDeliveryHandoff,
+    cancelTargetApplication,
+    capture,
+    command,
+    continueTargetApplication,
+    refresh,
+    snapshot,
+    startTargetApplication,
+    targetApplicationErrors,
+    targetApplicationPending,
+    targetApplications,
+  };
 }
 
 function proposalOfflineSnapshot(value: unknown): ProposalLiveSnapshot {

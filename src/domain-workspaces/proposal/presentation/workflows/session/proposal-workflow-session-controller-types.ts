@@ -14,7 +14,9 @@ export type UseProposalWorkflowSessionControllerParams = {
     decisionDraft: ProposalDecisionDraft;
     routeSelectionDraft: ProposalRouteSelectionDraft | null;
   }) => Promise<void>;
-  onApplyHandoffDraft: (draft: ProposalHandoffDraft) => Promise<void>;
+  onApplyHandoffDraft: (
+    draft: ProposalHandoffDraft,
+  ) => Promise<{ complete: boolean }>;
   onApplyTriageDraft: (draft: ProposalTriageDraft) => Promise<void>;
   onClose: () => void;
   onInspectProposal: (proposal: ProposalWorkspaceScenario) => void;

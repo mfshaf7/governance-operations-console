@@ -139,6 +139,7 @@ export function ProposalControlSurface({
         decisionDraft={controller.hub.decisionDraft}
         onApplyDispositionDraft={controller.hub.onApplyDispositionDraft}
         onApplyHandoffDraft={controller.hub.onApplyHandoffDraft}
+        onCancelTargetApplication={controller.hub.onCancelTargetApplication}
         onApplyTriageDraft={controller.hub.onApplyTriageDraft}
         onClose={controller.hub.close}
         onChangeDecisionDraft={controller.hub.onChangeDecisionDraft}
@@ -152,6 +153,9 @@ export function ProposalControlSurface({
         handoffDraft={controller.hub.handoffDraft}
         routeSelectionDraft={controller.hub.routeSelectionDraft}
         triageDraft={controller.hub.triageDraft}
+        targetApplication={controller.hub.targetApplication}
+        targetApplicationError={controller.hub.targetApplicationError}
+        targetApplicationPending={controller.hub.targetApplicationPending}
         workflowReceipts={controller.hub.workflowReceipts}
       />
       <ProposalDetailModal

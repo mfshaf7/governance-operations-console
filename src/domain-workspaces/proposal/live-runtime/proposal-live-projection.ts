@@ -208,10 +208,7 @@ export function projectProposalCanonicalDrafts(
     }
 
     if (record.projection.handoff.state !== "not-requested") {
-      const handoffRecorded =
-        record.projection.handoff.state === "applied" ||
-        (route?.target === "prototype" &&
-          record.projection.handoff.state === "ready");
+      const handoffRecorded = record.projection.handoff.state === "applied";
       projection.handoffDrafts[proposalId] = {
         ...source,
         ...(handoffRecorded

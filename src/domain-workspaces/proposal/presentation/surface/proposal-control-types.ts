@@ -17,6 +17,7 @@ import {
   type ProposalStatusFilter,
 } from "../shared/proposal-display-model.ts";
 import type { OperationSurfaceStatusModel } from "../../../operation-contracts/surface-status.ts";
+import type { ProposalTargetApplicationResult } from "../../live-runtime/proposal-live-types.ts";
 
 export type ProposalControlController = {
   capture: {
@@ -53,7 +54,10 @@ export type ProposalControlController = {
       decisionDraft: ProposalDecisionDraft;
       routeSelectionDraft: ProposalRouteSelectionDraft | null;
     }) => Promise<void>;
-    onApplyHandoffDraft: (draft: ProposalHandoffDraft) => Promise<void>;
+    onApplyHandoffDraft: (
+      draft: ProposalHandoffDraft,
+    ) => Promise<{ complete: boolean }>;
+    onCancelTargetApplication: () => Promise<void>;
     onApplyTriageDraft: (draft: ProposalTriageDraft) => Promise<void>;
     onChangeDecisionDraft: (draft: ProposalDecisionDraft) => void;
     onChangeHandoffDraft: (draft: ProposalHandoffDraft) => void;
@@ -64,6 +68,9 @@ export type ProposalControlController = {
     repositoryGateResolution: ProposalRepositoryGateResolution | null;
     routeSelectionDraft: ProposalRouteSelectionDraft | null;
     triageDraft: ProposalTriageDraft | null;
+    targetApplication: ProposalTargetApplicationResult | null;
+    targetApplicationError: string | null;
+    targetApplicationPending: boolean;
     workflowReceipts: ProposalWorkflowLocalReceipt[];
   };
   proposals: {
