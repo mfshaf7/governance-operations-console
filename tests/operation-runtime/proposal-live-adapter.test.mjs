@@ -230,8 +230,9 @@ test("case:proposal-target-console-protocol-positive prepares, submits, and proj
     if (String(url).endsWith("/v1/proposal-target-applications")) {
       const command = JSON.parse(String(init.body));
       assert.equal(command.application_id, "proposal-prototype-application:proposal-851:851");
-      assert.equal(command.prototype.id, "prototype:proposal-851");
-      assert.equal(command.prototype.suggested_name, "Sample Tool");
+      assert.deepEqual(command.prototype, {
+        id: "prototype:proposal-851",
+      });
       assert.equal(command.proposal.record_version, "version-21");
       assert.deepEqual(Object.keys(command.proposal).sort(), [
         "handoff_packet_digest",
