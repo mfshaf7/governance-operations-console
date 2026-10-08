@@ -220,7 +220,6 @@ export async function startProposalTargetApplication(
       {
         body: JSON.stringify({
           proposal_id: request.proposalId,
-          prototype_id: prototypeId,
         }),
         method: "POST",
       },

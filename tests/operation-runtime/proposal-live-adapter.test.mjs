@@ -222,6 +222,9 @@ test("case:proposal-target-console-protocol-positive prepares, submits, and proj
       });
     }
     if (String(url).endsWith("/preparations")) {
+      assert.deepEqual(JSON.parse(String(init.body)), {
+        proposal_id: "idea-851",
+      });
       return jsonResponse(proposalTargetPreparation());
     }
     if (String(url).endsWith("/v1/proposal-target-applications")) {
