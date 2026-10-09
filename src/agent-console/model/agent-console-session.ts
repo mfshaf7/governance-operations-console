@@ -25,7 +25,7 @@ export type AgentInvocation = {
   contextDecision: AgentContextDecision["code"];
   contextPolicyProfile: AgentContextDecision["policyProfile"];
   contextSourceMode: AgentContextDecision["sourceMode"];
-  cggReceiptRef: null;
+  cggReceiptRef: string | null;
   error: string | null;
   failureCode: AgentInvocationFailureCode | null;
   id: string;
@@ -131,10 +131,12 @@ export function settleAgentInvocation(
 
 export function createAgentInvocation({
   contextDecision,
+  id,
   model,
   provider,
 }: {
   contextDecision: AgentContextDecision;
+  id?: string;
   model: string | null;
   provider: string;
 }): AgentInvocation {
@@ -149,7 +151,7 @@ export function createAgentInvocation({
     cggReceiptRef: null,
     error: null,
     failureCode: null,
-    id: `agent-invocation-${crypto.randomUUID()}`,
+    id: id ?? `agent-invocation-${crypto.randomUUID()}`,
     interactionMode: contextDecision.mode,
     model,
     provider,

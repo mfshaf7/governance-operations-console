@@ -170,7 +170,7 @@ export const guard = {
       "EnvironmentLifecycleWorkspace",
       "ConsoleActivityPanel",
       'initialContextMode="focused"',
-      'initialContextMode="general"',
+      'initialContextMode="focused"',
       'runtimeId: "console-ai.embedded-context"',
       'runtimeId: "console-ai.docking-agent"',
       'title="Docking Agent"',

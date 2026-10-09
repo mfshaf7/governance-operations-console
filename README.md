@@ -57,6 +57,10 @@ separately governed OOS integration slices:
 - Model Operations request creation through OOS plus exact Platform profile
   source, lifecycle receipt, and merged-readback reconciliation; the Console
   retains no registry, fulfillment, Security, or activation authority
+- Agent Console sessions and invocations through OOS, CGG model-safe context,
+  the governed Agent Console profile, gateway audit evidence, and terminal
+  receipts; the Console retains no context-admission, model, action, Security,
+  or activation authority
 - owner-backed Command Center Focus and Workspace Pulse composition from one
   freshness-aware, deduplicated attention snapshot
 - bounded Governance Activity composition from canonical OOS workflow activity
@@ -151,6 +155,9 @@ The Workspace Registry boundary is documented in
 The Model Operations request and source-reconciliation boundary is documented
 in
 [`docs/product/model-operations-live-integration.md`](docs/product/model-operations-live-integration.md).
+The governed Agent Console session, context, model, and evidence boundary is
+documented in
+[`docs/product/agent-console-live-integration.md`](docs/product/agent-console-live-integration.md).
 The shared runtime configuration, capability, correlation, and audit boundary
 is documented in
 [`docs/product/console-runtime-operability.md`](docs/product/console-runtime-operability.md).

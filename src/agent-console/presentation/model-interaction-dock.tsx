@@ -70,7 +70,8 @@ export function ModelInteractionDock({
     placement,
     providerStatus,
   });
-  const modeOptions: AgentInteractionMode[] = ["focused", "general", "workspace"];
+  const modeOptions: AgentInteractionMode[] = ["focused", "workspace"];
+  const workspaceModeAvailable = contextCandidate?.scope === "workspace";
 
   return (
     <>
@@ -109,7 +110,7 @@ export function ModelInteractionDock({
                 {title}
               </p>
               <p className="model-dock-subtitle mt-1 truncate text-xs">
-                {providerOnline ? `${providerStatus?.modelCount ?? 0} local models detected` : "Local model path is visible but not ready"}
+                {providerOnline ? `${providerStatus?.model ?? "governed profile"} ready` : "Governed Agent Console path is not ready"}
               </p>
             </div>
           </div>
@@ -138,10 +139,10 @@ export function ModelInteractionDock({
                           key={mode}
                           className="model-dock-mode-menu-item"
                           data-active={agentContextMode === mode ? "true" : "false"}
-                          disabled={agentBusy || mode === "workspace"}
+                          disabled={agentBusy || (mode === "workspace" && !workspaceModeAvailable)}
                           title={
                             mode === "workspace"
-                              ? "Workspace mode requires a governed workspace packet source."
+                              ? "Workspace mode requires a current workspace context candidate."
                               : undefined
                           }
                           type="button"
@@ -162,10 +163,10 @@ export function ModelInteractionDock({
                     aria-pressed={agentContextMode === mode}
                     className="model-dock-mode-compact-button"
                     data-active={agentContextMode === mode ? "true" : "false"}
-                    disabled={agentBusy || mode === "workspace"}
+                    disabled={agentBusy || (mode === "workspace" && !workspaceModeAvailable)}
                     title={
                       mode === "workspace"
-                        ? "Workspace mode requires a governed workspace packet source."
+                        ? "Workspace mode requires a current workspace context candidate."
                         : undefined
                     }
                     type="button"
@@ -242,7 +243,7 @@ export function ModelInteractionDock({
                     <>
                       <span className="terminal-speaker">
                         {entry.kind === "agent"
-                          ? `agent[${entry.model ?? providerStatus?.model ?? "ollama"}]`
+                          ? `agent[${entry.model ?? providerStatus?.model ?? "governed"}]`
                           : entry.kind}
                       </span>
                       <pre>{entry.text}</pre>
@@ -253,7 +254,7 @@ export function ModelInteractionDock({
               {agentBusy && agentTranscript.at(-1)?.kind !== "agent" ? (
                 <div className="terminal-entry terminal-entry-agent">
                   <span className="terminal-speaker">
-                    agent[{providerStatus?.model ?? "ollama"}]
+                    agent[{providerStatus?.model ?? "governed"}]
                   </span>
                   <pre className="terminal-thinking">thinking...</pre>
                 </div>

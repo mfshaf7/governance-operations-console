@@ -11,12 +11,12 @@ import {
 function providerStatus(overrides = {}) {
   return {
     checkedAt: "2026-07-28T04:00:00.000Z",
-    endpoint: "http://127.0.0.1:11434",
+    endpoint: null,
     freshness: "live",
-    model: "llama3.1:8b",
-    modelCount: 12,
+    model: "agent-console-assistant-v1",
+    modelCount: 1,
     observedAt: "2026-07-28T04:00:00.000Z",
-    provider: "ollama",
+    provider: "governed-ai-gateway",
     safetyMode: agentProviderSafetyMode,
     status: "online",
     ...overrides,
@@ -82,10 +82,10 @@ test("Agent provider observations require source and freshness timestamps", () =
   assert.equal(isAgentProviderStatus(providerStatus()), true);
   assert.equal(
     isAgentProviderStatus({
-      endpoint: "http://127.0.0.1:11434",
-      model: "llama3.1:8b",
-      modelCount: 12,
-      provider: "ollama",
+      endpoint: null,
+      model: "agent-console-assistant-v1",
+      modelCount: 1,
+      provider: "governed-ai-gateway",
       safetyMode: agentProviderSafetyMode,
       status: "online",
     }),

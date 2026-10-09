@@ -1,5 +1,5 @@
 export const agentProviderSafetyMode =
-  "manual-operator-request/prototype-synthetic-context-only";
+  "oos-session/cgg-model-safe/governed-ai/manual-operator-request";
 
 export type AgentProviderStatus = {
   checkedAt: string;
@@ -9,7 +9,7 @@ export type AgentProviderStatus = {
   model: string | null;
   modelCount: number;
   observedAt: string | null;
-  provider: "ollama";
+  provider: "governed-ai-gateway";
   safetyMode: string;
   status: "offline" | "online" | "unavailable";
 };
@@ -56,7 +56,7 @@ export function retainStaleAgentProviderObservation({
     model: null,
     modelCount: 0,
     observedAt: null,
-    provider: "ollama",
+    provider: "governed-ai-gateway",
     safetyMode: agentProviderSafetyMode,
     status: "unavailable",
   };
@@ -96,7 +96,7 @@ export function isAgentProviderStatus(
     Number.isInteger(candidate.modelCount) &&
     Number(candidate.modelCount) >= 0 &&
     observedAtIsValid &&
-    candidate.provider === "ollama" &&
+    candidate.provider === "governed-ai-gateway" &&
     typeof candidate.safetyMode === "string" &&
     statusIsValid &&
     sourceStateIsCoherent

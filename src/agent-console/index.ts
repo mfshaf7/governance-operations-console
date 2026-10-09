@@ -85,18 +85,18 @@ export const agentConsoleBoundary: ConsoleBoundary = {
   ],
   owns: [
     "manual operator prompt state",
-    "independent browser-local agent sessions",
-    "structured local invocation state",
-    "visible context candidate and local policy display",
-    "prototype-local synthetic context projection",
-    "freshness-aware local model-provider health projection",
+    "browser session identity bound to OOS-owned Agent Console sessions",
+    "structured governed invocation state and receipt display",
+    "visible context candidate and CGG admission-boundary display",
+    "same-origin OOS Agent Console adapter",
+    "freshness-aware governed runtime-path health projection",
     "distinct embedded and docking runtime projections",
     "active runtime presence and heartbeat projection",
     "model profile reference display",
-    "local read-only guidance",
+    "receipt-bound read-only guidance",
   ],
   status: "active-contract",
 };
 
 export const agentConsoleSafetyMode =
-  "local/manual-only until governed model profile and CGG model-access boundaries exist";
+  "manual-only through OOS sessions, CGG model-safe projection, and the governed AI profile";

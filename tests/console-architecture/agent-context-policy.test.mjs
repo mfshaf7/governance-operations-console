@@ -30,20 +30,20 @@ function candidate(overrides = {}) {
   };
 }
 
-test("Focused mode attaches only bounded synthetic candidates", () => {
+test("Focused mode requires governed CGG admission for bounded candidates", () => {
   const result = resolveAgentContextRequest({
     candidate: candidate(),
     mode: "focused",
   });
 
-  assert.equal(result.decision.code, "focused-synthetic-attached");
-  assert.equal(result.decision.attached, true);
-  assert.equal(result.decision.budgetUsedChars > 0, true);
+  assert.equal(result.decision.code, "cgg-required");
+  assert.equal(result.decision.attached, false);
+  assert.equal(result.decision.budgetUsedChars, 0);
   assert.equal(result.decision.cggReceiptRef, null);
-  assert.equal("displayTone" in result.projection, false);
+  assert.equal(result.projection, null);
 });
 
-test("General and workspace modes never attach the visible candidate", () => {
+test("General stays detached while workspace candidates require CGG", () => {
   const general = evaluateAgentContextPolicy({
     candidate: candidate(),
     mode: "general",
@@ -56,7 +56,7 @@ test("General and workspace modes never attach the visible candidate", () => {
   assert.equal(general.code, "general-detached");
   assert.equal(general.attached, false);
   assert.equal(general.budgetUsedChars, 0);
-  assert.equal(workspace.code, "workspace-unavailable");
+  assert.equal(workspace.code, "cgg-required");
   assert.equal(workspace.attached, false);
 });
 

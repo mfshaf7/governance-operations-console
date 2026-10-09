@@ -16,9 +16,8 @@ const contextPolicy = "src/agent-console/model/agent-context-policy.ts";
 const inputPolicy = "src/agent-console/model/agent-input-policy.ts";
 const providerStatusHook = "src/agent-console/state/use-agent-provider-status.ts";
 const policy = "src/agent-console/server/agent-request-policy.ts";
-const adapter = "src/agent-console/server/ollama-adapter.ts";
+const adapter = "src/agent-console/server/agent-console-oos-client.ts";
 const route = "src/agent-console/server/agent-interaction-route.ts";
-const responseStream = "src/agent-console/server/agent-response-stream.ts";
 
 export const guard = {
   id: "shared/agent-console-boundary",
@@ -43,7 +42,6 @@ export const guard = {
       dock,
       policy,
       adapter,
-      responseStream,
       route,
     ]) {
       assertAppFile(failures, path);
@@ -78,7 +76,7 @@ export const guard = {
     );
 
     assertIncludes(failures, appRoute, [
-      'export { GET, POST } from "../../../agent-console/server/agent-interaction-route"',
+      'export { DELETE, GET, POST } from "../../../agent-console/server/agent-interaction-route"',
     ]);
     if (lineCount(appRoute) > 5) {
       failures.push(`${appRoute}: app route must remain a thin mount`);
@@ -108,7 +106,7 @@ export const guard = {
       'fetch("/api/agent-interaction"',
       "evaluateAgentContextPolicy",
       "inspectAgentInput",
-      "contextDecisionHeaderMismatch",
+      "governedResponseHeaderMismatch",
       "createAgentInvocation",
       "settleAgentInvocation",
       "isAgentRequestAbortReason",
@@ -117,6 +115,8 @@ export const guard = {
       "cancelAgentRequest",
       "agentConsoleExpanded",
       "setAgentConsoleExpanded",
+      "await handleAgentContextModeChange(requestedMode)",
+      'method: "DELETE"',
     ]);
     assertOmits(failures, controller, [
       "className=",
@@ -130,6 +130,7 @@ export const guard = {
       "agentConsoleExpandedPlacement",
       "setAgentConsoleExpandedPlacement",
       "dockHiddenBySharedExpansion",
+      "setAgentContextMode(requestedMode)",
     ]);
     assertIncludes(failures, sessionProvider, [
       "AgentConsoleSessionProvider",
@@ -173,8 +174,7 @@ export const guard = {
     assertIncludes(failures, contextPolicy, [
       "evaluateAgentContextPolicy",
       "resolveAgentContextRequest",
-      'agentContextPolicyProfile = "prototype-synthetic-only/v1"',
-      '"focused-synthetic-attached"',
+      'agentContextPolicyProfile = "governed-cgg-required/v1"',
       '"cgg-required"',
       "projectAgentContextCandidate",
     ]);
@@ -187,8 +187,8 @@ export const guard = {
       "validateAgentRequest",
       "parseAgentContextRequest",
       "parseAgentContextCandidate",
-      "resolveAgentContextRequest",
-      "normalizeHistory",
+      "invocationNonce",
+      "browser session binding",
     ]);
     assertOmits(failures, policy, [
       "NextResponse",
@@ -200,31 +200,31 @@ export const guard = {
       "contextAttached?:",
     ]);
     assertIncludes(failures, adapter, [
-      "resolveOllama",
-      "fetchOllamaChatStream",
+      "invokeGovernedAgent",
+      "closeGovernedAgentSession",
+      "probeGovernedAgentPath",
       "AbortSignal.any",
-      "/api/chat",
+      "/v1/agent-console/sessions",
+      "x-oos-caller-secret",
     ]);
     assertOmits(failures, adapter, [
       "NextResponse",
-      "normalizeContextRequest",
-      "OperatorContextPacket",
-      "summarizeModels",
-      "/api/show",
+      "ollama",
+      "/api/chat",
+      "GOVERNED_AI_GATEWAY_BASE_URL",
+      "CGG_AGENT_CONSOLE_BASE_URL",
     ]);
     assertIncludes(failures, route, [
       "validateAgentRequest",
-      "resolveOllama",
-      "fetchOllamaChatStream",
-      "agentProviderSafetyMode",
-      "createAgentResponseStream",
-      "resolveOllama(request.signal)",
+      "authorizeConsoleMutation",
+      "invokeGovernedAgent",
+      "closeGovernedAgentSession",
+      "probeGovernedAgentPath",
       "request.signal",
       'freshness: "live"',
-      "X-Agent-Context-Decision",
-      "X-Agent-Context-Policy",
-      "X-Agent-Context-Candidate",
-      "X-Agent-Context-Budget",
+      "X-Agent-CGG-Receipt",
+      "X-Agent-Context-Admitted",
+      "X-Agent-Receipt",
       "NextResponse",
     ]);
     assertOmits(failures, route, [
@@ -234,21 +234,19 @@ export const guard = {
       "summarizeModels",
       "models,",
       "new ReadableStream",
-      "TextDecoder",
-    ]);
-    assertIncludes(failures, responseStream, [
-      "createAgentResponseStream",
-      "async cancel",
-      "ended before its completion event",
-      "reader.cancel",
-      "reader.releaseLock",
-      "TextDecoder",
-    ]);
-    assertOmits(failures, responseStream, [
-      "NextResponse",
-      "validateAgentRequest",
       "/api/chat",
     ]);
+
+    assertAppPathAbsent(
+      failures,
+      "src/agent-console/server/ollama-adapter.ts",
+      "Agent Console must not retain a direct provider path",
+    );
+    assertAppPathAbsent(
+      failures,
+      "src/agent-console/server/agent-response-stream.ts",
+      "provider stream translation is owned by the governed OOS path",
+    );
 
     assertIncludes(failures, publicBoundary, [
       'from "./presentation/model-interaction-dock"',

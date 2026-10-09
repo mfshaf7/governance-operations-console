@@ -41,6 +41,7 @@ type AgentConsoleSessionContextValue = {
   agentHistoryCursor: number | null;
   agentPrompt: string;
   agentTranscript: AgentTerminalEntry[];
+  agentSessionBinding: AgentBrowserSessionBinding;
   beginAgentRequest: (invocationId: string) => AbortSignal | null;
   cancelAgentRequest: () => boolean;
   currentInvocation: AgentInvocation | null;
@@ -53,7 +54,13 @@ type AgentConsoleSessionContextValue = {
   setAgentPrompt: Dispatch<SetStateAction<string>>;
   setAgentTranscript: Dispatch<SetStateAction<AgentTerminalEntry[]>>;
   setCurrentInvocation: Dispatch<SetStateAction<AgentInvocation | null>>;
+  rotateAgentSession: () => void;
 };
+
+export type AgentBrowserSessionBinding = Readonly<{
+  nonce: string;
+  openedAt: string;
+}>;
 
 type ActiveAgentRequest = {
   controller: AbortController;
@@ -84,7 +91,7 @@ function createInitialTranscript(
     {
       id: "mode",
       kind: "system",
-      text: `mode: ${interactionModeLabel(initialContextMode)} by default / prototype-local context policy / no raw operational context`,
+      text: `mode: ${interactionModeLabel(initialContextMode)} by default / governed CGG context admission / no raw operational context`,
     },
     {
       id: "help",
@@ -121,6 +128,8 @@ export function AgentConsoleSessionProvider({
   const [agentConsoleExpanded, setAgentConsoleExpanded] = useState(false);
   const [currentInvocation, setCurrentInvocation] =
     useState<AgentInvocation | null>(null);
+  const [agentSessionBinding, setAgentSessionBinding] =
+    useState<AgentBrowserSessionBinding>(() => createSessionBinding());
   const activeAgentRequestRef = useRef<ActiveAgentRequest | null>(null);
   const agentBusy = currentInvocation?.state === "running";
 
@@ -176,6 +185,10 @@ export function AgentConsoleSessionProvider({
     return true;
   }, []);
 
+  const rotateAgentSession = useCallback(() => {
+    setAgentSessionBinding(createSessionBinding());
+  }, []);
+
   useEffect(
     () => () => {
       const activeRequest = activeAgentRequestRef.current;
@@ -202,14 +215,16 @@ export function AgentConsoleSessionProvider({
     ...runtimeIdentity,
     currentOperation:
       currentInvocation?.state === "running" ? "Manual operator request" : null,
-    governancePosture: "prototype-local",
+    governancePosture: "governed",
     interactionMode: agentContextMode,
     invocationRef: currentInvocation?.id ?? null,
     model: currentInvocation?.model ?? providerStatus?.model ?? null,
-    modelProfileRef: null,
-    modelProfileVersion: null,
+    modelProfileRef: providerStatus?.model
+      ? `platform://profiles/${providerStatus.model}`
+      : null,
+    modelProfileVersion: providerStatus?.model ? "1.0" : null,
     operationRunRef: null,
-    provider: providerStatus?.provider ?? "ollama",
+    provider: providerStatus?.provider ?? "governed-ai-gateway",
     state: runtimeState,
   });
 
@@ -223,11 +238,13 @@ export function AgentConsoleSessionProvider({
         agentHistory,
         agentHistoryCursor,
         agentPrompt,
+        agentSessionBinding,
         agentTranscript,
         beginAgentRequest,
         cancelAgentRequest,
         currentInvocation,
         finishAgentRequest,
+        rotateAgentSession,
         setAgentConversationTurns,
         setAgentConsoleExpanded,
         setAgentContextMode,
@@ -241,6 +258,13 @@ export function AgentConsoleSessionProvider({
       {children}
     </AgentConsoleSessionContext.Provider>
   );
+}
+
+function createSessionBinding(): AgentBrowserSessionBinding {
+  return {
+    nonce: crypto.randomUUID(),
+    openedAt: new Date().toISOString(),
+  };
 }
 
 export function useAgentConsoleSession() {

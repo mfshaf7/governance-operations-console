@@ -79,7 +79,7 @@ classification receipt cannot satisfy an active-inventory requirement.
 | Durable Orchestration Run | Approved domain command matches an active definition; a durable adapter returns a reconciled final receipt. | prototype-only | missing | missing |
 | Dev Integration Profile Request | Component needs a fast integration lane; admitted active profile and owner commands exist without implying stage. | prototype-only | partial | missing |
 | Governed Product Release | Product descriptor permits an operation; Platform and product projections reconcile with an immutable receipt. | prototype-only | partial | missing |
-| Governed Context to Agent | Context candidate is admitted; Agent Console receives only a model-safe packet and receipt references. | partial | partial | missing |
+| Governed Context to Agent | Context candidate is admitted; Agent Console receives only a model-safe answer plus CGG, gateway-audit, and OOS receipt references. | implemented | connected | connected |
 
 ## Ownership Pattern
 

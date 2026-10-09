@@ -81,12 +81,15 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  Candidate["Visible context candidate"] --> CGG["CGG admission,<br/>redaction, budget, projection"]
+  Candidate["Visible context candidate"] --> OOS["OOS-owned Agent Console session"]
+  Identity["Authenticated actor + caller policy"] --> OOS
+  OOS --> CGG["CGG admission,<br/>redaction, budget, projection"]
   CGG --> Packet["Model-safe packet + receipt"]
   Packet --> Access["Governed model access"]
   Profile["Governed model profile"] --> Access
-  Identity["Authenticated actor + caller policy"] --> Access
-  Access --> Agent["Agent Console session"]
+  Access --> Evidence["Validated answer + audit evidence"]
+  OOS --> Evidence
+  Evidence --> Agent["Console evidence projection"]
 ```
 
 | Capability | Responsibility |
@@ -94,11 +97,11 @@ flowchart LR
 | Model Operations | Project governed model profiles, caller eligibility, access readiness, runtime controls, and Security evidence. |
 | Context Governance Gateway | Admit and transform operational context into bounded safe packets. |
 | Federated Identity and Access | Authenticate the actor and enforce caller roles and authority. |
-| Agent Console | Host separate bounded sessions and consume admitted context; it does not approve profiles or mutate domains. |
+| Agent Console | Submit nonce-bound intent through its same-origin OOS adapter and render validated terminal evidence; it does not own sessions, approve profiles, or mutate domains. |
 
-The current local agent connection is valid pre-baseline proof. Synthetic
-context projection must be replaced with CGG-admitted packets before governed
-live context use.
+The Console source path is connected. Routine operation remains unavailable
+until the exact Security activation decision and Platform commissioning proof
+accept the composed revisions.
 
 ## Observation Boundary
 
