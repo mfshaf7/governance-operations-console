@@ -69,13 +69,13 @@ export function AgentRuntimeDock({
     : "PROBING";
   const providerLabel = providerStatus
     ? providerOnline
-      ? "Local Ollama"
+      ? "Governed AI Gateway"
       : providerState === "offline"
-        ? "Provider unavailable"
+        ? "Governed path unavailable"
         : providerStatus.observedAt
           ? "Observation stale"
-          : "Provider unavailable"
-    : "Resolving provider";
+          : "Governed path unavailable"
+    : "Resolving governed path";
   const modelLabel = providerStatus
     ? providerOnline
       ? providerStatus.model ?? "model ready"
@@ -87,12 +87,12 @@ export function AgentRuntimeDock({
     ? providerOnline
       ? `${activeRuntimes.length} active runtime${
           activeRuntimes.length === 1 ? "" : "s"
-        } / ${providerStatus.modelCount} models available`
+        } / OOS and governed profile reachable`
       : providerStatus.error ??
         (providerState === "offline"
-          ? "endpoint unavailable"
-          : "Fresh provider observation unavailable.")
-    : "Checking the model endpoint.";
+          ? "orchestration path unavailable"
+          : "Fresh governed-path observation unavailable.")
+    : "Checking the governed Agent Console path.";
 
   return (
     <>
@@ -118,7 +118,7 @@ export function AgentRuntimeDock({
             </span>
           </div>
           <div className={styles.providerShell}>
-            <p className={styles.providerLabel}>Model Provider</p>
+            <p className={styles.providerLabel}>Governed Path</p>
             <div className={styles.providerRow}>
               <p className={styles.providerName}>{providerLabel}</p>
               <span className={styles.modelPill}>

@@ -9,7 +9,6 @@ export type AgentContextDecisionCode =
   | "context-budget-exceeded"
   | "context-unavailable"
   | "cgg-required"
-  | "focused-synthetic-attached"
   | "general-detached"
   | "workspace-unavailable";
 
@@ -37,7 +36,7 @@ export type AgentContextModelProjection = Omit<
   "displayTone"
 >;
 
-export const agentContextPolicyProfile = "prototype-synthetic-only/v1";
+export const agentContextPolicyProfile = "governed-cgg-required/v1";
 export const agentContextBudgetLimitChars = 3_500;
 
 export function projectAgentContextCandidate(
@@ -104,15 +103,16 @@ export function evaluateAgentContextPolicy({
   }
 
   if (mode === "workspace") {
-    return decision({
-      attached: false,
-      candidate,
-      candidateChars,
-      code: "workspace-unavailable",
-      mode,
-      reason:
-        "Workspace mode requires a governed workspace packet source that is not connected in this prototype.",
-    });
+    if (!candidate || candidate.scope !== "workspace" || candidate.sourceMode === "unavailable") {
+      return decision({
+        attached: false,
+        candidate,
+        candidateChars,
+        code: "workspace-unavailable",
+        mode,
+        reason: "Workspace mode requires a current workspace context candidate.",
+      });
+    }
   }
 
   if (!candidate || candidate.sourceMode === "unavailable") {
@@ -124,21 +124,6 @@ export function evaluateAgentContextPolicy({
       mode,
       reason:
         "No model-eligible focused context candidate is available.",
-    });
-  }
-
-  if (
-    candidate.sourceMode === "live" ||
-    candidate.sourceMode === "source-projected"
-  ) {
-    return decision({
-      attached: false,
-      candidate,
-      candidateChars,
-      code: "cgg-required",
-      mode,
-      reason:
-        "Live and source-projected context requires governed CGG admission before model projection.",
     });
   }
 
@@ -154,14 +139,13 @@ export function evaluateAgentContextPolicy({
   }
 
   return decision({
-    attached: true,
-    budgetUsedChars: candidateChars,
+    attached: false,
     candidate,
     candidateChars,
-    code: "focused-synthetic-attached",
+    code: "cgg-required",
     mode,
     reason:
-      "Focused mode may attach this explicitly synthetic candidate under the prototype-local context policy.",
+      "The candidate must be admitted and redacted by CGG before governed model projection.",
   });
 }
 

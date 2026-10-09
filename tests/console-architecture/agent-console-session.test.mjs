@@ -39,18 +39,18 @@ test("Agent Console invocation records provider and context-decision truth", () 
   });
   const invocation = createAgentInvocation({
     contextDecision,
-    model: "llama3.1:8b",
-    provider: "ollama",
+    model: "agent-console-assistant-v1",
+    provider: "governed-ai-gateway",
   });
 
   assert.match(invocation.id, /^agent-invocation-/);
   assert.equal(invocation.state, "running");
-  assert.equal(invocation.provider, "ollama");
-  assert.equal(invocation.model, "llama3.1:8b");
-  assert.equal(invocation.contextAttached, true);
-  assert.equal(invocation.contextDecision, "focused-synthetic-attached");
+  assert.equal(invocation.provider, "governed-ai-gateway");
+  assert.equal(invocation.model, "agent-console-assistant-v1");
+  assert.equal(invocation.contextAttached, false);
+  assert.equal(invocation.contextDecision, "cgg-required");
   assert.equal(invocation.contextCandidateId, "page:test");
-  assert.equal(invocation.contextPolicyProfile, "prototype-synthetic-only/v1");
+  assert.equal(invocation.contextPolicyProfile, "governed-cgg-required/v1");
   assert.equal(invocation.contextSourceMode, "synthetic");
   assert.equal(invocation.interactionMode, "focused");
   assert.equal(invocation.cggReceiptRef, null);

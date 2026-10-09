@@ -306,25 +306,24 @@ capabilities:
     label: Agent Console And Runtime
     plane: operator-experience
     kind: bounded-assistance
-    role: Provide separate local agent sessions, provider observation, runtime presence, and explicit context-projection decisions.
+    role: Bind separate browser agents to OOS-owned sessions, governed CGG context projection, governed model access, receipt evidence, and runtime presence.
     authority_refs:
       - context-governance-gateway
       - platform-engineering
       - security-architecture
     canonical_records:
-      - local-agent-invocation
+      - agent-invocation-evidence-projection
       - agent-runtime-presence
     must_not_own:
       - Domain decisions, canonical mutation, profile approval, or context admission authority.
     design_status: approved-target
     implementation:
       console: implemented
-      backend_support: partial
+      backend_support: connected
       live_adapter: connected
-      delivery_phase: pre-baseline
+      delivery_phase: pi-2026-04
     post_baseline_work:
-      - Replace synthetic-only context projection with admitted CGG packets and receipts.
-      - Route governed model access through the platform access plane.
+      - Activate routine operation only after the exact Security gate and Platform commissioning proof.
 
   runtime-readiness:
     label: Runtime Readiness
@@ -1099,10 +1098,10 @@ transitions:
     target_completion: Agent Console receives only a model-safe packet and receipt references through an admitted model-access path.
     design_status: approved-target
     implementation:
-      console: partial
-      backend_support: partial
-      live_adapter: missing
-      delivery_phase: post-baseline
+      console: implemented
+      backend_support: connected
+      live_adapter: connected
+      delivery_phase: pi-2026-04
 
 state_families:
   proposal-lifecycle:

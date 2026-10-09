@@ -26,15 +26,6 @@ type AgentContextProjection = {
 function contextProjection(
   decision: AgentContextDecision,
 ): AgentContextProjection {
-  if (decision.code === "focused-synthetic-attached") {
-    return {
-      detail:
-        "The prototype-local policy can attach this synthetic candidate in Focus mode.",
-      label: "Eligible",
-      state: "available",
-    };
-  }
-
   if (decision.code === "general-detached") {
     return {
       detail: "General requests do not receive console context.",
@@ -55,9 +46,9 @@ function contextProjection(
   if (decision.code === "cgg-required") {
     return {
       detail:
-        "This visible live or source-projected candidate requires governed CGG admission.",
-      label: "CGG required",
-      state: "unavailable",
+        "OOS sends this visible candidate through governed CGG admission before model use.",
+      label: "CGG guarded",
+      state: "available",
     };
   }
 

@@ -67,7 +67,7 @@ export function AgentRuntimeStatusDialog({
     <TerasDialog
       contentOverflow="auto"
       height="content"
-      description="Aggregate provider connectivity and live presence for Console agent runtimes. Model profile approval remains owned by Model Operations."
+      description="Aggregate governed path connectivity and live presence for Console agent runtimes. Model profile approval remains owned by Model Operations."
       kicker="Agent Runtime"
       onClose={onClose}
       open={open}
@@ -77,16 +77,14 @@ export function AgentRuntimeStatusDialog({
       <TerasMetadataList
         items={[
           { label: "Status", tone: statusTone, value: statusLabel },
-          { label: "Provider", value: "Local Ollama" },
-          { label: "Selected Model", value: providerStatus?.model ?? "not resolved" },
-          { label: "Models", value: String(providerStatus?.modelCount ?? 0) },
+          { label: "Provider Path", value: "Governed AI Gateway" },
+          { label: "Profile", value: providerStatus?.model ?? "not resolved" },
           { label: "Active Runtimes", value: String(activeRuntimeCount) },
-          { label: "Endpoint", value: providerStatus?.endpoint ?? "not resolved" },
           {
             label: "Request Boundary",
             value:
               providerStatus?.safetyMode === agentProviderSafetyMode
-                ? "Manual requests / synthetic context only"
+                ? "OOS session / CGG model-safe context / manual requests"
                 : providerStatus?.safetyMode ?? "Probing",
           },
           {
@@ -101,7 +99,7 @@ export function AgentRuntimeStatusDialog({
           {
             label: "Profile Linkage",
             tone: "info",
-            value: "No governed profile",
+            value: providerStatus?.model ?? "Not resolved",
           },
         ]}
       />

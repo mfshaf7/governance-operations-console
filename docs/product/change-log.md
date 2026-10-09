@@ -8,6 +8,17 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-09
 
+- Replaced the direct local-provider Agent Console path with one verified
+  same-origin OOS adapter. Browser-generated nonce identities now bind durable
+  OOS sessions and invocations while caller credentials stay server-only.
+- Required CGG model-safe projection, exact governed-profile binding, gateway
+  audit evidence, and terminal OOS receipts before rendering an answer. Added
+  revision-bound reset/mode cleanup and removed the Ollama adapter and stream
+  bridge so no direct-provider fallback remains.
+- Added exact positive and negative protocol coverage for session binding,
+  candidate digests, authorization, profile and receipt mismatch, replay-safe
+  close, and bounded OOS failure. Routine activation remains blocked by the
+  existing Security gate and Platform operating proof.
 - Connected Model Operations to caller-owned OOS request projections and the
   exact Platform profile source, lifecycle receipt, and merged readback.
 - Enabled the existing two-step create request only under complete live

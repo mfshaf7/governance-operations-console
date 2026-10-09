@@ -34,7 +34,7 @@ export function inspectAgentInput(value: unknown): AgentInputInspection {
 
   if (message.length > maxOperatorPromptChars) {
     return {
-      error: `message exceeds ${maxOperatorPromptChars} character prototype limit`,
+      error: `message exceeds ${maxOperatorPromptChars} character Agent Console limit`,
       ok: false,
       status: 400,
     };
@@ -43,7 +43,7 @@ export function inspectAgentInput(value: unknown): AgentInputInspection {
   if (hasSecretLikeMaterial(message)) {
     return {
       error:
-        "secret-like material detected; this prototype blocks raw projection into the local model",
+        "secret-like material detected; governed Agent Console projection was denied",
       ok: false,
       status: 422,
     };

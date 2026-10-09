@@ -258,7 +258,7 @@ function DockingAgent({
 }) {
   return (
     <AgentConsoleSessionProvider
-      initialContextMode="general"
+      initialContextMode="focused"
       providerStatus={providerStatus}
       runtimeIdentity={dockingAgentRuntimeIdentity}
     >

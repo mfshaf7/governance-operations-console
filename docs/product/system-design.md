@@ -407,11 +407,12 @@ ownership:
   fabricate environment posture or mutate runtime, delivery, movement, or
   domain records.
 - Agent Console provides bounded assistance over an explicit visible context
-  candidate. Before governed CGG integration, Focus mode may project only
-  bounded synthetic candidates under the prototype-local policy. Live and
-  source-projected candidates remain display-only. Agent Console must not
-  receive raw operational context, make autonomous governance decisions, or
-  mutate canonical workspace state.
+  candidate. Its same-origin server adapter verifies the Console operator,
+  binds an OOS-owned session, requires CGG model-safe admission, accepts only
+  the governed Agent Console profile, and renders terminal receipt evidence.
+  The browser has no OOS, CGG, gateway, or provider credential. Agent Console
+  must not receive raw operational context, make autonomous governance
+  decisions, or mutate canonical workspace state.
 
 ## Orchestration Boundary
 
@@ -580,7 +581,7 @@ that acceptance.
 | Lifecycle Transitions | Read-only correlation of source intent, validation, target admission, application, failures, receipts, and owner routes without central decision authority. | Canonical target writes plus Security acceptance and Platform activation. | Canonical OOS journal projection connected through a server-only, bounded, stale-safe adapter; WGCF readiness and escalation evidence is projected through OOS without direct Console-to-WGCF access or live fallback. |
 | Environment Lifecycle | Accepted operator model for dev-integration profiles and operations plus product-capability-gated stage and production readiness/promotion views. | Platform execution API, shared runner, GitHub workflow, Argo, stage, production, and post-promotion wiring. | Baseline Foundation behavior and dedicated Dev Integration and Governed Releases workspace cutover complete; obsolete inline presentation removed. |
 | Runtime Readiness | Truthful read-only local host telemetry, declared component observation coverage, source-qualified alerts, and explicit stale/unavailable states. | Admitted component probes and any separately owned platform or WGCF projections. | Accepted current shape with source-qualified telemetry, freshness, alert eligibility, uptime, and focused semantic proof. |
-| Agent Console and context admission | Bounded manual assistance, typed visible candidates, server-recomputed prototype-local projection decisions, source-mode cues, input preflight, budget posture, and explicit mutation denial. | Real CGG admission and receipts, governed model access, caller authorization, and downstream adapters. | Accepted prototype-local shape with independent sessions, bounded synthetic Focus projection, server-side request validation, and explicit mutation denial. |
+| Agent Console and context admission | Bounded manual assistance, typed visible candidates, Focus/Workspace mode binding, input preflight, and explicit mutation denial. | Routine operating activation remains gated by the exact Security acceptance and Platform commissioning proof. | OOS-owned sessions, CGG model-safe projection, the governed `agent-console-assistant-v1` profile, caller authorization, audit and receipt evidence, cancellation propagation, and revision-bound cleanup are connected through one same-origin fail-closed adapter; no direct provider fallback remains. |
 | Identity and authorization semantics | Stable Operator Account surface, prototype-local profile preferences, actor, role, named authority, approval identity, action eligibility, and denied/unavailable presentation in every affected contract. | OIDC, RBAC, durable profile preferences, access-request workflow, token/session handling, and server-side enforcement. | Accepted prototype-local shape; synthetic trust fails closed and deterministic actor/session attribution is preserved through shared command, run, and receipt envelopes. |
 | Audit and correlation | Structured event, correlation, causation, receipt, authority, and evidence-reference model with safe operator inspection. | Durable aggregation across OOS, WGCF, CGG, platform workflows, and target systems. | Accepted prototype-local shape with domain-owned activity sources, immutable receipts, ordered run events, cross-domain correlation/custody, safe inspection, and structured export. |
 | Adapter and persistence boundary | Typed ports, canonical owners, freshness, reconciliation, idempotency, fallback, and prototype-local simulation rules. | Real adapters, subscriptions, durable stores in owner systems, migration, and cutover. | Accepted Baseline Foundation boundary with shared runtime ports, centralized disposable draft storage, explicit unavailable live adapters, versioned preconditions, idempotency, projection freshness, and reconciliation proof. |
@@ -736,7 +737,8 @@ Validation is added as surfaces normalize. Required guard families:
 - Model Operations remains caller-specific and read-oriented until its OOS
   request path is admitted; it does not imply governed invocation or direct
   registry mutation.
-- Agent Console remains bounded until governed model access exists.
+- Agent Console remains manual and non-mutating; operating availability must
+  remain gated by the exact Security and Platform activation evidence.
 - Teras does not import domain read models.
 - global CSS does not retain Operation-domain styles after extraction and does
   not grow new capability styling without an explicit owner discussion.

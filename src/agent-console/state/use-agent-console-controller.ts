@@ -10,7 +10,6 @@ import {
 } from "../model/agent-console-session";
 import {
   evaluateAgentContextPolicy,
-  type AgentContextDecision,
   type AgentInteractionMode,
 } from "../model/agent-context-policy";
 import { inspectAgentInput } from "../model/agent-input-policy";
@@ -70,27 +69,27 @@ function agentInteractionModeLabel(mode: AgentInteractionMode) {
       : "General";
 }
 
-function contextDecisionHeaderMismatch(
-  response: Response,
-  expected: AgentContextDecision,
-) {
+function governedResponseHeaderMismatch(response: Response) {
   const actual = {
-    attached: response.headers.get("X-Agent-Context-Attached"),
-    budget: response.headers.get("X-Agent-Context-Budget"),
-    candidateId: response.headers.get("X-Agent-Context-Candidate"),
-    code: response.headers.get("X-Agent-Context-Decision"),
-    policy: response.headers.get("X-Agent-Context-Policy"),
+    admitted: response.headers.get("X-Agent-Context-Admitted"),
+    artifact: response.headers.get("X-Agent-Context-Artifact"),
+    cggReceipt: response.headers.get("X-Agent-CGG-Receipt"),
+    invocation: response.headers.get("X-Agent-Invocation"),
+    receipt: response.headers.get("X-Agent-Receipt"),
+    receiptDigest: response.headers.get("X-Agent-Receipt-Digest"),
+    session: response.headers.get("X-Agent-Session"),
   };
-  const expectedBudget = `${expected.budgetUsedChars}/${expected.budgetLimitChars}`;
 
   if (
-    actual.attached !== String(expected.attached) ||
-    actual.budget !== expectedBudget ||
-    actual.candidateId !== (expected.candidateId ?? "none") ||
-    actual.code !== expected.code ||
-    actual.policy !== expected.policyProfile
+    actual.admitted !== "true" ||
+    !actual.cggReceipt ||
+    !actual.invocation ||
+    !actual.receipt ||
+    !actual.session ||
+    !actual.artifact?.match(/^sha256:[0-9a-f]{64}$/) ||
+    !actual.receiptDigest?.match(/^sha256:[0-9a-f]{64}$/)
   ) {
-    return "server context decision did not match the browser projection; response was discarded";
+    return "governed response evidence was incomplete; response was discarded";
   }
 
   return null;
@@ -118,10 +117,12 @@ export function useAgentConsoleController({
     agentHistory,
     agentHistoryCursor,
     agentPrompt,
+    agentSessionBinding,
     agentTranscript,
     beginAgentRequest,
     cancelAgentRequest,
     finishAgentRequest,
+    rotateAgentSession,
     setAgentConsoleExpanded,
     setAgentConversationTurns,
     setAgentContextMode,
@@ -177,12 +178,12 @@ export function useAgentConsoleController({
           prompt?: string;
         }>
       ).detail;
-      const requestedMode = detail?.mode ?? contextMode;
+      const requestedMode = detail?.mode === "workspace" ? "workspace" : "focused";
 
       setModelDockExpanded(true);
 
-      if (detail?.mode && detail.mode !== "workspace") {
-        setAgentContextMode(detail.mode);
+      if (detail?.mode && !(await handleAgentContextModeChange(requestedMode))) {
+        return;
       }
 
       if (detail?.note) {
@@ -253,11 +254,11 @@ export function useAgentConsoleController({
 
     setAgentTranscript((current) =>
       current.map((entry) =>
-        entry.kind === "error" && entry.text === "local ollama is offline; run status to inspect endpoint state"
+        entry.kind === "error" && entry.text === "governed Agent Console path is offline; run status to inspect runtime state"
           ? {
               ...entry,
               kind: "system",
-              text: `local ollama recovered: ${providerStatus.model ?? "model ready"} / ${providerStatus.modelCount} models`,
+              text: `governed Agent Console recovered: ${providerStatus.model ?? "profile ready"}`,
             }
           : entry,
       ),
@@ -299,14 +300,14 @@ export function useAgentConsoleController({
 
   function statusText(status: AgentProviderStatus | null) {
     if (!status) {
-      return "local ollama: probing";
+      return "governed Agent Console: probing";
     }
 
     const readiness = deriveAgentProviderReadinessState(status);
 
     if (readiness === "probing") {
       return [
-        `local ollama: ${status.observedAt ? "stale" : "unavailable"}`,
+        `governed Agent Console: ${status.observedAt ? "stale" : "unavailable"}`,
         `last observed: ${status.observedAt ?? "not observed"}`,
         `last check: ${status.checkedAt}`,
         status.error ?? "fresh provider observation unavailable",
@@ -314,16 +315,15 @@ export function useAgentConsoleController({
     }
 
     if (readiness === "offline") {
-      return `local ollama: offline\n${status.error ?? "endpoint unavailable"}`;
+      return `governed Agent Console: offline\n${status.error ?? "runtime unavailable"}`;
     }
 
     return [
-      "local ollama: online",
-      `endpoint: ${status.endpoint}`,
-      `model: ${status.model}`,
-      `models: ${status.modelCount}`,
+      "governed Agent Console: online",
+      `profile: ${status.model}`,
+      `provider path: ${status.provider}`,
       `operator mode: ${agentInteractionModeLabel(contextMode)}`,
-      `session turns: ${agentConversationTurns.length}`,
+      `visible turns: ${agentConversationTurns.length}`,
       `safety: ${status.safetyMode}`,
       `observed: ${status.observedAt}`,
     ].join("\n");
@@ -357,13 +357,28 @@ export function useAgentConsoleController({
         ),
         terminalEntry(
           "system",
-          `mode: ${agentInteractionModeLabel(requestedMode)} / prototype-local context policy`,
+          `mode: ${agentInteractionModeLabel(requestedMode)} / governed CGG context admission`,
         ),
       ]);
       return true;
     }
 
     if (command === "reset") {
+      if (requestedMode === "focused" || requestedMode === "workspace") {
+        const response = await fetch("/api/agent-interaction", {
+          body: JSON.stringify({ mode: requestedMode, session: agentSessionBinding }),
+          headers: { "Content-Type": "application/json" },
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+          appendAgentTranscript([
+            terminalEntry("error", payload?.error ?? "governed session could not be closed"),
+          ]);
+          return true;
+        }
+      }
+      rotateAgentSession();
       setAgentConversationTurns([]);
       setAgentHistory([]);
       setAgentHistoryCursor(null);
@@ -376,7 +391,7 @@ export function useAgentConsoleController({
         ),
         terminalEntry(
           "system",
-          `mode: ${agentInteractionModeLabel(requestedMode)} / prototype-local context policy`,
+          `mode: ${agentInteractionModeLabel(requestedMode)} / governed CGG context admission`,
         ),
       ]);
       return true;
@@ -389,13 +404,13 @@ export function useAgentConsoleController({
           [
             "available commands:",
             "  help                 show this guide",
-            "  status               show local model and safety state",
+            "  status               show governed runtime and profile state",
             "  mode                 show operator intent mode",
-            "  context              show the visible candidate and local policy decision",
+            "  context              show the visible candidate and admission boundary",
             "  why this context?    explain the context projection boundary",
             "  clear                clear transcript; retain session context",
             "  reset                clear transcript, history, and session context",
-            "  ask <question>       send a manual prompt to local Ollama",
+            "  ask <question>       send a manual prompt through OOS, CGG, and governed AI",
             "",
             "keyboard:",
             "  Enter runs the command",
@@ -431,9 +446,9 @@ export function useAgentConsoleController({
     if (command === "mode") {
       const modeDescription =
         requestedMode === "focused"
-          ? "Focus mode attaches only synthetic candidates allowed by the prototype-local policy."
+          ? "Focus mode submits the visible page candidate through governed CGG admission."
           : requestedMode === "workspace"
-            ? "Workspace mode is unavailable until a governed workspace packet source is connected."
+            ? "Workspace mode submits a current workspace candidate through governed CGG admission."
             : "General mode suppresses workspace and active UI context.";
       appendAgentTranscript([
         terminalEntry(
@@ -456,13 +471,12 @@ export function useAgentConsoleController({
         terminalEntry(
           "system",
           [
-            `local policy: ${contextDecision.policyProfile}`,
+            `admission policy: ${contextDecision.policyProfile}`,
             `decision: ${contextDecision.code}`,
             `operator mode: ${agentInteractionModeLabel(contextDecision.mode)}`,
-            `context attached: ${contextDecision.attached ? "yes" : "no"}`,
-            `context budget: ${contextDecision.budgetUsedChars}/${contextDecision.budgetLimitChars} characters`,
+            "context attached locally: no",
             `reason: ${contextDecision.reason}`,
-            "CGG receipt: unavailable before governed integration",
+            "CGG receipt: issued only after a successful governed invocation",
             "",
             formatAgentContextCandidate(contextCandidate),
           ].join("\n"),
@@ -522,7 +536,7 @@ export function useAgentConsoleController({
         appendAgentTranscript([
           terminalEntry(
             "error",
-            `local ollama status is unavailable; ${error instanceof Error ? error.message : String(error)}`,
+            `governed Agent Console status is unavailable; ${error instanceof Error ? error.message : String(error)}`,
           ),
         ]);
         return;
@@ -533,7 +547,7 @@ export function useAgentConsoleController({
       !liveProviderStatus ||
       deriveAgentProviderReadinessState(liveProviderStatus) !== "online"
     ) {
-      appendAgentTranscript([terminalEntry("error", "local ollama is offline; run status to inspect endpoint state")]);
+      appendAgentTranscript([terminalEntry("error", "governed Agent Console path is offline; run status to inspect runtime state")]);
       return;
     }
 
@@ -541,8 +555,14 @@ export function useAgentConsoleController({
       candidate: contextCandidate,
       mode: requestedMode,
     });
+    if (contextDecision.code !== "cgg-required" || requestedMode === "general") {
+      appendAgentTranscript([terminalEntry("error", contextDecision.reason)]);
+      return;
+    }
+    const invocationNonce = crypto.randomUUID();
     const invocation = createAgentInvocation({
       contextDecision,
+      id: `agent-invocation-${invocationNonce}`,
       model: liveProviderStatus.model,
       provider: liveProviderStatus.provider,
     });
@@ -563,9 +583,7 @@ export function useAgentConsoleController({
       appendAgentTranscript([
         terminalEntry(
           "system",
-          `local policy: ${contextDecision.code}; context ${
-            contextDecision.attached ? "attached" : "not attached"
-          } / CGG receipt unavailable`,
+          "candidate submitted to the OOS session; CGG admission, model binding, and receipt evidence must all succeed",
         ),
       ]);
 
@@ -575,8 +593,9 @@ export function useAgentConsoleController({
             candidate: contextCandidate,
             mode: requestedMode,
           },
-          history: agentConversationTurns.slice(-16),
+          invocationNonce,
           message,
+          session: agentSessionBinding,
         }),
         headers: {
           "Content-Type": "application/json",
@@ -590,10 +609,7 @@ export function useAgentConsoleController({
         throw new Error(payload?.error ?? `model request failed with status ${response.status}`);
       }
 
-      const decisionMismatch = contextDecisionHeaderMismatch(
-        response,
-        contextDecision,
-      );
+      const decisionMismatch = governedResponseHeaderMismatch(response);
 
       if (decisionMismatch) {
         await response.body?.cancel();
@@ -618,6 +634,8 @@ export function useAgentConsoleController({
         current?.id === invocation.id
           ? {
               ...current,
+              cggReceiptRef: response.headers.get("X-Agent-CGG-Receipt"),
+              contextAttached: true,
               model: responseModel,
               provider: responseProvider,
             }
@@ -655,6 +673,16 @@ export function useAgentConsoleController({
           state: "failed",
         });
       } else {
+        appendAgentTranscript([
+          terminalEntry(
+            "system",
+            [
+              `CGG projection receipt: ${response.headers.get("X-Agent-CGG-Receipt")}`,
+              `OOS invocation receipt: ${response.headers.get("X-Agent-Receipt")}`,
+              `governed audit: ${response.headers.get("X-Agent-Audit-Ref")}`,
+            ].join("\n"),
+          ),
+        ]);
         setAgentConversationTurns((current) =>
           [
             ...current,
@@ -738,13 +766,38 @@ export function useAgentConsoleController({
     cancelAgentRequest();
   }
 
-  function handleAgentContextModeChange(mode: AgentInteractionMode) {
-    if (agentBusy || mode === "workspace") {
-      return;
+  async function handleAgentContextModeChange(mode: AgentInteractionMode) {
+    if (agentBusy || mode === "general") {
+      return false;
     }
 
+    if (mode === contextMode) {
+      return true;
+    }
+
+    if (mode === "workspace" && contextCandidate?.scope !== "workspace") {
+      appendAgentTranscript([
+        terminalEntry("error", "Workspace mode requires a current workspace context candidate."),
+      ]);
+      return false;
+    }
+
+    const response = await fetch("/api/agent-interaction", {
+      body: JSON.stringify({ mode: contextMode, session: agentSessionBinding }),
+      headers: { "Content-Type": "application/json" },
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      appendAgentTranscript([terminalEntry("error", payload?.error ?? "current governed session could not be closed")]);
+      return false;
+    }
+
+    rotateAgentSession();
+    setAgentConversationTurns([]);
     setAgentContextMode(mode);
     setFloatingModeMenuOpen(false);
+    return true;
   }
 
   function handleAgentPromptKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
@@ -855,14 +908,14 @@ export function useAgentConsoleController({
           : "Probing";
   const providerStatusLabel =
     providerState === "online"
-      ? `local ollama / ${providerStatus?.model}`
+      ? `governed AI / ${providerStatus?.model}`
       : providerState === "offline"
-        ? "local ollama / offline"
+        ? "governed AI / offline"
         : providerStatus
           ? providerStatus.observedAt
-            ? "local ollama / stale"
-            : "local ollama / unavailable"
-          : "local ollama / probing";
+            ? "governed AI / stale"
+            : "governed AI / unavailable"
+          : "governed AI / probing";
   const contextDecision = evaluateAgentContextPolicy({
     candidate: contextCandidate,
     mode: contextMode,
@@ -872,33 +925,25 @@ export function useAgentConsoleController({
       ? contextCandidate?.summary ??
         "Ask generally; no console context candidate is available."
       : contextMode === "workspace"
-        ? "Workspace mode requires a governed workspace packet source."
+        ? contextCandidate?.summary ?? "Workspace mode requires a current workspace context candidate."
         : "General mode selected; workspace and active UI context will not be attached.";
   const contextTitle =
     contextMode === "focused"
       ? contextCandidateBadgeLabel(contextCandidate, contextFallbackLabel)
       : contextMode === "workspace"
-        ? "Workspace mode / unavailable"
+        ? contextCandidateBadgeLabel(contextCandidate, "Workspace context")
         : "General mode / no context";
   const contextPill =
-    contextMode === "focused"
-      ? contextDecision.code === "focused-synthetic-attached"
-        ? "Eligible"
-        : contextDecision.code === "cgg-required"
-          ? "CGG required"
-          : "Unavailable"
-      : contextMode === "workspace"
-        ? "Unavailable"
+    contextMode === "focused" || contextMode === "workspace"
+      ? contextDecision.code === "cgg-required"
+        ? "CGG guarded"
+        : "Unavailable"
         : "Detached";
   const contextPillTone =
-    contextMode === "focused"
-      ? contextDecision.attached
+    contextMode === "focused" || contextMode === "workspace"
+      ? contextDecision.code === "cgg-required"
         ? "admitted"
-        : contextDecision.code === "cgg-required"
-          ? "planned"
-          : "missing"
-      : contextMode === "workspace"
-        ? "planned"
+        : "missing"
         : "off";
   const contextBarTone =
     contextMode === "focused"

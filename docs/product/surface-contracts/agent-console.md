@@ -1,9 +1,9 @@
 # Agent Console Contract
 
-Status: accepted local-baseline cross-surface contract.
+Status: accepted governed dev-integration cross-surface contract.
 
-Agent Console owns bounded agent-assist visibility, command posture, provider
-health, and the live runtime-presence projection used by its embedded,
+Agent Console owns bounded agent-assist visibility, command posture, governed
+path health, and the live runtime-presence projection used by its embedded,
 floating, and future admitted agent instances. Domain workflows decide where
 agent assistance is allowed.
 
@@ -15,78 +15,68 @@ Console context candidate and an explicit model-projection decision.
 Agent Console is cross-cutting. It is not an Operation Workbench domain.
 
 The fixed Agent Runtime dock is the canonical cross-console runtime surface. Its
-aggregate status card reports model-provider readiness separately from logical
+aggregate status card reports governed-path readiness separately from logical
 agent-runtime activity. Its bounded, scrollable roster lists only logical
 runtimes with a current heartbeat and keeps `idle`, `working`, `waiting`, and
 `failed` activity separate from presence. Each entry carries runtime identity,
 caller, owner surface, source authority, provider, model, current operation,
 current invocation, and optional model-profile and durable-run references.
 
-The embedded Agent Console and the Docking Agent are separate browser-local
-logical agents. Each owns its prompt draft, transcript, bounded conversation
-history, interaction mode, busy state, current invocation, expansion state, and
-runtime identity. The embedded agent starts in Focus mode because it is paired
-with the visible Console context candidate. The Docking Agent starts in General
-mode because it is a persistent cross-console assistant and attaches no page
-context unless the operator explicitly changes its mode.
+The embedded Agent Console and the Docking Agent are separate logical agents.
+Each keeps its browser presentation state but binds its generated nonce,
+interaction mode, invocation identity, and operator identity to an OOS-owned
+session. Both start in Focus mode. Workspace mode is selectable only when the
+Shell exposes a current workspace candidate; General mode is not an invocation
+path in the governed OOS contract.
 
-Both agents register independently through the local `agent-console` source so
-the shared Agent Runtime dock can observe them without merging their sessions.
-Future agent runtimes may enter through an admitted OOS projection, but source
-authority must remain explicit. A workflow advisor is not listed merely because
-its UI exists.
+Both agents register independently through the `agent-console` source so the
+shared Agent Runtime dock can observe them without merging sessions. The
+Console keeps no durable session or invocation authority; OOS owns that state.
 
-Each model-backed request creates a structured local invocation with identity,
-state, timestamps, provider, actual response model, context-admission
-decision, policy profile, interaction mode, candidate identity, source mode,
-context budget, and failure information. A CGG receipt remains unavailable
-until governed integration exists. An invocation is not a durable orchestration
-run and must not populate the durable-run reference.
+Each request creates a structured browser projection while OOS creates the
+durable session and invocation. A response is accepted only when the same-origin
+server adapter validates the OOS session binding, the CGG projection receipt and
+artifact digest, the exact `agent-console-assistant-v1` governed profile, the
+gateway audit reference, and the OOS invocation receipt. Those references are
+displayed after completion. The Console must not fabricate them.
 
 ## Provider Observation Boundary
 
-Provider health is a source-timestamped observation, not a browser assumption.
-A successful provider probe may report `online` or `offline`; both are live
-source observations. Failure to reach the Console probe route is not proof that
-the provider is offline. The Console retains the last provider facts as
-`stale`, records the newer check time, and projects the runtime as waiting until
+Runtime-path health is a source-timestamped observation, not a browser
+assumption. The same-origin probe reports whether OOS is reachable; it does not
+call a model provider or claim a completed invocation. Failure to reach the
+Console probe route is not proof that every upstream is offline. The Console
+retains the last path facts as `stale`, records the newer check time, and projects the runtime as waiting until
 a fresh observation succeeds. With no prior observation, the provider is
 `unavailable`, not offline.
 
-Routine provider polling must be lightweight, non-overlapping, visibility
-aware, abortable during teardown, and backed off after transport failures. It
-may resolve the selected model and model count from the provider tags response.
-Detailed model inventory and per-model capabilities are not provider-health
-facts and must not be expanded on the polling path.
+Routine path polling must be lightweight, non-overlapping, visibility
+aware, abortable during teardown, and backed off after transport failures.
+Detailed provider inventory and credentials are not path-health facts and must
+not enter the polling response.
 
 ## Request Lifecycle Boundary
 
-Each browser-local agent session permits one active model request through its
+Each browser agent permits one active governed request through its
 own request controller. The embedded Agent Console and Docking Agent can run
 independently; one agent's busy, cancel, compact, or expansion state must not
 change the other agent. While a request is active, that agent's existing Run
 control becomes Cancel.
 
-Every request is bounded by a browser timeout and a slightly longer provider
-timeout. Operator cancellation and session teardown abort the browser request,
-and browser cancellation propagates through the Console route to the upstream
-provider reader. The stream bridge must flush a final provider line, require
-the provider completion event, release its reader lock, and cancel upstream
-generation when the consumer leaves or provider output is malformed. Provider
-EOF without that completion event is a stream interruption.
+Every request is bounded by browser and server timeouts. Operator cancellation
+propagates through the same-origin route to OOS. Reset and mode changes close
+the exact current OOS revision before rotating the browser session binding.
 
-Completion, operator cancellation, timeout, provider-request failure, empty
-response, and stream interruption are distinct invocation outcomes. Partial
-output may remain visible in the terminal for diagnosis, but cancelled,
-timed-out, empty, or interrupted output must not enter conversation context.
-The Console does not retry model generation automatically because an automatic
-retry could duplicate cost or produce a second divergent answer. The operator
-may rerun the retained command after the active request settles.
+Completion, operator cancellation, timeout, owner rejection, empty response,
+and response interruption remain distinct outcomes. The Console does not retry
+model generation automatically because an automatic retry could duplicate cost
+or produce a second divergent answer. OOS owns deterministic replay when the
+same invocation identity is deliberately retried.
 
 Model Operations owns model-profile lifecycle, policy, and caller eligibility.
 Agent Runtime may resolve and display a versioned model-profile reference, but
-it does not expose, approve, or mutate profile truth. A local runtime without a
-governed profile is shown as `Prototype local`, never as approved.
+it does not expose, approve, or mutate profile truth. An unresolved path is
+shown as unavailable, never as approved.
 
 ## Context Boundary
 
@@ -96,49 +86,44 @@ freshness, observation and projection timestamps, bounded signals, safe
 actions, references, and an explicit boundary. Presentation-only tone does not
 enter model projection.
 
-Agent Console owns the model-projection decision. The current policy profile is
-`prototype-synthetic-only/v1`:
+Agent Console exposes the pre-admission boundary. The current policy profile is
+`governed-cgg-required/v1`:
 
-- Focus mode may attach a bounded candidate only when its source mode is
-  explicitly `synthetic`.
+- Focus mode accepts a bounded current page candidate.
 - General mode attaches no page or workspace context.
-- Workspace mode remains unavailable until a governed workspace packet source
-  exists.
-- `live` and `source-projected` candidates remain visible to the operator but
-  are not sent to the model; they report `CGG required`.
+- Workspace mode accepts only a bounded current workspace candidate.
+- `live`, `source-projected`, and `synthetic` candidates all require CGG
+  admission; none is locally attached to a model request.
 - `unavailable` or over-budget candidates fail closed.
 
-The browser sends only interaction mode and candidate. It does not declare
-admission. The server validates the candidate schema, rejects unsupported
-fields, recomputes the policy decision, strips presentation metadata, and
-returns decision metadata with the response. The browser discards a response
-whose decision headers do not match its local projection.
+The browser sends the interaction mode, candidate, nonce-bound session, and
+invocation identity. It does not declare admission. The server validates those
+inputs, strips presentation metadata, constructs the OOS contract, keeps caller
+credentials server-only, and discards mismatched or incomplete OOS evidence.
+The browser discards responses missing the governed receipt headers.
 
 Obvious secret-like or oversized operator input is rejected before it enters
-the transcript, prompt history, conversation history, or provider request.
+the transcript, prompt history, conversation history, or governed request.
 Server validation independently enforces the same input boundary. `clear`
 removes only the transcript; `reset` removes transcript, command history,
 conversation history, and current invocation state.
 
-Real CGG packet admission, redaction receipts, model-safe packet projection,
-caller authorization, and downstream model adapters remain post-baseline
-integration work. The prototype must never fabricate a CGG receipt or describe
-its local policy as CGG admission.
-
-Until governed model access exists, Agent Console remains local/manual-only. It
-must not receive raw operational context or mutate canonical workspace state.
+CGG packet admission, redaction, model-safe projection, and downstream model
+access occur only behind OOS. The Console has no CGG or provider credential and
+must not receive raw operational context. The OOS Agent Action route remains a
+separate explicit-action boundary; this manual assistance surface does not
+construct or dispatch mutations.
 
 ## Modes
 
 Agent Console may support:
 
 - Focus mode for the active visible candidate
-- General mode without context
-- future workspace mode after governance admission
+- Workspace mode for a current workspace candidate
 
 Mode changes must not weaken context admission or source-of-truth boundaries.
-The selected mode belongs to the individual agent session. Workspace mode
-remains visibly unavailable until a governed workspace packet source exists.
+The selected mode belongs to the individual OOS session. A mode change closes
+the old session and opens a new binding on the next invocation.
 
 Explicit surface actions such as `Ask Agent About Focus` must request Focus
 mode directly. They must not inherit a stale General mode while claiming that

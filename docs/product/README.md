@@ -82,6 +82,9 @@ current and future product changes.
     governance history with owner evidence routes and explicit source posture.
 - `proposal-live-integration.md`
   - OOS-backed Proposal projection and command behavior.
+- `agent-console-live-integration.md`
+  - Verified same-origin OOS session adapter, CGG context admission, governed
+    profile binding, terminal evidence, and fail-closed session cleanup.
 - `prototype-landing-live-integration.md`
   - Reviewed preparation, durable OOS lifecycle, human source review, merged
     Studio readback, and receipt-bound Landing projection.

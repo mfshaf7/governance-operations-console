@@ -26,7 +26,7 @@ All capabilities and transitions in this view are `approved-target`.
 | Workspace Pulse | implemented | partial | prototype-local | pre-baseline |
 | Governance Activity | implemented | partial | prototype-local | pre-baseline |
 | Operator Account | implemented | missing | prototype-local | post-baseline |
-| Agent Console And Runtime | implemented | partial | connected | pre-baseline |
+| Agent Console And Runtime | implemented | connected | connected | PI-2026-04 |
 | Runtime Readiness | implemented | implemented | connected | pre-baseline |
 | Operation Workbench | implemented | not-required | not-required | pre-baseline |
 | Proposal | implemented | implemented | connected | post-baseline |
@@ -68,7 +68,7 @@ All capabilities and transitions in this view are `approved-target`.
 | Durable Orchestration Run | prototype-only | missing | missing | post-baseline |
 | Dev Integration Profile Request | prototype-only | partial | missing | post-baseline |
 | Governed Product Release | prototype-only | partial | missing | post-baseline |
-| Governed Context to Agent | partial | partial | missing | post-baseline |
+| Governed Context to Agent | implemented | connected | connected | PI-2026-04 |
 
 ## Current Gaps By Class
 
@@ -88,7 +88,8 @@ All capabilities and transitions in this view are `approved-target`.
   into the implemented generic Workspace Intake adapter.
 - Add Workspace Prototype Studio registry and graduation adapters.
 - Add Platform and Security projections and product-specific release adapters.
-- Add CGG context admission and governed model-access integration.
+- Activate the connected Agent Console path only after the exact Security gate
+  and Platform operating proof.
 - Add federated identity, session, RBAC, named authority, and access-request
   enforcement.
 

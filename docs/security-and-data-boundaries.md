@@ -9,7 +9,9 @@ separately governed external-system adapters: the browser calls same-origin
 Console routes and the server-side adapters authenticate to OOS. These source
 changes do not themselves grant deployment or security acceptance. Repository
 existing-source custody linkage and new-source provisioning follow the same
-server-only OOS boundary.
+server-only OOS boundary. Agent Console now follows that boundary for OOS-owned
+sessions and invocations, CGG model-safe projection, and governed model access;
+routine activation remains blocked by Security ART #1248.
 
 The current security evidence is:
 
@@ -61,6 +63,24 @@ fulfillment, or owner failure blocks the live surface without fixture fallback.
 The read-only operating projection exists only after the exact approved OOS
 request, Platform lifecycle receipt, merged readback, and current profile
 projection agree; it grants the Console no profile mutation authority.
+
+Agent Console is a same-origin, server-only OOS adapter. The browser may send
+only a generated session nonce, an invocation nonce, the current Focus or
+Workspace mode, the visible bounded candidate, and a manually entered prompt.
+The verified Console session, named authority, operator binding, OOS caller
+credential, candidate digest, and canonical OOS request are constructed or
+validated server-side. A response is accepted only when OOS preserves the
+exact caller/operator/session/agent/mode/invocation binding and returns a
+terminal CGG projection receipt and artifact digest, the exact
+`agent-console-assistant-v1` profile, a gateway audit reference, and an OOS
+receipt. Missing, stale, malformed, conflicting, unauthorized, failed, or
+incomplete evidence fails closed. Reset and mode change close the exact current
+OOS revision before rotating the browser nonce. The direct Ollama adapter is
+removed; the Console has no CGG, gateway, or provider credential and no direct
+provider fallback. Manual interaction does not construct an Agent Action or
+grant mutation authority. Activation remains blocked until
+`gate:agent-console-operating-acceptance` under ART #1248 and the Platform #1246
+commissioning proof accept the exact composition.
 
 Governance Activity is a server-only read composition over the OOS workflow
 activity and WGCF governance-history projections. Each owner uses a distinct
