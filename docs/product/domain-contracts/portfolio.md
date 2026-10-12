@@ -490,6 +490,16 @@ History composes source classification, active-inventory promotion,
 publication, release, runtime observation, publication-decision, and listing
 receipts in event order without mutating source history.
 
+When lifecycle maintenance is commissioned, the same Product Dashboard also
+composes OOS lifecycle/publication evidence with the Platform product-health
+projection. Lifecycle, publication posture, runtime availability, freshness,
+issues, and listing remain independent axes. `Operations` displays their owner
+routes and evidence; `History` adds the bounded immutable OOS maintenance
+events. A single confirmation review can request `archive` for an active
+product or `restore` for a retired product. The Console rereads exact owner
+evidence before submission and never performs the lifecycle transition itself.
+This is dashboard composition, not a fourth peer Portfolio surface.
+
 ### Publication
 
 - `Open` and `Resolved` register views
@@ -552,6 +562,14 @@ commands behind the shared operation runtime boundary, then derives one
 effective read model from immutable source projections and accepted local
 receipts. Receipt mismatches remain explicit reconciliation issues and do not
 alter the effective read model.
+
+The source-complete lifecycle-maintenance adapter is separately activated from
+the existing Product Publication path. It consumes the OOS maintenance
+projection and the private Platform `portfolio-product-runtime-health/v1`
+projection, validates their receipts server-side, and overlays live runtime
+facts only when the composition is valid. Partial or invalid live
+configuration fails closed without fixture fallback. Archive and restore
+remain source-inactive until their Security, OOS, and Platform gates land.
 
 Canonical product-entry identity and vocabulary live in `domain/`; publication
 review and listing command models live in `work-model/`; source projections and

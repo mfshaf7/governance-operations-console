@@ -5,6 +5,7 @@ import {
   consoleOosModeSelected,
   consolePrototypePreviewModeSelected,
   consoleProductPublicationModeSelected,
+  consoleProductMaintenanceModeSelected,
   consoleRuntimeObservationModeSelected,
   consoleWgcfModeSelected,
   ConsoleRuntimeConfigurationError,
@@ -13,6 +14,7 @@ import {
   resolveConsoleOosConnection,
   resolveConsolePrototypePreviewConfiguration,
   resolveConsoleProductPublicationConfiguration,
+  resolveConsoleProductMaintenanceConfiguration,
   resolveConsoleRuntimeObservationConfiguration,
   resolveConsoleSessionConfiguration,
   resolveConsoleWgcfConnection,
@@ -160,6 +162,45 @@ test("Product Publication configuration requires exact Workspace and Security au
     (error) =>
       error instanceof ConsoleRuntimeConfigurationError &&
       error.code === "console_product_publication_security_decision_invalid",
+  );
+});
+
+test("Product Maintenance activation is complete, separate, and server-only", () => {
+  const env = {
+    ...completeEnv,
+    GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_AUTHORITY_REVISION: "a".repeat(40),
+    GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_DIGEST: `sha256:${"b".repeat(64)}`,
+    GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_REVISION: "c".repeat(40),
+    GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_URI:
+      "security-architecture://product-publication/decisions/maintenance-v1",
+    GOVERNANCE_CONSOLE_PRODUCT_HEALTH_PROJECTION_PATH: "/run/user/1000/platform/product-health.json",
+    GOVERNANCE_CONSOLE_PRODUCT_HEALTH_RECEIPT_PATH: "/run/user/1000/platform/product-health-receipt.json",
+  };
+  assert.equal(consoleProductMaintenanceModeSelected({}), false);
+  assert.equal(consoleProductMaintenanceModeSelected(env), true);
+  assert.deepEqual(resolveConsoleProductMaintenanceConfiguration(env), {
+    authorityRevision: env.GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_AUTHORITY_REVISION,
+    baseUrl: "http://127.0.0.1:8080",
+    callerId: "private-caller-987",
+    callerSecret: "test-secret-never-project",
+    healthProjectionPath: env.GOVERNANCE_CONSOLE_PRODUCT_HEALTH_PROJECTION_PATH,
+    healthReceiptPath: env.GOVERNANCE_CONSOLE_PRODUCT_HEALTH_RECEIPT_PATH,
+    operatorHandle: undefined,
+    operatorId: "principal:reviewer-432",
+    securityDecision: {
+      digest: env.GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_DIGEST,
+      revision: env.GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_REVISION,
+      uri: env.GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_URI,
+    },
+  });
+  assert.throws(
+    () => resolveConsoleProductMaintenanceConfiguration({
+      ...env,
+      GOVERNANCE_CONSOLE_PRODUCT_HEALTH_RECEIPT_PATH: "relative.json",
+    }),
+    (error) =>
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_product_health_receipt_unavailable",
   );
 });
 

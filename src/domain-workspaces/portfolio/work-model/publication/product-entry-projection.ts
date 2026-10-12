@@ -94,6 +94,7 @@ export function productEntryFromPacket(
     },
     provenance: {
       freshness,
+      publicationRequestId: packet.governedPublication?.requestId ?? null,
       publicationReceiptRef: receiptRef,
       refreshedAt: context.evaluatedAt,
       sourceVersions: packet.sourceVersions.map((version) => ({ ...version })),

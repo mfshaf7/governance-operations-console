@@ -286,6 +286,13 @@ export function productDashboardRetainedReferences(
     },
   ];
 
+  if (entry.provenance.publicationRequestId) {
+    references.push({
+      label: "Publication Request",
+      value: entry.provenance.publicationRequestId,
+    });
+  }
+
   if (entry.delivery.latestOutcomeRef) {
     references.push({
       label: "Latest Delivery Outcome",

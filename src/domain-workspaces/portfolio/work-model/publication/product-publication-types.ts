@@ -94,7 +94,7 @@ export type ProductPublicationPacket = {
   sourceVersions: ProductSourceVersion[];
   supersedesPublicationRef: string | null;
   governedPublication?: {
-    action: "archive" | "publish" | "unpublish" | "update";
+    action: "archive" | "publish" | "restore" | "unpublish" | "update";
     currentPosture: "archived" | "client" | "internal" | "public" | "unlisted";
     expectedVersion: number;
     idempotencyKey: string;
@@ -106,10 +106,12 @@ export type ProductPublicationPacket = {
       sourceRevision: string;
     };
     previousReceipt: {
+      publicationPosture?: "archived" | "client" | "internal" | "public" | "unlisted";
       publicationVersion: number;
       receiptDigest: string;
       receiptId: string;
     } | null;
     requestId: string;
+    schemaVersion?: 1 | 2;
   };
 };

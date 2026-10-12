@@ -28,9 +28,12 @@ export function assertGovernedProductPublicationIntent(
     "previous_receipt",
     "request_id",
     "requested_at",
+    "schema_version",
     "target_publication",
   ]);
-  oneOf(root.action, ["archive", "publish", "unpublish", "update"], "action");
+  const schemaVersion = contractVersion(root.schema_version, "schema_version");
+  const action = oneOf(root.action, ["archive", "publish", "restore", "unpublish", "update"], "action");
+  if (schemaVersion === 1 && action === "restore") invalid("Restore requires Product Publication schema v2.");
   posture(root.current_publication_posture);
   timestamp(root.decided_at, "decided_at");
   timestamp(root.requested_at, "requested_at");
@@ -45,7 +48,7 @@ export function assertGovernedProductPublicationIntent(
   }
   manifestSource(root.manifest_source);
   target(root.target_publication);
-  previousReceipt(root.previous_receipt, Number(root.expected_publication_version));
+  previousReceipt(root.previous_receipt, Number(root.expected_publication_version), schemaVersion);
   return value as GovernedProductPublicationIntent;
 }
 
@@ -59,6 +62,7 @@ export function assertGovernedProductPublicationResult(
     "cross_boundary_authority_granted",
     "evaluation",
     "history",
+    "maintenance_projection",
     "next_action",
     "owner_receipt",
     "packet",
@@ -97,6 +101,7 @@ export function assertGovernedProductPublicationResult(
   const packet = record(root.packet, "packet");
   const receipt = record(root.receipt, "receipt");
   const ownerReceipt = record(root.owner_receipt, "owner_receipt");
+  const maintenance = record(root.maintenance_projection, "maintenance_projection");
 
   exactKeys(command, [
     "action",
@@ -117,6 +122,7 @@ export function assertGovernedProductPublicationResult(
     "session_ref",
     "target_publication",
   ]);
+  const schemaVersion = contractVersion(command.schema_version, "command schema_version");
   exactKeys(evaluation, [
     "artifact_type",
     "authority_revision",
@@ -144,6 +150,9 @@ export function assertGovernedProductPublicationResult(
     "schema_version",
     "secret_values_embedded",
     "target_publication",
+    ...(schemaVersion === 2
+      ? ["action", "current_publication_posture", "inventory_lifecycle_binding", "previous_receipt"]
+      : []),
   ]);
   exactKeys(ledger, [
     "authority_revision",
@@ -172,6 +181,7 @@ export function assertGovernedProductPublicationResult(
     "requested_at",
     "schema_version",
     "target_publication",
+    ...(schemaVersion === 2 ? ["lifecycle_history_binding"] : []),
   ]);
   exactKeys(receipt, [
     "artifact_type",
@@ -188,6 +198,7 @@ export function assertGovernedProductPublicationResult(
     "request_id",
     "schema_version",
     "secret_values_embedded",
+    ...(schemaVersion === 2 ? ["lifecycle_history_binding", "previous_receipt"] : []),
   ]);
   exactKeys(ownerReceipt, ["digest", "uri"]);
 
@@ -209,10 +220,12 @@ export function assertGovernedProductPublicationResult(
   manifestSource(evaluationSource);
   same(evaluationSource, source, "evaluation manifest source");
   target(command.target_publication);
-  previousReceipt(command.previous_receipt, Number(command.expected_publication_version));
-  if (command.schema_version !== 1 || command.artifact_type !== "product-publication-command") {
+  previousReceipt(command.previous_receipt, Number(command.expected_publication_version), schemaVersion);
+  if (command.artifact_type !== "product-publication-command") {
     invalid("The Product Publication command version is unsupported.");
   }
+  const action = oneOf(command.action, ["archive", "publish", "restore", "unpublish", "update"], "command action");
+  if (schemaVersion === 1 && action === "restore") invalid("Restore requires Product Publication schema v2.");
   if (!/^operator:[a-z0-9][a-z0-9._:-]*$/.test(text(command.operator_id, "operator_id"))) {
     invalid("The Product Publication operator identity is invalid.");
   }
@@ -227,7 +240,7 @@ export function assertGovernedProductPublicationResult(
   if (!text(securityDecision.uri, "security decision URI").startsWith("security-architecture://product-publication/decisions/")) {
     invalid("The Product Publication Security decision uses the wrong authority namespace.");
   }
-  if (evaluation.schema_version !== 1 || evaluation.artifact_type !== "wgcf-product-publication-evaluation") {
+  if (evaluation.schema_version !== schemaVersion || evaluation.artifact_type !== "wgcf-product-publication-evaluation") {
     invalid("The Product Publication evaluation version is unsupported.");
   }
   digest(evaluation.evaluation_digest, "evaluation digest");
@@ -255,7 +268,12 @@ export function assertGovernedProductPublicationResult(
   ] as const) same(actual, expected, label);
 
   const authority = record(readiness.authority_binding, "readiness authority binding");
-  exactKeys(authority, ["contract_digest", "products_digest", "revision"]);
+  exactKeys(authority, [
+    "contract_digest",
+    ...(schemaVersion === 2 ? ["history_digest"] : []),
+    "products_digest",
+    "revision",
+  ]);
   digest(authority.contract_digest, "authority contract digest");
   digest(authority.products_digest, "authority products digest");
   same(authority.revision, command.authority_revision, "readiness authority revision");
@@ -291,13 +309,13 @@ export function assertGovernedProductPublicationResult(
   if (readiness.secret_values_embedded !== false) {
     invalid("The Product Publication readiness claims embedded secret values.");
   }
-  if (readiness.schema_version !== 1 || readiness.artifact_type !== "product-publication-readiness") {
+  if (readiness.schema_version !== schemaVersion || readiness.artifact_type !== "product-publication-readiness") {
     invalid("The Product Publication readiness version is unsupported.");
   }
-  if (packet.schema_version !== 1 || packet.artifact_type !== "product-publication-packet") {
+  if (packet.schema_version !== schemaVersion || packet.artifact_type !== "product-publication-packet") {
     invalid("The Product Publication packet version is unsupported.");
   }
-  if (receipt.schema_version !== 1 || receipt.artifact_type !== "product-publication-receipt") {
+  if (receipt.schema_version !== schemaVersion || receipt.artifact_type !== "product-publication-receipt") {
     invalid("The Product Publication receipt version is unsupported.");
   }
   target(readiness.target_publication);
@@ -338,6 +356,13 @@ export function assertGovernedProductPublicationResult(
   if (!Array.isArray(root.history) || root.history.length === 0) {
     invalid("The Product Publication result has no immutable history.");
   }
+  maintenanceProjection(maintenance, {
+    command,
+    packet,
+    readiness,
+    receipt,
+    receiptDigest,
+  });
   for (const eventValue of root.history) {
     const event = record(eventValue, "history event");
     exactKeys(event, [
@@ -392,6 +417,189 @@ export function isProductPublicationLiveApiError(
   );
 }
 
+function maintenanceProjection(
+  maintenance: Record<string, unknown>,
+  bindings: {
+    command: Record<string, unknown>;
+    packet: Record<string, unknown>;
+    readiness: Record<string, unknown>;
+    receipt: Record<string, unknown>;
+    receiptDigest: string;
+  },
+) {
+  exactKeys(maintenance, [
+    "evidence_posture",
+    "history",
+    "implications",
+    "lifecycle",
+    "next_action",
+    "operational_health",
+    "owner_route",
+    "product_id",
+    "publication",
+    "schema_version",
+  ]);
+  if (maintenance.schema_version !== 1) invalid("The maintenance projection version is unsupported.");
+  same(maintenance.product_id, bindings.receipt.product_id, "maintenance product identity");
+  same(maintenance.operational_health, "not-projected", "maintenance operational health");
+
+  const lifecycle = record(maintenance.lifecycle, "maintenance lifecycle");
+  exactKeys(lifecycle, [
+    "history_event_ref",
+    "receipt_ref",
+    "record_digest",
+    "record_version",
+    "state",
+  ]);
+  oneOf(lifecycle.state, ["active", "not-projected", "retired", "suspended"], "maintenance lifecycle state");
+  if (lifecycle.state === "not-projected") {
+    for (const key of ["history_event_ref", "receipt_ref", "record_digest", "record_version"] as const) {
+      same(lifecycle[key], null, `maintenance lifecycle ${key}`);
+    }
+  } else {
+    positiveInteger(lifecycle.record_version, "maintenance lifecycle record version");
+    digest(lifecycle.record_digest, "maintenance lifecycle record digest");
+    artifactRef(lifecycle.receipt_ref, "maintenance lifecycle receipt");
+    historyEventRef(lifecycle.history_event_ref, "maintenance lifecycle history event");
+  }
+
+  const publication = record(maintenance.publication, "maintenance publication");
+  exactKeys(publication, ["posture", "receipt_ref", "version"]);
+  posture(publication.posture);
+  nonnegativeInteger(publication.version, "maintenance publication version");
+  if (bindings.receipt.outcome === "applied") {
+    same(publication.posture, bindings.receipt.publication_posture, "maintenance publication posture");
+    same(publication.version, bindings.receipt.publication_version, "maintenance publication version");
+    const currentRef = artifactRef(publication.receipt_ref, "maintenance publication receipt");
+    same(currentRef.id, bindings.receipt.receipt_id, "maintenance receipt identity");
+    same(currentRef.digest, bindings.receiptDigest, "maintenance receipt digest");
+  }
+
+  const owner = record(maintenance.owner_route, "maintenance owner route");
+  exactKeys(owner, ["manifest_digest", "manifest_id", "repo", "revision"]);
+  const manifest = record(bindings.readiness.manifest_binding, "readiness manifest binding");
+  same(owner.repo, manifest.owner_repo, "maintenance owner repo");
+  same(owner.revision, manifest.owner_revision, "maintenance owner revision");
+  same(owner.manifest_id, manifest.manifest_id, "maintenance manifest identity");
+  same(owner.manifest_digest, manifest.manifest_digest, "maintenance manifest digest");
+
+  const evidence = record(maintenance.evidence_posture, "maintenance evidence posture");
+  exactKeys(evidence, ["findings", "state", "valid_until"]);
+  oneOf(evidence.state, ["blocked", "ready", "stale"], "maintenance evidence state");
+  timestamp(evidence.valid_until, "maintenance evidence validity");
+  if (!Array.isArray(evidence.findings)) invalid("maintenance findings are invalid.");
+  same(evidence.state, bindings.readiness.outcome, "maintenance readiness state");
+  same(evidence.valid_until, bindings.readiness.expires_at, "maintenance readiness validity");
+  same(evidence.findings, bindings.readiness.findings, "maintenance readiness findings");
+
+  const implications = record(maintenance.implications, "maintenance implications");
+  exactKeys(implications, [
+    "access_restored",
+    "release_restored",
+    "runtime_restored",
+    "security_acceptance_granted",
+  ]);
+  if (Object.values(implications).some((value) => value !== false)) {
+    invalid("The maintenance projection grants cross-boundary restoration authority.");
+  }
+  same(maintenance.next_action,
+    bindings.receipt.outcome === "applied"
+      ? "refresh-portfolio-projection"
+      : "correct-owner-evidence-and-submit-new-request",
+    "maintenance next action");
+
+  if (!Array.isArray(maintenance.history) || maintenance.history.length > 50) {
+    invalid("The maintenance history window is invalid.");
+  }
+  let previousSequence = 0;
+  let previousTime = -Infinity;
+  for (const eventValue of maintenance.history) {
+    const event = record(eventValue, "maintenance history event");
+    exactKeys(event, [
+      "action",
+      "inventory_history_event_ref",
+      "inventory_lifecycle_receipt_ref",
+      "publication_posture",
+      "publication_version",
+      "receipt_ref",
+      "recorded_at",
+      "sequence",
+    ]);
+    const sequence = Number(event.sequence);
+    positiveInteger(sequence, "maintenance history sequence");
+    if (sequence <= previousSequence) invalid("Maintenance history is not strictly ordered.");
+    previousSequence = sequence;
+    const occurredAt = timestamp(event.recorded_at, "maintenance history timestamp");
+    if (occurredAt < previousTime) invalid("Maintenance history timeline is contradictory.");
+    previousTime = occurredAt;
+    oneOf(event.action, ["archive", "publish", "restore", "unpublish", "update"], "maintenance history action");
+    posture(event.publication_posture);
+    positiveInteger(event.publication_version, "maintenance history publication version");
+    artifactRef(event.receipt_ref, "maintenance history receipt");
+    optionalArtifactRef(event.inventory_lifecycle_receipt_ref, "maintenance inventory receipt");
+    optionalHistoryEventRef(event.inventory_history_event_ref, "maintenance inventory history event");
+  }
+
+  if (bindings.command.schema_version === 2) {
+    const readinessLifecycle = record(bindings.readiness.inventory_lifecycle_binding, "readiness lifecycle binding");
+    const packetLifecycle = record(bindings.packet.lifecycle_history_binding, "packet lifecycle binding");
+    const receiptLifecycle = record(bindings.receipt.lifecycle_history_binding, "receipt lifecycle binding");
+    exactKeys(readinessLifecycle, ["action", "after", "history_event_ref", "previous_event_ref", "receipt_ref"]);
+    exactKeys(packetLifecycle, ["inventory_history_event_ref", "inventory_lifecycle_receipt_ref"]);
+    exactKeys(receiptLifecycle, ["inventory_history_event_ref", "inventory_lifecycle_receipt_ref"]);
+    same(bindings.readiness.action, bindings.command.action, "readiness maintenance action");
+    same(bindings.readiness.current_publication_posture, bindings.command.current_publication_posture, "readiness current posture");
+    same(bindings.readiness.previous_receipt, bindings.command.previous_receipt, "readiness previous publication binding");
+    same(
+      readinessLifecycle.action,
+      bindings.command.action === "archive" ? "retire" : "restore",
+      "inventory lifecycle action",
+    );
+    artifactRef(readinessLifecycle.receipt_ref, "readiness lifecycle receipt");
+    historyEventRef(readinessLifecycle.history_event_ref, "readiness lifecycle history event");
+    optionalArtifactRef(readinessLifecycle.previous_event_ref, "readiness previous lifecycle event");
+    same(packetLifecycle, receiptLifecycle, "packet and receipt lifecycle binding");
+    same(packetLifecycle.inventory_lifecycle_receipt_ref, readinessLifecycle.receipt_ref, "packet lifecycle receipt binding");
+    same(packetLifecycle.inventory_history_event_ref, readinessLifecycle.history_event_ref, "packet lifecycle history binding");
+    same(bindings.receipt.previous_receipt, bindings.command.previous_receipt, "receipt previous publication binding");
+    same(lifecycle.receipt_ref, readinessLifecycle.receipt_ref, "maintenance lifecycle receipt binding");
+    same(lifecycle.history_event_ref, readinessLifecycle.history_event_ref, "maintenance lifecycle history binding");
+    const after = record(readinessLifecycle.after, "readiness lifecycle after state");
+    exactKeys(after, ["posture", "record_digest", "record_version"]);
+    oneOf(after.posture, ["active", "retired"], "readiness lifecycle after posture");
+    positiveInteger(after.record_version, "readiness lifecycle after version");
+    digest(after.record_digest, "readiness lifecycle after digest");
+    same(lifecycle.state, after.posture, "maintenance lifecycle posture");
+    same(lifecycle.record_version, after.record_version, "maintenance lifecycle version");
+    same(lifecycle.record_digest, after.record_digest, "maintenance lifecycle digest");
+  }
+}
+
+function artifactRef(value: unknown, label: string) {
+  const ref = record(value, label);
+  exactKeys(ref, ["digest", "id"]);
+  text(ref.id, `${label} id`);
+  digest(ref.digest, `${label} digest`);
+  return ref;
+}
+
+function historyEventRef(value: unknown, label: string) {
+  const ref = record(value, label);
+  exactKeys(ref, ["digest", "id", "sequence"]);
+  text(ref.id, `${label} id`);
+  digest(ref.digest, `${label} digest`);
+  positiveInteger(ref.sequence, `${label} sequence`);
+  return ref;
+}
+
+function optionalArtifactRef(value: unknown, label: string) {
+  if (value !== null) artifactRef(value, label);
+}
+
+function optionalHistoryEventRef(value: unknown, label: string) {
+  if (value !== null) historyEventRef(value, label);
+}
+
 function manifestSource(value: unknown) {
   const source = record(value, "manifest_source");
   exactKeys(source, ["manifest_digest", "manifest_revision", "path", "repo", "source_revision"]);
@@ -403,17 +611,28 @@ function manifestSource(value: unknown) {
   if (path.startsWith("/") || path.split("/").includes("..")) invalid("The manifest path is invalid.");
 }
 
-function previousReceipt(value: unknown, expectedVersion: number) {
+function previousReceipt(value: unknown, expectedVersion: number, schemaVersion: 1 | 2) {
   if (expectedVersion === 0) {
     if (value !== null) invalid("Initial publication cannot bind a previous receipt.");
     return;
   }
   const previous = record(value, "previous_receipt");
-  exactKeys(previous, ["publication_version", "receipt_digest", "receipt_id"]);
+  exactKeys(previous, [
+    ...(schemaVersion === 2 ? ["publication_posture"] : []),
+    "publication_version",
+    "receipt_digest",
+    "receipt_id",
+  ]);
   positiveInteger(previous.publication_version, "previous publication version");
   same(previous.publication_version, expectedVersion, "previous publication version");
   digest(previous.receipt_digest, "previous receipt digest");
   text(previous.receipt_id, "previous receipt id");
+  if (schemaVersion === 2) posture(previous.publication_posture);
+}
+
+function contractVersion(value: unknown, label: string): 1 | 2 {
+  if (value !== 1 && value !== 2) invalid(`${label} is invalid.`);
+  return value;
 }
 
 function target(value: unknown) {

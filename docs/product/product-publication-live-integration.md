@@ -2,8 +2,10 @@
 
 Status: the internal-only path is source-complete and commissioned by Security
 `#1257` and Platform `#1258`. Support for broader contract-defined audience
-postures is present but remains inactive pending Security `#1262`, OOS source
-activation `#1263`, and Platform commissioning `#1264`.
+postures was commissioned through Security `#1262`, OOS `#1263`, and Platform
+`#1264`. Product lifecycle-maintenance composition is source-complete in the
+Console under `#1270`; it remains inactive until Security `#1271`, OOS `#1272`,
+and Platform `#1273` complete in that order.
 
 ## Operator Job
 
@@ -52,10 +54,11 @@ access grant. Listing scope controls who may see a Portfolio listing. Product
 owners and their approved identity and access controls continue to enforce
 access to the product itself. The Console remains private and loopback-only.
 
-The current audience slice operates on `internal`, `client`, `public`, and
-`unlisted` target tuples. `archived` remains outside this operator action until
-the deferred product-lifecycle Feature `#924` is elaborated; this slice does not
-smuggle retirement into audience activation.
+The audience slice operates on `internal`, `client`, `public`, and `unlisted`
+target tuples. Lifecycle maintenance adds only the separately reviewed
+`archive` and `restore` actions. Archive targets the fixed historical tuple;
+restore targets `unlisted` and does not restore runtime, release, access, or
+Security acceptance.
 
 The product-owned publication evidence is
 [`product-publication/manifest.json`](../../product-publication/manifest.json).
@@ -75,6 +78,9 @@ canonical publication rejection.
 | Inspect capability mode | `GET /api/product-portfolio/publications` | local server configuration only |
 | Submit or replay | `POST /api/product-portfolio/publications` | `POST /v1/product-publications` |
 | Read exact result | `GET /api/product-portfolio/publications/{request_id}` | `GET /v1/product-publications/{request_id}` |
+| Inspect maintenance mode | `GET /api/product-portfolio/maintenance` | local server configuration only |
+| Compose lifecycle and health | `GET /api/product-portfolio/maintenance/{request_id}` | OOS exact result plus private Platform projection |
+| Submit archive or restore | `POST /api/product-portfolio/maintenance/{request_id}` | reread then `POST /v1/product-publications` |
 
 Mutation and readback routes require the verified Console session. Browser code
 never receives the OOS caller secret, configured operator identity, authority
@@ -94,6 +100,17 @@ plus all Product Publication values as one complete set:
 - `GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_URI`
 - `GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_DIGEST`
 - `GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_REVISION`
+
+Lifecycle maintenance activation additionally supplies this separate complete
+set, so existing Product Publication commissioning does not silently activate
+the maintenance path:
+
+- `GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_AUTHORITY_REVISION`
+- `GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_URI`
+- `GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_DIGEST`
+- `GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_REVISION`
+- `GOVERNANCE_CONSOLE_PRODUCT_HEALTH_PROJECTION_PATH`
+- `GOVERNANCE_CONSOLE_PRODUCT_HEALTH_RECEIPT_PATH`
 
 The Security URI must use
 `security-architecture://product-publication/decisions/...`; all revisions are
@@ -115,6 +132,13 @@ then produce an invalid capability rather than falling back to preview.
 - WGCF readiness, packet, receipt, and owner-receipt references must bind the
   same request, manifest, product, target, and authority revision.
 - All cross-boundary grants remain `false`.
+- Platform health projection and receipt files must be regular, non-symlink,
+  current-user-owned `0600` files with exact digest, reference, inventory,
+  freshness, count, and no-authority bindings.
+- A configured maintenance path never falls back to fixture health. Invalid or
+  missing live evidence projects unavailable/unknown state.
+- Archive and restore reread the exact current OOS result and reject stale
+  lifecycle digest, publication receipt, posture, or version bindings.
 - The terminal receipt digest is recomputed server-side before projection.
 - OOS errors, oversized or malformed responses, timeline contradictions,
   replay conflicts, stale versions, or cross-product results never become a
@@ -128,11 +152,15 @@ Run:
 node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
   --experimental-strip-types --test \
   tests/operation-runtime/product-publication-live-adapter.test.mjs
+node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+  --experimental-strip-types --test \
+  tests/operation-runtime/product-maintenance-live-adapter.test.mjs
 npm run check
 ```
 
 The focused suite owns Delivery ART cases `case:1256-positive` and
 `case:1256-negative` for the commissioned baseline and `case:1261-positive`
-and `case:1261-negative` for the audience projection. Real-Git head, base,
+and `case:1261-negative` for the audience projection. Lifecycle composition is
+covered by `case:1270-positive` and `case:1270-negative`. Real-Git head, base,
 validation, merge, and Review Packet binding remains in the Delivery
 work-session lifecycle.

@@ -118,7 +118,7 @@ export function buildProductPublicationCommand({
   sessionRef: string;
 }) {
   return {
-    schema_version: 1,
+    schema_version: intent.schema_version,
     artifact_type: "product-publication-command",
     request_id: intent.request_id,
     idempotency_key: intent.idempotency_key,

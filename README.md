@@ -159,6 +159,8 @@ The Workspace Registry boundary is documented in
 [`docs/product/workspace-registry-live-integration.md`](docs/product/workspace-registry-live-integration.md).
 The governed Product Publication boundary is documented in
 [`docs/product/product-publication-live-integration.md`](docs/product/product-publication-live-integration.md).
+That boundary also documents the separately activated Product Dashboard
+lifecycle/publication/Platform-health composition and archive/restore review.
 The Model Operations request and source-reconciliation boundary is documented
 in
 [`docs/product/model-operations-live-integration.md`](docs/product/model-operations-live-integration.md).

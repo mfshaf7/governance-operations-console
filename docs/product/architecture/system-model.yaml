@@ -507,6 +507,8 @@ capabilities:
       - admitted-product
       - product-owned-portfolio-manifest
       - portfolio-listing-projection
+      - oos-product-maintenance-projection
+      - platform-product-runtime-health-projection
     must_not_own:
       - Product creation, workspace product admission, runtime exposure, release promotion, security acceptance, or source custody.
     design_status: approved-target
@@ -519,9 +521,11 @@ capabilities:
       - Products, Publication, and Curation are separate peer surfaces.
       - Publication requires canonical Workspace product identity and a versioned product-owner packet.
       - Prototype-local publication and listing receipts never imply a live canonical write.
+      - Product Dashboard composes lifecycle, publication, and health without adding a fourth peer surface or taking owner authority.
+      - Archive and restore require one confirmation plus exact current lifecycle and publication evidence.
     post_baseline_work:
-      - Activate the exact reviewed OOS/WGCF Product Publication adapter after Security and Platform gates.
-      - Add broader product registry, owner manifest, Platform, Security, Delivery, and release projections.
+      - Commission lifecycle maintenance only after Security, OOS, and Platform gates.
+      - Add broader product registry, Security, Delivery, and release projections without copying their authority.
 
   orchestration:
     label: Orchestration

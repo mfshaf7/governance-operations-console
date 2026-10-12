@@ -26,11 +26,26 @@ export function governedIntentFromPortfolioDecision(
       "The publication source has no exact owner-manifest and version binding.",
     );
   }
-  const target = governedProductPublicationTarget(submission.draft.listing);
+  const target = binding.action === "archive"
+    ? {
+        access_class: "historical-read-only" as const,
+        audience: "historical" as const,
+        listing_scope: "historical-archive" as const,
+        posture: "archived" as const,
+      }
+    : binding.action === "restore"
+      ? {
+          access_class: null,
+          audience: null,
+          listing_scope: null,
+          posture: "unlisted" as const,
+        }
+      : governedProductPublicationTarget(submission.draft.listing);
   if (
-    (target.posture === "unlisted" && binding.action !== "unpublish") ||
-    (target.posture !== "unlisted" && !new Set(["publish", "update"]).has(binding.action)) ||
-    binding.action === "archive"
+    (target.posture === "unlisted" && !new Set(["restore", "unpublish"]).has(binding.action)) ||
+    (target.posture === "archived" && binding.action !== "archive") ||
+    (!new Set(["archived", "unlisted"]).has(target.posture) &&
+      !new Set(["publish", "update"]).has(binding.action))
   ) {
     throw new Error(
       "The reviewed publication action conflicts with the selected target posture.",
@@ -52,6 +67,9 @@ export function governedIntentFromPortfolioDecision(
     operator_reason: `Apply the reviewed ${binding.action} action for ${record.publicationPacket.product.productId}.`,
     previous_receipt: binding.previousReceipt
       ? {
+          ...(binding.previousReceipt.publicationPosture
+            ? { publication_posture: binding.previousReceipt.publicationPosture }
+            : {}),
           publication_version: binding.previousReceipt.publicationVersion,
           receipt_digest: binding.previousReceipt.receiptDigest,
           receipt_id: binding.previousReceipt.receiptId,
@@ -59,6 +77,7 @@ export function governedIntentFromPortfolioDecision(
       : null,
     request_id: binding.requestId,
     requested_at: submission.decidedAt,
+    schema_version: binding.schemaVersion ?? 1,
     target_publication: target,
   };
 }
