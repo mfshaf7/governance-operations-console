@@ -43,6 +43,12 @@ unchanged. The Publication register makes its source posture visible as one of:
    timeline, grant, readiness, packet, receipt, and digest binding before it
    projects success.
 
+The product-owned publication evidence is
+[`product-publication/manifest.json`](../../product-publication/manifest.json).
+Its `owner_revision` identifies the earlier product-source snapshot described
+by the manifest. The later commit containing the manifest is the separate
+`manifest_revision` that WGCF must verify from merged owner-repository truth.
+
 An OOS readiness rejection remains authoritative and names the receipt that
 must be corrected. The Console's disconnected-preview `Reject` choice is a
 local candidate-review disposition; it is not sent to OOS and never becomes a
