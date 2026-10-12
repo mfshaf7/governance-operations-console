@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "artifact_type": "product-publication-owner-manifest",
-  "manifest_id": "product-publication-manifest:governance-operations-console:3",
+  "manifest_id": "product-publication-manifest:governance-operations-console:4",
   "product_id": "product:governance-operations-console",
   "product_record_ref": "workspace-governance://products/governance-operations-console/v2",
-  "product_record_version": 2,
+  "product_record_version": 3,
   "product_classification": "owner-managed",
-  "lifecycle_state": "retired",
+  "lifecycle_state": "active",
   "owner_repo": "governance-operations-console",
   "owner_role": "runtime-owner",
   "owner_revision": "9c1b9117a98a59662ba570d90bce01bc0b869fb0",
@@ -23,7 +23,7 @@
     }
   ],
   "lifecycle_evidence": {
-    "project_phase": "retired",
+    "project_phase": "operational",
     "source_custody": "dedicated-owner-repo",
     "runtime_environment": "dev-integration",
     "release_posture": "not-applicable",
@@ -34,22 +34,25 @@
     ]
   },
   "inventory_lifecycle_binding": {
-    "action": "retire",
+    "action": "restore",
     "receipt_ref": {
-      "id": "workspace-inventory-lifecycle-receipt:workspace-inventory-lifecycle-request:console-delivery-894-retire-20261012b:v1:review-branch",
-      "digest": "sha256:1432e278b9ff0c2fb605d3208f9a2ab7f01358dcb69e8742d2b26e6d73a010f6"
+      "id": "workspace-inventory-lifecycle-receipt:workspace-inventory-lifecycle-request:console-delivery-894-restore-20261013:v1:review-branch",
+      "digest": "sha256:02410b71aa852a00e4251b2299890ac0728aab84000075165b00dc95b951fe6d"
     },
     "history_event_ref": {
-      "id": "workspace-inventory-event:product:governance-operations-console:2",
-      "digest": "sha256:c4d0031c997ebc7caf030a41c5d19e904648f6a1de85277f4c702d7aa61868dd",
-      "sequence": 1
+      "id": "workspace-inventory-event:product:governance-operations-console:3",
+      "digest": "sha256:f55e483554629f434fb069a44ace2d1d56156f53854bcd1d29b792f50fe9b9f6",
+      "sequence": 2
     },
-    "previous_event_ref": null,
+    "previous_event_ref": {
+      "id": "workspace-inventory-event:product:governance-operations-console:2",
+      "digest": "sha256:c4d0031c997ebc7caf030a41c5d19e904648f6a1de85277f4c702d7aa61868dd"
+    },
     "after": {
-      "record_version": 2,
-      "record_digest": "sha256:7e826fe288fe596b04cd7b5ee9be351e5637ada86c9113b06c19f6c14ebdc166",
-      "posture": "retired"
+      "record_version": 3,
+      "record_digest": "sha256:ff1fddc2ae2600ccc63040ef153acceade9c1c2e470af38ceff344c2bb39adda",
+      "posture": "active"
     }
   },
-  "issued_at": "2026-10-12T20:52:57Z"
+  "issued_at": "2026-10-12T21:05:08Z"
 }
