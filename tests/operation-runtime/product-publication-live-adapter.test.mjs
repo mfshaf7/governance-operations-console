@@ -167,6 +167,17 @@ test("case:1256-negative rejects missing session, stale or contradictory intent,
     /receipt manifest digest does not match/i,
   );
 
+  const crossLanguageKeyOrder = resultFor(command, "created");
+  crossLanguageKeyOrder.readiness.readiness.target_publication = {
+    posture: "internal",
+    audience: "workspace-operators",
+    access_class: "workspace-authenticated",
+    listing_scope: "workspace-portfolio",
+  };
+  assert.doesNotThrow(() =>
+    assertGovernedProductPublicationResult(crossLanguageKeyOrder),
+  );
+
   const replayConflict = resultFor(command, "created");
   replayConflict.command.idempotency_key = "product-publication:conflicting-content";
   assert.throws(

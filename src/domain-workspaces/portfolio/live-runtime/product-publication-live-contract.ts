@@ -482,7 +482,21 @@ function oneOf<T extends string>(value: unknown, options: readonly T[], label: s
 }
 
 function same(actual: unknown, expected: unknown, label: string) {
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) invalid(`${label} does not match.`);
+  if (canonicalJson(actual) !== canonicalJson(expected)) invalid(`${label} does not match.`);
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "undefined";
 }
 
 function invalid(message: string): never {
