@@ -1,12 +1,12 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "artifact_type": "product-publication-owner-manifest",
-  "manifest_id": "product-publication-manifest:governance-operations-console:2",
+  "manifest_id": "product-publication-manifest:governance-operations-console:3",
   "product_id": "product:governance-operations-console",
-  "product_record_ref": "workspace-governance://products/governance-operations-console/v1",
-  "product_record_version": 1,
+  "product_record_ref": "workspace-governance://products/governance-operations-console/v2",
+  "product_record_version": 2,
   "product_classification": "owner-managed",
-  "lifecycle_state": "active",
+  "lifecycle_state": "retired",
   "owner_repo": "governance-operations-console",
   "owner_role": "runtime-owner",
   "owner_revision": "9c1b9117a98a59662ba570d90bce01bc0b869fb0",
@@ -23,15 +23,33 @@
     }
   ],
   "lifecycle_evidence": {
-    "project_phase": "operational",
+    "project_phase": "retired",
     "source_custody": "dedicated-owner-repo",
     "runtime_environment": "dev-integration",
     "release_posture": "not-applicable",
-    "publication_posture": "internal",
+    "publication_posture": "unlisted",
     "evidence_refs": [
       "git://governance-operations-console/9c1b9117a98a59662ba570d90bce01bc0b869fb0#src/domain-workspaces/portfolio",
       "git://governance-operations-console/9c1b9117a98a59662ba570d90bce01bc0b869fb0#docs/product/product-publication-live-integration.md"
     ]
   },
-  "issued_at": "2026-10-12T17:51:00Z"
+  "inventory_lifecycle_binding": {
+    "action": "retire",
+    "receipt_ref": {
+      "id": "workspace-inventory-lifecycle-receipt:workspace-inventory-lifecycle-request:console-delivery-894-retire-20261012b:v1:review-branch",
+      "digest": "sha256:1432e278b9ff0c2fb605d3208f9a2ab7f01358dcb69e8742d2b26e6d73a010f6"
+    },
+    "history_event_ref": {
+      "id": "workspace-inventory-event:product:governance-operations-console:2",
+      "digest": "sha256:c4d0031c997ebc7caf030a41c5d19e904648f6a1de85277f4c702d7aa61868dd",
+      "sequence": 1
+    },
+    "previous_event_ref": null,
+    "after": {
+      "record_version": 2,
+      "record_digest": "sha256:7e826fe288fe596b04cd7b5ee9be351e5637ada86c9113b06c19f6c14ebdc166",
+      "posture": "retired"
+    }
+  },
+  "issued_at": "2026-10-12T19:47:11Z"
 }
