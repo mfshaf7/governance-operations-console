@@ -23,7 +23,12 @@ the browser. OOS and WGCF remain the workflow and readiness authorities. The
 Console recomputes the terminal receipt digest and rejects synthetic sources,
 stale or conflicting versions, mismatched authority or manifest evidence,
 cross-product results, and any cross-boundary grant. Source completion does not
-activate the path; Security `#1257` and Platform `#1258` remain required.
+activate a new audience posture. Security `#1257` and Platform `#1258`
+commissioned the internal-only path. Broader audience postures remain inactive
+until Security `#1262`, OOS source activation `#1263`, and Platform
+commissioning `#1264` complete in order. The Console displays the exact
+posture, audience, listing scope, access class, and owner-manifest evidence but
+does not treat any of them as product-access authority.
 
 The current security evidence is:
 

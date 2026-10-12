@@ -6,6 +6,7 @@ import type {
 } from "../read-model/types/product-portfolio-fixture-types.ts";
 import { productPortfolioReadModelFromProjections } from "../read-model/selectors/product-portfolio-selectors.ts";
 import { projectProductPublication } from "../work-model/publication/product-publication-projection.ts";
+import { governedProductPublicationTarget } from "../work-model/publication/product-publication-audience-model.ts";
 import type { ProductPublicationDecisionReceipt } from "../work-model/publication/product-publication-decision-types.ts";
 import {
   productCommandsForEntry,
@@ -415,12 +416,47 @@ function productPublicationReceiptMatchesProjection({
     receipt.resultState === (published ? "published" : "rejected") &&
     receipt.resultingProductRef ===
       (published ? `portfolio://products/${packet.product.productId}` : null) &&
+    productPublicationAuthorityEvidenceMatches(packet, receipt) &&
     sameProductListing(receipt.listing, projection.entry?.listing ?? null) &&
     sameSourceVersions(receipt.sourceVersions, packet.sourceVersions) &&
     samePublicationRequirements(
       receipt.requirementSnapshot,
       projection.requirements,
     )
+  );
+}
+
+function productPublicationAuthorityEvidenceMatches(
+  packet: ProductPortfolioScenarioProjection["publicationPacket"],
+  receipt: ProductPublicationDecisionReceipt,
+) {
+  const evidence = receipt.authorityEvidence;
+  if (!evidence) return true;
+
+  const binding = packet.governedPublication;
+  const listing = receipt.listing;
+  if (!binding || !listing || !evidence.ownerManifest || !evidence.targetPublication) {
+    return false;
+  }
+
+  const expectedTarget = governedProductPublicationTarget({
+    scope: listing.scope,
+    state: listing.state === "unlisted" ? "unlisted" : "listed",
+  });
+  const target = evidence.targetPublication;
+  const manifest = evidence.ownerManifest;
+  const source = binding.manifestSource;
+
+  return (
+    target.posture === expectedTarget.posture &&
+    target.audience === expectedTarget.audience &&
+    target.listing_scope === expectedTarget.listing_scope &&
+    target.access_class === expectedTarget.access_class &&
+    manifest.repo === source.repo &&
+    manifest.path === source.path &&
+    manifest.sourceRevision === source.sourceRevision &&
+    manifest.manifestRevision === source.manifestRevision &&
+    manifest.manifestDigest === source.manifestDigest
   );
 }
 

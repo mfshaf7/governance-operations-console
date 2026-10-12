@@ -1,37 +1,14 @@
-export type GovernedProductPublicationPosture =
-  | "archived"
-  | "client"
-  | "internal"
-  | "public"
-  | "unlisted";
+import type {
+  GovernedProductPublicationAction,
+  GovernedProductPublicationPosture,
+  GovernedProductPublicationTarget,
+} from "../work-model/publication/product-publication-audience-model.ts";
 
-export type GovernedProductPublicationAction =
-  | "archive"
-  | "publish"
-  | "unpublish"
-  | "update";
-
-export type GovernedProductPublicationTarget = Readonly<{
-  access_class:
-    | "client-authorized"
-    | "historical-read-only"
-    | "public-anonymous"
-    | "workspace-authenticated"
-    | null;
-  audience:
-    | "authorized-clients"
-    | "historical"
-    | "public"
-    | "workspace-operators"
-    | null;
-  listing_scope:
-    | "client-portfolio"
-    | "historical-archive"
-    | "public-catalog"
-    | "workspace-portfolio"
-    | null;
-  posture: GovernedProductPublicationPosture;
-}>;
+export type {
+  GovernedProductPublicationAction,
+  GovernedProductPublicationPosture,
+  GovernedProductPublicationTarget,
+} from "../work-model/publication/product-publication-audience-model.ts";
 
 export type GovernedProductPublicationPreviousReceipt = Readonly<{
   publication_version: number;

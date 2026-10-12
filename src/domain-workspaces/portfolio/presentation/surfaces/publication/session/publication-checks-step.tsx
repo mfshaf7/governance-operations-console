@@ -1,12 +1,17 @@
 import {
+  TerasMetadataList,
   TerasStatusItem,
   TerasList,
   TerasStatusPill,
+  TerasTrayStack,
   TerasWizardPanel,
 } from "@/teras";
 import type { ProductPortfolioScenarioProjection } from "../../../../read-model/types/product-portfolio-fixture-types.ts";
 import { productPublicationRequirementCounts } from "../publication-view-model.ts";
-import { productPublicationRequirementRows } from "./publication-session-view-model.ts";
+import {
+  productPublicationOwnerManifestFacts,
+  productPublicationRequirementRows,
+} from "./publication-session-view-model.ts";
 
 export function ProductPublicationChecksStep({
   record,
@@ -18,30 +23,42 @@ export function ProductPublicationChecksStep({
   );
   const rows = productPublicationRequirementRows(record);
   const clear = counts.satisfied === counts.total;
+  const ownerManifestFacts = productPublicationOwnerManifestFacts(record);
 
   return (
-    <TerasWizardPanel
-      actions={
-        <TerasStatusPill tone={clear ? "ok" : "warn"}>
-          {counts.satisfied}/{counts.total} clear
-        </TerasStatusPill>
-      }
-      description="Review the source-backed publication requirements before choosing an outcome."
-      kicker="Publication Work"
-      title="Source Checks"
-    >
-      <TerasList frame="contained">
-        {rows.map((row, index) => (
-          <TerasStatusItem
-            tone={row.tone}
-            detail={row.detail}
-            index={String(index + 1).padStart(2, "0")}
-            key={row.id}
-            label={row.label}
-            status={row.status}
-          />
-        ))}
-      </TerasList>
-    </TerasWizardPanel>
+    <TerasTrayStack spacing="loose">
+      <TerasWizardPanel
+        actions={
+          <TerasStatusPill tone={clear ? "ok" : "warn"}>
+            {counts.satisfied}/{counts.total} clear
+          </TerasStatusPill>
+        }
+        description="Review the source-backed publication requirements before choosing an outcome."
+        kicker="Publication Work"
+        title="Source Checks"
+      >
+        <TerasList frame="contained">
+          {rows.map((row, index) => (
+            <TerasStatusItem
+              tone={row.tone}
+              detail={row.detail}
+              index={String(index + 1).padStart(2, "0")}
+              key={row.id}
+              label={row.label}
+              status={row.status}
+            />
+          ))}
+        </TerasList>
+      </TerasWizardPanel>
+      {ownerManifestFacts.length > 0 ? (
+        <TerasWizardPanel
+          description="This exact owner-manifest binding proves publication evidence. It does not grant product access."
+          kicker="Owner Evidence"
+          title="Manifest binding"
+        >
+          <TerasMetadataList columns={1} items={ownerManifestFacts} />
+        </TerasWizardPanel>
+      ) : null}
+    </TerasTrayStack>
   );
 }

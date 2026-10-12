@@ -146,11 +146,12 @@ export function productPublicationSelectedFacts(
   record: ProductPortfolioScenarioProjection,
 ): TerasMetadataItem[] {
   const packet = record.publicationPacket;
+  const governed = packet.governedPublication;
   const counts = productPublicationRequirementCounts(
     record.projection.requirements,
   );
 
-  return [
+  const facts: TerasMetadataItem[] = [
     { label: "Product ID", value: packet.product.productId },
     {
       label: "Product Form",
@@ -167,6 +168,18 @@ export function productPublicationSelectedFacts(
     },
     { label: "Packet", value: packet.packetId },
   ];
+
+  if (governed) {
+    facts.push(
+      { label: "Current Posture", value: titleCase(governed.currentPosture) },
+      {
+        label: "Owner Manifest",
+        value: `${governed.manifestSource.repo}/${governed.manifestSource.path}`,
+      },
+    );
+  }
+
+  return facts;
 }
 
 export function productPublicationActionModel(
@@ -176,7 +189,7 @@ export function productPublicationActionModel(
     case "captured":
       return {
         description:
-          "Review source-backed requirements, choose the publication outcome, and record a local receipt.",
+          "Review source-backed requirements, choose the publication outcome, and record the owner receipt when connected or a local receipt in disconnected preview.",
         label: "Review Publication",
         title: "Publication review",
       };
