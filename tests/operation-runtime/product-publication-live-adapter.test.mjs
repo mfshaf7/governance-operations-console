@@ -185,6 +185,26 @@ test("case:1270-positive validates exact archive lifecycle, publication, and his
   );
 });
 
+test("case:1273-rejected preserves a governed future-request rejection", () => {
+  const command = commandFor(lifecycleIntent());
+  command.requested_at = "2026-10-12T05:30:30.000Z";
+  const rejected = rejectedResultFor(command, {
+    code: "future-request",
+    message: "Publication request timestamp is ahead of the evaluation clock.",
+    severity: "blocking",
+  });
+
+  assert.doesNotThrow(() => assertGovernedProductPublicationResult(rejected));
+
+  const unbound = structuredClone(rejected);
+  unbound.readiness.readiness.findings = [];
+  unbound.maintenance_projection.evidence_posture.findings = [];
+  assert.throws(
+    () => assertGovernedProductPublicationResult(unbound),
+    /evidence timeline is contradictory/i,
+  );
+});
+
 test("case:1256-negative rejects missing session, stale or contradictory intent, and unbound owner evidence", async () => {
   await assert.rejects(
     submitGovernedProductPublication(intent(), { config }),
@@ -649,6 +669,54 @@ function resultFor(command, resolution) {
     next_action: "refresh-portfolio-projection",
     cross_boundary_authority_granted: false,
   };
+}
+
+function rejectedResultFor(command, finding) {
+  const result = resultFor(command, "created");
+  const readiness = result.readiness.readiness;
+  readiness.outcome = "blocked";
+  readiness.findings = [structuredClone(finding)];
+  readiness.readiness_digest = digest(readiness, "readiness_digest");
+  const readinessRef = {
+    digest: readiness.readiness_digest,
+    uri: `wgcf://product-publication/readiness-receipts/${readiness.readiness_digest.slice(7)}`,
+  };
+  result.readiness.ledger.ref = readinessRef;
+  result.packet.authority_refs.readiness_receipt_ref = readinessRef.uri;
+
+  result.receipt.outcome = "rejected";
+  result.receipt.publication_posture = null;
+  result.receipt.publication_version = null;
+  result.receipt_digest = digest(result.receipt);
+  result.owner_receipt.digest = result.receipt_digest;
+  result.history[0].event_type = "publication-rejected";
+  result.history[0].readiness_ref = structuredClone(readinessRef);
+  result.history[0].receipt_ref.digest = result.receipt_digest;
+
+  result.state = "rejected";
+  result.next_action = "correct-owner-evidence-and-submit-new-request";
+  result.maintenance_projection.publication = {
+    posture: command.previous_receipt.publication_posture,
+    version: command.previous_receipt.publication_version,
+    receipt_ref: structuredClone(command.previous_receipt),
+  };
+  result.maintenance_projection.evidence_posture.state = "blocked";
+  result.maintenance_projection.evidence_posture.findings = [structuredClone(finding)];
+  result.maintenance_projection.history = [{
+    sequence: 1,
+    action: "unpublish",
+    publication_posture: command.previous_receipt.publication_posture,
+    publication_version: command.previous_receipt.publication_version,
+    receipt_ref: {
+      id: command.previous_receipt.receipt_id,
+      digest: command.previous_receipt.receipt_digest,
+    },
+    inventory_lifecycle_receipt_ref: null,
+    inventory_history_event_ref: null,
+    recorded_at: "2026-10-12T05:20:00.000Z",
+  }];
+  result.maintenance_projection.next_action = "correct-owner-evidence-and-submit-new-request";
+  return result;
 }
 
 function digest(value, omittedField = null) {

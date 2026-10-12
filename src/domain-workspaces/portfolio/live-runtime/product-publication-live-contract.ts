@@ -388,7 +388,14 @@ export function assertGovernedProductPublicationResult(
   const evaluatedAt = timestamp(readiness.evaluated_at, "evaluated_at");
   const expiresAt = timestamp(readiness.expires_at, "expires_at");
   const recordedAt = timestamp(receipt.recorded_at, "recorded_at");
-  if (!(decidedAt <= requestedAt && requestedAt <= evaluatedAt && evaluatedAt < expiresAt && evaluatedAt <= recordedAt)) {
+  const futureRequestRejected = root.state === "rejected" &&
+    hasBlockingFinding(readiness.findings, "future-request");
+  if (!(
+    decidedAt <= requestedAt &&
+    (requestedAt <= evaluatedAt || futureRequestRejected) &&
+    evaluatedAt < expiresAt &&
+    evaluatedAt <= recordedAt
+  )) {
     invalid("The Product Publication evidence timeline is contradictory.");
   }
   return value as GovernedProductPublicationResult;
@@ -651,6 +658,18 @@ function target(value: unknown) {
 
 function posture(value: unknown) {
   return oneOf(value, ["archived", "client", "internal", "public", "unlisted"], "publication posture");
+}
+
+function hasBlockingFinding(value: unknown, code: string) {
+  return Array.isArray(value) && value.some((candidate) =>
+    Boolean(
+      candidate &&
+      typeof candidate === "object" &&
+      !Array.isArray(candidate) &&
+      (candidate as Record<string, unknown>).code === code &&
+      (candidate as Record<string, unknown>).severity === "blocking",
+    )
+  );
 }
 
 function record(value: unknown, label: string): Record<string, unknown> {
