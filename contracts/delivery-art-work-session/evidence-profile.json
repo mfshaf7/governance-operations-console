@@ -24,6 +24,19 @@
       "timeout_seconds": 900
     },
     {
+      "id": "semantic-sandbox-runtime-test-suite",
+      "kind": "tests",
+      "name": "Console semantic test suite in the bounded source-executor runtime",
+      "executable": "npm",
+      "args": [
+        "run",
+        "test:semantics"
+      ],
+      "fidelity": "sandbox-runtime",
+      "conformance_binding": "matching-fidelity",
+      "timeout_seconds": 900
+    },
+    {
       "id": "repository-safety-validation",
       "kind": "validations",
       "name": "Repository structure and public-source validation",

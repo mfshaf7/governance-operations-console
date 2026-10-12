@@ -6,6 +6,14 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-12
+
+- Bound the existing semantic suite to sandbox-runtime Delivery ART cases while
+  retaining its real-git binding, so Epic `#894` Console work fails during
+  planning compatibility checks rather than at source-session start.
+- Added a product-local profile test that locks both fidelity bindings without
+  changing Console behavior, authority, deployment, or security acceptance.
+
 ## 2026-10-09
 
 - Replaced the direct local-provider Agent Console path with one verified
