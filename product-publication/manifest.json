@@ -3,7 +3,7 @@
   "artifact_type": "product-publication-owner-manifest",
   "manifest_id": "product-publication-manifest:governance-operations-console:4",
   "product_id": "product:governance-operations-console",
-  "product_record_ref": "workspace-governance://products/governance-operations-console/v2",
+  "product_record_ref": "workspace-governance://products/governance-operations-console/v3",
   "product_record_version": 3,
   "product_classification": "owner-managed",
   "lifecycle_state": "active",
@@ -54,5 +54,5 @@
       "posture": "active"
     }
   },
-  "issued_at": "2026-10-12T21:05:08Z"
+  "issued_at": "2026-10-12T21:09:16Z"
 }
