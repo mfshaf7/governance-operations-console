@@ -4,14 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 
 import type {
   ProductMaintenanceComposition,
-  ProductMaintenanceIntent,
   ProductMaintenanceMode,
 } from "./product-maintenance-live-types.ts";
 
 export function useProductMaintenanceLiveRuntime(requestId: string | null) {
   const [mode, setMode] = useState<ProductMaintenanceMode | null>(null);
   const [composition, setComposition] = useState<ProductMaintenanceComposition | null>(null);
-  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -43,30 +41,7 @@ export function useProductMaintenanceLiveRuntime(requestId: string | null) {
     return () => { active = false; };
   }, [refresh]);
 
-  const submit = useCallback(async (intent: ProductMaintenanceIntent) => {
-    setPending(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/product-portfolio/maintenance/${encodeURIComponent(intent.expected_source.request_id)}`, {
-        body: JSON.stringify(intent),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
-      const body: unknown = await response.json().catch(() => null);
-      if (!response.ok) throw apiError(body);
-      const next = assertComposition(body);
-      setComposition(next);
-      return next;
-    } catch (caught) {
-      const failure = caught instanceof Error ? caught : new Error("Product Maintenance failed.");
-      setError(failure.message);
-      throw failure;
-    } finally {
-      setPending(false);
-    }
-  }, []);
-
-  return { composition, error, mode, pending, refresh, submit };
+  return { composition, error, mode, refresh };
 }
 
 function assertMode(value: unknown): ProductMaintenanceMode {
@@ -81,6 +56,7 @@ function assertComposition(value: unknown): ProductMaintenanceComposition {
     !isRecord(value) || value.schema_version !== 1 ||
     value.artifact_type !== "portfolio-product-maintenance-composition" ||
     value.mode !== "live" || !isRecord(value.maintenance) || !isRecord(value.health) ||
+    !isRecord(value.inventory_lifecycle) ||
     value.product_id !== value.maintenance.product_id || value.product_id !== value.health.productId ||
     !isRecord(value.grants) || Object.values(value.grants).some((grant) => grant !== false)
   ) {

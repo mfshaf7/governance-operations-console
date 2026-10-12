@@ -131,6 +131,16 @@ function GovernanceConsoleContent({
             }
             onOpenAttentionCandidate={controller.openAttentionCandidate}
             onOpenWorkbenchSurface={controller.openWorkbenchSurface}
+            onOpenWorkspace={(workspaceId, focusIntent) =>
+              controller.openConsoleWorkspace(workspaceId, {
+                ...focusIntent,
+                target: {
+                  id: workspaceId,
+                  kind: "workspace",
+                  workspaceId,
+                },
+              })
+            }
             onOpenPulseRoute={controller.openPulseRoute}
             onPulseScenarioChange={controller.setPulseScenario}
             onSelectAttentionCandidate={
@@ -183,6 +193,7 @@ function GovernanceConsoleContent({
       {controller.activeConsoleWorkspaceId === "workspace-registry" ? (
         <WorkspaceRegistryWorkspace
           consoleDevMode={controller.consoleDevMode}
+          entryIntent={controller.activeConsoleEntryIntent}
           onClose={controller.closeConsoleWorkspace}
         />
       ) : null}

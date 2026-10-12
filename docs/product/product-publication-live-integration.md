@@ -1,11 +1,12 @@
 # Product Publication Live Integration
 
 Status: the internal-only path is source-complete and commissioned by Security
-`#1257` and Platform `#1258`. Support for broader contract-defined audience
-postures was commissioned through Security `#1262`, OOS `#1263`, and Platform
-`#1264`. Product lifecycle-maintenance composition is source-complete in the
-Console under `#1270`; it remains inactive until Security `#1271`, OOS `#1272`,
-and Platform `#1273` complete in that order.
+`#1257` and Platform `#1258`. Security `#1262`, OOS `#1263`, and Platform
+`#1264` preserved that exact internal-only target; `unlisted`, `client`,
+`public`, and `archived` remain denied as target transitions until separately
+accepted. Product lifecycle-maintenance composition is source-complete in the
+Console under `#1270`; it remains read-only and inactive until Security `#1271`,
+OOS `#1272`, and Platform `#1273` complete in that order.
 
 ## Operator Job
 
@@ -54,11 +55,26 @@ access grant. Listing scope controls who may see a Portfolio listing. Product
 owners and their approved identity and access controls continue to enforce
 access to the product itself. The Console remains private and loopback-only.
 
-The audience slice operates on `internal`, `client`, `public`, and `unlisted`
-target tuples. Lifecycle maintenance adds only the separately reviewed
-`archive` and `restore` actions. Archive targets the fixed historical tuple;
-restore targets `unlisted` and does not restore runtime, release, access, or
-Security acceptance.
+The Console can display the contract-defined audience tuples, but the active
+Security decision permits only the `internal` target. Lifecycle maintenance
+does not add a second publication command path. It composes current Workspace
+Registry lifecycle, immutable Product Publication history, and Platform health,
+then routes the operator to the existing owner surface for the next prerequisite.
+
+The archive sequence is exact:
+
+1. If currently listed, commit a fresh active/current-posture owner manifest and
+   unpublish through Product Publication.
+2. Retire the product through Workspace Registry.
+3. Commit a fresh schema-v2 retired/`unlisted` owner manifest bound to that exact
+   retirement receipt and history event.
+4. Archive through Product Publication.
+
+Restoration first restores the inventory record through Workspace Registry,
+then requires a fresh schema-v2 active/`unlisted` owner manifest bound to the
+restore event and exact prior archived receipt before Product Publication may
+restore `archived` to `unlisted`. Neither path restores runtime, release, access,
+or Security acceptance.
 
 The product-owned publication evidence is
 [`product-publication/manifest.json`](../../product-publication/manifest.json).
@@ -79,8 +95,8 @@ canonical publication rejection.
 | Submit or replay | `POST /api/product-portfolio/publications` | `POST /v1/product-publications` |
 | Read exact result | `GET /api/product-portfolio/publications/{request_id}` | `GET /v1/product-publications/{request_id}` |
 | Inspect maintenance mode | `GET /api/product-portfolio/maintenance` | local server configuration only |
-| Compose lifecycle and health | `GET /api/product-portfolio/maintenance/{request_id}` | OOS exact result plus private Platform projection |
-| Submit archive or restore | `POST /api/product-portfolio/maintenance/{request_id}` | reread then `POST /v1/product-publications` |
+| Compose lifecycle and health | `GET /api/product-portfolio/maintenance/{request_id}` | OOS exact publication result plus current Workspace Registry and private Platform projection |
+| Continue lifecycle prerequisite | existing Workspace Registry or Product Publication surface | existing owner workflow only |
 
 Mutation and readback routes require the verified Console session. Browser code
 never receives the OOS caller secret, configured operator identity, authority
@@ -137,8 +153,13 @@ then produce an invalid capability rather than falling back to preview.
   freshness, count, and no-authority bindings.
 - A configured maintenance path never falls back to fixture health. Invalid or
   missing live evidence projects unavailable/unknown state.
-- Archive and restore reread the exact current OOS result and reject stale
-  lifecycle digest, publication receipt, posture, or version bindings.
+- Product Maintenance has no mutation endpoint and never copies a prior
+  `manifest_source` into a new request.
+- The composition rereads current Workspace Registry lifecycle independently of
+  the historical publication result and blocks contradictory state pairs.
+- Archive and restore remain available only through Product Publication with a
+  fresh authority-snapshot owner manifest and the exact current receipt,
+  posture, version, and lifecycle-history bindings.
 - The terminal receipt digest is recomputed server-side before projection.
 - OOS errors, oversized or malformed responses, timeline contradictions,
   replay conflicts, stale versions, or cross-product results never become a

@@ -28,6 +28,7 @@ import {
 import type {
   ConsoleEntryIntent,
   ConsoleSurfaceEntryIntent,
+  ConsoleWorkspaceId,
 } from "../../console-architecture";
 import { ConsoleShellPanel } from "../console-shell-panel";
 
@@ -46,6 +47,10 @@ export type ConsoleFocusRouterProps = {
   onOpenWorkbenchSurface: (
     surfaceLabel: OperationWorkbenchPathLabel,
     focusIntent?: ConsoleSurfaceEntryIntent | null,
+  ) => void;
+  onOpenWorkspace: (
+    workspaceId: ConsoleWorkspaceId,
+    entryIntent: ConsoleSurfaceEntryIntent,
   ) => void;
   onPulseScenarioChange: (
     signalId: WorkspacePulseSignal["id"],
@@ -74,6 +79,7 @@ export function ConsoleFocusRouter({
   onOpenAttentionCandidate,
   onOpenPulseRoute,
   onOpenWorkbenchSurface,
+  onOpenWorkspace,
   onPulseScenarioChange,
   onSelectAttentionCandidate,
   onSelectPulseSignal,
@@ -139,6 +145,7 @@ export function ConsoleFocusRouter({
                 subjectRef: proposalId,
               })
             }
+            onOpenWorkspace={onOpenWorkspace}
             selected={selectedWorkbenchSurface}
           />
         ) : selectedResourceMetric ? (

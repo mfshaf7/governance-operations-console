@@ -25,9 +25,9 @@ import type { ProductPortfolioEntry } from "@/domain-workspaces/portfolio/domain
 import type { ProductPortfolioHistoryEvent } from "@/domain-workspaces/portfolio/read-model/types/product-portfolio-history-types";
 import type {
   ProductMaintenanceComposition,
-  ProductMaintenanceIntent,
   ProductMaintenanceMode,
 } from "@/domain-workspaces/portfolio/live-runtime/product-maintenance-live-types";
+import { resolveProductMaintenanceStep } from "@/domain-workspaces/portfolio/live-runtime/product-maintenance-sequence";
 import {
   formatProductTimestamp,
   productDashboardAccessLabel,
@@ -61,35 +61,26 @@ export function ProductDashboardModal({
   onClose,
   onManageListing,
   onOpenPrimaryTarget,
+  onOpenPublication,
+  onOpenWorkspaceRegistry,
 }: {
   entry: ProductPortfolioEntry | null;
   historyEvents: ProductPortfolioHistoryEvent[];
   maintenanceRuntime: {
-    apply: (
-      action: ProductMaintenanceIntent["action"],
-      reason: string,
-      intentId: string,
-      decidedAt: string,
-    ) => Promise<unknown>;
     composition: ProductMaintenanceComposition | null;
     error: string | null;
     mode: ProductMaintenanceMode | null;
-    pending: boolean;
   };
   onClose: () => void;
   onManageListing: (entry: ProductPortfolioEntry) => void;
   onOpenPrimaryTarget: (entry: ProductPortfolioEntry) => void;
+  onOpenPublication: (entry: ProductPortfolioEntry) => void;
+  onOpenWorkspaceRegistry: (entry: ProductPortfolioEntry) => void;
 }) {
   const [activeTab, setActiveTab] = useState<ProductDashboardTabId>("overview");
-  const [review, setReview] = useState<{
-    action: ProductMaintenanceIntent["action"];
-    decidedAt: string;
-    intentId: string;
-  } | null>(null);
 
   useEffect(() => {
     setActiveTab("overview");
-    setReview(null);
   }, [entry?.identity.productId]);
 
   if (!entry) {
@@ -101,6 +92,9 @@ export function ProductDashboardModal({
   const accessTone = productDashboardAccessTone(entry);
   const canOpenTarget = productDashboardCanOpenTarget(entry);
   const canManageListing = entry.listing.state !== "retired";
+  const maintenanceStep = maintenanceRuntime.composition
+    ? resolveProductMaintenanceStep(maintenanceRuntime.composition)
+    : null;
 
   return (
     <TerasModalShell
@@ -248,70 +242,36 @@ export function ProductDashboardModal({
             >
               <TerasPanelHeader
                 description={maintenanceRuntime.error ?? (
-                  maintenanceRuntime.composition
-                    ? "Review an archive or restoration request. OOS remains the lifecycle authority."
+                  maintenanceStep
+                    ? maintenanceStep.description
                     : maintenanceRuntime.mode?.mode === "disconnected-preview"
                       ? "Lifecycle maintenance is not commissioned."
                       : "No governed publication binding is available for this product."
                 )}
                 kicker="Product Lifecycle"
-                title={maintenanceRuntime.composition?.maintenance.lifecycle.state ?? "Unavailable"}
+                title={maintenanceRuntime.composition
+                  ? `${maintenanceRuntime.composition.inventory_lifecycle.posture} · ${maintenanceRuntime.composition.maintenance.publication.posture}`
+                  : "Unavailable"}
               />
               <TerasActionRow spacing="normal">
                 <TerasActionButton
-                  disabled={maintenanceRuntime.pending || maintenanceRuntime.composition?.maintenance.lifecycle.state !== "active"}
-                  onClick={() => setReview(createMaintenanceReview(entry, "archive"))}
-                  emphasis="secondary"
-                >
-                  Review archive
-                </TerasActionButton>
-                <TerasActionButton
-                  disabled={maintenanceRuntime.pending || maintenanceRuntime.composition?.maintenance.lifecycle.state !== "retired"}
-                  onClick={() => setReview(createMaintenanceReview(entry, "restore"))}
+                  disabled={!maintenanceStep?.surface}
+                  onClick={() => {
+                    if (maintenanceStep?.surface === "workspace-registry") {
+                      onOpenWorkspaceRegistry(entry);
+                    } else if (maintenanceStep?.surface === "product-publication") {
+                      onOpenPublication(entry);
+                    }
+                  }}
                   emphasis="primary"
                 >
-                  Review restore
+                  {maintenanceStep?.label ?? "Maintenance unavailable"}
                 </TerasActionButton>
               </TerasActionRow>
             </TerasPanel>
           </TerasZone>
         }
       />
-      {review && maintenanceRuntime.composition ? (
-        <TerasModalShell
-          bodyLayout="scroll"
-          description={`Confirm the ${review.action} request against the exact lifecycle and publication receipts shown below.`}
-          footer={
-            <TerasActionRow spacing="normal">
-              <TerasActionButton onClick={() => setReview(null)} emphasis="secondary">
-                Cancel
-              </TerasActionButton>
-              <TerasActionButton
-                disabled={maintenanceRuntime.pending}
-                onClick={() => void maintenanceRuntime.apply(
-                  review.action,
-                  `Operator reviewed ${review.action} for ${entry.identity.productId} against the displayed owner evidence.`,
-                  review.intentId,
-                  review.decidedAt,
-                ).then(() => setReview(null)).catch(() => undefined)}
-                emphasis="primary"
-              >
-                Confirm {review.action}
-              </TerasActionButton>
-            </TerasActionRow>
-          }
-          height="content"
-          kicker="Lifecycle Review"
-          onClose={() => setReview(null)}
-          surfaceId="product-maintenance-review"
-          title={`${review.action === "archive" ? "Archive" : "Restore"} ${entry.identity.displayName}`}
-          width="standard"
-        >
-          <TerasMetadataList
-            items={productMaintenanceReviewFacts(maintenanceRuntime.composition)}
-          />
-        </TerasModalShell>
-      ) : null}
     </TerasModalShell>
   );
 }
@@ -487,7 +447,8 @@ function ProductDashboardTabContent({
 
 function productMaintenanceStateFacts(composition: ProductMaintenanceComposition) {
   return [
-    { label: "Lifecycle", value: composition.maintenance.lifecycle.state },
+    { label: "Current Lifecycle", value: composition.inventory_lifecycle.posture },
+    { label: "Publication Evidence Lifecycle", value: composition.maintenance.lifecycle.state },
     { label: "Publication", value: composition.maintenance.publication.posture },
     { label: "Publication Version", value: String(composition.maintenance.publication.version) },
     { label: "Evidence", value: composition.maintenance.evidence_posture.state },
@@ -503,29 +464,4 @@ function productMaintenanceHealthFacts(composition: ProductMaintenanceCompositio
     { label: "Runtime Owner", value: composition.health.runtimeOwner },
     { label: "Recovery", value: composition.health.recovery.runbookRef },
   ];
-}
-
-function productMaintenanceReviewFacts(composition: ProductMaintenanceComposition) {
-  return [
-    ...productMaintenanceStateFacts(composition),
-    { label: "Lifecycle Digest", value: composition.maintenance.lifecycle.record_digest ?? "Unavailable" },
-    { label: "Maintenance Receipt", value: composition.source.maintenance_receipt_id },
-    { label: "Health Projection", value: composition.source.health_projection_ref },
-    { label: "Authority", value: "OOS validates; owner repositories remain authoritative" },
-  ];
-}
-
-function createMaintenanceReview(
-  entry: ProductPortfolioEntry,
-  action: ProductMaintenanceIntent["action"],
-) {
-  const decidedAt = new Date().toISOString();
-  const nonce = typeof crypto.randomUUID === "function"
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return {
-    action,
-    decidedAt,
-    intentId: `product-maintenance-intent:${entry.identity.productId.replace(/^product:/, "")}:${action}:${nonce}`,
-  };
 }

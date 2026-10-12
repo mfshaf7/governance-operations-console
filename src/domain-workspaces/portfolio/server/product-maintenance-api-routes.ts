@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import {
   ConsoleRuntimeConfigurationError,
@@ -9,7 +9,6 @@ import {
   ProductMaintenanceError,
   productMaintenanceConfigured,
   readProductMaintenanceComposition,
-  submitProductMaintenance,
 } from "./product-maintenance-service.ts";
 import { ProductPublicationOosError } from "./product-publication-oos-client.ts";
 
@@ -33,17 +32,6 @@ export async function productMaintenanceModeRoute() {
 export async function readProductMaintenanceRoute(requestId: string) {
   try {
     return NextResponse.json(await readProductMaintenanceComposition(requestId), { headers: noStoreHeaders });
-  } catch (error) {
-    return errorResponse(error);
-  }
-}
-
-export async function submitProductMaintenanceRoute(request: NextRequest) {
-  try {
-    return NextResponse.json(await submitProductMaintenance(await request.json().catch(() => null)), {
-      headers: noStoreHeaders,
-      status: 201,
-    });
   } catch (error) {
     return errorResponse(error);
   }

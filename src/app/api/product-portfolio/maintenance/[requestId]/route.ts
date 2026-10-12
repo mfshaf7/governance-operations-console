@@ -3,7 +3,6 @@ import type { NextRequest } from "next/server";
 import { authorizeConsoleMutation } from "@/console-integration/identity/server/console-session-authorization";
 import {
   readProductMaintenanceRoute,
-  submitProductMaintenanceRoute,
 } from "@/domain-workspaces/portfolio/server";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +13,4 @@ export async function GET(
 ) {
   const { requestId } = await params;
   return authorizeConsoleMutation(request, () => readProductMaintenanceRoute(requestId));
-}
-
-export async function POST(request: NextRequest) {
-  return authorizeConsoleMutation(request, () => submitProductMaintenanceRoute(request));
 }

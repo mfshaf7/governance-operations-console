@@ -28,7 +28,7 @@ import {
   RepositoryWorkspace,
   getRepositoryOperationWorkbenchContract,
 } from "../domain-workspaces/repository";
-import type { ConsoleSurfaceEntryIntent } from "../console-architecture";
+import type { ConsoleSurfaceEntryIntent, ConsoleWorkspaceId } from "../console-architecture";
 import type { OperationWorkbenchSelectorEntry } from "./operation-workbench-selector-model";
 import { OperationWorkbench } from "./operation-workbench";
 
@@ -41,12 +41,14 @@ export function OperationWorkbenchHost({
   onClose,
   onOpenDeliveryCatalog,
   onOpenRepositorySurface,
+  onOpenWorkspace,
   selected,
 }: {
   entryIntent: ConsoleSurfaceEntryIntent | null;
   onClose: () => void;
   onOpenDeliveryCatalog: (repositoryId: string) => void;
   onOpenRepositorySurface: (proposalId: string) => void;
+  onOpenWorkspace: (workspaceId: ConsoleWorkspaceId, entryIntent: ConsoleSurfaceEntryIntent) => void;
   selected: OperationWorkbenchSelectorEntry;
 }) {
   const domain = selected.domain;
@@ -124,6 +126,7 @@ export function OperationWorkbenchHost({
             contract={contract}
             entryIntent={entryIntent}
             onClose={onClose}
+            onOpenWorkspace={onOpenWorkspace}
           />
         </OperationWorkbench>
       );

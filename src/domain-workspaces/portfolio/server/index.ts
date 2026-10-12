@@ -6,5 +6,4 @@ export {
 export {
   productMaintenanceModeRoute,
   readProductMaintenanceRoute,
-  submitProductMaintenanceRoute,
 } from "./product-maintenance-api-routes.ts";

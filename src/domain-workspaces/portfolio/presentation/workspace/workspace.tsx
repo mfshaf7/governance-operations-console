@@ -1,6 +1,7 @@
 "use client";
 
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
+import type { ConsoleWorkspaceId } from "../../../../console-architecture.ts";
 import type { OperationWorkbenchDomainContract } from "../../../../operation-workbench/operation-workbench-contract.ts";
 import { ProductPortfolioPublicationSurface } from "../surfaces/publication/publication-surface.tsx";
 import { ProductPortfolioCurationSurface } from "../surfaces/curation/curation-surface.tsx";
@@ -13,12 +14,14 @@ export type PortfolioWorkspaceProps = {
   contract: OperationWorkbenchDomainContract;
   entryIntent?: ConsoleSurfaceEntryIntent | null;
   onClose: () => void;
+  onOpenWorkspace: (workspaceId: ConsoleWorkspaceId, entryIntent: ConsoleSurfaceEntryIntent) => void;
 };
 
 export function PortfolioWorkspace({
   contract,
   entryIntent = null,
   onClose,
+  onOpenWorkspace,
 }: PortfolioWorkspaceProps) {
   const controller = useProductPortfolioWorkspaceController({
     entryIntent,
@@ -67,6 +70,12 @@ export function PortfolioWorkspace({
         onClose={controller.closeDashboard}
         onManageListing={controller.openCuration}
         onOpenPrimaryTarget={controller.openPrimaryTarget}
+        onOpenPublication={controller.openPublication}
+        onOpenWorkspaceRegistry={(entry) => onOpenWorkspace("workspace-registry", {
+          mode: "review",
+          requiredMoveRef: "workspace-inventory.lifecycle-maintenance",
+          subjectRef: entry.identity.productId,
+        })}
       />
     </ProductPortfolioWorkspaceShell>
   );
