@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "artifact_type": "product-publication-owner-manifest",
-  "manifest_id": "product-publication-manifest:governance-operations-console:4",
+  "manifest_id": "product-publication-manifest:governance-operations-console:5",
   "product_id": "product:governance-operations-console",
   "product_record_ref": "workspace-governance://products/governance-operations-console/v3",
   "product_record_version": 3,
@@ -27,7 +27,7 @@
     "source_custody": "dedicated-owner-repo",
     "runtime_environment": "dev-integration",
     "release_posture": "not-applicable",
-    "publication_posture": "unlisted",
+    "publication_posture": "internal",
     "evidence_refs": [
       "git://governance-operations-console/9c1b9117a98a59662ba570d90bce01bc0b869fb0#src/domain-workspaces/portfolio",
       "git://governance-operations-console/9c1b9117a98a59662ba570d90bce01bc0b869fb0#docs/product/product-publication-live-integration.md"
@@ -54,5 +54,5 @@
       "posture": "active"
     }
   },
-  "issued_at": "2026-10-12T21:09:16Z"
+  "issued_at": "2026-10-12T21:12:05Z"
 }
