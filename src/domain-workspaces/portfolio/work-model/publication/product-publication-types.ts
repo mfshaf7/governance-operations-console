@@ -93,4 +93,23 @@ export type ProductPublicationPacket = {
   };
   sourceVersions: ProductSourceVersion[];
   supersedesPublicationRef: string | null;
+  governedPublication?: {
+    action: "archive" | "publish" | "unpublish" | "update";
+    currentPosture: "archived" | "client" | "internal" | "public" | "unlisted";
+    expectedVersion: number;
+    idempotencyKey: string;
+    manifestSource: {
+      manifestDigest: string;
+      manifestRevision: string;
+      path: string;
+      repo: string;
+      sourceRevision: string;
+    };
+    previousReceipt: {
+      publicationVersion: number;
+      receiptDigest: string;
+      receiptId: string;
+    } | null;
+    requestId: string;
+  };
 };

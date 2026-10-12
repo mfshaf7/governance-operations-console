@@ -8,6 +8,14 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-12
 
+- Connected the existing Product Portfolio Publication workflow to exact
+  product-owner manifest bindings, verified Console session attribution, the
+  OOS Product Publication API, WGCF readiness, and immutable owner receipts.
+- Added strict request, version, replay, manifest, authority, target, timeline,
+  receipt-digest, and cross-boundary validation; synthetic fixture data cannot
+  enter the live path and configured failures never become local success.
+- Kept the current source runtime-inactive until Security `#1257` and Platform
+  `#1258` bind and activate the exact reviewed revisions.
 - Bound the existing semantic suite to sandbox-runtime Delivery ART cases while
   retaining its real-git binding, so Epic `#894` Console work fails during
   planning compatibility checks rather than at source-session start.

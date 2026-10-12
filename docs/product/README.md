@@ -114,6 +114,9 @@ current and future product changes.
 - `repository-lifecycle-live-integration.md`
   - OOS-backed guarded custody transfer, provider archive/unarchive, workspace
     retirement/restore, replay, reversal evidence, receipts, and audit history.
+- `product-publication-live-integration.md`
+  - Exact owner-manifest publication intent, server-bound Console identity,
+    OOS/WGCF readiness, replay, and terminal owner-receipt projection.
 
 Retired planning and audit records have been removed from the active record
 set. If an implementation question is not answered by the files above, stop and

@@ -405,9 +405,12 @@ function productPublicationReceiptMatchesProjection({
     receipt.schemaVersion === 1 &&
     receipt.packetId === packet.packetId &&
     receipt.productId === packet.product.productId &&
-    receipt.decision.decidedAt === receipt.recordedAt &&
+    (receipt.authorityEvidence
+      ? Date.parse(receipt.decision.decidedAt) <= Date.parse(receipt.recordedAt)
+      : receipt.decision.decidedAt === receipt.recordedAt) &&
     receipt.decision.receiptRef ===
-      `portfolio-local://publication/${receipt.receiptId}` &&
+      (receipt.authorityEvidence?.ownerReceiptRef ??
+        `portfolio-local://publication/${receipt.receiptId}`) &&
     receipt.publicationReceiptRef === projection.receipt.receiptRef &&
     receipt.resultState === (published ? "published" : "rejected") &&
     receipt.resultingProductRef ===

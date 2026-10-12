@@ -48,6 +48,7 @@ export function PortfolioWorkspace({
           onOpenRoute={controller.openRoute}
           onOpenProduct={controller.openProduct}
           records={controller.readModel.publicationRecords}
+          runtime={controller.publicationRuntime}
           resolveRoute={controller.resolveRoute}
         />
       ) : (

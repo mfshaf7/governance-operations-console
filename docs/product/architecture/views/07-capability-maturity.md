@@ -34,7 +34,7 @@ All capabilities and transitions in this view are `approved-target`.
 | Model Operations | implemented | implemented | implemented | post-baseline |
 | Delivery | implemented | implemented | partial | post-baseline |
 | Prototype | partial | partial | partial | post-baseline |
-| Product Portfolio | implemented | partial | missing | post-baseline |
+| Product Portfolio | implemented | implemented | partial | post-baseline |
 | Orchestration | implemented | partial | missing | post-baseline |
 | Lifecycle Transitions | implemented | partial | missing | post-baseline |
 | Dev Integration | implemented | implemented | missing | post-baseline |
@@ -61,8 +61,8 @@ All capabilities and transitions in this view are `approved-target`.
 | Prototype to Workspace Intake | not-started | partial | missing | post-baseline |
 | Delivery to Workspace Intake | implemented | implemented | connected | post-baseline |
 | Workspace Intake to Active Inventory | implemented | implemented | connected | post-baseline |
-| Active Product to Portfolio | prototype-only | missing | missing | post-baseline |
-| Existing Product Update to Portfolio | partial | missing | missing | post-baseline |
+| Active Product to Portfolio | implemented | implemented | connected | post-baseline |
+| Existing Product Update to Portfolio | implemented | implemented | connected | post-baseline |
 | Model Profile Request | not-started | missing | missing | post-baseline |
 | Orchestration Definition Admission | prototype-only | missing | missing | post-baseline |
 | Durable Orchestration Run | prototype-only | missing | missing | post-baseline |

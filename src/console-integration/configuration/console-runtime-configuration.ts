@@ -11,6 +11,7 @@ export type ConsoleRuntimeCapabilityId =
   | "delivery-work-session"
   | "lifecycle-transitions"
   | "model-operations"
+  | "product-publication"
   | "proposal"
   | "prototype-closure"
   | "prototype-delivery"
@@ -68,6 +69,17 @@ export type ConsolePrototypePreviewConfiguration = Readonly<{
   stateRoot: string;
 }>;
 
+export type ConsoleProductPublicationConfiguration =
+  ConsoleOosOperatorConfiguration &
+    Readonly<{
+      authorityRevision: string;
+      securityDecision: Readonly<{
+        digest: string;
+        revision: string;
+        uri: string;
+      }>;
+    }>;
+
 export type ConsoleArtifactReference = Readonly<{
   digest: string;
   uri: string;
@@ -120,7 +132,11 @@ const capabilityDefinitions: readonly Readonly<{
   label: string;
   mutationArtifactReferences?: readonly ConsoleArtifactReferenceNames[];
   owner?: "operator-orchestration-service" | "workspace-prototype-studio";
-  runtime?: "model-operations" | "oos" | "prototype-preview";
+  runtime?:
+    | "model-operations"
+    | "oos"
+    | "product-publication"
+    | "prototype-preview";
 }>[] = [
   { id: "proposal", label: "Proposal" },
   { id: "prototype-landing", label: "Prototype Landing" },
@@ -189,6 +205,11 @@ const capabilityDefinitions: readonly Readonly<{
   },
   { id: "workspace-intake", label: "Workspace Intake" },
   { id: "workspace-registry", label: "Workspace Registry" },
+  {
+    id: "product-publication",
+    label: "Product Publication",
+    runtime: "product-publication",
+  },
 ];
 
 export function consoleOosModeSelected(
@@ -349,6 +370,58 @@ export function resolveConsoleModelOperationsConfiguration(
   };
 }
 
+export function consoleProductPublicationModeSelected(
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  return Boolean(
+    env.GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_AUTHORITY_REVISION?.trim() ||
+      env.GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_URI?.trim() ||
+      env.GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_DIGEST?.trim() ||
+      env.GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_REVISION?.trim(),
+  );
+}
+
+export function resolveConsoleProductPublicationConfiguration(
+  env: NodeJS.ProcessEnv = process.env,
+): ConsoleProductPublicationConfiguration {
+  const authorityRevision =
+    env.GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_AUTHORITY_REVISION?.trim();
+  const securityDecision = resolveConsoleArtifactReference(env, {
+    digestName:
+      "GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_DIGEST",
+    label: "Product Publication Security decision",
+    uriName: "GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_URI",
+  });
+  const securityRevision =
+    env.GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_REVISION?.trim();
+  if (!authorityRevision || !gitRevisionPattern.test(authorityRevision)) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Product Publication authority revision is unavailable or invalid.",
+      "console_product_publication_authority_revision_invalid",
+    );
+  }
+  if (!securityRevision || !gitRevisionPattern.test(securityRevision)) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Product Publication Security decision revision is unavailable or invalid.",
+      "console_product_publication_security_revision_invalid",
+    );
+  }
+  if (!securityDecision.uri.startsWith("security-architecture://product-publication/decisions/")) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Product Publication Security decision uses the wrong authority namespace.",
+      "console_product_publication_security_decision_invalid",
+    );
+  }
+  return {
+    ...resolveConsoleOosOperatorConfiguration(env),
+    authorityRevision,
+    securityDecision: {
+      ...securityDecision,
+      revision: securityRevision,
+    },
+  };
+}
+
 export function consolePrototypePreviewModeSelected(
   env: NodeJS.ProcessEnv = process.env,
 ) {
@@ -482,6 +555,16 @@ export function projectConsoleRuntimeCapabilities(
         source: modelOperationsSource,
       };
     }
+    if (definition.runtime === "product-publication") {
+      const publicationSource = projectProductPublicationSourceState(env);
+      return {
+        id: definition.id,
+        label: definition.label,
+        mutation: publicationSource,
+        owner: definition.owner ?? "operator-orchestration-service",
+        source: publicationSource,
+      };
+    }
     return {
       id: definition.id,
       label: definition.label,
@@ -539,6 +622,24 @@ function projectModelOperationsSourceState(env: NodeJS.ProcessEnv) {
   }
   try {
     resolveConsoleModelOperationsConfiguration(env);
+    return { reasonCode: null, state: "available" as const };
+  } catch (error) {
+    return {
+      reasonCode: configurationErrorCode(error),
+      state: "invalid" as const,
+    };
+  }
+}
+
+function projectProductPublicationSourceState(env: NodeJS.ProcessEnv) {
+  if (!consoleProductPublicationModeSelected(env)) {
+    return {
+      reasonCode: "console_product_publication_not_selected",
+      state: "disconnected" as const,
+    };
+  }
+  try {
+    resolveConsoleProductPublicationConfiguration(env);
     return { reasonCode: null, state: "available" as const };
   } catch (error) {
     return {

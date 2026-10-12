@@ -234,7 +234,9 @@ export function productPublicationSessionSteps({
       available: receipt !== null,
       connectsToNext: false,
       detail: receipt
-        ? "Local decision receipt is available."
+        ? receipt.authorityEvidence
+          ? "Authoritative OOS owner receipt is available."
+          : "Disconnected-preview decision receipt is available."
         : "Available after the decision is applied.",
       id: "result",
       label: "Result",
@@ -403,6 +405,26 @@ export function productPublicationResultFacts(
           (option) => option.id === receipt.decision.reasonCode,
         )?.label ?? receipt.decision.reasonCode,
     });
+  }
+
+  if (receipt.authorityEvidence) {
+    facts.push(
+      {
+        label: "Owner Receipt",
+        value: receipt.authorityEvidence.ownerReceiptRef,
+      },
+      {
+        label: "Readiness Receipt",
+        value: receipt.authorityEvidence.readinessReceiptRef,
+      },
+      {
+        label: "Publication Version",
+        value:
+          receipt.authorityEvidence.publicationVersion === null
+            ? "Not applied"
+            : String(receipt.authorityEvidence.publicationVersion),
+      },
+    );
   }
 
   return facts;

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   consoleOosModeSelected,
   consolePrototypePreviewModeSelected,
+  consoleProductPublicationModeSelected,
   consoleRuntimeObservationModeSelected,
   consoleWgcfModeSelected,
   ConsoleRuntimeConfigurationError,
@@ -11,6 +12,7 @@ import {
   resolveConsoleArtifactReference,
   resolveConsoleOosConnection,
   resolveConsolePrototypePreviewConfiguration,
+  resolveConsoleProductPublicationConfiguration,
   resolveConsoleRuntimeObservationConfiguration,
   resolveConsoleSessionConfiguration,
   resolveConsoleWgcfConnection,
@@ -117,6 +119,48 @@ test("Prototype Preview configuration binds exact Studio source and external sta
     sourceRevision: env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_SOURCE_REVISION,
     stateRoot: env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_STATE_ROOT,
   });
+});
+
+test("Product Publication configuration requires exact Workspace and Security authority bindings", () => {
+  const env = {
+    ...completeEnv,
+    GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_AUTHORITY_REVISION: "a".repeat(40),
+    GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_DIGEST:
+      `sha256:${"b".repeat(64)}`,
+    GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_REVISION:
+      "c".repeat(40),
+    GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_URI:
+      "security-architecture://product-publication/decisions/internal-v1",
+  };
+  assert.equal(consoleProductPublicationModeSelected({}), false);
+  assert.equal(consoleProductPublicationModeSelected(env), true);
+  assert.deepEqual(resolveConsoleProductPublicationConfiguration(env), {
+    authorityRevision:
+      env.GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_AUTHORITY_REVISION,
+    baseUrl: "http://127.0.0.1:8080",
+    callerId: "private-caller-987",
+    callerSecret: "test-secret-never-project",
+    operatorHandle: undefined,
+    operatorId: "principal:reviewer-432",
+    securityDecision: {
+      digest:
+        env.GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_DIGEST,
+      revision:
+        env.GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_REVISION,
+      uri: env.GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_URI,
+    },
+  });
+  assert.throws(
+    () =>
+      resolveConsoleProductPublicationConfiguration({
+        ...env,
+        GOVERNANCE_CONSOLE_PRODUCT_PUBLICATION_SECURITY_DECISION_URI:
+          "oos://not-security-authority",
+      }),
+    (error) =>
+      error instanceof ConsoleRuntimeConfigurationError &&
+      error.code === "console_product_publication_security_decision_invalid",
+  );
 });
 
 test("capability projection distinguishes disconnected, invalid, and live state", () => {

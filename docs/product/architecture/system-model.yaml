@@ -512,16 +512,16 @@ capabilities:
     design_status: approved-target
     implementation:
       console: implemented
-      backend_support: partial
-      live_adapter: missing
+      backend_support: implemented
+      live_adapter: partial
       delivery_phase: post-baseline
     operator_boundary:
       - Products, Publication, and Curation are separate peer surfaces.
       - Publication requires canonical Workspace product identity and a versioned product-owner packet.
       - Prototype-local publication and listing receipts never imply a live canonical write.
     post_baseline_work:
-      - Add product registry, owner manifest, Platform, Security, WGCF, Delivery, and release projections.
-      - Add a listing-publication adapter only after product identity is admitted.
+      - Activate the exact reviewed OOS/WGCF Product Publication adapter after Security and Platform gates.
+      - Add broader product registry, owner manifest, Platform, Security, Delivery, and release projections.
 
   orchestration:
     label: Orchestration
@@ -965,9 +965,9 @@ transitions:
     target_completion: Portfolio projects one listing for the active real product under a policy-permitted audience and access scope.
     design_status: approved-target
     implementation:
-      console: prototype-only
-      backend_support: missing
-      live_adapter: missing
+      console: implemented
+      backend_support: implemented
+      live_adapter: connected
       delivery_phase: post-baseline
 
   existing-product-update-to-portfolio:
@@ -984,9 +984,9 @@ transitions:
     target_completion: The existing Portfolio projection updates without creating a second product.
     design_status: approved-target
     implementation:
-      console: partial
-      backend_support: missing
-      live_adapter: missing
+      console: implemented
+      backend_support: implemented
+      live_adapter: connected
       delivery_phase: post-baseline
 
   model-profile-request:

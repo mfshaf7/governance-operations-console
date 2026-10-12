@@ -25,6 +25,7 @@ import { useProductPortfolioPublicationController } from "./use-publication-cont
 import type { ProductPortfolioRouteResolution } from "../../routing/product-portfolio-route-model.ts";
 import { ProductPublicationCaptureDialog } from "./capture/publication-capture-dialog.tsx";
 import type { ProductPublicationCaptureSubmitHandler } from "./capture/publication-capture-view-model.ts";
+import type { ProductPublicationLiveMode } from "../../../live-runtime/product-publication-live-types.ts";
 
 export function ProductPortfolioPublicationSurface({
   publicationSources,
@@ -36,6 +37,7 @@ export function ProductPortfolioPublicationSurface({
   onOpenRoute,
   onOpenProduct,
   records,
+  runtime,
   resolveRoute,
 }: {
   publicationSources: ProductPortfolioScenarioProjection[];
@@ -47,6 +49,11 @@ export function ProductPortfolioPublicationSurface({
   onOpenRoute: (routeRef: string) => boolean;
   onOpenProduct: (entry: ProductPortfolioEntry) => void;
   records: ProductPortfolioScenarioProjection[];
+  runtime: {
+    error: string | null;
+    mode: ProductPublicationLiveMode | null;
+    pending: boolean;
+  };
   resolveRoute: (routeRef: string) => ProductPortfolioRouteResolution;
 }) {
   const controller = useProductPortfolioPublicationController({
@@ -73,6 +80,27 @@ export function ProductPortfolioPublicationSurface({
           <TerasRegisterPanel
             actions={
               <TerasActionRow spacing="compact">
+                <TerasStatusPill
+                  tone={
+                    runtime.error
+                      ? "danger"
+                      : runtime.mode?.mode === "live"
+                        ? "ok"
+                        : runtime.mode === null
+                          ? "muted"
+                          : "info"
+                  }
+                >
+                  {runtime.error
+                    ? "Owner path unavailable"
+                    : runtime.mode?.mode === "live"
+                      ? runtime.pending
+                        ? "Owner path working"
+                        : "Owner path connected"
+                      : runtime.mode === null
+                        ? "Checking owner path"
+                        : "Disconnected preview"}
+                </TerasStatusPill>
                 <TerasStatusPill tone="info">
                   {controller.visibleRecords.length}/{viewCount} shown
                 </TerasStatusPill>
@@ -92,7 +120,11 @@ export function ProductPortfolioPublicationSurface({
             bodyProps={{
               "data-product-portfolio-publication-register": controller.viewId,
             }}
-            description="Review product-owner publication packets and their source-backed publication state."
+            description={
+              runtime.mode?.mode === "live"
+                ? "Review exact product-owner evidence and project OOS/WGCF publication receipts without transferring authority to the Console."
+                : "Review product-owner publication packets in disconnected preview; fixture decisions are never publication evidence."
+            }
             filterBar={
               <TerasFilterBar
                 action={
