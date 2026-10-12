@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
 import { readProductHealthProjection } from "../../src/domain-workspaces/portfolio/server/product-health-platform-adapter.ts";
+import { resolveProductMaintenanceStep } from "../../src/domain-workspaces/portfolio/live-runtime/product-maintenance-sequence.ts";
 import {
   consoleProductMaintenanceModeSelected,
   resolveConsoleProductMaintenanceConfiguration,
@@ -53,6 +54,30 @@ test("case:1270-negative rejects partial activation, public files, tampering, an
     readProductHealthProjection({ config: stale.config, now: new Date("2026-10-12T09:00:00.000Z") }),
     /does not bind the exact projection/i,
   );
+});
+
+test("case:1270-sequence routes every lifecycle prerequisite through its existing owner surface", () => {
+  assert.deepEqual(step("active", "internal"), ["unpublish", "product-publication"]);
+  assert.deepEqual(step("active", "unlisted"), ["retire-inventory", "workspace-registry"]);
+  assert.deepEqual(step("retired", "unlisted"), ["archive-publication", "product-publication"]);
+  assert.deepEqual(step("retired", "archived"), ["restore-inventory", "workspace-registry"]);
+  assert.deepEqual(step("active", "archived"), ["restore-publication", "product-publication"]);
+  assert.deepEqual(step("retired", "internal"), ["blocked-contradiction", null]);
+});
+
+test("case:1270-regression maintenance projection is read-only and cannot reuse a stale manifest", async () => {
+  const route = await readFile(new URL(
+    "../../src/app/api/product-portfolio/maintenance/[requestId]/route.ts",
+    import.meta.url,
+  ), "utf8");
+  const service = await readFile(new URL(
+    "../../src/domain-workspaces/portfolio/server/product-maintenance-service.ts",
+    import.meta.url,
+  ), "utf8");
+
+  assert.doesNotMatch(route, /export async function POST/);
+  assert.doesNotMatch(service, /submitGovernedProductPublication|manifest_source|structuredClone/);
+  assert.match(service, /readWorkspaceRegistry/);
 });
 
 async function evidenceFixture(context) {
@@ -151,4 +176,12 @@ function canonical(value) {
   if (value === null || ["boolean", "number", "string"].includes(typeof value)) return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+}
+
+function step(lifecycle, publication) {
+  const result = resolveProductMaintenanceStep({
+    inventory_lifecycle: { posture: lifecycle },
+    maintenance: { publication: { posture: publication } },
+  });
+  return [result.id, result.surface];
 }

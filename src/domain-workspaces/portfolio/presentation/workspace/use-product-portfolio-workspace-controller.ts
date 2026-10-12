@@ -23,7 +23,6 @@ import type { ProductPortfolioEntry } from "@/domain-workspaces/portfolio/domain
 import type { ProductListingCommand } from "../../work-model/listing/product-listing-types.ts";
 import { useProductPublicationLiveRuntime } from "../../live-runtime/use-product-publication-live-runtime.ts";
 import { useProductMaintenanceLiveRuntime } from "../../live-runtime/use-product-maintenance-live-runtime.ts";
-import type { ProductMaintenanceIntent } from "../../live-runtime/product-maintenance-live-types.ts";
 import {
   governedIntentFromPortfolioDecision,
   portfolioSubmissionFromGovernedResult,
@@ -158,6 +157,12 @@ export function useProductPortfolioWorkspaceController({
     setActiveSurfaceId("curation");
   }
 
+  function openPublication(entry: ProductPortfolioEntry) {
+    setDashboardProductId(null);
+    setFocusedPublicationProductId(entry.identity.productId);
+    setActiveSurfaceId("publication");
+  }
+
   function openPrimaryTarget(entry: ProductPortfolioEntry) {
     openExternalConsoleRoute(entry.experience.primaryTarget.href);
   }
@@ -225,40 +230,6 @@ export function useProductPortfolioWorkspaceController({
     );
   }
 
-  async function applyProductMaintenance(
-    action: ProductMaintenanceIntent["action"],
-    reason: string,
-    intentId: string,
-    decidedAt: string,
-  ) {
-    const composition = maintenanceLiveRuntime.composition;
-    if (!composition || !dashboardProductId) {
-      throw new Error("Current owner maintenance evidence is unavailable.");
-    }
-    const lifecycle = composition.maintenance.lifecycle;
-    if (
-      lifecycle.record_digest === null ||
-      lifecycle.state === "not-projected"
-    ) {
-      throw new Error("The exact lifecycle record is not available for review.");
-    }
-    return maintenanceLiveRuntime.submit({
-      action,
-      decided_at: decidedAt,
-      expected_source: {
-        lifecycle_record_digest: lifecycle.record_digest,
-        lifecycle_state: lifecycle.state,
-        publication_posture: composition.maintenance.publication.posture,
-        publication_version: composition.maintenance.publication.version,
-        receipt_digest: composition.source.maintenance_receipt_digest,
-        receipt_id: composition.source.maintenance_receipt_id,
-        request_id: composition.request_id,
-      },
-      intent_id: intentId,
-      reason,
-    });
-  }
-
   return {
     activeSurfaceId,
     applyPublicationDecision,
@@ -268,11 +239,9 @@ export function useProductPortfolioWorkspaceController({
     dashboardEntry,
     dashboardHistoryEvents,
     maintenanceRuntime: {
-      apply: applyProductMaintenance,
       composition: maintenanceLiveRuntime.composition,
       error: maintenanceLiveRuntime.error,
       mode: maintenanceLiveRuntime.mode,
-      pending: maintenanceLiveRuntime.pending,
     },
     decisionReceipts: effectiveProjection.publicationReceipts,
     focusedCurationProductId,
@@ -281,6 +250,7 @@ export function useProductPortfolioWorkspaceController({
     openCuration,
     openRoute,
     openPrimaryTarget,
+    openPublication,
     openProduct,
     publicationRuntime: {
       error: publicationLiveRuntime.error,

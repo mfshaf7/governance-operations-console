@@ -1,6 +1,4 @@
 import type {
-  GovernedProductPublicationAction,
-  GovernedProductPublicationPosture,
   ProductMaintenanceProjection,
 } from "./product-publication-live-types.ts";
 
@@ -76,6 +74,16 @@ export type ProductMaintenanceComposition = Readonly<{
     security_acceptance_granted: false;
   }>;
   health: ProductHealthProjection["products"][number];
+  inventory_lifecycle: Readonly<{
+    authority_revision: string;
+    last_action: string;
+    last_mutation_id: string;
+    posture: "active" | "retired" | "suspended";
+    projected_at: string;
+    projection_digest: string;
+    record_digest: string;
+    record_version: number;
+  }>;
   maintenance: ProductMaintenanceProjection;
   mode: "live";
   product_id: string;
@@ -100,22 +108,6 @@ export type ProductMaintenanceMode =
       mode: "live";
       reason_code: null;
     }>;
-
-export type ProductMaintenanceIntent = Readonly<{
-  action: Extract<GovernedProductPublicationAction, "archive" | "restore">;
-  decided_at: string;
-  expected_source: Readonly<{
-    lifecycle_record_digest: string;
-    lifecycle_state: "active" | "retired" | "suspended";
-    publication_posture: GovernedProductPublicationPosture;
-    publication_version: number;
-    receipt_digest: string;
-    receipt_id: string;
-    request_id: string;
-  }>;
-  intent_id: string;
-  reason: string;
-}>;
 
 export type ProductMaintenanceApiError = Readonly<{
   code: string;

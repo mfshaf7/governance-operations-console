@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ConsoleEntryIntent } from "../../console-architecture";
 
 import {
   TerasFullscreenSurfaceFrame,
@@ -24,9 +25,11 @@ type RegistryView = "eligible" | "registry";
 
 export function WorkspaceRegistryWorkspace({
   consoleDevMode,
+  entryIntent = null,
   onClose,
 }: {
   consoleDevMode: boolean;
+  entryIntent?: ConsoleEntryIntent | null;
   onClose: () => void;
 }) {
   const runtime = useWorkspaceRegistryLiveRuntime();
@@ -35,6 +38,7 @@ export function WorkspaceRegistryWorkspace({
     useState<WorkspaceRegistryCandidate | null>(null);
   const [lifecycleRecord, setLifecycleRecord] =
     useState<WorkspaceRegistryRecord | null>(null);
+  const appliedEntryIntentRef = useRef<string | null>(null);
   const snapshot = consoleDevMode ? workspaceRegistryFixture : runtime.snapshot;
   const owners = useMemo(
     () => new Set(snapshot?.records.flatMap((record) => record.owner_refs) ?? []).size,
@@ -44,6 +48,19 @@ export function WorkspaceRegistryWorkspace({
   useEffect(() => {
     if (!consoleDevMode) void runtime.load().catch(() => undefined);
   }, [consoleDevMode, runtime.load]);
+
+  useEffect(() => {
+    if (!entryIntent || !snapshot) return;
+    const entryKey = `${entryIntent.subjectRef}:${entryIntent.requiredMoveRef}`;
+    if (appliedEntryIntentRef.current === entryKey) return;
+    const record = snapshot.records.find(
+      (candidate) => candidate.kind === "product" && candidate.id === entryIntent.subjectRef,
+    );
+    if (!record) return;
+    appliedEntryIntentRef.current = entryKey;
+    setView("registry");
+    setLifecycleRecord(record);
+  }, [entryIntent, snapshot]);
 
   return (
     <>
