@@ -22,6 +22,8 @@ import { productPortfolioReadModel } from "../../read-model/product-portfolio-re
 import type { ProductPortfolioEntry } from "@/domain-workspaces/portfolio/domain/product-portfolio-entry-types";
 import type { ProductListingCommand } from "../../work-model/listing/product-listing-types.ts";
 import { useProductPublicationLiveRuntime } from "../../live-runtime/use-product-publication-live-runtime.ts";
+import { useProductMaintenanceLiveRuntime } from "../../live-runtime/use-product-maintenance-live-runtime.ts";
+import type { ProductMaintenanceIntent } from "../../live-runtime/product-maintenance-live-types.ts";
 import {
   governedIntentFromPortfolioDecision,
   portfolioSubmissionFromGovernedResult,
@@ -66,13 +68,67 @@ export function useProductPortfolioWorkspaceController({
     string | null
   >(null);
   const appliedEntryIntentRef = useRef<string | null>(null);
-  const dashboardEntry =
+  const dashboardEntrySource =
     readModel.entries.find(
       (entry) => entry.identity.productId === dashboardProductId,
     ) ?? null;
   const dashboardHistoryEvents = dashboardProductId
     ? (readModel.historyByProductId[dashboardProductId] ?? [])
     : [];
+  const dashboardPublicationReceipt = [...effectiveProjection.publicationReceipts]
+    .reverse()
+    .find(
+      (receipt) =>
+        receipt.productId === dashboardProductId && receipt.authorityEvidence,
+    );
+  const maintenanceLiveRuntime = useProductMaintenanceLiveRuntime(
+    dashboardEntrySource?.provenance.publicationRequestId ??
+      dashboardPublicationReceipt?.authorityEvidence?.requestId ??
+      null,
+  );
+  const dashboardEntry = useMemo(() => {
+    if (!dashboardEntrySource || maintenanceLiveRuntime.mode?.mode !== "live") {
+      return dashboardEntrySource;
+    }
+    const health = maintenanceLiveRuntime.composition?.health;
+    if (!health) {
+      return {
+        ...dashboardEntrySource,
+        provenance: { ...dashboardEntrySource.provenance, freshness: "unknown" as const },
+        runtime: {
+          ...dashboardEntrySource.runtime,
+          availability: "unknown" as const,
+          evidenceRefs: [],
+          observedAt: null,
+        },
+      };
+    }
+    const availability = {
+      available: "live",
+      degraded: "degraded",
+      unavailable: "offline",
+      unknown: "unknown",
+    } as const;
+    return {
+      ...dashboardEntrySource,
+      ownership: {
+        ...dashboardEntrySource.ownership,
+        platformOwnerRef: health.platformOwner,
+        runtimeOwnerRef: health.runtimeOwner,
+      },
+      provenance: {
+        ...dashboardEntrySource.provenance,
+        freshness: health.freshness === "current" ? "fresh" as const : "stale" as const,
+        refreshedAt: health.observedAt,
+      },
+      runtime: {
+        ...dashboardEntrySource.runtime,
+        availability: availability[health.availability.state],
+        evidenceRefs: health.evidence.map((item) => item.sourceRef),
+        observedAt: health.observedAt,
+      },
+    };
+  }, [dashboardEntrySource, maintenanceLiveRuntime.composition, maintenanceLiveRuntime.mode]);
   useEffect(() => {
     if (!entryIntent) {
       return;
@@ -169,6 +225,40 @@ export function useProductPortfolioWorkspaceController({
     );
   }
 
+  async function applyProductMaintenance(
+    action: ProductMaintenanceIntent["action"],
+    reason: string,
+    intentId: string,
+    decidedAt: string,
+  ) {
+    const composition = maintenanceLiveRuntime.composition;
+    if (!composition || !dashboardProductId) {
+      throw new Error("Current owner maintenance evidence is unavailable.");
+    }
+    const lifecycle = composition.maintenance.lifecycle;
+    if (
+      lifecycle.record_digest === null ||
+      lifecycle.state === "not-projected"
+    ) {
+      throw new Error("The exact lifecycle record is not available for review.");
+    }
+    return maintenanceLiveRuntime.submit({
+      action,
+      decided_at: decidedAt,
+      expected_source: {
+        lifecycle_record_digest: lifecycle.record_digest,
+        lifecycle_state: lifecycle.state,
+        publication_posture: composition.maintenance.publication.posture,
+        publication_version: composition.maintenance.publication.version,
+        receipt_digest: composition.source.maintenance_receipt_digest,
+        receipt_id: composition.source.maintenance_receipt_id,
+        request_id: composition.request_id,
+      },
+      intent_id: intentId,
+      reason,
+    });
+  }
+
   return {
     activeSurfaceId,
     applyPublicationDecision,
@@ -177,6 +267,13 @@ export function useProductPortfolioWorkspaceController({
     closeDashboard: () => setDashboardProductId(null),
     dashboardEntry,
     dashboardHistoryEvents,
+    maintenanceRuntime: {
+      apply: applyProductMaintenance,
+      composition: maintenanceLiveRuntime.composition,
+      error: maintenanceLiveRuntime.error,
+      mode: maintenanceLiveRuntime.mode,
+      pending: maintenanceLiveRuntime.pending,
+    },
     decisionReceipts: effectiveProjection.publicationReceipts,
     focusedCurationProductId,
     focusedPublicationProductId,

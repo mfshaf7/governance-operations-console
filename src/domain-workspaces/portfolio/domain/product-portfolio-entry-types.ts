@@ -59,6 +59,7 @@ export type ProductPortfolioEntry = {
   };
   provenance: {
     freshness: ProductFreshness;
+    publicationRequestId: string | null;
     publicationReceiptRef: string;
     refreshedAt: string;
     sourceVersions: ProductSourceVersion[];

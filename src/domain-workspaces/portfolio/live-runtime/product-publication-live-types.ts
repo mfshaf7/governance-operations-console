@@ -11,6 +11,7 @@ export type {
 } from "../work-model/publication/product-publication-audience-model.ts";
 
 export type GovernedProductPublicationPreviousReceipt = Readonly<{
+  publication_posture?: GovernedProductPublicationPosture;
   publication_version: number;
   receipt_digest: string;
   receipt_id: string;
@@ -33,7 +34,68 @@ export type GovernedProductPublicationIntent = Readonly<{
   previous_receipt: GovernedProductPublicationPreviousReceipt | null;
   request_id: string;
   requested_at: string;
+  schema_version: 1 | 2;
   target_publication: GovernedProductPublicationTarget;
+}>;
+
+export type ProductMaintenanceHistoryEvent = Readonly<{
+  action: GovernedProductPublicationAction;
+  inventory_history_event_ref: Readonly<{
+    digest: string;
+    id: string;
+    sequence: number;
+  }> | null;
+  inventory_lifecycle_receipt_ref: Readonly<{
+    digest: string;
+    id: string;
+  }> | null;
+  publication_posture: GovernedProductPublicationPosture;
+  publication_version: number;
+  receipt_ref: Readonly<{ digest: string; id: string }>;
+  recorded_at: string;
+  sequence: number;
+}>;
+
+export type ProductMaintenanceProjection = Readonly<{
+  evidence_posture: Readonly<{
+    findings: readonly Readonly<Record<string, unknown>>[];
+    state: "blocked" | "ready" | "stale";
+    valid_until: string;
+  }>;
+  history: readonly ProductMaintenanceHistoryEvent[];
+  implications: Readonly<{
+    access_restored: false;
+    release_restored: false;
+    runtime_restored: false;
+    security_acceptance_granted: false;
+  }>;
+  lifecycle: Readonly<{
+    history_event_ref: Readonly<{ digest: string; id: string; sequence: number }> | null;
+    receipt_ref: Readonly<{ digest: string; id: string }> | null;
+    record_digest: string | null;
+    record_version: number | null;
+    state: "active" | "not-projected" | "retired" | "suspended";
+  }>;
+  next_action:
+    | "correct-owner-evidence-and-submit-new-request"
+    | "refresh-portfolio-projection";
+  operational_health: "not-projected";
+  owner_route: Readonly<{
+    manifest_digest: string;
+    manifest_id: string;
+    repo: string;
+    revision: string;
+  }>;
+  product_id: string;
+  publication: Readonly<{
+    posture: GovernedProductPublicationPosture;
+    receipt_ref:
+      | GovernedProductPublicationPreviousReceipt
+      | Readonly<{ digest: string; id: string }>
+      | null;
+    version: number;
+  }>;
+  schema_version: 1;
 }>;
 
 export type GovernedProductPublicationReceipt = Readonly<{
@@ -49,7 +111,7 @@ export type GovernedProductPublicationReceipt = Readonly<{
   recorded_at: string;
   request_digest: string;
   request_id: string;
-  schema_version: 1;
+  schema_version: 1 | 2;
   secret_values_embedded: false;
 }>;
 
@@ -59,6 +121,7 @@ export type GovernedProductPublicationResult = Readonly<{
   cross_boundary_authority_granted: false;
   evaluation: Readonly<Record<string, unknown>>;
   history: readonly Readonly<Record<string, unknown>>[];
+  maintenance_projection: ProductMaintenanceProjection;
   next_action:
     | "correct-owner-evidence-and-submit-new-request"
     | "refresh-portfolio-projection";

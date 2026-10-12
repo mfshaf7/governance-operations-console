@@ -63,6 +63,7 @@ export function PortfolioWorkspace({
       <ProductDashboardModal
         entry={controller.dashboardEntry}
         historyEvents={controller.dashboardHistoryEvents}
+        maintenanceRuntime={controller.maintenanceRuntime}
         onClose={controller.closeDashboard}
         onManageListing={controller.openCuration}
         onOpenPrimaryTarget={controller.openPrimaryTarget}

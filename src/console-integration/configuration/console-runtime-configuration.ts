@@ -80,6 +80,19 @@ export type ConsoleProductPublicationConfiguration =
       }>;
     }>;
 
+export type ConsoleProductMaintenanceConfiguration =
+  ConsoleOosOperatorConfiguration &
+    Readonly<{
+      authorityRevision: string;
+      healthProjectionPath: string;
+      healthReceiptPath: string;
+      securityDecision: Readonly<{
+        digest: string;
+        revision: string;
+        uri: string;
+      }>;
+    }>;
+
 export type ConsoleArtifactReference = Readonly<{
   digest: string;
   uri: string;
@@ -415,6 +428,70 @@ export function resolveConsoleProductPublicationConfiguration(
   return {
     ...resolveConsoleOosOperatorConfiguration(env),
     authorityRevision,
+    securityDecision: {
+      ...securityDecision,
+      revision: securityRevision,
+    },
+  };
+}
+
+export function consoleProductMaintenanceModeSelected(
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  return Boolean(
+    env.GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_AUTHORITY_REVISION?.trim() ||
+      env.GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_URI?.trim() ||
+      env.GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_DIGEST?.trim() ||
+      env.GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_REVISION?.trim() ||
+      env.GOVERNANCE_CONSOLE_PRODUCT_HEALTH_PROJECTION_PATH?.trim() ||
+      env.GOVERNANCE_CONSOLE_PRODUCT_HEALTH_RECEIPT_PATH?.trim(),
+  );
+}
+
+export function resolveConsoleProductMaintenanceConfiguration(
+  env: NodeJS.ProcessEnv = process.env,
+): ConsoleProductMaintenanceConfiguration {
+  const authorityRevision =
+    env.GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_AUTHORITY_REVISION?.trim();
+  const securityDecision = resolveConsoleArtifactReference(env, {
+    digestName:
+      "GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_DIGEST",
+    label: "Product Maintenance Security decision",
+    uriName: "GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_URI",
+  });
+  const securityRevision =
+    env.GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_SECURITY_DECISION_REVISION?.trim();
+  if (!authorityRevision || !gitRevisionPattern.test(authorityRevision)) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Product Maintenance authority revision is unavailable or invalid.",
+      "console_product_maintenance_authority_revision_invalid",
+    );
+  }
+  if (!securityRevision || !gitRevisionPattern.test(securityRevision)) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Product Maintenance Security decision revision is unavailable or invalid.",
+      "console_product_maintenance_security_revision_invalid",
+    );
+  }
+  if (!securityDecision.uri.startsWith("security-architecture://product-publication/decisions/")) {
+    throw new ConsoleRuntimeConfigurationError(
+      "The Product Maintenance Security decision uses the wrong authority namespace.",
+      "console_product_maintenance_security_decision_invalid",
+    );
+  }
+  return {
+    ...resolveConsoleOosOperatorConfiguration(env),
+    authorityRevision,
+    healthProjectionPath: absolutePath(
+      env.GOVERNANCE_CONSOLE_PRODUCT_HEALTH_PROJECTION_PATH,
+      "console_product_health_projection_unavailable",
+      "The Platform product-health projection is not configured.",
+    ),
+    healthReceiptPath: absolutePath(
+      env.GOVERNANCE_CONSOLE_PRODUCT_HEALTH_RECEIPT_PATH,
+      "console_product_health_receipt_unavailable",
+      "The Platform product-health receipt is not configured.",
+    ),
     securityDecision: {
       ...securityDecision,
       revision: securityRevision,

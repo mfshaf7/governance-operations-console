@@ -13,6 +13,7 @@ export type GovernedProductPublicationPosture =
 export type GovernedProductPublicationAction =
   | "archive"
   | "publish"
+  | "restore"
   | "unpublish"
   | "update";
 
