@@ -135,6 +135,10 @@ const productPortfolioCommandRuntime = createLocalOperationRuntimeAdapter<
         draft: runtimeCommand.draft,
         idempotencyKey: runtimeCommand.domainIdempotencyKey,
         packet: record.publicationPacket,
+        authorityEvidence: runtimeCommand.authorityEvidence,
+        receiptId: runtimeCommand.receiptId,
+        receiptRef: runtimeCommand.receiptRef,
+        recordedAt: runtimeCommand.recordedAt,
       });
 
       return {
@@ -346,6 +350,9 @@ export async function submitProductPortfolioPublicationDecision(
   const run = await productPortfolioCommandRuntime.submitCommand(
     createPrototypeLocalOperationCommand({
       command: {
+        ...(submission.authorityEvidence
+          ? { authorityEvidence: submission.authorityEvidence }
+          : {}),
         decidedAt: submission.decidedAt,
         decidedByRef: submission.decidedByRef,
         domainIdempotencyKey: submission.idempotencyKey,
@@ -355,6 +362,9 @@ export async function submitProductPortfolioPublicationDecision(
         kind: "apply-publication",
         packetId: submission.record.publicationPacket.packetId,
         scenarioId: submission.record.scenarioId,
+        ...(submission.receiptId ? { receiptId: submission.receiptId } : {}),
+        ...(submission.receiptRef ? { receiptRef: submission.receiptRef } : {}),
+        ...(submission.recordedAt ? { recordedAt: submission.recordedAt } : {}),
       },
       commandName: "portfolio.publication.apply",
       preconditions: createOperationCommandPreconditions({

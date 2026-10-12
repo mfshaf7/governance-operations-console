@@ -9,6 +9,7 @@ import type {
   ProductPublicationDecisionDraft,
   ProductPublicationDecisionReceipt,
   ProductPublicationDecisionValidation,
+  ProductPublicationAuthorityEvidence,
 } from "./product-publication-decision-types.ts";
 
 export function validateProductPublicationDecision({
@@ -94,6 +95,10 @@ export function applyProductPublicationDecision({
   draft,
   idempotencyKey,
   packet,
+  authorityEvidence,
+  receiptId: suppliedReceiptId,
+  receiptRef: suppliedReceiptRef,
+  recordedAt: suppliedRecordedAt,
 }: {
   context: ProductPortfolioProjectionContext;
   decidedAt: string;
@@ -101,6 +106,10 @@ export function applyProductPublicationDecision({
   draft: ProductPublicationDecisionDraft;
   idempotencyKey: string;
   packet: ProductPublicationPacket;
+  authorityEvidence?: ProductPublicationAuthorityEvidence;
+  receiptId?: string;
+  receiptRef?: string;
+  recordedAt?: string;
 }): ProductPublicationDecisionApplyResult {
   const commandFindings = [
     [idempotencyKey, "An idempotency key is required."],
@@ -120,21 +129,28 @@ export function applyProductPublicationDecision({
     throw new Error(findings.join(" "));
   }
 
-  const receiptId = `portfolio-publication-${commandSlug(idempotencyKey)}`;
-  const receiptRef = `portfolio-local://publication/${receiptId}`;
+  const receiptId = suppliedReceiptId ?? `portfolio-publication-${commandSlug(idempotencyKey)}`;
+  const receiptRef = suppliedReceiptRef ?? `portfolio-local://publication/${receiptId}`;
   const decision = productPublicationDecisionFromDraft({
     decidedAt,
     decidedByRef,
     draft,
     receiptRef,
   });
-  const projection = projectProductPublication(packet, {
+  const projected = projectProductPublication(packet, {
     ...context,
     publicationDecision: decision,
     evaluatedAt: decidedAt,
   });
+  const projection = suppliedReceiptRef
+    ? {
+        ...projected,
+        receipt: { ...projected.receipt, receiptRef: suppliedReceiptRef },
+      }
+    : projected;
   const published = projection.publicationState === "published";
   const receipt: ProductPublicationDecisionReceipt = {
+    ...(authorityEvidence ? { authorityEvidence } : {}),
     commandName: "portfolio.publication.apply",
     decision,
     idempotencyKey,
@@ -143,7 +159,7 @@ export function applyProductPublicationDecision({
     productId: packet.product.productId,
     publicationReceiptRef: projection.receipt.receiptRef,
     receiptId,
-    recordedAt: decidedAt,
+    recordedAt: suppliedRecordedAt ?? decidedAt,
     requirementSnapshot: projection.requirements.map((requirement) => ({
       ...requirement,
       evidenceRefs: [...requirement.evidenceRefs],

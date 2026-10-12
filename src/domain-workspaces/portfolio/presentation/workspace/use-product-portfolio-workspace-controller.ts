@@ -21,6 +21,12 @@ import { projectProductPortfolioEffectiveProjection } from "../../local-runtime/
 import { productPortfolioReadModel } from "../../read-model/product-portfolio-read-model.ts";
 import type { ProductPortfolioEntry } from "@/domain-workspaces/portfolio/domain/product-portfolio-entry-types";
 import type { ProductListingCommand } from "../../work-model/listing/product-listing-types.ts";
+import { useProductPublicationLiveRuntime } from "../../live-runtime/use-product-publication-live-runtime.ts";
+import {
+  governedIntentFromPortfolioDecision,
+  portfolioSubmissionFromGovernedResult,
+} from "../../live-runtime/product-publication-live-projection.ts";
+import type { ProductPortfolioPublicationSubmission } from "../../local-runtime/product-portfolio-runtime-model.ts";
 import {
   resolveProductPortfolioEntryIntent,
   resolveProductPortfolioRoute,
@@ -38,6 +44,7 @@ export function useProductPortfolioWorkspaceController({
     getProductPortfolioRuntimeProjectionSnapshot,
     getProductPortfolioRuntimeProjectionSnapshot,
   );
+  const publicationLiveRuntime = useProductPublicationLiveRuntime();
   const effectiveProjection = useMemo(
     () =>
       projectProductPortfolioEffectiveProjection({
@@ -138,9 +145,33 @@ export function useProductPortfolioWorkspaceController({
     return submitProductPortfolioListingCommand(command);
   }
 
+  async function applyPublicationDecision(
+    submission: ProductPortfolioPublicationSubmission,
+  ) {
+    if (publicationLiveRuntime.error) {
+      throw new Error(
+        `Product Publication owner path is unavailable: ${publicationLiveRuntime.error}`,
+      );
+    }
+    if (publicationLiveRuntime.mode === null) {
+      throw new Error(
+        "Product Publication capability is still resolving. Try again after its source posture is visible.",
+      );
+    }
+    if (publicationLiveRuntime.mode.mode === "disconnected-preview") {
+      return submitProductPortfolioPublicationDecision(submission);
+    }
+    const result = await publicationLiveRuntime.submit(
+      governedIntentFromPortfolioDecision(submission),
+    );
+    return submitProductPortfolioPublicationDecision(
+      portfolioSubmissionFromGovernedResult({ result, submission }),
+    );
+  }
+
   return {
     activeSurfaceId,
-    applyPublicationDecision: submitProductPortfolioPublicationDecision,
+    applyPublicationDecision,
     applyListing,
     capturePublicationSource: submitProductPortfolioPublicationCapture,
     closeDashboard: () => setDashboardProductId(null),
@@ -154,6 +185,11 @@ export function useProductPortfolioWorkspaceController({
     openRoute,
     openPrimaryTarget,
     openProduct,
+    publicationRuntime: {
+      error: publicationLiveRuntime.error,
+      mode: publicationLiveRuntime.mode,
+      pending: publicationLiveRuntime.pending,
+    },
     readModel,
     resolveRoute,
     setActiveSurfaceId,

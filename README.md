@@ -54,6 +54,10 @@ separately governed OOS integration slices:
   merged-authority receipt projection
 - Workspace Registry inspection and active-inventory promotion through a
   server-only, stale-safe OOS adapter with explicit fixture isolation
+- Product Portfolio publication through an exact owner-manifest binding,
+  server-only OOS workflow, WGCF readiness, replay-safe version chain, and
+  immutable owner receipt; runtime activation remains Security- and
+  Platform-gated
 - Model Operations request creation through OOS plus exact Platform profile
   source, lifecycle receipt, and merged-readback reconciliation; the Console
   retains no registry, fulfillment, Security, or activation authority
@@ -152,6 +156,8 @@ The Workspace Intake boundary is documented in
 [`docs/product/workspace-intake-live-integration.md`](docs/product/workspace-intake-live-integration.md).
 The Workspace Registry boundary is documented in
 [`docs/product/workspace-registry-live-integration.md`](docs/product/workspace-registry-live-integration.md).
+The governed Product Publication boundary is documented in
+[`docs/product/product-publication-live-integration.md`](docs/product/product-publication-live-integration.md).
 The Model Operations request and source-reconciliation boundary is documented
 in
 [`docs/product/model-operations-live-integration.md`](docs/product/model-operations-live-integration.md).

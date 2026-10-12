@@ -13,6 +13,18 @@ server-only OOS boundary. Agent Console now follows that boundary for OOS-owned
 sessions and invocations, CGG model-safe projection, and governed model access;
 routine activation remains blocked by Security ART #1248.
 
+Product Publication follows the same server-only OOS boundary. The Console
+accepts only authority-snapshot records carrying an exact owner repo, manifest
+path, source revision, manifest revision, manifest digest, request identity,
+version, posture, and prior-receipt binding. The verified Platform session and
+server configuration supply operator attribution, Workspace Governance
+revision, Security decision, and OOS caller credentials; none is accepted from
+the browser. OOS and WGCF remain the workflow and readiness authorities. The
+Console recomputes the terminal receipt digest and rejects synthetic sources,
+stale or conflicting versions, mismatched authority or manifest evidence,
+cross-product results, and any cross-boundary grant. Source completion does not
+activate the path; Security `#1257` and Platform `#1258` remain required.
+
 The current security evidence is:
 
 - [Security review checklist](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/security-review-checklist.md)

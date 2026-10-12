@@ -66,6 +66,7 @@ const completedDomains = [
   }),
   operationDomain({
     domain: "portfolio",
+    optionalLayers: ["live-runtime", "server"],
     requiredLayers: [
       "domain",
       "local-runtime",
@@ -110,6 +111,7 @@ const allowedIndexPaths = new Set([
   "src/domain-workspaces/proposal/presentation/workspace/index.ts",
   "src/domain-workspaces/portfolio/index.ts",
   "src/domain-workspaces/portfolio/presentation/workspace/index.ts",
+  "src/domain-workspaces/portfolio/server/index.ts",
   "src/domain-workspaces/prototype/index.ts",
   "src/domain-workspaces/prototype/presentation/workspace/index.ts",
   "src/domain-workspaces/prototype/server/index.ts",

@@ -14,9 +14,11 @@ export const guard = {
     assertDomainOwnershipRoot(failures, "portfolio", {
       allowedLayers: [
         "domain",
+        "live-runtime",
         "local-runtime",
         "presentation",
         "read-model",
+        "server",
         "work-model",
       ],
     });
@@ -40,6 +42,13 @@ export const guard = {
       `${root}/work-model/listing/product-listing-model.ts`,
       `${root}/local-runtime/product-portfolio-runtime.ts`,
       `${root}/local-runtime/product-portfolio-effective-projection.ts`,
+      `${root}/live-runtime/product-publication-live-contract.ts`,
+      `${root}/live-runtime/product-publication-live-projection.ts`,
+      `${root}/live-runtime/product-publication-live-types.ts`,
+      `${root}/live-runtime/use-product-publication-live-runtime.ts`,
+      `${root}/server/index.ts`,
+      `${root}/server/product-publication-api-routes.ts`,
+      `${root}/server/product-publication-oos-client.ts`,
     ]) {
       assertAppFile(failures, path);
     }

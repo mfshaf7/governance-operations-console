@@ -161,7 +161,7 @@ export function ProductPublicationSessionModal({
     <>
       <TerasWizardModal
         activeStepId={activeStep}
-        description="Review source-backed product requirements, choose one controlled outcome, and record a prototype-local receipt."
+        description="Review source-backed product requirements and record either a disconnected-preview result or the exact OOS owner receipt for a governed action."
         footer={
           <TerasWizardFooter
             apply={

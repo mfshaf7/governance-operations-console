@@ -6,6 +6,7 @@ import type {
   ProductPublicationDecisionApplyResult,
   ProductPublicationDecisionDraft,
   ProductPublicationDecisionReceipt,
+  ProductPublicationAuthorityEvidence,
 } from "../work-model/publication/product-publication-decision-types.ts";
 import type {
   ProductListingApplyResult,
@@ -14,6 +15,7 @@ import type {
 } from "../work-model/listing/product-listing-types.ts";
 
 export type ProductPortfolioPublicationRuntimeCommand = {
+  authorityEvidence?: ProductPublicationAuthorityEvidence;
   decidedAt: string;
   decidedByRef: string;
   domainIdempotencyKey: string;
@@ -22,6 +24,9 @@ export type ProductPortfolioPublicationRuntimeCommand = {
   kind: "apply-publication";
   packetId: string;
   scenarioId: string;
+  receiptId?: string;
+  receiptRef?: string;
+  recordedAt?: string;
 };
 
 export type ProductPortfolioPublicationCaptureRuntimeCommand = {
@@ -39,11 +44,15 @@ export type ProductPortfolioPublicationCaptureSubmission = {
 };
 
 export type ProductPortfolioPublicationSubmission = {
+  authorityEvidence?: ProductPublicationAuthorityEvidence;
   decidedAt: string;
   decidedByRef: string;
   draft: ProductPublicationDecisionDraft;
   idempotencyKey: string;
   record: ProductPortfolioScenarioProjection;
+  receiptId?: string;
+  receiptRef?: string;
+  recordedAt?: string;
 };
 
 export type ProductPortfolioListingRuntimeCommand = {

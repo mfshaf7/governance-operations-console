@@ -25,6 +25,16 @@ export type ProductPublicationDecisionValidation = {
 };
 
 export type ProductPublicationDecisionReceipt = {
+  authorityEvidence?: {
+    authorityRevision: string;
+    ownerReceiptRef: string;
+    publicationVersion: number | null;
+    readinessReceiptRef: string;
+    receiptDigest: string;
+    requestDigest: string;
+    requestId: string;
+    resolution: "created" | "read" | "replayed";
+  };
   commandName: "portfolio.publication.apply";
   decision: ProductPublicationDecision;
   idempotencyKey: string;
@@ -41,6 +51,10 @@ export type ProductPublicationDecisionReceipt = {
   sourceVersions: ProductSourceVersion[];
   summary: string;
 };
+
+export type ProductPublicationAuthorityEvidence = NonNullable<
+  ProductPublicationDecisionReceipt["authorityEvidence"]
+>;
 
 export type ProductPublicationDecisionApplyResult = {
   projection: ProductPublicationProjection;
