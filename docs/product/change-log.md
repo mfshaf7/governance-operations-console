@@ -8,6 +8,13 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-12
 
+- Projected the exact Product Publication posture, audience, listing scope,
+  access class, and owner-manifest evidence into the existing Portfolio review
+  and result surfaces without granting product access or enabling retirement.
+- Recorded the current operating truth: Security `#1257` and Platform `#1258`
+  commissioned the internal-only path; broader audience postures remain
+  inactive pending Security `#1262`, OOS source activation `#1263`, and
+  Platform commissioning `#1264`.
 - Connected the existing Product Portfolio Publication workflow to exact
   product-owner manifest bindings, verified Console session attribution, the
   OOS Product Publication API, WGCF readiness, and immutable owner receipts.

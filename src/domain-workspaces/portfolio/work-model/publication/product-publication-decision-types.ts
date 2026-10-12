@@ -7,6 +7,7 @@ import type {
   ProductPublicationRequirement,
   ProductPublicationProjection,
 } from "./product-publication-review-types.ts";
+import type { GovernedProductPublicationTarget } from "./product-publication-audience-model.ts";
 
 export type ProductPublicationDecisionDraft =
   | {
@@ -27,6 +28,13 @@ export type ProductPublicationDecisionValidation = {
 export type ProductPublicationDecisionReceipt = {
   authorityEvidence?: {
     authorityRevision: string;
+    ownerManifest: {
+      manifestDigest: string;
+      manifestRevision: string;
+      path: string;
+      repo: string;
+      sourceRevision: string;
+    };
     ownerReceiptRef: string;
     publicationVersion: number | null;
     readinessReceiptRef: string;
@@ -34,6 +42,7 @@ export type ProductPublicationDecisionReceipt = {
     requestDigest: string;
     requestId: string;
     resolution: "created" | "read" | "replayed";
+    targetPublication: GovernedProductPublicationTarget;
   };
   commandName: "portfolio.publication.apply";
   decision: ProductPublicationDecision;

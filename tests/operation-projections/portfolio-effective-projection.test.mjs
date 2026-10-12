@@ -167,6 +167,101 @@ test("Product Portfolio applies only the first valid source-matched terminal rec
   );
 });
 
+test("case:1261-negative rejects persisted authority evidence with a contradictory audience tuple", () => {
+  const record = structuredClone(scenario("new-product-delivery-candidate"));
+  record.provenance = {
+    authorityRefs: ["workspace-governance://products/governance-operations-console/v1"],
+    mode: "authority-snapshot",
+    syntheticFields: [],
+  };
+  record.publicationPacket.governedPublication = {
+    action: "publish",
+    currentPosture: "unlisted",
+    expectedVersion: 0,
+    idempotencyKey: "product-publication:console:1261:projection",
+    manifestSource: {
+      manifestDigest: `sha256:${"a".repeat(64)}`,
+      manifestRevision: "b".repeat(40),
+      path: "product-publication/manifest.json",
+      repo: "governance-operations-console",
+      sourceRevision: "c".repeat(40),
+    },
+    previousReceipt: null,
+    requestId: "product-publication-request:console:1261:projection",
+  };
+  const result = applyProductPublicationDecision({
+    context: record.projectionContext,
+    decidedAt: "2026-10-12T11:00:00.000Z",
+    decidedByRef: "operator:mfshaf7",
+    draft: {
+      listing: {
+        featured: false,
+        scope: "internal",
+        state: "listed",
+      },
+      outcome: "publish",
+    },
+    idempotencyKey: "effective-publication-audience-1261",
+    packet: record.publicationPacket,
+  });
+  const ownerReceiptRef =
+    "oos://product-publication/owner-receipts/product-publication-receipt:console:1261";
+  const contradictoryReceipt = {
+    ...result.receipt,
+    authorityEvidence: {
+      authorityRevision: "d".repeat(40),
+      ownerManifest: {
+        manifestDigest:
+          record.publicationPacket.governedPublication.manifestSource.manifestDigest,
+        manifestRevision:
+          record.publicationPacket.governedPublication.manifestSource.manifestRevision,
+        path: record.publicationPacket.governedPublication.manifestSource.path,
+        repo: record.publicationPacket.governedPublication.manifestSource.repo,
+        sourceRevision:
+          record.publicationPacket.governedPublication.manifestSource.sourceRevision,
+      },
+      ownerReceiptRef,
+      publicationVersion: 1,
+      readinessReceiptRef: `wgcf://product-publication/readiness/${"e".repeat(64)}`,
+      receiptDigest: `sha256:${"f".repeat(64)}`,
+      requestDigest: `sha256:${"1".repeat(64)}`,
+      requestId: record.publicationPacket.governedPublication.requestId,
+      resolution: "created",
+      targetPublication: {
+        access_class: "public-anonymous",
+        audience: "public",
+        listing_scope: "public-catalog",
+        posture: "public",
+      },
+    },
+    decision: {
+      ...result.receipt.decision,
+      receiptRef: ownerReceiptRef,
+    },
+  };
+  const sourceReadModel = {
+    ...productPortfolioReadModel,
+    scenarioProjections: productPortfolioReadModel.scenarioProjections.map(
+      (candidate) =>
+        candidate.scenarioId === record.scenarioId ? record : candidate,
+    ),
+  };
+  const projection = projectProductPortfolioEffectiveProjection({
+    runtimeProjection: {
+      publicationReceipts: [contradictoryReceipt],
+      captureReceipts: [],
+      listingApplications: [],
+    },
+    sourceReadModel,
+  });
+
+  assert.equal(projection.publicationReceipts.length, 0);
+  assert.deepEqual(
+    projection.reconciliationIssues.map((issue) => issue.kind),
+    ["publication-receipt-rejected"],
+  );
+});
+
 test("Product Portfolio rejects malformed listing applications without breaking projection", () => {
   const sourceEntry = entry("unlisted-library");
   const command = {

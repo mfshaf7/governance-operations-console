@@ -56,8 +56,9 @@ separately governed OOS integration slices:
   server-only, stale-safe OOS adapter with explicit fixture isolation
 - Product Portfolio publication through an exact owner-manifest binding,
   server-only OOS workflow, WGCF readiness, replay-safe version chain, and
-  immutable owner receipt; runtime activation remains Security- and
-  Platform-gated
+  immutable owner receipt; the internal-only path is commissioned, while
+  broader audience postures remain inactive pending their current Security,
+  OOS source-activation, and Platform commissioning sequence
 - Model Operations request creation through OOS plus exact Platform profile
   source, lifecycle receipt, and merged-readback reconciliation; the Console
   retains no registry, fulfillment, Security, or activation authority

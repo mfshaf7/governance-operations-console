@@ -8,9 +8,9 @@ export function getPortfolioOperationWorkbenchContract(): OperationWorkbenchDoma
     handoff:
       "Review publication packets for active Workspace products, project authority-owned product truth, and curate only Portfolio-owned listing fields.",
     localState:
-      "Portfolio register selection, filters, publication decisions, listing drafts, and prototype-local receipts until live adapters exist.",
+      "Portfolio register selection, filters, listing drafts, disconnected-preview decisions, and local listing receipts; connected publication results come from OOS owner receipts.",
     mutationBoundary:
-      "Prototype-local publication and listing receipts; owner-routed canonical mutation after baseline",
+      "Portfolio-local listing and disconnected-preview receipts; canonical publication mutation only through the server-side OOS owner path",
     surfacePurpose:
       "Discover managed products, review publication packets, inspect stable product dashboards, and curate listings without becoming a product registry, build lane, or runtime authority.",
     readModel:

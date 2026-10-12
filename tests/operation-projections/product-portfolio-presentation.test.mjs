@@ -34,6 +34,8 @@ import {
   initialProductPublicationDraft,
   productPublicationDecisionSubmission,
   productPublicationDecisionValidation,
+  productPublicationGovernedTargetFacts,
+  productPublicationOwnerManifestFacts,
   productPublicationSessionSteps,
 } from "../../src/domain-workspaces/portfolio/presentation/surfaces/publication/session/publication-session-view-model.ts";
 import { applyProductPublicationDecision } from "../../src/domain-workspaces/portfolio/work-model/publication/product-publication-decision-model.ts";
@@ -403,6 +405,75 @@ test("Publication corrects only listing-scope conflicts within the permitted con
 
   assert.equal(draft.scope, "internal");
   assert.equal(productPublicationDecisionValidation(record, draft).allowed, true);
+});
+
+test("case:1261-positive shows the exact governed audience tuple and owner-manifest evidence", () => {
+  const source = productPortfolioReadModel.publicationRecords.find(
+    (candidate) =>
+      candidate.scenarioId === "new-product-delivery-candidate",
+  );
+  assert.ok(source);
+  const record = structuredClone(source);
+  record.publicationPacket.governedPublication = {
+    action: "publish",
+    currentPosture: "unlisted",
+    expectedVersion: 0,
+    idempotencyKey: "product-publication:console:1261",
+    manifestSource: {
+      manifestDigest: `sha256:${"a".repeat(64)}`,
+      manifestRevision: "b".repeat(40),
+      path: "product-publication/manifest.json",
+      repo: "governance-operations-console",
+      sourceRevision: "c".repeat(40),
+    },
+    previousReceipt: null,
+    requestId: "product-publication-request:console:1261",
+  };
+  const draft = {
+    ...initialProductPublicationDraft(record),
+    scope: "client",
+  };
+
+  assert.deepEqual(
+    productPublicationGovernedTargetFacts(record, draft).map((fact) => [
+      fact.label,
+      fact.value,
+    ]),
+    [
+      ["Current Posture", "Unlisted"],
+      ["Target Posture", "Client"],
+      ["Audience", "Authorized Clients"],
+      ["Listing Scope", "Client Portfolio"],
+      ["Access Class", "Client Authorized"],
+    ],
+  );
+  assert.deepEqual(
+    productPublicationOwnerManifestFacts(record).map((fact) => fact.label),
+    [
+      "Owner Repository",
+      "Manifest Path",
+      "Source Revision",
+      "Manifest Revision",
+      "Manifest Digest",
+    ],
+  );
+});
+
+test("case:1261-negative does not claim governed audience evidence for disconnected fixtures", () => {
+  const record = productPortfolioReadModel.publicationRecords.find(
+    (candidate) =>
+      candidate.scenarioId === "new-product-delivery-candidate",
+  );
+  assert.ok(record);
+
+  assert.deepEqual(
+    productPublicationGovernedTargetFacts(
+      record,
+      initialProductPublicationDraft(record),
+    ),
+    [],
+  );
+  assert.deepEqual(productPublicationOwnerManifestFacts(record), []);
 });
 
 test("source-owned missing evidence blocks publication but still permits controlled rejection", () => {

@@ -1,5 +1,6 @@
 import {
   TerasChoiceGroup,
+  TerasMetadataList,
   TerasNoteField,
   TerasStatusPill,
   TerasTrayStack,
@@ -11,6 +12,7 @@ import { productListingScopeLabel } from "../../products/products-view-model.ts"
 import {
   productPublicationDecisionOptions,
   productPublicationDecisionValidation,
+  productPublicationGovernedTargetFacts,
   productPublicationListingStateOptions,
   productPublicationPlacementOptions,
   productPublicationRejectionOptions,
@@ -35,6 +37,7 @@ export function ProductPublicationDecisionStep({
         tone: "info" as const,
       }),
     );
+  const targetFacts = productPublicationGovernedTargetFacts(record, draft);
 
   return (
     <TerasWizardPanel
@@ -43,7 +46,7 @@ export function ProductPublicationDecisionStep({
           {validation.allowed ? "Ready" : "Needs decision"}
         </TerasStatusPill>
       }
-      description="Choose one controlled publication outcome. Portfolio may change listing fields only within the verified access contract."
+      description="Choose one controlled publication outcome. Portfolio records the exact audience tuple within the verified access contract; the product owner still enforces access."
       kicker="Publication Work"
       title="Publication Decision"
     >
@@ -90,6 +93,9 @@ export function ProductPublicationDecisionStep({
                 options={productPublicationPlacementOptions}
                 selectedId={draft.featured ? "featured" : "standard"}
               />
+            ) : null}
+            {targetFacts.length > 0 ? (
+              <TerasMetadataList columns={2} items={targetFacts} />
             ) : null}
           </>
         ) : (

@@ -1,9 +1,9 @@
 import type { ProductPortfolioPublicationSubmission } from "../local-runtime/product-portfolio-runtime-model.ts";
 import type { ProductPublicationAuthorityEvidence } from "../work-model/publication/product-publication-decision-types.ts";
+import { governedProductPublicationTarget } from "../work-model/publication/product-publication-audience-model.ts";
 import type {
   GovernedProductPublicationIntent,
   GovernedProductPublicationResult,
-  GovernedProductPublicationTarget,
 } from "./product-publication-live-types.ts";
 
 export function governedIntentFromPortfolioDecision(
@@ -26,7 +26,7 @@ export function governedIntentFromPortfolioDecision(
       "The publication source has no exact owner-manifest and version binding.",
     );
   }
-  const target = targetFromDecision(submission.draft.listing);
+  const target = governedProductPublicationTarget(submission.draft.listing);
   if (
     (target.posture === "unlisted" && binding.action !== "unpublish") ||
     (target.posture !== "unlisted" && !new Set(["publish", "update"]).has(binding.action)) ||
@@ -85,11 +85,20 @@ export function portfolioSubmissionFromGovernedResult({
     );
   }
   const command = result.command;
+  const manifestSource = command.manifest_source as GovernedProductPublicationIntent["manifest_source"];
+  const targetPublication = command.target_publication as GovernedProductPublicationIntent["target_publication"];
   const readiness = result.readiness as {
     ledger?: { ref?: { uri?: unknown } };
   };
   const authorityEvidence: ProductPublicationAuthorityEvidence = {
     authorityRevision: String(command.authority_revision),
+    ownerManifest: {
+      manifestDigest: manifestSource.manifest_digest,
+      manifestRevision: manifestSource.manifest_revision,
+      path: manifestSource.path,
+      repo: manifestSource.repo,
+      sourceRevision: manifestSource.source_revision,
+    },
     ownerReceiptRef: result.receipt.owner_receipt_ref,
     publicationVersion: result.receipt.publication_version,
     readinessReceiptRef: String(readiness.ledger?.ref?.uri ?? ""),
@@ -97,6 +106,7 @@ export function portfolioSubmissionFromGovernedResult({
     requestDigest: result.receipt.request_digest,
     requestId: result.request_id,
     resolution: result.resolution,
+    targetPublication: structuredClone(targetPublication),
   };
   if (!authorityEvidence.readinessReceiptRef.startsWith("wgcf://")) {
     throw new Error("The authoritative readiness receipt reference is unavailable.");
@@ -109,41 +119,5 @@ export function portfolioSubmissionFromGovernedResult({
     receiptId: result.receipt.receipt_id,
     receiptRef: result.receipt.owner_receipt_ref,
     recordedAt: result.receipt.recorded_at,
-  };
-}
-
-function targetFromDecision(listing: {
-  scope: "client" | "internal" | "public";
-  state: "listed" | "unlisted";
-}): GovernedProductPublicationTarget {
-  if (listing.state === "unlisted") {
-    return {
-      access_class: null,
-      audience: null,
-      listing_scope: null,
-      posture: "unlisted",
-    };
-  }
-  if (listing.scope === "client") {
-    return {
-      access_class: "client-authorized",
-      audience: "authorized-clients",
-      listing_scope: "client-portfolio",
-      posture: "client",
-    };
-  }
-  if (listing.scope === "public") {
-    return {
-      access_class: "public-anonymous",
-      audience: "public",
-      listing_scope: "public-catalog",
-      posture: "public",
-    };
-  }
-  return {
-    access_class: "workspace-authenticated",
-    audience: "workspace-operators",
-    listing_scope: "workspace-portfolio",
-    posture: "internal",
   };
 }

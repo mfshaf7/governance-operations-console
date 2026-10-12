@@ -11,6 +11,7 @@ import type {
   ProductPublicationRequirement,
 } from "../../../../work-model/publication/product-publication-review-types.ts";
 import { validateProductPublicationDecision } from "../../../../work-model/publication/product-publication-decision-model.ts";
+import { governedProductPublicationTarget } from "../../../../work-model/publication/product-publication-audience-model.ts";
 import {
   productPublicationRequirementDetail,
   productPublicationRequirementLabel,
@@ -374,6 +375,56 @@ export function productPublicationDecisionRows(
   return rows;
 }
 
+export function productPublicationGovernedTargetFacts(
+  record: ProductPortfolioScenarioProjection,
+  draft: ProductPublicationSessionDraft,
+): TerasMetadataItem[] {
+  const binding = record.publicationPacket.governedPublication;
+  if (!binding || draft.decision !== "publish") return [];
+
+  const target = governedProductPublicationTarget({
+    scope: draft.scope,
+    state: draft.listingState,
+  });
+  return [
+    {
+      label: "Current Posture",
+      value: governedPublicationValueLabel(binding.currentPosture),
+    },
+    {
+      label: "Target Posture",
+      value: governedPublicationValueLabel(target.posture),
+    },
+    {
+      label: "Audience",
+      value: governedPublicationValueLabel(target.audience),
+    },
+    {
+      label: "Listing Scope",
+      value: governedPublicationValueLabel(target.listing_scope),
+    },
+    {
+      label: "Access Class",
+      value: governedPublicationValueLabel(target.access_class),
+    },
+  ];
+}
+
+export function productPublicationOwnerManifestFacts(
+  record: ProductPortfolioScenarioProjection,
+): TerasMetadataItem[] {
+  const source = record.publicationPacket.governedPublication?.manifestSource;
+  if (!source) return [];
+
+  return [
+    { label: "Owner Repository", value: source.repo },
+    { label: "Manifest Path", value: source.path },
+    { label: "Source Revision", value: source.sourceRevision },
+    { label: "Manifest Revision", value: source.manifestRevision },
+    { label: "Manifest Digest", value: source.manifestDigest },
+  ];
+}
+
 export function productPublicationResultFacts(
   receipt: ProductPublicationDecisionReceipt,
 ): TerasMetadataItem[] {
@@ -408,7 +459,37 @@ export function productPublicationResultFacts(
   }
 
   if (receipt.authorityEvidence) {
+    const target = receipt.authorityEvidence.targetPublication;
+    const manifest = receipt.authorityEvidence.ownerManifest;
     facts.push(
+      {
+        label: "Target Posture",
+        value: governedPublicationValueLabel(target.posture),
+      },
+      {
+        label: "Audience",
+        value: governedPublicationValueLabel(target.audience),
+      },
+      {
+        label: "Governed Scope",
+        value: governedPublicationValueLabel(target.listing_scope),
+      },
+      {
+        label: "Access Class",
+        value: governedPublicationValueLabel(target.access_class),
+      },
+      {
+        label: "Owner Manifest",
+        value: `${manifest.repo}/${manifest.path}`,
+      },
+      {
+        label: "Manifest Revision",
+        value: manifest.manifestRevision,
+      },
+      {
+        label: "Manifest Digest",
+        value: manifest.manifestDigest,
+      },
       {
         label: "Owner Receipt",
         value: receipt.authorityEvidence.ownerReceiptRef,
@@ -428,6 +509,14 @@ export function productPublicationResultFacts(
   }
 
   return facts;
+}
+
+function governedPublicationValueLabel(value: string | null) {
+  if (value === null) return "None (unlisted)";
+  return value
+    .split("-")
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 }
 
 export function productPublicationResultRows(

@@ -1,9 +1,11 @@
 # Product Portfolio Domain Contract
 
 Status: accepted managed-product contract with fixture-backed disconnected
-preview and a source-complete, runtime-inactive OOS/WGCF Product Publication
-adapter. Broader owner, Platform, Security, Delivery, and release projections
-remain post-baseline work.
+preview and a commissioned internal-only OOS/WGCF Product Publication adapter.
+Broader audience postures are source-capable but inactive pending their current
+Security, OOS activation, and Platform commissioning sequence. Other owner,
+Platform, Security, Delivery, and release projections remain post-baseline
+work.
 
 Surface label: `Product Portfolio`.
 
@@ -571,9 +573,13 @@ server-only contract in `../product-publication-live-integration.md`. It accepts
 only an `authority-snapshot` record with the exact governed manifest and
 version binding, submits affirmative publication actions through OOS, validates
 WGCF and owner receipts, and projects that evidence into the existing
-Publication result. Synthetic and synthetic-companion fixtures remain confined
-to disconnected preview. Runtime activation remains blocked until Security
-`#1257` and Platform `#1258` accept and commission the exact revisions.
+Publication result. The operator surface shows the current and target posture,
+audience, listing scope, access class, and exact owner-manifest evidence while
+stating that product access remains owner-enforced. Synthetic and
+synthetic-companion fixtures remain confined to disconnected preview. The
+internal-only path is commissioned by Security `#1257` and Platform `#1258`;
+broader audience postures remain inactive pending Security `#1262`, OOS source
+activation `#1263`, and Platform commissioning `#1264`.
 
 ## Sources
 

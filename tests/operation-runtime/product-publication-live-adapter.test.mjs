@@ -104,6 +104,69 @@ test("case:1256-positive submits exact reviewed intent, reads authoritative stat
   assert.equal(projected.receiptId, created.receipt.receipt_id);
   assert.equal(projected.receiptRef, created.receipt.owner_receipt_ref);
   assert.equal(projected.authorityEvidence.receiptDigest, created.receipt_digest);
+  assert.deepEqual(
+    projected.authorityEvidence.targetPublication,
+    intent().target_publication,
+  );
+  assert.deepEqual(projected.authorityEvidence.ownerManifest, {
+    manifestDigest: intent().manifest_source.manifest_digest,
+    manifestRevision: intent().manifest_source.manifest_revision,
+    path: intent().manifest_source.path,
+    repo: intent().manifest_source.repo,
+    sourceRevision: intent().manifest_source.source_revision,
+  });
+});
+
+test("case:1261-positive projects every active audience tuple from the reviewed Portfolio decision", () => {
+  const cases = [
+    {
+      listing: { featured: false, scope: "internal", state: "listed" },
+      target: {
+        access_class: "workspace-authenticated",
+        audience: "workspace-operators",
+        listing_scope: "workspace-portfolio",
+        posture: "internal",
+      },
+    },
+    {
+      listing: { featured: false, scope: "client", state: "listed" },
+      target: {
+        access_class: "client-authorized",
+        audience: "authorized-clients",
+        listing_scope: "client-portfolio",
+        posture: "client",
+      },
+    },
+    {
+      listing: { featured: false, scope: "public", state: "listed" },
+      target: {
+        access_class: "public-anonymous",
+        audience: "public",
+        listing_scope: "public-catalog",
+        posture: "public",
+      },
+    },
+    {
+      listing: { featured: false, scope: "internal", state: "unlisted" },
+      target: {
+        access_class: null,
+        audience: null,
+        listing_scope: null,
+        posture: "unlisted",
+      },
+    },
+  ];
+
+  for (const item of cases) {
+    const submission = authorityBackedSubmission();
+    submission.draft.listing = item.listing;
+    submission.record.publicationPacket.governedPublication.action =
+      item.listing.state === "unlisted" ? "unpublish" : "publish";
+    assert.deepEqual(
+      governedIntentFromPortfolioDecision(submission).target_publication,
+      item.target,
+    );
+  }
 });
 
 test("case:1256-negative rejects missing session, stale or contradictory intent, and unbound owner evidence", async () => {
@@ -197,6 +260,14 @@ test("case:1256-negative rejects missing session, stale or contradictory intent,
   assert.throws(
     () => governedIntentFromPortfolioDecision(fixtureSubmission),
     /fixture data cannot enter governed Product Publication/i,
+  );
+
+  const prematureLifecycleAction = authorityBackedSubmission();
+  prematureLifecycleAction.record.publicationPacket.governedPublication.action =
+    "archive";
+  assert.throws(
+    () => governedIntentFromPortfolioDecision(prematureLifecycleAction),
+    /conflicts with the selected target posture/i,
   );
 });
 
