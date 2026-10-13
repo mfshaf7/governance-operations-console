@@ -113,9 +113,9 @@ Architecture baseline decisions:
   shape changes are out of scope for Delivery structure normalization and need
   a separate recorded design decision before implementation.
 - `live-runtime/` owns browser-safe canonical Delivery projection and
-  same-origin command state for admitted Work Design, Refinement, Catalog, and
-  Execution work-session contracts. It must not read server credentials or
-  call OOS or OpenProject directly.
+  same-origin command state for admitted Work Design, Refinement, Catalog,
+  Architecture Packet authoring, and Execution work-session contracts. It must
+  not read server credentials or call OOS or OpenProject directly.
 - `server/` owns authenticated OOS requests, configuration, timeout, response
   validation, and Next route handlers. Configured failures fail closed; only
   an unconfigured runtime may select explicit disconnected preview behavior.
@@ -152,6 +152,7 @@ presentation/surfaces/catalog
 presentation/surfaces/execution-board
 presentation/surfaces/execution-board/action-session
 presentation/surfaces/execution-board/action-session/closeout
+presentation/surfaces/execution-board/architecture-packet
 presentation/surfaces/execution-board/work-session
 presentation/surfaces/home
 presentation/surfaces/intake
@@ -257,6 +258,8 @@ local-runtime/transitions/transition-record.ts
 local-runtime/transitions/work-design-transition.ts
 live-runtime/catalog-live-contract.ts
 live-runtime/catalog-live-types.ts
+live-runtime/architecture-packet-live-contract.ts
+live-runtime/architecture-packet-live-types.ts
 live-runtime/delivery-closeout-live-contract.ts
 live-runtime/delivery-closeout-live-types.ts
 live-runtime/delivery-change-live-contract.ts
@@ -267,6 +270,7 @@ live-runtime/delivery-work-session-live-types.ts
 live-runtime/refinement-live-contract.ts
 live-runtime/refinement-live-types.ts
 live-runtime/use-catalog-live-runtime.ts
+live-runtime/use-architecture-packet-live-runtime.ts
 live-runtime/use-delivery-closeout-live-runtime.ts
 live-runtime/use-delivery-change-live-runtime.ts
 live-runtime/use-delivery-work-session-live-runtime.ts
@@ -302,6 +306,8 @@ presentation/surfaces/execution-board/action-session/closeout/execution-closeout
 presentation/surfaces/execution-board/action-session/closeout/execution-closeout-modal.tsx
 presentation/surfaces/execution-board/action-session/closeout/execution-closeout-model.ts
 presentation/surfaces/execution-board/action-session/closeout/delivery-workspace-intake-candidate.ts
+presentation/surfaces/execution-board/architecture-packet/architecture-packet-authoring-modal.tsx
+presentation/surfaces/execution-board/architecture-packet/architecture-packet-editor-model.ts
 presentation/surfaces/execution-board/execution-board-surface.tsx
 presentation/surfaces/execution-board/execution-board-view-model.ts
 presentation/surfaces/execution-board/execution-selected-package-panel.tsx
@@ -510,6 +516,8 @@ read-model/selectors/delivery-attention-selector.ts
 read-model/selectors/workflow-package-selectors.ts
 read-model/terms/copy.ts
 server/delivery-oos-client.ts
+server/architecture-packet-api-routes.ts
+server/architecture-packet-oos-client.ts
 server/delivery-closeout-api-routes.ts
 server/delivery-closeout-oos-client.ts
 server/delivery-change-api-routes.ts

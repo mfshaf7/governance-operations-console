@@ -98,8 +98,9 @@ current and future product changes.
   - OOS-backed Delivery Work Design source projection, governed advice,
     canonical apply, reconciliation, and durable receipt readback.
 - `delivery-execution-work-sessions.md`
-  - OOS-backed Execution Board work-session projection, Landing Unit decision,
-    start, continue, retry, failure, and receipt behavior.
+  - OOS-backed Architecture Packet authoring and Execution Board work-session
+    projection, operator decision, start, continue, retry, failure, custody,
+    and receipt behavior.
 - `delivery-change-control-live-integration.md`
   - OOS-backed in-flight Delivery projection, reviewed change commands,
     repository-custody routing, conflict handling, receipts, and rollback

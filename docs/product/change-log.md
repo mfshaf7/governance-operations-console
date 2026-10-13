@@ -8,6 +8,14 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-14
 
+- Added one Console-native schema-v6 Architecture Packet workflow to Delivery
+  Execution. Operators can inspect current canonical truth, author complete
+  editable design input, validate it against fresh ART through OOS, review and
+  approve the exact local candidate, and persist it through WGCF custody.
+- Kept caller and operator identity, ART capture, canonical fields, validation,
+  digest, supersession, custody, and projection outside the browser. Incomplete
+  ownership, topology, evidence, gates, or operator decision now blocks the
+  visible workflow, and disconnected preview cannot fabricate packet success.
 - Preserved canonical Lifecycle Transition context when routing operators into
   Proposal, Prototype, Delivery, or Orchestration workspaces. Applied targets,
   target-ingress sources, and OOS runs now carry identity-bearing Console entry

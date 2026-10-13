@@ -32,6 +32,8 @@ separately governed OOS integration slices:
   receipt-bound result projection
 - Delivery Work Design source projection, bounded governed advice, canonical
   apply, reconciliation, and durable receipt readback
+- Delivery Architecture Packet authoring with fresh ART validation, explicit
+  operator approval, and WGCF-backed durable custody
 - Delivery Refinement packet/run projection, governed metadata advice, durable
   apply polling, canonical readback, and receipt projection
 - Delivery Catalog projection and reviewed add, edit, or retire mutation with
@@ -141,6 +143,9 @@ The Prototype Delivery application boundary is documented in
 [`docs/product/prototype-delivery-live-integration.md`](docs/product/prototype-delivery-live-integration.md).
 The Delivery Work Design boundary is documented in
 [`docs/product/work-design-live-integration.md`](docs/product/work-design-live-integration.md).
+The Delivery Architecture Packet and execution work-session boundary is
+documented in
+[`docs/product/delivery-execution-work-sessions.md`](docs/product/delivery-execution-work-sessions.md).
 The Delivery Refinement and Catalog boundary is documented in
 [`docs/product/refinement-catalog-live-integration.md`](docs/product/refinement-catalog-live-integration.md).
 The Delivery in-flight adaptation boundary is documented in

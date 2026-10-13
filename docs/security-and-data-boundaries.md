@@ -218,6 +218,20 @@ Mutable `dev-integration` activation remains denied until Security Architecture
 binds the exact merged Console and OOS heads and accepts the admitted executor
 and composed proof.
 
+Architecture Packet authoring is a separate bounded transition on the same
+Delivery surface. The browser submits only editable scope, exact repository
+revisions, architecture design, conformance design, and decision intent through
+same-origin routes. The Console server supplies the configured caller and
+accountable operator; OOS captures fresh ART truth, derives authority-bearing
+fields, validates the canonical schema-v6 contract, and remains the workflow
+authority. WGCF remains the only durable custody authority. The browser cannot
+submit operator identity, canonical timestamps, fingerprints, digests, custody,
+or ART projection evidence. Validation, operator approval, and persistence are
+separate visible steps; changed input invalidates the reviewed candidate.
+Configured failure, stale or contradictory topology, incomplete ownership,
+evidence, gates, or decision input, and failed custody stay blocked without
+fixture fallback or Console-local success.
+
 The Delivery in-flight change exception is bounded to same-origin canonical
 projection and reviewed command routes over OOS-owned change control. Caller
 credentials, accountable operator construction, and accepted-command records
