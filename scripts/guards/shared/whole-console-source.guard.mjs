@@ -27,6 +27,8 @@ const shellActivityPanel =
 const shellRoot = "src/console-shell/governance-console-shell.tsx";
 const selectorModel =
   "src/operation-workbench/operation-workbench-selector-model.ts";
+const fixtureIsolation =
+  "src/console-integration/fixture-isolation/console-fixture-isolation.ts";
 
 export const guard = {
   id: "shared/whole-console-source",
@@ -41,6 +43,7 @@ export const guard = {
       workspacePulseFixture,
       "src/command-center/read-model/workspace-pulse.ts",
       "src/console-integration/browser-download.ts",
+      fixtureIsolation,
       shellActivityHook,
       shellActivityModel,
       shellActivityPanel,
@@ -94,8 +97,19 @@ export const guard = {
     ]);
     assertIncludes(failures, shellController, [
       "lifecycleTransitionProjectionFixtures",
+      "resolveConsoleFixtureIsolation",
+      "selectConsoleAuthorityProjection",
       "operationWorkbenchSelectorEntries",
       "selectedWorkbenchSurface",
+    ]);
+    assertOmits(failures, shellController, [
+      "consoleDevMode ||\n      lifecycleTransitionSnapshot",
+    ]);
+    assertIncludes(failures, fixtureIsolation, [
+      "console_owner_explicitly_disconnected",
+      "console_live_owner_unavailable",
+      "selectConsoleAuthorityProjection",
+      "consoleActionExecutable",
     ]);
     assertOmits(failures, "src/app/page.tsx", [
       "command-center",

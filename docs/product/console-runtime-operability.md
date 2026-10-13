@@ -74,6 +74,28 @@ The projection states are:
 Capability projection is diagnostic truth, not proof that OOS, Platform,
 Security, or an external provider is healthy.
 
+## Fixture Isolation And Executable Action Boundary
+
+The Console consumes the Workspace Governance operational-capability contract
+through the pinned binding at
+`contracts/console-operational-capabilities.binding.json`. The product-owned
+decision module at
+`src/console-integration/fixture-isolation/console-fixture-isolation.ts`
+selects exactly one demonstration source:
+
+- an owner-confirmed `disconnected-preview` may select capability-owned
+  fixtures and prototype-local simulation actions;
+- a current `live` owner projection may select canonical data and durable
+  actions;
+- loading, partial, offline, invalid, or unavailable owner truth selects no
+  fixture and disables both action classes.
+
+The `?dev=1` presentation control may choose among approved synthetic scenarios
+only after the owner has explicitly reported disconnected preview. It cannot
+override live mode, convert a live error into fixture data, merge fixture and
+canonical records, or make a durable action executable. This rule applies to
+whole-Console composition as well as individual domain adapters.
+
 ## Correlation Boundary
 
 Every same-origin `/api/*` request receives a fresh server-issued
@@ -114,4 +136,6 @@ The product guards enforce that:
 
 Semantic tests cover disconnected, invalid, and live capability projection;
 secret-safe output; successful mutation correlation; denied mutation
-correlation; bounded owner failure; and unchanged owner receipt readback.
+correlation; bounded owner failure; unchanged owner receipt readback; loading
+and unavailable owner isolation; and the prohibition on dev-mode live
+fallback.

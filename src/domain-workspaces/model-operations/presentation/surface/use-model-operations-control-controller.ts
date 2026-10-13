@@ -2,6 +2,11 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  consoleActionExecutable,
+  resolveConsoleFixtureIsolation,
+  selectConsoleAuthorityProjection,
+} from "../../../../console-integration/fixture-isolation/console-fixture-isolation.ts";
 import { unavailableModelOperationsReadModel } from "../../live-runtime/model-operations-live-projection.ts";
 import { useModelOperationsLiveRuntime } from "../../live-runtime/use-model-operations-live-runtime.ts";
 import type {
@@ -25,13 +30,20 @@ import {
 
 export function useModelOperationsControlController() {
   const liveRuntime = useModelOperationsLiveRuntime();
+  const fixtureIsolation = resolveConsoleFixtureIsolation({
+    mode: liveRuntime.snapshot?.mode ?? null,
+    status: liveRuntime.snapshot?.status ?? "loading",
+  });
   const readModel =
-    liveRuntime.snapshot?.readModel ??
-    (liveRuntime.snapshot?.mode === "live"
-      ? unavailableModelOperationsReadModel(
-          liveRuntime.snapshot.error ?? "Model Operations live authority is unavailable.",
-        )
-      : modelOperationsReadModel);
+    selectConsoleAuthorityProjection({
+      decision: fixtureIsolation,
+      fixture: modelOperationsReadModel,
+      live: liveRuntime.snapshot?.readModel ?? null,
+    }) ??
+    unavailableModelOperationsReadModel(
+      liveRuntime.snapshot?.error ??
+        "Model Operations owner truth is still loading.",
+    );
   const [search, setSearch] = useState("");
   const [lifecycle, setLifecycle] =
     useState<ModelProfileLifecycleFilter>("all");
@@ -125,8 +137,8 @@ export function useModelOperationsControlController() {
     readModel,
     request: {
       available:
-        liveRuntime.snapshot?.mode === "live" &&
-        liveRuntime.snapshot.status === "current",
+        consoleActionExecutable(fixtureIsolation, "durable-command") &&
+        liveRuntime.snapshot?.status === "current",
       close: () => setRequestOpen(false),
       draft: requestDraft,
       error: liveRuntime.error,
