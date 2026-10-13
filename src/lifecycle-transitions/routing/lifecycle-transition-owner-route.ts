@@ -3,7 +3,12 @@ import {
   type OperationWorkbenchPathLabel,
 } from "../../operation-workbench/operation-workbench-domain-registry.ts";
 import type {
+  ConsoleSurfaceEntryIntent,
+} from "../../console-architecture.ts";
+import type {
   LifecycleTransitionDomain,
+  LifecycleTransitionNextAction,
+  LifecycleTransitionState,
 } from "../model/lifecycle-transition-types.ts";
 
 export type LifecycleTransitionWorkbenchRoute =
@@ -16,38 +21,61 @@ export type LifecycleTransitionWorkbenchRoute =
       kind: "workbench";
       buttonLabel: string;
       contextRef: string;
+      entryIntent: ConsoleSurfaceEntryIntent;
       ownerRef: string;
       surfaceLabel: OperationWorkbenchPathLabel;
     }>;
 
 export function resolveLifecycleTransitionWorkbenchRoute({
   applicationRunRef,
-  nextOwnerRef,
+  nextAction,
   sourceDomain,
   sourceRecordId,
+  state,
   targetDomain,
   targetRecordRef,
   transitionId,
 }: {
   applicationRunRef: string | null;
-  nextOwnerRef: string | null;
+  nextAction: LifecycleTransitionNextAction | null;
   sourceDomain: LifecycleTransitionDomain;
   sourceRecordId: string;
+  state: LifecycleTransitionState;
   targetDomain: LifecycleTransitionDomain;
   targetRecordRef: string | null;
   transitionId: string;
 }): LifecycleTransitionWorkbenchRoute {
-  if (!nextOwnerRef) {
+  if (!nextAction) {
+    if (state !== "applied" || !targetRecordRef) {
+      return {
+        kind: "unavailable",
+        message: state === "applied"
+          ? "The applied transition has no canonical target identity. Refresh owner truth before continuing."
+          : `This transition is ${state}. No owner action is available.`,
+        ownerRef: targetDomain,
+      };
+    }
     const surfaceLabel = domainSurfaceLabel(targetDomain);
+    const targetContext = appliedTargetContext({
+      sourceRecordId,
+      targetDomain,
+      targetRecordRef,
+    });
     return {
       buttonLabel: `Open ${workbenchDisplayName(surfaceLabel)}`,
-      contextRef: targetRecordRef ?? transitionId,
+      contextRef: targetContext.subjectRef,
+      entryIntent: {
+        mode: "inspect",
+        requiredMoveRef: targetContext.requiredMoveRef,
+        subjectRef: targetContext.subjectRef,
+      },
       kind: "workbench",
       ownerRef: targetDomain,
       surfaceLabel,
     };
   }
 
+  const nextOwnerRef = nextAction.ownerRef;
   const surfaceLabel = ownerSurfaceLabel(nextOwnerRef);
 
   if (!surfaceLabel) {
@@ -58,16 +86,23 @@ export function resolveLifecycleTransitionWorkbenchRoute({
     };
   }
 
+  const ownerContext = nextOwnerContext({
+    applicationRunRef,
+    nextOwnerRef,
+    sourceDomain,
+    sourceRecordId,
+    targetDomain,
+    targetRecordRef,
+    transitionId,
+  });
   return {
     buttonLabel: `Open ${workbenchDisplayName(surfaceLabel)}`,
-    contextRef: ownerContextRef({
-      applicationRunRef,
-      nextOwnerRef,
-      sourceDomain,
-      sourceRecordId,
-      targetRecordRef,
-      transitionId,
-    }),
+    contextRef: ownerContext.subjectRef,
+    entryIntent: {
+      mode: lifecycleTransitionEntryMode(nextAction.action),
+      requiredMoveRef: ownerContext.requiredMoveRef,
+      subjectRef: ownerContext.subjectRef,
+    },
     kind: "workbench",
     ownerRef: nextOwnerRef,
     surfaceLabel,
@@ -112,11 +147,12 @@ function domainSurfaceLabel(
   }
 }
 
-function ownerContextRef({
+function nextOwnerContext({
   applicationRunRef,
   nextOwnerRef,
   sourceDomain,
   sourceRecordId,
+  targetDomain,
   targetRecordRef,
   transitionId,
 }: {
@@ -124,16 +160,104 @@ function ownerContextRef({
   nextOwnerRef: string;
   sourceDomain: LifecycleTransitionDomain;
   sourceRecordId: string;
+  targetDomain: LifecycleTransitionDomain;
   targetRecordRef: string | null;
   transitionId: string;
-}): string {
+}): Readonly<{ requiredMoveRef: string; subjectRef: string }> {
   if (nextOwnerRef === sourceDomain) {
-    return sourceRecordId;
+    return {
+      requiredMoveRef: `${sourceDomain}.lifecycle-transition.resume`,
+      subjectRef: domainRecordId(sourceDomain, sourceRecordId),
+    };
   }
   if (nextOwnerRef === "operator-orchestration-service") {
-    return applicationRunRef ?? transitionId;
+    return {
+      requiredMoveRef: "orchestration.runs.lifecycle-transition",
+      subjectRef: applicationRunRef ?? transitionId,
+    };
   }
-  return targetRecordRef ?? transitionId;
+  if (
+    nextOwnerRef === "delivery-ingress-adapter" ||
+    nextOwnerRef === "delivery-ingress-policy"
+  ) {
+    return {
+      requiredMoveRef: "delivery.intake.lifecycle-transition",
+      subjectRef: sourceRecordId,
+    };
+  }
+  if (
+    nextOwnerRef === "prototype-ingress-adapter" ||
+    nextOwnerRef === "prototype-ingress-policy"
+  ) {
+    return {
+      requiredMoveRef: "prototype.lifecycle-transition.ingress",
+      subjectRef: targetRecordRef ?? sourceRecordId,
+    };
+  }
+  return {
+    requiredMoveRef: `${targetDomain}.lifecycle-transition.resume`,
+    subjectRef: targetRecordRef ?? transitionId,
+  };
+}
+
+function appliedTargetContext({
+  sourceRecordId,
+  targetDomain,
+  targetRecordRef,
+}: {
+  sourceRecordId: string;
+  targetDomain: LifecycleTransitionDomain;
+  targetRecordRef: string;
+}): Readonly<{ requiredMoveRef: string; subjectRef: string }> {
+  if (targetDomain === "delivery") {
+    const workPackageId = targetRecordRef?.match(
+      /^openproject:\/\/work_packages\/([1-9][0-9]*)$/,
+    )?.[1];
+    return workPackageId
+      ? {
+          requiredMoveRef: "delivery.execution-board.lifecycle-transition",
+          subjectRef: `delivery-${workPackageId}`,
+        }
+      : {
+          requiredMoveRef: "delivery.intake.lifecycle-transition",
+          subjectRef: sourceRecordId,
+        };
+  }
+
+  return {
+    requiredMoveRef: `${targetDomain}.lifecycle-transition.inspect`,
+    subjectRef: domainRecordId(targetDomain, targetRecordRef),
+  };
+}
+
+function domainRecordId(
+  domain: LifecycleTransitionDomain,
+  recordRef: string,
+): string {
+  const openProjectId = recordRef.match(
+    /^openproject:\/\/work_packages\/([1-9][0-9]*)$/,
+  )?.[1];
+  if (domain === "proposal" && openProjectId) {
+    return `idea-${openProjectId}`;
+  }
+  const prefix = `${domain}://`;
+  return recordRef.startsWith(prefix) ? recordRef.slice(prefix.length) : recordRef;
+}
+
+function lifecycleTransitionEntryMode(
+  action: LifecycleTransitionNextAction["action"],
+): ConsoleSurfaceEntryIntent["mode"] {
+  switch (action) {
+    case "correct-source":
+    case "resolve-gate":
+    case "retry-application":
+      return "resolve";
+    case "review-deferred-transition":
+    case "review-rejection":
+      return "review";
+    default:
+      return "resume";
+  }
 }
 
 function unavailableOwnerMessage(ownerRef: string): string {

@@ -32,7 +32,10 @@ export function useOrchestrationWorkspaceController({
       return;
     }
 
-    if (entryIntent?.subjectRef.startsWith("run:")) {
+    if (
+      entryIntent?.subjectRef.startsWith("run:") ||
+      entryIntent?.requiredMoveRef.startsWith("orchestration.runs.")
+    ) {
       setActiveSurfaceId("runs");
     }
   }, [entryIntent]);

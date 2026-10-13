@@ -212,7 +212,12 @@ export function usePrototypeControlController({
     }
 
     const focusedRecord = readModel.records.find(
-      (record) => record.id === entryIntent.subjectRef,
+      (record) =>
+        record.id === entryIntent.subjectRef ||
+        record.sourceRef === entryIntent.subjectRef ||
+        record.linkedRecords.some(
+          (linkedRecord) => linkedRecord.ref === entryIntent.subjectRef,
+        ),
     );
 
     if (!focusedRecord) {

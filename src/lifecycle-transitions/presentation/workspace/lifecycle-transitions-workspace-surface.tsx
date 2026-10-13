@@ -10,6 +10,9 @@ import {
 } from "@/teras";
 
 import type {
+  ConsoleSurfaceEntryIntent,
+} from "../../../console-architecture";
+import type {
   OperationWorkbenchPathLabel,
 } from "../../../operation-workbench/operation-workbench-domain-registry";
 import type {
@@ -33,7 +36,10 @@ export function LifecycleTransitionsWorkspaceSurface({
   route,
 }: {
   focusTransitionId?: string | null;
-  onOpenWorkbenchSurface: (surfaceLabel: OperationWorkbenchPathLabel) => void;
+  onOpenWorkbenchSurface: (
+    surfaceLabel: OperationWorkbenchPathLabel,
+    focusIntent?: ConsoleSurfaceEntryIntent | null,
+  ) => void;
   route: LifecycleTransitionRouteOverview;
 }) {
   const [query, setQuery] = useState("");

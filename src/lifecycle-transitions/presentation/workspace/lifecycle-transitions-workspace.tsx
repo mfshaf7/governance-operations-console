@@ -9,7 +9,10 @@ import {
   TerasSurfaceNavButton,
   TerasSurfaceSummaryHeader,
 } from "@/teras";
-import type { ConsoleEntryIntent } from "../../../console-architecture";
+import type {
+  ConsoleEntryIntent,
+  ConsoleSurfaceEntryIntent,
+} from "../../../console-architecture";
 
 import type {
   OperationWorkbenchPathLabel,
@@ -42,7 +45,10 @@ export function LifecycleTransitionsWorkspace({
 }: {
   entryIntent?: ConsoleEntryIntent | null;
   onClose: () => void;
-  onOpenWorkbenchSurface: (surfaceLabel: OperationWorkbenchPathLabel) => void;
+  onOpenWorkbenchSurface: (
+    surfaceLabel: OperationWorkbenchPathLabel,
+    focusIntent?: ConsoleSurfaceEntryIntent | null,
+  ) => void;
   runtimePosture: LifecycleTransitionRuntimePosture | null;
   transitions: readonly LifecycleTransitionProjection[];
 }) {

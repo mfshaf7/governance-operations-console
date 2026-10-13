@@ -6,6 +6,14 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-14
+
+- Preserved canonical Lifecycle Transition context when routing operators into
+  Proposal, Prototype, Delivery, or Orchestration workspaces. Applied targets,
+  target-ingress sources, and OOS runs now carry identity-bearing Console entry
+  intents, while unknown owners and stale or conflicting projections remain
+  non-mutating recovery states.
+
 ## 2026-10-12
 
 - Projected the exact Product Publication posture, audience, listing scope,

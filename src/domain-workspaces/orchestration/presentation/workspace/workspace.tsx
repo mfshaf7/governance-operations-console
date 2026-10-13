@@ -140,6 +140,13 @@ function orchestrationFocusRecordId(
   entryIntent: ConsoleSurfaceEntryIntent | null,
   kind: "definition" | "run",
 ) {
+  if (
+    kind === "run" &&
+    entryIntent?.requiredMoveRef.startsWith("orchestration.runs.")
+  ) {
+    return entryIntent.subjectRef;
+  }
+
   const prefix = `${kind}:`;
 
   return entryIntent?.subjectRef.startsWith(prefix)

@@ -43,6 +43,22 @@ OOS or WGCF directly and never receives owner credentials.
 7. If more than five pages exist, the visible projection is marked truncated
    instead of issuing an unbounded read.
 
+## Resume Behavior
+
+Lifecycle Transitions preserves the canonical record or run identity when it
+routes the operator to the workspace that owns the next action. Proposal and
+Prototype source corrections reopen the exact source record. Target ingress
+opens the matching Prototype entry or Delivery Intake source. OOS-owned retry
+and application work opens the exact Orchestration run, while an applied
+transition opens its canonical target record.
+
+The routing intent is derived only from the current OOS projection. An unknown
+owner has no action button and shows recovery guidance. Stale or conflicting
+owner truth keeps the whole live projection offline and cannot produce a
+navigation intent or mutation. Refresh and the existing visible-tab poll read
+canonical state again; neither path stores or reconstructs transition state in
+the browser.
+
 ## Ownership Boundary
 
 The integration does not:
@@ -52,6 +68,7 @@ The integration does not:
 - call WGCF directly
 - store canonical transition data in the Console
 - invent receipts, target records, owner routes, or recovery actions
+- infer a replacement identity when the canonical owner reference is unknown
 - turn fixture data into live authority
 
 Target-domain writes remain owned by admitted source, OOS, WGCF, and target

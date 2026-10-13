@@ -118,9 +118,10 @@ test("a returned source routes to the source workbench", () => {
 
   const route = resolveLifecycleTransitionWorkbenchRoute({
     applicationRunRef: item.applicationRunRef,
-    nextOwnerRef: item.nextAction?.ownerRef ?? null,
+    nextAction: item.nextAction,
     sourceDomain: item.sourceDomain,
     sourceRecordId: item.sourceRecordId,
+    state: item.state,
     targetDomain: item.targetDomain,
     targetRecordRef: item.targetRecordRef,
     transitionId: item.transitionId,
@@ -128,7 +129,12 @@ test("a returned source routes to the source workbench", () => {
 
   assert.equal(route.kind, "workbench");
   assert.equal(route.surfaceLabel, "PROPOSAL");
-  assert.equal(route.contextRef, item.sourceRecordId);
+  assert.equal(route.contextRef, "PR-404");
+  assert.deepEqual(route.entryIntent, {
+    mode: "resolve",
+    requiredMoveRef: "proposal.lifecycle-transition.resume",
+    subjectRef: "PR-404",
+  });
 });
 
 test("a technical application failure routes to Orchestration", () => {
@@ -137,9 +143,10 @@ test("a technical application failure routes to Orchestration", () => {
 
   const route = resolveLifecycleTransitionWorkbenchRoute({
     applicationRunRef: item.applicationRunRef,
-    nextOwnerRef: item.nextAction?.ownerRef ?? null,
+    nextAction: item.nextAction,
     sourceDomain: item.sourceDomain,
     sourceRecordId: item.sourceRecordId,
+    state: item.state,
     targetDomain: item.targetDomain,
     targetRecordRef: item.targetRecordRef,
     transitionId: item.transitionId,
@@ -148,6 +155,11 @@ test("a technical application failure routes to Orchestration", () => {
   assert.equal(route.kind, "workbench");
   assert.equal(route.surfaceLabel, "ORCHESTRATION");
   assert.equal(route.contextRef, item.applicationRunRef);
+  assert.deepEqual(route.entryIntent, {
+    mode: "resolve",
+    requiredMoveRef: "orchestration.runs.lifecycle-transition",
+    subjectRef: item.applicationRunRef,
+  });
 });
 
 test("a named authority without an admitted console surface gets no fake action", () => {
@@ -158,9 +170,10 @@ test("a named authority without an admitted console surface gets no fake action"
 
   const route = resolveLifecycleTransitionWorkbenchRoute({
     applicationRunRef: item.applicationRunRef,
-    nextOwnerRef: item.nextAction?.ownerRef ?? null,
+    nextAction: item.nextAction,
     sourceDomain: item.sourceDomain,
     sourceRecordId: item.sourceRecordId,
+    state: item.state,
     targetDomain: item.targetDomain,
     targetRecordRef: item.targetRecordRef,
     transitionId: item.transitionId,
@@ -177,9 +190,10 @@ test("an applied transition routes to the target workspace for inspection", () =
 
   const route = resolveLifecycleTransitionWorkbenchRoute({
     applicationRunRef: item.applicationRunRef,
-    nextOwnerRef: null,
+    nextAction: null,
     sourceDomain: item.sourceDomain,
     sourceRecordId: item.sourceRecordId,
+    state: item.state,
     targetDomain: item.targetDomain,
     targetRecordRef: item.targetRecordRef,
     transitionId: item.transitionId,
@@ -187,5 +201,104 @@ test("an applied transition routes to the target workspace for inspection", () =
 
   assert.equal(route.kind, "workbench");
   assert.equal(route.surfaceLabel, "DELIVERY");
-  assert.equal(route.contextRef, "delivery-intake://source/INT-205");
+  assert.equal(route.contextRef, item.sourceRecordId);
+  assert.deepEqual(route.entryIntent, {
+    mode: "inspect",
+    requiredMoveRef: "delivery.intake.lifecycle-transition",
+    subjectRef: item.sourceRecordId,
+  });
+});
+
+test("an applied Prototype target resumes the exact canonical target record", () => {
+  const item = routes[0].items.find(
+    (candidate) => candidate.state === "applied",
+  );
+  assert.ok(item);
+
+  const route = resolveLifecycleTransitionWorkbenchRoute({
+    applicationRunRef: item.applicationRunRef,
+    nextAction: null,
+    sourceDomain: item.sourceDomain,
+    sourceRecordId: item.sourceRecordId,
+    state: item.state,
+    targetDomain: item.targetDomain,
+    targetRecordRef: item.targetRecordRef,
+    transitionId: item.transitionId,
+  });
+
+  assert.equal(route.kind, "workbench");
+  assert.equal(route.surfaceLabel, "PROTOTYPE");
+  assert.deepEqual(route.entryIntent, {
+    mode: "inspect",
+    requiredMoveRef: "prototype.lifecycle-transition.inspect",
+    subjectRef: "PT-101",
+  });
+});
+
+test("an applied Delivery work package resumes its canonical execution package", () => {
+  const item = routes[2].items.find(
+    (candidate) => candidate.state === "applied",
+  );
+  assert.ok(item);
+
+  const route = resolveLifecycleTransitionWorkbenchRoute({
+    applicationRunRef: item.applicationRunRef,
+    nextAction: null,
+    sourceDomain: item.sourceDomain,
+    sourceRecordId: item.sourceRecordId,
+    state: item.state,
+    targetDomain: item.targetDomain,
+    targetRecordRef: item.targetRecordRef,
+    transitionId: item.transitionId,
+  });
+
+  assert.equal(route.kind, "workbench");
+  assert.equal(route.surfaceLabel, "DELIVERY");
+  assert.deepEqual(route.entryIntent, {
+    mode: "inspect",
+    requiredMoveRef: "delivery.execution-board.lifecycle-transition",
+    subjectRef: "delivery-307",
+  });
+});
+
+test("a target-ingress action preserves the canonical source identity", () => {
+  const route = resolveLifecycleTransitionWorkbenchRoute({
+    applicationRunRef: null,
+    nextAction: {
+      action: "record-admission",
+      ownerRef: "prototype-ingress-policy",
+      reviewAt: null,
+    },
+    sourceDomain: "proposal",
+    sourceRecordId: "openproject://work_packages/851",
+    state: "awaiting-admission",
+    targetDomain: "prototype",
+    targetRecordRef: null,
+    transitionId: "transition-proposal-prototype-851",
+  });
+
+  assert.equal(route.kind, "workbench");
+  assert.deepEqual(route.entryIntent, {
+    mode: "resume",
+    requiredMoveRef: "prototype.lifecycle-transition.ingress",
+    subjectRef: "openproject://work_packages/851",
+  });
+});
+
+test("terminal state without an applied target exposes recovery only", () => {
+  for (const state of ["cancelled", "superseded", "applied"]) {
+    const route = resolveLifecycleTransitionWorkbenchRoute({
+      applicationRunRef: null,
+      nextAction: null,
+      sourceDomain: "proposal",
+      sourceRecordId: "openproject://work_packages/851",
+      state,
+      targetDomain: "prototype",
+      targetRecordRef: null,
+      transitionId: `transition-${state}`,
+    });
+
+    assert.equal(route.kind, "unavailable");
+    assert.match(route.message, /no owner action|no canonical target/i);
+  }
 });
