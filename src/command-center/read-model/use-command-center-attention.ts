@@ -20,6 +20,7 @@ import {
   normalizeCommandCenterAttentionSourceForRuntime,
   projectCommandCenterAttention,
 } from "./command-center-attention";
+import { resolveConsoleFixtureIsolation } from "../../console-integration/fixture-isolation/console-fixture-isolation";
 
 export function useCommandCenterAttention({
   disconnectedPreview = false,
@@ -45,10 +46,12 @@ export function useCommandCenterAttention({
   const governedReleases = useAttentionSource(governedReleaseAttentionSource);
 
   return useMemo(() => {
-    const runtimeMode =
-      disconnectedPreview || lifecycleSnapshot?.mode === "disconnected-preview"
-        ? "disconnected-preview"
-        : "live";
+    const runtimeMode = resolveConsoleFixtureIsolation({
+      mode: lifecycleSnapshot?.mode ?? null,
+      status: lifecycleSnapshot?.status ?? "loading",
+    }).fixtureAllowed
+      ? "disconnected-preview"
+      : "live";
     const sources = [
       proposal,
       repository,

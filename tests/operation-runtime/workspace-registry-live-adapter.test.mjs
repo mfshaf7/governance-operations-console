@@ -157,7 +157,13 @@ test("case:workspace-registry browser runtime contains no authority credentials 
   assert.match(server, /resolveConsoleOosConnection/);
   assert.match(server, /sameWorkspaceInventoryPreparation/);
   assert.match(server, /sameWorkspaceInventoryLifecyclePreparation/);
-  assert.match(workspace, /consoleDevMode \? workspaceRegistryFixture : runtime\.snapshot/);
+  assert.match(workspace, /consoleDevMode && fixtureIsolation\.fixtureAllowed/);
+  assert.match(workspace, /consoleActionExecutable/);
+  assert.match(workspace, /liveActionExecutable/);
+  assert.doesNotMatch(
+    workspace,
+    /consoleDevMode \? workspaceRegistryFixture : runtime\.snapshot/,
+  );
 });
 
 test("case:console-adapters-positive submits a caller-bound Workspace Registry lifecycle action", async () => {

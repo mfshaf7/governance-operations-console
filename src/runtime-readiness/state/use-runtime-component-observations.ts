@@ -7,6 +7,7 @@ import type {
   RuntimeComponentProjection,
 } from "../model/runtime-readiness-model";
 import { componentStatusScenarios } from "../read-model/runtime-readiness-scenarios";
+import { resolveConsoleFixtureIsolation } from "../../console-integration/fixture-isolation/console-fixture-isolation";
 
 const currentScenario = componentStatusScenarios[0];
 
@@ -61,11 +62,29 @@ export function useRuntimeComponentObservations({
     const selected = componentStatusScenarios.find(
       (scenario) => scenario.id === scenarioId,
     );
-    if (consoleDevMode && selected?.mode === "synthetic") return selected;
-    if (!projection || projection.mode === "disconnected-preview") {
+    const fixtureIsolation = resolveConsoleFixtureIsolation({
+      mode:
+        projection?.mode === "unavailable"
+          ? "unavailable"
+          : (projection?.mode ?? null),
+      status:
+        projection === null
+          ? "loading"
+          : projection.mode === "unavailable"
+            ? "unavailable"
+            : "current",
+    });
+    if (
+      fixtureIsolation.fixtureAllowed &&
+      consoleDevMode &&
+      selected?.mode === "synthetic"
+    ) {
+      return selected;
+    }
+    if (fixtureIsolation.fixtureAllowed) {
       return currentScenario;
     }
-    if (projection.mode === "live") {
+    if (fixtureIsolation.liveAuthorityAllowed && projection?.mode === "live") {
       return {
         components: [...projection.components],
         description: "Current Platform-owned runtime observations.",
@@ -81,7 +100,7 @@ export function useRuntimeComponentObservations({
       id: "current",
       label: "Current",
       mode: "unavailable",
-      tone: projection.source.freshness === "stale" ? "stale" : "warn",
+      tone: projection?.source.freshness === "stale" ? "stale" : "warn",
     };
   }, [consoleDevMode, projection, scenarioId]);
 

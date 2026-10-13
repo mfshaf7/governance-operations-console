@@ -20,6 +20,10 @@ import type {
 import { WorkspaceRegistryLifecycleWorkflow } from "./workspace-registry-lifecycle-workflow";
 import { WorkspaceRegistryPromotionWorkflow } from "./workspace-registry-promotion-workflow";
 import { WorkspaceRegistrySurface } from "./workspace-registry-surface";
+import {
+  consoleActionExecutable,
+  resolveConsoleFixtureIsolation,
+} from "../../console-integration/fixture-isolation/console-fixture-isolation";
 
 type RegistryView = "eligible" | "registry";
 
@@ -39,15 +43,38 @@ export function WorkspaceRegistryWorkspace({
   const [lifecycleRecord, setLifecycleRecord] =
     useState<WorkspaceRegistryRecord | null>(null);
   const appliedEntryIntentRef = useRef<string | null>(null);
-  const snapshot = consoleDevMode ? workspaceRegistryFixture : runtime.snapshot;
+  const fixtureIsolation = resolveConsoleFixtureIsolation({
+    mode:
+      runtime.mode === "loading"
+        ? null
+        : runtime.mode === "unavailable"
+          ? "unavailable"
+          : runtime.mode,
+    status:
+      runtime.mode === "loading"
+        ? "loading"
+        : runtime.mode === "unavailable"
+          ? "unavailable"
+          : "current",
+  });
+  const fixtureMode = consoleDevMode && fixtureIsolation.fixtureAllowed;
+  const liveActionExecutable = consoleActionExecutable(
+    fixtureIsolation,
+    "durable-command",
+  );
+  const snapshot = fixtureMode
+    ? workspaceRegistryFixture
+    : liveActionExecutable
+      ? runtime.snapshot
+      : null;
   const owners = useMemo(
     () => new Set(snapshot?.records.flatMap((record) => record.owner_refs) ?? []).size,
     [snapshot],
   );
 
   useEffect(() => {
-    if (!consoleDevMode) void runtime.load().catch(() => undefined);
-  }, [consoleDevMode, runtime.load]);
+    void runtime.load().catch(() => undefined);
+  }, [runtime.load]);
 
   useEffect(() => {
     if (!entryIntent || !snapshot) return;
@@ -114,8 +141,14 @@ export function WorkspaceRegistryWorkspace({
                   facts: [],
                   id: "source",
                   label: "Source",
-                  stateLabel: consoleDevMode ? "Fixture" : snapshot ? "OOS" : "Unavailable",
-                  tone: consoleDevMode ? "info" : snapshot ? "ok" : "danger",
+                  stateLabel: fixtureMode
+                    ? "Fixture"
+                    : snapshot
+                      ? "OOS"
+                      : runtime.mode === "loading"
+                        ? "Loading"
+                        : "Unavailable",
+                  tone: fixtureMode ? "info" : snapshot ? "ok" : "danger",
                 },
                 {
                   detail: "Canonical authority",
@@ -132,7 +165,7 @@ export function WorkspaceRegistryWorkspace({
           }
         >
           <WorkspaceRegistrySurface
-            fixtureMode={consoleDevMode}
+            fixtureMode={fixtureMode}
             onLifecycle={setLifecycleRecord}
             onPromote={setPromotionCandidate}
             runtime={runtime}
@@ -144,7 +177,7 @@ export function WorkspaceRegistryWorkspace({
       {promotionCandidate ? (
         <WorkspaceRegistryPromotionWorkflow
           candidate={promotionCandidate}
-          fixtureMode={consoleDevMode}
+          fixtureMode={fixtureMode}
           onClose={() => {
             runtime.reset();
             setPromotionCandidate(null);
@@ -154,7 +187,7 @@ export function WorkspaceRegistryWorkspace({
       ) : null}
       {lifecycleRecord ? (
         <WorkspaceRegistryLifecycleWorkflow
-          fixtureMode={consoleDevMode}
+          fixtureMode={fixtureMode}
           onClose={() => {
             runtime.reset();
             setLifecycleRecord(null);

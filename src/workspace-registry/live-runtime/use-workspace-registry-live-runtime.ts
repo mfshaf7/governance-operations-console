@@ -32,6 +32,9 @@ export class WorkspaceRegistryClientError extends Error {
 }
 
 export function useWorkspaceRegistryLiveRuntime() {
+  const [mode, setMode] = useState<
+    "disconnected-preview" | "live" | "loading" | "unavailable"
+  >("loading");
   const [snapshot, setSnapshot] = useState<WorkspaceRegistrySnapshot | null>(null);
   const [preparation, setPreparation] =
     useState<WorkspaceInventoryPreparation | null>(null);
@@ -44,16 +47,28 @@ export function useWorkspaceRegistryLiveRuntime() {
   const [pending, setPending] = useState(false);
 
   const load = useCallback(async () => {
-    return run(async () => {
-      const next = assertWorkspaceRegistrySnapshot(
-        await jsonRequest("/api/workspace-registry", {
-          cache: "no-store",
-          method: "GET",
-        }),
+    try {
+      return await run(async () => {
+        const next = assertWorkspaceRegistrySnapshot(
+          await jsonRequest("/api/workspace-registry", {
+            cache: "no-store",
+            method: "GET",
+          }),
+        );
+        setMode("live");
+        setSnapshot(next);
+        return next;
+      });
+    } catch (caught) {
+      const failure = normalizeError(caught);
+      setSnapshot(null);
+      setMode(
+        failure.code === "workspace_registry_live_mode_required"
+          ? "disconnected-preview"
+          : "unavailable",
       );
-      setSnapshot(next);
-      return next;
-    });
+      throw failure;
+    }
   }, []);
 
   const prepare = useCallback(async (candidate: WorkspaceRegistryCandidate) => {
@@ -295,6 +310,7 @@ export function useWorkspaceRegistryLiveRuntime() {
     lifecyclePreparation,
     lifecycleResult,
     load,
+    mode,
     pending,
     preparation,
     prepare,

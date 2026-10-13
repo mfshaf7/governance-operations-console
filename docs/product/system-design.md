@@ -295,6 +295,10 @@ capability-owned server modules own host or provider interaction.
 
 Fixture truth lives with the capability that owns its meaning. The Console must
 not keep a whole-console fixture object or a generic shared-data warehouse.
+Fixture selection is also authority-gated: only an explicit owner-confirmed
+`disconnected-preview` may project fixtures. A development/design query flag
+may select an approved preview scenario only inside that posture; it cannot
+override loading, configured-live, degraded, or unavailable owner truth.
 Operation Workbench selector identity comes from its typed registry and domain
 contracts. Completed domain fixture truth remains inside its domain. Command
 Center, Runtime Readiness, Agent Console, Lifecycle Transitions, and

@@ -20,6 +20,10 @@ import type {
 } from "../console-architecture";
 import { openExternalConsoleRoute } from "../console-integration/external-route";
 import {
+  resolveConsoleFixtureIsolation,
+  selectConsoleAuthorityProjection,
+} from "../console-integration/fixture-isolation/console-fixture-isolation";
+import {
   lifecycleTransitionProjectionFixtures,
   useLifecycleTransitionLiveRuntime,
 } from "../lifecycle-transitions";
@@ -71,15 +75,18 @@ export function useConsoleShellController() {
   });
   const lifecycleTransitionRuntime = useLifecycleTransitionLiveRuntime();
   const lifecycleTransitionSnapshot = lifecycleTransitionRuntime.snapshot;
+  const lifecycleFixtureIsolation = resolveConsoleFixtureIsolation({
+    mode: lifecycleTransitionSnapshot?.mode ?? null,
+    status: lifecycleTransitionSnapshot?.status ?? "loading",
+  });
   const lifecycleTransitions = useMemo(
     () =>
-      consoleDevMode ||
-      lifecycleTransitionSnapshot?.mode === "disconnected-preview"
-        ? lifecycleTransitionProjectionFixtures
-        : lifecycleTransitionSnapshot?.status === "current"
-          ? lifecycleTransitionSnapshot.transitions
-          : [],
-    [consoleDevMode, lifecycleTransitionSnapshot],
+      selectConsoleAuthorityProjection({
+        decision: lifecycleFixtureIsolation,
+        fixture: lifecycleTransitionProjectionFixtures,
+        live: lifecycleTransitionSnapshot?.transitions ?? null,
+      }) ?? [],
+    [lifecycleFixtureIsolation, lifecycleTransitionSnapshot],
   );
   const activeComponentScenario = componentObservations.activeScenario;
   const activeResourceScenario =
@@ -87,15 +94,21 @@ export function useConsoleShellController() {
       (scenario) => scenario.id === resourceScenarioId,
     ) ?? resourceUsageScenarios[0];
   const attentionSnapshot = useCommandCenterAttention({
-    disconnectedPreview: consoleDevMode,
+    disconnectedPreview:
+      consoleDevMode && lifecycleFixtureIsolation.fixtureAllowed,
     lifecycleSnapshot: lifecycleTransitionSnapshot,
   });
   const workspacePulseSnapshot = useMemo(
     () =>
-      consoleDevMode
+      consoleDevMode && lifecycleFixtureIsolation.fixtureAllowed
         ? resolveWorkspacePulseFixture(pulseScenarioSelections)
         : projectWorkspacePulseFromAttention(attentionSnapshot),
-    [attentionSnapshot, consoleDevMode, pulseScenarioSelections],
+    [
+      attentionSnapshot,
+      consoleDevMode,
+      lifecycleFixtureIsolation.fixtureAllowed,
+      pulseScenarioSelections,
+    ],
   );
   const pulseSignals = workspacePulseSnapshot.signals;
   const systemMood = workspacePulseSnapshot.posture;

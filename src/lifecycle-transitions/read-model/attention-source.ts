@@ -10,6 +10,7 @@ import type { LifecycleTransitionLiveSnapshot } from "../live-runtime/lifecycle-
 import type { LifecycleTransitionNextActionCode } from "../model/lifecycle-transition-types.ts";
 import type { LifecycleTransitionProjection } from "./lifecycle-transition-projection-types.ts";
 import { selectLifecycleTransitionsRequiringAction } from "./lifecycle-transition-selectors.ts";
+import { resolveConsoleFixtureIsolation } from "../../console-integration/fixture-isolation/console-fixture-isolation.ts";
 
 const registration =
   consoleAttentionSourceRegistrations.lifecycleTransitions;
@@ -29,10 +30,11 @@ export function projectLifecycleTransitionAttentionSnapshot(
   snapshot: LifecycleTransitionLiveSnapshot | null,
   { allowSyntheticPreview = false }: { allowSyntheticPreview?: boolean } = {},
 ): ReturnType<ConsoleAttentionSource["getSnapshot"]> {
-  if (
-    allowSyntheticPreview ||
-    snapshot?.mode === "disconnected-preview"
-  ) {
+  const fixtureIsolation = resolveConsoleFixtureIsolation({
+    mode: snapshot?.mode ?? null,
+    status: snapshot?.status ?? "loading",
+  });
+  if (fixtureIsolation.fixtureAllowed) {
     const projectedAt = latestTransitionUpdate(
       lifecycleTransitionProjectionFixtures,
     );

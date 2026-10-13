@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "artifact_type": "console-operational-capability-consumer-binding",
+  "activation_ref": "openproject://work_packages/1279",
+  "authority": {
+    "contract_id": "workspace-governance.console-operational-capabilities.v1",
+    "contract_schema_version": 1,
+    "path": "contracts/console-operational-capabilities.yaml",
+    "repository": "workspace-governance",
+    "revision": "ae000f65c8348364e81ebdbf48cd9bc4231a26ea",
+    "sha256": "023c0ea832643f862e83c5b27bef3a6a0a04a441d86fb2ff8545475b065e887c"
+  },
+  "consumer": {
+    "repository": "governance-operations-console",
+    "boundary_module": "src/console-integration/fixture-isolation/console-fixture-isolation.ts"
+  },
+  "fixture_boundary": {
+    "allowed_modes": [
+      "unit-test",
+      "storybook",
+      "disconnected-preview"
+    ],
+    "fixture_completion_evidence_allowed": false,
+    "fixture_live_fallback_allowed": false,
+    "live_mode_source": "live-authority",
+    "live_owner_unavailable_behavior": "fail-closed-visible"
+  }
+}

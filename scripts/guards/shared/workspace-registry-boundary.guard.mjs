@@ -42,7 +42,9 @@ export const guard = {
     assertIncludes(failures, workspace, [
       "TerasFullscreenSurfaceFrame",
       "workspaceRegistryFixture",
-      "consoleDevMode ? workspaceRegistryFixture : runtime.snapshot",
+      "consoleDevMode && fixtureIsolation.fixtureAllowed",
+      "consoleActionExecutable",
+      "liveActionExecutable",
     ]);
     assertIncludes(failures, workflow, [
       "TerasWizardModal",
