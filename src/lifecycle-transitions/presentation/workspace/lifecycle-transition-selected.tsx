@@ -10,6 +10,9 @@ import {
 } from "@/teras";
 
 import type {
+  ConsoleSurfaceEntryIntent,
+} from "../../../console-architecture";
+import type {
   OperationWorkbenchPathLabel,
 } from "../../../operation-workbench/operation-workbench-domain-registry";
 import {
@@ -31,7 +34,10 @@ export function LifecycleTransitionSelected({
   onOpenWorkbenchSurface,
 }: {
   item: LifecycleTransitionOverviewItem | null;
-  onOpenWorkbenchSurface: (surfaceLabel: OperationWorkbenchPathLabel) => void;
+  onOpenWorkbenchSurface: (
+    surfaceLabel: OperationWorkbenchPathLabel,
+    focusIntent?: ConsoleSurfaceEntryIntent | null,
+  ) => void;
 }) {
   if (!item) {
     return (
@@ -43,9 +49,10 @@ export function LifecycleTransitionSelected({
 
   const ownerRoute = resolveLifecycleTransitionWorkbenchRoute({
     applicationRunRef: item.applicationRunRef,
-    nextOwnerRef: item.nextAction?.ownerRef ?? null,
+    nextAction: item.nextAction,
     sourceDomain: item.sourceDomain,
     sourceRecordId: item.sourceRecordId,
+    state: item.state,
     targetDomain: item.targetDomain,
     targetRecordRef: item.targetRecordRef,
     transitionId: item.transitionId,
@@ -70,7 +77,10 @@ export function LifecycleTransitionSelected({
               <TerasActionButton
                 emphasis="secondary"
                 onClick={() =>
-                  onOpenWorkbenchSurface(ownerRoute.surfaceLabel)
+                  onOpenWorkbenchSurface(
+                    ownerRoute.surfaceLabel,
+                    ownerRoute.entryIntent,
+                  )
                 }
               >
                 {ownerRoute.buttonLabel}
