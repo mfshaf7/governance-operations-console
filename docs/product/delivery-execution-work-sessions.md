@@ -48,6 +48,44 @@ Work-session reads and commands use a bounded 75-second server timeout because
 the local ART backend may perform sequential authoritative reads. Other OOS
 Console calls retain their shorter timeout.
 
+## Architecture Packet Authoring
+
+Execution Board exposes one `Architecture Packet` action beside direct work-item
+entry. It is the primary operator surface for the packet transition that must
+finish before architecture-bound source work starts.
+
+The workflow has three distinct steps:
+
+1. Author editable scope, exact repository revisions, architecture design,
+   conformance plan, and rationale. `Validate Draft` sends only those fields to
+   the same-origin Console route. OOS binds fresh ART truth, server-held
+   operator identity, current supersession, fingerprints, timestamps, custody
+   posture, and the content digest. The result is still a local candidate.
+2. Inspect the complete canonical candidate in the Console. `Approve Candidate`
+   re-authors the reviewed input with `architecture-ready`; changing any editor
+   field invalidates the candidate and requires fresh validation.
+3. `Persist Approved Packet` submits that exact OOS-authored candidate. OOS
+   rechecks caller, operator, ART snapshot, supersession, semantics, and digest;
+   WGCF issues durable custody; OOS projects the accepted reference to ART.
+
+`Inspect Current` reads the immutable packet and custody posture currently
+projected for one Delivery initiative. `Use as Starting Point` copies only its
+editable design fields into the editor; it does not copy operator authority,
+integrity, timestamps, or custody as new input.
+
+The Console performs an early completeness check for ownership, Landing Units,
+source topology, execution order, evidence handoffs, runtime boundaries, human
+gates, rollback and terminal conditions, conformance dimensions and cases, exact
+repository revisions, and the operator rationale. That check improves the
+operator experience but does not replace OOS validation against the canonical
+schema-v6 Workspace Governance contract and fresh ART topology.
+
+Disconnected preview is read-only for this workflow. It never creates or
+persists a fixture packet. Missing or malformed input, unavailable OOS, stale
+ART truth, contradictory topology, an unapproved decision, or failed WGCF
+custody remains visible as a blocked request. The Console does not retain a
+parallel packet ledger or report success from browser state.
+
 ## Operator Flow
 
 1. Select a Delivery package whose structured action intent identifies an
@@ -146,6 +184,10 @@ Implemented in source:
 - exact Landing Unit scope and whole-scope closeout result presentation
 - explicit disconnected preview and configured fail-closed behavior
 - Execution Board interaction without direct browser source authority
+- current Architecture Packet inspection plus complete author, validate,
+  operator-approve, and persist controls through OOS and WGCF
+- visible completeness blockers and exact local-candidate review without
+  fixture fallback or browser-supplied authority fields
 
 Still separate from the work-session adapter:
 

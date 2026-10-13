@@ -76,6 +76,7 @@ import {
 } from "../../../work-model/execution/execution-change-operation.ts";
 import { ExecutionCloseoutModal } from "./action-session/closeout/execution-closeout-modal.tsx";
 import type { CatalogDeliveryLinkTarget } from "../../../live-runtime/catalog-live-types.ts";
+import { ArchitecturePacketAuthoringModal } from "./architecture-packet/architecture-packet-authoring-modal.tsx";
 
 export type ExecutionTreeEditState = {
   active: boolean;
@@ -139,6 +140,7 @@ export function DeliveryExecutionBoard({
   const [workSessionTargetDialogOpen, setWorkSessionTargetDialogOpen] =
     useState(false);
   const [closeoutOpen, setCloseoutOpen] = useState(false);
+  const [architecturePacketOpen, setArchitecturePacketOpen] = useState(false);
 
   useEffect(() => {
     if (
@@ -337,6 +339,13 @@ export function DeliveryExecutionBoard({
     : [];
   const boardHeaderActions = (
     <TerasActionRow spacing="tight">
+      <TerasActionButton
+        disabled={Boolean(treeEditActive)}
+        emphasis="secondary"
+        onClick={() => setArchitecturePacketOpen(true)}
+      >
+        Architecture Packet
+      </TerasActionButton>
       <TerasActionButton
         disabled={Boolean(treeEditActive)}
         emphasis="secondary"
@@ -724,6 +733,17 @@ export function DeliveryExecutionBoard({
           }}
           runtime={workSessionRuntime}
           target={workSessionTarget}
+        />
+      ) : null}
+      {architecturePacketOpen ? (
+        <ArchitecturePacketAuthoringModal
+          defaultDeliveryId={
+            selectedPackage?.legacy_epic_id
+              ? `delivery-${selectedPackage.legacy_epic_id}`
+              : null
+          }
+          defaultWorkItemId={selectedWorkItemId}
+          onClose={() => setArchitecturePacketOpen(false)}
         />
       ) : null}
       <ExecutionWorkSessionTargetDialog
