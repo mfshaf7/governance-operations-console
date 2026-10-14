@@ -48,8 +48,8 @@ application or completion.
 | Prototype to Workspace Intake | Prototype establishes a new durable repo, product, or component boundary; the originating workflow submits a generic entrant packet. | not-started | partial | missing |
 | Delivery to Workspace Intake | Delivery discovers a new durable repo, product, or component boundary; the originating workflow submits a generic entrant packet. | implemented | implemented | connected |
 | Workspace Intake to Active Inventory | An admitted entrant satisfies type-specific requirements; one governed change removes it from intake and adds it to exactly one active inventory contract. | implemented | implemented | connected |
-| Active Product to Portfolio | An active `products.yaml` product has a product-owner publication packet and operating evidence; Portfolio projects one policy-permitted listing. | prototype-only | missing | missing |
-| Existing Product Update to Portfolio | Delivery closeout or a release produces outcome evidence against an active product ref; the product owner assembles the versioned publication packet and the existing listing updates without duplicate identity. | partial | missing | missing |
+| Active Product to Portfolio | An active `products.yaml` identity appears once in canonical Portfolio Products continuity; publication still requires a product-owner packet and operating evidence before a policy-permitted listing exists. | implemented | implemented | connected |
+| Existing Product Update to Portfolio | Registry lifecycle and non-terminal readiness changes update the same canonical Products identity; release or listing changes still require their owning evidence and workflow. | implemented | implemented | connected |
 
 ## Workspace Intake Split
 

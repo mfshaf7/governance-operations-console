@@ -162,6 +162,9 @@ The Workspace Intake boundary is documented in
 [`docs/product/workspace-intake-live-integration.md`](docs/product/workspace-intake-live-integration.md).
 The Workspace Registry boundary is documented in
 [`docs/product/workspace-registry-live-integration.md`](docs/product/workspace-registry-live-integration.md).
+The shared Registry and Product Portfolio canonical read boundary is documented
+in
+[`docs/product/workspace-continuity-live-integration.md`](docs/product/workspace-continuity-live-integration.md).
 The governed Product Publication boundary is documented in
 [`docs/product/product-publication-live-integration.md`](docs/product/product-publication-live-integration.md).
 That boundary also documents the separately activated Product Dashboard

@@ -13,6 +13,8 @@ import {
 
 import { workspaceRegistryFixture } from "../fixtures/workspace-registry.fixture";
 import { useWorkspaceRegistryLiveRuntime } from "../live-runtime/use-workspace-registry-live-runtime";
+import { useWorkspaceContinuityRuntime } from "../../workspace-continuity/live-runtime/use-workspace-continuity-runtime";
+import { reconcileWorkspaceRegistryContinuity } from "../../workspace-continuity/workspace-registry-continuity";
 import type {
   WorkspaceRegistryCandidate,
   WorkspaceRegistryRecord,
@@ -37,23 +39,47 @@ export function WorkspaceRegistryWorkspace({
   onClose: () => void;
 }) {
   const runtime = useWorkspaceRegistryLiveRuntime();
+  const continuity = useWorkspaceContinuityRuntime();
   const [view, setView] = useState<RegistryView>("registry");
   const [promotionCandidate, setPromotionCandidate] =
     useState<WorkspaceRegistryCandidate | null>(null);
   const [lifecycleRecord, setLifecycleRecord] =
     useState<WorkspaceRegistryRecord | null>(null);
   const appliedEntryIntentRef = useRef<string | null>(null);
+  const reconciliation = useMemo(() => {
+    if (!continuity.projection || !runtime.snapshot) {
+      return { error: null, snapshot: null };
+    }
+    try {
+      return {
+        error: null,
+        snapshot: reconcileWorkspaceRegistryContinuity(
+          continuity.projection,
+          runtime.snapshot,
+        ),
+      };
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : "Registry continuity is contradictory.",
+        snapshot: null,
+      };
+    }
+  }, [continuity.projection, runtime.snapshot]);
+  const combinedMode =
+    continuity.mode === "loading" || runtime.mode === "loading"
+      ? null
+      : continuity.mode === "live" && runtime.mode === "live" && reconciliation.snapshot
+        ? "live"
+        : continuity.mode === "disconnected-preview" &&
+            runtime.mode === "disconnected-preview"
+          ? "disconnected-preview"
+          : "unavailable";
   const fixtureIsolation = resolveConsoleFixtureIsolation({
-    mode:
-      runtime.mode === "loading"
-        ? null
-        : runtime.mode === "unavailable"
-          ? "unavailable"
-          : runtime.mode,
+    mode: combinedMode,
     status:
-      runtime.mode === "loading"
+      combinedMode === null
         ? "loading"
-        : runtime.mode === "unavailable"
+        : combinedMode === "unavailable"
           ? "unavailable"
           : "current",
   });
@@ -65,16 +91,17 @@ export function WorkspaceRegistryWorkspace({
   const snapshot = fixtureMode
     ? workspaceRegistryFixture
     : liveActionExecutable
-      ? runtime.snapshot
+      ? reconciliation.snapshot
       : null;
+  const availabilityError = reconciliation.error ?? continuity.error?.message ?? runtime.error?.message ?? null;
   const owners = useMemo(
     () => new Set(snapshot?.records.flatMap((record) => record.owner_refs) ?? []).size,
     [snapshot],
   );
 
   useEffect(() => {
-    void runtime.load().catch(() => undefined);
-  }, [runtime.load]);
+    void Promise.allSettled([continuity.load(), runtime.load()]);
+  }, [continuity.load, runtime.load]);
 
   useEffect(() => {
     if (!entryIntent || !snapshot) return;
@@ -144,8 +171,8 @@ export function WorkspaceRegistryWorkspace({
                   stateLabel: fixtureMode
                     ? "Fixture"
                     : snapshot
-                      ? "OOS"
-                      : runtime.mode === "loading"
+                      ? "WGCF + OOS"
+                      : combinedMode === null
                         ? "Loading"
                         : "Unavailable",
                   tone: fixtureMode ? "info" : snapshot ? "ok" : "danger",
@@ -165,10 +192,13 @@ export function WorkspaceRegistryWorkspace({
           }
         >
           <WorkspaceRegistrySurface
+            availabilityError={availabilityError}
             fixtureMode={fixtureMode}
             onLifecycle={setLifecycleRecord}
             onPromote={setPromotionCandidate}
-            runtime={runtime}
+            onRetry={() => {
+              void Promise.allSettled([continuity.load(), runtime.load()]);
+            }}
             snapshot={snapshot}
             view={view}
           />

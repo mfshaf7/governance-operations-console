@@ -27,6 +27,9 @@ const completeEnv = {
   OOS_BASE_URL: "http://127.0.0.1:8080/",
   OOS_CALLER_ID: "private-caller-987",
   OOS_CALLER_SECRET: "test-secret-never-project",
+  WGCF_BASE_URL: "http://127.0.0.1:8090/",
+  WGCF_CALLER_ID: "console-history-reader",
+  WGCF_CALLER_SECRET: "wgcf-test-secret-never-project",
 };
 
 test("runtime configuration normalizes one OOS connection", () => {
@@ -247,6 +250,10 @@ test("capability projection distinguishes disconnected, invalid, and live state"
   assert.equal(live.mode, "live");
   assert.equal(
     live.capabilities.find(({ id }) => id === "proposal")?.mutation.state,
+    "available",
+  );
+  assert.equal(
+    live.capabilities.find(({ id }) => id === "workspace-registry")?.source.state,
     "available",
   );
   assert.equal(

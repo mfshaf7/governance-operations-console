@@ -1,6 +1,20 @@
 import type { ProductPortfolioReadModel } from "../../read-model/types/product-portfolio-fixture-types.ts";
 import type { TerasTone } from "@/teras";
 import type { OperationSurfaceStatusItem } from "@/domain-workspaces/operation-projections";
+import type { WorkspaceContinuityProjection } from "../../../../workspace-continuity/workspace-continuity-types.ts";
+import { productContinuitySummary } from "../surfaces/products/product-continuity-view-model.ts";
+
+export type ProductContinuityWorkspaceProjection = Readonly<{
+  fixtureMode: boolean;
+  mode: "disconnected-preview" | "live" | "loading" | "unavailable";
+  projection: WorkspaceContinuityProjection | null;
+}>;
+
+const disconnectedFixtureContinuity: ProductContinuityWorkspaceProjection = {
+  fixtureMode: true,
+  mode: "disconnected-preview",
+  projection: null,
+};
 
 export type ProductPortfolioWorkspaceSurfaceId =
   "publication" | "curation" | "products";
@@ -37,6 +51,7 @@ export const productPortfolioWorkspaceSurfaces: ProductPortfolioWorkspaceSurface
 export function productPortfolioWorkspaceNavMeta(
   readModel: ProductPortfolioReadModel,
   surfaceId: ProductPortfolioWorkspaceSurfaceId,
+  continuity: ProductContinuityWorkspaceProjection = disconnectedFixtureContinuity,
 ) {
   switch (surfaceId) {
     case "publication":
@@ -47,7 +62,11 @@ export function productPortfolioWorkspaceNavMeta(
           .length,
       );
     case "products":
-      return String(readModel.summary.listed);
+      return String(
+        continuity.fixtureMode
+          ? readModel.summary.listed
+          : continuity.projection?.products.length ?? 0,
+      );
   }
 }
 
@@ -67,6 +86,7 @@ export function productPortfolioWorkspaceSummaryTitle(
 export function productPortfolioWorkspaceSummaryMetrics(
   readModel: ProductPortfolioReadModel,
   surfaceId: ProductPortfolioWorkspaceSurfaceId,
+  continuity: ProductContinuityWorkspaceProjection = disconnectedFixtureContinuity,
 ) {
   switch (surfaceId) {
     case "publication":
@@ -135,6 +155,18 @@ export function productPortfolioWorkspaceSummaryMetrics(
         },
       ];
     case "products":
+      if (!continuity.fixtureMode) {
+        const summary = productContinuitySummary(
+          continuity.projection?.products ?? [],
+        );
+        return [
+          { id: "managed", label: "Managed", tone: "info" as const, value: String(summary.managed) },
+          { id: "active", label: "Active", tone: "ok" as const, value: String(summary.active) },
+          { id: "suspended", label: "Suspended", tone: "warn" as const, value: String(summary.suspended) },
+          { id: "retired", label: "Retired", tone: "muted" as const, value: String(summary.retired) },
+          { id: "readiness-attention", label: "Readiness attention", tone: "warn" as const, value: String(summary.readinessAttention) },
+        ];
+      }
       return [
         {
           id: "managed",
@@ -176,7 +208,50 @@ export function productPortfolioWorkspaceSummaryMetrics(
 
 export function productPortfolioWorkspaceStatuses(
   readModel: ProductPortfolioReadModel,
+  continuity: ProductContinuityWorkspaceProjection = disconnectedFixtureContinuity,
+  surfaceId: ProductPortfolioWorkspaceSurfaceId = "products",
 ): OperationSurfaceStatusItem[] {
+  if (surfaceId === "products" && !continuity.fixtureMode) {
+    const projection = continuity.projection;
+    const readinessAttention = productContinuitySummary(
+      projection?.products ?? [],
+    ).readinessAttention;
+    return [
+      {
+        detail: projection
+          ? "Canonical Workspace Governance product state projected read-only through WGCF."
+          : continuity.mode === "loading"
+            ? "Canonical product continuity is loading."
+            : "Canonical product continuity is unavailable; fixtures are not used as fallback.",
+        facts: [
+          { label: "Mode", value: projection ? "Live authority" : continuity.mode },
+          { label: "Products", value: String(projection?.products.length ?? 0) },
+        ],
+        id: "source-mode",
+        label: "Source Mode",
+        state: projection ? "current" : continuity.mode === "loading" ? "syncing" : "offline",
+      },
+      {
+        detail: "Registry and Portfolio lifecycle identity is bound to one continuity projection.",
+        facts: [
+          { label: "Authority", value: projection?.authority.owner_repo ?? "Unavailable" },
+          { label: "Revision", value: projection ? shortRevision(projection.authority.revision) : "Unavailable" },
+        ],
+        id: "projection",
+        label: "Continuity",
+        state: projection ? "current" : "offline",
+      },
+      {
+        detail: readinessAttention
+          ? "One or more products have stale or unavailable non-terminal publication readiness."
+          : "Projected publication readiness is current for every managed product.",
+        facts: [{ label: "Attention", value: String(readinessAttention) }],
+        id: "readiness",
+        label: "Readiness",
+        state: readinessAttention ? "stale" : projection ? "current" : "offline",
+      },
+    ];
+  }
   const runtimeAttention = readModel.workspaceStatus.degradedProducts > 0;
   const stale = readModel.workspaceStatus.staleProducts > 0;
 
@@ -237,6 +312,10 @@ export function productPortfolioWorkspaceStatuses(
       state: stale ? "stale" : "current",
     },
   ];
+}
+
+function shortRevision(value: string) {
+  return value.slice(0, 12);
 }
 
 function listedScopeCount(

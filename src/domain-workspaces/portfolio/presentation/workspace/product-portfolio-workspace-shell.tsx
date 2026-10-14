@@ -21,6 +21,7 @@ import {
   productPortfolioWorkspaceSummaryMetrics,
   productPortfolioWorkspaceSummaryTitle,
   productPortfolioWorkspaceSurfaces,
+  type ProductContinuityWorkspaceProjection,
   type ProductPortfolioWorkspaceSurfaceId,
 } from "./product-portfolio-workspace-view-model.ts";
 
@@ -30,6 +31,7 @@ export function ProductPortfolioWorkspaceShell({
   contract,
   onActiveSurfaceChange,
   onClose,
+  productContinuity,
   readModel,
 }: {
   activeSurfaceId: ProductPortfolioWorkspaceSurfaceId;
@@ -39,6 +41,7 @@ export function ProductPortfolioWorkspaceShell({
     surfaceId: ProductPortfolioWorkspaceSurfaceId,
   ) => void;
   onClose: () => void;
+  productContinuity: ProductContinuityWorkspaceProjection;
   readModel: ProductPortfolioReadModel;
 }) {
   return (
@@ -68,7 +71,7 @@ export function ProductPortfolioWorkspaceShell({
                 data-product-portfolio-section={surface.id}
                 key={surface.id}
                 kicker={surface.kicker}
-                meta={productPortfolioWorkspaceNavMeta(readModel, surface.id)}
+                meta={productPortfolioWorkspaceNavMeta(readModel, surface.id, productContinuity)}
                 onClick={() => onActiveSurfaceChange(surface.id)}
                 title={surface.title}
                 tone={surface.tone}
@@ -82,9 +85,10 @@ export function ProductPortfolioWorkspaceShell({
             metrics={productPortfolioWorkspaceSummaryMetrics(
               readModel,
               activeSurfaceId,
+              productContinuity,
             )}
             statuses={projectOperationSurfaceStatusItems(
-              productPortfolioWorkspaceStatuses(readModel),
+              productPortfolioWorkspaceStatuses(readModel, productContinuity, activeSurfaceId),
             )}
             title={productPortfolioWorkspaceSummaryTitle(activeSurfaceId)}
           />

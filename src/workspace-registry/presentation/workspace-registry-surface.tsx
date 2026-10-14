@@ -19,7 +19,6 @@ import {
   TerasStatusPill,
 } from "@/teras";
 
-import type { WorkspaceRegistryLiveRuntime } from "../live-runtime/use-workspace-registry-live-runtime";
 import type {
   WorkspaceRegistryCandidate,
   WorkspaceRegistryKind,
@@ -31,17 +30,19 @@ type RegistryView = "eligible" | "registry";
 type KindFilter = "all" | WorkspaceRegistryKind;
 
 export function WorkspaceRegistrySurface({
+  availabilityError,
   fixtureMode,
   onLifecycle,
   onPromote,
-  runtime,
+  onRetry,
   snapshot,
   view,
 }: {
+  availabilityError: string | null;
   fixtureMode: boolean;
   onLifecycle: (record: WorkspaceRegistryRecord) => void;
   onPromote: (candidate: WorkspaceRegistryCandidate) => void;
-  runtime: WorkspaceRegistryLiveRuntime;
+  onRetry: () => void;
   snapshot: WorkspaceRegistrySnapshot | null;
   view: RegistryView;
 }) {
@@ -67,14 +68,14 @@ export function WorkspaceRegistrySurface({
       <TerasPanelStack fill="last">
         <TerasPanel fit="content" treatment="neutral">
           <TerasPanelHeader
-            description={runtime.error?.message ?? "Reading the canonical Workspace Inventory projection through OOS."}
+            description={availabilityError ?? "Reconciling canonical Workspace Inventory projections from WGCF and OOS."}
             kicker="Workspace Registry"
-            statusLabel={runtime.error ? "Unavailable" : "Loading"}
-            statusTone={runtime.error ? "danger" : "info"}
-            title={runtime.error ? "Registry unavailable" : "Loading registry"}
+            statusLabel={availabilityError ? "Unavailable" : "Loading"}
+            statusTone={availabilityError ? "danger" : "info"}
+            title={availabilityError ? "Registry unavailable" : "Loading registry"}
           />
-          {runtime.error ? (
-            <TerasActionButton emphasis="secondary" onClick={() => void runtime.load()}>
+          {availabilityError ? (
+            <TerasActionButton emphasis="secondary" onClick={onRetry}>
               Retry Registry
             </TerasActionButton>
           ) : null}

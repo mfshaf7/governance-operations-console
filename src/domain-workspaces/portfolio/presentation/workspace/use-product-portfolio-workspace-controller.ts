@@ -23,6 +23,8 @@ import type { ProductPortfolioEntry } from "@/domain-workspaces/portfolio/domain
 import type { ProductListingCommand } from "../../work-model/listing/product-listing-types.ts";
 import { useProductPublicationLiveRuntime } from "../../live-runtime/use-product-publication-live-runtime.ts";
 import { useProductMaintenanceLiveRuntime } from "../../live-runtime/use-product-maintenance-live-runtime.ts";
+import { useWorkspaceContinuityRuntime } from "../../../../workspace-continuity/live-runtime/use-workspace-continuity-runtime.ts";
+import { resolveConsoleFixtureIsolation } from "../../../../console-integration/fixture-isolation/console-fixture-isolation.ts";
 import {
   governedIntentFromPortfolioDecision,
   portfolioSubmissionFromGovernedResult,
@@ -36,16 +38,34 @@ import {
 import type { ProductPortfolioWorkspaceSurfaceId } from "./product-portfolio-workspace-view-model.ts";
 
 export function useProductPortfolioWorkspaceController({
+  consoleDevMode,
   entryIntent = null,
 }: {
+  consoleDevMode: boolean;
   entryIntent?: ConsoleSurfaceEntryIntent | null;
-} = {}) {
+}) {
   const runtimeProjection = useSyncExternalStore(
     subscribeProductPortfolioRuntimeProjection,
     getProductPortfolioRuntimeProjectionSnapshot,
     getProductPortfolioRuntimeProjectionSnapshot,
   );
   const publicationLiveRuntime = useProductPublicationLiveRuntime();
+  const continuityRuntime = useWorkspaceContinuityRuntime();
+  const continuityIsolation = resolveConsoleFixtureIsolation({
+    mode:
+      continuityRuntime.mode === "loading"
+        ? null
+        : continuityRuntime.mode === "unavailable"
+          ? "unavailable"
+          : continuityRuntime.mode,
+    status:
+      continuityRuntime.mode === "loading"
+        ? "loading"
+        : continuityRuntime.mode === "unavailable"
+          ? "unavailable"
+          : "current",
+  });
+  const productFixtureMode = consoleDevMode && continuityIsolation.fixtureAllowed;
   const effectiveProjection = useMemo(
     () =>
       projectProductPortfolioEffectiveProjection({
@@ -60,6 +80,9 @@ export function useProductPortfolioWorkspaceController({
   const [dashboardProductId, setDashboardProductId] = useState<string | null>(
     null,
   );
+  const [focusedContinuityProductId, setFocusedContinuityProductId] = useState<
+    string | null
+  >(null);
   const [focusedCurationProductId, setFocusedCurationProductId] = useState<
     string | null
   >(null);
@@ -67,10 +90,11 @@ export function useProductPortfolioWorkspaceController({
     string | null
   >(null);
   const appliedEntryIntentRef = useRef<string | null>(null);
-  const dashboardEntrySource =
-    readModel.entries.find(
-      (entry) => entry.identity.productId === dashboardProductId,
-    ) ?? null;
+  const dashboardEntrySource = productFixtureMode
+    ? readModel.entries.find(
+        (entry) => entry.identity.productId === dashboardProductId,
+      ) ?? null
+    : null;
   const dashboardHistoryEvents = dashboardProductId
     ? (readModel.historyByProductId[dashboardProductId] ?? [])
     : [];
@@ -85,6 +109,14 @@ export function useProductPortfolioWorkspaceController({
       dashboardPublicationReceipt?.authorityEvidence?.requestId ??
       null,
   );
+  useEffect(() => {
+    void continuityRuntime.load().catch(() => undefined);
+  }, [continuityRuntime.load]);
+  useEffect(() => {
+    if (!productFixtureMode) {
+      setDashboardProductId(null);
+    }
+  }, [productFixtureMode]);
   const dashboardEntry = useMemo(() => {
     if (!dashboardEntrySource || maintenanceLiveRuntime.mode?.mode !== "live") {
       return dashboardEntrySource;
@@ -148,6 +180,15 @@ export function useProductPortfolioWorkspaceController({
   }, [entryIntent, readModel]);
 
   function openProduct(entry: ProductPortfolioEntry) {
+    if (!productFixtureMode) {
+      const canonicalProduct = continuityRuntime.projection?.products.find(
+        (product) => product.product_id === entry.identity.productId,
+      );
+      setDashboardProductId(null);
+      setFocusedContinuityProductId(canonicalProduct?.product_id ?? null);
+      setActiveSurfaceId("products");
+      return;
+    }
     setDashboardProductId(entry.identity.productId);
   }
 
@@ -181,6 +222,16 @@ export function useProductPortfolioWorkspaceController({
       case "external":
         return openExternalConsoleRoute(route.href);
       case "product-dashboard": {
+        if (!productFixtureMode) {
+          const product = continuityRuntime.projection?.products.find(
+            (candidate) => candidate.product_id === route.productId,
+          );
+          if (!product) return false;
+          setDashboardProductId(null);
+          setFocusedContinuityProductId(product.product_id);
+          setActiveSurfaceId("products");
+          return true;
+        }
         const entry = readModel.entries.find(
           (candidate) => candidate.identity.productId === route.productId,
         );
@@ -245,6 +296,7 @@ export function useProductPortfolioWorkspaceController({
     },
     decisionReceipts: effectiveProjection.publicationReceipts,
     focusedCurationProductId,
+    focusedContinuityProductId,
     focusedPublicationProductId,
     listingReceipts: effectiveProjection.listingReceipts,
     openCuration,
@@ -256,6 +308,19 @@ export function useProductPortfolioWorkspaceController({
       error: publicationLiveRuntime.error,
       mode: publicationLiveRuntime.mode,
       pending: publicationLiveRuntime.pending,
+    },
+    productContinuity: {
+      error: continuityRuntime.error?.message ?? null,
+      fixtureMode: productFixtureMode,
+      loading: continuityRuntime.mode === "loading",
+      mode: continuityRuntime.mode,
+      products: continuityIsolation.liveAuthorityAllowed
+        ? continuityRuntime.projection?.products ?? null
+        : null,
+      projection: continuityIsolation.liveAuthorityAllowed
+        ? continuityRuntime.projection
+        : null,
+      reload: continuityRuntime.load,
     },
     readModel,
     resolveRoute,

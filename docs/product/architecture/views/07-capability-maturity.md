@@ -87,7 +87,10 @@ All capabilities and transitions in this view are `approved-target`.
 - Complete the remaining Repository and Prototype source-candidate handoffs
   into the implemented generic Workspace Intake adapter.
 - Add Workspace Prototype Studio registry and graduation adapters.
-- Add Platform and Security projections and product-specific release adapters.
+- Commission the source-complete Registry/Portfolio continuity composition only
+  after exact-revision Security acceptance and Platform activation.
+- Add remaining Platform, Security, product-manifest, Delivery, and
+  product-specific release projections.
 - Activate the connected Agent Console path only after the exact Security gate
   and Platform operating proof.
 - Add federated identity, session, RBAC, named authority, and access-request

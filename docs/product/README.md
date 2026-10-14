@@ -118,6 +118,10 @@ current and future product changes.
 - `product-publication-live-integration.md`
   - Exact owner-manifest publication intent, server-bound Console identity,
     OOS/WGCF readiness, replay, and terminal owner-receipt projection.
+- `workspace-continuity-live-integration.md`
+  - One canonical WGCF Registry, Intake, lifecycle, and readiness projection
+    reconciled across Workspace Registry and Product Portfolio list/detail,
+    with OOS retaining command and terminal-publication authority.
 - `orchestration-and-environment-live-controls.md`
   - OOS-backed orchestration definitions, runs, controls, Platform-operation
     catalog, environment/release commands, destructive confirmation, retained

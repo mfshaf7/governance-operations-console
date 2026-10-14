@@ -14,7 +14,11 @@ canonical commands, or mutate inventory directly.
 
 The Console server:
 
-- reads the canonical registry projection through OOS
+- reads the canonical Registry, Intake, lifecycle, and product continuity
+  projection through WGCF
+- reconciles the OOS Registry projection against the same Workspace Governance
+  revision, identities, versions, digests, posture, lineage, and last mutation
+  before enabling Registry actions
 - requests a current promotion preparation for the selected entrant
 - requests current inventory and append-only history bindings for lifecycle work
 - re-reads registry and preparation before submission
@@ -35,20 +39,27 @@ The server-only adapter uses:
 - `OOS_BASE_URL`
 - `OOS_CALLER_ID` (defaults to `governance-operations-console`)
 - `OOS_CALLER_SECRET`
+- `WGCF_BASE_URL`
+- `WGCF_CALLER_ID` (defaults to `governance-operations-console`)
+- `WGCF_CALLER_SECRET`
 
 Missing or malformed configuration remains unavailable. Live failure never
 falls back to fixture data or a local mutation. `?dev=1` exposes a visibly
 fixture-backed, read-only surface for interface verification only.
 
-Runtime activation is separate from this source contract. It requires the
-admitted OOS service, Workspace Governance provider identity, Platform, and
-Security evidence. This adapter grants none of those authorities and remains
-fail-closed whenever they are unavailable.
+Runtime activation is separate from this source contract. The original OOS
+Registry command adapter was admitted under ART `#1209`. The shared continuity
+read path is source-complete under `#1295` and remains default-denied until
+Security `#1303` and Platform `#1291` accept and commission the exact WGCF,
+Console, OOS, and credential composition. This adapter grants none of those
+authorities and remains fail-closed whenever either live owner is unavailable
+or contradictory.
 
-The Console source adapter is reviewed under ART `#1209`. Routine live use
-remains blocked until Security `#1216` accepts the exact merged Console and OOS
-revisions, Platform `#1217` activates their bounded composition, and the
-operating proof `#1210` succeeds.
+The original OOS Registry command path retains its distinct commissioning
+evidence in Security `#1216`, Platform `#1217`, and operating proof `#1210`.
+
+The detailed cross-surface read contract is
+[`workspace-continuity-live-integration.md`](workspace-continuity-live-integration.md).
 
 ## Operator Flow
 

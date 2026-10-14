@@ -1,7 +1,8 @@
 # Product Portfolio Domain Contract
 
 Status: accepted managed-product contract with fixture-backed disconnected
-preview and a commissioned internal-only OOS/WGCF Product Publication adapter.
+preview, a source-complete canonical Products continuity adapter, and a
+commissioned internal-only OOS/WGCF Product Publication adapter.
 Broader audience postures are source-capable but inactive pending their current
 Security, OOS activation, and Platform commissioning sequence. Other owner,
 Platform, Security, Delivery, and release projections remain post-baseline
@@ -562,6 +563,14 @@ commands behind the shared operation runtime boundary, then derives one
 effective read model from immutable source projections and accepted local
 receipts. Receipt mismatches remain explicit reconciliation issues and do not
 alter the effective read model.
+
+The Products register and selected-product detail consume the authenticated
+WGCF Workspace continuity projection in live mode. They display canonical
+product identity, lifecycle, maturity, ownership, lineage, and non-terminal
+publication readiness without synthesizing absent listing, runtime, access,
+release, or Security facts. Workspace Registry reconciles the same projection
+against OOS before offering commands. Invalid, duplicated, drifting, or
+unavailable live truth fails closed without fixture fallback.
 
 The source-complete lifecycle-maintenance adapter is separately activated from
 the existing Product Publication path. It consumes the OOS maintenance

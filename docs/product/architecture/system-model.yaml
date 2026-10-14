@@ -505,6 +505,7 @@ capabilities:
       - workspace-governance-control-fabric
     canonical_records:
       - admitted-product
+      - workspace-continuity-projection
       - product-owned-portfolio-manifest
       - portfolio-listing-projection
       - oos-product-maintenance-projection
@@ -519,13 +520,16 @@ capabilities:
       delivery_phase: post-baseline
     operator_boundary:
       - Products, Publication, and Curation are separate peer surfaces.
+      - Products list and detail consume one canonical WGCF continuity projection shared with Workspace Registry identity and lifecycle.
+      - Missing listing, runtime, access, release, or Security facts remain unavailable; the Console does not synthesize them from continuity.
       - Publication requires canonical Workspace product identity and a versioned product-owner packet.
       - Prototype-local publication and listing receipts never imply a live canonical write.
       - Product Dashboard composes lifecycle, publication, and health without adding a fourth peer surface or taking owner authority.
       - Archive and restore require one confirmation plus exact current lifecycle and publication evidence.
     post_baseline_work:
+      - Commission the exact continuity adapter only after Security and Platform accept its merged source and credential boundary.
       - Commission lifecycle maintenance only after Security, OOS, and Platform gates.
-      - Add broader product registry, Security, Delivery, and release projections without copying their authority.
+      - Add remaining product-manifest, Security, Delivery, and release projections without copying their authority.
 
   orchestration:
     label: Orchestration
@@ -581,6 +585,7 @@ capabilities:
       - workspace-governance-control-fabric
       - operator-orchestration-service
     canonical_records:
+      - workspace-continuity-projection
       - workspace-governance/contracts/intake-register.yaml
       - workspace-governance/contracts/repos.yaml
       - workspace-governance/contracts/products.yaml
@@ -594,9 +599,10 @@ capabilities:
       live_adapter: connected
       delivery_phase: post-baseline
     operator_visibility: >
-      Active inventory and eligible entrants are separate views. Fixture mode
-      is read-only; live promotion requires current OOS preparation and merged
-      Workspace Governance receipt evidence.
+      Active inventory and eligible entrants are separate views. Live reads
+      reconcile one WGCF continuity projection against OOS Registry evidence;
+      fixture mode is read-only. Live promotion and lifecycle work require
+      current OOS preparation and merged Workspace Governance receipt evidence.
 
   dev-integration:
     label: Dev Integration
