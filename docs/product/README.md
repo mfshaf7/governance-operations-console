@@ -118,6 +118,10 @@ current and future product changes.
 - `product-publication-live-integration.md`
   - Exact owner-manifest publication intent, server-bound Console identity,
     OOS/WGCF readiness, replay, and terminal owner-receipt projection.
+- `orchestration-and-environment-live-controls.md`
+  - OOS-backed orchestration definitions, runs, controls, Platform-operation
+    catalog, environment/release commands, destructive confirmation, retained
+    recovery, and strict no-fixture live behavior.
 
 Retired planning and audit records have been removed from the active record
 set. If an implementation question is not answered by the files above, stop and

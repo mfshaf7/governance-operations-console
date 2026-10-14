@@ -4,15 +4,17 @@ Status: accepted Baseline Foundation behavior and architecture contract. All six
 behavior phases are complete: typed truth, the two peer views, Dev Integration,
 Governed Releases, prototype-local execution, and final verification are
 implemented and proven. The dedicated workspace-modal cutover and obsolete
-inline-host removal are complete. Live platform execution remains Live Integration and Deployment
-work.
+inline-host removal are complete. The Console-to-OOS live adapter now projects
+the Platform-operation catalog, retained operations, exact next action,
+controls, and receipts without fixture fallback. Platform owner composition,
+operating proof, and activation remain Live Integration and Deployment work.
 
 Architecture recommendation outcome:
 
 - `extend` the Governance Operations Console with one cross-surface
   Environment Lifecycle capability
-- `extend` Operator Orchestration Service only after baseline approval with
-  bounded environment-workflow APIs
+- `reuse` the admitted Operator Orchestration Service Platform-operation API
+  for bounded catalog, command, readback, retry, and cancellation behavior
 - `reuse` Workspace Governance profile and product contracts, Platform-owned
   runners and release workflows, WGCF readiness evaluation, Security evidence,
   and product-owned adapters
@@ -105,8 +107,10 @@ Live Integration and Deployment read adapters consume:
 - OOS operation and audit projections
 - Security-owned review and acceptance evidence
 
-Baseline Foundation uses structured synthetic fixtures shaped like those sources. Fixture
-data must identify provenance and must not imply live environment authority.
+Disconnected preview uses structured synthetic fixtures shaped like those
+sources. Fixture data must identify provenance and must not imply live
+environment authority. Configured live mode accepts only the OOS projection;
+missing or partial owner truth disables commands and never falls back.
 
 During Baseline Foundation, sibling owner repositories are read-only authority inputs.
 Governance Console work does not patch them. A mismatch discovered there is
@@ -520,17 +524,25 @@ Baseline Foundation performs no real platform mutation.
 
 ## Live Integration and Deployment: Post-Baseline Implementation
 
-Live Integration and Deployment is admitted and sequenced independently:
+The Console adapter steps below are complete; owner composition and operating
+acceptance remain independently sequenced:
 
-1. add read-only profile and product adapters
-2. add identity and server-side authorization
-3. admit profile-request submission
-4. admit dev-integration runtime commands
-5. admit promote-check receipts
-6. admit product-specific release workflow dispatch
-7. admit product runtime-lifecycle controls
-8. add reconciliation and receipt subscriptions
-9. remove each fixture fallback only after its live adapter is proven
+1. completed: project current Platform subjects and finite capabilities through
+   OOS
+2. completed: keep credentials, operator binding, intent digest, and exact
+   approval construction server-side
+3. completed: submit finite profile, runtime, promote-check, release, and
+   runtime-lifecycle command families through one OOS contract
+4. completed: project retained operation state, exact next action, retry,
+   cancellation, events, and terminal receipts
+5. completed: suppress fixtures in configured live, partial, loading, and
+   unavailable postures while retaining readable failed history
+6. pending: commission the Platform owner catalog and command/readback/control
+   routes
+7. pending: prove restart, lost-response, reconciliation, and terminal receipt
+   behavior in the composed runtime
+8. pending: pass exact-revision Security acceptance and fixture-free
+   end-to-end proof
 
 Each action family can fall back to read-only projection without corrupting
 canonical records.

@@ -545,8 +545,8 @@ capabilities:
     design_status: approved-target
     implementation:
       console: implemented
-      backend_support: partial
-      live_adapter: missing
+      backend_support: implemented
+      live_adapter: partial
       delivery_phase: post-baseline
     post_baseline_work:
       - Extend OOS with definition catalog, run projection, run control, and correlation.
@@ -617,8 +617,8 @@ capabilities:
     design_status: approved-target
     implementation:
       console: implemented
-      backend_support: implemented
-      live_adapter: missing
+      backend_support: partial
+      live_adapter: connected
       delivery_phase: post-baseline
 
   governed-releases:
@@ -641,7 +641,7 @@ capabilities:
     implementation:
       console: implemented
       backend_support: partial
-      live_adapter: missing
+      live_adapter: connected
       delivery_phase: post-baseline
 
   workspace-intake:
@@ -1026,9 +1026,9 @@ transitions:
     target_completion: OOS exposes one immutable active definition version.
     design_status: approved-target
     implementation:
-      console: prototype-only
-      backend_support: missing
-      live_adapter: missing
+      console: partial
+      backend_support: implemented
+      live_adapter: partial
       delivery_phase: post-baseline
 
   orchestration-run-execution:
@@ -1045,9 +1045,9 @@ transitions:
     target_completion: The durable adapter returns a reconciled final receipt and source-domain projection.
     design_status: approved-target
     implementation:
-      console: prototype-only
-      backend_support: missing
-      live_adapter: missing
+      console: partial
+      backend_support: implemented
+      live_adapter: partial
       delivery_phase: post-baseline
 
   dev-integration-profile-request:
@@ -1064,9 +1064,9 @@ transitions:
     target_completion: An admitted active profile and owner commands exist; profile activation does not imply stage.
     design_status: approved-target
     implementation:
-      console: prototype-only
+      console: implemented
       backend_support: partial
-      live_adapter: missing
+      live_adapter: connected
       delivery_phase: post-baseline
 
   governed-release-operation:
@@ -1083,9 +1083,9 @@ transitions:
     target_completion: Product and platform projections reconcile with an immutable operation receipt.
     design_status: approved-target
     implementation:
-      console: prototype-only
+      console: implemented
       backend_support: partial
-      live_adapter: missing
+      live_adapter: connected
       delivery_phase: post-baseline
 
   context-admission-to-agent:

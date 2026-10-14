@@ -30,7 +30,7 @@ export type OrchestrationRunControlId =
 export type OrchestrationRunSource = {
   authority: string;
   freshness: "current" | "stale" | "unknown";
-  mode: "prototype-local" | "synthetic-scenario";
+  mode: "live-authority" | "prototype-local" | "synthetic-scenario";
   observedAt: string;
   ref: string;
   schemaVersion: string;
@@ -118,6 +118,7 @@ export type OrchestrationRunEvent = {
 
 export type OrchestrationRunReceipt = {
   outcome:
+    | "cancelled_no_effect"
     | "cancelled_with_effects"
     | "completed"
     | "failed_no_effect"
@@ -131,8 +132,8 @@ export type OrchestrationRunReceipt = {
 export type OrchestrationRuntimeDiagnostics = {
   adapter: string;
   detail: string;
-  liveRuntimeClaimed: false;
-  state: "synthetic" | "unavailable";
+  liveRuntimeClaimed: boolean;
+  state: "online" | "synthetic" | "unavailable";
   worker: string;
 };
 
@@ -171,7 +172,8 @@ export type OrchestrationRunRecord = {
     | "failed-retry-available"
     | "healthy-wait"
     | "queued-no-effects"
-    | "running-possible-effects";
+    | "running-possible-effects"
+    | "live-authority";
   source: OrchestrationRunSource;
   sourceDomain: string;
   sourceProjectionRef: string;

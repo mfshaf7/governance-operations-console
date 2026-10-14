@@ -14,7 +14,7 @@ export type OrchestrationDefinitionLifecycle =
   | "suspended";
 
 export type OrchestrationDefinitionSourceMode =
-  "contract-derived" | "prototype-local" | "synthetic-scenario";
+  "contract-derived" | "live-authority" | "prototype-local" | "synthetic-scenario";
 
 export type OrchestrationDefinitionSource = {
   authority: string;
@@ -109,6 +109,7 @@ export type OrchestrationDefinitionRecord = {
     | "definition-ready"
     | "durable-qualification"
     | "retired-definition"
+    | "live-authority"
     | "suspended-definition"
     | "synchronous-qualification";
   securityClassification: string;

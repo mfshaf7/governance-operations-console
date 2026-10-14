@@ -77,6 +77,7 @@ const completedDomains = [
   }),
   operationDomain({
     domain: "orchestration",
+    optionalLayers: ["live-runtime", "server"],
     requiredLayers: [
       "domain",
       "local-runtime",
@@ -119,6 +120,7 @@ const allowedIndexPaths = new Set([
   "src/domain-workspaces/repository/presentation/workspace/index.ts",
   "src/domain-workspaces/orchestration/index.ts",
   "src/domain-workspaces/orchestration/presentation/workspace/index.ts",
+  "src/domain-workspaces/orchestration/server/index.ts",
   "src/domain-workspaces/model-operations/index.ts",
   "src/domain-workspaces/model-operations/presentation/workspace/index.ts",
   "src/domain-workspaces/model-operations/server/index.ts",

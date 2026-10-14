@@ -49,8 +49,9 @@ implementation.
   focused domain guards. Its backend request path remains unavailable, and the
   surface is not baseline-approved.
 - Orchestration is a completed current-shape fullscreen workspace with Home,
-  Definitions, and Runs. Its local command and receipt behavior remains
-  prototype-only and is not durable orchestration evidence.
+  Definitions, and Runs. Configured live mode now projects strict OOS
+  definition and run truth and routes only currently available controls;
+  disconnected preview remains explicitly local and is not durable evidence.
 - Lifecycle Transitions now uses its accepted dedicated full-viewport Teras
   workspace. Runtime Readiness and Agent Console have completed capability
   ownership and current-shape content and visual passes, but remain local

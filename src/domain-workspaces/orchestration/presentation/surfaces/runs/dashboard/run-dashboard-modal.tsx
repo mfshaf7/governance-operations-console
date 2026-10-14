@@ -22,7 +22,6 @@ import {
 import {
   getOrchestrationRunScenarioOverlay,
   getOrchestrationRunControlSimulationSnapshot,
-  simulateOrchestrationRunControl,
   subscribeOrchestrationRunControlSimulation,
 } from "../../../../local-runtime/run-control/run-control-simulator.ts";
 import {
@@ -35,7 +34,7 @@ import type {
   OrchestrationRunNode,
   OrchestrationRunRecord,
 } from "@/domain-workspaces/orchestration/domain/orchestration-run-types";
-import type { OrchestrationRunControlInput } from "../../../../work-model/run-control/run-control-types.ts";
+import type { OrchestrationRunControlInput, OrchestrationRunControlReceipt } from "../../../../work-model/run-control/run-control-types.ts";
 import { RunControlDialog } from "../dialogs/run-control-dialog.tsx";
 import { RunEvidenceDialog } from "../dialogs/run-evidence-dialog.tsx";
 import { RunNodeDialog } from "../dialogs/run-node-dialog.tsx";
@@ -56,9 +55,11 @@ import {
 } from "./run-dashboard-view-model.ts";
 
 export function RunDashboardModal({
+  onControl,
   onClose,
   record,
 }: {
+  onControl: (runId: string, input: OrchestrationRunControlInput) => Promise<OrchestrationRunControlReceipt>;
   onClose: () => void;
   record: OrchestrationRunRecord | null;
 }) {
@@ -98,12 +99,16 @@ export function RunDashboardModal({
   }
 
   const activeRecord = record;
-  const controlReceipts = receiptSnapshot.receipts.filter(
-    (receipt) => receipt.runId === activeRecord.runId,
-  );
-  const overlay =
-    simulationSnapshot.overlays[activeRecord.runId] ??
-    getOrchestrationRunScenarioOverlay(activeRecord.runId);
+  const disconnectedPreview = activeRecord.source.mode !== "live-authority";
+  const controlReceipts = disconnectedPreview
+    ? receiptSnapshot.receipts.filter(
+        (receipt) => receipt.runId === activeRecord.runId,
+      )
+    : [];
+  const overlay = disconnectedPreview
+    ? simulationSnapshot.overlays[activeRecord.runId] ??
+      getOrchestrationRunScenarioOverlay(activeRecord.runId)
+    : null;
   const condition = orchestrationRunConditionProjection(activeRecord);
   const availableControls = orchestrationRunAvailableControls(activeRecord);
   const inspectors = orchestrationRunEvidenceInspectorRows(
@@ -119,13 +124,7 @@ export function RunDashboardModal({
   }
 
   function applyControl(input: OrchestrationRunControlInput) {
-    const result = simulateOrchestrationRunControl({
-      input,
-      requestedAt: new Date().toISOString(),
-      run: activeRecord,
-    });
-
-    return result.receipt;
+    return onControl(activeRecord.runId, input);
   }
 
   return (

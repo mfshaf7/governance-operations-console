@@ -23,6 +23,7 @@ import {
   type OrchestrationWorkspaceSurfaceId,
 } from "./orchestration-workspace-view-model.ts";
 import { useOrchestrationWorkspaceController } from "./use-orchestration-workspace-controller.ts";
+import type { OrchestrationRunControlInput, OrchestrationRunControlReceipt } from "../../work-model/run-control/run-control-types.ts";
 
 export type OrchestrationWorkspaceProps = {
   contract: OperationWorkbenchDomainContract;
@@ -37,6 +38,7 @@ export function OrchestrationWorkspace({
 }: OrchestrationWorkspaceProps) {
   const {
     activeSurfaceId,
+    controlRun,
     readModel,
     setActiveSurfaceId,
     summaryMetrics,
@@ -91,6 +93,7 @@ export function OrchestrationWorkspace({
       >
         <OrchestrationWorkspaceSurfaceContent
           activeSurfaceId={activeSurfaceId}
+          controlRun={controlRun}
           entryIntent={entryIntent}
           onOpenSurface={setActiveSurfaceId}
           readModel={readModel}
@@ -102,11 +105,13 @@ export function OrchestrationWorkspace({
 
 function OrchestrationWorkspaceSurfaceContent({
   activeSurfaceId,
+  controlRun,
   entryIntent,
   onOpenSurface,
   readModel,
 }: {
   activeSurfaceId: OrchestrationWorkspaceSurfaceId;
+  controlRun: (runId: string, input: OrchestrationRunControlInput) => Promise<OrchestrationRunControlReceipt>;
   entryIntent: ConsoleSurfaceEntryIntent | null;
   onOpenSurface: (surfaceId: OrchestrationWorkspaceSurfaceId) => void;
   readModel: OrchestrationWorkspaceReadModel;
@@ -129,6 +134,7 @@ function OrchestrationWorkspaceSurfaceContent({
     case "runs":
       return (
         <OrchestrationRunsSurface
+          onControl={controlRun}
           focusRecordId={orchestrationFocusRecordId(entryIntent, "run")}
           records={readModel.runs}
         />

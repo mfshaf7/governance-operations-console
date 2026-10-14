@@ -54,6 +54,20 @@ references, or trusted correlation headers. This source implementation does
 not grant normal activation; Security Architecture review under ART #1181
 remains required.
 
+Orchestration and Environment Lifecycle now use same-origin Console routes over
+the authenticated OOS boundary. The browser supplies only a bounded selected
+capability or run-control intent and a generated retry identity. The server
+re-reads current capability truth, binds the configured operator, constructs
+the canonical digest and exact approval, and sends server-held OOS
+credentials. Strict response validation rejects unknown fields, identity
+mismatches, malformed nested state, incomplete terminal receipts, and
+contradictory owner bindings. Configured failure preserves readable retained
+records as unavailable or stale, disables mutation, and never falls back to
+fixtures. The Console has no direct Platform or Temporal credential and no
+direct shell, Kubernetes, Argo, GitHub, WGCF, or owner-service mutation path.
+Platform composition and the later exact-revision Security gate remain
+required before this source can claim operating activation.
+
 ## Authority Boundaries
 
 - Workspace Governance owns classification and cross-repo contract truth.

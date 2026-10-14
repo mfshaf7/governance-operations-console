@@ -7,6 +7,21 @@ Do not use deleted master-plan, old audit, or deep-design records as active
 guidance. When dated entries conflict, the later decision supersedes the
 earlier one.
 
+## 2026-10-15
+
+- Decision: configured Orchestration and Environment Lifecycle use OOS as the
+  sole browser-facing workflow authority. The Console re-reads current owner
+  truth, constructs bounded intent and approval bindings server-side, and
+  projects OOS state, next action, control availability, and receipts without
+  direct Platform or Temporal access.
+- Decision: disconnected preview remains a deliberate product mode, not a live
+  fallback. If a configured owner read fails, retained records may remain
+  visible only as stale or unavailable, every dependent control is disabled,
+  and no local simulator may manufacture success.
+- Decision: a lost response reuses the same pending command or control identity
+  during the browser session; reload recovery uses the retained OOS list rather
+  than inventing a replacement effect.
+
 ## 2026-07-30
 
 - Decision: `architecture/system-model.yaml` is the canonical cross-domain
