@@ -125,6 +125,43 @@ The Governance Activity surface may also display explicitly labelled
 events are not canonical owner evidence. Only source-projected owner readback
 may support a durable completion or mutation claim.
 
+## Environment Operation Readiness And Recovery
+
+Environment Lifecycle derives operating readiness only from the current OOS
+Platform-operation catalog plus retained OOS operation readback. It does not
+reuse the separate Runtime Readiness telemetry surface or invent a Console
+health authority.
+
+The projection is `ready` only while the integration is live, both owner
+sources are current, the catalog observation is within the 60-second operating
+window, and no latest retained operation is active, blocked, or failed.
+Loading and active operations project `recovering`; a partial source failure
+projects `degraded`; an aged or owner-marked catalog projects `stale`; and a
+disconnected or wholly absent owner path projects `unavailable`. None of those
+four postures counts as ready or falls back to fixtures. Source-level loading,
+partial, stale, disconnected, and unavailable states disable new durable
+actions. An active, blocked, or failed retained operation changes readiness but
+does not override a separate capability that the current owner catalog still
+marks available; OOS remains the admission authority.
+
+The browser refreshes the combined projection on a bounded 15-second cadence
+while visible. An accepted nonterminal command or control is reconciled from
+its exact OOS operation route every two seconds for at most ten attempts; the
+normal bounded refresh continues afterward. Partial and offline reads retain
+the last validated catalog and operation history for diagnosis, while action
+admission remains disabled until fresh combined truth returns.
+
+Operation readiness is scoped to the active Environment workspace. A retained
+Governed Releases failure does not make Dev Integration unhealthy, or vice
+versa, while their shared catalog dependency remains current.
+
+Every non-ready posture shows the source state, retained owner next action,
+and a manual refresh. Retry and cancel stay bound to the exact retained OOS
+operation. Stopping a profile explicitly warns that it may stop Console
+control-plane dependencies and that recovery then follows Platform's projected
+next action. The Console does not claim it can bootstrap an unavailable OOS or
+Platform provider from inside that unavailable path.
+
 ## Validation
 
 The product guards enforce that:

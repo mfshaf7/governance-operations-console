@@ -142,5 +142,5 @@ export type PlatformOperationsLiveSnapshot = Readonly<{
   mode: "disconnected-preview" | "live" | "unavailable";
   observedAt: string;
   operations: readonly PlatformOperationRecord[];
-  status: "current" | "loading" | "offline";
+  status: "current" | "degraded" | "loading" | "offline";
 }>;

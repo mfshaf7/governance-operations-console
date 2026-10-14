@@ -45,6 +45,12 @@ const operationLogPanel =
   `${root}/presentation/operations/environment-operation-log-panel.tsx`;
 const runtimeController =
   `${root}/state/use-environment-lifecycle-runtime.ts`;
+const liveRuntimeController =
+  `${root}/live-runtime/use-platform-operations-runtime.ts`;
+const liveRuntimeSurface =
+  `${root}/presentation/live/platform-operations-live-surface.tsx`;
+const platformReadiness =
+  `${root}/read-model/platform-runtime-readiness.ts`;
 const shell = "src/console-shell/governance-console-shell.tsx";
 
 export const guard = {
@@ -75,11 +81,15 @@ export const guard = {
       `${root}/model/environment-lifecycle-command.ts`,
       `${root}/model/product-release-capability.ts`,
       `${root}/read-model/environment-lifecycle-effective-projection.ts`,
+      platformReadiness,
       `${root}/local-runtime/environment-lifecycle-command-simulator.ts`,
       `${root}/local-runtime/environment-lifecycle-runtime-store.ts`,
       runtimeController,
+      liveRuntimeController,
+      liveRuntimeSurface,
       "tests/environment-lifecycle/environment-lifecycle-model.test.mjs",
       "tests/environment-lifecycle/environment-lifecycle-runtime.test.mjs",
+      "tests/environment-lifecycle/platform-runtime-readiness.test.mjs",
     ]) {
       assertAppFile(failures, path);
     }
@@ -229,6 +239,25 @@ export const guard = {
       "submitProfileAction",
       "submitProductRelease",
       "submitProductRuntimeLifecycle",
+    ]);
+    assertIncludes(failures, liveRuntimeController, [
+      "refreshIntervalMs",
+      "reconcileAttempts",
+      "/api/environment-operations/",
+      "visibilitychange",
+    ]);
+    assertIncludes(failures, liveRuntimeSurface, [
+      "Operating Readiness",
+      "Refresh owner truth",
+      "projectPlatformRuntimeReadiness",
+      "readiness.ready",
+    ]);
+    assertIncludes(failures, platformReadiness, [
+      "platformOperationFreshnessWindowMs",
+      '"degraded"',
+      '"recovering"',
+      '"stale"',
+      '"unavailable"',
     ]);
 
     assertIncludes(failures, shell, [

@@ -19,6 +19,7 @@ import { buildEnvironmentLifecycleSummary } from "../../read-model/environment-l
 import { useEnvironmentLifecycleRuntime } from "../../state/use-environment-lifecycle-runtime";
 import { usePlatformOperationsRuntime } from "../../live-runtime/use-platform-operations-runtime";
 import type { PlatformOperationsLiveSnapshot } from "../../live-runtime/platform-operation-types";
+import { projectPlatformRuntimeReadiness } from "../../read-model/platform-runtime-readiness";
 import { PlatformOperationHistory, PlatformOperationsLiveSurface } from "../live/platform-operations-live-surface";
 import { DevIntegrationSurface } from "../dev-integration/dev-integration-surface";
 import { GovernedReleasesSurface } from "../governed-releases/governed-releases-surface";
@@ -59,6 +60,9 @@ function buildWorkspaceMetrics(
   liveSnapshot: PlatformOperationsLiveSnapshot,
 ): TerasSurfaceSummaryMetric[] {
   if (liveSnapshot.mode !== "disconnected-preview") {
+    const readiness = projectPlatformRuntimeReadiness(liveSnapshot, new Date(), activeWorkspaceId === "dev-integration"
+      ? ["dev-integration-profile", "profile-request"]
+      : ["product-release", "product-runtime-lifecycle"]);
     const subjects = liveSnapshot.catalog?.subjects ?? [];
     const selected = subjects.filter((subject) =>
       activeWorkspaceId === "dev-integration"
@@ -70,7 +74,7 @@ function buildWorkspaceMetrics(
     );
     return [
       { id: "subjects", label: "Live Subjects", value: String(selected.length) },
-      { id: "available", label: "Actions", tone: "ok", value: String(selected.flatMap((subject) => subject.capabilities).filter((capability) => capability.available).length) },
+      { id: "available", label: "Executable", tone: readiness.actionable ? "ok" : "warn", value: readiness.actionable ? String(selected.flatMap((subject) => subject.capabilities).filter((capability) => capability.available).length) : "0" },
       { id: "operations", label: "Operations", tone: "info", value: String(operations.length) },
     ];
   }
@@ -119,27 +123,28 @@ function buildWorkspaceMetrics(
 
 function buildWorkspaceStatuses(
   activeWorkspaceId: EnvironmentLifecycleWorkspaceId,
-  mode: "disconnected-preview" | "live" | "unavailable",
-  status: "current" | "loading" | "offline",
+  snapshot: PlatformOperationsLiveSnapshot,
 ): TerasSurfaceStatusItem[] {
-  if (mode !== "disconnected-preview") {
-    const current = mode === "live" && status === "current";
+  if (snapshot.mode !== "disconnected-preview") {
+    const readiness = projectPlatformRuntimeReadiness(snapshot, new Date(), activeWorkspaceId === "dev-integration"
+      ? ["dev-integration-profile", "profile-request"]
+      : ["product-release", "product-runtime-lifecycle"]);
     return [
       {
-        detail: current
+        detail: readiness.ready
           ? "Current subjects and capability availability come from the OOS Platform-operation catalog."
-          : "Current OOS Platform-operation truth is unavailable; fixture truth is suppressed.",
+          : readiness.detail,
         facts: [], id: "source", label: "Projection",
-        stateLabel: current ? "Live" : status === "loading" ? "Loading" : "Unavailable",
-        tone: current ? "ok" : "warn",
+        stateLabel: readiness.label,
+        tone: readiness.tone,
       },
       {
-        detail: current
+        detail: readiness.actionable
           ? "Commands, reconciliation, controls, exact next action, and receipts remain OOS-owned."
-          : "Durable actions remain disabled until current owner truth returns.",
+          : `Durable actions are disabled. ${readiness.nextAction.authority}: ${readiness.nextAction.reason}`,
         facts: [], id: "execution", label: "Execution",
-        stateLabel: current ? "Durable" : "Disabled",
-        tone: current ? "info" : "warn",
+        stateLabel: readiness.actionable ? "Durable" : readiness.operationState,
+        tone: readiness.actionable ? "info" : "warn",
       },
     ];
   }
@@ -230,7 +235,7 @@ export function EnvironmentLifecycleWorkspace({
               ariaLabel={`${copy.title} summary`}
               metricSlots={3}
               metrics={metrics}
-              statuses={buildWorkspaceStatuses(activeWorkspaceId, liveRuntime.snapshot.mode, liveRuntime.snapshot.status)}
+              statuses={buildWorkspaceStatuses(activeWorkspaceId, liveRuntime.snapshot)}
               title={copy.summaryTitle}
               titleKicker="Environment Summary"
             />
@@ -241,6 +246,7 @@ export function EnvironmentLifecycleWorkspace({
               <PlatformOperationsLiveSurface
                 kind={activeWorkspaceId}
                 onControl={liveRuntime.control}
+                onRefresh={liveRuntime.load}
                 onSubmit={liveRuntime.submit}
                 snapshot={liveRuntime.snapshot}
               />
