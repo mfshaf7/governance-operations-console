@@ -365,6 +365,8 @@ function definitionSourceModeLabel(record: OrchestrationDefinitionRecord) {
       return "Contract derived";
     case "prototype-local":
       return "Prototype local";
+    case "live-authority":
+      return "Live OOS authority";
     case "synthetic-scenario":
       return "Synthetic scenario";
   }

@@ -17,6 +17,9 @@ import type { DevIntegrationProfile } from "../../model/dev-integration-profile"
 import type { ProductReleaseCapability } from "../../model/product-release-capability";
 import { buildEnvironmentLifecycleSummary } from "../../read-model/environment-lifecycle-summary";
 import { useEnvironmentLifecycleRuntime } from "../../state/use-environment-lifecycle-runtime";
+import { usePlatformOperationsRuntime } from "../../live-runtime/use-platform-operations-runtime";
+import type { PlatformOperationsLiveSnapshot } from "../../live-runtime/platform-operation-types";
+import { PlatformOperationHistory, PlatformOperationsLiveSurface } from "../live/platform-operations-live-surface";
 import { DevIntegrationSurface } from "../dev-integration/dev-integration-surface";
 import { GovernedReleasesSurface } from "../governed-releases/governed-releases-surface";
 
@@ -53,7 +56,24 @@ function buildWorkspaceMetrics(
   activeWorkspaceId: EnvironmentLifecycleWorkspaceId,
   profiles: readonly DevIntegrationProfile[],
   products: readonly ProductReleaseCapability[],
+  liveSnapshot: PlatformOperationsLiveSnapshot,
 ): TerasSurfaceSummaryMetric[] {
+  if (liveSnapshot.mode !== "disconnected-preview") {
+    const subjects = liveSnapshot.catalog?.subjects ?? [];
+    const selected = subjects.filter((subject) =>
+      activeWorkspaceId === "dev-integration"
+        ? subject.kind === "dev-integration-profile" || subject.kind === "profile-request"
+        : subject.kind === "product-release" || subject.kind === "product-runtime-lifecycle",
+    );
+    const operations = liveSnapshot.operations.filter((operation) =>
+      selected.some((subject) => subject.ref === operation.command.subject.ref),
+    );
+    return [
+      { id: "subjects", label: "Live Subjects", value: String(selected.length) },
+      { id: "available", label: "Actions", tone: "ok", value: String(selected.flatMap((subject) => subject.capabilities).filter((capability) => capability.available).length) },
+      { id: "operations", label: "Operations", tone: "info", value: String(operations.length) },
+    ];
+  }
   const summary = buildEnvironmentLifecycleSummary(profiles, products);
 
   return activeWorkspaceId === "dev-integration"
@@ -99,7 +119,30 @@ function buildWorkspaceMetrics(
 
 function buildWorkspaceStatuses(
   activeWorkspaceId: EnvironmentLifecycleWorkspaceId,
+  mode: "disconnected-preview" | "live" | "unavailable",
+  status: "current" | "loading" | "offline",
 ): TerasSurfaceStatusItem[] {
+  if (mode !== "disconnected-preview") {
+    const current = mode === "live" && status === "current";
+    return [
+      {
+        detail: current
+          ? "Current subjects and capability availability come from the OOS Platform-operation catalog."
+          : "Current OOS Platform-operation truth is unavailable; fixture truth is suppressed.",
+        facts: [], id: "source", label: "Projection",
+        stateLabel: current ? "Live" : status === "loading" ? "Loading" : "Unavailable",
+        tone: current ? "ok" : "warn",
+      },
+      {
+        detail: current
+          ? "Commands, reconciliation, controls, exact next action, and receipts remain OOS-owned."
+          : "Durable actions remain disabled until current owner truth returns.",
+        facts: [], id: "execution", label: "Execution",
+        stateLabel: current ? "Durable" : "Disabled",
+        tone: current ? "info" : "warn",
+      },
+    ];
+  }
   return [
     {
       detail:
@@ -142,6 +185,7 @@ export function EnvironmentLifecycleWorkspace({
   const [dirty, setDirty] = useState(false);
   const [closeGuardOpen, setCloseGuardOpen] = useState(false);
   const runtime = useEnvironmentLifecycleRuntime({ products, profiles });
+  const liveRuntime = usePlatformOperationsRuntime();
   const effectiveProfiles = runtime.snapshot.effective.profiles;
   const effectiveProducts = runtime.snapshot.effective.products;
   const copy = workspaceCopy[activeWorkspaceId];
@@ -149,6 +193,7 @@ export function EnvironmentLifecycleWorkspace({
     activeWorkspaceId,
     effectiveProfiles,
     effectiveProducts,
+    liveRuntime.snapshot,
   );
 
   function requestClose() {
@@ -185,13 +230,26 @@ export function EnvironmentLifecycleWorkspace({
               ariaLabel={`${copy.title} summary`}
               metricSlots={3}
               metrics={metrics}
-              statuses={buildWorkspaceStatuses(activeWorkspaceId)}
+              statuses={buildWorkspaceStatuses(activeWorkspaceId, liveRuntime.snapshot.mode, liveRuntime.snapshot.status)}
               title={copy.summaryTitle}
               titleKicker="Environment Summary"
             />
           }
         >
-          {activeWorkspaceId === "dev-integration" ? (
+          {liveRuntime.snapshot.mode !== "disconnected-preview" ? (
+            <>
+              <PlatformOperationsLiveSurface
+                kind={activeWorkspaceId}
+                onControl={liveRuntime.control}
+                onSubmit={liveRuntime.submit}
+                snapshot={liveRuntime.snapshot}
+              />
+              <PlatformOperationHistory
+                onControl={liveRuntime.control}
+                operations={liveRuntime.snapshot.operations}
+              />
+            </>
+          ) : activeWorkspaceId === "dev-integration" ? (
             <DevIntegrationSurface
               focusProfileId={entryIntent?.subjectRef ?? null}
               historyEvents={profileHistory}

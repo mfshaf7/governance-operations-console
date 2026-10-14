@@ -18,12 +18,15 @@ import { RunDashboardModal } from "./dashboard/run-dashboard-modal.tsx";
 import { orchestrationRunSelectedFacts } from "./orchestration-runs-view-model.ts";
 import { OrchestrationRunsRegister } from "./register/orchestration-runs-register.tsx";
 import { useOrchestrationRunsController } from "./use-orchestration-runs-controller.ts";
+import type { OrchestrationRunControlInput, OrchestrationRunControlReceipt } from "../../../work-model/run-control/run-control-types.ts";
 
 export function OrchestrationRunsSurface({
   focusRecordId = null,
+  onControl,
   records,
 }: {
   focusRecordId?: string | null;
+  onControl: (runId: string, input: OrchestrationRunControlInput) => Promise<OrchestrationRunControlReceipt>;
   records: OrchestrationRunRecord[];
 }) {
   const controller = useOrchestrationRunsController(records, focusRecordId);
@@ -141,6 +144,7 @@ export function OrchestrationRunsSurface({
         }}
       />
       <RunDashboardModal
+        onControl={onControl}
         onClose={controller.dashboard.close}
         record={controller.dashboard.record}
       />

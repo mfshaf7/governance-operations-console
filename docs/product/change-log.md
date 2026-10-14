@@ -6,6 +6,22 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-15
+
+- Connected Orchestration Definitions and Runs to strict OOS projections and
+  routed only currently available run controls through authenticated
+  same-origin Console handlers. Malformed or unavailable owner truth now fails
+  closed; retained records become stale and non-executable instead of falling
+  back to fixtures.
+- Connected Dev Integration and Governed Releases to the OOS
+  Platform-operation catalog, exact approved commands, retained state, retry,
+  cancellation, next actions, and receipts. Added destructive confirmation,
+  stable lost-response retry identity, partial-read recovery, and strict nested
+  owner-contract validation.
+- Preserved synthetic fixtures only for explicit disconnected preview. This
+  source change does not claim Platform owner commissioning, runtime
+  activation, Security acceptance, or fixture-free operating proof.
+
 ## 2026-10-14
 
 - Added one Console-native schema-v6 Architecture Packet workflow to Delivery

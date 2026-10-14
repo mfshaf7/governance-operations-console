@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
 import {
@@ -12,6 +12,9 @@ import {
   orchestrationWorkspaceSummaryTitle,
   type OrchestrationWorkspaceSurfaceId,
 } from "./orchestration-workspace-view-model.ts";
+import { useOrchestrationLiveRuntime } from "../../live-runtime/use-orchestration-live-runtime.ts";
+import { simulateOrchestrationRunControl } from "../../local-runtime/run-control/run-control-simulator.ts";
+import type { OrchestrationRunControlInput } from "../../work-model/run-control/run-control-types.ts";
 
 export function useOrchestrationWorkspaceController({
   entryIntent = null,
@@ -24,6 +27,22 @@ export function useOrchestrationWorkspaceController({
     subscribeOrchestrationWorkspaceProjection,
     getOrchestrationWorkspaceProjectionSnapshot,
     getOrchestrationWorkspaceProjectionSnapshot,
+  );
+  const liveRuntime = useOrchestrationLiveRuntime();
+  const effectiveReadModel =
+    liveRuntime.snapshot.mode === "disconnected-preview"
+      ? readModel
+      : liveRuntime.snapshot.readModel ?? readModel;
+  const controlRun = useCallback(
+    async (runId: string, input: OrchestrationRunControlInput) => {
+      if (liveRuntime.snapshot.mode !== "disconnected-preview") {
+        return liveRuntime.control(runId, input);
+      }
+      const run = readModel.runs.find((candidate) => candidate.runId === runId);
+      if (!run) throw new Error("The disconnected-preview run is unavailable.");
+      return simulateOrchestrationRunControl({ input, requestedAt: new Date().toISOString(), run }).receipt;
+    },
+    [liveRuntime, readModel],
   );
 
   useEffect(() => {
@@ -42,10 +61,11 @@ export function useOrchestrationWorkspaceController({
 
   return {
     activeSurfaceId,
-    readModel,
+    controlRun,
+    readModel: effectiveReadModel,
     setActiveSurfaceId,
     summaryMetrics: orchestrationWorkspaceSummaryMetrics(
-      readModel,
+      effectiveReadModel,
       activeSurfaceId,
     ),
     summaryTitle: orchestrationWorkspaceSummaryTitle(activeSurfaceId),

@@ -35,10 +35,10 @@ All capabilities and transitions in this view are `approved-target`.
 | Delivery | implemented | implemented | partial | post-baseline |
 | Prototype | partial | partial | partial | post-baseline |
 | Product Portfolio | implemented | implemented | partial | post-baseline |
-| Orchestration | implemented | partial | missing | post-baseline |
+| Orchestration | implemented | implemented | partial | post-baseline |
 | Lifecycle Transitions | implemented | partial | missing | post-baseline |
-| Dev Integration | implemented | implemented | missing | post-baseline |
-| Governed Releases | implemented | partial | missing | post-baseline |
+| Dev Integration | implemented | partial | connected | post-baseline |
+| Governed Releases | implemented | partial | connected | post-baseline |
 | Workspace Intake Classification | implemented | implemented | connected | post-baseline |
 | Workspace Registry | implemented | implemented | connected | post-baseline |
 | Workspace Active Inventory | implemented | implemented | connected | post-baseline |
@@ -64,10 +64,10 @@ All capabilities and transitions in this view are `approved-target`.
 | Active Product to Portfolio | implemented | implemented | connected | post-baseline |
 | Existing Product Update to Portfolio | implemented | implemented | connected | post-baseline |
 | Model Profile Request | not-started | missing | missing | post-baseline |
-| Orchestration Definition Admission | prototype-only | missing | missing | post-baseline |
-| Durable Orchestration Run | prototype-only | missing | missing | post-baseline |
-| Dev Integration Profile Request | prototype-only | partial | missing | post-baseline |
-| Governed Product Release | prototype-only | partial | missing | post-baseline |
+| Orchestration Definition Admission | partial | implemented | partial | post-baseline |
+| Durable Orchestration Run | partial | implemented | partial | post-baseline |
+| Dev Integration Profile Request | implemented | partial | connected | post-baseline |
+| Governed Product Release | implemented | partial | connected | post-baseline |
 | Governed Context to Agent | implemented | connected | connected | PI-2026-04 |
 
 ## Current Gaps By Class

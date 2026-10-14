@@ -80,7 +80,7 @@ Current operation shapes:
 | Model Operations | compact control with dashboard | Governed profile/readiness projection remains read-oriented and separate from Agent Console runtime health. |
 | Prototype | compact control with dashboards | Request, dashboard, Preview Runtime, landing, candidate promotion, baseline promotion, transition intent, closeout, and history are separated. |
 | Portfolio | fullscreen workspace | Products, Publication, Product Dashboard, and Curation follow the managed-product contract; Portfolio requires active product inventory and owns no intake classification or active registration. |
-| Orchestration | fullscreen workspace | Home, Definitions, Runs, definition design, run control, projections, and local receipts are separated. |
+| Orchestration | fullscreen workspace | Home, Definitions, Runs, definition design, run control, live OOS projections, fail-closed retained recovery, and disconnected-preview receipts are separated. |
 
 Domain public barrels expose workspace entry, contract metadata, and approved
 read-only activity or attention sources only. Private fixtures, workflow steps,

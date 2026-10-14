@@ -10,6 +10,8 @@ export type ConsoleRuntimeCapabilityId =
   | "delivery-work-design"
   | "delivery-work-session"
   | "lifecycle-transitions"
+  | "orchestration"
+  | "environment-lifecycle"
   | "model-operations"
   | "product-publication"
   | "proposal"
@@ -169,6 +171,8 @@ const capabilityDefinitions: readonly Readonly<{
   { id: "delivery-change-control", label: "Delivery Change Control" },
   { id: "delivery-closeout", label: "Delivery Closeout" },
   { id: "lifecycle-transitions", label: "Lifecycle Transitions" },
+  { id: "orchestration", label: "Orchestration" },
+  { id: "environment-lifecycle", label: "Environment Lifecycle" },
   {
     id: "model-operations",
     label: "Model Operations",

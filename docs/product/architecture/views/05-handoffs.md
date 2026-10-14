@@ -75,10 +75,10 @@ classification receipt cannot satisfy an active-inventory requirement.
 | Transition | Trigger and target completion | Console | Backend | Adapter |
 | --- | --- | --- | --- | --- |
 | Model Profile Request | Operator requests creation or lifecycle change; source-backed registry, access, OOS, and Security evidence reconcile. | not-started | missing | missing |
-| Orchestration Definition Admission | Reviewed executable source is ready; OOS exposes one immutable active definition version. | prototype-only | missing | missing |
-| Durable Orchestration Run | Approved domain command matches an active definition; a durable adapter returns a reconciled final receipt. | prototype-only | missing | missing |
-| Dev Integration Profile Request | Component needs a fast integration lane; admitted active profile and owner commands exist without implying stage. | prototype-only | partial | missing |
-| Governed Product Release | Product descriptor permits an operation; Platform and product projections reconcile with an immutable receipt. | prototype-only | partial | missing |
+| Orchestration Definition Admission | Reviewed executable source is ready; OOS exposes one immutable active definition version. | partial | implemented | partial |
+| Durable Orchestration Run | Approved domain command matches an active definition; a durable adapter returns a reconciled final receipt. | partial | implemented | partial |
+| Dev Integration Profile Request | Component needs a fast integration lane; admitted active profile and owner commands exist without implying stage. | implemented | partial | connected |
+| Governed Product Release | Product descriptor permits an operation; Platform and product projections reconcile with an immutable receipt. | implemented | partial | connected |
 | Governed Context to Agent | Context candidate is admitted; Agent Console receives only a model-safe answer plus CGG, gateway-audit, and OOS receipt references. | implemented | connected | connected |
 
 ## Ownership Pattern

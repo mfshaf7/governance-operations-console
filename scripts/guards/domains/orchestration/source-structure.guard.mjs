@@ -24,9 +24,11 @@ export const guard = {
     assertDomainOwnershipRoot(failures, "orchestration", {
       allowedLayers: [
         "domain",
+        "live-runtime",
         "local-runtime",
         "presentation",
         "read-model",
+        "server",
         "work-model",
       ],
     });
@@ -48,6 +50,7 @@ export const guard = {
       `${root}/work-model/run-control/run-control-model.ts`,
       `${root}/local-runtime/orchestration-workspace-runtime.ts`,
       `${root}/local-runtime/orchestration-effective-projection.ts`,
+      `${root}/server/index.ts`,
     ]) {
       assertAppFile(failures, path);
     }

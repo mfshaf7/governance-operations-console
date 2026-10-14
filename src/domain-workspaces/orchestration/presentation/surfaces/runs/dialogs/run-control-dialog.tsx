@@ -36,7 +36,7 @@ export function RunControlDialog({
   control: OrchestrationRunControl | null;
   onApply: (
     input: OrchestrationRunControlInput,
-  ) => OrchestrationRunControlReceipt;
+  ) => Promise<OrchestrationRunControlReceipt>;
   onClose: () => void;
   record: OrchestrationRunRecord;
 }) {
@@ -47,6 +47,7 @@ export function RunControlDialog({
   const [receipt, setReceipt] = useState<OrchestrationRunControlReceipt | null>(
     null,
   );
+  const [submitting, setSubmitting] = useState(false);
   const [resumeCondition, setResumeCondition] = useState("");
   const [reviewAt, setReviewAt] = useState("");
   const [signalName, setSignalName] = useState("");
@@ -68,9 +69,10 @@ export function RunControlDialog({
   });
   const validation = orchestrationRunControlValidation(record, input);
 
-  function applyControl() {
+  async function applyControl() {
+    setSubmitting(true);
     try {
-      const recordedReceipt = onApply(input);
+      const recordedReceipt = await onApply(input);
 
       setError("");
       setReceipt(recordedReceipt);
@@ -80,7 +82,7 @@ export function RunControlDialog({
           ? caught.message
           : "The run control could not be recorded.",
       );
-    }
+    } finally { setSubmitting(false); }
   }
 
   return (
@@ -96,9 +98,9 @@ export function RunControlDialog({
               Back
             </TerasActionButton>
             <TerasActionButton
-              disabled={!validation.available}
+              disabled={!validation.available || submitting}
               emphasis="primary"
-              onClick={applyControl}
+              onClick={() => void applyControl()}
               tone={control.id === "cancel" ? "danger" : "accent"}
             >
               {control.label}
@@ -134,8 +136,8 @@ export function RunControlDialog({
 
       {receipt ? (
         <TerasContentTray
-          description="The immutable source projection is unchanged. This receipt records only the prototype-local control simulation."
-          kicker="Local Receipt"
+          description="The receipt records the control result returned by the selected runtime. It does not rewrite source-domain truth or imply rollback."
+          kicker="Control Receipt"
           title={receipt.receiptId}
         >
           <TerasMetadataList

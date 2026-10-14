@@ -476,6 +476,14 @@ orchestration/
   local-runtime/
     definition-design/
     run-control/
+  live-runtime/
+    orchestration-live-contract.ts
+    orchestration-live-projection.ts
+    use-orchestration-live-runtime.ts
+  server/
+    index.ts
+    orchestration-api-routes.ts
+    orchestration-oos-client.ts
   presentation/
     workspace/
     surfaces/
@@ -501,6 +509,12 @@ Ownership rules:
   DTOs.
 - `local-runtime/` owns only prototype-local draft continuity, simulated
   receipts, and scenario overlays.
+- `live-runtime/` validates and projects browser-safe OOS definition, run,
+  control, event, and receipt truth. It must fail closed without substituting
+  local scenarios when configured owner truth is unavailable.
+- `server/` owns the authenticated, bounded OOS adapter and the narrow HTTP
+  handlers mounted by `src/app/api/orchestration/**`. `server/index.ts` is the
+  sole server-side public boundary; browser code must not import it.
 - `presentation/workspace/` owns the fullscreen shell, navigation, summary,
   workspace status, and controller.
 - Each peer surface owns its register, dashboard, and focused dialogs.
@@ -518,7 +532,7 @@ Ownership rules:
 
 ## Implemented Capability Set
 
-The current local prototype includes:
+The current Console includes:
 
 - structured definition and run scenarios
 - fullscreen workspace entry, navigation, summary, status, and close behavior
@@ -528,10 +542,20 @@ The current local prototype includes:
 - advisor-assisted Qualify, Define, and Review And Request work
 - Runs register, dashboard, progress, conditions, evidence, events, and bounded
   controls
-- prototype-local continuity, dirty guards, and receipts
+- prototype-local continuity, dirty guards, and receipts in explicit
+  disconnected preview
+- configured-live OOS definition catalog and durable-run projection
+- strict nested definition, run, control, event, runtime, and receipt
+  validation
+- currently available OOS run controls with stable retry identity and
+  digest-bound operator reason references
+- stale retained-record recovery with every dependent control disabled
 
-Backend wiring, a new Teras primitive, a local visual variant, or a runtime
-authority claim still requires separate discussion and admission.
+The Console-to-OOS source adapter is implemented. Durable runtime activation,
+definition admission mutation, new run submission, Platform composition, and
+operating acceptance remain separate admitted work. A new Teras primitive,
+local visual variant, or runtime authority claim still requires separate
+discussion and admission.
 
 ## Mutation Boundary
 
