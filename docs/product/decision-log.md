@@ -21,6 +21,17 @@ earlier one.
 - Decision: a lost response reuses the same pending command or control identity
   during the browser session; reload recovery uses the retained OOS list rather
   than inventing a replacement effect.
+- Decision: Environment Lifecycle operating readiness is derived only from the
+  current OOS Platform-operation catalog and retained operation readback. A
+  partial, stale, disconnected, or unavailable projection keeps recovery truth
+  visible but cannot enable a new action or fall back to fixtures.
+- Decision: retained operation posture is scoped to its Environment workspace
+  and does not override a different capability that the current owner catalog
+  still marks available. OOS, not a Console-wide history lock, remains the
+  admission authority.
+- Decision: the Console performs bounded visible-page refresh and bounded exact
+  operation reconciliation. It does not claim authority to bootstrap an absent
+  OOS or Platform provider; that recovery remains Platform-owned.
 
 ## 2026-07-30
 

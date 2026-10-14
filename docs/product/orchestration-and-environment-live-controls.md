@@ -29,6 +29,9 @@ Its records and receipts are explicitly local and cannot enter the live path.
 5. Follow the returned state, owner, exact next action, events, blocker or
    failure, and terminal receipt. A failed or cancelled operation never renders
    as successful, and cancellation never implies rollback.
+6. Use **Refresh owner truth** when a dependency is degraded or stale. The
+   Console also refreshes every 15 seconds while visible and briefly reconciles
+   an accepted nonterminal operation from its exact OOS record.
 
 ## Recovery
 
@@ -39,7 +42,15 @@ Its records and receipts are explicitly local and cannot enter the live path.
   retained run projection. Do not create a replacement command merely because
   the prior response was lost.
 - If catalog truth fails while retained operation history is readable, the
-  history remains visible but new actions are disabled.
+  history, exact owner next action, retry, and cancellation remain visible but
+  new actions are disabled.
+- A `recovering`, `degraded`, `stale`, or `unavailable` readiness state never
+  counts as ready. Correct the named owner condition, then refresh or use the
+  retained control that OOS explicitly exposes.
+- Stopping a dev-integration profile can stop dependencies used by this
+  Console. If the Console can no longer reach OOS afterward, use the projected
+  Platform-owned recovery path; the unavailable Console cannot bootstrap its
+  own control plane.
 - If a previously current orchestration projection becomes unavailable, the
   last records remain visible as stale, all run controls are disabled, and the
   workspace status names OOS as unavailable.

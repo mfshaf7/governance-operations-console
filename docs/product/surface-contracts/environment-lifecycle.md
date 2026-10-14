@@ -537,11 +537,14 @@ acceptance remain independently sequenced:
    cancellation, events, and terminal receipts
 5. completed: suppress fixtures in configured live, partial, loading, and
    unavailable postures while retaining readable failed history
-6. pending: commission the Platform owner catalog and command/readback/control
+6. completed product behavior: project runtime readiness, preserve dependency
+   failure and retained recovery, reconcile accepted nonterminal operations,
+   and fail closed on disconnected, degraded, or stale owner truth
+7. pending: commission the Platform owner catalog and command/readback/control
    routes
-7. pending: prove restart, lost-response, reconciliation, and terminal receipt
-   behavior in the composed runtime
-8. pending: pass exact-revision Security acceptance and fixture-free
+8. pending operating proof: prove restart, lost-response, reconciliation, and
+   terminal receipt behavior in the composed runtime
+9. pending: pass exact-revision Security acceptance and fixture-free
    end-to-end proof
 
 Each action family can fall back to read-only projection without corrupting

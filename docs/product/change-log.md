@@ -21,6 +21,11 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 - Preserved synthetic fixtures only for explicit disconnected preview. This
   source change does not claim Platform owner commissioning, runtime
   activation, Security acceptance, or fixture-free operating proof.
+- Added explicit Environment Lifecycle readiness states, dependency failure
+  projection, retained owner next actions, manual refresh, and bounded
+  reconciliation for accepted nonterminal Platform operations. Degraded,
+  stale, disconnected, and unavailable truth now remains recoverable without
+  appearing ready or re-enabling durable actions.
 
 ## 2026-10-14
 
