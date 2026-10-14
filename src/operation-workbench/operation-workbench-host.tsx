@@ -37,6 +37,7 @@ function assertUnreachableOperationWorkbenchDomain(domain: never): never {
 }
 
 export function OperationWorkbenchHost({
+  consoleDevMode,
   entryIntent,
   onClose,
   onOpenDeliveryCatalog,
@@ -44,6 +45,7 @@ export function OperationWorkbenchHost({
   onOpenWorkspace,
   selected,
 }: {
+  consoleDevMode: boolean;
   entryIntent: ConsoleSurfaceEntryIntent | null;
   onClose: () => void;
   onOpenDeliveryCatalog: (repositoryId: string) => void;
@@ -123,6 +125,7 @@ export function OperationWorkbenchHost({
       return (
         <OperationWorkbench contract={contract}>
           <PortfolioWorkspace
+            consoleDevMode={consoleDevMode}
             contract={contract}
             entryIntent={entryIntent}
             onClose={onClose}

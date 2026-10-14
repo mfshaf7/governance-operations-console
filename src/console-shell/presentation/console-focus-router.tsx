@@ -125,6 +125,7 @@ export function ConsoleFocusRouter({
       <div className="relative h-full min-h-0">
         {selectedWorkbenchSurface ? (
           <OperationWorkbenchHost
+            consoleDevMode={consoleDevMode}
             entryIntent={
               activeConsoleEntryIntent?.target.kind === "workbench-domain"
                 ? activeConsoleEntryIntent

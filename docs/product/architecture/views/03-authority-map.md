@@ -67,6 +67,14 @@ OOS may correlate the workflow and WGCF may evaluate requirements. Neither
 service owns the decision or the canonical contract mutation. The originating
 operation presents the candidate and reconciles the returned receipt.
 
+WGCF also projects one authenticated, read-only continuity view over canonical
+Registry, Intake, lifecycle, and non-terminal Product Publication readiness.
+Workspace Registry reconciles its OOS command projection against that same
+authority revision. Product Portfolio Products consumes the canonical product
+subset without filling absent product-manifest, listing, runtime, access,
+release, or Security facts. OOS remains the workflow and terminal-publication
+authority.
+
 ## Mutation Contract
 
 Every live mutable command must carry:

@@ -151,7 +151,8 @@ const capabilityDefinitions: readonly Readonly<{
     | "model-operations"
     | "oos"
     | "product-publication"
-    | "prototype-preview";
+    | "prototype-preview"
+    | "workspace-continuity";
 }>[] = [
   { id: "proposal", label: "Proposal" },
   { id: "prototype-landing", label: "Prototype Landing" },
@@ -221,7 +222,11 @@ const capabilityDefinitions: readonly Readonly<{
     ],
   },
   { id: "workspace-intake", label: "Workspace Intake" },
-  { id: "workspace-registry", label: "Workspace Registry" },
+  {
+    id: "workspace-registry",
+    label: "Workspace Registry",
+    runtime: "workspace-continuity",
+  },
   {
     id: "product-publication",
     label: "Product Publication",
@@ -646,6 +651,19 @@ export function projectConsoleRuntimeCapabilities(
         source: publicationSource,
       };
     }
+    if (definition.runtime === "workspace-continuity") {
+      const continuitySource = projectWorkspaceContinuitySourceState(env);
+      return {
+        id: definition.id,
+        label: definition.label,
+        mutation:
+          continuitySource.state === "available"
+            ? projectMutationState(env, continuitySource)
+            : continuitySource,
+        owner: definition.owner ?? "operator-orchestration-service",
+        source: continuitySource,
+      };
+    }
     return {
       id: definition.id,
       label: definition.label,
@@ -721,6 +739,27 @@ function projectProductPublicationSourceState(env: NodeJS.ProcessEnv) {
   }
   try {
     resolveConsoleProductPublicationConfiguration(env);
+    return { reasonCode: null, state: "available" as const };
+  } catch (error) {
+    return {
+      reasonCode: configurationErrorCode(error),
+      state: "invalid" as const,
+    };
+  }
+}
+
+function projectWorkspaceContinuitySourceState(env: NodeJS.ProcessEnv) {
+  const oosSelected = consoleOosModeSelected(env);
+  const wgcfSelected = consoleWgcfModeSelected(env);
+  if (!oosSelected && !wgcfSelected) {
+    return {
+      reasonCode: "console_workspace_continuity_not_selected",
+      state: "disconnected" as const,
+    };
+  }
+  try {
+    resolveConsoleOosConnection(env);
+    resolveConsoleWgcfConnection(env);
     return { reasonCode: null, state: "available" as const };
   } catch (error) {
     return {
