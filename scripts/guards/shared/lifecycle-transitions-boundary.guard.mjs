@@ -22,6 +22,8 @@ const selected =
   `${root}/presentation/workspace/lifecycle-transition-selected.tsx`;
 const ownerRoute =
   `${root}/routing/lifecycle-transition-owner-route.ts`;
+const resumeRoute =
+  `${root}/routing/lifecycle-transition-resume.ts`;
 
 export const guard = {
   id: "shared/lifecycle-transitions-boundary",
@@ -43,6 +45,7 @@ export const guard = {
       `${root}/read-model/lifecycle-transition-projector.ts`,
       `${root}/read-model/lifecycle-transition-reducer.ts`,
       ownerRoute,
+      resumeRoute,
     ]) {
       assertAppFile(failures, path);
     }
@@ -80,6 +83,7 @@ export const guard = {
       "TerasSurfaceNav",
       "TerasSurfaceSummaryHeader",
       "LifecycleTransitionsWorkspaceSurface",
+      "resolveLifecycleTransitionResume",
     ]);
     assertIncludes(failures, workspaceSurface, [
       "TerasRecordControlLayout",
@@ -108,6 +112,13 @@ export const guard = {
     assertOmits(failures, ownerRoute, [
       "operationWorkbenchPathLabels.portfolio",
       "operationWorkbenchPathLabels.repository",
+    ]);
+    assertIncludes(failures, resumeRoute, [
+      'runtimePosture.mode !== "live"',
+      'code: "canonical-source-truncated"',
+      'code: "conflicting-transition"',
+      'code: "stale-required-move"',
+      'code: "unknown-transition"',
     ]);
 
     assertIncludes(failures, `${root}/index.ts`, [

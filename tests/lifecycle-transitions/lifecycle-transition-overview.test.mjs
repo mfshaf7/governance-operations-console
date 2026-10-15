@@ -11,6 +11,7 @@ import {
   lifecycleTransitionWorkspaceMetrics,
 } from "../../src/lifecycle-transitions/presentation/workspace/lifecycle-transitions-workspace-view-model.ts";
 import { resolveLifecycleTransitionWorkbenchRoute } from "../../src/lifecycle-transitions/routing/lifecycle-transition-owner-route.ts";
+import { resolveLifecycleTransitionResume } from "../../src/lifecycle-transitions/routing/lifecycle-transition-resume.ts";
 
 const transitions = projectLifecycleTransitions(
   Object.values(lifecycleTransitionArtifactFixtures).flat(),
@@ -301,4 +302,124 @@ test("terminal state without an applied target exposes recovery only", () => {
     assert.equal(route.kind, "unavailable");
     assert.match(route.message, /no owner action|no canonical target/i);
   }
+});
+
+test("case:1282-positive resumes all three admitted routes from current canonical journal state", () => {
+  const currentRuntime = {
+    error: null,
+    mode: "live",
+    observedAt: "2026-10-15T00:00:00.000Z",
+    status: "current",
+    truncated: false,
+  };
+
+  for (const routeId of [
+    "proposal-to-prototype",
+    "proposal-to-delivery",
+    "prototype-to-delivery",
+  ]) {
+    const transition = transitions.find(
+      (candidate) => candidate.route.routeId === routeId,
+    );
+    assert.ok(transition, `missing current transition for ${routeId}`);
+    const requiredMoveRef = transition.nextAction
+      ? `lifecycle-transition.${transition.nextAction.action}`
+      : "lifecycle-transition.inspect";
+
+    assert.deepEqual(
+      resolveLifecycleTransitionResume({
+        entryIntent: {
+          mode: "resume",
+          requiredMoveRef,
+          subjectRef: transition.transitionId,
+          target: {
+            id: "lifecycle-transitions",
+            kind: "workspace",
+            workspaceId: "lifecycle-transitions",
+          },
+        },
+        runtimePosture: currentRuntime,
+        transitions,
+      }),
+      {
+        routeId,
+        state: "ready",
+        transitionId: transition.transitionId,
+      },
+    );
+  }
+});
+
+test("case:1282-negative blocks unknown, stale, conflicting, and unavailable resume state", () => {
+  const transition = transitions.find((candidate) => candidate.nextAction);
+  assert.ok(transition);
+  const currentRuntime = {
+    error: null,
+    mode: "live",
+    observedAt: transition.updatedAt,
+    status: "current",
+    truncated: false,
+  };
+  const entryIntent = {
+    mode: "resume",
+    requiredMoveRef: `lifecycle-transition.${transition.nextAction.action}`,
+    subjectRef: transition.transitionId,
+    target: {
+      id: "lifecycle-transitions",
+      kind: "workspace",
+      workspaceId: "lifecycle-transitions",
+    },
+  };
+
+  assert.equal(
+    resolveLifecycleTransitionResume({
+      entryIntent: { ...entryIntent, subjectRef: "unknown-transition" },
+      runtimePosture: currentRuntime,
+      transitions,
+    }).code,
+    "unknown-transition",
+  );
+  assert.equal(
+    resolveLifecycleTransitionResume({
+      entryIntent: {
+        ...entryIntent,
+        requiredMoveRef: "lifecycle-transition.not-current",
+      },
+      runtimePosture: currentRuntime,
+      transitions,
+    }).code,
+    "stale-required-move",
+  );
+  assert.equal(
+    resolveLifecycleTransitionResume({
+      entryIntent,
+      runtimePosture: currentRuntime,
+      transitions: [...transitions, transition],
+    }).code,
+    "conflicting-transition",
+  );
+  assert.equal(
+    resolveLifecycleTransitionResume({
+      entryIntent,
+      runtimePosture: { ...currentRuntime, status: "offline" },
+      transitions: [],
+    }).code,
+    "canonical-source-unavailable",
+  );
+  assert.equal(
+    resolveLifecycleTransitionResume({
+      entryIntent,
+      runtimePosture: { ...currentRuntime, mode: "disconnected-preview" },
+      transitions,
+    }).code,
+    "canonical-source-unavailable",
+  );
+  assert.equal(
+    resolveLifecycleTransitionResume({
+      entryIntent,
+      runtimePosture: { ...currentRuntime, truncated: true },
+      transitions,
+    }).code,
+    "canonical-source-truncated",
+  );
 });
