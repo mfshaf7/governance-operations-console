@@ -74,6 +74,9 @@ test("Repository gate adapter binds successful owner receipt, preserves source a
     (value) => { value.event.command_id = "wrong-resolution"; },
     (value) => { value.projection.repository_resolution_history_pending = true; },
     (value) => { delete value.projection.repository_resolution; },
+    (value) => { value.receipt.owner = "wrong-owner"; },
+    (value) => { value.receipt.record_ref = "openproject://work_packages/852"; },
+    (value) => { value.receipt.record_version = "version-19"; },
   ]) {
     await assert.rejects(resolveProposalRepositoryGate(intent, { env, fetchImpl: async (_url, init) => {
       const value = resultFor(JSON.parse(init.body)); corrupt(value); return jsonResponse(value);
