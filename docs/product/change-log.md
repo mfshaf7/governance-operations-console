@@ -8,6 +8,13 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-15
 
+- Maintenance Landing Unit `maintenance-1275-console-repository-readback`
+  (`child_isolated_landing_unit`) restores the Repository register from
+  integrity-validated OOS custody pages after browser reload. Source status
+  follows the canonical read, and provider results remain distinct from
+  workspace admission. The source, review, deployment, and rollback boundary
+  is the Console owner repository; this change supports the existing final
+  acceptance exercise.
 - Connected Orchestration Definitions and Runs to strict OOS projections and
   routed only currently available run controls through authenticated
   same-origin Console handlers. Malformed or unavailable owner truth now fails

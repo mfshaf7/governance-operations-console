@@ -27,7 +27,7 @@ export function projectRepositoryProvisioningResults(
     const providerId = result.provider_readback.repository_identity.provider_repository_id;
     if (providerIds.has(providerId)) continue;
     providerIds.add(providerId);
-    projected.push(repositoryRecordFromProvisioningResult(result));
+    projected.push(repositoryRecordFromCustodyResult(result));
   }
   return projected;
 }
@@ -45,7 +45,7 @@ export function projectRepositoryCustodyResults(
     Record<string, RepositoryCustodyWorkflowResult>
   >,
 ): RepositoryWorkspaceRecord[] {
-  return records.map((record) => {
+  const projected = records.map((record) => {
     const result = resultsByRepositoryId[record.id];
     if (
       result?.status !== "succeeded" ||
@@ -70,13 +70,24 @@ export function projectRepositoryCustodyResults(
         "Review the authoritative custody receipt and use separate downstream actions when required.",
     };
   });
+  const providerIds = new Set(projected.map((record) => record.providerIdentity?.repositoryId));
+  for (const result of Object.values(resultsByRepositoryId)) {
+    const providerId = result.provider_readback?.repository_identity.provider_repository_id;
+    if (
+      result.status === "succeeded" && result.request.action === "link-existing" &&
+      result.receipt?.custody.after === "linked" && providerId && !providerIds.has(providerId)
+    ) {
+      providerIds.add(providerId);
+      projected.push(repositoryRecordFromCustodyResult(result));
+    }
+  }
+  return projected;
 }
 
-function repositoryRecordFromProvisioningResult(
+function repositoryRecordFromCustodyResult(
   result: RepositoryCustodyWorkflowResult,
 ): RepositoryWorkspaceRecord {
   if (
-    result.request.action !== "provision-new" ||
     !result.provider_readback ||
     !result.receipt
   ) {
@@ -85,6 +96,10 @@ function repositoryRecordFromProvisioningResult(
   const request = result.request;
   const readback = result.provider_readback;
   const providerId = readback.repository_identity.provider_repository_id;
+  const provisioned = request.action === "provision-new";
+  const description = request.action === "provision-new"
+    ? request.provisioning.description ?? "Governed repository source."
+    : "Existing provider repository verified through OOS custody.";
   return {
     admissionPosture: [
       {
@@ -99,7 +114,9 @@ function repositoryRecordFromProvisioningResult(
             value: providerId,
           },
           {
-            detail: "README, features, visibility, and merge policy match the approved baseline.",
+            detail: provisioned
+              ? "README, features, visibility, and merge policy match the approved baseline."
+              : "Provider identity and lifecycle match the approved custody request.",
             label: "Provider settings",
             state: "clear",
             tone: "ok",
@@ -143,21 +160,21 @@ function repositoryRecordFromProvisioningResult(
     ],
     admissionState: "ready",
     blockers: [],
-    boundary: request.provisioning.description ?? "Governed repository source.",
+    boundary: description,
     custody: {
       kind: request.requested_custody.custody_kind,
-      state: "provisioned",
+      state: provisioned ? "provisioned" : "linked",
       workspaceOwnerRef: request.requested_custody.workspace_owner_ref,
     },
     githubUrl: readback.canonical_url,
     id: `repo-provider-${providerId}`,
     lastValidation: `provider readback / ${readback.observed_at}`,
-    lifecycle: "provisioned",
+    lifecycle: provisioned ? "provisioned" : "linked",
     name: readback.canonical_name,
     nextAction:
       "Review onboarding and prepare the separate Workspace Intake request when this repository should enter active inventory.",
     owner: request.requested_custody.workspace_owner_ref,
-    purpose: request.provisioning.description ?? "Governed repository source.",
+    purpose: description,
     providerIdentity: {
       host: "github.com",
       name: readback.canonical_name,

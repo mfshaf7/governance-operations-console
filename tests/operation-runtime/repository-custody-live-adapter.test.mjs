@@ -8,9 +8,11 @@ import {
 import { projectRepositoryCustodyResults } from "../../src/domain-workspaces/repository/live-runtime/repository-custody-live-projection.ts";
 import {
   linkExistingRepositoryCustody,
+  listRepositoryCustodyResults,
   readRepositoryCustodyResult,
   RepositoryCustodyOosError,
 } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
+import { readRepositoryCustodyRegister } from "../../src/domain-workspaces/repository/live-runtime/repository-custody-live-readback.ts";
 import {
   assertCanonicalSourceRequest,
   canonicalSourceResponse,
@@ -29,6 +31,52 @@ const env = {
   REPOSITORY_CUSTODY_POLICY_PROFILE_URI:
     "https://workspace-governance.local/contracts/repository-custody.yaml",
 };
+
+test("canonical Repository register survives reload through authenticated owner readback", async () => {
+  let request;
+  await linkExistingRepositoryCustody(intent(), {
+    env,
+    fetchImpl: async (_url, init) => {
+      request = JSON.parse(String(init.body));
+      return jsonResponse(successfulResult(request), 201);
+    },
+  });
+  const result = successfulResult(request, { replayed: true });
+  const page = { schema_version: 1, records: [result], next_cursor: null };
+  const listed = await listRepositoryCustodyResults(null, {
+    env,
+    fetchImpl: async (url, init) => {
+      assert.match(String(url), /\/v1\/repository-custody\/requests$/);
+      assertCanonicalSourceRequest(init);
+      assert.equal(init.headers["x-oos-caller-secret"], env.OOS_CALLER_SECRET);
+      return canonicalSourceResponse(page, {
+        recordRef: "oos://repository-custody/requests",
+        sourceOwner: "operator-orchestration-service",
+      });
+    },
+  });
+  assert.equal(listed.records[0].request.request_id, request.request_id);
+  const fetchImpl = async () => jsonResponse({ ...page, mode: "live", status: "current", error: null });
+  for (let reload = 0; reload < 2; reload += 1) {
+    const records = await readRepositoryCustodyRegister(fetchImpl);
+    const projected = projectRepositoryCustodyResults([], { [records[0].request.request_id]: records[0] });
+    assert.equal(projected[0].providerIdentity.repositoryId, result.provider_readback.repository_identity.provider_repository_id);
+    assert.equal(projected[0].custody.state, "linked");
+    assert.equal(projected[0].admissionState, "ready");
+  }
+  await assert.rejects(
+    readRepositoryCustodyRegister(async () => jsonResponse({ mode: "live", status: "offline", records: [] }, 503)),
+    /unavailable or invalid/,
+  );
+  await assert.rejects(listRepositoryCustodyResults("../private", { env }), /cursor is invalid/);
+  const cursor = "a".repeat(64);
+  await assert.rejects(
+    readRepositoryCustodyRegister(async () => jsonResponse({
+      schema_version: 1, records: [], next_cursor: cursor, mode: "live", status: "current",
+    })),
+    /did not advance/,
+  );
+});
 
 test("case:repository-custody-end-to-end-positive links, replays, reads, and projects exact authority evidence", async () => {
   const calls = [];

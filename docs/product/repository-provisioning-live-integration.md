@@ -24,6 +24,12 @@ Catalog metadata, admit a product, or complete Repository onboarding.
 6. On success, continue through Repository onboarding and the separately
    governed Workspace Intake path when classification is required.
 
+Repository Control restores retained provisioning results from OOS after
+browser reload. A recovered provider record remains ready for onboarding;
+readback does not imply Workspace Intake, active inventory, or product
+admission. The Source signal distinguishes loading, current canonical records,
+and owner failure.
+
 The operator cannot provide provider credentials, policy references, caller
 secrets, arbitrary GitHub hosts, or repository feature and merge-policy values.
 

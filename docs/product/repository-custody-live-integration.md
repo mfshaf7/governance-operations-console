@@ -48,6 +48,14 @@ server.
 
 ## Link Flow
 
+Repository Control reloads its canonical register from retained OOS custody
+request pages through the same-origin `GET /api/repositories/custody/requests`
+route. The server validates the OOS source envelope and every workflow result.
+The browser follows bounded pages, rejects repeated cursors and conflicting
+identities, and polls only while visible. Reloading the browser does not erase
+retained successful custody or provisioning records. Missing or malformed
+owner truth leaves the source offline without fixture fallback.
+
 1. Select a Repository record with immutable provider identity and choose
    `Link Existing Repository`.
 2. Review the custody kind and workspace owner reference, then record the
