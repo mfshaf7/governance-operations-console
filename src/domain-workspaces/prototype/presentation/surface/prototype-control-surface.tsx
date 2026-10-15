@@ -28,8 +28,28 @@ export function PrototypeControlSurface({
       <TerasRecordControlLayout
         composition="compact-control"
         data-prototype-control="true"
-        data-prototype-control-surface="empty"
-        mode="register-only"
+        data-prototype-control-surface="unavailable"
+        mode="overview-register-selected"
+        overview={
+          <PrototypeControlOverviewPanel
+            canRequestPrototype={controller.overview.canRequestPrototype}
+            onOpenPrototypeRequest={controller.overview.onOpenPrototypeRequest}
+            requestSubmittedAt={controller.overview.requestSubmittedAt}
+            summary={controller.overview.summary}
+            workspaceStatus={controller.overview.workspaceStatus}
+          />
+        }
+        register={
+          <TerasEmptyState fill>
+            Canonical Prototype records are unavailable. Fixtures are not used
+            as fallback in live mode.
+          </TerasEmptyState>
+        }
+        selected={
+          <TerasEmptyState fill>
+            No canonical Prototype record is available to select.
+          </TerasEmptyState>
+        }
       />
     );
   }
@@ -43,6 +63,7 @@ export function PrototypeControlSurface({
         mode="overview-register-selected"
         overview={
           <PrototypeControlOverviewPanel
+            canRequestPrototype={controller.overview.canRequestPrototype}
             onOpenPrototypeRequest={controller.overview.onOpenPrototypeRequest}
             requestSubmittedAt={controller.overview.requestSubmittedAt}
             summary={controller.overview.summary}

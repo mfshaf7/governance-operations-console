@@ -88,3 +88,33 @@ export function consoleActionExecutable(
     ? decision.actionMode === "durable"
     : decision.actionMode === "prototype-local";
 }
+
+export function resolveConsolePrimaryRecordIsolation({
+  liveAuthorityAvailable,
+  runtimeMode,
+  runtimeStatus,
+}: {
+  liveAuthorityAvailable: boolean;
+  runtimeMode: "disconnected-preview" | "invalid" | "live" | null;
+  runtimeStatus: "current" | "loading" | "unavailable";
+}) {
+  if (runtimeStatus === "loading") {
+    return resolveConsoleFixtureIsolation({ mode: null, status: "loading" });
+  }
+  if (runtimeStatus === "unavailable" || runtimeMode === "invalid") {
+    return resolveConsoleFixtureIsolation({
+      mode: "unavailable",
+      status: "unavailable",
+    });
+  }
+  if (runtimeMode === "disconnected-preview") {
+    return resolveConsoleFixtureIsolation({
+      mode: "disconnected-preview",
+      status: "current",
+    });
+  }
+  return resolveConsoleFixtureIsolation({
+    mode: "live",
+    status: liveAuthorityAvailable ? "current" : "unavailable",
+  });
+}

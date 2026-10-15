@@ -39,9 +39,35 @@ export function RepositoryControlSurface({
 
   if (!selectedRepository) {
     return (
-      <TerasEmptyState fill>
-        No repository records are available in the projection.
-      </TerasEmptyState>
+      <TerasRecordControlLayout
+        composition="compact-control"
+        data-repository-control-surface="unavailable"
+        mode="overview-register-selected"
+        overview={
+          <RepositoryControlOverviewPanel
+            canProvisionRepository={
+              controller.overview.canProvisionRepository
+            }
+            onOpenRepositoryRequestDraft={
+              controller.overview.onOpenRepositoryRequestDraft
+            }
+            requestSubmittedAt={controller.overview.requestSubmittedAt}
+            summary={controller.overview.summary}
+            workspaceStatus={controller.overview.workspaceStatus}
+          />
+        }
+        register={
+          <TerasEmptyState fill>
+            Canonical Repository records are unavailable. Fixtures are not
+            used as fallback in live mode.
+          </TerasEmptyState>
+        }
+        selected={
+          <TerasEmptyState fill>
+            No canonical Repository record is available to select.
+          </TerasEmptyState>
+        }
+      />
     );
   }
 
@@ -54,6 +80,9 @@ export function RepositoryControlSurface({
         mode="overview-register-selected"
         overview={
           <RepositoryControlOverviewPanel
+            canProvisionRepository={
+              controller.overview.canProvisionRepository
+            }
             onOpenRepositoryRequestDraft={
               controller.overview.onOpenRepositoryRequestDraft
             }

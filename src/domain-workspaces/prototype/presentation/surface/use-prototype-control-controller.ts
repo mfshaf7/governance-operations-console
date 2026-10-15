@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
+import type { OperationSurfaceStatusModel } from "../../../operation-contracts/surface-status.ts";
+import { useConsoleRuntimeCapabilities } from "../../../../console-integration/configuration/use-console-runtime-capabilities.ts";
+import {
+  resolveConsolePrimaryRecordIsolation,
+  selectConsoleAuthorityProjection,
+} from "../../../../console-integration/fixture-isolation/console-fixture-isolation.ts";
 import {
   getPrototypeEntryPacketProjections,
   subscribePrototypeEntryPacketProjections,
@@ -22,7 +28,9 @@ import {
 } from "../../local-runtime/prototype-landing-runtime.ts";
 import {
   getPrototypeWorkspaceReadModel,
+  type PrototypeProjectedReceipt,
   type PrototypeRecord,
+  type PrototypeWorkspaceReadModel,
 } from "../../read-model/prototype-workspace-read-model.ts";
 import {
   filterPrototypeRecords,
@@ -81,12 +89,44 @@ export function usePrototypeControlController({
   entryIntent?: ConsoleSurfaceEntryIntent | null;
 } = {}) {
   const runtimeCapabilities = getPrototypeRuntimeCapabilities();
+  const consoleRuntime = useConsoleRuntimeCapabilities();
+  const primaryRecordIsolation = resolveConsolePrimaryRecordIsolation({
+    liveAuthorityAvailable: false,
+    runtimeMode: consoleRuntime.projection?.mode ?? null,
+    runtimeStatus: consoleRuntime.status,
+  });
   const deliveryRuntime = usePrototypeDeliveryLiveRuntime();
   const closureRuntime = usePrototypeClosureLiveRuntime();
   const landingRuntime = usePrototypeLandingLiveRuntime();
   const maturityRuntime = usePrototypeMaturityLiveRuntime();
   const previewRuntime = usePrototypePreviewLiveRuntime();
-  const sourceReadModel = getPrototypeWorkspaceReadModel();
+  const fixtureReadModel = primaryRecordIsolation.fixtureAllowed
+    ? getPrototypeWorkspaceReadModel()
+    : null;
+  const sourceReadModel = useMemo<PrototypeWorkspaceReadModel>(
+    () => ({
+      ...(fixtureReadModel ?? {
+        source: {
+          lastRead: "unavailable",
+          mutationGateway: "unavailable",
+          project: "Workspace Prototype Studio",
+          recordSystem: "canonical owner projection",
+          registry: "unavailable",
+        },
+      }),
+      records:
+        selectConsoleAuthorityProjection({
+          decision: primaryRecordIsolation,
+          fixture: fixtureReadModel?.records ?? [],
+          live: null,
+        }) ?? [],
+    }),
+    [
+      fixtureReadModel,
+      primaryRecordIsolation.fixtureAllowed,
+      primaryRecordIsolation.liveAuthorityAllowed,
+    ],
+  );
   const state = usePrototypeControlState(sourceReadModel);
   const [requestDraft, setRequestDraft] = useState<PrototypeRequestDraft>(
     emptyPrototypeRequestDraft,
@@ -107,9 +147,15 @@ export function usePrototypeControlController({
       ),
     [proposalEntryPacketProjections],
   );
-  const effectiveProjection = useMemo(
-    () =>
-      projectPrototypeEffectiveReadModel({
+  const effectiveProjection = useMemo<{
+    readModel: PrototypeWorkspaceReadModel;
+    receiptsByRecord: Record<string, PrototypeProjectedReceipt[]>;
+  }>(
+    () => {
+      if (!primaryRecordIsolation.fixtureAllowed) {
+        return { readModel: sourceReadModel, receiptsByRecord: {} };
+      }
+      return projectPrototypeEffectiveReadModel({
         deliveryApplicationsByPrototypeId:
           deliveryRuntime.projectionsByPrototypeId,
         landingProjectionsByRecordId: landingRuntime.projectionsByRecordId,
@@ -117,11 +163,13 @@ export function usePrototypeControlController({
         proposalEntryRecords,
         runtimeProjection: state.runtimeProjection,
         sourceReadModel,
-      }),
+      });
+    },
     [
       deliveryRuntime.projectionsByPrototypeId,
       landingRuntime.projectionsByRecordId,
       maturityRuntime.projectionsByRecordId,
+      primaryRecordIsolation.fixtureAllowed,
       proposalEntryRecords,
       sourceReadModel,
       state.runtimeProjection,
@@ -203,8 +251,35 @@ export function usePrototypeControlController({
       : {}),
   };
   const stats = getPrototypeWorkspaceStats(readModel.records);
-  const workspaceStatus = prototypeWorkspaceStatus(readModel, stats);
-  const canSubmitRequest = prototypeRequestDraftComplete(requestDraft);
+  const workspaceStatus: OperationSurfaceStatusModel =
+    primaryRecordIsolation.fixtureAllowed
+      ? prototypeWorkspaceStatus(readModel, stats)
+      : {
+          ariaLabel: "Prototype workspace status details",
+          items: [
+            {
+              detail:
+                "Canonical Prototype records are unavailable; fixture and browser-local records are excluded from live mode.",
+              facts: [
+                { label: "Primary records", value: "unavailable" },
+                { label: "Fixture fallback", value: "disabled" },
+              ],
+              id: "source-projection",
+              label: "Source",
+              state: "offline",
+              tone: "danger",
+            },
+          ],
+          kicker: "Prototype Status",
+          statusLabel: "Canonical source unavailable",
+          summary:
+            "Live mode requires an owner-backed Prototype projection before records or record actions are shown.",
+          title: "Prototype workspace status",
+          tone: "danger",
+        };
+  const canSubmitRequest =
+    primaryRecordIsolation.fixtureAllowed &&
+    prototypeRequestDraftComplete(requestDraft);
 
   useEffect(() => {
     if (!entryIntent) {
@@ -279,6 +354,7 @@ export function usePrototypeControlController({
   }
 
   function openPrototypeRequest() {
+    if (!primaryRecordIsolation.fixtureAllowed) return;
     setRequestSubmittedAt(null);
     setRequestOpen(true);
   }
@@ -484,6 +560,7 @@ export function usePrototypeControlController({
     },
     openDialog,
     overview: {
+      canRequestPrototype: primaryRecordIsolation.fixtureAllowed,
       onOpenPrototypeRequest: openPrototypeRequest,
       requestSubmittedAt,
       summary: prototypeSummaryMetrics(stats),
@@ -492,6 +569,11 @@ export function usePrototypeControlController({
     records: {
       all: readModel.records,
       filtered: filteredRecords,
+    },
+    sourceAvailability: {
+      error: consoleRuntime.error,
+      reasonCode: primaryRecordIsolation.reasonCode,
+      unavailable: !primaryRecordIsolation.fixtureAllowed && readModel.records.length === 0,
     },
     request: {
       canSubmit: canSubmitRequest,

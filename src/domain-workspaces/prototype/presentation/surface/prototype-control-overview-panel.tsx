@@ -16,11 +16,13 @@ import {
 import type { PrototypeSummaryMetric } from "./prototype-control-view-model.ts";
 
 export function PrototypeControlOverviewPanel({
+  canRequestPrototype,
   onOpenPrototypeRequest,
   requestSubmittedAt,
   summary,
   workspaceStatus,
 }: {
+  canRequestPrototype: boolean;
   onOpenPrototypeRequest: () => void;
   requestSubmittedAt: string | null;
   summary: PrototypeSummaryMetric[];
@@ -41,6 +43,7 @@ export function PrototypeControlOverviewPanel({
         action={
           <TerasActionButton
             data-prototype-request-action="true"
+            disabled={!canRequestPrototype}
             onClick={onOpenPrototypeRequest}
           >
             <Plus aria-hidden="true" size={14} />
@@ -55,7 +58,9 @@ export function PrototypeControlOverviewPanel({
           </>
         }
         boundaryKicker="Request Boundary"
-        description="Prototype-local ingress for a direct prototype request."
+        description={canRequestPrototype
+          ? "Prototype-local ingress for a direct prototype request."
+          : "Direct prototype requests are unavailable in live mode until a canonical owner path is connected."}
         kicker="Prototype Ingress"
         receipt={
           requestSubmittedAt
