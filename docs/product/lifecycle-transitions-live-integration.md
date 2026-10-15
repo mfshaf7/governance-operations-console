@@ -59,6 +59,14 @@ navigation intent or mutation. Refresh and the existing visible-tab poll read
 canonical state again; neither path stores or reconstructs transition state in
 the browser.
 
+Resume navigation is admitted only when the requested transition identity and
+required move still match one current, non-truncated OOS journal projection.
+Unknown identities, duplicate identities, stale required moves, unavailable
+owner truth, and truncated results render recovery guidance without mounting a
+different transition or exposing its owner action. The operator refreshes OOS
+truth and reopens the transition from Focus; the Console never substitutes the
+first visible record for an unresolved resume request.
+
 ## Ownership Boundary
 
 The integration does not:

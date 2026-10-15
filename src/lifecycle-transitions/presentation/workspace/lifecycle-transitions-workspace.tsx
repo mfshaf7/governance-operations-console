@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   TerasFullscreenSurfaceFrame,
+  TerasEmptyState,
   TerasModalShell,
   TerasSurfaceNav,
   TerasSurfaceNavButton,
@@ -35,6 +36,7 @@ import {
   lifecycleTransitionRouteNavLabel,
   lifecycleTransitionWorkspaceStatus,
 } from "./lifecycle-transitions-workspace-view-model";
+import { resolveLifecycleTransitionResume } from "../../routing/lifecycle-transition-resume";
 
 export function LifecycleTransitionsWorkspace({
   entryIntent,
@@ -52,27 +54,30 @@ export function LifecycleTransitionsWorkspace({
   runtimePosture: LifecycleTransitionRuntimePosture | null;
   transitions: readonly LifecycleTransitionProjection[];
 }) {
-  const routes = buildLifecycleTransitionRouteOverviews(transitions);
+  const routes = useMemo(
+    () => buildLifecycleTransitionRouteOverviews(transitions),
+    [transitions],
+  );
+  const resume = useMemo(
+    () =>
+      resolveLifecycleTransitionResume({
+        entryIntent,
+        runtimePosture,
+        transitions,
+      }),
+    [entryIntent, runtimePosture, transitions],
+  );
   const [activeRouteId, setActiveRouteId] =
     useState<LifecycleTransitionRouteId>(routes[0].routeId);
   const activeRoute =
     routes.find((route) => route.routeId === activeRouteId) ?? routes[0];
 
   useEffect(() => {
-    if (!entryIntent) {
+    if (resume.state !== "ready") {
       return;
     }
-
-    const focusedRoute = routes.find((route) =>
-      route.items.some(
-        (item) => item.transitionId === entryIntent.subjectRef,
-      ),
-    );
-
-    if (focusedRoute) {
-      setActiveRouteId(focusedRoute.routeId);
-    }
-  }, [entryIntent, routes]);
+    setActiveRouteId(resume.routeId);
+  }, [resume]);
 
   return (
     <TerasModalShell
@@ -85,48 +90,56 @@ export function LifecycleTransitionsWorkspace({
       title="Lifecycle Transitions"
       width="viewport"
     >
-      <TerasFullscreenSurfaceFrame
-        data-lifecycle-transition-route={activeRoute.routeId}
-        nav={
-          <TerasSurfaceNav
-            ariaLabel="Lifecycle transition routes"
-            description="Select a supported cross-domain route."
-            kicker="Route Nav"
-            title="Transition Routes"
-          >
-            {routes.map((route, index) => (
-              <TerasSurfaceNavButton
-                current={route.routeId === activeRoute.routeId}
-                kicker={String(index + 1).padStart(2, "0")}
-                key={route.routeId}
-                meta={String(route.totalCount)}
-                onClick={() => setActiveRouteId(route.routeId)}
-                title={lifecycleTransitionRouteNavLabel(route.routeId)}
-                tone={route.tone}
-              />
-            ))}
-          </TerasSurfaceNav>
-        }
-        summary={
-          <TerasSurfaceSummaryHeader
-            ariaLabel="Lifecycle transition route summary"
-            metrics={lifecycleTransitionWorkspaceMetrics(activeRoute)}
-            statuses={lifecycleTransitionWorkspaceStatus(
-              activeRoute,
-              runtimePosture,
-            )}
-            title={`${activeRoute.sourceLabel} to ${activeRoute.targetLabel}`}
-            titleKicker="Route Summary"
+      {resume.state === "blocked" ? (
+        <TerasEmptyState fill>
+          {resume.message}
+        </TerasEmptyState>
+      ) : (
+        <TerasFullscreenSurfaceFrame
+          data-lifecycle-transition-route={activeRoute.routeId}
+          nav={
+            <TerasSurfaceNav
+              ariaLabel="Lifecycle transition routes"
+              description="Select a supported cross-domain route."
+              kicker="Route Nav"
+              title="Transition Routes"
+            >
+              {routes.map((route, index) => (
+                <TerasSurfaceNavButton
+                  current={route.routeId === activeRoute.routeId}
+                  kicker={String(index + 1).padStart(2, "0")}
+                  key={route.routeId}
+                  meta={String(route.totalCount)}
+                  onClick={() => setActiveRouteId(route.routeId)}
+                  title={lifecycleTransitionRouteNavLabel(route.routeId)}
+                  tone={route.tone}
+                />
+              ))}
+            </TerasSurfaceNav>
+          }
+          summary={
+            <TerasSurfaceSummaryHeader
+              ariaLabel="Lifecycle transition route summary"
+              metrics={lifecycleTransitionWorkspaceMetrics(activeRoute)}
+              statuses={lifecycleTransitionWorkspaceStatus(
+                activeRoute,
+                runtimePosture,
+              )}
+              title={`${activeRoute.sourceLabel} to ${activeRoute.targetLabel}`}
+              titleKicker="Route Summary"
+            />
+          }
+        >
+          <LifecycleTransitionsWorkspaceSurface
+            focusTransitionId={
+              resume.state === "ready" ? resume.transitionId : null
+            }
+            key={activeRoute.routeId}
+            onOpenWorkbenchSurface={onOpenWorkbenchSurface}
+            route={activeRoute}
           />
-        }
-      >
-        <LifecycleTransitionsWorkspaceSurface
-          focusTransitionId={entryIntent?.subjectRef ?? null}
-          key={activeRoute.routeId}
-          onOpenWorkbenchSurface={onOpenWorkbenchSurface}
-          route={activeRoute}
-        />
-      </TerasFullscreenSurfaceFrame>
+        </TerasFullscreenSurfaceFrame>
+      )}
     </TerasModalShell>
   );
 }
