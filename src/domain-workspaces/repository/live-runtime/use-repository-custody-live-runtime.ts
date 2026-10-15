@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { readRepositoryCustodyRegister } from "./repository-custody-live-readback.ts";
 
 import {
   assertRepositoryCustodyWorkflowResult,
@@ -24,6 +25,9 @@ export class RepositoryCustodyClientError extends Error {
 }
 
 export function useRepositoryCustodyLiveRuntime() {
+  const [sourceStatus, setSourceStatus] = useState<"loading" | "current" | "offline">("loading");
+  const [sourceError, setSourceError] = useState<string | null>(null);
+  const refreshSequence = useRef(0);
   const [resultsByRepositoryId, setResultsByRepositoryId] = useState<
     Readonly<Record<string, RepositoryCustodyWorkflowResult>>
   >({});
@@ -40,6 +44,45 @@ export function useRepositoryCustodyLiveRuntime() {
   const [pendingProvisioningRequestId, setPendingProvisioningRequestId] =
     useState<string | null>(null);
 
+  const refresh = useCallback(async () => {
+    const sequence = ++refreshSequence.current;
+    try {
+      const records = await readRepositoryCustodyRegister();
+      if (sequence !== refreshSequence.current) return;
+      const provisions: Record<string, RepositoryCustodyWorkflowResult> = {};
+      const links: Record<string, RepositoryCustodyWorkflowResult> = {};
+      for (const record of records.sort((a, b) =>
+        a.request.requested_at.localeCompare(b.request.requested_at) ||
+        a.request.request_id.localeCompare(b.request.request_id),
+      )) {
+        if (record.request.action === "provision-new") {
+          provisions[record.request.request_id] = record;
+        } else if (record.provider_readback) {
+          links[`repo-provider-${record.provider_readback.repository_identity.provider_repository_id}`] = record;
+        }
+      }
+      setProvisioningResultsByRequestId(provisions);
+      setResultsByRepositoryId(links);
+      setSourceStatus("current");
+      setSourceError(null);
+    } catch (error) {
+      if (sequence !== refreshSequence.current) return;
+      setSourceStatus("offline");
+      setSourceError(error instanceof Error ? error.message : "Canonical Repository readback failed.");
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 15_000);
+    return () => {
+      refreshSequence.current += 1;
+      window.clearInterval(timer);
+    };
+  }, [refresh]);
+
   const link = useCallback(async (intent: RepositoryCustodyLinkIntent) => {
     setPendingRepositoryId(intent.repositoryId);
     setErrorsByRepositoryId((current) => withoutKey(current, intent.repositoryId));
@@ -52,6 +95,7 @@ export function useRepositoryCustodyLiveRuntime() {
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) throw clientError(body);
       const result = assertRepositoryCustodyWorkflowResult(body);
+      refreshSequence.current += 1;
       setResultsByRepositoryId((current) => ({
         ...current,
         [intent.repositoryId]: result,
@@ -90,6 +134,7 @@ export function useRepositoryCustodyLiveRuntime() {
         const body: unknown = await response.json().catch(() => null);
         if (!response.ok) throw clientError(body);
         const result = assertRepositoryCustodyWorkflowResult(body);
+        refreshSequence.current += 1;
         setResultsByRepositoryId((current) => ({
           ...current,
           [repositoryId]: result,
@@ -130,6 +175,7 @@ export function useRepositoryCustodyLiveRuntime() {
           false,
         );
       }
+      refreshSequence.current += 1;
       setProvisioningResultsByRequestId((current) => ({
         ...current,
         [intent.requestId]: result,
@@ -165,6 +211,7 @@ export function useRepositoryCustodyLiveRuntime() {
           false,
         );
       }
+      refreshSequence.current += 1;
       setProvisioningResultsByRequestId((current) => ({
         ...current,
         [requestId]: result,
@@ -183,6 +230,9 @@ export function useRepositoryCustodyLiveRuntime() {
   }, []);
 
   return {
+    refresh,
+    sourceStatus,
+    sourceError,
     errorsByRepositoryId,
     link,
     pendingRepositoryId,

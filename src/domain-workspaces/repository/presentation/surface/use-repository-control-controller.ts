@@ -80,8 +80,9 @@ export function useRepositoryControlController({
 }) {
   const runtimeCapabilities = getRepositoryRuntimeCapabilities();
   const consoleRuntime = useConsoleRuntimeCapabilities();
+  const custodyRuntime = useRepositoryCustodyLiveRuntime();
   const primaryRecordIsolation = resolveConsolePrimaryRecordIsolation({
-    liveAuthorityAvailable: false,
+    liveAuthorityAvailable: custodyRuntime.sourceStatus === "current",
     runtimeMode: consoleRuntime.projection?.mode ?? null,
     runtimeStatus: consoleRuntime.status,
   });
@@ -104,7 +105,6 @@ export function useRepositoryControlController({
     "repository-provisioning",
     "mutation",
   );
-  const custodyRuntime = useRepositoryCustodyLiveRuntime();
   const lifecycleRuntime = useRepositoryLifecycleLiveRuntime();
   const proposalRequestRecords = useSyncExternalStore(
     subscribeProposalRepositoryRequestRecords,
@@ -315,16 +315,17 @@ export function useRepositoryControlController({
           ariaLabel: "Repository control status",
           items: [
             {
-              detail:
-                "Canonical Repository records are unavailable; fixture and browser-local records are excluded from live mode.",
+              detail: custodyRuntime.sourceStatus === "current"
+                ? "Repository records are projected from retained OOS custody requests."
+                : custodyRuntime.sourceError ?? "Canonical Repository records are loading.",
               facts: [
-                { label: "Primary records", value: "unavailable" },
+                { label: "Primary records", value: custodyRuntime.sourceStatus },
                 { label: "Fixture fallback", value: "disabled" },
               ],
               id: "source",
               label: "Source",
-              state: "offline",
-              tone: "danger",
+              state: custodyRuntime.sourceStatus === "current" ? "online" : custodyRuntime.sourceStatus === "loading" ? "syncing" : "offline",
+              tone: custodyRuntime.sourceStatus === "current" ? "ok" : custodyRuntime.sourceStatus === "loading" ? "info" : "danger",
             },
             {
               detail: canProvisionRepository
@@ -343,11 +344,11 @@ export function useRepositoryControlController({
             },
           ],
           kicker: "Repository Status",
-          statusLabel: "Canonical source unavailable",
+          statusLabel: custodyRuntime.sourceStatus === "current" ? "Canonical source current" : "Canonical source unavailable",
           summary:
             "Live mode shows only authoritative Repository results returned by owner workflows.",
           title: "Repository control status",
-          tone: "danger",
+          tone: custodyRuntime.sourceStatus === "current" ? "ok" : "danger",
         };
   const requestDraftDirty = repositoryRequestDraftDirty(requestDraft);
   const requestResult = custodyRuntime.provisioningResultsByRequestId[requestId];

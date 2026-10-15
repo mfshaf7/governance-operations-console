@@ -164,6 +164,45 @@ export async function readRepositoryCustodyResult(
   return result;
 }
 
+export async function listRepositoryCustodyResults(
+  cursor: string | null = null,
+  { env = process.env, fetchImpl = fetch }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+): Promise<{ schema_version: 1; records: RepositoryCustodyWorkflowResult[]; next_cursor: string | null }> {
+  if (cursor !== null && !/^[a-f0-9]{64}$/.test(cursor)) {
+    throw new RepositoryCustodyOosError("Repository custody cursor is invalid.", "repository_custody_page_invalid", 400);
+  }
+  const config = resolveConsoleOosOperatorConfiguration(env);
+  const value = await repositoryCustodyOosRequest(
+    config,
+    `/v1/repository-custody/requests${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+    { method: "GET" },
+    fetchImpl,
+    {
+      authority: "operator-orchestration-service",
+      recordRef: "oos://repository-custody/requests",
+      sourceOwner: "operator-orchestration-service",
+    },
+  );
+  if (
+    !isRecord(value) || value.schema_version !== 1 ||
+    !Array.isArray(value.records) || value.records.length > 25 ||
+    (value.next_cursor !== null &&
+      (typeof value.next_cursor !== "string" || !/^[a-f0-9]{64}$/.test(value.next_cursor))) ||
+    Object.keys(value).some((key) => !["schema_version", "records", "next_cursor"].includes(key))
+  ) {
+    throw new RepositoryCustodyOosError("Repository custody page is invalid.", "repository_custody_page_invalid", 502);
+  }
+  const records = value.records.map((entry) => {
+    const result = assertRepositoryCustodyWorkflowResult(entry);
+    assertCanonicalRepositoryCustodyRequest(result.request);
+    return result;
+  });
+  if (new Set(records.map((record) => record.request.request_id)).size !== records.length) {
+    throw new RepositoryCustodyOosError("Repository custody page contains duplicate identities.", "repository_custody_page_invalid", 502);
+  }
+  return { schema_version: 1, records, next_cursor: value.next_cursor as string | null };
+}
+
 export function buildRepositoryCustodyRequest(
   intent: RepositoryCustodyLinkIntent,
   config: RepositoryCustodyOosConfig,
@@ -451,7 +490,7 @@ function configuredArtifactRef(
 }
 
 async function repositoryCustodyOosRequest(
-  config: RepositoryCustodyOosConfig,
+  config: ConsoleOosOperatorConfiguration,
   path: string,
   init: RequestInit,
   fetchImpl: typeof fetch,

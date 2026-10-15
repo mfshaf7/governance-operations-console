@@ -7,12 +7,25 @@ import type {
 import {
   assertRepositoryCustodyRequestId,
   linkExistingRepositoryCustody,
+  listRepositoryCustodyResults,
   provisionRepository,
   readRepositoryCustodyResult,
   RepositoryCustodyOosError,
 } from "./repository-custody-oos-client.ts";
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
+
+export async function listRepositoryCustodyRequestsRoute(request: NextRequest) {
+  try {
+    const page = await listRepositoryCustodyResults(request.nextUrl.searchParams.get("cursor"));
+    return NextResponse.json(
+      { ...page, mode: "live", status: "current", error: null },
+      { headers: noStoreHeaders },
+    );
+  } catch (error) {
+    return repositoryCustodyErrorResponse(error);
+  }
+}
 
 export async function linkExistingRepositoryCustodyRoute(
   request: NextRequest,
