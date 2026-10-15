@@ -15,9 +15,29 @@ import {
   proposalOosConfigured,
   ProposalOosError,
   startProposalTargetApplication,
+  resolveProposalRepositoryGate,
 } from "./proposal-oos-client.ts";
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
+
+export async function resolveProposalRepositoryGateRoute(request: NextRequest, proposalId: string) {
+  try {
+    const value: unknown = await request.json().catch(() => null);
+    if (!isRecord(value) || value.proposalId !== proposalId || !/^idea-[1-9][0-9]*$/.test(proposalId) ||
+        Object.keys(value).some((key) => !["proposalId", "recordRef", "recordVersion", "custodyRequestId", "custodyReceiptRef", "notes"].includes(key)) ||
+        value.recordRef !== `openproject://work_packages/${proposalId.slice(5)}` ||
+        typeof value.recordVersion !== "string" || !/^version-[0-9]+$/.test(value.recordVersion) ||
+        typeof value.custodyRequestId !== "string" || !/^repository-custody-request:[A-Za-z0-9._:-]+$/.test(value.custodyRequestId) ||
+        !isRecord(value.custodyReceiptRef) || typeof value.custodyReceiptRef.uri !== "string" ||
+        typeof value.custodyReceiptRef.digest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(value.custodyReceiptRef.digest) ||
+        typeof value.notes !== "string" || !value.notes.trim() || value.notes.length > 1000) {
+      throw new ProposalOosError("Review the exact Proposal source, successful custody receipt and resolution notes.", "proposal_repository_resolution_intent_invalid", 400);
+    }
+    const result = await resolveProposalRepositoryGate({ proposalId, recordRef: String(value.recordRef), recordVersion: value.recordVersion,
+      custodyRequestId: value.custodyRequestId, custodyReceiptRef: { uri: value.custodyReceiptRef.uri, digest: value.custodyReceiptRef.digest }, notes: value.notes });
+    return NextResponse.json(result, { headers: noStoreHeaders, status: result.replayed ? 200 : 201 });
+  } catch (error) { return proposalErrorResponse(error); }
+}
 
 export async function listProposalsRoute() {
   if (!proposalOosConfigured()) {

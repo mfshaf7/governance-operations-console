@@ -16,6 +16,7 @@ import {
   proposalTargetApplicationId,
   ProposalOosError,
   startProposalTargetApplication,
+  resolveProposalRepositoryGate,
 } from "../../src/domain-workspaces/proposal/server/proposal-oos-client.ts";
 import {
   assertCanonicalSourceRequest,
@@ -30,6 +31,55 @@ const env = {
 };
 const handoffRef19 = "proposal-handoff:idea-851:version-19";
 const handoffRef21 = "proposal-handoff:idea-851:version-21";
+
+test("Repository gate adapter binds successful owner receipt, preserves source and returns durable resolution", async () => {
+  const intent = { proposalId: "idea-851", recordRef: "openproject://work_packages/851", recordVersion: "version-17",
+    custodyRequestId: "repository-custody-request:todo", custodyReceiptRef: { uri: "oos://receipts/repository-custody/todo.json", digest: `sha256:${"a".repeat(64)}` }, notes: "Use the reviewed private repository." };
+  const requests = [];
+  function resultFor(request) {
+    const resolution = { resolution_id: request.resolution_id, custody_request_id: request.custody_request_id,
+      receipt_ref: `repository-resolution:idea-851:${"c".repeat(64)}`, source_version: request.source.record_version,
+      proposal_id: request.proposal_id, repository_request_ref: request.repository_request_ref,
+      resolved_owner: "repo:todo", resolved_repo_ref: "https://github.com/example-workspace/todo",
+      recorded_at: "2026-10-15T20:00:00Z", notes: request.notes, custody_receipt_ref: request.custody_receipt_ref };
+    const projection = proposalProjection({ record_version: "version-18", status: "accepted",
+      route: { target: "prototype", rationale: "Original accepted Prototype decision.", source_custody: {
+        classification: "new-repo-required", repository_mode: "new", repository_gate_state: "resolved", owner: resolution.resolved_owner,
+        source_ref: resolution.resolved_repo_ref, rationale: request.notes } }, repository_resolution: resolution, repository_resolution_history_pending: false });
+    const event = { schema_version: 1, event_id: "proposal-event:idea-851:resolution", event_type: "repository-gate-resolved",
+      proposal_id: request.proposal_id, command_id: request.resolution_id, record_version: "version-18",
+      actor: { id: "governance-operations-console", kind: "operator" }, occurred_at: resolution.recorded_at,
+      receipt_refs: [resolution.receipt_ref], summary: request.notes, repository_resolution: resolution };
+    return { schema_version: 1, command_id: request.resolution_id, replayed: false,
+      receipt: { owner: "operator-orchestration-service", receipt_ref: resolution.receipt_ref, recorded_at: resolution.recorded_at, record_ref: intent.recordRef, record_version: "version-18" },
+      projection, event, history: { schema_version: 1, proposal_id: intent.proposalId, record_version: "version-18", events: [event], next_cursor: null } };
+  }
+  const fetchImpl = async (url, init) => {
+    assert.match(String(url), /\/v1\/proposals\/idea-851\/repository-resolution$/);
+    const request = JSON.parse(init.body); requests.push(request);
+    assert.equal(request.operator.id, "governance-operations-console");
+    assert.equal(request.source.record_version, intent.recordVersion);
+    assert.equal(request.resolved_owner, undefined);
+    return jsonResponse(resultFor(request), 201);
+  };
+  const result = await resolveProposalRepositoryGate(intent, { env, fetchImpl });
+  await resolveProposalRepositoryGate(intent, { env, fetchImpl });
+  assert.equal(requests[0].resolution_id, requests[1].resolution_id);
+  const drafts = projectProposalCanonicalDrafts([{ projection: result.projection, history: result.history, createdAt: result.projection.updated_at }]);
+  assert.equal(drafts.repositoryGateResolutions["idea-851"].receiptId, result.receipt.receipt_ref);
+  const pending = { ...result.projection, repository_resolution_history_pending: true };
+  assert.equal(projectProposalCanonicalDrafts([{ projection: pending, history: result.history, createdAt: pending.updated_at }]).repositoryGateResolutions["idea-851"], undefined);
+  for (const corrupt of [
+    (value) => { value.projection.repository_resolution.custody_receipt_ref.digest = `sha256:${"b".repeat(64)}`; },
+    (value) => { value.event.command_id = "wrong-resolution"; },
+    (value) => { value.projection.repository_resolution_history_pending = true; },
+    (value) => { delete value.projection.repository_resolution; },
+  ]) {
+    await assert.rejects(resolveProposalRepositoryGate(intent, { env, fetchImpl: async (_url, init) => {
+      const value = resultFor(JSON.parse(init.body)); corrupt(value); return jsonResponse(value);
+    } }));
+  }
+});
 
 test("case:console-proposal-adapter-positive projects OOS truth and submits a version-bound command", async () => {
   const calls = [];

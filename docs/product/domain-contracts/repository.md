@@ -207,10 +207,19 @@ must expose enough owner/ref/admission posture for the Proposal handoff to know
 whether the gate is resolved after refresh/projection.
 
 Gate resolution is a Repository-owned command outcome. It must produce an
-idempotent prototype-local Repository receipt carrying receipt id, source
+idempotent Repository receipt carrying receipt id, source
 version, proposal id, request ref, resolved owner/ref, result, and timestamp.
 The cross-domain projection may publish that immutable receipt back to Proposal;
 it must not create a resolution timestamp or synthesize resolution truth itself.
+
+In configured live mode, Repository Control reads canonical Proposal requests
+and successful retained OOS custody results. Its reviewed resolution operation
+binds the exact source version and custody receipt, preserves Disposition, and
+persists the typed acknowledgement in canonical Proposal state and history.
+An interrupted history acknowledgement is visible and retryable from the same
+persisted inputs after reload. The prototype-local receipt path remains limited
+to disconnected preview; it cannot satisfy a live handoff gate. See
+[`../repository-proposal-gate-live-integration.md`](../repository-proposal-gate-live-integration.md).
 
 ## Non-Goals
 
