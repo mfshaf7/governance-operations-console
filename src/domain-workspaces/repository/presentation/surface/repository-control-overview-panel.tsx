@@ -16,11 +16,13 @@ import {
 import type { RepositoryWorkspaceSummaryMetric } from "../../read-model/repository-workspace-read-model.ts";
 
 export function RepositoryControlOverviewPanel({
+  canProvisionRepository,
   onOpenRepositoryRequestDraft,
   requestSubmittedAt,
   summary,
   workspaceStatus,
 }: {
+  canProvisionRepository: boolean;
   onOpenRepositoryRequestDraft: () => void;
   requestSubmittedAt: string | null;
   summary: RepositoryWorkspaceSummaryMetric[];
@@ -41,6 +43,7 @@ export function RepositoryControlOverviewPanel({
         action={
           <TerasActionButton
             data-repository-request-action="true"
+            disabled={!canProvisionRepository}
             onClick={onOpenRepositoryRequestDraft}
           >
             <Plus aria-hidden="true" size={14} />
@@ -55,7 +58,9 @@ export function RepositoryControlOverviewPanel({
           </>
         }
         boundaryKicker="Mutation Boundary"
-        description="Governed organization-repository creation with exact provider readback and a terminal receipt."
+        description={canProvisionRepository
+          ? "Governed organization-repository creation with exact provider readback and a terminal receipt."
+          : "Repository provisioning is unavailable until its exact owner capability is executable."}
         kicker="Repository Provisioning"
         receipt={
           requestSubmittedAt

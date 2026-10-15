@@ -6,6 +6,7 @@ import binding from "../../contracts/console-operational-capabilities.binding.js
 import {
   consoleActionExecutable,
   resolveConsoleFixtureIsolation,
+  resolveConsolePrimaryRecordIsolation,
   selectConsoleAuthorityProjection,
 } from "../../src/console-integration/fixture-isolation/console-fixture-isolation.ts";
 import { projectLifecycleTransitionAttentionSnapshot } from "../../src/lifecycle-transitions/read-model/attention-source.ts";
@@ -50,6 +51,30 @@ test("case:1279-positive selects one canonical source and gates actions by its s
     consoleActionExecutable(live, "prototype-local-simulation"),
     false,
   );
+});
+
+test("case:1279-negative excludes primary fixtures until owner records are real", () => {
+  const loading = resolveConsolePrimaryRecordIsolation({
+    liveAuthorityAvailable: false,
+    runtimeMode: null,
+    runtimeStatus: "loading",
+  });
+  const liveUnavailable = resolveConsolePrimaryRecordIsolation({
+    liveAuthorityAvailable: false,
+    runtimeMode: "live",
+    runtimeStatus: "current",
+  });
+  const disconnected = resolveConsolePrimaryRecordIsolation({
+    liveAuthorityAvailable: false,
+    runtimeMode: "disconnected-preview",
+    runtimeStatus: "current",
+  });
+
+  assert.equal(loading.fixtureAllowed, false);
+  assert.equal(liveUnavailable.fixtureAllowed, false);
+  assert.equal(liveUnavailable.actionMode, "disabled");
+  assert.equal(disconnected.fixtureAllowed, true);
+  assert.equal(disconnected.actionMode, "prototype-local");
 });
 
 test("case:1279-negative never falls back while live owner truth is loading or unavailable", () => {
@@ -121,6 +146,18 @@ test("dev preview controls cannot override configured owner truth", () => {
     new URL("../../src/domain-workspaces/model-operations/presentation/surface/use-model-operations-control-controller.ts", import.meta.url),
     "utf8",
   );
+  const repository = readFileSync(
+    new URL("../../src/domain-workspaces/repository/presentation/surface/use-repository-control-controller.ts", import.meta.url),
+    "utf8",
+  );
+  const prototype = readFileSync(
+    new URL("../../src/domain-workspaces/prototype/presentation/surface/use-prototype-control-controller.ts", import.meta.url),
+    "utf8",
+  );
+  const delivery = readFileSync(
+    new URL("../../src/domain-workspaces/delivery/presentation/workspace/workspace-controller.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.doesNotMatch(shell, /consoleDevMode\s*\|\|\s*lifecycleTransitionSnapshot/);
   assert.match(shell, /lifecycleFixtureIsolation\.fixtureAllowed/);
@@ -132,4 +169,21 @@ test("dev preview controls cannot override configured owner truth", () => {
     /selectConsoleAuthorityProjection[\s\S]*modelOperationsReadModel/,
   );
   assert.match(modelOperations, /consoleActionExecutable/);
+  for (const source of [repository, prototype, delivery]) {
+    assert.match(source, /resolveConsolePrimaryRecordIsolation/);
+    assert.match(source, /selectConsoleAuthorityProjection/);
+  }
+  assert.match(repository, /canProvisionRepository/);
+  assert.match(
+    repository,
+    /primaryRecordIsolation\.fixtureAllowed[\s\S]*repositoryWorkspaceReadModel\.records/,
+  );
+  assert.match(prototype, /primaryRecordIsolation\.fixtureAllowed/);
+  assert.match(
+    prototype,
+    /primaryRecordIsolation\.fixtureAllowed[\s\S]*getPrototypeWorkspaceReadModel/,
+  );
+  assert.match(delivery, /fixture: primaryRecordIsolation\.fixtureAllowed/);
+  assert.match(delivery, /AvailableDeliveryWorkspaceController/);
+  assert.doesNotMatch(delivery, /selectedBaseModel \?\? baseModel/);
 });

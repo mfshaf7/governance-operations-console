@@ -9,12 +9,22 @@ import {
 } from "react";
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
 import type { OperationWorkbenchDomainContract } from "../../../../operation-workbench/operation-workbench-contract.ts";
+import { useConsoleRuntimeCapabilities } from "../../../../console-integration/configuration/use-console-runtime-capabilities.ts";
+import {
+  resolveConsolePrimaryRecordIsolation,
+  selectConsoleAuthorityProjection,
+} from "../../../../console-integration/fixture-isolation/console-fixture-isolation.ts";
+import {
+  getOperationWorkbenchSurfaceAttributes,
+} from "../../../../operation-workbench/operation-workbench-contract.ts";
+import { TerasEmptyState, TerasModalShell } from "@/teras";
 
 import type { DeliveryIntakeSource } from "../../read-model/index.ts";
 import {
   getDeliveryReadModel,
   getExecutionBoardPackages,
 } from "../../read-model/index.ts";
+import type { DeliveryReadModel } from "../../read-model/index.ts";
 
 import {
   getDeliveryWorkspaceProjectionSnapshot,
@@ -39,7 +49,47 @@ export function DeliveryWorkspaceController({
   entryIntent: ConsoleSurfaceEntryIntent | null;
   onClose: () => void;
 }) {
-  const baseModel = getDeliveryReadModel();
+  const consoleRuntime = useConsoleRuntimeCapabilities();
+  const primaryRecordIsolation = resolveConsolePrimaryRecordIsolation({
+    liveAuthorityAvailable: false,
+    runtimeMode: consoleRuntime.projection?.mode ?? null,
+    runtimeStatus: consoleRuntime.status,
+  });
+  const selectedBaseModel = selectConsoleAuthorityProjection({
+    decision: primaryRecordIsolation,
+    fixture: primaryRecordIsolation.fixtureAllowed
+      ? getDeliveryReadModel()
+      : null,
+    live: null,
+  });
+
+  if (!selectedBaseModel) {
+    return (
+      <DeliveryWorkspaceUnavailable contract={contract} onClose={onClose} />
+    );
+  }
+
+  return (
+    <AvailableDeliveryWorkspaceController
+      baseModel={selectedBaseModel}
+      contract={contract}
+      entryIntent={entryIntent}
+      onClose={onClose}
+    />
+  );
+}
+
+function AvailableDeliveryWorkspaceController({
+  baseModel,
+  contract,
+  entryIntent,
+  onClose,
+}: {
+  baseModel: DeliveryReadModel;
+  contract: OperationWorkbenchDomainContract;
+  entryIntent: ConsoleSurfaceEntryIntent | null;
+  onClose: () => void;
+}) {
   const localProjection = useSyncExternalStore(
     subscribeDeliveryWorkspaceProjection,
     getDeliveryWorkspaceProjectionSnapshot,
@@ -139,6 +189,33 @@ export function DeliveryWorkspaceController({
       }}
       packageRegisterFocus={packageRegisterFocus}
     />
+  );
+}
+
+function DeliveryWorkspaceUnavailable({
+  contract,
+  onClose,
+}: {
+  contract: OperationWorkbenchDomainContract;
+  onClose: () => void;
+}) {
+  return (
+    <TerasModalShell
+      bodyLayout="fill"
+      description="Canonical Delivery records are unavailable. Fixtures are not used as fallback in live mode."
+      kicker="Delivery Workspace"
+      modalAttributes={getOperationWorkbenchSurfaceAttributes(contract)}
+      onClose={onClose}
+      height="fill"
+      surfaceId="delivery-workspace-unavailable"
+      title="Delivery Workspace"
+      width="viewport"
+    >
+      <TerasEmptyState fill>
+        Canonical Delivery records are unavailable. Restore the OOS owner
+        projection before continuing Delivery work.
+      </TerasEmptyState>
+    </TerasModalShell>
   );
 }
 

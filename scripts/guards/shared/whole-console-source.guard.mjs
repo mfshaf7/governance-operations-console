@@ -29,6 +29,8 @@ const selectorModel =
   "src/operation-workbench/operation-workbench-selector-model.ts";
 const fixtureIsolation =
   "src/console-integration/fixture-isolation/console-fixture-isolation.ts";
+const runtimeCapabilities =
+  "src/console-integration/configuration/use-console-runtime-capabilities.ts";
 
 export const guard = {
   id: "shared/whole-console-source",
@@ -44,6 +46,7 @@ export const guard = {
       "src/command-center/read-model/workspace-pulse.ts",
       "src/console-integration/browser-download.ts",
       fixtureIsolation,
+      runtimeCapabilities,
       shellActivityHook,
       shellActivityModel,
       shellActivityPanel,
@@ -110,7 +113,23 @@ export const guard = {
       "console_live_owner_unavailable",
       "selectConsoleAuthorityProjection",
       "consoleActionExecutable",
+      "resolveConsolePrimaryRecordIsolation",
     ]);
+    assertIncludes(failures, runtimeCapabilities, [
+      'fetch("/api/console/capabilities"',
+      "consoleRuntimeCapabilityExecutable",
+      "ConsoleRuntimeCapabilitySnapshot",
+    ]);
+    for (const path of [
+      "src/domain-workspaces/repository/presentation/surface/use-repository-control-controller.ts",
+      "src/domain-workspaces/prototype/presentation/surface/use-prototype-control-controller.ts",
+      "src/domain-workspaces/delivery/presentation/workspace/workspace-controller.tsx",
+    ]) {
+      assertIncludes(failures, path, [
+        "resolveConsolePrimaryRecordIsolation",
+        "selectConsoleAuthorityProjection",
+      ]);
+    }
     assertOmits(failures, "src/app/page.tsx", [
       "command-center",
       "operation-workbench",

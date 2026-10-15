@@ -78,7 +78,11 @@ export const guard = {
       "useRepositoryLifecycleLiveRuntime",
       "openRepositoryLifecycle",
       "runtimeProjection: repositoryRuntimeProjection",
-      "sourceRecords: repositoryWorkspaceReadModel.records",
+      "resolveConsolePrimaryRecordIsolation",
+      "selectConsoleAuthorityProjection",
+      "sourceRecords",
+      "primaryRecordIsolation.fixtureAllowed",
+      "canProvisionRepository",
     ]);
     assertOmits(failures, controller, [
       "repositoryRuntimeProjection.admissionReceipts",

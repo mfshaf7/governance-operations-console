@@ -2,6 +2,15 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
+import type { OperationSurfaceStatusModel } from "../../../operation-contracts/surface-status.ts";
+import {
+  consoleRuntimeCapabilityExecutable,
+  useConsoleRuntimeCapabilities,
+} from "../../../../console-integration/configuration/use-console-runtime-capabilities.ts";
+import {
+  resolveConsolePrimaryRecordIsolation,
+  selectConsoleAuthorityProjection,
+} from "../../../../console-integration/fixture-isolation/console-fixture-isolation.ts";
 
 import {
   getProposalRepositoryRequestRecords,
@@ -70,6 +79,31 @@ export function useRepositoryControlController({
   onOpenDeliveryCatalog?: (repositoryId: string) => void;
 }) {
   const runtimeCapabilities = getRepositoryRuntimeCapabilities();
+  const consoleRuntime = useConsoleRuntimeCapabilities();
+  const primaryRecordIsolation = resolveConsolePrimaryRecordIsolation({
+    liveAuthorityAvailable: false,
+    runtimeMode: consoleRuntime.projection?.mode ?? null,
+    runtimeStatus: consoleRuntime.status,
+  });
+  const sourceRecords = useMemo(
+    () =>
+      selectConsoleAuthorityProjection({
+        decision: primaryRecordIsolation,
+        fixture: primaryRecordIsolation.fixtureAllowed
+          ? repositoryWorkspaceReadModel.records
+          : [],
+        live: null,
+      }) ?? [],
+    [
+      primaryRecordIsolation.fixtureAllowed,
+      primaryRecordIsolation.liveAuthorityAllowed,
+    ],
+  );
+  const canProvisionRepository = consoleRuntimeCapabilityExecutable(
+    consoleRuntime,
+    "repository-provisioning",
+    "mutation",
+  );
   const custodyRuntime = useRepositoryCustodyLiveRuntime();
   const lifecycleRuntime = useRepositoryLifecycleLiveRuntime();
   const proposalRequestRecords = useSyncExternalStore(
@@ -84,12 +118,19 @@ export function useRepositoryControlController({
   );
   const recordProjections = useMemo(
     () =>
-      projectRepositoryEffectiveRecordProjections({
-        proposalRequestRecords,
-        runtimeProjection: repositoryRuntimeProjection,
-        sourceRecords: repositoryWorkspaceReadModel.records,
-      }),
-    [proposalRequestRecords, repositoryRuntimeProjection],
+      primaryRecordIsolation.fixtureAllowed
+        ? projectRepositoryEffectiveRecordProjections({
+            proposalRequestRecords,
+            runtimeProjection: repositoryRuntimeProjection,
+            sourceRecords,
+          })
+        : [],
+    [
+      primaryRecordIsolation.fixtureAllowed,
+      proposalRequestRecords,
+      repositoryRuntimeProjection,
+      sourceRecords,
+    ],
   );
   const records = useMemo(
     () => {
@@ -267,11 +308,53 @@ export function useRepositoryControlController({
     () => repositorySummaryFromRecords(records),
     [records],
   );
+  const workspaceStatus: OperationSurfaceStatusModel =
+    primaryRecordIsolation.fixtureAllowed
+      ? repositoryWorkspaceReadModel.workspaceStatus
+      : {
+          ariaLabel: "Repository control status",
+          items: [
+            {
+              detail:
+                "Canonical Repository records are unavailable; fixture and browser-local records are excluded from live mode.",
+              facts: [
+                { label: "Primary records", value: "unavailable" },
+                { label: "Fixture fallback", value: "disabled" },
+              ],
+              id: "source",
+              label: "Source",
+              state: "offline",
+              tone: "danger",
+            },
+            {
+              detail: canProvisionRepository
+                ? "Repository provisioning is independently executable through OOS."
+                : "Repository provisioning is not executable under the current runtime capability projection.",
+              facts: [
+                {
+                  label: "Provisioning",
+                  value: canProvisionRepository ? "available" : "unavailable",
+                },
+              ],
+              id: "write-path",
+              label: "Write Path",
+              state: canProvisionRepository ? "online" : "offline",
+              tone: canProvisionRepository ? "ok" : "warn",
+            },
+          ],
+          kicker: "Repository Status",
+          statusLabel: "Canonical source unavailable",
+          summary:
+            "Live mode shows only authoritative Repository results returned by owner workflows.",
+          title: "Repository control status",
+          tone: "danger",
+        };
   const requestDraftDirty = repositoryRequestDraftDirty(requestDraft);
   const requestResult = custodyRuntime.provisioningResultsByRequestId[requestId];
   const requestError = custodyRuntime.provisioningErrorsByRequestId[requestId];
   const requestPending = custodyRuntime.pendingProvisioningRequestId === requestId;
   const requestDraftCanSubmit =
+    canProvisionRepository &&
     !requestPending &&
     repositoryRequestDraftComplete(requestDraft) &&
     requestResult?.status !== "succeeded" &&
@@ -300,6 +383,7 @@ export function useRepositoryControlController({
   }, [entryIntent, records]);
 
   function openRepositoryRequestDraft() {
+    if (!canProvisionRepository) return;
     setRequestDialogOpen(true);
     setRequestCloseGuardOpen(false);
     setRequestSubmittedAt(null);
@@ -557,14 +641,20 @@ export function useRepositoryControlController({
       repository: historyRepository,
     },
     overview: {
+      canProvisionRepository,
       onOpenRepositoryRequestDraft: openRepositoryRequestDraft,
       requestSubmittedAt,
       summary,
-      workspaceStatus: repositoryWorkspaceReadModel.workspaceStatus,
+      workspaceStatus,
     },
     records: {
       all: records,
       filtered: filteredRecords,
+    },
+    sourceAvailability: {
+      error: consoleRuntime.error,
+      reasonCode: primaryRecordIsolation.reasonCode,
+      unavailable: !primaryRecordIsolation.fixtureAllowed && records.length === 0,
     },
     register: {
       inspect: inspectRepository,

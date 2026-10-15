@@ -96,6 +96,20 @@ override live mode, convert a live error into fixture data, merge fixture and
 canonical records, or make a durable action executable. This rule applies to
 whole-Console composition as well as individual domain adapters.
 
+Repository, Prototype, and Delivery primary registers use fixtures only in the
+explicit disconnected-preview posture. Selecting live mode does not make those
+fixtures authoritative: while an owner-backed primary projection is absent,
+the register renders a visible unavailable state and record-dependent actions
+remain disabled. The Console does not import, combine, merge, or fall back to
+fixture or browser-local records in that state.
+
+Independent canonical commands are evaluated separately. For example,
+Repository provisioning can remain available without a Repository list only
+when the runtime capability projection marks the exact provisioning mutation
+as available; its terminal provider readback may then introduce the resulting
+canonical record. Loading, invalid configuration, owner failure, and missing
+capability evidence all fail closed without flashing disconnected fixtures.
+
 ## Correlation Boundary
 
 Every same-origin `/api/*` request receives a fresh server-issued
