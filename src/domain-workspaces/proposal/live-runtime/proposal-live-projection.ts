@@ -37,7 +37,7 @@ export function projectProposalLiveRecord(
   createdAt: string,
 ): ProposalWorkspaceScenario {
   const custody = projection.route?.source_custody ?? null;
-  const repositoryPending = custody?.repository_gate_state === "pending";
+  const repositoryPending = custody?.repository_gate_state === "pending" || projection.repository_resolution_history_pending === true;
   const status = proposalSurfaceStatus(projection);
 
   return {
@@ -190,19 +190,21 @@ export function projectProposalCanonicalDrafts(
 
       if (
         route.source_custody.repository_gate_state === "resolved" &&
+        !record.projection.repository_resolution_history_pending &&
+        (route.source_custody.classification !== "new-repo-required" || record.projection.repository_resolution) &&
         route.source_custody.owner &&
         route.source_custody.source_ref
       ) {
         projection.repositoryGateResolutions[proposalId] = {
           notes: route.source_custody.rationale,
           proposalId,
-          recordedAt: record.projection.updated_at,
-          receiptId: `repository-resolution:${proposalId}:${record.projection.record_version}`,
+          recordedAt: record.projection.repository_resolution?.recorded_at ?? record.projection.updated_at,
+          receiptId: record.projection.repository_resolution?.receipt_ref ?? `repository-resolution:${proposalId}:${record.projection.record_version}`,
           repoRequestRef: `repo-request://proposal/${proposalId}`,
           resolvedOwner: route.source_custody.owner,
           resolvedRepoRef: route.source_custody.source_ref,
           result: "resolved",
-          sourceVersion: record.projection.record_version,
+          sourceVersion: record.projection.repository_resolution?.source_version ?? record.projection.record_version,
         };
       }
     }

@@ -8,6 +8,19 @@ import type {
   ProposalOosProjection,
   ProposalTargetApplicationResult,
 } from "./proposal-live-types.ts";
+import type { ProposalRepositoryResolutionRecord } from "../../operation-contracts/proposal-repository-live.ts";
+
+export function assertProposalRepositoryResolutionRecord(value: unknown): ProposalRepositoryResolutionRecord {
+  if (!isRecord(value) ||
+      !["resolution_id", "custody_request_id", "receipt_ref", "proposal_id", "source_version", "repository_request_ref", "resolved_owner", "resolved_repo_ref", "recorded_at", "notes"].every((key) => typeof value[key] === "string" && Boolean(value[key])) ||
+      !isRecord(value.custody_receipt_ref) || typeof value.custody_receipt_ref.uri !== "string" ||
+      typeof value.custody_receipt_ref.digest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(value.custody_receipt_ref.digest) ||
+      value.repository_request_ref !== `repo-request://proposal/${value.proposal_id}` ||
+      !Number.isFinite(Date.parse(String(value.recorded_at)))) {
+    throw new Error("Repository resolution receipt does not satisfy the owner contract.");
+  }
+  return value as unknown as ProposalRepositoryResolutionRecord;
+}
 
 export function assertProposalLiveSnapshot(value: unknown): ProposalLiveSnapshot {
   if (!isRecord(value)) {
@@ -198,6 +211,16 @@ export function assertProposalOosProjection(
   ) {
     throw new Error("Proposal projection does not satisfy the live contract.");
   }
+  if (value.repository_resolution !== undefined) {
+    const resolution = assertProposalRepositoryResolutionRecord(value.repository_resolution);
+    if (resolution.proposal_id !== value.proposal_id || !isRecord(value.route) || !isRecord(value.route.source_custody) ||
+        value.route.source_custody.repository_gate_state !== "resolved" ||
+        value.route.source_custody.owner !== resolution.resolved_owner ||
+        value.route.source_custody.source_ref !== resolution.resolved_repo_ref ||
+        typeof value.repository_resolution_history_pending !== "boolean") {
+      throw new Error("Repository resolution does not match canonical Proposal custody.");
+    }
+  }
   return value as unknown as ProposalOosProjection;
 }
 
@@ -224,6 +247,12 @@ function assertProposalOosEvent(value: unknown): ProposalOosEvent {
     typeof value.occurred_at !== "string"
   ) {
     throw new Error("Proposal event does not satisfy the live contract.");
+  }
+  if (value.event_type === "repository-gate-resolved") {
+    const resolution = assertProposalRepositoryResolutionRecord(value.repository_resolution);
+    if (resolution.proposal_id !== value.proposal_id || resolution.resolution_id !== value.command_id ||
+        resolution.recorded_at !== value.occurred_at || !Array.isArray(value.receipt_refs) ||
+        !value.receipt_refs.includes(resolution.receipt_ref)) throw new Error("Repository resolution event binding is invalid.");
   }
   return value as unknown as ProposalOosEvent;
 }

@@ -1,4 +1,5 @@
 import type { ProposalWorkflowApplyPayload } from "../work-model/proposal-workflow-command-model.ts";
+import type { ProposalRepositoryResolutionRecord } from "../../operation-contracts/proposal-repository-live.ts";
 
 export type ProposalOosLifecycleStatus =
   | "accepted"
@@ -28,6 +29,8 @@ export type ProposalOosRoute = {
 };
 
 export type ProposalOosProjection = {
+  repository_resolution?: ProposalRepositoryResolutionRecord;
+  repository_resolution_history_pending?: boolean;
   body: string | null;
   decision_notes: string | null;
   handoff: {
@@ -58,12 +61,14 @@ export type ProposalOosProjection = {
 };
 
 export type ProposalOosEvent = {
+  repository_resolution?: ProposalRepositoryResolutionRecord;
   actor: { id: string; kind: "operator" | "system" | "target" };
   command_id: string | null;
   event_id: string;
   event_type:
     | "captured"
     | "disposition-recorded"
+    | "repository-gate-resolved"
     | "handoff-applied"
     | "handoff-blocked"
     | "handoff-prepared"

@@ -571,6 +571,13 @@ export function useRepositoryControlController({
   }
 
   return {
+    proposalGate: {
+      custodyCurrent: custodyRuntime.sourceStatus === "current",
+      custodyResults: [
+        ...Object.values(custodyRuntime.resultsByRepositoryId),
+        ...Object.values(custodyRuntime.provisioningResultsByRequestId),
+      ],
+    },
     custody: {
       close: () => setCustodyRepositoryId(null),
       error: custodyRepository

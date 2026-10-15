@@ -37,11 +37,14 @@ export function useProposalLiveRuntime() {
 
   const refresh = useCallback(async () => {
     const sequence = ++refreshSequence.current;
-    const response = await fetch("/api/proposals", { cache: "no-store" });
-    const body: unknown = await response.json().catch(() => null);
-    const next = response.ok
-      ? assertProposalLiveSnapshot(body)
-      : proposalOfflineSnapshot(body);
+    let next: ProposalLiveSnapshot;
+    try {
+      const response = await fetch("/api/proposals", { cache: "no-store" });
+      const body: unknown = await response.json().catch(() => null);
+      next = response.ok ? assertProposalLiveSnapshot(body) : proposalOfflineSnapshot(body);
+    } catch (error) {
+      next = proposalOfflineSnapshot(error);
+    }
     if (sequence === refreshSequence.current) {
       setSnapshot(next);
     }

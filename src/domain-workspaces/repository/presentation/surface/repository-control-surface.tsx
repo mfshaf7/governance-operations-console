@@ -23,6 +23,7 @@ import {
 } from "../shared/repository-control-projection.ts";
 import { RepositoryControlDialogStack } from "./repository-control-dialog-stack.tsx";
 import { useRepositoryControlController } from "./use-repository-control-controller.ts";
+import { RepositoryProposalGatePanel } from "./repository-proposal-gate-panel.tsx";
 
 export function RepositoryControlSurface({
   entryIntent = null,
@@ -36,30 +37,28 @@ export function RepositoryControlSurface({
     onOpenDeliveryCatalog,
   });
   const selectedRepository = controller.selectedRepository;
+  const overview = <>
+    <RepositoryControlOverviewPanel
+      canProvisionRepository={controller.overview.canProvisionRepository}
+      onOpenRepositoryRequestDraft={controller.overview.onOpenRepositoryRequestDraft}
+      requestSubmittedAt={controller.overview.requestSubmittedAt}
+      summary={controller.overview.summary} workspaceStatus={controller.overview.workspaceStatus} />
+    <RepositoryProposalGatePanel subjectRef={entryIntent?.subjectRef}
+      custodyCurrent={controller.proposalGate.custodyCurrent} custodyResults={controller.proposalGate.custodyResults} />
+  </>;
 
   if (!selectedRepository) {
     return (
+      <>
       <TerasRecordControlLayout
         composition="compact-control"
         data-repository-control-surface="unavailable"
         mode="overview-register-selected"
-        overview={
-          <RepositoryControlOverviewPanel
-            canProvisionRepository={
-              controller.overview.canProvisionRepository
-            }
-            onOpenRepositoryRequestDraft={
-              controller.overview.onOpenRepositoryRequestDraft
-            }
-            requestSubmittedAt={controller.overview.requestSubmittedAt}
-            summary={controller.overview.summary}
-            workspaceStatus={controller.overview.workspaceStatus}
-          />
-        }
+        overview={overview}
         register={
           <TerasEmptyState fill>
-            Canonical Repository records are unavailable. Fixtures are not
-            used as fallback in live mode.
+            No canonical Repository records are available to select. Provision
+            a repository above when required; live mode never substitutes fixtures.
           </TerasEmptyState>
         }
         selected={
@@ -68,6 +67,8 @@ export function RepositoryControlSurface({
           </TerasEmptyState>
         }
       />
+      <RepositoryControlDialogStack controller={controller} />
+      </>
     );
   }
 
@@ -78,19 +79,7 @@ export function RepositoryControlSurface({
         data-repository-control-entry-subject={entryIntent?.subjectRef ?? ""}
         data-repository-control-surface="true"
         mode="overview-register-selected"
-        overview={
-          <RepositoryControlOverviewPanel
-            canProvisionRepository={
-              controller.overview.canProvisionRepository
-            }
-            onOpenRepositoryRequestDraft={
-              controller.overview.onOpenRepositoryRequestDraft
-            }
-            requestSubmittedAt={controller.overview.requestSubmittedAt}
-            summary={controller.overview.summary}
-            workspaceStatus={controller.overview.workspaceStatus}
-          />
-        }
+        overview={overview}
         register={
           <TerasRegisterPanel
             bodyProps={{

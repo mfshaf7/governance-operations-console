@@ -4,6 +4,8 @@ import {
   type ConsoleOosOperatorConfiguration,
   ConsoleRuntimeConfigurationError,
 } from "../../../console-integration/configuration/console-runtime-configuration.ts";
+import { createHash } from "node:crypto";
+import type { ProposalRepositoryResolutionIntent } from "../../operation-contracts/proposal-repository-live.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 import {
   acceptCurrentConsoleSourceProjection,
@@ -60,6 +62,42 @@ export class ProposalOosError extends Error {
 
 export function proposalOosConfigured(env: NodeJS.ProcessEnv = process.env) {
   return consoleOosModeSelected(env);
+}
+
+export async function resolveProposalRepositoryGate(
+  intent: ProposalRepositoryResolutionIntent,
+  { env = process.env, fetchImpl = fetch }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+) {
+  const config = resolveProposalOosConfig(env);
+  const request = {
+    schema_version: 1, proposal_id: intent.proposalId,
+    source: { record_ref: intent.recordRef, record_version: intent.recordVersion, projection_state: "current", status: "accepted" },
+    operator: proposalOperator(config), repository_request_ref: `repo-request://proposal/${intent.proposalId}`,
+    custody_request_id: intent.custodyRequestId, custody_receipt_ref: intent.custodyReceiptRef, notes: intent.notes,
+  };
+  const resolutionId = `repository-resolution:${intent.proposalId}:${createHash("sha256").update(JSON.stringify(request)).digest("hex")}`;
+  const result = assertProposalOosCommandResult(await proposalOosRequest(config,
+    `/v1/proposals/${encodeURIComponent(intent.proposalId)}/repository-resolution`,
+    { method: "POST", body: JSON.stringify({ ...request, resolution_id: resolutionId }) }, fetchImpl));
+  const resolution = result.projection.repository_resolution;
+  if (result.command_id !== resolutionId || result.projection.proposal_id !== intent.proposalId ||
+      result.projection.record_ref !== intent.recordRef ||
+      result.receipt.owner !== "operator-orchestration-service" || result.receipt.record_ref !== intent.recordRef ||
+      result.receipt.record_version !== result.event.record_version ||
+      result.event.event_type !== "repository-gate-resolved" || result.event.command_id !== resolutionId ||
+      !resolution || resolution.resolution_id !== resolutionId ||
+      resolution.receipt_ref !== result.receipt.receipt_ref ||
+      resolution.custody_request_id !== intent.custodyRequestId ||
+      resolution.custody_receipt_ref.uri !== intent.custodyReceiptRef.uri ||
+      resolution.custody_receipt_ref.digest !== intent.custodyReceiptRef.digest ||
+      resolution.source_version !== intent.recordVersion ||
+      result.event.repository_resolution?.receipt_ref !== resolution.receipt_ref ||
+      result.event.repository_resolution?.custody_receipt_ref.digest !== intent.custodyReceiptRef.digest ||
+      result.event.repository_resolution?.custody_receipt_ref.uri !== intent.custodyReceiptRef.uri ||
+      result.projection.repository_resolution_history_pending !== false) {
+    throw new ProposalOosError("Repository resolution acknowledgement does not match the reviewed request.", "proposal_repository_resolution_invalid", 502);
+  }
+  return result;
 }
 
 export async function listProposalLiveRecords({
