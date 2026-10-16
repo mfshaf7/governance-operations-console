@@ -33,6 +33,19 @@ Partial or contradictory configuration is invalid. Completely absent
 configuration leaves the existing disconnected preview explicit and does not
 invoke an owner command.
 
+The commissioned Console record-cache lane additionally sets
+`GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_RECORD_AUTHORITY_FRESHNESS_REQUIRED=true`.
+Its owner root is Platform's private Studio clone, not the primary checkout.
+The configured source revision remains the Security-reviewed control-code
+baseline. Each operation requires the current regular, bounded, same-owner
+Platform checkpoint and binds the owner's actual current record revision.
+Platform accepts only data-only ancestry with unchanged owner command and
+schemas; Studio independently checks clean source, profile, digest and expected
+state. Missing, stale or mismatched checkpoints prevent invocation. Normal
+reviewed prototype records therefore need no manual source pull or Console
+recommissioning. This does not grant the Console Git refresh or new execution
+authority and is inactive outside that explicitly configured lane.
+
 ## Operator workflow
 
 1. Open a Prototype and choose **Preview Runtime**.

@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, unlinkSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   canonicalDigest,
@@ -32,6 +35,38 @@ const config = {
   sourceRevision: revision,
   stateRoot: "/run/user/1000/workspace-prototype-studio/preview-runtime",
 };
+
+test("commissioned Preview separates reviewed owner code from fresh canonical record identity without fallback", async (context) => {
+  const root = mkdtempSync(join(tmpdir(), "console-preview-records-"));
+  context.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(join(root, ".git"));
+  const checkpoint = join(root, ".git", "console-record-authority.json");
+  const current = "a".repeat(40);
+  const sourceConfig = { ...config, ownerRepoRoot: root, recordAuthorityFreshnessRequired: true };
+  let calls = 0;
+  const runner = async () => { calls += 1; return { stdout: JSON.stringify({ ...stoppedProjection(), source_revision: current }), stderr: "" }; };
+  const valid = { schema_version: 1, owner_repo: "workspace-prototype-studio", trusted_ref: "refs/remotes/origin/main",
+    reviewed_revision: revision, record_revision: current, observed_at: new Date().toISOString(), valid_until: new Date(Date.now() + 300000).toISOString() };
+  const denied = () => assert.rejects(readPrototypePreviewOwner("client-review-portal", { config: sourceConfig, runner }),
+    (error) => error.code === "prototype_preview_record_authority_unavailable" && error.status === 503);
+  await denied();
+  assert.equal(calls, 0);
+  writeFileSync(checkpoint, JSON.stringify(valid));
+  const projection = await readPrototypePreviewOwner("client-review-portal", { config: sourceConfig, runner });
+  assert.equal(projection.source_revision, current);
+  assert.equal(calls, 1);
+  for (const value of [null, [], { ...valid, reviewed_revision: current }, { ...valid, owner_repo: "workspace-governance" },
+    { ...valid, valid_until: new Date(Date.now() - 1000).toISOString() }, { ...valid, trusted_ref: "HEAD" },
+    { ...valid, valid_until: new Date(Date.now() + 3600000).toISOString() }]) {
+    writeFileSync(checkpoint, JSON.stringify(value));
+    await denied();
+  }
+  unlinkSync(checkpoint);
+  const target = join(root, "checkpoint.json"); writeFileSync(target, JSON.stringify(valid));
+  symlinkSync(target, checkpoint);
+  await denied();
+  assert.equal(calls, 1);
+});
 
 test("Preview owner configuration is all-or-nothing and keeps state outside source", () => {
   assert.equal(consolePrototypePreviewModeSelected({}), false);

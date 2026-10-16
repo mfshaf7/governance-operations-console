@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { lstatSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -158,6 +159,7 @@ function ownerContext(prototypeId: string, options: OwnerOptions): OwnerContext 
     }
     throw error;
   }
+  if (config.recordAuthorityFreshnessRequired) config = currentRecordAuthority(config);
   const prototypeSlug = assertPrototypePreviewSlug(prototypeId);
   return {
     config,
@@ -170,6 +172,27 @@ function ownerContext(prototypeId: string, options: OwnerOptions): OwnerContext 
     prototypeSlug,
     runner: options.runner ?? defaultRunner,
   };
+}
+
+function currentRecordAuthority(config: ConsolePrototypePreviewConfiguration): ConsolePrototypePreviewConfiguration {
+  try {
+    const file = join(config.ownerRepoRoot, ".git", "console-record-authority.json");
+    const info = lstatSync(file);
+    if (!info.isFile() || info.size > 2048 || info.uid !== process.getuid?.()) throw new Error();
+    const value = JSON.parse(readFileSync(file, "utf8"));
+    const observed = Date.parse(value.observed_at), expires = Date.parse(value.valid_until), now = Date.now();
+    if (value.schema_version !== 1 || value.owner_repo !== "workspace-prototype-studio" ||
+      value.trusted_ref !== "refs/remotes/origin/main" || value.reviewed_revision !== config.sourceRevision ||
+      !/^[a-f0-9]{40}$/.test(value.record_revision) || !Number.isFinite(observed) || !Number.isFinite(expires) ||
+      observed > now + 30000 || expires <= now || expires <= observed || expires - observed > 600000) throw new Error();
+    // Platform admits data-only ancestry and preserves this fixed owner command
+    // and its schemas. Studio still verifies its actual clean Git source and
+    // exact runtime/profile/proof binding; the Console gains no Git authority.
+    return { ...config, sourceRevision: value.record_revision };
+  } catch {
+    throw new PrototypePreviewOwnerError("Studio canonical record snapshot is unavailable or stale. Restore Platform record refresh before continuing.",
+      "prototype_preview_record_authority_unavailable", 503, true);
+  }
 }
 
 async function runProjection(context: OwnerContext, action: "status") {
