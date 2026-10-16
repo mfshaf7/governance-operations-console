@@ -190,7 +190,10 @@ export function buildPrototypeLandingCommand(
       intent.source.posture === "create-studio-source"
         ? `repo://workspace-prototype-studio/prototypes/${slug}`
         : intent.source.ref,
-    source_revision: intent.source.revision,
+    source_revision:
+      intent.source.posture === "create-studio-source"
+        ? null
+        : intent.source.revision,
   };
   const requestArtifact = bindDigest(
     {

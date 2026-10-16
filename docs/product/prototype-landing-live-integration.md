@@ -58,6 +58,13 @@ separate reviewed reversal.
   `prototype-local` and carries no source-authority claim.
 - Existing and referenced source require an immutable revision. Import requires
   an admitted `import://staged/` ref plus origin and imported-content digests.
+- Creating new Studio source uses a null source-plan revision because that code
+  does not exist yet. The originating capture's revision stays in the Entry
+  Packet, while current Studio concurrency stays in the preparation and expected
+  state. A capture revision must not be mistaken for an existing-code revision.
+  An authority finding preserves the immutable prior request; use normal
+  corrected submission for the same Prototype rather than changing old payloads
+  or creating another product.
 
 ## Authority And Activation
 
