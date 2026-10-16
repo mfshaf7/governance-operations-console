@@ -44,6 +44,7 @@ export type RepositoryCustodyLinkIntent = Readonly<{
 
 export type RepositoryProvisionIntent = Readonly<{
   approvalNote: string;
+  correctionOfRequestId?: string;
   custodyKind: RepositoryCustodyKind;
   repositoryDescription: string;
   repositoryName: string;

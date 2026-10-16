@@ -62,6 +62,8 @@ import {
   repositoryRequestDraftComplete,
   repositoryRequestDraftDirty,
   repositoryProvisionIntentFromDraft,
+  repositoryProvisioningCanCorrect,
+  repositoryRequestDraftFromResult,
 } from "../dialogs/request/repository-request-view-model.ts";
 
 const defaultRepositoryId =
@@ -171,6 +173,7 @@ export function useRepositoryControlController({
   const [requestCloseGuardOpen, setRequestCloseGuardOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [requestId, setRequestId] = useState(createRepositoryProvisionRequestId);
+  const [requestCorrectionOf, setRequestCorrectionOf] = useState<string | null>(null);
   const [requestRequestedAt, setRequestRequestedAt] = useState(() =>
     new Date().toISOString(),
   );
@@ -351,17 +354,23 @@ export function useRepositoryControlController({
           tone: custodyRuntime.sourceStatus === "current" ? "ok" : "danger",
         };
   const requestDraftDirty = repositoryRequestDraftDirty(requestDraft);
-  const requestResult = custodyRuntime.provisioningResultsByRequestId[requestId];
+  const activeRequestResult = custodyRuntime.provisioningResultsByRequestId[requestId];
+  const correctionSource = repositoryProvisioningCanCorrect(activeRequestResult)
+    ? activeRequestResult
+    : requestCorrectionOf ? custodyRuntime.provisioningResultsByRequestId[requestCorrectionOf] : undefined;
+  const requestResult = activeRequestResult ?? correctionSource;
   const requestError = custodyRuntime.provisioningErrorsByRequestId[requestId];
   const requestPending = custodyRuntime.pendingProvisioningRequestId === requestId;
+  const resumeApprovedRequest = Boolean(activeRequestResult?.retryable || activeRequestResult?.status === "applying");
   const requestDraftCanSubmit =
     canProvisionRepository &&
     !requestPending &&
-    repositoryRequestDraftComplete(requestDraft) &&
+    (resumeApprovedRequest || repositoryRequestDraftComplete(requestDraft)) &&
     requestResult?.status !== "succeeded" &&
     (!requestResult ||
       requestResult.retryable ||
-      requestResult.status === "applying");
+      requestResult.status === "applying" ||
+      repositoryProvisioningCanCorrect(requestResult));
 
   useEffect(() => {
     if (!entryIntent) {
@@ -394,7 +403,9 @@ export function useRepositoryControlController({
     field: keyof RepositoryRequestDraft,
     value: RepositoryRequestDraft[keyof RepositoryRequestDraft],
   ) {
-    if (requestResult) {
+    if (requestPending || resumeApprovedRequest) return;
+    if (correctionSource && !["approvalNote", "templateReviewed"].includes(field)) return;
+    if (requestResult && !correctionSource) {
       setRequestId(createRepositoryProvisionRequestId());
       setRequestRequestedAt(new Date().toISOString());
     }
@@ -411,6 +422,23 @@ export function useRepositoryControlController({
       return next;
     });
     setRequestSubmittedAt(null);
+  }
+
+  function selectRetainedProvisioningRequest(retainedId: string) {
+    if (requestPending) return;
+    setRequestCorrectionOf(null);
+    setRequestSubmittedAt(null);
+    if (retainedId === "new") {
+      setRequestDraft(emptyRepositoryRequestDraft);
+      setRequestId(createRepositoryProvisionRequestId());
+      setRequestRequestedAt(new Date().toISOString());
+      return;
+    }
+    const result = custodyRuntime.provisioningResultsByRequestId[retainedId];
+    if (!result) return;
+    setRequestId(retainedId);
+    setRequestRequestedAt(result.request.requested_at);
+    setRequestDraft(repositoryRequestDraftFromResult(result));
   }
 
   function requestRepositoryDraftClose() {
@@ -434,6 +462,7 @@ export function useRepositoryControlController({
       setRequestDraft(emptyRepositoryRequestDraft);
       setRequestSubmittedAt(null);
       setRequestId(createRepositoryProvisionRequestId());
+      setRequestCorrectionOf(null);
       setRequestRequestedAt(new Date().toISOString());
     }
   }
@@ -443,13 +472,23 @@ export function useRepositoryControlController({
       return;
     }
 
+    const correcting = repositoryProvisioningCanCorrect(activeRequestResult);
+    const nextRequestId = correcting ? createRepositoryProvisionRequestId() : requestId;
+    const nextRequestedAt = correcting ? new Date().toISOString() : requestRequestedAt;
+    const correctionOfRequestId = correcting ? activeRequestResult!.request.request_id : requestCorrectionOf;
+    if (correcting) {
+      setRequestId(nextRequestId);
+      setRequestRequestedAt(nextRequestedAt);
+      setRequestCorrectionOf(correctionOfRequestId);
+    }
     const result =
-      requestResult?.status === "applying"
-        ? await custodyRuntime.readProvisioning(requestId)
+      resumeApprovedRequest
+        ? await custodyRuntime.provision({ requestId, resume: true })
         : await custodyRuntime.provision(
             repositoryProvisionIntentFromDraft(requestDraft, {
-              requestedAt: requestRequestedAt,
-              requestId,
+              requestedAt: nextRequestedAt,
+              requestId: nextRequestId,
+              ...(correctionOfRequestId ? { correctionOfRequestId } : {}),
             }),
           );
     if (result.status === "succeeded") {
@@ -682,6 +721,11 @@ export function useRepositoryControlController({
       open: requestDialogOpen,
       pending: requestPending,
       result: requestResult,
+      correction: Boolean(correctionSource),
+      resume: resumeApprovedRequest,
+      retainedRequests: Object.values(custodyRuntime.provisioningResultsByRequestId),
+      selectedRequestId: activeRequestResult ? requestId : requestCorrectionOf ?? "new",
+      onSelectRetained: selectRetainedProvisioningRequest,
     },
     lifecycle: {
       close: () => setLifecycleRepositoryId(null),

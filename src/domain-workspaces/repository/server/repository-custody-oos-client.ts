@@ -164,6 +164,32 @@ export async function readRepositoryCustodyResult(
   return result;
 }
 
+export async function resumeRepositoryProvisioning(
+  requestId: string,
+  { env = process.env, fetchImpl = fetch }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+): Promise<RepositoryCustodyWorkflowResult> {
+  const config = resolveRepositoryCustodyOosConfig(env, "provisioning");
+  const retained = await readRepositoryCustodyResult(requestId, { env, fetchImpl, credentialKind: "provisioning" });
+  const operatorRef = artifactReference(`console://operators/${encodeURIComponent(config.operatorId)}`,
+    { operator_id: config.operatorId });
+  if (retained.request.action !== "provision-new" ||
+      (!retained.retryable && retained.status !== "applying") ||
+      canonicalStringify(retained.request.operator_ref) !== canonicalStringify(operatorRef) ||
+      canonicalStringify(retained.request.authority.policy_profile_ref) !== canonicalStringify(config.policyProfileRef) ||
+      retained.request.authority.credential_binding_ref.uri !== config.credentialBindingRef.uri) {
+    throw new RepositoryCustodyOosError("The retained request cannot be resumed under the current operator and authority.",
+      "repository_provisioning_resume_denied", 409);
+  }
+  const result = assertRepositoryCustodyWorkflowResult(await repositoryCustodyOosRequest(config,
+    "/v1/repository-custody/requests", { body: JSON.stringify(retained.request), method: "POST" }, fetchImpl));
+  assertCanonicalRepositoryCustodyRequest(result.request);
+  if (canonicalStringify(result.request) !== canonicalStringify(retained.request)) {
+    throw new RepositoryCustodyOosError("Resumed provisioning returned another request.",
+      "repository_provisioning_result_request_mismatch", 502);
+  }
+  return result;
+}
+
 export async function listRepositoryCustodyResults(
   cursor: string | null = null,
   { env = process.env, fetchImpl = fetch }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
@@ -285,6 +311,7 @@ export function buildRepositoryProvisionRequest(
     {
       approval_note: intent.approvalNote.trim(),
       decision: "approve-provision-new",
+      ...(intent.correctionOfRequestId ? { correction_of_request_id: intent.correctionOfRequestId } : {}),
       operator_id: config.operatorId,
       repository: {
         name: intent.repositoryName.trim(),
@@ -328,7 +355,7 @@ export function buildRepositoryProvisionRequest(
     },
     correlation: {
       correlation_id: intent.requestId,
-      causation_id: null,
+      causation_id: intent.correctionOfRequestId ?? null,
     },
     idempotency_key: intent.requestId,
   };
@@ -379,6 +406,13 @@ function assertRepositoryCustodyLinkIntent(
 
 function assertRepositoryProvisionIntent(value: RepositoryProvisionIntent) {
   assertRepositoryCustodyRequestId(value.requestId);
+  if (value.correctionOfRequestId !== undefined) {
+    assertRepositoryCustodyRequestId(value.correctionOfRequestId);
+    if (value.correctionOfRequestId === value.requestId) {
+      throw new RepositoryCustodyOosError("Correction requires a new request identity.",
+        "repository_provisioning_intent_invalid", 400);
+    }
+  }
   if (
     !repositoryCoordinatePattern.test(value.repositoryOwner.trim()) ||
     !repositoryCoordinatePattern.test(value.repositoryName.trim()) ||

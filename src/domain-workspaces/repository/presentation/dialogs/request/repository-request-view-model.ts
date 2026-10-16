@@ -37,13 +37,14 @@ export function repositoryRequestDraftComplete(draft: RepositoryRequestDraft) {
 
 export function repositoryProvisionIntentFromDraft(
   draft: RepositoryRequestDraft,
-  request: { requestedAt: string; requestId: string },
+  request: { requestedAt: string; requestId: string; correctionOfRequestId?: string },
 ): RepositoryProvisionIntent {
   if (!repositoryRequestDraftComplete(draft)) {
     throw new Error("Repository provisioning draft is incomplete.");
   }
   return {
     approvalNote: draft.approvalNote,
+    ...(request.correctionOfRequestId ? { correctionOfRequestId: request.correctionOfRequestId } : {}),
     custodyKind: draft.custodyKind,
     repositoryDescription: draft.purpose,
     repositoryName: draft.name,
@@ -53,6 +54,29 @@ export function repositoryProvisionIntentFromDraft(
     templateReviewed: true,
     visibility: draft.visibility,
     workspaceOwnerRef: draft.workspaceOwnerRef,
+  };
+}
+
+export function repositoryProvisioningCanCorrect(result?: RepositoryCustodyWorkflowResult) {
+  return Boolean(result?.request.action === "provision-new" &&
+    result.status === "failed" && !result.retryable &&
+    ["provider-acknowledged", "recovery-required"].includes(result.provider_operation.state) &&
+    result.provider_operation.attempt_count > 0 &&
+    result.provider_operation.provider_repository_id &&
+    (!result.provider_readback || result.provider_operation.provider_repository_id ===
+      result.provider_readback.repository_identity.provider_repository_id));
+}
+
+export function repositoryRequestDraftFromResult(result: RepositoryCustodyWorkflowResult): RepositoryRequestDraft {
+  if (result.request.action !== "provision-new") throw new Error("Provisioning request required.");
+  return {
+    ...emptyRepositoryRequestDraft,
+    custodyKind: result.request.requested_custody.custody_kind,
+    name: result.request.target.name,
+    ownerDomain: result.request.target.owner,
+    purpose: result.request.provisioning.description ?? "",
+    visibility: result.request.provisioning.visibility,
+    workspaceOwnerRef: result.request.requested_custody.workspace_owner_ref,
   };
 }
 
@@ -109,7 +133,9 @@ export function repositoryProvisioningResultProjection(
         result.failure?.message ??
         "OOS returned a terminal result without provisioning the repository.",
       statusLabel: result.retryable ? "Retry available" : "Correction required",
-      title: "Repository unchanged",
+      title: result.provider_operation.provider_repository_id
+        ? "Repository exists; custody incomplete"
+        : "Repository not provisioned",
       tone: result.retryable ? ("warn" as const) : ("danger" as const),
     };
   }
@@ -125,12 +151,13 @@ export function repositoryProvisioningResultProjection(
 export function repositoryProvisioningChecks(
   draft: RepositoryRequestDraft,
   result?: RepositoryCustodyWorkflowResult,
+  resume = false,
 ) {
   const coordinatesReady = Boolean(
     draft.ownerDomain.trim() && draft.name.trim() && draft.purpose.trim(),
   );
   const custodyReady = Boolean(draft.workspaceOwnerRef.trim());
-  const approvalReady = draft.approvalNote.trim().length >= 12;
+  const approvalReady = resume || draft.approvalNote.trim().length >= 12;
   return [
     {
       detail: "Organization, repository name, and purpose are required.",
@@ -147,11 +174,11 @@ export function repositoryProvisioningChecks(
     {
       detail: "The fixed README, feature, and merge controls were reviewed.",
       label: "Provider baseline",
-      status: draft.templateReviewed ? "reviewed" : "required",
-      tone: draft.templateReviewed ? ("ok" as const) : ("warn" as const),
+      status: draft.templateReviewed || resume ? "reviewed" : "required",
+      tone: draft.templateReviewed || resume ? ("ok" as const) : ("warn" as const),
     },
     {
-      detail: "The accountable operator records why creation is approved.",
+      detail: resume ? "Resume uses the retained request's exact original approval." : "The accountable operator records why creation is approved.",
       label: "Operator approval",
       status: approvalReady ? "ready" : "required",
       tone: approvalReady ? ("ok" as const) : ("warn" as const),

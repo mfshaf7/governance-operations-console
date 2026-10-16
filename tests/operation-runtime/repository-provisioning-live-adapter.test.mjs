@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { provisioningResult } from "../support/repository-provisioning-result.mjs";
 
 import { assertRepositoryCustodyWorkflowResult } from "../../src/domain-workspaces/repository/live-runtime/repository-custody-live-contract.ts";
 import {
@@ -11,7 +12,13 @@ import {
   provisionRepository,
   readRepositoryCustodyResult,
   RepositoryCustodyOosError,
+  resumeRepositoryProvisioning,
 } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
+import {
+  repositoryProvisioningCanCorrect,
+  repositoryRequestDraftFromResult,
+  repositoryProvisioningResultProjection,
+} from "../../src/domain-workspaces/repository/presentation/dialogs/request/repository-request-view-model.ts";
 import {
   assertCanonicalSourceRequest,
   canonicalSourceResponse,
@@ -230,13 +237,89 @@ test("case:repository-provisioning-browser-boundary exposes only same-origin rev
   assert.match(browserSource, /\/api\/repositories\/provisioning\/requests/);
   assert.match(browserSource, /readProvisioning/);
   assert.match(controllerSource, /status === "applying"/);
-  assert.match(controllerSource, /readProvisioning\(requestId\)/);
+  assert.match(controllerSource, /provision\(\{ requestId, resume: true \}\)/);
   assert.doesNotMatch(browserSource, /OOS_CALLER_SECRET|INSTALLATION_TOKEN|PRIVATE_KEY/);
   assert.doesNotMatch(browserSource, /api\.github\.com|fixtures\//i);
   assert.doesNotMatch(serverSource, /api\.github\.com|octokit/i);
   assert.match(serverSource, /REPOSITORY_PROVISIONING_CREDENTIAL_BINDING/);
   assert.match(serverSource, /x-oos-caller-secret/);
   assert.match(routeSource, /provisionRepositoryRoute/);
+});
+
+test("failed applied settings remain readable failure, never successful custody or a malformed register", async () => {
+  const request = await captureRequest();
+  const result = provisioningResult(request);
+  result.status = "failed";
+  result.next_action = "request-correction";
+  result.failure = { code: "repository_provider_readback_stale", message: "Provider settings do not match.", retryable: false };
+  result.provider_operation.state = "provider-acknowledged";
+  result.provider_operation.completion_path = null;
+  result.provider_readback.applied_provisioning.settings.merge_policy.delete_branch_on_merge = false;
+  result.receipt.outcome = "failed";
+  result.receipt.workflow_status = "failed";
+  result.receipt.repository_identity = null;
+  result.receipt.custody.after = "unrecorded";
+  for (const key of Object.keys(result.receipt.downstream_handoffs)) result.receipt.downstream_handoffs[key] = "not-requested";
+  assert.equal(assertRepositoryCustodyWorkflowResult(result).status, "failed");
+  assert.equal(projectRepositoryProvisioningResults([], { retained: result }).length, 0);
+  assert.equal(repositoryProvisioningCanCorrect(result), true);
+  const draft = repositoryRequestDraftFromResult(result);
+  assert.equal(draft.name, request.target.name);
+  assert.equal(draft.purpose, request.provisioning.description);
+  assert.equal(draft.approvalNote, "");
+  assert.equal(draft.templateReviewed, false);
+  assert.match(repositoryProvisioningResultProjection(result).title, /exists; custody incomplete/);
+  result.provider_readback.applied_provisioning.settings.merge_policy.delete_branch_on_merge = "false";
+  assert.throws(() => assertRepositoryCustodyWorkflowResult(result), /applied settings delete_branch_on_merge is invalid/);
+});
+
+test("correction binds a new approval and request to the retained failure without accepting browser authority", async () => {
+  let submitted;
+  const correction = { ...intent(), requestId: `${intent().requestId}-correction`, correctionOfRequestId: intent().requestId };
+  await provisionRepository(correction, {
+    env,
+    fetchImpl: async (_url, init) => {
+      submitted = JSON.parse(String(init.body));
+      return jsonResponse(provisioningResult(submitted));
+    },
+  });
+  assert.equal(submitted.correlation.causation_id, intent().requestId);
+  assert.equal(submitted.request_id, correction.requestId);
+  assert.notDeepEqual(submitted.authority.approval_ref, (await captureRequest()).authority.approval_ref);
+  await assert.rejects(provisionRepository({ ...intent(), correctionOfRequestId: intent().requestId }, { env }),
+    error => error.code === "repository_provisioning_intent_invalid");
+});
+
+test("cold-browser resume resubmits the exact retained approval instead of reconstructing its note", async () => {
+  const request = await captureRequest();
+  const calls = [];
+  const result = await resumeRepositoryProvisioning(request.request_id, {
+    env,
+    fetchImpl: async (_url, init) => {
+      calls.push(init);
+      if (init.method === "GET") {
+        assertCanonicalSourceRequest(init);
+        return canonicalSourceResponse(provisioningResult(request, { status: "applying" }), {
+          recordRef: `oos://repository-custody/requests/${request.request_id}`, sourceOwner: "operator-orchestration-service",
+        });
+      }
+      assert.deepEqual(JSON.parse(init.body), request);
+      return jsonResponse(provisioningResult(request));
+    },
+  });
+  assert.equal(result.status, "succeeded");
+  assert.equal(calls.length, 2);
+  let writes = 0;
+  await assert.rejects(resumeRepositoryProvisioning(request.request_id, {
+    env: { ...env, GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:someone-else" },
+    fetchImpl: async (_url, init) => {
+      if (init.method === "POST") writes += 1;
+      return canonicalSourceResponse(provisioningResult(request, { status: "failed" }), {
+        recordRef: `oos://repository-custody/requests/${request.request_id}`, sourceOwner: "operator-orchestration-service",
+      });
+    },
+  }), error => error.code === "repository_provisioning_resume_denied");
+  assert.equal(writes, 0);
 });
 
 function intent() {
@@ -264,173 +347,6 @@ async function captureRequest() {
     },
   });
   return request;
-}
-
-function provisioningResult(request, { replayed = false, status = "succeeded" } = {}) {
-  const decisionDigest = digest("d");
-  const readbackDigest = digest("e");
-  const receiptDigest = digest("f");
-  const decisionRef = {
-    digest: decisionDigest,
-    uri: "wgcf://decisions/repository-custody/provision-test.json",
-  };
-  const readbackRef = {
-    digest: readbackDigest,
-    uri: "oos://readbacks/repository-provider/provision-test.json",
-  };
-  const terminal = status !== "applying";
-  const succeeded = status === "succeeded";
-  const denied = status === "denied";
-  const readback = succeeded
-    ? {
-        action: "provision-new",
-        applied_provisioning: {
-          initialization_state: "initialized",
-          owner_scope: "organization",
-          settings: structuredClone(request.provisioning),
-        },
-        artifact_type: "repository_provider_readback",
-        canonical_name: request.target.name,
-        canonical_owner: request.target.owner,
-        canonical_url: `https://github.com/${request.target.owner}/${request.target.name}`,
-        credential_binding_ref: request.authority.credential_binding_ref,
-        default_branch: "main",
-        integrity: integrity(readbackDigest),
-        observed_at: "2026-08-30T08:00:02.000Z",
-        provider_lifecycle_state: "active",
-        provider_version: "etag-proof-001",
-        readback_id: "repository-provider-readback:provision-test-001",
-        repository_identity: {
-          provider: "github",
-          provider_repository_id: "1350916928",
-        },
-        request_ref: {
-          digest: request.request_digest,
-          uri: "wgcf://requests/repository-custody/provision-test.json",
-        },
-        schema_version: 1,
-        visibility: request.provisioning.visibility,
-      }
-    : null;
-  const receipt = terminal
-    ? {
-        action: "provision-new",
-        artifact_type: "repository_custody_receipt",
-        completed_at: "2026-08-30T08:00:03.000Z",
-        custody: {
-          after: succeeded ? "provisioned" : "unrecorded",
-          before: "unrecorded",
-          workspace_owner_ref: request.requested_custody.workspace_owner_ref,
-        },
-        decision_ref: decisionRef,
-        downstream_handoffs: {
-          active_inventory: succeeded ? "separate-action-required" : "not-requested",
-          delivery_catalog: succeeded ? "separate-action-required" : "not-requested",
-          product_admission: succeeded ? "separate-action-required" : "not-requested",
-          workspace_intake: succeeded ? "request-available" : "not-requested",
-        },
-        findings: succeeded
-          ? ["Provider readback matched the exact approved settings."]
-          : [denied ? "WGCF denied the request." : "Provider operation unavailable."],
-        integrity: integrity(receiptDigest),
-        outcome: status,
-        provider_readback_ref: succeeded ? readbackRef : null,
-        receipt_id: "repository-custody-receipt:provision-test-001",
-        repository_identity: succeeded ? readback.repository_identity : null,
-        request_ref: {
-          digest: request.request_digest,
-          uri: "wgcf://requests/repository-custody/provision-test.json",
-        },
-        schema_version: 1,
-        workflow_status: status,
-      }
-    : null;
-
-  return {
-    decision: {
-      action: "provision-new",
-      approved_provisioning: denied
-        ? null
-        : {
-            name: request.target.name,
-            owner: request.target.owner,
-            owner_scope: "organization",
-            provider: "github",
-            provider_host: "github.com",
-            settings: structuredClone(request.provisioning),
-          },
-      artifact_type: "repository_custody_decision",
-      decision_id: "repository-custody-decision:provision-test-001",
-      evaluated_at: "2026-08-30T08:00:01.000Z",
-      findings: denied
-        ? [{ code: "not-ready", severity: "blocking", summary: "WGCF denied the request." }]
-        : [],
-      integrity: integrity(decisionDigest),
-      next_action: denied ? "stop" : "create-provider",
-      obligations: denied ? [] : ["create-provider-once"],
-      outcome: denied ? "denied" : "allowed",
-      policy_version: "repository-custody/v1",
-      request_ref: {
-        digest: request.request_digest,
-        uri: "wgcf://requests/repository-custody/provision-test.json",
-      },
-      resolved_identity: null,
-      schema_version: 1,
-    },
-    decision_ref: decisionRef,
-    execution_id: request.workflow.execution_id,
-    failure: terminal && !succeeded
-      ? {
-          code: denied ? "repository_custody_denied" : "repository_provider_unavailable",
-          message: denied ? "WGCF denied the request." : "Provider operation unavailable.",
-          retryable: !denied,
-        }
-      : null,
-    next_action: !terminal
-      ? "await-provider"
-      : succeeded
-        ? "complete"
-        : denied
-          ? "request-correction"
-          : "retry-provider",
-    provider_operation: {
-      attempt_count: denied ? 0 : 1,
-      command: "create-provider",
-      completion_path: succeeded ? "created" : null,
-      provider_repository_id: succeeded ? "1350916928" : null,
-      state: succeeded
-        ? "verified"
-        : denied
-          ? "not-started"
-          : terminal
-            ? "recovery-required"
-            : "command-issued",
-    },
-    provider_readback: readback,
-    provider_readback_ref: succeeded ? readbackRef : null,
-    receipt,
-    receipt_ref: terminal
-      ? {
-          digest: receiptDigest,
-          uri: "oos://receipts/repository-custody/provision-test.json",
-        }
-      : null,
-    replayed,
-    request,
-    retryable: status === "failed",
-    schema_version: 1,
-    status,
-    workflow_id: "repository-custody",
-    workflow_version: "1",
-  };
-}
-
-function integrity(contentDigest) {
-  return {
-    algorithm: "sha256",
-    canonicalization: "RFC8785",
-    content_digest: contentDigest,
-  };
 }
 
 function jsonResponse(body, status = 200) {

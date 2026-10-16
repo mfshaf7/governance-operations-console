@@ -154,7 +154,7 @@ export function useRepositoryCustodyLiveRuntime() {
     [],
   );
 
-  const provision = useCallback(async (intent: RepositoryProvisionIntent) => {
+  const provision = useCallback(async (intent: RepositoryProvisionIntent | { requestId: string; resume: true }) => {
     setPendingProvisioningRequestId(intent.requestId);
     setProvisioningErrorsByRequestId((current) =>
       withoutKey(current, intent.requestId),

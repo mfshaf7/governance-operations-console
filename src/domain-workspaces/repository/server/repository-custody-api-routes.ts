@@ -10,6 +10,7 @@ import {
   listRepositoryCustodyResults,
   provisionRepository,
   readRepositoryCustodyResult,
+  resumeRepositoryProvisioning,
   RepositoryCustodyOosError,
 } from "./repository-custody-oos-client.ts";
 
@@ -45,9 +46,12 @@ export async function linkExistingRepositoryCustodyRoute(
 
 export async function provisionRepositoryRoute(request: NextRequest) {
   try {
-    const result = await provisionRepository(
-      assertProvisionIntent(await request.json().catch(() => null)),
-    );
+    const input: unknown = await request.json().catch(() => null);
+    if (isRecord(input) && input.resume === true &&
+        Object.keys(input).some(key => !["requestId", "resume"].includes(key))) throw invalidProvisionIntent();
+    const result = isRecord(input) && input.resume === true
+      ? await resumeRepositoryProvisioning(assertRepositoryCustodyRequestId(input.requestId))
+      : await provisionRepository(assertProvisionIntent(input));
     return NextResponse.json(result, {
       headers: noStoreHeaders,
       status: result.replayed ? 200 : 201,
@@ -111,6 +115,9 @@ function assertProvisionIntent(value: unknown): RepositoryProvisionIntent {
   }
   return {
     approvalNote: text(value.approvalNote),
+    ...(value.correctionOfRequestId === undefined ? {} : {
+      correctionOfRequestId: assertRepositoryCustodyRequestId(value.correctionOfRequestId),
+    }),
     custodyKind: text(value.custodyKind) as RepositoryProvisionIntent["custodyKind"],
     repositoryDescription: text(value.repositoryDescription),
     repositoryName: text(value.repositoryName),

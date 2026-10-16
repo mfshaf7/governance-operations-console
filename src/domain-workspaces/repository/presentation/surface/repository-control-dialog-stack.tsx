@@ -19,6 +19,11 @@ export function RepositoryControlDialogStack({
     <>
       <RepositoryRequestDialog
         canSubmit={controller.request.canSubmit}
+        correction={controller.request.correction}
+        resume={controller.request.resume}
+        retainedRequests={controller.request.retainedRequests}
+        selectedRequestId={controller.request.selectedRequestId}
+        onSelectRetained={controller.request.onSelectRetained}
         draft={controller.request.draft}
         error={controller.request.error}
         onClose={controller.request.close}
