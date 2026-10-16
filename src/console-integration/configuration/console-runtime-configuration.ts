@@ -69,6 +69,7 @@ export type ConsolePrototypePreviewConfiguration = Readonly<{
   ownerRepoRoot: string;
   sourceRevision: string;
   stateRoot: string;
+  recordAuthorityFreshnessRequired?: boolean;
 }>;
 
 export type ConsoleProductPublicationConfiguration =
@@ -554,7 +555,10 @@ export function resolveConsolePrototypePreviewConfiguration(
       "console_prototype_preview_state_root_invalid",
     );
   }
-  return { ownerRepoRoot, sourceRevision, stateRoot };
+  return { ownerRepoRoot, sourceRevision, stateRoot,
+    ...(env.GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_RECORD_AUTHORITY_FRESHNESS_REQUIRED === "true"
+      ? { recordAuthorityFreshnessRequired: true } : {}),
+  };
 }
 
 export function resolveConsoleOperatorBinding(

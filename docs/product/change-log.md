@@ -17,6 +17,10 @@ lives in `surface-contracts/lifecycle-transitions.md`.
   Live maturity projection does not invoke fixture transition helpers or create
   simulated evidence. This source boundary requires coordinated Platform and
   Security commissioning; engineering tests are not the final app exercise.
+  The same repair's Preview follow-up binds the existing fixed Studio owner
+  command to Platform's fresh canonical record revision while retaining its
+  exact reviewed control-code baseline; it does not grant Git or provider
+  authority to the Console.
 
 ## 2026-10-15
 
