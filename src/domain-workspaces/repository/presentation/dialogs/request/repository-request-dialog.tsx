@@ -30,6 +30,11 @@ import {
 
 export function RepositoryRequestDialog({
   canSubmit,
+  correction = false,
+  resume = false,
+  retainedRequests = [],
+  selectedRequestId = "new",
+  onSelectRetained,
   draft,
   error,
   onClose,
@@ -40,6 +45,11 @@ export function RepositoryRequestDialog({
   result,
 }: {
   canSubmit: boolean;
+  correction?: boolean;
+  resume?: boolean;
+  retainedRequests?: readonly RepositoryCustodyWorkflowResult[];
+  selectedRequestId?: string;
+  onSelectRetained?: (requestId: string) => void;
   draft: RepositoryRequestDraft;
   error?: RepositoryCustodyClientError;
   onClose: () => void;
@@ -55,9 +65,12 @@ export function RepositoryRequestDialog({
   if (!open) return null;
 
   const projection = repositoryProvisioningResultProjection(result, error);
-  const checks = repositoryProvisioningChecks(draft, result);
+  const checks = repositoryProvisioningChecks(draft, result, resume);
   const actionLabel = pending
     ? "Provisioning Repository"
+    : resume ? "Resume Approved Request"
+    : correction && result?.status !== "succeeded" && !result?.retryable
+      ? "Complete Approved Baseline"
     : result?.status === "applying"
       ? "Check Result"
       : result?.retryable
@@ -91,6 +104,21 @@ export function RepositoryRequestDialog({
       surfaceId="repository-request"
       title="Provision New Repository"
     >
+      {retainedRequests.length > 0 && onSelectRetained ? (
+        <TerasSelectField
+          label="Retained provisioning request"
+          onValueChange={onSelectRetained}
+          disabled={pending}
+          options={[
+            { label: "New repository request", value: "new" },
+            ...retainedRequests.map((item) => ({
+              label: `${item.request.target.owner}/${item.request.target.name} — ${item.status} — ${item.request.request_id}`,
+              value: item.request.request_id,
+            })),
+          ]}
+          value={selectedRequestId}
+        />
+      ) : null}
       <TerasDetailGrid
         data-repository-request-draft="true"
         scrollGutter
@@ -98,7 +126,11 @@ export function RepositoryRequestDialog({
       >
         <TerasPanel frame="padded" fit="content" treatment="neutral">
           <TerasPanelHeader
-            description="Name the organization repository, its workspace custody, and the accountable approval."
+            description={resume
+              ? "Resume the exact retained request with its original approval and identity. OOS rereads readiness and provider truth before continuing; reviewed intent cannot be edited."
+              : correction
+              ? "Complete the unchanged approved baseline on the retained repository. Review it again and approve a new correction request; the original failed receipt is preserved. No repository is created again."
+              : "Name the organization repository, its workspace custody, and the accountable approval."}
             kicker="Provisioning Request"
             title="Repository definition"
           />
@@ -107,6 +139,7 @@ export function RepositoryRequestDialog({
               <TerasFieldGrid spacing="loose">
                 <TerasTextField
                   aria-label="GitHub organization"
+                  disabled={correction || resume || pending}
                   label="GitHub organization"
                   onValueChange={(value) => onUpdateDraft("ownerDomain", value)}
                   placeholder="mfshaf7-workspace"
@@ -114,6 +147,7 @@ export function RepositoryRequestDialog({
                 />
                 <TerasTextField
                   aria-label="Repository name"
+                  disabled={correction || resume || pending}
                   label="Repository name"
                   onValueChange={(value) => onUpdateDraft("name", value)}
                   placeholder="workspace-client-dashboard"
@@ -122,6 +156,7 @@ export function RepositoryRequestDialog({
               </TerasFieldGrid>
               <TerasNoteField
                 aria-label="Repository purpose"
+                disabled={correction || resume || pending}
                 label="Repository purpose"
                 onValueChange={(value) => onUpdateDraft("purpose", value)}
                 placeholder="Describe the repository purpose and durable owner boundary."
@@ -130,6 +165,7 @@ export function RepositoryRequestDialog({
               <TerasFieldGrid spacing="loose">
                 <TerasTextField
                   aria-label="Workspace owner reference"
+                  disabled={correction || resume || pending}
                   label="Workspace owner reference"
                   onValueChange={(value) =>
                     onUpdateDraft("workspaceOwnerRef", value)
@@ -139,6 +175,7 @@ export function RepositoryRequestDialog({
                 />
                 <TerasSelectField
                   aria-label="Custody kind"
+                  disabled={correction || resume || pending}
                   label="Custody kind"
                   onValueChange={(value) =>
                     onUpdateDraft(
@@ -160,6 +197,7 @@ export function RepositoryRequestDialog({
               </TerasFieldGrid>
               <TerasSelectField
                 aria-label="Repository visibility"
+                disabled={correction || resume || pending}
                 label="Repository visibility"
                 onValueChange={(value) =>
                   onUpdateDraft(
@@ -175,7 +213,7 @@ export function RepositoryRequestDialog({
                 value={draft.visibility}
               />
               <TerasMetadataList items={repositoryRequestBoundaryMetadata()} />
-              <TerasSelectableRow
+              {!resume ? <TerasSelectableRow
                 ariaLabel="Confirm provider baseline review"
                 detail="README initialized, Issues enabled, squash-only merge, and branch deletion after merge."
                 label="Provider baseline reviewed"
@@ -185,14 +223,15 @@ export function RepositoryRequestDialog({
                 selected={draft.templateReviewed}
                 status={draft.templateReviewed ? "Confirmed" : "Required"}
                 tone={draft.templateReviewed ? "ok" : "warn"}
-              />
-              <TerasNoteField
+              /> : null}
+              {!resume ? <TerasNoteField
                 aria-label="Provisioning approval note"
                 label="Approval note"
+                disabled={pending}
                 onValueChange={(value) => onUpdateDraft("approvalNote", value)}
                 placeholder="Record why this exact repository and provider baseline are approved for creation."
                 value={draft.approvalNote}
-              />
+              /> : null}
             </TerasFieldStack>
           </TerasTrayStack>
         </TerasPanel>

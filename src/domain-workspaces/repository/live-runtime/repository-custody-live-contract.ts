@@ -48,7 +48,7 @@ export function assertRepositoryCustodyWorkflowResult(
   const readback =
     result.provider_readback === null
       ? null
-      : assertProviderReadback(result.provider_readback, request);
+      : assertProviderReadback(result.provider_readback, request, result.status === "succeeded");
   const readbackRef = nullableArtifactRef(
     result.provider_readback_ref,
     "provider readback reference",
@@ -347,6 +347,7 @@ function assertProviderOperation(
 function assertProviderReadback(
   value: unknown,
   request: RepositoryCustodyRequest,
+  successful: boolean,
 ): RepositoryProviderReadback {
   const readback = record(value, "Repository provider readback");
   exact(readback.schema_version, 1, "readback schema version");
@@ -395,28 +396,17 @@ function assertProviderReadback(
   );
 
   if (request.action === "link-existing") {
-    exact(
-      identity.provider_repository_id,
-      request.target.provider_repository_id,
-      "readback provider repository identity",
-    );
+    if (successful) {
+      exact(identity.provider_repository_id, request.target.provider_repository_id,
+        "readback provider repository identity");
+    }
     exact(readback.applied_provisioning, null, "link applied provisioning");
   } else {
-    caseInsensitiveExact(
-      readback.canonical_owner,
-      request.target.owner,
-      "provisioned repository owner",
-    );
-    caseInsensitiveExact(
-      readback.canonical_name,
-      request.target.name,
-      "provisioned repository name",
-    );
-    exact(
-      readback.visibility,
-      request.provisioning.visibility,
-      "provisioned visibility",
-    );
+    if (successful) {
+      caseInsensitiveExact(readback.canonical_owner, request.target.owner, "provisioned repository owner");
+      caseInsensitiveExact(readback.canonical_name, request.target.name, "provisioned repository name");
+      exact(readback.visibility, request.provisioning.visibility, "provisioned visibility");
+    }
     const applied = record(
       readback.applied_provisioning,
       "Applied provisioning",
@@ -427,12 +417,10 @@ function assertProviderReadback(
       "initialized",
       "repository initialization",
     );
-    canonicalEqual(
-      assertProvisioningSettings(applied.settings, "applied settings"),
-      request.provisioning,
-      "applied provisioning settings",
-    );
+    const settings = assertProvisioningSettings(applied.settings, "applied settings");
+    if (successful) canonicalEqual(settings, request.provisioning, "applied provisioning settings");
   }
+  if (successful) exact(readback.provider_lifecycle_state, "active", "successful provider lifecycle");
   integrity(readback.integrity, "readback integrity");
   return value as RepositoryProviderReadback;
 }

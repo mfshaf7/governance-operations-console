@@ -30,6 +30,24 @@ readback does not imply Workspace Intake, active inventory, or product
 admission. The Source signal distinguishes loading, current canonical records,
 and owner failure.
 
+Open the existing provisioning dialog and select a `Retained provisioning
+request` to inspect its status and receipt after reload. A failed creation may
+have a real repository even though custody is still incomplete; the Console
+shows that failure and never projects it as a successful Repository record.
+
+For an acknowledged partial creation, the target and baseline remain locked.
+Review the baseline again, enter a fresh approval note, then choose `Complete
+Approved Baseline`. The server binds a new request to the retained failed
+creation through its causation identity. OOS verifies provenance and unchanged
+intent, obtains fresh readiness, completes only the approved mutable settings
+on the same immutable repository, and separately rereads provider truth. The
+old failed result and receipt remain intact. No second repository is created.
+
+For applying or retryable results, choose `Resume Approved Request`. This uses
+the canonical original request and approval, not a reconstructed browser draft
+or a guessed approval note. The server verifies current operator and authority
+before resubmission. Do not change the identity to retry an unknown outcome.
+
 The operator cannot provide provider credentials, policy references, caller
 secrets, arbitrary GitHub hosts, or repository feature and merge-policy values.
 
@@ -78,6 +96,9 @@ remain on the server.
 - `denied` remains a policy result and does not create a repository record.
 - retryable `failed` results may be retried with the same request identity.
 - corrected non-retryable requests receive a new request identity.
+- failed observations are structurally validated, but may differ from requested
+  settings or identity: that mismatch is the failure evidence. Exact settings,
+  active state, identity, and custody checks remain mandatory for success.
 - configured live failure never falls back to fixtures or local receipts.
 
 ## Validation
