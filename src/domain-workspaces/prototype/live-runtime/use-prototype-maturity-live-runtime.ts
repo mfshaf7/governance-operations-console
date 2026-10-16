@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { prototypeOwnerProgressIsNewer } from "./prototype-workspace-live-projection.ts";
 
 import type { PrototypeRecord } from "../read-model/prototype-workspace-read-model.ts";
 import {
   assertPrototypeMaturityPreparation,
   assertPrototypeMaturityResult,
   assertPrototypeMaturitySubmissionIntent,
+  prototypeMaturityInputKey,
 } from "./prototype-maturity-live-contract.ts";
 import type {
   PrototypeMaturityLiveApiError,
@@ -50,18 +52,37 @@ export function prototypeMaturityAllowsLocalFallback(error: unknown) {
   );
 }
 
-export function prototypeMaturityInputKey(
-  input: PrototypeMaturityRunInput["input"],
-) {
-  return JSON.stringify(input);
-}
+export { prototypeMaturityInputKey };
 
-export function usePrototypeMaturityLiveRuntime() {
+const emptySourceProjections: Readonly<Record<string, PrototypeMaturityLiveProjection>> = {};
+
+export function usePrototypeMaturityLiveRuntime(sourceProjections = emptySourceProjections) {
   const [projectionsByRecordId, setProjectionsByRecordId] = useState<
     Readonly<Record<string, PrototypeMaturityLiveProjection>>
   >({});
   const identities = useRef(new Map<string, RequestIdentity>());
   const sequence = useRef(0);
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+  const inFlight = useRef(new Set<string>());
+  const withProgress = useCallback(async <T,>(recordId: string, operation: () => Promise<T>) => {
+    if (inFlight.current.has(recordId)) throw new Error("A Maturity owner request is already running.");
+    inFlight.current.add(recordId);
+    setPending((current) => ({ ...current, [recordId]: true }));
+    setErrors((current) => ({ ...current, [recordId]: null }));
+    try { return await operation(); }
+    catch (error) { setErrors((current) => ({ ...current, [recordId]: error instanceof Error ? error.message : "Maturity owner request failed." })); throw error; }
+    finally { inFlight.current.delete(recordId); setPending((current) => ({ ...current, [recordId]: false })); }
+  }, []);
+  useEffect(() => {
+    setProjectionsByRecordId((current) => {
+      let next = current;
+      for (const [id, projection] of Object.entries(sourceProjections)) {
+        if (prototypeOwnerProgressIsNewer(projection.result, current[id]?.result)) next = { ...next, [id]: projection };
+      }
+      return next;
+    });
+  }, [sourceProjections]);
 
   const retain = useCallback(
     (input: PrototypeMaturityRunInput, result: PrototypeMaturityResult) => {
@@ -82,12 +103,14 @@ export function usePrototypeMaturityLiveRuntime() {
   const run = useCallback(
     async (input: PrototypeMaturityRunInput) => {
       const current = projectionsByRecordId[input.record.id];
+      const identityKey = `${input.record.id}\n${input.inputKey}`;
+      if (current && !terminal(current.result.status) && current.inputKey !== input.inputKey) throw new Error("The current owner request is immutable. Continue it or cancel before changing promotion input.");
       if (current?.inputKey === input.inputKey) {
-        if (terminal(current.result.status)) return retain(input, current.result);
-        return retain(input, await advance(current.result, input));
+        if (["cancelled", "rejected", "requires-action"].includes(current.result.status)) identities.current.delete(identityKey);
+        else if (terminal(current.result.status)) return retain(input, current.result);
+        else return retain(input, await advance(current.result, input));
       }
 
-      const identityKey = `${input.record.id}\n${input.inputKey}`;
       let identity = identities.current.get(identityKey);
       if (!identity) {
         sequence.current += 1;
@@ -122,7 +145,10 @@ export function usePrototypeMaturityLiveRuntime() {
     [retain],
   );
 
-  return { cancel, projectionsByRecordId, read, run };
+  const runWithProgress = useCallback((input: PrototypeMaturityRunInput) => withProgress(input.record.id, () => run(input)), [run, withProgress]);
+  const readWithProgress = useCallback((input: PrototypeMaturityRunInput, requestId: string) => withProgress(input.record.id, () => read(input, requestId)), [read, withProgress]);
+  const cancelWithProgress = useCallback((input: PrototypeMaturityRunInput, requestId: string) => withProgress(input.record.id, () => cancel(input, requestId)), [cancel, withProgress]);
+  return { cancel: cancelWithProgress, errors, pending, projectionsByRecordId, read: readWithProgress, run: runWithProgress };
 }
 
 export function prototypeMaturitySubmissionIntent(

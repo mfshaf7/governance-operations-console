@@ -152,12 +152,16 @@ async function prototypeDeliveryOosRequest(
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const message =
-      isRecord(body) && typeof body.error === "string"
+      isRecord(body) && typeof body.message === "string"
+        ? body.message
+        : isRecord(body) && typeof body.error === "string"
         ? body.error
         : response.statusText || "OOS rejected the Prototype Delivery request.";
     const code =
       isRecord(body) && typeof body.code === "string"
         ? body.code
+        : isRecord(body) && typeof body.error === "string" && /^prototype_delivery_[a-z_]+$/.test(body.error)
+          ? body.error
         : "prototype_delivery_oos_rejected";
     throw new PrototypeDeliveryOosError(message, code, response.status);
   }

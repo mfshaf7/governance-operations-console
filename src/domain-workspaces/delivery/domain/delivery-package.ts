@@ -77,7 +77,7 @@ export type DeliveryPackageSummary = {
   legacy_epic_id: number;
   open_child_count: number;
   package_posture: DeliveryPackagePosture;
-  source_custody: OperationResolvedSourceCustody;
+  source_custody: OperationResolvedSourceCustody | null;
   source_ref: string;
   summary: string;
   target_pi: string | null;

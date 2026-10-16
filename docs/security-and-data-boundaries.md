@@ -356,6 +356,16 @@ live-integration work resolves them.
 
 ## Public Repository Boundary
 
+The canonical primary Prototype and Delivery collection adapters use the same
+server-only OOS and negotiated source-envelope boundary. Owner records and
+caller-owned workflow progress reconstruct cold UI state; stale local overlays
+cannot change canonical lifecycle. Bounded Delivery realization accepts only an
+objective, reviewed digest and finite recovery intent. OOS retains context/model,
+source-executor, file bytes and receipt authority; the browser receives curated
+metadata only. This source extension does not activate source realization or
+expand provider installation scope. Commissioning requires the existing bounded
+source-realization review and exact-composition Security decision.
+
 Allowed content includes public product source, synthetic fixtures, contracts,
 tests, architecture records, and operator documentation.
 

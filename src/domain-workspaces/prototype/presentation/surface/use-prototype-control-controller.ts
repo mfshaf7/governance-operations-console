@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
 import type { OperationSurfaceStatusModel } from "../../../operation-contracts/surface-status.ts";
 import { useConsoleRuntimeCapabilities } from "../../../../console-integration/configuration/use-console-runtime-capabilities.ts";
+import { usePrototypeWorkspaceLiveRuntime } from "../../live-runtime/use-prototype-workspace-live-runtime.ts";
 import {
   resolveConsolePrimaryRecordIsolation,
   selectConsoleAuthorityProjection,
@@ -22,6 +23,7 @@ import {
 } from "../../local-runtime/prototype-runtime.ts";
 import type { PrototypeLandingCommandInput } from "../../work-model/workflows/landing/prototype-landing-model.ts";
 import { projectPrototypeEffectiveReadModel } from "../../local-runtime/prototype-effective-projection.ts";
+import { prototypeProjectedReceipts } from "../../local-runtime/prototype-receipt-projection.ts";
 import {
   runPrototypeLandingSimulation,
   type PrototypeLandingSimulationInput,
@@ -90,22 +92,23 @@ export function usePrototypeControlController({
 } = {}) {
   const runtimeCapabilities = getPrototypeRuntimeCapabilities();
   const consoleRuntime = useConsoleRuntimeCapabilities();
+  const live = usePrototypeWorkspaceLiveRuntime(consoleRuntime.status === "current" && consoleRuntime.projection?.mode === "live");
   const primaryRecordIsolation = resolveConsolePrimaryRecordIsolation({
-    liveAuthorityAvailable: false,
+    liveAuthorityAvailable: live.projection !== null,
     runtimeMode: consoleRuntime.projection?.mode ?? null,
     runtimeStatus: consoleRuntime.status,
   });
   const deliveryRuntime = usePrototypeDeliveryLiveRuntime();
-  const closureRuntime = usePrototypeClosureLiveRuntime();
-  const landingRuntime = usePrototypeLandingLiveRuntime();
-  const maturityRuntime = usePrototypeMaturityLiveRuntime();
+  const closureRuntime = usePrototypeClosureLiveRuntime(live.projection?.closure);
+  const landingRuntime = usePrototypeLandingLiveRuntime(live.projection?.landing);
+  const maturityRuntime = usePrototypeMaturityLiveRuntime(live.projection?.maturity);
   const previewRuntime = usePrototypePreviewLiveRuntime();
   const fixtureReadModel = primaryRecordIsolation.fixtureAllowed
     ? getPrototypeWorkspaceReadModel()
     : null;
   const sourceReadModel = useMemo<PrototypeWorkspaceReadModel>(
     () => ({
-      ...(fixtureReadModel ?? {
+      ...(fixtureReadModel ?? live.projection?.readModel ?? {
         source: {
           lastRead: "unavailable",
           mutationGateway: "unavailable",
@@ -118,11 +121,12 @@ export function usePrototypeControlController({
         selectConsoleAuthorityProjection({
           decision: primaryRecordIsolation,
           fixture: fixtureReadModel?.records ?? [],
-          live: null,
+          live: live.projection?.readModel.records ?? null,
         }) ?? [],
     }),
     [
       fixtureReadModel,
+      live.projection?.readModel,
       primaryRecordIsolation.fixtureAllowed,
       primaryRecordIsolation.liveAuthorityAllowed,
     ],
@@ -153,15 +157,15 @@ export function usePrototypeControlController({
   }>(
     () => {
       if (!primaryRecordIsolation.fixtureAllowed) {
-        return { readModel: sourceReadModel, receiptsByRecord: {} };
+        return { readModel: sourceReadModel, receiptsByRecord: Object.fromEntries(sourceReadModel.records.map((record) => [record.id, prototypeProjectedReceipts(record, [])])) };
       }
       return projectPrototypeEffectiveReadModel({
         deliveryApplicationsByPrototypeId:
           deliveryRuntime.projectionsByPrototypeId,
         landingProjectionsByRecordId: landingRuntime.projectionsByRecordId,
         maturityProjectionsByRecordId: maturityRuntime.projectionsByRecordId,
-        proposalEntryRecords,
-        runtimeProjection: state.runtimeProjection,
+        proposalEntryRecords: primaryRecordIsolation.fixtureAllowed ? proposalEntryRecords : [],
+        runtimeProjection: primaryRecordIsolation.fixtureAllowed ? state.runtimeProjection : { localRequestRecords: [], receiptsByRecord: {} },
         sourceReadModel,
       });
     },
@@ -171,11 +175,11 @@ export function usePrototypeControlController({
       maturityRuntime.projectionsByRecordId,
       primaryRecordIsolation.fixtureAllowed,
       proposalEntryRecords,
-      sourceReadModel,
+      sourceReadModel.records,
       state.runtimeProjection,
     ],
   );
-  const readModel = effectiveProjection.readModel;
+  const readModel = { ...effectiveProjection.readModel, source: sourceReadModel.source };
   const filteredRecords = useMemo(
     () => filterPrototypeRecords(readModel.records, state.filters),
     [readModel.records, state.filters],
@@ -207,25 +211,37 @@ export function usePrototypeControlController({
     selectedRecord,
   ]);
 
+  const refreshClosureSources = useCallback(async (record: PrototypeRecord) => {
+    const packet = sourceReadModel.deliveryPacketsByPrototypeId?.[record.id]?.packet;
+    if (packet) await deliveryRuntime.load(packet);
+    return closureRuntime.load(record);
+  }, [sourceReadModel.deliveryPacketsByPrototypeId, deliveryRuntime.load, closureRuntime.load]);
+
   useEffect(() => {
     if (!activeRecord || !["dashboard", "closeout-retirement", "history"].includes(state.activeDialog ?? "")) return;
-    void closureRuntime.load(activeRecord).catch(() => undefined);
-  }, [activeRecord?.id, state.activeDialog, closureRuntime.load]);
+    void refreshClosureSources(activeRecord).catch(() => undefined);
+  }, [activeRecord?.id, state.activeDialog, refreshClosureSources]);
   useEffect(() => {
     if (!selectedRecord || state.activeDialog !== "preview-runtime") return;
     void previewRuntime.load(selectedRecord).catch(() => undefined);
   }, [selectedRecord?.id, state.activeDialog, previewRuntime.load]);
+  const selectedCanonicalDeliveryPacket = activeRecord ? sourceReadModel.deliveryPacketsByPrototypeId?.[activeRecord.id]?.packet : null;
+  useEffect(() => {
+    if (!selectedCanonicalDeliveryPacket || !["dashboard", "movement-request", "closeout-retirement", "history"].includes(state.activeDialog ?? "")) return;
+    void deliveryRuntime.load(selectedCanonicalDeliveryPacket).catch(() => undefined);
+  }, [selectedCanonicalDeliveryPacket?.packet_digest, state.activeDialog, deliveryRuntime.load]);
   const selectedReceipts = activeRecord
     ? (effectiveProjection.receiptsByRecord[activeRecord.id] ?? [])
     : [];
   const selectedPreviewReceipts = activeRecord && selectedPreviewMode === "live"
     ? (previewRuntime.receiptsByRecord[activeRecord.id] ?? [])
     : selectedReceipts.filter((receipt) => receipt.authority === "prototype-local");
-  const selectedDeliveryApplication = activeRecord
+  const observedDeliveryApplication = activeRecord
     ? (deliveryRuntime.projectionsByPrototypeId[
         prototypeRecordSourceId(activeRecord)
       ] ?? null)
     : null;
+  const selectedDeliveryApplication = observedDeliveryApplication && (primaryRecordIsolation.fixtureAllowed || observedDeliveryApplication.packet.packet_digest === selectedCanonicalDeliveryPacket?.packet_digest) ? observedDeliveryApplication : null;
   const acceptedBaselineReceipt = selectedReceipts.find(
     (receipt) =>
       receipt.authority === "source-projected" &&
@@ -252,8 +268,8 @@ export function usePrototypeControlController({
   };
   const stats = getPrototypeWorkspaceStats(readModel.records);
   const workspaceStatus: OperationSurfaceStatusModel =
-    primaryRecordIsolation.fixtureAllowed
-      ? prototypeWorkspaceStatus(readModel, stats)
+    primaryRecordIsolation.fixtureAllowed || primaryRecordIsolation.liveAuthorityAllowed
+      ? prototypeWorkspaceStatus(readModel, stats, primaryRecordIsolation.liveAuthorityAllowed)
       : {
           ariaLabel: "Prototype workspace status details",
           items: [
@@ -333,6 +349,7 @@ export function usePrototypeControlController({
     commandId: CommandId,
     input: PrototypeCommandInputById[CommandId],
   ) {
+    if (!primaryRecordIsolation.fixtureAllowed) throw new Error("Prototype-local commands are disabled in live mode; use the canonical owner workflow.");
     if (!runtimeCapabilities.canSubmit) {
       return null;
     }
@@ -387,14 +404,18 @@ export function usePrototypeControlController({
       return;
     }
 
+    if (!primaryRecordIsolation.fixtureAllowed) { await live.refresh(); return; }
+
     await recordPrototypeProjection(record, commandId, input);
   }
 
   async function runLandingSimulation(input: PrototypeLandingSimulationInput) {
     try {
-      return await landingRuntime.run(input);
+      const result = await landingRuntime.run(input);
+      if (!primaryRecordIsolation.fixtureAllowed) await live.refresh();
+      return result;
     } catch (error) {
-      if (prototypeLandingAllowsLocalFallback(error)) {
+      if (primaryRecordIsolation.fixtureAllowed && prototypeLandingAllowsLocalFallback(error)) {
         return runPrototypeLandingSimulation(input);
       }
       throw error;
@@ -429,8 +450,9 @@ export function usePrototypeControlController({
         inputKey: prototypeMaturityInputKey(maturityInput),
         record,
       });
+      if (!primaryRecordIsolation.fixtureAllowed) await live.refresh();
     } catch (error) {
-      if (prototypeMaturityAllowsLocalFallback(error)) {
+      if (primaryRecordIsolation.fixtureAllowed && prototypeMaturityAllowsLocalFallback(error)) {
         await recordPrototypeProjection(record, commandId, input);
       } else {
         throw error;
@@ -461,8 +483,9 @@ export function usePrototypeControlController({
         inputKey: prototypeMaturityInputKey(maturityInput),
         record,
       });
+      if (!primaryRecordIsolation.fixtureAllowed) await live.refresh();
     } catch (error) {
-      if (prototypeMaturityAllowsLocalFallback(error)) {
+      if (primaryRecordIsolation.fixtureAllowed && prototypeMaturityAllowsLocalFallback(error)) {
         await recordPrototypeProjection(record, commandId, input);
       } else {
         throw error;
@@ -513,7 +536,7 @@ export function usePrototypeControlController({
         );
         return;
       } catch (error) {
-        if (!previewFallbackAllowed(error)) throw error;
+        if (!primaryRecordIsolation.fixtureAllowed || !previewFallbackAllowed(error)) throw error;
       }
     }
     await recordPrototypeProjection(record, actionId, {});
@@ -535,10 +558,22 @@ export function usePrototypeControlController({
         await previewRuntime.prove(record);
         return;
       } catch (error) {
-        if (!previewFallbackAllowed(error)) throw error;
+        if (!primaryRecordIsolation.fixtureAllowed || !previewFallbackAllowed(error)) throw error;
       }
     }
     await recordPrototypeProjection(record, "refresh-preview-proof", {});
+  }
+
+  async function maturityAction(action: "read" | "continue" | "cancel") {
+    if (!activeRecord) throw new Error("Select a canonical Prototype record.");
+    const projection = maturityRuntime.projectionsByRecordId[activeRecord.id];
+    if (!projection) throw new Error("No current owner Maturity request is available.");
+    const input = { record: activeRecord, input: projection.input, inputKey: projection.inputKey };
+    try {
+      if (action === "read") return await maturityRuntime.read(input, projection.result.request_id);
+      if (action === "cancel") return await maturityRuntime.cancel(input, projection.result.request_id);
+      return await maturityRuntime.run(input);
+    } finally { if (!primaryRecordIsolation.fixtureAllowed) await live.refresh(); }
   }
 
   return {
@@ -571,9 +606,11 @@ export function usePrototypeControlController({
       filtered: filteredRecords,
     },
     sourceAvailability: {
-      error: consoleRuntime.error,
+      error: live.error ?? consoleRuntime.error,
       reasonCode: primaryRecordIsolation.reasonCode,
-      unavailable: !primaryRecordIsolation.fixtureAllowed && readModel.records.length === 0,
+      unavailable: !primaryRecordIsolation.fixtureAllowed && !live.projection,
+      loading: consoleRuntime.status === "loading" || consoleRuntime.projection?.mode === "live" && !live.projection && !live.error,
+      refresh: live.refresh,
     },
     request: {
       canSubmit: canSubmitRequest,
@@ -589,13 +626,22 @@ export function usePrototypeControlController({
     selectedClosure: activeRecord ? {
       preparation: closureRuntime.preparations[activeRecord.id] ?? null,
       result: closureRuntime.results[activeRecord.id] ?? null,
-      error: closureRuntime.errors[activeRecord.id] ?? null,
+      error: closureRuntime.errors[activeRecord.id] ?? deliveryRuntime.errorsByPrototypeId[prototypeRecordSourceId(activeRecord)] ?? null,
       pending: closureRuntime.pending[activeRecord.id] === true,
     } : null,
     selectedClosureOwnerEvidence,
     selectedLandingProjection: activeRecord
       ? (landingRuntime.projectionsByRecordId[activeRecord.id] ?? null)
       : null,
+    selectedMaturity: {
+      mode: primaryRecordIsolation.fixtureAllowed ? "disconnected-preview" as const : "live" as const,
+      projection: activeRecord ? maturityRuntime.projectionsByRecordId[activeRecord.id] ?? null : null,
+      error: activeRecord ? maturityRuntime.errors[activeRecord.id] ?? null : null,
+      pending: activeRecord ? maturityRuntime.pending[activeRecord.id] === true : false,
+      read: () => maturityAction("read"),
+      continueWork: () => maturityAction("continue"),
+      cancel: () => maturityAction("cancel"),
+    },
     selectedRecord,
     selectedSourceDeliveryPacket: activeRecord
       ? (sourceReadModel.deliveryPacketsByPrototypeId?.[activeRecord.id] ?? null)
@@ -613,7 +659,7 @@ export function usePrototypeControlController({
       recordPreviewProfileAction,
       recordPreviewRuntimeAction,
       closure: {
-        load: closureRuntime.load,
+        load: refreshClosureSources,
         submit: closureRuntime.submit,
         read: closureRuntime.read,
         inspect: closureRuntime.inspect,

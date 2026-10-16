@@ -86,6 +86,7 @@ function toneForPosture(posture: DeliveryPackagePosture): DeliveryTone {
     case "Done":
       return "ok";
     case "In Progress":
+    case "New":
     case "Ready":
       return "info";
     case "Retired":

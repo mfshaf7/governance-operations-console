@@ -6,6 +6,18 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-16
+
+- Maintenance Landing Unit `maintenance-1275-console-journey-console`
+  (`child_isolated_landing_unit`) connects the primary Prototype and Delivery
+  registers to existing owner authority, restores caller-owned workflow progress
+  after reload, and exposes bounded OOS source realization in the existing
+  Governed Work Session. Candidate and Baseline dialogs now await submission,
+  display owner failure and exact review, and offer continue/cancel controls.
+  Live maturity projection does not invoke fixture transition helpers or create
+  simulated evidence. This source boundary requires coordinated Platform and
+  Security commissioning; engineering tests are not the final app exercise.
+
 ## 2026-10-15
 
 - Maintenance Landing Unit `maintenance-1275-console-repository-readback`

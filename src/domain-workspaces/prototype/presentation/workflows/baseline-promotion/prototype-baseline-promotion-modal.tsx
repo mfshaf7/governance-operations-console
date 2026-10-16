@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 
 import {
   TerasDraftCloseGuardDialog,
+  TerasFieldStack,
+  TerasEmptyState,
   TerasWizardFooter,
   TerasWizardModal,
 } from "@/teras";
@@ -42,12 +44,14 @@ import {
 } from "./prototype-baseline-promotion-view-model.ts";
 import { PrototypeBaselinePromotionSupportPanels } from "./prototype-baseline-promotion-support-panels.tsx";
 import { PrototypeBaselinePromotionStepPanel } from "./prototype-baseline-promotion-work-step-panel.tsx";
+import { PrototypeMaturityOwnerProgressPanel, prototypeMaturityRequestPending, type PrototypeMaturityOwnerProgress } from "../shared/prototype-maturity-owner-progress.tsx";
 
 export function PrototypeBaselinePromotionModal({
   onBackToDashboard,
   onClose,
   onRecordReceipt,
   record,
+  ownerProgress,
 }: {
   onBackToDashboard: () => void;
   onClose: () => void;
@@ -55,8 +59,9 @@ export function PrototypeBaselinePromotionModal({
     record: PrototypeRecord,
     commandId: PrototypeCommandId,
     input: PrototypeBaselinePromotionInput,
-  ) => void;
+  ) => void | Promise<void>;
   record: PrototypeRecord | null;
+  ownerProgress?: PrototypeMaturityOwnerProgress;
 }) {
   const [activeStep, setActiveStep] =
     useState<PrototypeBaselinePromotionStepId>("packet");
@@ -65,6 +70,8 @@ export function PrototypeBaselinePromotionModal({
   const [draft, setDraft] = useState<PrototypeBaselinePromotionDraft>(() =>
     baselinePromotionDraftFromRecord(null),
   );
+  const [submitting, setSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (record) {
@@ -89,7 +96,8 @@ export function PrototypeBaselinePromotionModal({
   const sourceDraft = baselinePromotionDraftFromRecord(record);
   const draftDirty = baselinePromotionDraftDirty(draft, sourceDraft);
   const draftComplete = baselinePromotionDraftComplete(draft);
-  const draftMutable = prototypeWorkflowRecordCanEdit({
+  const ownerRequestPending = ownerProgress?.projection?.input.transition === "baseline-promotion" && prototypeMaturityRequestPending(ownerProgress);
+  const draftMutable = !submitting && !ownerRequestPending && prototypeWorkflowRecordCanEdit({
     disabledReason: command.disabledReason,
     record,
   });
@@ -125,6 +133,7 @@ export function PrototypeBaselinePromotionModal({
     reviewDispositionsReady &&
     baselineStateClear;
   const applyDisabled =
+    submitting || ownerProgress?.pending === true || ownerRequestPending ||
     Boolean(command.disabledReason) ||
     !draftComplete ||
     (draft.decision === "block-baseline" &&
@@ -196,23 +205,25 @@ export function PrototypeBaselinePromotionModal({
     });
   }
 
-  function recordBaselineDecision() {
+  async function recordBaselineDecision() {
     if (applyDisabled) {
       return;
     }
 
-    onRecordReceipt(
+    setSubmitting(true); setSubmissionError(null);
+    try { await onRecordReceipt(
       activeRecord,
       command.id,
       baselinePromotionInputFromDraft(draft),
-    );
+    ); } catch (error) { setSubmissionError(error instanceof Error ? error.message : "Baseline owner request failed."); }
+    finally { setSubmitting(false); }
   }
 
   return (
     <>
       <TerasWizardModal
         activeStepId={activeStep}
-        description="Prepare a local Baseline Packet before Movement request preparation. Prototype records acceptance; Movement Control owns boundary movement."
+        description={ownerProgress?.mode === "live" ? "Review the Baseline decision and owner evidence, then follow exact Studio review and merged readback before preparing movement." : "Prepare a local Baseline Packet before Movement request preparation. Prototype records acceptance; Movement Control owns boundary movement."}
         footer={
           <TerasWizardFooter
             apply={
@@ -269,6 +280,9 @@ export function PrototypeBaselinePromotionModal({
         steps={workflowSteps}
         subject={prototypeWorkflowSubject(record)}
         support={
+          <TerasFieldStack spacing="normal">
+          {submissionError ? <TerasEmptyState>{submissionError}</TerasEmptyState> : null}
+          {ownerProgress?.projection?.input.transition === "baseline-promotion" || !ownerProgress?.projection ? <PrototypeMaturityOwnerProgressPanel progress={ownerProgress} /> : null}
           <PrototypeBaselinePromotionSupportPanels
             activeStep={activeStep}
             advisorPromptMutable={draftMutable}
@@ -293,6 +307,7 @@ export function PrototypeBaselinePromotionModal({
             reviewDispositionsReady={reviewDispositionsReady}
             reviewReady={reviewReady}
           />
+          </TerasFieldStack>
         }
         surfaceId="prototype-baseline-promotion"
         title="Baseline Promotion"

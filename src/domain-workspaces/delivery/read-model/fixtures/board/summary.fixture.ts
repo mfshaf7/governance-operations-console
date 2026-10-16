@@ -6,6 +6,7 @@ export const deliveryBoardSummaryFixture: DeliveryBoardSummary = {
   closeout_pending_count: 1,
   stale_count: 1,
   by_posture: {
+    New: 0,
     Blocked: 4,
     "Closeout Pending": 1,
     Deferred: 1,

@@ -135,7 +135,7 @@ function deliveryAttentionCandidate(
       ...source,
       ref:
         intakeSource?.source_custody.repo_ref ??
-        deliveryPackage?.source_custody.repo_ref ??
+        deliveryPackage?.source_custody?.repo_ref ??
         intakeSource?.source_ref ??
         deliveryPackage?.source_ref ??
         source.ref,

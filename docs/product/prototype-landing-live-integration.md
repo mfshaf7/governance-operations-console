@@ -70,6 +70,24 @@ and human-merge-only. This Console change grants no stage, production, runtime,
 or security authority. Composed dev-integration activation remains owned by
 ART work item `#1092`.
 
+## Primary Records And Reload Recovery
+
+The live Prototype register reads `/api/prototypes/records`, backed by OOS's
+canonical Studio collection. It includes Proposal captures before Landing,
+registry records, exact referenced Delivery packets and the caller's retained
+Landing, Maturity and Closure progress. A capture is not landed source: its
+support rows remain unknown and its setup defaults remain unaccepted until the
+operator completes Landing. Loading, unavailable and successfully empty reads
+remain distinct; refresh never promotes fixture or browser-local truth.
+
+Cold reads restore review, continue, cancel and terminal receipt state from
+owners, not browser storage. Canonical registry lifecycle wins over older
+workflow history. Record identity (`record://prototypes/<id>`) is distinct from
+its repository source path. Preview runtime/proof retains its separate owner.
+An existing Delivery application is looked up read-only using its immutable
+packet identity; only an exact owner `application_not_found` response means
+the packet has not been applied. Owner failure is not empty success.
+
 ## Validation
 
 ```bash

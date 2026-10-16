@@ -53,7 +53,7 @@ export function projectPrototypeLanding({
           },
         ],
     sourcePath: result.readback.record.source.ref,
-    sourceRef: result.readback.record.source.ref,
+    sourceRef: `record://prototypes/${result.prototype_id.replace(/^prototype:/, "")}`,
     summary: result.readback.record.objective,
   };
 }

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { projectCanonicalPrototypeWorkspace } from "../live-runtime/prototype-workspace-live-projection.ts";
 
 import {
   consoleOosModeSelected,
@@ -55,6 +56,14 @@ export class PrototypeLandingOosError extends Error {
 
 export function prototypeLandingOosConfigured(env = process.env) {
   return consoleOosModeSelected(env);
+}
+
+export async function readCanonicalPrototypeWorkspace(options: RequestOptions = {}) {
+  const body = await request("/v1/prototypes", { method: "GET" }, options, {
+    authority: "operator-orchestration-service", sourceOwner: "workspace-prototype-studio",
+    recordRef: "repo://workspace-prototype-studio/prototypes", sourceRef: "repo://workspace-prototype-studio@main",
+  }, 5 * 1024 * 1024);
+  return projectCanonicalPrototypeWorkspace(body, new Date().toISOString(), canonicalDigest(body));
 }
 
 export async function preparePrototypeLanding(
@@ -388,6 +397,7 @@ async function request(
   init: RequestInit,
   options: RequestOptions,
   sourceExpectation?: ConsoleSourceAuthorityExpectation,
+  responseLimit = maxResponseBytes,
 ) {
   const config = options.config ?? resolveConfig();
   let response: Response;
@@ -416,7 +426,7 @@ async function request(
     );
   }
   const raw = await response.text();
-  if (Buffer.byteLength(raw) > maxResponseBytes) {
+  if (Buffer.byteLength(raw) > responseLimit) {
     throw new PrototypeLandingOosError(
       "Prototype Landing response exceeded the Console limit.",
       "prototype_landing_response_large",

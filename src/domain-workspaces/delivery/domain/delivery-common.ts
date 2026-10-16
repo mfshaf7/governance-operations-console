@@ -13,6 +13,7 @@ export type DeliveryBackendStatus =
   "blocked" | "done" | "in-progress" | "new" | "parked" | "ready" | "retired";
 
 export type DeliveryPackagePosture =
+  | "New"
   | "Blocked"
   | "Closeout Pending"
   | "Deferred"

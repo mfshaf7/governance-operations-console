@@ -67,6 +67,15 @@ The console renders and submits operator intent.
 
 ## Operator Surfaces
 
+Configured live mode projects the primary register from the canonical OOS ART
+initiative collection. Observed trees/statuses do not create package action
+eligibility or source custody; exact work-session reads resolve those gates.
+The existing Governed Work Session also hosts bounded source realization:
+objective, owner draft metadata, explicit exact-digest acceptance, cancellation,
+linked retry and unknown-apply recovery. No browser file editing, simulated
+receipt, or bypass of source review is allowed. See the primary procedure in
+[`delivery-execution-work-sessions.md`](../delivery-execution-work-sessions.md).
+
 Delivery has six peer operator surfaces:
 
 - Home

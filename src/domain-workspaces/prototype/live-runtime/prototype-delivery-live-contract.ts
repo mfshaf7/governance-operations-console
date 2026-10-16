@@ -9,6 +9,18 @@ const gitCommitPattern = /^[a-f0-9]{40}$/;
 const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9._:/@+\-]{0,1023}$/;
 const kebabPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+export async function prototypeDeliveryApplicationIdForPacket(value: unknown) {
+  const packet = assertPrototypeDeliveryPacket(value);
+  // The existing OOS read identity has exactly these four ASCII-bound fields.
+  // Computing a lookup key grants no write, caller or operator authority.
+  const bytes = new TextEncoder().encode(JSON.stringify({
+    packet_digest: packet.packet_digest, packet_ref: packet.packet_ref,
+    source_record_ref: packet.content.source.record_ref, target: "workspace-delivery-art",
+  }));
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return `prototype-delivery-application:${Array.from(hash, (entry) => entry.toString(16).padStart(2, "0")).join("")}`;
+}
+
 export function assertPrototypeDeliveryPacket(
   value: unknown,
 ): PrototypeDeliveryPacket {

@@ -456,7 +456,7 @@ capabilities:
       live_adapter: partial
       delivery_phase: post-baseline
     post_baseline_work:
-      - Extend the implemented Work Design, Refinement, Catalog, Execution work-session, in-flight change, and closeout adapters to the Delivery register, Intake, and remaining Execution actions through OOS and WGCF.
+      - Commission the canonical Delivery register and bounded source-realization adapter alongside the existing OOS work-session and owner controls; retain separate Intake and remaining Execution action boundaries.
       - Activate Execution work sessions only after exact-head Security review and admitted source-executor proof.
       - Add missing controlled-value add, repository link, and sync adapters.
       - Connect closeout outcome handoffs to separately admitted downstream Workspace Intake or product-owner adapters without moving their authority into Delivery.
@@ -487,8 +487,8 @@ capabilities:
       live_adapter: partial
       delivery_phase: post-baseline
     post_baseline_work:
-      - Add a registry adapter and source-backed baseline receipts.
-      - Connect Proposal ingress and Workspace Prototype Studio packet discovery.
+      - Commission the canonical Studio registry, Proposal capture discovery, exact Delivery packet discovery and cold Landing/Maturity/Closure progress adapters.
+      - Keep canonical lifecycle separate from historical receipts and never synthesize preview proof from a maturity result.
       - Preserve the OOS-owned Prototype Delivery application and receipt boundary.
       - Keep Preview Runtime proof separate from platform readiness.
 

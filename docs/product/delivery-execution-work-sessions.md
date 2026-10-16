@@ -120,6 +120,36 @@ parallel packet ledger or report success from browser state.
    operator action. If the network outcome is unknown, retry retains the same
    command identity so OOS can replay the retained result safely.
 
+## Canonical Register And Bounded Source Realization
+
+In live mode the primary register reads OOS's canonical Delivery initiative
+collection through `/api/delivery/workspace`. It projects observed ART identities,
+trees, and statuses, not synthetic package action eligibility or source custody.
+Use `Open Work Item` to resolve the exact target's current OOS eligibility.
+Unavailable and successful-empty reads are distinct; `Refresh owner records`
+retries a failed read without fixture fallback. Visible-page polling is bounded.
+
+Inside an active Governed Work Session, the source-realization panel provides:
+
+1. A bounded objective submitted to OOS's commissioned context/model path.
+2. Owner-generated draft metadata: paths, actions, commit message and exact
+   change-set digest, never generated file contents or a browser source editor.
+3. Explicit acceptance of that displayed digest before the existing Agent Gary
+   source executor can create a commit. This acceptance does not approve a PR,
+   merge source, close ART, or grant Platform or Security authority.
+4. Owner refresh, reason-bound cancellation before apply, and linked retry.
+   Accepted-only generation interrupted before a draft may be cancelled; an
+   applying or unknown apply may only recover the same owner action. Unknown
+   acknowledgement retains command identity instead of issuing another write.
+
+All realization routes are under the existing work-session route's
+`realization` suffix, with `start`, `continue`, `cancel`, and `recover` commands.
+They reuse verified mutation authorization and server-built caller/operator/
+session bindings. Canonical GET envelopes, terminal receipt integrity, target,
+objective and accepted-digest bindings must agree before success is displayed.
+Source merge alone does not commission `source-realization-v1` or activate its
+model profile: Platform and Security own that exact operating boundary.
+
 ## Source Landing Order
 
 Keep the Landing Unit pull request open until OOS reports that its exact head

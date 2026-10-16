@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import test from "node:test";
@@ -12,6 +13,7 @@ import {
 import {
   assertPrototypeDeliveryApplicationResult,
   assertPrototypeDeliveryResultMatchesPacket,
+  prototypeDeliveryApplicationIdForPacket,
 } from "../../src/domain-workspaces/prototype/live-runtime/prototype-delivery-live-contract.ts";
 import { projectPrototypeDeliveryApplication } from "../../src/domain-workspaces/prototype/live-runtime/prototype-delivery-live-projection.ts";
 import { getPrototypeWorkspaceReadModel } from "../../src/domain-workspaces/prototype/read-model/prototype-workspace-read-model.ts";
@@ -19,6 +21,30 @@ import { getPrototypeWorkspaceReadModel } from "../../src/domain-workspaces/prot
 const applicationDigest = "a".repeat(64);
 const applicationId = `prototype-delivery-application:${applicationDigest}`;
 const ingressId = `delivery-ingress:prototype:${"b".repeat(64)}`;
+
+test("cold Delivery lookup uses the existing immutable packet identity and performs only an owner GET", async () => {
+  const packet = prototypeDeliveryPacket();
+  const expected = createHash("sha256").update(JSON.stringify({
+    packet_digest: packet.packet_digest,
+    packet_ref: packet.packet_ref,
+    source_record_ref: packet.content.source.record_ref,
+    target: "workspace-delivery-art",
+  })).digest("hex");
+  const identity = await prototypeDeliveryApplicationIdForPacket(packet);
+  assert.equal(identity, `prototype-delivery-application:${expected}`);
+  assert.equal(await prototypeDeliveryApplicationIdForPacket(structuredClone(packet)), identity);
+  assert.notEqual(await prototypeDeliveryApplicationIdForPacket({ ...packet, packet_digest: `sha256:${"f".repeat(64)}` }), identity);
+  const calls = [];
+  await assert.rejects(readPrototypeDeliveryApplication(identity, {
+    env: { OOS_BASE_URL: "http://127.0.0.1:8080", OOS_CALLER_ID: "console-test", OOS_CALLER_SECRET: "test-only-secret" },
+    fetchImpl: async (url, init) => {
+      calls.push({ url, method: init.method ?? "GET" });
+      return Response.json({ error: "prototype_delivery_application_not_found", message: "No application exists for this exact packet." }, { status: 404 });
+    },
+  }), (error) => error.status === 404 && error.code === "prototype_delivery_application_not_found");
+  assert.deepEqual(calls.map((call) => call.method), ["GET"]);
+  assert.ok(decodeURIComponent(calls[0].url).endsWith(identity));
+});
 
 test("case:ingress-protocol-positive applies, replays, reads, and projects source-authoritative Delivery truth", async (context) => {
   const packet = prototypeDeliveryPacket();

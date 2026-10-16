@@ -5,12 +5,11 @@ import type {
   PrototypeClosureRequestFields,
   PrototypeClosureResult,
 } from "../../live-runtime/prototype-closure-live-types.ts";
-import type { PrototypeClosureClientError } from "../../live-runtime/use-prototype-closure-live-runtime.ts";
 
 export type PrototypeClosureViewState = Readonly<{
   preparation: PrototypeClosurePreparation | null;
   result: PrototypeClosureResult | null;
-  error: PrototypeClosureClientError | null;
+  error: Error | null;
   pending: boolean;
 }>;
 

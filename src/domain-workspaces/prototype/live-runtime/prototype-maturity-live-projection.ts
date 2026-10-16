@@ -1,6 +1,4 @@
 import type { PrototypeRecord } from "../read-model/prototype-workspace-read-model.ts";
-import { prototypeRecordAfterBaselinePromotion } from "../work-model/workflows/baseline-promotion/prototype-baseline-promotion-model.ts";
-import { prototypeRecordAfterCandidatePromotion } from "../work-model/workflows/candidate-promotion/prototype-candidate-promotion-model.ts";
 import { assertPrototypeMaturityResult } from "./prototype-maturity-live-contract.ts";
 import type { PrototypeMaturityLiveProjection } from "./prototype-maturity-live-types.ts";
 
@@ -21,19 +19,35 @@ export function projectPrototypeMaturity({
     throw new Error("Prototype Maturity receipt does not match the reviewed decision.");
   }
 
-  const projected =
-    projection.input.transition === "candidate-promotion"
-      ? prototypeRecordAfterCandidatePromotion(
-          record,
-          result.receipt.receipt_id,
-          projection.input.input,
-        )
-      : prototypeRecordAfterBaselinePromotion(
-          record,
-          result.receipt.receipt_id,
-          projection.input.input,
-        );
-  if (projected === record) return record;
+  if (result.receipt.resulting_lifecycle !== result.readback.observed_lifecycle) {
+    throw new Error("Prototype Maturity receipt and owner readback disagree on lifecycle.");
+  }
+
+  // Fixture helpers create local evidence as part of simulated transitions.
+  // Live projection must use the owner's receipt alone and preserve separately
+  // observed preview/evidence instead of importing those simulated effects.
+  let projected = record;
+  // Local draft eligibility is not authority to reject an already verified
+  // owner transition during a cold reconstruction. Preserve unobserved preview
+  // state while projecting the exact canonical promotion and its receipt.
+  if (result.status === "succeeded" && result.receipt.outcome === "succeeded") {
+    if (projection.input.transition === "candidate-promotion") {
+      const input = projection.input.input;
+      projected = { ...projected, lifecycle: result.readback.observed_lifecycle,
+        candidate: { ...projected.candidate, ...input, state: "candidate", lastReceiptRef: result.receipt.receipt_id },
+        currentMove: record.landing.previewNeed === "none" || record.preview.proofState === "proof-ready"
+          ? { id: "baseline-promotion", actionLabel: "Open Baseline Promotion", label: "Review baseline evidence", detail: "Candidate promotion is recorded by the owner; inspect current baseline readiness.", tone: "info" }
+          : { id: "preview-proof", actionLabel: "Open Preview Runtime", label: "Inspect preview evidence", detail: "Candidate promotion is recorded by the owner; preview proof remains independently owned.", tone: "info" },
+      };
+    } else {
+      const input = projection.input.input;
+      projected = { ...projected, lifecycle: result.readback.observed_lifecycle,
+        baseline: { ...projected.baseline, ...input, state: "ready-for-movement", lastPacketReceiptRef: result.receipt.receipt_id, missingItems: [],
+          acceptedSummary: String(result.request.inputs.editable_values["accepted-summary"] ?? ""), excludedSummary: String(result.request.inputs.editable_values["excluded-summary"] ?? "") },
+        currentMove: { id: "movement-request", actionLabel: "Open Movement Request", label: "Prepare owner-backed Delivery handoff", detail: "The owner accepted this baseline. Delivery and custody retain their own gates.", tone: "info" },
+      };
+    }
+  }
 
   const sourceReceipt = {
     authority: "source-projected" as const,
