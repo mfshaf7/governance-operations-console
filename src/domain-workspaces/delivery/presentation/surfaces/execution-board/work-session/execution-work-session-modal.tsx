@@ -22,6 +22,7 @@ import type {
   DeliveryWorkSessionProjection,
 } from "../../../../live-runtime/delivery-work-session-live-types.ts";
 import type { ExecutionWorkSessionTarget } from "./execution-work-session-target.ts";
+import { ExecutionSourceRealizationPanel } from "./execution-source-realization-panel.tsx";
 
 type WorkSessionRuntime = {
   closeWork: () => Promise<unknown>;
@@ -282,6 +283,15 @@ export function ExecutionWorkSessionModal({
               />
               <TerasMetadataList items={workSessionEvidence(projection)} />
             </TerasPanel>
+          ) : null}
+          {runtime.mode === "live" && runtime.projectionStatus === "current" && projection?.session_id && projection.session_revision && target.workItemId ? (
+            <ExecutionSourceRealizationPanel
+              key={`${projection.session_id}:${target.workItemId}`}
+              sessionId={projection.session_id}
+              sessionRevision={projection.session_revision}
+              sourceWorkRequired={nextAction?.code === "source-work-required"}
+              workItemId={target.workItemId}
+            />
           ) : null}
         </TerasZone>
 

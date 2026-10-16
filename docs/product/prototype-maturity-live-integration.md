@@ -64,6 +64,22 @@ OOS manifest keeps Prototype Maturity runtime activation false until its
 separate Security, conformance, Platform, and activation gates are complete.
 This change grants no stage, production, provider, or source-merge authority.
 
+## Visible Owner Progress
+
+Candidate and Baseline dialogs await the actual owner result and display errors,
+request state, source head, next action, exact provider review link and receipt.
+Use `Refresh owner progress`, `Continue owner request`, or `Cancel current owner
+request` on the retained request. A decision-required request explicitly names
+the operator decision being confirmed. Editing and duplicate submission remain
+disabled while its owner action is pending. Correctable rejected, requires-action
+or cancelled attempts can create a fresh explicit request after correction;
+completed outcomes replay rather than creating another mutation.
+
+Reload restores owner progress from the primary canonical collection. A valid
+merged promotion receipt is not reapproved against missing browser preview
+state. It restores only its own lifecycle/decision evidence and does not invent
+preview proof, local receipt evidence, or downstream Delivery acceptance.
+
 ## Validation
 
 ```bash

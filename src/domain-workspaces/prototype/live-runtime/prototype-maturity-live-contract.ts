@@ -3,6 +3,7 @@ import type {
   PrototypeMaturityBlocker,
   PrototypeMaturityDecision,
   PrototypeMaturityExpectedState,
+  PrototypeMaturityInput,
   PrototypeMaturityPacket,
   PrototypeMaturityPreparation,
   PrototypeMaturityReceipt,
@@ -16,6 +17,12 @@ const digestPattern = /^sha256:[0-9a-f]{64}$/;
 const prototypeIdPattern = /^prototype:[a-z0-9][a-z0-9._-]*$/;
 const requestIdPattern =
   /^prototype-maturity-request:[a-z0-9][a-z0-9._-]*:[0-9]+$/;
+
+export function prototypeMaturityInputKey(input: PrototypeMaturityInput) {
+  const ordered = (value: unknown): unknown => Array.isArray(value) ? value.map(ordered) : value && typeof value === "object"
+    ? Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, ordered(entry)])) : value;
+  return JSON.stringify(ordered(input));
+}
 const statuses = new Set([
   "accepted",
   "blocked",

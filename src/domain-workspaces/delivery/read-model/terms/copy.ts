@@ -48,6 +48,10 @@ export const deliveryPostureTerms: Record<
   DeliveryPackagePosture,
   { description: string; label: string }
 > = {
+  New: {
+    description: "Canonical ART work exists but is not yet ready or started.",
+    label: "New",
+  },
   Blocked: {
     description: "Next committed step is blocked; use the blocker workflow.",
     label: "Blocked",

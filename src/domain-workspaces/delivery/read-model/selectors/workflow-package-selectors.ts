@@ -143,6 +143,7 @@ export const deliveryPostureOrder: DeliveryPackagePosture[] = [
   "Blocked",
   "Closeout Pending",
   "In Progress",
+  "New",
   "Ready",
   "Deferred",
   "Done",

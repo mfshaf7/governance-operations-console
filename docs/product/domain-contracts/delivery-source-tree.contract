@@ -267,6 +267,11 @@ live-runtime/delivery-change-live-types.ts
 live-runtime/delivery-live-identity.ts
 live-runtime/delivery-work-session-live-contract.ts
 live-runtime/delivery-work-session-live-types.ts
+live-runtime/delivery-source-realization-live-contract.ts
+live-runtime/delivery-source-realization-live-types.ts
+live-runtime/delivery-workspace-live-projection.ts
+live-runtime/use-delivery-workspace-live-runtime.ts
+live-runtime/use-delivery-source-realization-live-runtime.ts
 live-runtime/refinement-live-contract.ts
 live-runtime/refinement-live-types.ts
 live-runtime/use-catalog-live-runtime.ts
@@ -315,6 +320,7 @@ presentation/surfaces/execution-board/execution-tree-change-review-dialog.tsx
 presentation/surfaces/execution-board/execution-tree-edit-support-panel.tsx
 presentation/surfaces/execution-board/execution-tree-edit-view.tsx
 presentation/surfaces/execution-board/work-session/execution-work-session-modal.tsx
+presentation/surfaces/execution-board/work-session/execution-source-realization-panel.tsx
 presentation/surfaces/execution-board/work-session/execution-work-session-target-dialog.tsx
 presentation/surfaces/execution-board/work-session/execution-work-session-target.ts
 presentation/surfaces/home/home-activity-model.ts
@@ -524,6 +530,9 @@ server/delivery-change-api-routes.ts
 server/delivery-change-oos-client.ts
 server/delivery-work-session-api-routes.ts
 server/delivery-work-session-oos-client.ts
+server/delivery-source-realization-api-routes.ts
+server/delivery-source-realization-oos-client.ts
+server/delivery-workspace-oos-client.ts
 server/refinement-catalog-api-routes.ts
 server/refinement-catalog-oos-client.ts
 server/work-design-api-routes.ts

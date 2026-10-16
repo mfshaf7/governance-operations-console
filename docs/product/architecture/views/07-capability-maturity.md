@@ -33,7 +33,7 @@ All capabilities and transitions in this view are `approved-target`.
 | Repository | implemented | implemented | connected | dev-integration |
 | Model Operations | implemented | implemented | implemented | post-baseline |
 | Delivery | implemented | implemented | partial | post-baseline |
-| Prototype | partial | partial | partial | post-baseline |
+| Prototype | implemented | partial | partial | post-baseline |
 | Product Portfolio | implemented | implemented | partial | post-baseline |
 | Orchestration | implemented | implemented | partial | post-baseline |
 | Lifecycle Transitions | implemented | partial | missing | post-baseline |
@@ -81,9 +81,9 @@ All capabilities and transitions in this view are `approved-target`.
 
 - Add or extend OOS APIs for Delivery, Model, Orchestration, and remaining
   correlated transition workflows.
-- Connect Workspace Prototype Studio packet discovery to the implemented
-  Prototype-to-Delivery application without synthesizing packet truth in the
-  Console.
+- Commission the implemented canonical Studio collection and exact packet
+  discovery with cold Landing/Maturity/Closure progress, without synthesizing
+  packet truth, preview proof, or local workflow evidence in the Console.
 - Complete the remaining Repository and Prototype source-candidate handoffs
   into the implemented generic Workspace Intake adapter.
 - Add Workspace Prototype Studio registry and graduation adapters.

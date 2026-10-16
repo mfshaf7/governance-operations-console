@@ -16,6 +16,7 @@ export const controlBoardViewOptions: Array<{
 ];
 
 export const controlBoardPostureOrder: ControlBoardPackagePosture[] = [
+  "New",
   "Ready",
   "In Progress",
   "Blocked",

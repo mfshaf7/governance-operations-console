@@ -291,6 +291,33 @@ test("Prototype Maturity projects lifecycle only from merged terminal authority"
   );
 });
 
+test("cold Candidate readback retains merged lifecycle and receipt without inventing preview proof", () => {
+  const input = candidateRunInput();
+  const intent = prototypeMaturitySubmissionIntent(input, {
+    acceptedAt: "2026-09-10T04:00:00.000Z",
+    requestId: "prototype-maturity-request:sample-tool:8",
+  }, preparation());
+  const result = succeededResult(buildPrototypeMaturityCommand(intent, preparation(), config.callerId));
+  const record = { ...input.record, lifecycle: "candidate",
+    landing: { ...input.record.landing, previewNeed: "required" },
+    preview: { ...input.record.preview, proofState: "not-started" },
+    evidence: [],
+  };
+  const projected = projectPrototypeMaturity({ record, projection: {
+    input: input.input, inputKey: input.inputKey, recordId: record.id, result,
+  } });
+  assert.equal(projected.lifecycle, "candidate");
+  assert.equal(projected.candidate.lastReceiptRef, result.receipt.receipt_id);
+  assert.equal(projected.currentMove.id, "preview-proof");
+  assert.equal(projected.preview.proofState, "not-started");
+  assert.deepEqual(projected.evidence, []);
+  assert.equal(projected.receipts.at(-1).authority, "source-projected");
+  assert.throws(() => projectPrototypeMaturity({ record, projection: {
+    input: input.input, inputKey: input.inputKey, recordId: record.id,
+    result: { ...result, readback: { ...result.readback, observed_lifecycle: "exploring" } },
+  } }), /Terminal Prototype Maturity evidence does not bind one outcome/);
+});
+
 test("Prototype Maturity permits fixture fallback only when live mode is absent", () => {
   assert.equal(
     prototypeMaturityAllowsLocalFallback(

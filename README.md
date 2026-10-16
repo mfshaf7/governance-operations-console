@@ -26,6 +26,8 @@ separately governed OOS integration slices:
 - Proposal-to-Prototype target application with repository-gate enforcement,
   exact Studio review projection, and receipt-plus-acknowledgement completion
 - bounded visible-page polling with fail-closed writes
+- canonical primary Prototype and Delivery registers, cold owner-workflow
+  recovery, and bounded Delivery source-realization review controls
 - explicit disconnected preview when no OOS endpoint is configured
 - Prototype-to-Delivery application for an exact, source-authoritative
   Prototype Delivery packet, with server-only caller credentials and

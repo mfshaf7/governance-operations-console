@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { prototypeOwnerProgressIsNewer } from "./prototype-workspace-live-projection.ts";
 
 import type {
   PrototypeRecord,
@@ -49,12 +50,23 @@ export function prototypeLandingAllowsLocalFallback(error: unknown) {
   );
 }
 
-export function usePrototypeLandingLiveRuntime() {
+const emptySourceProjections: Readonly<Record<string, PrototypeLandingLiveProjection>> = {};
+
+export function usePrototypeLandingLiveRuntime(sourceProjections = emptySourceProjections) {
   const [projectionsByRecordId, setProjectionsByRecordId] = useState<
     Readonly<Record<string, PrototypeLandingLiveProjection>>
   >({});
   const identities = useRef(new Map<string, RequestIdentity>());
   const sequence = useRef(0);
+  useEffect(() => {
+    setProjectionsByRecordId((current) => {
+      let next = current;
+      for (const [id, projection] of Object.entries(sourceProjections)) {
+        if (prototypeOwnerProgressIsNewer(projection.result, current[id]?.result)) next = { ...next, [id]: projection };
+      }
+      return next;
+    });
+  }, [sourceProjections]);
 
   const retain = useCallback(
     (
@@ -78,17 +90,18 @@ export function usePrototypeLandingLiveRuntime() {
   const run = useCallback(
     async (input: PrototypeLandingRunInput) => {
       const current = projectionsByRecordId[input.record.id];
+      const identityKey = `${input.record.id}\n${input.draftKey}`;
+      if (current && !terminal(current.result.status) && current.draftKey !== input.draftKey) throw new Error("The current Landing request is immutable. Continue it or cancel before changing setup input.");
       if (current && current.draftKey === input.draftKey) {
-        if (terminal(current.result.status)) {
+        if (["cancelled", "rejected", "requires-action"].includes(current.result.status)) identities.current.delete(identityKey);
+        else if (terminal(current.result.status)) {
           return retain(input, current.result);
-        }
-        return retain(
+        } else return retain(
           input,
           await commandRequest(current.result.request_id, "continue"),
         );
       }
 
-      const identityKey = `${input.record.id}\n${input.draftKey}`;
       let identity = identities.current.get(identityKey);
       if (!identity) {
         sequence.current += 1;

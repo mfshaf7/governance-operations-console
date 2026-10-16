@@ -242,10 +242,15 @@ export const guard = {
     ]);
     assertIncludes(failures, maturityProjection, [
       "assertPrototypeMaturityResult",
-      "prototypeRecordAfterCandidatePromotion",
-      "prototypeRecordAfterBaselinePromotion",
+      "result.receipt.resulting_lifecycle !== result.readback.observed_lifecycle",
+      "lifecycle: result.readback.observed_lifecycle",
       'authority: "source-projected"',
       "result.receipt.receipt_digest",
+    ]);
+    assertOmits(failures, maturityProjection, [
+      "prototypeRecordAfterCandidatePromotion",
+      "prototypeRecordAfterBaselinePromotion",
+      'status: "prototype-local"',
     ]);
     assertIncludes(failures, maturityRuntime, [
       'fetch(path',

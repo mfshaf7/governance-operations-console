@@ -3,6 +3,7 @@ import type { TerasTone } from "@/teras";
 export type ControlBoardViewMode = "art-tree" | "control-board" | "family-map";
 
 export type ControlBoardPackagePosture =
+  | "New"
   | "Ready"
   | "In Progress"
   | "Blocked"

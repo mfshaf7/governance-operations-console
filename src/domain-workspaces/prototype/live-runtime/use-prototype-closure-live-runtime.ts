@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { prototypeOwnerProgressIsNewer } from "./prototype-workspace-live-projection.ts";
 
 import type { PrototypeRecord } from "../read-model/prototype-workspace-read-model.ts";
 import {
@@ -37,12 +38,23 @@ export function prototypeClosureId(record: PrototypeRecord) {
   return sourceMatch?.[1] ?? record.id.replace(/^prototype-/, "");
 }
 
-export function usePrototypeClosureLiveRuntime() {
+const emptySourceResults: Record<string, PrototypeClosureResult> = {};
+
+export function usePrototypeClosureLiveRuntime(sourceResults = emptySourceResults) {
   const [preparations, setPreparations] = useState<Record<string, PrototypeClosurePreparation>>({});
   const [results, setResults] = useState<Record<string, PrototypeClosureResult>>({});
   const [errors, setErrors] = useState<Record<string, PrototypeClosureClientError | null>>({});
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const identities = useRef(new Map<string, string>());
+  useEffect(() => {
+    setResults((current) => {
+      let next = current;
+      for (const [id, result] of Object.entries(sourceResults)) {
+        if (prototypeOwnerProgressIsNewer(result, current[id])) next = { ...next, [id]: result };
+      }
+      return next;
+    });
+  }, [sourceResults]);
 
   const load = useCallback(async (record: PrototypeRecord) => {
     setPending((current) => ({ ...current, [record.id]: true }));
@@ -54,7 +66,7 @@ export function usePrototypeClosureLiveRuntime() {
       ));
       setPreparations((current) => ({ ...current, [record.id]: preparation }));
       setErrors((current) => ({ ...current, [record.id]: null }));
-      const pendingRequestId = readPrototypeClosureRequestPointer(preparation.prototype_id);
+      const pendingRequestId = sourceResults[record.id]?.request_id ?? readPrototypeClosureRequestPointer(preparation.prototype_id);
       if (pendingRequestId) {
         try {
           const result = assertPrototypeClosureResult(await api(requestPath(pendingRequestId),
@@ -63,7 +75,7 @@ export function usePrototypeClosureLiveRuntime() {
             throw new PrototypeClosureClientError("prototype_closure_recovery_mismatch",
               "Stored Closure request belongs to a different Prototype.", false);
           }
-          setResults((current) => ({ ...current, [record.id]: result }));
+          setResults((current) => prototypeOwnerProgressIsNewer(current[record.id] ?? result, result) ? current : ({ ...current, [record.id]: result }));
         } catch (error) {
           if (error instanceof PrototypeClosureClientError && error.code === "prototype_closure_not_found") {
             clearPrototypeClosureRequestPointer(preparation.prototype_id);
@@ -80,7 +92,7 @@ export function usePrototypeClosureLiveRuntime() {
     } finally {
       setPending((current) => ({ ...current, [record.id]: false }));
     }
-  }, []);
+  }, [sourceResults]);
 
   const retain = useCallback((record: PrototypeRecord, result: PrototypeClosureResult) => {
     setResults((current) => ({ ...current, [record.id]: result }));

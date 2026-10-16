@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 
 import {
   TerasDraftCloseGuardDialog,
+  TerasFieldStack,
+  TerasEmptyState,
   TerasWizardFooter,
   TerasWizardModal,
 } from "@/teras";
@@ -43,12 +45,14 @@ import {
 } from "./prototype-candidate-promotion-view-model.ts";
 import { PrototypeCandidatePromotionSupportPanels } from "./prototype-candidate-promotion-support-panels.tsx";
 import { PrototypeCandidatePromotionStepPanel } from "./prototype-candidate-promotion-work-step-panel.tsx";
+import { PrototypeMaturityOwnerProgressPanel, prototypeMaturityRequestPending, type PrototypeMaturityOwnerProgress } from "../shared/prototype-maturity-owner-progress.tsx";
 
 export function PrototypeCandidatePromotionModal({
   onBackToDashboard,
   onClose,
   onRecordReceipt,
   record,
+  ownerProgress,
 }: {
   onBackToDashboard: () => void;
   onClose: () => void;
@@ -56,8 +60,9 @@ export function PrototypeCandidatePromotionModal({
     record: PrototypeRecord,
     commandId: PrototypeCommandId,
     input: PrototypeCandidatePromotionInput,
-  ) => void;
+  ) => void | Promise<void>;
   record: PrototypeRecord | null;
+  ownerProgress?: PrototypeMaturityOwnerProgress;
 }) {
   const [activeStep, setActiveStep] =
     useState<PrototypeCandidatePromotionStepId>("interview");
@@ -66,6 +71,8 @@ export function PrototypeCandidatePromotionModal({
   const [draft, setDraft] = useState<PrototypeCandidatePromotionDraft>(() =>
     candidatePromotionDraftFromRecord(null),
   );
+  const [submitting, setSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (record) {
@@ -91,7 +98,8 @@ export function PrototypeCandidatePromotionModal({
   const sourceDraft = candidatePromotionDraftFromRecord(record);
   const draftDirty = candidatePromotionDraftDirty(draft, sourceDraft);
   const draftComplete = candidatePromotionDraftComplete(draft);
-  const draftMutable = prototypeWorkflowRecordCanEdit({
+  const ownerRequestPending = ownerProgress?.projection?.input.transition === "candidate-promotion" && prototypeMaturityRequestPending(ownerProgress);
+  const draftMutable = !submitting && !ownerRequestPending && prototypeWorkflowRecordCanEdit({
     disabledReason: command.disabledReason,
     record,
   });
@@ -110,6 +118,7 @@ export function PrototypeCandidatePromotionModal({
     reviewReady,
   });
   const applyDisabled =
+    submitting || ownerProgress?.pending === true || ownerRequestPending ||
     Boolean(command.disabledReason) ||
     !draftComplete ||
     (draft.decision === "block-promotion" && !blockedIssue) ||
@@ -179,23 +188,25 @@ export function PrototypeCandidatePromotionModal({
     });
   }
 
-  function recordCandidateDecision() {
+  async function recordCandidateDecision() {
     if (applyDisabled) {
       return;
     }
 
-    onRecordReceipt(
+    setSubmitting(true); setSubmissionError(null);
+    try { await onRecordReceipt(
       activeRecord,
       command.id,
       candidatePromotionInputFromDraft(draft),
-    );
+    ); } catch (error) { setSubmissionError(error instanceof Error ? error.message : "Candidate owner request failed."); }
+    finally { setSubmitting(false); }
   }
 
   return (
     <>
       <TerasWizardModal
         activeStepId={activeStep}
-        description="Promote an exploring prototype only after the objective, scope, boundaries, and local decision are explicit."
+        description={ownerProgress?.mode === "live" ? "Review the Candidate decision, then follow the OOS request through exact Studio review and merged owner readback." : "Promote an exploring prototype only after the objective, scope, boundaries, and local decision are explicit."}
         footer={
           <TerasWizardFooter
             apply={
@@ -252,6 +263,9 @@ export function PrototypeCandidatePromotionModal({
         steps={workflowSteps}
         subject={prototypeWorkflowSubject(record)}
         support={
+          <TerasFieldStack spacing="normal">
+          {submissionError ? <TerasEmptyState>{submissionError}</TerasEmptyState> : null}
+          {ownerProgress?.projection?.input.transition === "candidate-promotion" || !ownerProgress?.projection ? <PrototypeMaturityOwnerProgressPanel progress={ownerProgress} /> : null}
           <PrototypeCandidatePromotionSupportPanels
             actionTone={actionTone}
             activeStep={activeStep}
@@ -270,6 +284,7 @@ export function PrototypeCandidatePromotionModal({
             reviewReady={reviewReady}
             reviewTone={reviewTone}
           />
+          </TerasFieldStack>
         }
         surfaceId="prototype-candidate-promotion"
         title="Candidate Promotion"
@@ -282,7 +297,7 @@ export function PrototypeCandidatePromotionModal({
           issueTone={issueTone}
           onDraftChange={updateDraft}
           record={record}
-          reviewActionLabel={actionState.label}
+          reviewActionLabel={ownerProgress?.mode === "live" ? "Owner decision" : actionState.label}
           reviewReady={reviewReady}
         />
       </TerasWizardModal>

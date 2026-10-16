@@ -201,6 +201,7 @@ export function workDesignRegisterToneForStatus(
   statusLabel: WorkDesignRegisterStatusLabel,
 ): DeliveryTone {
   switch (statusLabel) {
+    case "New":
     case "Ready":
       return "info";
     case "Linked":

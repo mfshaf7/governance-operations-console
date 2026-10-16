@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  TerasActionButton,
   TerasEmptyState,
   TerasFilterBar,
   TerasRecordControlLayout,
@@ -41,8 +42,8 @@ export function PrototypeControlSurface({
         }
         register={
           <TerasEmptyState fill>
-            Canonical Prototype records are unavailable. Fixtures are not used
-            as fallback in live mode.
+            {controller.sourceAvailability.loading ? "Loading canonical Prototype records." : controller.sourceAvailability.unavailable ? "Canonical Prototype records are unavailable. Fixtures are not used as fallback in live mode." : "No canonical Prototype records yet. Capture and route a Proposal to Prototype."}
+            <TerasActionButton emphasis="secondary" onClick={() => void controller.sourceAvailability.refresh()}>Refresh canonical records</TerasActionButton>
           </TerasEmptyState>
         }
         selected={
@@ -152,6 +153,7 @@ export function PrototypeControlSurface({
         closureActions={controller.workflowActions.closure}
         closureOwnerEvidence={controller.selectedClosureOwnerEvidence}
         landingProjection={controller.selectedLandingProjection}
+        maturityProgress={controller.selectedMaturity}
         sourceDeliveryPacket={controller.selectedSourceDeliveryPacket}
         onBackToDashboard={controller.workflowActions.backToDashboard}
         onCancelLanding={controller.workflowActions.cancelLanding}

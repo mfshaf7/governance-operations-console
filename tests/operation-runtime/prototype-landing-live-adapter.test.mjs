@@ -165,7 +165,8 @@ test("Prototype Landing projects only terminal merged Studio authority", () => {
   assert.equal(projected.currentMove.id, "candidate-promotion");
   assert.equal(projected.projectionVersion, succeeded.receipt.receipt_digest);
   assert.equal(projected.receipts.at(-1).authority, "source-projected");
-  assert.equal(projected.sourceRef, succeeded.readback.record.source.ref);
+  assert.equal(projected.sourceRef, "record://prototypes/client-review-portal");
+  assert.equal(projected.sourcePath, succeeded.readback.record.source.ref);
 
   const effective = projectPrototypeEffectiveReadModel({
     landingProjectionsByRecordId: {

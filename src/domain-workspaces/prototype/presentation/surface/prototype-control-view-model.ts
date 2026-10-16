@@ -41,6 +41,7 @@ export function prototypeSummaryMetrics(
 export function prototypeWorkspaceStatus(
   readModel: PrototypeWorkspaceReadModel,
   stats: PrototypeWorkspaceStats,
+  liveAuthority = false,
 ): OperationSurfaceStatusModel {
   const proposalRoutedCount = readModel.records.filter(
     (record) => record.ingress === "proposal-routed",
@@ -80,8 +81,7 @@ export function prototypeWorkspaceStatus(
         tone: postureTone,
       },
       {
-        detail:
-          "Prototype Control merges registry records with proposal-routed and local-entry records.",
+        detail: liveAuthority ? "Canonical Studio registry and captures with caller-scoped durable OOS progress; browser-local records are excluded." : "Prototype Control merges registry records with proposal-routed and local-entry records.",
         facts: [
           { label: "Registry", value: readModel.source.registry },
           { label: "Total Records", value: String(readModel.records.length) },
@@ -91,21 +91,20 @@ export function prototypeWorkspaceStatus(
         ],
         id: "source-projection",
         label: "Source",
-        state: "local",
+        state: liveAuthority ? "current" : "local",
         tone: "info",
       },
       {
-        detail:
-          "Prototype requests, workflow receipts, and preview proof remain prototype-local until a future backend command path is admitted.",
+        detail: liveAuthority ? "Commands, review and receipts remain owner-backed. Each operation proves its own current readiness; this register is not execution approval." : "Prototype requests, workflow receipts, and preview proof remain prototype-local until a future backend command path is admitted.",
         facts: [
           { label: "Mutation", value: readModel.source.mutationGateway },
-          { label: "Receipt Scope", value: "local prototype session" },
-          { label: "Backend Write", value: "not connected" },
+          { label: "Receipt Scope", value: liveAuthority ? "durable owner receipts" : "local prototype session" },
+          { label: "Backend Write", value: liveAuthority ? "owner-gated" : "not connected" },
           { label: "Durable Source", value: readModel.source.registry },
         ],
         id: "write-path",
         label: "Write Path",
-        state: "local",
+        state: liveAuthority ? "online" : "local",
         tone: "warn",
       },
       {
@@ -124,8 +123,8 @@ export function prototypeWorkspaceStatus(
       },
     ],
     kicker: "Prototype Status",
-    statusLabel: needsAttention ? "attention" : "healthy",
-    summary: needsAttention
+    statusLabel: liveAuthority ? needsAttention ? "attention" : "owner data current" : needsAttention ? "attention" : "healthy",
+    summary: liveAuthority ? "Canonical Prototype records are current; each workflow retains its own readiness, review and authority." : needsAttention
       ? "Prototype-local record posture has explicit work requiring operator attention."
       : "Prototype-local record posture has no explicit blockers or returned movement requests.",
     title: needsAttention

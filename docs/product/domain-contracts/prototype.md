@@ -23,6 +23,17 @@ the packet from the local Prototype fixture.
 
 ## Ingress
 
+### Canonical Live Register
+
+Configured live mode reads the owner-backed Studio collection, including
+Proposal captures and retained caller-owned Landing, Maturity and Closure
+progress. A capture is not landed source; setup defaults remain unaccepted.
+Canonical registry lifecycle overrides historical workflow projections. Local
+drafts, simulated transition helpers and browser receipts cannot become live
+record authority. Preview proof and Delivery application retain their separate
+owner-backed reads. The primary operator procedure is
+[`prototype-landing-live-integration.md`](../prototype-landing-live-integration.md).
+
 Allowed ingress classes:
 
 - `local-entry`

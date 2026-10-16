@@ -43,6 +43,7 @@ type PrototypeControlDialogStackProps = {
   previewOwnerMode: PrototypeControlController["selectedPreviewOwnerMode"];
   receipts: PrototypeProjectedReceipt[];
   landingProjection: PrototypeLandingLiveProjection | null;
+  maturityProgress: PrototypeControlController["selectedMaturity"];
   sourceDeliveryPacket: PrototypeDeliveryPacketProjection | null;
   onBackToDashboard: () => void;
   onCloseDialog: () => void;
@@ -104,6 +105,7 @@ export function PrototypeControlDialogStack({
   previewOwnerMode,
   receipts,
   landingProjection,
+  maturityProgress,
   sourceDeliveryPacket,
   onBackToDashboard,
   onCancelLanding,
@@ -147,6 +149,7 @@ export function PrototypeControlDialogStack({
         record={activeDialog === "closeout-retirement" ? activeRecord : null}
       />
       <PrototypeCandidatePromotionModal
+        ownerProgress={maturityProgress}
         onBackToDashboard={onBackToDashboard}
         onClose={onCloseDialog}
         onRecordReceipt={onRecordCandidatePromotion}
@@ -173,6 +176,7 @@ export function PrototypeControlDialogStack({
         record={activeDialog === "preview-runtime" ? activeRecord : null}
       />
       <PrototypeBaselinePromotionModal
+        ownerProgress={maturityProgress}
         onBackToDashboard={onBackToDashboard}
         onClose={onCloseDialog}
         onRecordReceipt={onRecordBaselinePromotion}

@@ -10,6 +10,7 @@ import {
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
 import type { OperationWorkbenchDomainContract } from "../../../../operation-workbench/operation-workbench-contract.ts";
 import { useConsoleRuntimeCapabilities } from "../../../../console-integration/configuration/use-console-runtime-capabilities.ts";
+import { useDeliveryWorkspaceLiveRuntime } from "../../live-runtime/use-delivery-workspace-live-runtime.ts";
 import {
   resolveConsolePrimaryRecordIsolation,
   selectConsoleAuthorityProjection,
@@ -17,7 +18,7 @@ import {
 import {
   getOperationWorkbenchSurfaceAttributes,
 } from "../../../../operation-workbench/operation-workbench-contract.ts";
-import { TerasEmptyState, TerasModalShell } from "@/teras";
+import { TerasActionButton, TerasEmptyState, TerasModalShell } from "@/teras";
 
 import type { DeliveryIntakeSource } from "../../read-model/index.ts";
 import {
@@ -50,8 +51,9 @@ export function DeliveryWorkspaceController({
   onClose: () => void;
 }) {
   const consoleRuntime = useConsoleRuntimeCapabilities();
+  const live = useDeliveryWorkspaceLiveRuntime(consoleRuntime.status === "current" && consoleRuntime.projection?.mode === "live");
   const primaryRecordIsolation = resolveConsolePrimaryRecordIsolation({
-    liveAuthorityAvailable: false,
+    liveAuthorityAvailable: live.model !== null,
     runtimeMode: consoleRuntime.projection?.mode ?? null,
     runtimeStatus: consoleRuntime.status,
   });
@@ -60,18 +62,20 @@ export function DeliveryWorkspaceController({
     fixture: primaryRecordIsolation.fixtureAllowed
       ? getDeliveryReadModel()
       : null,
-    live: null,
+    live: live.model,
   });
 
   if (!selectedBaseModel) {
     return (
-      <DeliveryWorkspaceUnavailable contract={contract} onClose={onClose} />
+      <DeliveryWorkspaceUnavailable contract={contract} onClose={onClose} onRetry={live.refresh} loading={consoleRuntime.status === "loading" || consoleRuntime.projection?.mode === "live" && !live.error} />
     );
   }
 
   return (
     <AvailableDeliveryWorkspaceController
       baseModel={selectedBaseModel}
+      allowLocalProjection={primaryRecordIsolation.fixtureAllowed}
+      onSourceRefresh={live.refresh}
       contract={contract}
       entryIntent={entryIntent}
       onClose={onClose}
@@ -80,11 +84,15 @@ export function DeliveryWorkspaceController({
 }
 
 function AvailableDeliveryWorkspaceController({
+  allowLocalProjection,
+  onSourceRefresh,
   baseModel,
   contract,
   entryIntent,
   onClose,
 }: {
+  allowLocalProjection: boolean;
+  onSourceRefresh: () => Promise<void>;
   baseModel: DeliveryReadModel;
   contract: OperationWorkbenchDomainContract;
   entryIntent: ConsoleSurfaceEntryIntent | null;
@@ -103,11 +111,11 @@ function AvailableDeliveryWorkspaceController({
   const appliedEntryIntentRef = useRef<string | null>(null);
   const model = useMemo(
     () =>
-      projectDeliveryEffectiveReadModel({
+      allowLocalProjection ? projectDeliveryEffectiveReadModel({
         model: baseModel,
         runtimeProjection: localProjection,
-      }),
-    [baseModel, localProjection],
+      }) : baseModel,
+    [allowLocalProjection, baseModel, localProjection],
   );
   const executionCount = useMemo(
     () => getExecutionBoardPackages(model).length,
@@ -160,6 +168,7 @@ function AvailableDeliveryWorkspaceController({
   }
 
   function consumeIntakeSource(source: DeliveryIntakeSource) {
+    if (!allowLocalProjection) throw new Error("Use the canonical Proposal or Prototype ingress workflow in live mode.");
     const deliveryPackageId = localDeliveryPackageIdForIntakeSource(source);
 
     recordLocalDeliveryIntakeConsume(source);
@@ -182,6 +191,7 @@ function AvailableDeliveryWorkspaceController({
       onConsumeSource={consumeIntakeSource}
       onRequestPackageRegisterFocus={focusPackageRegister}
       onWorkDesignApplied={(deliveryPackage, record) => {
+        if (!allowLocalProjection) { void onSourceRefresh(); return; }
         recordLocalDeliveryWorkDesignApply({
           deliveryPackage,
           record,
@@ -195,14 +205,18 @@ function AvailableDeliveryWorkspaceController({
 function DeliveryWorkspaceUnavailable({
   contract,
   onClose,
+  onRetry,
+  loading,
 }: {
   contract: OperationWorkbenchDomainContract;
   onClose: () => void;
+  onRetry: () => Promise<void>;
+  loading: boolean;
 }) {
   return (
     <TerasModalShell
       bodyLayout="fill"
-      description="Canonical Delivery records are unavailable. Fixtures are not used as fallback in live mode."
+      description={loading ? "Loading canonical Delivery records." : "Canonical Delivery records are unavailable. Fixtures are not used as fallback in live mode."}
       kicker="Delivery Workspace"
       modalAttributes={getOperationWorkbenchSurfaceAttributes(contract)}
       onClose={onClose}
@@ -210,10 +224,10 @@ function DeliveryWorkspaceUnavailable({
       surfaceId="delivery-workspace-unavailable"
       title="Delivery Workspace"
       width="viewport"
+      footer={<TerasActionButton emphasis="secondary" onClick={() => void onRetry()}>Refresh canonical records</TerasActionButton>}
     >
       <TerasEmptyState fill>
-        Canonical Delivery records are unavailable. Restore the OOS owner
-        projection before continuing Delivery work.
+        {loading ? "Loading canonical Delivery records." : "Canonical Delivery records are unavailable. Restore the OOS owner projection before continuing Delivery work."}
       </TerasEmptyState>
     </TerasModalShell>
   );
