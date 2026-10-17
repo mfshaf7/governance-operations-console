@@ -91,6 +91,13 @@ Cold reads restore review, continue, cancel and terminal receipt state from
 owners, not browser storage. Canonical registry lifecycle wins over older
 workflow history. Record identity (`record://prototypes/<id>`) is distinct from
 its repository source path. Preview runtime/proof retains its separate owner.
+Merged registry presence is not terminal workflow success: while that same
+accepted OOS request is pending, its draft stays read-only and Continue Landing
+remains available for merged readback (or cancellation reconciliation). Only
+`succeeded` completes a live run. Source-complete/local-draft guards still
+prevent a new submission; cancelled, rejected and requires-action runs cannot
+advance, and retired/graduated records remain review-only. Cold reload must
+resume the existing immutable request, never silently submit another one.
 An existing Delivery application is looked up read-only using its immutable
 packet identity; only an exact owner `application_not_found` response means
 the packet has not been applied. Owner failure is not empty success.

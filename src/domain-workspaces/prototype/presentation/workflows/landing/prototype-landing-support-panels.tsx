@@ -154,7 +154,7 @@ export function PrototypeLandingRunSupportPanels({
             detail={
               landingRunComplete
                 ? "The current Landing run is complete."
-                : "Run the current draft to complete the Landing boundary."
+                : runDescription
             }
             label="Run state"
             status={landingRunStatus.label}

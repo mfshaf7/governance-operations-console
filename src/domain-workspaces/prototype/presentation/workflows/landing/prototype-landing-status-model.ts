@@ -11,7 +11,8 @@ import {
 import {
   prototypeSupportRowWithState,
   prototypeSupportStateLabel,
-} from "@/domain-workspaces/prototype/domain/support/prototype-support-profile-model";
+} from "../../../domain/support/prototype-support-profile-model.ts";
+import type { PrototypeLandingResult } from "../../../live-runtime/prototype-landing-live-types.ts";
 import type { PrototypeLandingStatusProjection } from "./prototype-landing-types.ts";
 
 export const prototypeLandingSupportDerivedFields = new Set<
@@ -75,6 +76,41 @@ export function prototypeLandingRunStatus({
     label: landingDraftDirty ? "Draft not run" : "Ready to run",
     tone: "warn",
   };
+}
+
+export function prototypeLandingLiveRunPending(
+  status: PrototypeLandingResult["status"] | null,
+) {
+  return status !== null &&
+    ["accepted", "evaluating", "preparing", "review-required", "cancelling"].includes(status);
+}
+
+export function prototypeLandingRunControlState({
+  atResult,
+  canStartNewRun,
+  draftDirty,
+  liveStatus,
+  sourceRunComplete,
+  submitting,
+  terminalRecord,
+}: {
+  atResult: boolean;
+  canStartNewRun: boolean;
+  draftDirty: boolean;
+  liveStatus: PrototypeLandingResult["status"] | null;
+  sourceRunComplete: boolean;
+  submitting: boolean;
+  terminalRecord: boolean;
+}) {
+  // Canonical source can merge before OOS verifies readback and issues its
+  // terminal receipt. That source fact cannot complete or freeze a live run.
+  const complete = liveStatus === null ? sourceRunComplete : liveStatus === "succeeded";
+  const available = atResult && !submitting && !terminalRecord && (
+    liveStatus === null
+      ? canStartNewRun && (!complete || draftDirty)
+      : !draftDirty && prototypeLandingLiveRunPending(liveStatus)
+  );
+  return { complete, available };
 }
 
 export function prototypeLandingRunActionStatus(
