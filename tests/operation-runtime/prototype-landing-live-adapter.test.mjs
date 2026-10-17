@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -92,6 +93,95 @@ test("Prototype Landing prepares and submits a deterministic server-authorized c
     assertPrototypeLandingResult(result(submitted, "review-required")).next_action,
     "review-and-merge",
   );
+});
+
+test("Proposal capture revision does not become a revision of absent new Studio code", () => {
+  const sourceRecord = landingRecord();
+  sourceRecord.ingress = "proposal-routed";
+  sourceRecord.sourceRef = "record://prototype-captures/client-review-portal";
+  sourceRecord.sourceEvidence = {
+    authority: "workspace-proposals",
+    posture: "create-studio-source",
+    revision: authorityRevision,
+    originDigest: null,
+    importedContentDigest: null,
+  };
+  const prepared = preparation();
+  const intent = prototypeLandingSubmissionIntent(
+    {
+      draft: prototypeLandingDraftFromRecord(sourceRecord),
+      draftKey: "capture-with-current-revision",
+      record: sourceRecord,
+    },
+    {
+      acceptedAt: "2026-09-07T12:00:00.000Z",
+      requestId: "prototype-landing-request:client-review-portal:4",
+    },
+    prepared,
+  );
+  const before = structuredClone({ intent, prepared });
+  const command = buildPrototypeLandingCommand(intent, prepared, config.callerId);
+
+  assert.equal(command.entry_packet.ingress_class, "proposal-routed");
+  assert.equal(command.entry_packet.source.ref, sourceRecord.sourceRef);
+  assert.equal(command.entry_packet.source.revision, authorityRevision);
+  assert.equal(command.authority_revision, prepared.authority_revision);
+  assert.deepEqual(command.request.expected_state, prepared.expected_state);
+  assert.equal(command.request.expected_state.source_revision, authorityRevision);
+  assert.deepEqual(command.request.source_plan, {
+    posture: "create-studio-source",
+    source_ref: "repo://workspace-prototype-studio/prototypes/client-review-portal",
+    source_revision: null,
+    origin_digest: null,
+    imported_content_digest: null,
+  });
+  assert.deepEqual(command.plan.source_plan, command.request.source_plan);
+  assertArtifactDigest(command.entry_packet, "packet_digest");
+  assertArtifactDigest(command.request, "request_digest");
+  assertArtifactDigest(command.plan, "plan_digest");
+  assert.equal(command.plan.request_ref.digest, command.request.request_digest);
+  assert.deepEqual({ intent, prepared }, before);
+});
+
+test("Existing, referenced and imported source retain their own revision and custody evidence", () => {
+  const record = landingRecord();
+  const prepared = preparation();
+  const baseIntent = prototypeLandingSubmissionIntent(
+    { draft: prototypeLandingDraftFromRecord(record), draftKey: "source-postures", record },
+    {
+      acceptedAt: "2026-09-07T12:00:00.000Z",
+      requestId: "prototype-landing-request:client-review-portal:5",
+    },
+    prepared,
+  );
+  for (const posture of [
+    "use-existing-studio-source",
+    "reference-dedicated-owner-source",
+    "reference-shared-owner-source",
+    "import-to-studio",
+  ]) {
+    const imported = posture === "import-to-studio";
+    const intent = {
+      ...baseIntent,
+      source: {
+        ...baseIntent.source,
+        posture,
+        ref: imported ? "import://staged/sample" : "repo://workspace-prototype-studio/prototypes/client-review-portal",
+        revision: authorityRevision,
+        origin_digest: imported ? digest("a") : null,
+        imported_content_digest: imported ? digest("b") : null,
+      },
+    };
+    const command = buildPrototypeLandingCommand(intent, prepared, config.callerId);
+    assert.equal(command.entry_packet.source.revision, authorityRevision, posture);
+    assert.equal(command.request.source_plan.source_revision, authorityRevision, posture);
+    assert.equal(command.request.source_plan.source_ref, intent.source.ref, posture);
+    assert.equal(command.request.source_plan.origin_digest, intent.source.origin_digest, posture);
+    assert.equal(command.request.source_plan.imported_content_digest, intent.source.imported_content_digest, posture);
+    assert.deepEqual(command.plan.source_plan, command.request.source_plan);
+    assertArtifactDigest(command.request, "request_digest");
+    assertArtifactDigest(command.plan, "plan_digest");
+  }
 });
 
 test("Prototype Landing rejects stale authority before command submission", async () => {
@@ -300,6 +390,20 @@ function landingRecord() {
   );
   assert.ok(record);
   return structuredClone(record);
+}
+
+function assertArtifactDigest(artifact, digestField) {
+  const content = { ...artifact };
+  delete content[digestField];
+  function canonical(value) {
+    if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+    if (value !== null && typeof value === "object") {
+      return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+    }
+    return JSON.stringify(value);
+  }
+  const expected = `sha256:${createHash("sha256").update(canonical(content)).digest("hex")}`;
+  assert.equal(artifact[digestField], expected);
 }
 
 function preparation() {
