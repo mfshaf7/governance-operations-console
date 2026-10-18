@@ -40,7 +40,9 @@ import {
 import {
   prototypeLandingApplySystemSupportLocks,
   prototypeLandingDraftKey,
+  prototypeLandingLiveRunPending,
   prototypeLandingRunActionStatus,
+  prototypeLandingRunControlState,
   prototypeLandingRunLogRows,
   prototypeLandingRunStatus,
   prototypeLandingSupportDerivedFields,
@@ -166,10 +168,17 @@ export function PrototypeLandingModal({
   const command = getPrototypeCommandView(record, "land-prototype-request");
   const landingMove = prototypeLandingMove(record);
   const landingDraftDirty = activeLandingDraftKey !== sourceLandingDraftKey;
+  const currentRunResult =
+    landingRunResult?.draftKey === activeLandingDraftKey
+      ? landingRunResult
+      : null;
+  const liveResult = currentRunResult?.mode === "live" ? currentRunResult.result : null;
+  const liveRunPending = prototypeLandingLiveRunPending(liveResult?.status ?? null);
+  const terminalRecord = record.lifecycle === "graduated" || record.lifecycle === "retired";
   const landingDraftMutable =
+    !liveRunPending &&
     record.landing.state !== "landed" &&
-    record.lifecycle !== "graduated" &&
-    record.lifecycle !== "retired";
+    !terminalRecord;
   const supportProfileCustom = prototypeSupportProfileIsCustom(
     activeLandingDraft.supportProfile,
   );
@@ -199,29 +208,18 @@ export function PrototypeLandingModal({
     Boolean(record.landing.lastLandingReceiptRef) ||
     record.landing.state === "blocked" ||
     record.landing.state === "landed";
-  const currentRunResult =
-    landingRunResult?.draftKey === activeLandingDraftKey
-      ? landingRunResult
-      : null;
-  const liveResult = currentRunResult?.mode === "live" ? currentRunResult.result : null;
   const localRunComplete = currentRunResult?.mode === "local";
   const liveRunComplete = liveResult?.status === "succeeded";
-  const landingRunComplete =
-    (landingRunRecorded && !landingDraftDirty) ||
-    localRunComplete ||
-    liveRunComplete;
-  const liveRunCanAdvance =
-    !liveResult ||
-    new Set(["accepted", "evaluating", "preparing", "review-required"]).has(
-      liveResult.status,
-    );
-  const landingRunActionAvailable =
-    activeStep === "result" &&
-    landingDraftMutable &&
-    !command.disabledReason &&
-    !landingRunSubmitting &&
-    (!landingRunComplete || landingDraftDirty) &&
-    liveRunCanAdvance;
+  const { complete: landingRunComplete, available: landingRunActionAvailable } =
+    prototypeLandingRunControlState({
+      atResult: activeStep === "result",
+      canStartNewRun: landingDraftMutable && !command.disabledReason,
+      draftDirty: landingDraftDirty,
+      liveStatus: liveResult?.status ?? null,
+      sourceRunComplete: (landingRunRecorded && !landingDraftDirty) || localRunComplete,
+      submitting: landingRunSubmitting,
+      terminalRecord,
+    });
   const landingRecordActionVisible =
     activeStep === "result" &&
     record.landing.state !== "landed" &&
@@ -277,6 +275,15 @@ export function PrototypeLandingModal({
         ...step,
         detail: `${prototypeBasePlatformLabel(activeLandingDraft.basePlatform)} / ${activeLandingDraft.supportRows.length} support rows`,
         tone: prototypeLandingSetupTone(activeLandingDraft.basePlatform),
+      };
+    }
+
+    if (step.id === "result" && liveResult) {
+      return {
+        ...step,
+        detail: liveRunComplete ? "Owner receipt recorded" : "Canonical owner progress",
+        stateLabel: landingRunStatus.label,
+        tone: landingRunStatus.tone,
       };
     }
 
