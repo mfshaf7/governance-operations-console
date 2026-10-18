@@ -1365,6 +1365,45 @@ Prototype must not:
   reconciliation
 - keep page-era temporary implementation as final Prototype Control
 
+## Post-Baseline Bounded Source Authoring
+
+The approved Console-only product path extends Prototype with a separate
+authoring tool, launched from its selected-record surfaces. It does not change
+the accepted Dashboard layout or embed workflow bodies inside the Dashboard.
+Use existing Teras panels, fields, actions and modal patterns. This is not a new
+business plane or a replacement for Candidate/Baseline, Preview or Delivery.
+
+OOS owns caller-bound source requests, canonical Studio eligibility, exact
+generation inputs, private drafts, source sessions and source-control recovery.
+Studio owns incubation source/design scope and native validation. CGG admits
+bounded model-safe context; Platform owns model/source credentials and isolated
+execution. Gary authors and publishes; the accountable human reviews and
+merges the exact head. Model output is source/design text only, displayed
+inertly. It cannot select or edit owner controls, CI, executable profiles,
+permissions, approvals or receipts.
+
+The thin server adapter negotiates the registered canonical OOS source
+envelope for request/list/draft reads, binds the actual Prototype and current
+source revision, verifies draft/receipt/command digests, and projects only safe
+typed fields. Browser intent cannot select repository/provider coordinates,
+branches, source roots, arbitrary commands, operator identity or secrets.
+Mutation uses the existing verified Operator / Workspace owner session and
+server-only caller attribution. Configured-live failure never loads fixtures.
+
+Reload recovers requests from OOS, not a second Console database. Reuse retained
+generation input and pending/unknown publication/review/merge/close commands;
+do not regenerate time, revision or effect identity for uncertain actions.
+An uncertain apply uses exact accepted-action recovery. Expired scope requires
+the existing exact stop and fresh explicit successor approval; it does not
+restart the business lifecycle or silently extend an approval deadline.
+
+Source authoring is still being prepared and the corresponding Platform model
+purpose remains suspended. Adapters, source tests and PRs are not operating
+acceptance. Exact composed Security acceptance, Platform commissioning and the
+preserved real Console-only product witness remain required before reporting
+this path operational. Public synthetic proof does not qualify private/client
+custody, arbitrary toolchains or public hosting.
+
 ## Sources
 
 - `../system-design.md`

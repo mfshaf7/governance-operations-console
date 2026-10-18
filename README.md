@@ -1,5 +1,9 @@
 # Governance Operations Console
 
+Staged operator procedure:
+[Prototype source authoring](docs/product/prototype-source-authoring.md).
+This source extension still requires exact composed acceptance and commissioning.
+
 This repository owns the durable product source for the Governance Operations
 Console.
 

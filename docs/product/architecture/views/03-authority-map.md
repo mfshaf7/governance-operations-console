@@ -89,3 +89,10 @@ Every live mutable command must carry:
 
 The Console must fail closed when actor authority, source freshness, backend
 capability, or receipt reconciliation is unavailable.
+
+Prototype source authoring extends this same boundary: OOS retains original
+requests and uncertain source controls; Studio owns app/design scope; CGG
+supplies admitted context; Platform owns isolated execution and short-lived
+source/model custody. The browser supplies bounded intent and displays inert
+draft text, not credentials or executable model output. Draft acceptance,
+human exact-head PR review, Preview, Baseline and Delivery remain independent.

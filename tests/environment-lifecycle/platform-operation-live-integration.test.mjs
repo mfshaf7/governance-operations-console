@@ -9,7 +9,10 @@ import {
   controlPlatformOperation,
   readPlatformOperations,
   submitPlatformOperation,
+  platformCanonicalDigest as hash,
 } from "../../src/environment-lifecycle/server/platform-operation-oos-client.ts";
+import { assertSourceCredentialReceipt } from "../../src/environment-lifecycle/live-runtime/source-authorization-contract.ts";
+import { commandSourceAuthorization, prepareSourceAuthorization, readSourceAuthorization } from "../../src/environment-lifecycle/server/source-authorization-oos-client.ts";
 
 const now = "2026-10-15T00:00:00.000Z";
 const config = {
@@ -174,3 +177,108 @@ function operation(boundCommand) {
     replayed: false,
   };
 }
+
+function sourcePreparation() {
+  const source = { schema_version: 1, purpose: "ordinary-source", intent_id: "source-intent:console-example", caller_id: "operator-orchestration-service", operator_id: config.operatorId,
+    subject: { kind: "delivery", work_item_ref: "work-item-42", snapshot_digest: hash("snapshot") }, source_start_digest: hash("start"), repository: "example/source", repository_id: 123, installation_id: 456,
+    landing_unit_id: "source-example", branch: "topic/example", fetched_base: "a".repeat(40), human_reviewer_id: "reviewer", expires_at: "2026-10-18T12:00:00.000Z", supersedes_intent_digest: null };
+  return { schema_version: 1, workflow_id: "source-credential-preparation", intent_id: source.intent_id, source_intent: source, source_intent_digest: hash(source), session_id: null, created_at: now,
+    operation_refs: { issue: null, revoke: null },
+    start_decision: { schema_version: 1, artifact_type: "delivery_art_work_session_decision", work_item_id: "work-item-42", covered_work_item_ids: ["work-item-42"], caller_id: config.callerId,
+      operator: { id: config.operatorId, decision_source: "operator" }, landing_unit: { id: "source-example", decision: "feature_single_landing_unit", split_reason: "One owner boundary.", base_ref: "origin/main", branch: "topic/example", rollback_boundary: "Revert reviewed source." }, architecture: { required: false, artifact_location: null }, human_gate_work_item_ids: { security_acceptance: [] } },
+    authorization: { state: "prepared", approval_ref: null, credential_receipt: null }, authority: "operator-orchestration-service", secret_values_embedded: false };
+}
+function sourceCatalog() {
+  const value = catalog(); value.subjects[0].ref = "profile:accepted-idea-delivery";
+  value.subjects[0].capabilities = ["issue", "renew", "revoke"].map(action => ({ capability_id: `agent-source.${action}`, action: `agent-source.${action}`, available: true, unavailable_reason: null, required_capability: "platform.agent-source", approval_required: true, destructive: action === "revoke" }));
+  return value;
+}
+function sourceReceipt(bound) {
+  const intent = bound.input.source_intent;
+  const receipt = { schema_version: 1, artifact_type: "source-intent-credential-receipt", command_id: bound.command_id, action: bound.action, outcome: "issued", source_intent_digest: hash(intent), source_intent_id: intent.intent_id,
+    supersedes_intent_digest: intent.supersedes_intent_digest, subject: intent.subject, session_id: bound.input.session_id, landing_unit_id: intent.landing_unit_id, repository: intent.repository, repository_id: intent.repository_id, installation_id: intent.installation_id,
+    branch: intent.branch, fetched_base: intent.fetched_base, human_reviewer_id: intent.human_reviewer_id, caller_id: intent.caller_id, operator_id: intent.operator_id, source_start_digest: intent.source_start_digest,
+    identity_id: "agent-gary", logical_agent_id: "gary", provider_principal: "example-gary[bot]", app_id: 789, definition_digest: hash("definition"), permissions: { metadata: "read", contents: "write", pull_requests: "write", checks: "read" },
+    token_expires_at: "2026-10-15T01:00:00.000Z", authorization_expires_at: intent.expires_at, recorded_at: now, secret_values_embedded: false };
+  return { ...receipt, receipt_digest: hash(receipt) };
+}
+function sourceCommand() {
+  const { intent_digest, approval, ...intent } = command();
+  intent.action = "agent-source.issue"; intent.capability_id = intent.action;
+  intent.subject.ref = "profile:accepted-idea-delivery"; intent.input = { source_intent: sourcePreparation().source_intent, session_id: null };
+  return { ...intent, intent_digest: hash(intent), approval: { ...approval, intent_digest: hash(intent) } };
+}
+test("source preparation sends only actual subject/decision selectors and verifies the owner-derived scope", async () => {
+  const input = { preparationId: "console-example", subject: { kind: "delivery", work_item_ref: "work-item-42" }, decision: null, expiresAt: sourcePreparation().source_intent.expires_at, supersedesIntentDigest: null };
+  let sent;
+  const result = await prepareSourceAuthorization(input, { config, fetchImpl: async (_url, init) => { sent = JSON.parse(init.body); return Response.json(sourcePreparation()); } });
+  assert.deepEqual(sent.preparation.subject, input.subject); assert.equal(Object.hasOwn(sent.preparation, "repository"), false); assert.equal(result.source_intent.repository, "example/source");
+  await assert.rejects(prepareSourceAuthorization({ ...input, repository: "attacker/source" }, { config }), /invalid fields/);
+  await assert.rejects(readSourceAuthorization(result.intent_id, { config, fetchImpl: async () => Response.json({ ...sourcePreparation(), source_intent_digest: hash("forged") }) }), /digest/);
+});
+test("explicit source approval uses server identity and retained exact time, with no second issue after acknowledgement loss", async () => {
+  const preparation = sourcePreparation(); let submitted = 0, sent;
+  const fetchImpl = async (url, init) => {
+    if (String(url).includes("/source-preparations/")) return Response.json(preparation);
+    if (String(url).endsWith("/catalog")) return Response.json(sourceCatalog());
+    if (String(url).endsWith("/commands")) {
+      sent = JSON.parse(init.body).command; submitted++;
+      preparation.authorization = { state: "approved", approval_ref: sent.approval.decision_ref, credential_receipt: null };
+      return Response.json(operation(sent));
+    }
+    return Response.json({ workflow_id: "platform-operation-list", operations: [] });
+  };
+  const decision = { action: "issue", commandId: "approval:original", requestedAt: now, expectedIntentDigest: preparation.source_intent_digest };
+  const result = await commandSourceAuthorization(preparation.intent_id, decision, { config, fetchImpl });
+  assert.equal(result.authorization.state, "approved"); assert.equal(sent.requested_at, now); assert.equal(sent.approval.decided_at, now); assert.equal(sent.actor_ref, config.operatorId);
+  await commandSourceAuthorization(preparation.intent_id, decision, { config, fetchImpl }); assert.equal(submitted, 1);
+  await assert.rejects(commandSourceAuthorization(preparation.intent_id, { ...decision, expectedIntentDigest: hash("other") }, { config, fetchImpl }), /changed/);
+});
+test("native successful source receipts are accepted only with exact bounded permissions and verified intent/digest", async () => {
+  const bound = sourceCommand(), retained = operation(bound), receipt = sourceReceipt(bound);
+  retained.state = "succeeded"; retained.provider_operation.state = "succeeded"; retained.provider_operation.events[0].state = "succeeded";
+  retained.provider_operation.receipt = { receipt_ref: "platform:receipt:source", outcome: "succeeded", recorded_at: now, source_version: "version:1", effect: "verified", source_credential: receipt };
+  assert.equal(assertPlatformOperationRecord(retained).provider_operation.receipt.source_credential.receipt_digest, receipt.receipt_digest);
+  assert.throws(() => assertSourceCredentialReceipt({ ...receipt, token: "forbidden" }), /unauthorized/);
+  assert.throws(() => assertSourceCredentialReceipt({ ...receipt, permissions: { ...receipt.permissions, workflows: "write" } }), /unauthorized/);
+  let result = await readPlatformOperations({ config, fetchImpl: async url => Response.json(String(url).endsWith("/catalog") ? sourceCatalog() : { workflow_id: "platform-operation-list", operations: [retained] }) });
+  assert.equal(result.operations.length, 1);
+  retained.provider_operation.receipt.source_credential.receipt_digest = hash("forged");
+  result = await readPlatformOperations({ config, fetchImpl: async url => Response.json(String(url).endsWith("/catalog") ? sourceCatalog() : { workflow_id: "platform-operation-list", operations: [retained] }) });
+  assert.equal(result.status, "partial"); assert.equal(result.operations.length, 0); assert.equal(result.error.code, "source_authorization_receipt_invalid");
+});
+test("source issuance uncertainty preserves its exact retry boundary without widening generic failure fields", () => {
+  const retained = operation(sourceCommand()); retained.state = "blocked"; retained.provider_operation.state = "blocked"; retained.provider_operation.events[0].state = "blocked";
+  retained.provider_operation.failure = { code: "platform_source_issuance_uncertain", owner: "platform-engineering", detail: "Reconcile the original issuance.", retry_after: "2026-10-15T01:00:00.000Z" };
+  assert.equal(assertPlatformOperationRecord(retained).provider_operation.failure.retry_after, "2026-10-15T01:00:00.000Z");
+  retained.provider_operation.failure.code = "other-failure"; assert.throws(() => assertPlatformOperationRecord(retained), /malformed/);
+});
+
+test("cold revocation recovery reads the original operation, honors its deadline and retries only its retained control", async () => {
+  const preparation = sourcePreparation(), originalRef = `platform-operation:${"a".repeat(24)}`;
+  preparation.authorization.state = "revocation-requested"; preparation.operation_refs.revoke = originalRef;
+  const { approval, intent_digest, ...intent } = sourceCommand(); intent.action = "agent-source.revoke"; intent.capability_id = intent.action;
+  const bound = { ...intent, intent_digest: hash(intent), approval: { ...approval, intent_digest: hash(intent) } };
+  const original = operation(bound); original.operation_id = originalRef; original.state = "failed";
+  Object.assign(original.provider_operation, { state: "failed", retryable: true, failure: { code: "platform_source_revocation_expiry_pending", detail: "Wait for the exact owner expiry boundary.", owner: "platform-engineering", retry_after: "2099-01-01T00:00:00Z" },
+    receipt: { receipt_ref: "platform:receipt:pending-revoke", outcome: "failed", recorded_at: now, source_version: "version:1", effect: "none" } });
+  original.provider_operation.events[0].state = "failed";
+  const controls = [], paths = [];
+  const fetchImpl = async (url, init) => {
+    paths.push(String(url));
+    if (String(url).includes("/source-preparations/")) return Response.json(preparation);
+    if (String(url).endsWith("/controls")) {
+      const control = JSON.parse(init.body).control; controls.push(control);
+      original.controls = [{ control_id: control.control_id, idempotency_key: control.idempotency_key, request_digest: hash(control), action: control.action, requested_at: control.requested_at, status: "unknown" }];
+    }
+    return Response.json(original);
+  };
+  const decision = { action: "revoke", commandId: "source:after-browser-reload", requestedAt: now, expectedIntentDigest: preparation.source_intent_digest };
+  await commandSourceAuthorization(preparation.intent_id, decision, { config, fetchImpl }); assert.equal(controls.length, 0);
+  original.provider_operation.failure.retry_after = "2026-01-01T00:00:00Z";
+  await commandSourceAuthorization(preparation.intent_id, decision, { config, fetchImpl });
+  await commandSourceAuthorization(preparation.intent_id, { ...decision, commandId: "new-browser-nonce" }, { config, fetchImpl });
+  assert.equal(controls.length, 2); assert.deepEqual(controls[0], controls[1]);
+  assert.equal(paths.some(path => path.endsWith("/commands")), false); assert.equal(paths.some(path => path.endsWith("/catalog")), false);
+  assert.equal(preparation.authorization.state, "revocation-requested");
+});

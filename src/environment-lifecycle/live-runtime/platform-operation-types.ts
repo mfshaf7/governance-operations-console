@@ -1,4 +1,9 @@
+import type { SourceCredentialReceipt } from "./source-authorization-contract.ts";
+
 export type PlatformOperationAction =
+  | "agent-source.issue"
+  | "agent-source.renew"
+  | "agent-source.revoke"
   | "dev-integration.request-profile"
   | "dev-integration.start"
   | "dev-integration.status"
@@ -112,13 +117,14 @@ export type PlatformOperationRecord = Readonly<{
       state: PlatformOperationState;
       summary: string;
     }>[];
-    failure: Readonly<{ code: string; detail: string; owner: string }> | null;
+    failure: Readonly<{ code: string; detail: string; owner: string; retry_after?: string }> | null;
     receipt: Readonly<{
       effect: "none" | "partial" | "verified";
       outcome: "cancelled" | "failed" | "succeeded";
       receipt_ref: string;
       recorded_at: string;
       source_version: string;
+      source_credential?: SourceCredentialReceipt;
     }> | null;
     retryable: boolean;
     safe_log_ref: string | null;

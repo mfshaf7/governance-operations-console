@@ -28,6 +28,7 @@ export type DeliverySourceRealizationProjection = {
 export type DeliverySourceRealizationInput = {
   commandId: string;
   requestedAt: string;
+  sourceIntentRef?: string;
 } & (
   | { action: "start"; expectedSessionRevision: string; objective: string; budgetTokens: number; retryOf: string | null }
   | { action: "continue"; expectedRevision: string; acceptedChangeSetDigest: string }

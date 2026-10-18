@@ -73,6 +73,11 @@ current and future product changes.
 
 ## Live Integration Surfaces
 
+- `prototype-source-authoring.md`
+  - Staged primary authoring procedure, shared ordinary-source authorization,
+    exact draft inspection, source delivery and cold recovery. This extension
+    still awaits exact composed acceptance and commissioning.
+
 - `console-runtime-operability.md`
   - Central server configuration, non-secret capability projection,
     server-issued API correlation, bounded errors, and canonical owner-audit

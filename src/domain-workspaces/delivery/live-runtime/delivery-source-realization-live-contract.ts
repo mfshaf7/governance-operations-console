@@ -58,6 +58,10 @@ export function assertDeliverySourceRealizationInput(value: unknown): DeliverySo
   const input = record(value);
   const common = { commandId: stable(input.commandId), requestedAt: date(input.requestedAt) };
   const keys = ["action", "commandId", "requestedAt"];
+  if (input.sourceIntentRef !== undefined) {
+    if (typeof input.sourceIntentRef !== "string" || input.sourceIntentRef.length > 256 || !/^source-intent:[A-Za-z0-9][A-Za-z0-9._:/@+\-]{0,241}$/.test(input.sourceIntentRef)) invalid();
+    keys.push("sourceIntentRef");
+  }
   let result: DeliverySourceRealizationInput;
   if (input.action === "start") {
     keys.push("expectedSessionRevision", "objective", "budgetTokens", "retryOf");
@@ -77,7 +81,7 @@ export function assertDeliverySourceRealizationInput(value: unknown): DeliverySo
     result = { ...common, action: "recover", expectedRevision: date(input.expectedRevision) };
   } else invalid();
   if (Object.keys(input).sort().join(",") !== keys.sort().join(",")) invalid();
-  return result;
+  return { ...result, ...(input.sourceIntentRef === undefined ? {} : { sourceIntentRef: input.sourceIntentRef as string }) };
 }
 
 function invalid(): never { throw new Error("Source realization contains missing, malformed or unauthorized fields."); }

@@ -19,6 +19,7 @@ export type PrototypeDialogRoute =
   | "landing"
   | "movement-request"
   | "preview-runtime"
+  | "source-authoring"
   | "candidate-promotion";
 
 export type PrototypeControlState = ReturnType<typeof usePrototypeControlState>;

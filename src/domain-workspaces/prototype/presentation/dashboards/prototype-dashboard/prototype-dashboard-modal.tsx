@@ -51,6 +51,7 @@ export function PrototypeDashboardModal({
   onOpenCurrentAction,
   onOpenHistory,
   onOpenPreviewRuntime,
+  onOpenSourceAuthoring,
   record,
 }: {
   closure: PrototypeClosureViewState | null;
@@ -60,6 +61,7 @@ export function PrototypeDashboardModal({
   onOpenCurrentAction: (record: PrototypeRecord) => void;
   onOpenHistory: (record: PrototypeRecord) => void;
   onOpenPreviewRuntime: () => void;
+  onOpenSourceAuthoring?: () => void;
   record: PrototypeRecord | null;
 }) {
   const [openArea, setOpenArea] =
@@ -298,6 +300,11 @@ export function PrototypeDashboardModal({
                   </TerasEmptyState>
                 )}
               </TerasPanel>
+
+              {onOpenSourceAuthoring ? <TerasPanel frame="padded" treatment="rail" tone="info" fit="content" spacing="normal">
+                <TerasPanelHeader kicker="Source Authoring" title="App and design source" description="Open the owner-backed authoring tool. Source delivery does not replace Preview or maturity approval." />
+                <TerasActionButton emphasis="secondary" onClick={onOpenSourceAuthoring}>Open Source Authoring</TerasActionButton>
+              </TerasPanel> : null}
 
               <PrototypeDashboardLifecyclePanel
                 lifecycle={displayRecord.lifecycle}

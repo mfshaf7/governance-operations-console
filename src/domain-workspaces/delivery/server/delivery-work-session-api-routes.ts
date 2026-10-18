@@ -48,6 +48,7 @@ export async function startDeliveryWorkSessionRoute(
     const workItemId = routeWorkItemId(workItemIdInput);
     const body = record(await request.json().catch(() => null));
     const commandId = commandIdentity(body.commandId);
+    const sourceIntentRef = sourceReference(body.sourceIntentRef);
     const expectedSessionRevision = nullableDateTime(
       body.expectedSessionRevision,
       "expected session revision",
@@ -68,6 +69,7 @@ export async function startDeliveryWorkSessionRoute(
       commandId,
       ...(decision ? { decision } : {}),
       expectedSessionRevision,
+      ...(sourceIntentRef ? { sourceIntentRef } : {}),
     });
     return currentProjection(projection);
   } catch (error) {
@@ -119,6 +121,7 @@ async function commandDeliveryWorkSessionRoute(
     const body = record(await request.json().catch(() => null));
     const projection = await command(workItemId, {
       commandId: commandIdentity(body.commandId),
+      ...(body.sourceIntentRef === undefined ? {} : { sourceIntentRef: sourceReference(body.sourceIntentRef)! }),
       expectedSessionRevision: requiredDateTime(
         body.expectedSessionRevision,
         "expected session revision",
@@ -138,6 +141,12 @@ function commandIdentity(value: unknown) {
   ) {
     invalid("Delivery work-session command identity is invalid.");
   }
+  return value;
+}
+
+function sourceReference(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.length > 256 || !/^source-intent:[A-Za-z0-9][A-Za-z0-9._:/@+\-]{0,241}$/.test(value)) invalid("Delivery source authorization reference is invalid.");
   return value;
 }
 

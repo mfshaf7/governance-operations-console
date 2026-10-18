@@ -23,10 +23,12 @@ import type {
 } from "../../../../live-runtime/delivery-work-session-live-types.ts";
 import type { ExecutionWorkSessionTarget } from "./execution-work-session-target.ts";
 import { ExecutionSourceRealizationPanel } from "./execution-source-realization-panel.tsx";
+import { SourceAuthorizationPanel } from "../../../../../../environment-lifecycle/presentation/source-authorization-panel.tsx";
+import { assertDeliveryWorkSessionDecision } from "../../../../live-runtime/delivery-work-session-live-contract.ts";
 
 type WorkSessionRuntime = {
   closeWork: () => Promise<unknown>;
-  continueWork: () => Promise<unknown>;
+  continueWork: (sourceIntentRef?: string) => Promise<unknown>;
   mergeWork: () => Promise<unknown>;
   mode: "disconnected-preview" | "live" | null;
   prepare: () => Promise<unknown>;
@@ -34,7 +36,7 @@ type WorkSessionRuntime = {
   projectionError: string | null;
   projectionStatus: "current" | "loading" | "offline";
   refresh: () => Promise<unknown>;
-  start: (decision: DeliveryWorkSessionDecisionInput) => Promise<unknown>;
+  start: (decision: DeliveryWorkSessionDecisionInput, sourceIntentRef?: string) => Promise<unknown>;
 };
 
 export function ExecutionWorkSessionModal({
@@ -52,6 +54,7 @@ export function ExecutionWorkSessionModal({
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sourceIntent, setSourceIntent] = useState<string | null>(null);
 
   useEffect(() => {
     if (!draft) {
@@ -66,6 +69,11 @@ export function ExecutionWorkSessionModal({
     [decision],
   );
   const projection = runtime.projection;
+  const sourceDecision = draft && decision ? {
+    ...draft,
+    architecture: { required: decision.architecture.required, artifact_location: decision.architecture.artifactLocation },
+    landing_unit: { ...draft.landing_unit, branch: decision.branch, decision: decision.landingUnitDecision, id: decision.landingUnitId, rollback_boundary: decision.rollbackBoundary, split_reason: decision.splitReason },
+  } : null;
   const nextAction = projection?.next_action ?? null;
   const projectedCommand = workSessionCommand(nextAction?.code);
   const canPrepare =
@@ -102,7 +110,7 @@ export function ExecutionWorkSessionModal({
   function runProjectedCommand() {
     if (projectedCommand === "merge") return runtime.mergeWork();
     if (projectedCommand === "close") return runtime.closeWork();
-    return runtime.continueWork();
+    return runtime.continueWork(sourceIntent ?? undefined);
   }
 
   return (
@@ -269,6 +277,18 @@ export function ExecutionWorkSessionModal({
             </TerasPanel>
           ) : null}
 
+          {runtime.mode === "live" && target.workItemId && (projection?.session_id || draft) ? <SourceAuthorizationPanel
+            subject={{ kind: "delivery", work_item_ref: `work-item-${target.workItemId}` }} sourceStartDigest={null}
+            decision={projection?.session_id || !decisionReady ? null : sourceDecision} onIntentChange={setSourceIntent}
+            preparationAllowed={Boolean(projection?.session_id || decisionReady)}
+            boundIntentRef={projection?.source_authorization?.intent_ref ?? null}
+            onRecoverDecision={(value) => {
+              const original = assertDeliveryWorkSessionDecision(value);
+              if (original.work_item_id !== `work-item-${target.workItemId}`) throw new Error("Source approval belongs to another Delivery target.");
+              if (!projection?.session_id) setDecision(decisionInputFromDraft(original));
+            }}
+          /> : null}
+
           {projection?.session_id ? (
             <TerasPanel
               frame="padded"
@@ -290,6 +310,7 @@ export function ExecutionWorkSessionModal({
               sessionId={projection.session_id}
               sessionRevision={projection.session_revision}
               sourceWorkRequired={nextAction?.code === "source-work-required"}
+              sourceIntentRef={sourceIntent}
               workItemId={target.workItemId}
             />
           ) : null}
@@ -353,8 +374,8 @@ export function ExecutionWorkSessionModal({
                 <TerasSignalItem
                   actions={
                     <TerasActionButton
-                      disabled={submitting}
-                      onClick={() => run(() => runtime.start(decision))}
+                      disabled={submitting || !sourceIntent}
+                      onClick={() => run(() => runtime.start(decision, sourceIntent ?? undefined))}
                     >
                       Start Work Session
                     </TerasActionButton>
