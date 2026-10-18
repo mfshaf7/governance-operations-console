@@ -1,8 +1,20 @@
 export type PrototypeSourceAction = "session" | "generate" | "accept" | "recover" | "cancel-attempt" | "publish" | "review" | "merge" | "close";
+import type { PrototypeDeliverySourceCustody } from "../domain/prototype-delivery.ts";
+
+export type PrototypePreviewPreparation = {
+  kind: "preview-profile"; port: number; support_profile: "interactive" | "unattended";
+  runtime_activation: boolean; ttl_seconds: number; decision_ref: string;
+};
+export type PrototypeDeliveryPreparation = {
+  kind: "delivery-packet"; work: { title: string; objective: string; included_scope: string[]; excluded_scope: string[]; remaining_work: string[] };
+  custody: PrototypeDeliverySourceCustody; evidence_refs: string[]; rationale: string; decision_ref: string;
+};
+export type PrototypeOwnerPreparation = PrototypePreviewPreparation | PrototypeDeliveryPreparation;
 export type PrototypeSourceRequest = {
   schema_version: 1; request_id: string; prototype_id: string;
   expected_registry_revision: string; expected_source_revision: string;
   objective: string; requested_at: string;
+  owner_preparation?: PrototypeOwnerPreparation;
 };
 export type PrototypeGenerationRequest = {
   schema_version: 1; request_id: string; execution_id: string; expected_revision: string;
@@ -35,6 +47,7 @@ export type PrototypeSourceProjection = PrototypeSourceSummary & {
       request: PrototypeGenerationRequest; request_id: string; execution_id: string;
       retry_of: string | null; state: string; objective_digest: string;
       context_packet_ref: string | null; model_profile_id: string | null; failure: string | null;
+      owner_preparation: null | { plan_digest: string; request_digest: string };
       change_set: null | { digest: string; commit_message: string; operations: PrototypeSourceOperation[] };
       source_receipt: null | { head_commit: string; receipt_digest: string };
     };

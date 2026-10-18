@@ -100,3 +100,50 @@ test("forged source receipts and sibling source operations fail before browser p
   source.realization.attempt.source_receipt = null; source.realization.attempt.change_set.operations[0].path = "prototypes/other/index.html";
   await assert.rejects(readPrototypeSource(requestId, { config, fetchImpl: async () => response(source) }), /escapes/);
 });
+
+test("trusted Preview preparation exposes finite owner intent and evidence without borrowing model scope", async () => {
+  const owner = { kind: "preview-profile", port: 18199, support_profile: "interactive", runtime_activation: true,
+    ttl_seconds: 3600, decision_ref: "record://operator-decisions/example-preview" };
+  const source = raw(); source.source_request.owner_preparation = owner;
+  const attempt = source.realization.attempt;
+  attempt.context = null; attempt.model = null;
+  attempt.owner_preparation = { authority: "workspace-prototype-studio", model_invoked: false, runtime_activated: false,
+    plan_digest: digest("owner plan"), request_digest: digest("owner request") };
+  attempt.change_set.change_set_id = `prototype-owner-plan:${attempt.owner_preparation.plan_digest.slice(7)}`;
+  attempt.change_set.operations[0].path = "records/prototype-preview-profiles/example.yaml";
+  const options = { config, fetchImpl: async () => response(source) };
+  const result = await readPrototypeSource(requestId, options);
+  assert.deepEqual(result.source_request.owner_preparation, owner);
+  assert.equal(result.realization.attempt.model_profile_id, null);
+  assert.equal(result.realization.attempt.owner_preparation.plan_digest, digest("owner plan"));
+  attempt.change_set.operations[0].path = "records/prototype-preview-profiles/other.yaml";
+  await assert.rejects(readPrototypeSource(requestId, options), /escapes/);
+  attempt.change_set.operations[0].path = "records/prototype-preview-profiles/example.yaml";
+  attempt.model = { profile_id: "prototype-source-authoring-v1" };
+  await assert.rejects(readPrototypeSource(requestId, options), /borrow model/);
+  attempt.model = null; delete attempt.owner_preparation;
+  await assert.rejects(readPrototypeSource(requestId, options), /lacks its native/);
+  for (const value of [null, { ...owner, command: "shell" }, { ...owner, port: 80 }, { ...owner, decision_ref: "" }]) {
+    assert.throws(() => assertPrototypeSourceRequest({ ...request(), owner_preparation: value }));
+  }
+});
+
+test("Delivery owner preparation accepts only its packet/registry intent and does not claim Baseline or target authority", async () => {
+  const owner = { kind: "delivery-packet", work: { title: "Synthetic continuation", objective: "Continue the accepted source", included_scope: ["Preserve source"], excluded_scope: [], remaining_work: ["Validate owner output"] },
+    custody: { classification: "non-source-work", repository_mode: "not-required", repository_gate_state: "not-required", owner: "synthetic-owner", source_ref: null, rationale: "No product source required" },
+    evidence_refs: ["record://evidence/synthetic"], rationale: "Continue through Delivery", decision_ref: "record://decisions/synthetic-handoff" };
+  assert.deepEqual(assertPrototypeSourceRequest({ ...request(), owner_preparation: owner }).owner_preparation, owner);
+  for (const value of [{ ...owner, baseline: "caller-approved" }, { ...owner, source_revision: {} }, { ...owner, evidence_refs: [] }, { ...owner, work: { ...owner.work, remaining_work: [] } }]) {
+    assert.throws(() => assertPrototypeSourceRequest({ ...request(), owner_preparation: value }));
+  }
+  const source = raw(); source.source_request.owner_preparation = owner;
+  const attempt = source.realization.attempt; attempt.context = null; attempt.model = null;
+  attempt.owner_preparation = { authority: "workspace-prototype-studio", model_invoked: false, runtime_activated: false, plan_digest: digest("packet plan"), request_digest: digest("packet request") };
+  attempt.change_set.change_set_id = `prototype-owner-plan:${attempt.owner_preparation.plan_digest.slice(7)}`;
+  attempt.change_set.operations = [{ ...attempt.change_set.operations[0], action: "replace", expected_digest: digest("prior registry"), path: "prototypes.yaml" },
+    { ...attempt.change_set.operations[0], path: `records/delivery-packets/example-${"a".repeat(64)}.json` }];
+  const options = { config, fetchImpl: async () => response(source) };
+  assert.equal((await readPrototypeSource(requestId, options)).realization.attempt.change_set.operations.length, 2);
+  attempt.change_set.operations[1].path = `records/delivery-packets/other-${"a".repeat(64)}.json`;
+  await assert.rejects(readPrototypeSource(requestId, options), /escapes/);
+});

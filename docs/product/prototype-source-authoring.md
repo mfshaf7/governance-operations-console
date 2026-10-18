@@ -52,11 +52,38 @@ caller attribution authorize mutations; browser-supplied identity is rejected.
 
 ## Separate downstream decisions and current limits
 
+The same source tool offers trusted Studio Preview-profile preparation. Choose
+that purpose before creating the immutable request and review the port, TTL,
+support mode, activation intent and operator decision reference. The broker
+derives the profile path and invokes the commissioned owner planner, not the
+model. Inspect and accept its exact draft, then use the same validation,
+Gary publication, human review, merge and cleanup controls. Neither a draft nor
+an active-profile intent starts a Preview process.
+
+Preview readback accepts only the paired `none`/`runtime-metadata-only` or
+`prototype-local`/`browser-local` declarations, with synthetic/mock internal
+review, read-only server methods and no external services or public ingress.
+Browser-local data can survive server stop/restart. Runtime/profile proof is
+not proof of browser persistence, client privacy or a hostile-script sandbox.
+The new boundary still requires exact-source Security acceptance and coherent
+commissioning; source tests do not activate it.
+
 Source delivery is not Preview proof, Candidate promotion, Baseline approval,
 Delivery ingress, graduation, product admission or application readiness.
-Trusted Preview/packet preparation and selected durable-owner bootstrap/import
-remain part of the approved whole-path work, not capabilities this tool claims
-to have completed. Use their existing owner controls when commissioned.
+Native Delivery-packet preparation is a separate purpose in this same source
+tool. Supply typed work, resolved custody intent, existing evidence, rationale
+and the operator decision reference. OOS rejects a Prototype without its real
+accepted Baseline before source resources or authorization. Studio's existing
+emitter derives and validates its actual Baseline digest and Git source/tree;
+the browser cannot supply Baseline or Git evidence. Inspect and review the
+emitted packet plus normal registry backlink through the same source path.
+After merge, use the existing canonical packet and Prototype-to-Delivery
+application control. Preparing the packet is not applying it to Delivery.
+
+Selected durable-owner bootstrap/import and post-merge owner acceptance remain
+part of the approved whole-path work, not capabilities this tool claims to have
+completed. Source preparation still needs composed review, coherent activation
+and normal Console operating proof.
 
 The current bounded source adapter is Studio-incubated synthetic/mock work.
 Public synthetic demonstration does not qualify private/client custody, every

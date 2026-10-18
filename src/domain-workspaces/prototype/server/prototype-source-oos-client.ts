@@ -83,6 +83,15 @@ async function request(path: string, body: unknown, options: Options, timeoutMs 
   }, { ...options, config }, read ? { ...authority, recordRef: `oos://prototype-source-requests${decoded}` } : undefined, 2 * 1024 * 1024, timeoutMs);
 }
 function assertScope(path: string, current: PrototypeSourceProjection) {
+  if (current.source_request.owner_preparation) {
+    if (current.source_request.owner_preparation.kind === "delivery-packet") {
+      const slug = current.prototype_id.slice("prototype:".length);
+      if (path !== "prototypes.yaml" && !new RegExp(`^records/delivery-packets/${slug}-[a-f0-9]{64}\\.json$`).test(path)) throw new Error("Owner preparation escapes its exact Studio packet/registry scope.");
+      return;
+    }
+    if (path !== `records/prototype-preview-profiles/${current.prototype_id.slice("prototype:".length)}.yaml`) throw new Error("Owner preparation escapes its exact Studio Preview profile.");
+    return;
+  }
   if (!path.startsWith(`${current.source_scope.source_root}/`) && path !== current.source_scope.design_profile) throw new Error("Source operation escapes this Prototype app/design scope.");
 }
 function verifyEvidence(raw: Record<string, unknown>) {
@@ -96,6 +105,17 @@ function verifyEvidence(raw: Record<string, unknown>) {
     if (digest(control.command) !== sourceDigest(control.command_digest)) throw new Error("Retained source control does not match its immutable command digest.");
   }
   const projection = projectPrototypeSource(raw);
+  const prepared = projection.realization?.attempt?.owner_preparation;
+  if (prepared && (!projection.source_request.owner_preparation || projection.realization?.attempt?.model_profile_id || projection.realization?.attempt?.context_packet_ref)) throw new Error("Trusted owner preparation cannot borrow model or context authority.");
+  if (projection.source_request.owner_preparation && projection.realization?.attempt?.change_set && !prepared) throw new Error("Owner metadata draft lacks its native preparation evidence.");
+  if (prepared && projection.realization?.attempt?.change_set) {
+    const change = sourceObject(attempt?.change_set), operations = projection.realization.attempt.change_set.operations;
+    if (change.change_set_id !== `prototype-owner-plan:${prepared.plan_digest.slice(7)}`) throw new Error("Owner draft is not bound to its retained plan identity.");
+    if (projection.source_request.owner_preparation?.kind === "delivery-packet"
+      ? operations.length !== 2 || !operations.some(operation => operation.path === "prototypes.yaml" && operation.action === "replace" && operation.expected_digest !== null) ||
+        operations.some(operation => operation.path !== "prototypes.yaml" && (operation.action !== "create" || operation.expected_digest !== null))
+      : operations.length !== 1 || !["create", "replace"].includes(operations[0].action)) throw new Error("Owner draft operations do not match their finite preparation purpose.");
+  }
   for (const operation of projection.realization?.attempt?.change_set?.operations ?? []) assertScope(operation.path, projection);
   const objective = projection.realization?.attempt?.objective_digest;
   if (objective && digest(projection.source_request.objective) !== objective) throw new Error("Source attempt belongs to another objective.");

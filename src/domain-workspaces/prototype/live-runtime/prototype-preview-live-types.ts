@@ -5,15 +5,18 @@ export type PrototypePreviewOwnerReceiptRef = Readonly<{
   ref: string;
 }>;
 
+export type PrototypePreviewOwnerBoundary = Readonly<{
+  data_mode: "mock" | "synthetic";
+  external_network: false;
+  public_ingress: false;
+  visibility_tier: "operator-review" | "private-internal";
+} & (
+  | { mutation_boundary: "none"; persistence_model: "runtime-metadata-only" }
+  | { mutation_boundary: "prototype-local"; persistence_model: "browser-local" }
+)>;
+
 export type PrototypePreviewOwnerProjection = Readonly<{
-  boundary: Readonly<{
-    data_mode: "mock" | "synthetic";
-    external_network: false;
-    mutation_boundary: "none";
-    persistence_model: "runtime-metadata-only";
-    public_ingress: false;
-    visibility_tier: "operator-review" | "private-internal";
-  }>;
+  boundary: PrototypePreviewOwnerBoundary;
   endpoint: string | null;
   instance_id: string | null;
   latest_receipt: PrototypePreviewOwnerReceiptRef | null;

@@ -1,4 +1,5 @@
-import type { PrototypeGenerationRequest, PrototypeSourceCommand, PrototypeSourceDraft, PrototypeSourceIntent, PrototypeSourceProjection, PrototypeSourceRequest, PrototypeSourceSummary } from "./prototype-source-types.ts";
+import type { PrototypeGenerationRequest, PrototypeOwnerPreparation, PrototypeSourceCommand, PrototypeSourceDraft, PrototypeSourceIntent, PrototypeSourceProjection, PrototypeSourceRequest, PrototypeSourceSummary } from "./prototype-source-types.ts";
+import { assertPrototypeDeliveryPreparation } from "./prototype-delivery-preparation-contract.ts";
 
 export function sourceObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) invalid();
@@ -63,10 +64,29 @@ function generation(value: unknown): PrototypeGenerationRequest {
 }
 export function assertPrototypeSourceRequest(value: unknown): PrototypeSourceRequest {
   const item = sourceObject(value);
-  exact(item, ["schema_version", "request_id", "prototype_id", "expected_registry_revision", "expected_source_revision", "objective", "requested_at"]);
+  exact(item, ["schema_version", "request_id", "prototype_id", "expected_registry_revision", "expected_source_revision", "objective", "requested_at", ...(Object.hasOwn(item, "owner_preparation") ? ["owner_preparation"] : [])]);
   const objective = sourceText(item.objective, 16384);
   if (item.schema_version !== 1 || objective.trim().length < 8 || new TextEncoder().encode(objective).length > 16384) invalid();
-  return { schema_version: 1, request_id: prototypeSourceRequestId(item.request_id), prototype_id: prototypeId(item.prototype_id), expected_registry_revision: sourceCommit(item.expected_registry_revision), expected_source_revision: sourceCommit(item.expected_source_revision), objective, requested_at: sourceTimestamp(item.requested_at) };
+  return { schema_version: 1, request_id: prototypeSourceRequestId(item.request_id), prototype_id: prototypeId(item.prototype_id), expected_registry_revision: sourceCommit(item.expected_registry_revision), expected_source_revision: sourceCommit(item.expected_source_revision), objective, requested_at: sourceTimestamp(item.requested_at), ...(Object.hasOwn(item, "owner_preparation") ? { owner_preparation: assertPrototypeOwnerPreparation(item.owner_preparation) } : {}) };
+}
+export function assertPrototypeOwnerPreparation(value: unknown): PrototypeOwnerPreparation {
+  const item = sourceObject(value);
+  if (item.kind === "delivery-packet") return assertPrototypeDeliveryPreparation(value);
+  exact(item, ["kind", "port", "support_profile", "runtime_activation", "ttl_seconds", "decision_ref"]);
+  if (item.kind !== "preview-profile" || !Number.isInteger(item.port) || Number(item.port) < 1024 || Number(item.port) > 65535 ||
+      !["interactive", "unattended"].includes(String(item.support_profile)) || typeof item.runtime_activation !== "boolean" ||
+      !Number.isInteger(item.ttl_seconds) || Number(item.ttl_seconds) < 300 || Number(item.ttl_seconds) > 86400) invalid();
+  const decision = sourceText(item.decision_ref, 512);
+  if (!/^record:\/\/[A-Za-z0-9._:/-]+$/.test(decision)) invalid();
+  return { kind: "preview-profile", port: Number(item.port), support_profile: item.support_profile as "interactive" | "unattended",
+    runtime_activation: item.runtime_activation, ttl_seconds: Number(item.ttl_seconds), decision_ref: decision };
+}
+function ownerPreparationEvidence(value: unknown): { plan_digest: string; request_digest: string } | null {
+  if (value === undefined) return null;
+  const item = sourceObject(value);
+  exact(item, ["plan_digest", "request_digest", "authority", "model_invoked", "runtime_activated"]);
+  if (item.authority !== "workspace-prototype-studio" || item.model_invoked !== false || item.runtime_activated !== false) invalid();
+  return { plan_digest: sourceDigest(item.plan_digest), request_digest: sourceDigest(item.request_digest) };
 }
 export function projectPrototypeSourceSummary(value: unknown): PrototypeSourceSummary {
   const item = sourceObject(value), scope = sourceObject(item.source_scope), landing = sourceObject(item.landing_unit);
@@ -93,6 +113,7 @@ export function projectPrototypeSource(value: unknown): PrototypeSourceProjectio
     realization: realization ? { session_id: sourceId(realization.session_id), revision: sourceTimestamp(realization.revision), state: String(realization.state), attempt: attempt ? {
       request: generation(attempt.request), request_id: sourceId(attempt.request_id), execution_id: sourceId(attempt.execution_id), retry_of: nullable(attempt.retry_of, sourceId), state: sourceText(attempt.state), objective_digest: sourceDigest(attempt.objective_digest),
       context_packet_ref: attempt.context ? sourceText(sourceObject(attempt.context).packet_ref, 1024) : null, model_profile_id: attempt.model ? sourceId(sourceObject(attempt.model).profile_id) : null, failure: attempt.failure ? sourceId(sourceObject(attempt.failure).code) : null,
+      owner_preparation: ownerPreparationEvidence(attempt.owner_preparation),
       change_set: change ? { digest: sourceDigest(change.digest), commit_message: sourceText(change.commit_message, 120), operations: array(change.operations, 64).map(value => { const row = sourceObject(value); if (!["create", "replace", "delete"].includes(String(row.action))) invalid(); return { action: row.action as "create" | "replace" | "delete", path: path(row.path), expected_digest: nullable(row.expected_digest, sourceDigest), content_digest: nullable(row.content_digest, sourceDigest) }; }) } : null,
       source_receipt: attempt.source_receipt ? { head_commit: sourceCommit(sourceObject(attempt.source_receipt).head_commit), receipt_digest: sourceDigest(sourceObject(attempt.source_receipt).receipt_digest) } : null,
     } : null } : null };

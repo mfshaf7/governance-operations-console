@@ -51,6 +51,9 @@ export function assertPrototypePreviewProjection(
   const latestReceipt = nullableReceiptRef(record.latest_receipt);
   const actions = stringArray(record.operator_actions, "operator_actions");
   const expectedActions = ["start", "status", "restart", "stop", "proof"];
+  const admittedPersistence =
+    (boundary.mutation_boundary === "none" && boundary.persistence_model === "runtime-metadata-only") ||
+    (boundary.mutation_boundary === "prototype-local" && boundary.persistence_model === "browser-local");
   if (
     record.schema_version !== 1 ||
     record.profile_id !== expected.prototypeSlug ||
@@ -62,8 +65,7 @@ export function assertPrototypePreviewProjection(
     JSON.stringify(actions) !== JSON.stringify(expectedActions) ||
     boundary.public_ingress !== false ||
     boundary.external_network !== false ||
-    boundary.mutation_boundary !== "none" ||
-    boundary.persistence_model !== "runtime-metadata-only" ||
+    !admittedPersistence ||
     !new Set(["mock", "synthetic"]).has(String(boundary.data_mode)) ||
     !new Set(["private-internal", "operator-review"]).has(String(boundary.visibility_tier))
   ) {

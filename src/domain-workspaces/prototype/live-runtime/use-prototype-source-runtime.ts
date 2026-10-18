@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PrototypeSourceAction, PrototypeSourceDraft, PrototypeSourceProjection, PrototypeSourceSummary } from "./prototype-source-types.ts";
+import type { PrototypeOwnerPreparation, PrototypeSourceAction, PrototypeSourceDraft, PrototypeSourceProjection, PrototypeSourceSummary } from "./prototype-source-types.ts";
 
 const base = "/api/prototypes/source-requests";
 export function usePrototypeSourceRuntime(prototypeId: string) {
@@ -29,10 +29,11 @@ export function usePrototypeSourceRuntime(prototypeId: string) {
     finally { busy.current = false; if (identity.current === expected) setPending(false); }
   }
   return { requests, projection, draft, error, pending, refresh,
-    create: (objective: string, sourceRevision: string) => run(async () => {
+    create: (objective: string, sourceRevision: string, ownerPreparation?: PrototypeOwnerPreparation) => run(async () => {
       const expected = identity.current;
       const value = await read<PrototypeSourceProjection>(base, { schema_version: 1, request_id: `prototype-source-request:console:${crypto.randomUUID()}`, prototype_id: expected,
-        expected_registry_revision: sourceRevision, expected_source_revision: sourceRevision, objective, requested_at: new Date().toISOString() });
+        expected_registry_revision: sourceRevision, expected_source_revision: sourceRevision, objective, requested_at: new Date().toISOString(),
+        ...(ownerPreparation ? { owner_preparation: ownerPreparation } : {}) });
       if (identity.current === expected) await refresh(value.request_id);
     }),
     inspectDraft: () => run(async () => {
