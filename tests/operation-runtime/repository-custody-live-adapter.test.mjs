@@ -13,6 +13,7 @@ import {
   RepositoryCustodyOosError,
 } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
 import { readRepositoryCustodyRegister } from "../../src/domain-workspaces/repository/live-runtime/repository-custody-live-readback.ts";
+import { emptyRepositoryIntakeDraft, repositoryIntakeCustody, repositoryIntakeRecord } from "../../src/domain-workspaces/repository/presentation/dialogs/admission/repository-intake-candidate.ts";
 import {
   assertCanonicalSourceRequest,
   canonicalSourceResponse,
@@ -31,6 +32,44 @@ const env = {
   REPOSITORY_CUSTODY_POLICY_PROFILE_URI:
     "https://workspace-governance.local/contracts/repository-custody.yaml",
 };
+
+test("Repository entrant entry uses successful matching custody, never fixture admission", async () => {
+  let request;
+  await linkExistingRepositoryCustody(intent(), { env, fetchImpl: async (_url, init) => {
+    request = JSON.parse(String(init.body)); return jsonResponse(successfulResult(request), 201);
+  } });
+  const result = successfulResult(request);
+  const [record] = projectRepositoryCustodyResults([], { retained: result });
+  assert.deepEqual(repositoryIntakeCustody(record, result), {
+    requestId: request.request_id,
+    target: { kind: "repo", name: request.requested_custody.workspace_owner_ref.slice(5) },
+  });
+  assert.equal(repositoryIntakeCustody(record), null);
+  for (const mutate of [
+    (value) => { value.status = "failed"; },
+    (value) => { value.provider_readback.provider_lifecycle_state = "archived"; },
+    (value) => { value.provider_readback.repository_identity.provider_repository_id = "999999999"; },
+    (value) => { value.receipt.repository_identity.provider_repository_id = "999999999"; },
+    (value) => { value.request.requested_custody.workspace_owner_ref = "product:not-a-repo"; },
+  ]) {
+    const denied = structuredClone(result); mutate(denied);
+    assert.equal(repositoryIntakeCustody(record, denied), null);
+  }
+});
+
+test("Repository entrant metadata requires explicit owner/validation choices and cannot supply provider identity", () => {
+  assert.equal(repositoryIntakeRecord(emptyRepositoryIntakeDraft), null);
+  const draft = { ...emptyRepositoryIntakeDraft, repoClass: "product-owner", securityBinding: "false",
+    notes: "Synthetic operator-reviewed owner", validationPosture: "covered-by-owner-repo",
+    graphRole: "product-runtime-source", validationNotes: "Owner selects applicable validation; no universal CI." };
+  const record = repositoryIntakeRecord(draft);
+  assert.equal(record.requires_security_bindings, false);
+  assert.equal(record.security_owner, null);
+  assert.equal(record.provider_repository, undefined);
+  assert.deepEqual(record.validation_behavior.catalog_refs, []);
+  assert.equal(repositoryIntakeRecord({ ...draft, securityBinding: "true" }), null);
+  assert.equal(repositoryIntakeRecord({ ...draft, securityBinding: "true", securityOwner: "security-architecture" }).security_owner, "security-architecture");
+});
 
 test("canonical Repository register survives reload through authenticated owner readback", async () => {
   let request;

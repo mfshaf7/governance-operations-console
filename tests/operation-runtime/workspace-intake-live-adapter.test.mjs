@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { deliveryWorkspaceIntakeCandidate } from "../../src/domain-workspaces/delivery/presentation/surfaces/execution-board/action-session/closeout/delivery-workspace-intake-candidate.ts";
+import { assertWorkspaceIntakeCandidate, workspaceIntakeRecordForDecision } from "../../src/console-integration/workspace-intake/workspace-intake-live-contract.ts";
 import {
   continueWorkspaceIntake,
   prepareWorkspaceIntake,
@@ -22,6 +24,89 @@ const config = {
   callerId: "governance-operations-console",
   callerSecret: "server-only-secret",
 };
+
+function custodyPreparation() {
+  const selected = { kind: "repo", name: "synthetic-owner", record_id: "repo:synthetic-owner" };
+  const source = { schema_version: 1, artifact_type: "workspace-intake-source-candidate",
+    source: { class: "repository-custody", digest: digest("c"),
+      ref: `oos://repository-custody/requests/repository-custody-request%3Asynthetic/intake/${"d".repeat(64)}` },
+    target: selected, requested_record: { kind: "repo", notes: "Operator-reviewed synthetic owner.",
+      repo_class: "product", requires_security_bindings: false, security_owner: null,
+      provider_repository: { provider: "github", provider_repository_id: "123456789",
+        full_name: "example-organization/synthetic-owner" } },
+    evidence_refs: ["oos://receipts/repository-custody/synthetic.json", "oos://readbacks/repository-provider/synthetic.json"] };
+  function sorted(value) {
+    if (Array.isArray(value)) return value.map(sorted);
+    if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map((key) => [key, sorted(value[key])]));
+    return value;
+  }
+  return { ...preparation(), target: selected, source_candidate: { ...source,
+    candidate_digest: `sha256:${createHash("sha256").update(JSON.stringify(sorted(source))).digest("hex")}` } };
+}
+
+test("custody classification projection preserves identity while explicitly clearing out-of-scope ownership", () => {
+  const source = custodyPreparation().source_candidate.requested_record;
+  assert.equal(workspaceIntakeRecordForDecision(source, "proposed"), source);
+  assert.equal(workspaceIntakeRecordForDecision(source, "admitted"), source);
+  const outside = workspaceIntakeRecordForDecision(source, "out-of-scope");
+  assert.equal(outside.repo_class, null);
+  assert.equal(outside.requires_security_bindings, null);
+  assert.equal(outside.security_owner, null);
+  assert.equal(outside.validation_behavior, undefined);
+  assert.deepEqual(outside.provider_repository, source.provider_repository);
+  assert.equal(source.repo_class, "product");
+});
+
+test("custody preparation preserves owner-derived provider binding and submission rereads the same source", async () => {
+  const reviewed = custodyPreparation();
+  const wire = reviewed.source_candidate;
+  const custody = { request_id: "repository-custody-request:synthetic", requested_record: wire.requested_record };
+  const bodies = [];
+  const options = { config, now: () => new Date("2026-09-06T01:00:00.000Z"), fetchImpl: async (url, init) => {
+    const body = JSON.parse(String(init.body));
+    bodies.push(body);
+    return String(url).endsWith("/preparations") ? json(reviewed) : json(result(body, "accepted"), 202);
+  } };
+  const prepared = await prepareWorkspaceIntake({ kind: "repo", name: "synthetic-owner" }, options, custody);
+  assert.deepEqual(prepared.source_candidate.requested_record.provider_repository, wire.requested_record.provider_repository);
+  const selected = { evidence_refs: wire.evidence_refs, label: "Synthetic owner", requested_record: wire.requested_record,
+    source: wire.source, target: { kind: "repo", name: "synthetic-owner" } };
+  await submitWorkspaceIntake({ ...intent(prepared), candidate: selected, decision: "proposed" }, options);
+  assert.deepEqual(bodies[0].repository_custody, custody);
+  assert.deepEqual(bodies[1].repository_custody, custody);
+  assert.deepEqual(bodies[2].request.requested_record.provider_repository, wire.requested_record.provider_repository);
+  assert.equal(bodies[2].request.source.class, "repository-custody");
+  assert.doesNotMatch(JSON.stringify(bodies), /server-only-secret/);
+});
+
+test("custody preparation rejects altered bytes, mismatched target and malformed provider identity", async () => {
+  for (const mode of ["digest", "target", "numeric-id", "extra-binding", "invalid-name"]) {
+    const reviewed = custodyPreparation();
+    const wire = reviewed.source_candidate;
+    if (mode === "digest") wire.requested_record.notes = "Substituted owner response";
+    if (mode === "target") wire.target.name = "another-owner";
+    if (mode === "numeric-id") wire.requested_record.provider_repository.provider_repository_id = 123456789;
+    if (mode === "extra-binding") wire.requested_record.provider_repository.installation_id = 123;
+    if (mode === "invalid-name") wire.requested_record.provider_repository.full_name = "../untrusted";
+    await assert.rejects(prepareWorkspaceIntake({ kind: "repo", name: "synthetic-owner" }, {
+      config, fetchImpl: async () => json(reviewed),
+    }));
+  }
+  const wire = custodyPreparation().source_candidate;
+  const candidateValue = { ...wire, label: "Synthetic owner" };
+  assert.deepEqual(assertWorkspaceIntakeCandidate(candidateValue).requested_record.provider_repository, wire.requested_record.provider_repository);
+});
+
+test("a custody classification that changes reviewed source metadata requires fresh preparation before any submit", async () => {
+  const reviewed = custodyPreparation();
+  const wire = reviewed.source_candidate;
+  let calls = 0;
+  const candidateValue = { ...wire, label: "Synthetic owner" };
+  await assert.rejects(submitWorkspaceIntake({ ...intent(reviewed), candidate: candidateValue, decision: "out-of-scope" }, {
+    config, fetchImpl: async () => { calls += 1; return json(reviewed); },
+  }), /fresh custody preparation/);
+  assert.equal(calls, 0);
+});
 
 test("case:console-adapters-positive prepares, submits, continues, and projects exact OOS evidence", async () => {
   const calls = [];

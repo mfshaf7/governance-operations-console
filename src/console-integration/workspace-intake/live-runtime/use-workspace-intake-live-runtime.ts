@@ -8,6 +8,7 @@ import {
 } from "../workspace-intake-live-contract.ts";
 import type {
   WorkspaceIntakeCandidate,
+  WorkspaceIntakeCustodyPreparation,
   WorkspaceIntakeDecision,
   WorkspaceIntakePreparation,
   WorkspaceIntakeResult,
@@ -31,10 +32,11 @@ export function useWorkspaceIntakeLiveRuntime() {
   const [error, setError] = useState<WorkspaceIntakeClientError | null>(null);
   const [pending, setPending] = useState(false);
 
-  const prepare = useCallback(async (candidate: WorkspaceIntakeCandidate) => {
+  const prepare = useCallback(async (candidate: Pick<WorkspaceIntakeCandidate, "target">, custody?: WorkspaceIntakeCustodyPreparation) => {
+    setPreparation(null);
     return run(async () => {
       const body = await jsonRequest("/api/workspace-intake/preparations", {
-        body: JSON.stringify({ target: candidate.target }),
+        body: JSON.stringify({ target: candidate.target, ...(custody ? { repository_custody: custody } : {}) }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });

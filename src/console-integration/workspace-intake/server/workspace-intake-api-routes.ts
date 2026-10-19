@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   assertWorkspaceIntakeRequestId,
   assertWorkspaceIntakeTarget,
+  assertWorkspaceIntakeCustodyPreparation,
   WorkspaceIntakeContractError,
 } from "../workspace-intake-live-contract.ts";
 import {
@@ -21,7 +22,13 @@ export async function prepareWorkspaceIntakeRoute(request: NextRequest) {
   return execute(async () => {
     requireConfigured();
     const input = parseRecord(await request.json().catch(() => null));
-    return prepareWorkspaceIntake(assertWorkspaceIntakeTarget(input.target));
+    if (Object.keys(input).some((key) => !["target", "repository_custody"].includes(key))) {
+      throw new WorkspaceIntakeContractError("Workspace Intake preparation fields are invalid.");
+    }
+    const target = assertWorkspaceIntakeTarget(input.target);
+    const custody = input.repository_custody === undefined ? undefined : assertWorkspaceIntakeCustodyPreparation(input.repository_custody);
+    if (custody && target.kind !== "repo") throw new WorkspaceIntakeContractError("Custody preparation requires a repository target.");
+    return prepareWorkspaceIntake(target, {}, custody);
   });
 }
 

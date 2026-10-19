@@ -84,6 +84,14 @@ decision still does not add the repository to active `repos.yaml`; the
 active-inventory promotion workflow owns that later governed change and
 receipt.
 
+The staged `Prepare Workspace Intake` action consumes successful matching OOS
+custody, collects explicit owner/validation metadata, and opens the shared
+Intake Decision / Review / Result workflow with an OOS-derived source candidate.
+It does not classify in page-local Repository state, promote Inventory, grant
+source access or reconcile Catalog. Missing current custody/capability disables
+entry; owner readback failures remain explicit. See
+[`../workspace-intake-live-integration.md`](../workspace-intake-live-integration.md).
+
 Visible Repository summary cards must be computed from the current merged
 repository records and retained local setup receipt overlays. The control surface
 must not read fixture `summary` directly as live posture.

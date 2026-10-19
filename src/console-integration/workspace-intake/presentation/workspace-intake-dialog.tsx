@@ -17,9 +17,11 @@ import {
 } from "@/teras";
 
 import { useWorkspaceIntakeLiveRuntime } from "../live-runtime/use-workspace-intake-live-runtime.ts";
+import { workspaceIntakeRecordForDecision } from "../workspace-intake-live-contract.ts";
 import type {
   WorkspaceIntakeCandidate,
   WorkspaceIntakeDecision,
+  WorkspaceIntakeCustodyPreparation,
   WorkspaceIntakeResult,
 } from "../workspace-intake-live-types.ts";
 
@@ -28,9 +30,13 @@ type IntakeDecisionSelection = WorkspaceIntakeDecision | "unselected";
 
 export function WorkspaceIntakeDialog({
   candidate,
+  repositoryCustody,
+  returnLabel = "Back to Delivery",
   onClose,
 }: {
   candidate: WorkspaceIntakeCandidate;
+  repositoryCustody?: WorkspaceIntakeCustodyPreparation;
+  returnLabel?: string;
   onClose: () => void;
 }) {
   const runtime = useWorkspaceIntakeLiveRuntime();
@@ -40,12 +46,28 @@ export function WorkspaceIntakeDialog({
   const [confirmed, setConfirmed] = useState(false);
   const [requestId, setRequestId] = useState(createRequestId);
 
+  const selectedCustody = useMemo(() => {
+    if (!repositoryCustody) return undefined;
+    const requested = workspaceIntakeRecordForDecision(repositoryCustody.requested_record,
+      decision === "unselected" ? "proposed" : decision);
+    if (requested.kind !== "repo") return undefined;
+    return { request_id: repositoryCustody.request_id, requested_record: requested };
+  }, [repositoryCustody, decision]);
+  const sourceCandidate = runtime.preparation?.source_candidate;
+  const reviewedCandidate: WorkspaceIntakeCandidate = sourceCandidate ? {
+    label: candidate.label, target: { kind: sourceCandidate.target.kind, name: sourceCandidate.target.name },
+    source: sourceCandidate.source, requested_record: sourceCandidate.requested_record,
+    evidence_refs: sourceCandidate.evidence_refs,
+  } : candidate;
+
   useEffect(() => {
-    void runtime.prepare(candidate).catch(() => undefined);
-  }, [candidate.target.kind, candidate.target.name, runtime.prepare]);
+    setConfirmed(false);
+    void runtime.prepare(candidate, selectedCustody).catch(() => undefined);
+  }, [candidate, selectedCustody, runtime.prepare]);
 
   const decisionComplete = decision !== "unselected";
-  const reviewComplete = decisionComplete && confirmed && Boolean(runtime.preparation);
+  const reviewComplete = decisionComplete && confirmed && !runtime.pending && Boolean(runtime.preparation) &&
+    (!repositoryCustody || Boolean(sourceCandidate));
   const result = runtime.result;
   const steps = useMemo(
     () => [
@@ -77,7 +99,7 @@ export function WorkspaceIntakeDialog({
   async function submit() {
     if (!reviewComplete || runtime.pending) return;
     await runtime
-      .submit({ candidate, decision, requestId })
+      .submit({ candidate: reviewedCandidate, decision, requestId })
       .then(() => setActiveStep("result"))
       .catch(() => undefined);
   }
@@ -87,7 +109,7 @@ export function WorkspaceIntakeDialog({
     setRequestId(createRequestId());
     setConfirmed(false);
     setActiveStep("decision");
-    void runtime.prepare(candidate).catch(() => undefined);
+    void runtime.prepare(candidate, selectedCustody).catch(() => undefined);
   }
 
   return (
@@ -109,18 +131,18 @@ export function WorkspaceIntakeDialog({
             activeStep === "review"
               ? { label: "Back", onClick: () => setActiveStep("decision") }
               : activeStep === "decision"
-                ? { label: "Back to Delivery", onClick: onClose }
+                ? { label: returnLabel, onClick: onClose }
                 : undefined
           }
           finish={
             activeStep === "result"
-              ? { label: "Back to Delivery", onClick: onClose }
+              ? { label: returnLabel, onClick: onClose }
               : undefined
           }
           next={
             activeStep === "decision"
               ? {
-                  disabled: !decisionComplete || !runtime.preparation,
+                  disabled: !decisionComplete || !runtime.preparation || runtime.pending || Boolean(repositoryCustody && !sourceCandidate),
                   label: "Review Classification",
                   onClick: () => setActiveStep("review"),
                 }
@@ -149,7 +171,7 @@ export function WorkspaceIntakeDialog({
       }}
       support={
         <WorkspaceIntakeSupport
-          candidate={candidate}
+          candidate={reviewedCandidate}
           error={runtime.error?.message}
           onCancel={() => void runtime.cancel(requestId).catch(() => undefined)}
           onContinue={() => void runtime.continueRequest(requestId).catch(() => undefined)}
@@ -170,9 +192,11 @@ export function WorkspaceIntakeDialog({
         >
           <TerasChoiceGroup<IntakeDecisionSelection>
             ariaLabel="Workspace classification"
+            disabled={runtime.pending}
             frame="tray"
             label="Classification"
             onSelect={(value) => {
+              if (runtime.pending) return;
               setDecision(value);
               setConfirmed(false);
             }}
@@ -205,7 +229,14 @@ export function WorkspaceIntakeDialog({
             items={[
               { label: "Decision", value: decision },
               { label: "Target", value: `${candidate.target.kind}:${candidate.target.name}` },
-              { label: "Source", value: candidate.source.class },
+              { label: "Source", value: reviewedCandidate.source.class },
+              ...(reviewedCandidate.requested_record.kind === "repo" ? [
+                { label: "Repository class", value: reviewedCandidate.requested_record.repo_class ?? "Not in scope" },
+                { label: "Security bindings", value: reviewedCandidate.requested_record.requires_security_bindings === null ? "Not in scope" : String(reviewedCandidate.requested_record.requires_security_bindings) },
+                { label: "Security owner", value: reviewedCandidate.requested_record.security_owner ?? "None" },
+                { label: "Provider identity", value: reviewedCandidate.requested_record.provider_repository ? `${reviewedCandidate.requested_record.provider_repository.full_name} / ${reviewedCandidate.requested_record.provider_repository.provider_repository_id}` : "Legacy source" },
+                { label: "Validation posture", value: reviewedCandidate.requested_record.validation_behavior?.posture ?? "Not in scope" },
+              ] : []),
               {
                 label: "Current Record",
                 value: runtime.preparation?.expected_state.record_version
@@ -272,6 +303,8 @@ function WorkspaceIntakeSupport({
           columns={1}
           items={[
             { label: "Source ref", value: candidate.source.ref },
+            { label: "Source digest", value: candidate.source.digest },
+            ...(preparation?.source_candidate ? [{ label: "Candidate digest", value: preparation.source_candidate.candidate_digest }] : []),
             { label: "Evidence", value: String(candidate.evidence_refs.length) },
             { label: "Authority", value: preparation?.authority_revision.slice(0, 12) ?? "Unavailable" },
           ]}

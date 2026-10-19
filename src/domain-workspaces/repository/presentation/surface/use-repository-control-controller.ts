@@ -47,6 +47,7 @@ import {
   repositorySummaryFromRecords,
 } from "../shared/repository-control-projection.ts";
 import { useRepositoryCustodyLiveRuntime } from "../../live-runtime/use-repository-custody-live-runtime.ts";
+import { repositoryIntakeCustody } from "../dialogs/admission/repository-intake-candidate.ts";
 import {
   projectRepositoryCustodyResults,
   projectRepositoryProvisioningResults,
@@ -107,6 +108,7 @@ export function useRepositoryControlController({
     "repository-provisioning",
     "mutation",
   );
+  const canClassifyRepository = consoleRuntimeCapabilityExecutable(consoleRuntime, "workspace-intake", "mutation");
   const lifecycleRuntime = useRepositoryLifecycleLiveRuntime();
   const proposalRequestRecords = useSyncExternalStore(
     subscribeProposalRepositoryRequestRecords,
@@ -170,6 +172,9 @@ export function useRepositoryControlController({
   const [historyRepositoryId, setHistoryRepositoryId] = useState<string | null>(
     null,
   );
+  const [intakeRepositoryId, setIntakeRepositoryId] = useState<string | null>(null);
+  const allCustodyResults = [...Object.values(custodyRuntime.resultsByRepositoryId),
+    ...Object.values(custodyRuntime.provisioningResultsByRequestId)];
   const [requestCloseGuardOpen, setRequestCloseGuardOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [requestId, setRequestId] = useState(createRepositoryProvisionRequestId);
@@ -255,6 +260,9 @@ export function useRepositoryControlController({
         : null,
     [inspectedRepositoryId, records],
   );
+  const selectedIntakeCustody = allCustodyResults.find((result) => repositoryIntakeCustody(selectedRepository ?? null, result));
+  const intakeRepository = records.find((record) => record.id === intakeRepositoryId) ?? null;
+  const intakeCustodyResult = allCustodyResults.find((result) => repositoryIntakeCustody(intakeRepository, result));
   const custodyRepository = useMemo(
     () =>
       custodyRepositoryId
@@ -610,6 +618,13 @@ export function useRepositoryControlController({
   }
 
   return {
+    intake: {
+      canPrepare: canClassifyRepository && custodyRuntime.sourceStatus === "current" && Boolean(selectedIntakeCustody),
+      open: () => { if (canClassifyRepository && selectedRepository && selectedIntakeCustody) setIntakeRepositoryId(selectedRepository.id); },
+      close: () => setIntakeRepositoryId(null),
+      repository: intakeRepository,
+      custodyResult: intakeCustodyResult,
+    },
     proposalGate: {
       custodyCurrent: custodyRuntime.sourceStatus === "current",
       custodyResults: [
