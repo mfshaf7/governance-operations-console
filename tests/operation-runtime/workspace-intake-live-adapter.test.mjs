@@ -11,6 +11,7 @@ import {
   readWorkspaceIntake,
   submitWorkspaceIntake,
   WorkspaceIntakeOosError,
+  listWorkspaceIntakeRequests,
 } from "../../src/console-integration/workspace-intake/server/workspace-intake-oos-client.ts";
 import {
   assertCanonicalSourceRequest,
@@ -55,6 +56,39 @@ test("custody classification projection preserves identity while explicitly clea
   assert.equal(outside.validation_behavior, undefined);
   assert.deepEqual(outside.provider_repository, source.provider_repository);
   assert.equal(source.repo_class, "product");
+});
+
+test("retained Intake list verifies source authority, exact custody, closed metadata and candidate digest", async () => {
+  const wire = custodyPreparation().source_candidate;
+  const custodyId = "repository-custody-request:synthetic";
+  const query = new URLSearchParams({ target_kind: "repo", target_name: wire.target.name, custody_request_id: custodyId });
+  const page = { schema_version: 1, workflow_id: "workspace-intake", target: wire.target,
+    custody_request_id: custodyId, revision: 1, pending_request_count: 1, updated_at: "2026-10-19T01:00:00Z", next_cursor: null,
+    records: [{ request_id: "workspace-intake-request:retained", requested_at: "2026-10-19T01:00:00Z",
+      updated_at: "2026-10-19T01:00:00Z", revision: 1, status: "accepted", classification: "proposed", candidate: wire }] };
+  const options = value => ({ config, fetchImpl: async (url, init) => {
+    assert.equal(String(url), `${config.baseUrl}/v1/workspace-intake/requests?${query}`);
+    assert.equal(init.method, "GET");
+    assertCanonicalSourceRequest(init);
+    assert.equal(init.headers["x-oos-caller-secret"], config.callerSecret);
+    return canonicalSourceResponse(value, { recordRef: `oos://workspace-intake/requests?${query}`,
+      sourceOwner: "operator-orchestration-service" });
+  } });
+  const listed = await listWorkspaceIntakeRequests(wire.target.name, custodyId, null, options(page));
+  assert.equal(listed.records[0].request_id, "workspace-intake-request:retained");
+  assert.equal(listed.pending_request_count, 1);
+  for (const mutate of [
+    value => { value.target.name = "another-owner"; },
+    value => { value.custody_request_id = "repository-custody-request:other"; },
+    value => { value.records[0].candidate.requested_record.notes = "Substituted source metadata"; },
+    value => { value.records.push(structuredClone(value.records[0])); },
+    value => { value.records[0].token = "not-admitted"; },
+    value => { value.pending_request_count = 0; },
+    value => { value.next_cursor = "../private"; },
+  ]) {
+    const denied = structuredClone(page); mutate(denied);
+    await assert.rejects(listWorkspaceIntakeRequests(wire.target.name, custodyId, null, options(denied)), /target|custody|digest|metadata/i);
+  }
 });
 
 test("custody preparation preserves owner-derived provider binding and submission rereads the same source", async () => {

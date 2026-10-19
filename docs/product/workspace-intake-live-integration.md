@@ -74,6 +74,17 @@ Decision / Review / Result dialog opens. Changing classification prepares the
 exact normalized record again and clears confirmation. The review shows the
 provider ID, source/candidate digests and authority revision.
 
+The entrant surface first reads its retained Intake requests from OOS. The
+list is caller/target/custody-bound, newest-first, and bounded by record count
+and bytes. `Reopen original request` reads that acknowledged request and shows
+only its Result/progress controls; it does not prepare or submit classification.
+Existing continue/cancel/review actions retain the original identity. A pending
+request anywhere in the matching journal blocks a new classification, including
+when it is outside the visible page. Page navigation and refresh remain reads.
+There is no browser-storage authority, empty-success fallback, or restart-driven
+new request. A terminal correction returns to explicit entrant preparation and
+review rather than silently editing the acknowledged command.
+
 This remains staged source. Whole-source acceptance, coherent Platform
 commissioning and the real business-path witness remain required; passing
 adapter/UI tests alone does not prove a completed Console route. Canonical

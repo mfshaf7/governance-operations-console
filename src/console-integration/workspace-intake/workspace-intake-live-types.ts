@@ -192,3 +192,25 @@ export type WorkspaceIntakeClientError = Readonly<{
   message: string;
   retryable: boolean;
 }>;
+
+export type WorkspaceIntakeRetainedRequest = Readonly<{
+  request_id: string;
+  requested_at: string;
+  updated_at: string;
+  status: WorkspaceIntakeResult["status"];
+  revision: number;
+  classification: WorkspaceIntakeDecision;
+  candidate: WorkspaceIntakeSourceCandidate;
+}>;
+
+export type WorkspaceIntakeRequestPage = Readonly<{
+  schema_version: 1;
+  workflow_id: "workspace-intake";
+  target: WorkspaceIntakeTarget;
+  custody_request_id: string;
+  revision: number;
+  pending_request_count: number;
+  updated_at: string | null;
+  records: readonly WorkspaceIntakeRetainedRequest[];
+  next_cursor: string | null;
+}>;

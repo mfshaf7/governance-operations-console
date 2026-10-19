@@ -11,12 +11,29 @@ import {
   continueWorkspaceIntake,
   prepareWorkspaceIntake,
   readWorkspaceIntake,
+  listWorkspaceIntakeRequests,
   submitWorkspaceIntake,
   workspaceIntakeOosConfigured,
   WorkspaceIntakeOosError,
 } from "./workspace-intake-oos-client.ts";
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
+
+export async function listWorkspaceIntakeRequestsRoute(request: NextRequest) {
+  return execute(async () => {
+    requireConfigured();
+    const parameters = request.nextUrl.searchParams, keys = [...parameters.keys()];
+    if (new Set(keys).size !== keys.length || keys.some(key => !["target_name", "custody_request_id", "cursor"].includes(key))) {
+      throw new WorkspaceIntakeContractError("Retained Intake list parameters are invalid.");
+    }
+    const target = assertWorkspaceIntakeTarget({ kind: "repo", name: parameters.get("target_name") });
+    const custody = parameters.get("custody_request_id"), cursor = parameters.get("cursor");
+    if (!custody || custody.length > 256 || (cursor !== null && !/^[0-9a-f]{64}$/.test(cursor))) {
+      throw new WorkspaceIntakeContractError("Retained Intake requires an exact custody selector and optional cursor.");
+    }
+    return listWorkspaceIntakeRequests(target.name, custody, cursor);
+  });
+}
 
 export async function prepareWorkspaceIntakeRoute(request: NextRequest) {
   return execute(async () => {

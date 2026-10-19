@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TerasActionButton, TerasFieldStack, TerasMetadataList, TerasModalShell,
-  TerasNoteField, TerasSelectField, TerasTextField, TerasContentTray } from "@/teras";
+  TerasNoteField, TerasSelectField, TerasTextField, TerasContentTray, TerasList, TerasSignalItem, TerasActionRow } from "@/teras";
 import { WorkspaceIntakeDialog } from "@/console-integration/workspace-intake/presentation/workspace-intake-dialog.tsx";
 import { useWorkspaceIntakeLiveRuntime } from "@/console-integration/workspace-intake/live-runtime/use-workspace-intake-live-runtime.ts";
 import type { WorkspaceIntakeCandidate, WorkspaceIntakeCustodyPreparation } from "@/console-integration/workspace-intake/workspace-intake-live-types.ts";
@@ -21,14 +21,18 @@ export function RepositoryIntakeDialog({ repository, custodyResult, onClose }: {
 }) {
   const runtime = useWorkspaceIntakeLiveRuntime();
   const [draft, setDraft] = useState(emptyRepositoryIntakeDraft);
-  const [review, setReview] = useState<{ candidate: WorkspaceIntakeCandidate; custody: WorkspaceIntakeCustodyPreparation } | null>(null);
+  const [review, setReview] = useState<{ candidate: WorkspaceIntakeCandidate; custody?: WorkspaceIntakeCustodyPreparation; requestId?: string } | null>(null);
   const custody = repositoryIntakeCustody(repository, custodyResult);
+  const targetName = custody?.target.name, custodyRequestId = custody?.requestId;
+  useEffect(() => {
+    if (targetName && custodyRequestId) void runtime.list(targetName, custodyRequestId).catch(() => undefined);
+  }, [targetName, custodyRequestId, runtime.list]);
   const requestedRecord = useMemo(() => repositoryIntakeRecord(draft), [draft]);
   function update(field: keyof RepositoryIntakeDraft, value: string) {
     if (!runtime.pending) setDraft((current) => ({ ...current, [field]: value }));
   }
   async function prepare() {
-    if (!custody || !requestedRecord || runtime.pending) return;
+    if (!custody || !requestedRecord || runtime.pending || !runtime.requestPage || runtime.requestPage.pending_request_count) return;
     const selection = { request_id: custody.requestId, requested_record: requestedRecord };
     const preparation = await runtime.prepare({ target: custody.target }, selection).catch(() => null);
     const source = preparation?.source_candidate;
@@ -39,17 +43,40 @@ export function RepositoryIntakeDialog({ repository, custodyResult, onClose }: {
     } });
   }
   if (review) return <WorkspaceIntakeDialog candidate={review.candidate} repositoryCustody={review.custody}
-    returnLabel="Back to Repository" onClose={onClose} />;
+    initialRequestId={review.requestId} onNewCandidate={() => {
+      setReview(null);
+      if (targetName && custodyRequestId) void runtime.list(targetName, custodyRequestId).catch(() => undefined);
+    }} returnLabel="Back to Repository" onClose={onClose} />;
   return <TerasModalShell bodyLayout="scroll" height="content" width="standard"
     kicker="Workspace Intake" title="Prepare repository entrant" surfaceId="repository-intake-preparation"
     description="Prepare a candidate from successful OOS custody. Classification, trusted bootstrap, active Inventory and Delivery Catalog are separate reviewed actions."
     onClose={onClose} footer={<>
       <TerasActionButton emphasis="secondary" onClick={onClose}>Back to Repository</TerasActionButton>
-      <TerasActionButton disabled={!custody || !requestedRecord || runtime.pending} onClick={() => void prepare()}>
+      <TerasActionButton disabled={!custody || !requestedRecord || runtime.pending || !runtime.requestPage || Boolean(runtime.requestPage.pending_request_count)} onClick={() => void prepare()}>
         {runtime.pending ? "Reading custody and authority…" : "Prepare exact custody candidate"}
       </TerasActionButton>
     </>}>
     <TerasFieldStack spacing="loose">
+      <TerasContentTray kicker="Retained Intake requests"
+        description={runtime.requestPage ? runtime.requestPage.pending_request_count
+          ? `${runtime.requestPage.pending_request_count} pending request(s). Reopen the original request before starting another classification.`
+          : "No pending classification blocks a new reviewed decision. Reopening history only reads OOS."
+          : "Reading the existing owner journal; a missing or unavailable read never becomes an empty-success fallback."}
+        actions={<TerasActionRow>
+          <TerasActionButton emphasis="secondary" disabled={!targetName || !custodyRequestId || runtime.pending}
+            onClick={() => { if (targetName && custodyRequestId) void runtime.list(targetName, custodyRequestId).catch(() => undefined); }}>Refresh retained requests</TerasActionButton>
+          {runtime.requestPage?.next_cursor ? <TerasActionButton emphasis="secondary" disabled={runtime.pending}
+            onClick={() => { if (targetName && custodyRequestId) void runtime.list(targetName, custodyRequestId, runtime.requestPage!.next_cursor).catch(() => undefined); }}>More retained requests</TerasActionButton> : null}
+        </TerasActionRow>}>
+        {runtime.requestPage?.records.length ? <TerasList frame="contained" scrollHeight="short">
+          {runtime.requestPage.records.map(entry => <TerasSignalItem key={entry.request_id}
+            label={entry.request_id} title={`${entry.classification} / ${entry.status}`} detail={entry.updated_at}
+            ariaLabel={`Reopen original request ${entry.request_id}`}
+            actionLabel="Reopen original request" tone="info" onSelect={() => setReview({ requestId: entry.request_id,
+              candidate: { label: repository.name, target: { kind: entry.candidate.target.kind, name: entry.candidate.target.name },
+                requested_record: entry.candidate.requested_record, source: entry.candidate.source, evidence_refs: entry.candidate.evidence_refs } })} />)}
+        </TerasList> : null}
+      </TerasContentTray>
       <TerasMetadataList items={[
         { label: "Provider repository", value: repository.githubUrl },
         { label: "Workspace entrant", value: custody ? `repo:${custody.target.name}` : "Successful matching custody required" },

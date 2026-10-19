@@ -21,6 +21,7 @@ import {
   sameWorkspaceIntakePreparation,
   WorkspaceIntakeContractError,
   workspaceIntakeRecordForDecision as recordForDecision,
+  assertWorkspaceIntakeRequestPage,
 } from "../workspace-intake-live-contract.ts";
 import type {
   WorkspaceIntakePreparation,
@@ -50,6 +51,25 @@ export class WorkspaceIntakeOosError extends Error {
 
 export function workspaceIntakeOosConfigured(env = process.env) {
   return consoleOosModeSelected(env);
+}
+
+export async function listWorkspaceIntakeRequests(targetName: string, custodyRequestId: string,
+  cursor: string | null = null, options: RequestOptions = {}) {
+  const query = new URLSearchParams({ target_kind: "repo", target_name: targetName, custody_request_id: custodyRequestId });
+  if (cursor !== null) query.set("cursor", cursor);
+  const endpoint = `/v1/workspace-intake/requests?${query}`;
+  const value = await request(endpoint, { method: "GET" }, options, {
+    authority: "operator-orchestration-service", sourceOwner: "operator-orchestration-service",
+    recordRef: `oos://workspace-intake/requests?${query}`,
+  });
+  try {
+    const page = assertWorkspaceIntakeRequestPage(value, targetName, custodyRequestId);
+    for (const entry of page.records) {
+      const { candidate_digest: expected, ...content } = entry.candidate;
+      if (canonicalDigest(content) !== expected) throw contractError("Retained custody candidate digest does not match its content.");
+    }
+    return page;
+  } catch (error) { throw projectionError(error); }
 }
 
 export async function prepareWorkspaceIntake(

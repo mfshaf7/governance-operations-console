@@ -32,19 +32,23 @@ export function WorkspaceIntakeDialog({
   candidate,
   repositoryCustody,
   returnLabel = "Back to Delivery",
+  initialRequestId,
+  onNewCandidate,
   onClose,
 }: {
   candidate: WorkspaceIntakeCandidate;
   repositoryCustody?: WorkspaceIntakeCustodyPreparation;
   returnLabel?: string;
+  initialRequestId?: string;
+  onNewCandidate?: () => void;
   onClose: () => void;
 }) {
   const runtime = useWorkspaceIntakeLiveRuntime();
-  const [activeStep, setActiveStep] = useState<IntakeStep>("decision");
+  const [activeStep, setActiveStep] = useState<IntakeStep>(initialRequestId ? "result" : "decision");
   const [decision, setDecision] =
     useState<IntakeDecisionSelection>("unselected");
   const [confirmed, setConfirmed] = useState(false);
-  const [requestId, setRequestId] = useState(createRequestId);
+  const [requestId, setRequestId] = useState(() => initialRequestId ?? createRequestId());
 
   const selectedCustody = useMemo(() => {
     if (!repositoryCustody) return undefined;
@@ -61,9 +65,13 @@ export function WorkspaceIntakeDialog({
   } : candidate;
 
   useEffect(() => {
+    if (initialRequestId) {
+      void runtime.read(initialRequestId).catch(() => undefined);
+      return;
+    }
     setConfirmed(false);
     void runtime.prepare(candidate, selectedCustody).catch(() => undefined);
-  }, [candidate, selectedCustody, runtime.prepare]);
+  }, [candidate, selectedCustody, initialRequestId, runtime.read, runtime.prepare]);
 
   const decisionComplete = decision !== "unselected";
   const reviewComplete = decisionComplete && confirmed && !runtime.pending && Boolean(runtime.preparation) &&
@@ -105,6 +113,7 @@ export function WorkspaceIntakeDialog({
   }
 
   function startCorrection() {
+    if (initialRequestId) { onNewCandidate?.(); return; }
     runtime.reset();
     setRequestId(createRequestId());
     setConfirmed(false);
@@ -153,6 +162,7 @@ export function WorkspaceIntakeDialog({
       kicker="Workspace Intake"
       onClose={onClose}
       onStepSelect={(stepId) => {
+        if (initialRequestId) return;
         if (
           stepId === "decision" ||
           (stepId === "review" && decisionComplete) ||
@@ -163,7 +173,7 @@ export function WorkspaceIntakeDialog({
       }}
       statusLabel={result?.status ?? (runtime.preparation ? "Prepared" : "Unavailable")}
       statusTone={result ? resultTone(result) : runtime.preparation ? "info" : "warn"}
-      steps={steps}
+      steps={initialRequestId ? [{ id: "result", label: "Retained Request", stateLabel: result?.status ?? "Reading", tone: resultTone(result) }] : steps}
       subject={{
         detail: `${candidate.target.kind} / ${candidate.target.name}`,
         eyebrow: "Workspace Candidate",
@@ -178,6 +188,7 @@ export function WorkspaceIntakeDialog({
           onStartCorrection={startCorrection}
           pending={runtime.pending}
           preparation={runtime.preparation}
+          retained={Boolean(initialRequestId)}
           result={result}
         />
       }
@@ -279,6 +290,7 @@ function WorkspaceIntakeSupport({
   pending,
   preparation,
   result,
+  retained = false,
 }: {
   candidate: WorkspaceIntakeCandidate;
   error?: string;
@@ -288,6 +300,7 @@ function WorkspaceIntakeSupport({
   pending: boolean;
   preparation: ReturnType<typeof useWorkspaceIntakeLiveRuntime>["preparation"];
   result: WorkspaceIntakeResult | null;
+  retained?: boolean;
 }) {
   return (
     <>
@@ -295,8 +308,8 @@ function WorkspaceIntakeSupport({
         description="Source evidence and current canonical binding used for this classification."
         fit="content"
         kicker="Candidate Evidence"
-        title={preparation ? "Authority Current" : "Authority Unavailable"}
-        tone={preparation ? "info" : "warn"}
+        title={retained ? "Retained owner request" : preparation ? "Authority Current" : "Authority Unavailable"}
+        tone={retained || preparation ? "info" : "warn"}
         treatment="rail"
       >
         <TerasMetadataList
@@ -306,7 +319,7 @@ function WorkspaceIntakeSupport({
             { label: "Source digest", value: candidate.source.digest },
             ...(preparation?.source_candidate ? [{ label: "Candidate digest", value: preparation.source_candidate.candidate_digest }] : []),
             { label: "Evidence", value: String(candidate.evidence_refs.length) },
-            { label: "Authority", value: preparation?.authority_revision.slice(0, 12) ?? "Unavailable" },
+            { label: "Authority", value: preparation?.authority_revision.slice(0, 12) ?? (retained ? "OOS rechecks current authority before advancing" : "Unavailable") },
           ]}
         />
       </TerasWizardPanel>
@@ -328,7 +341,7 @@ function WorkspaceIntakeSupport({
                   </TerasActionButton>
                 ) : result.next_action === "submit-corrected-request" ? (
                   <TerasActionButton onClick={onStartCorrection}>
-                    Correct Request
+                    {retained ? "Prepare a reviewed correction" : "Correct Request"}
                   </TerasActionButton>
                 ) : undefined
           }
@@ -397,6 +410,7 @@ function WorkspaceIntakeResultPanel({
           <TerasMetadataList
             items={[
               { label: "Status", value: result.status },
+              { label: "Request", value: result.request_id },
               { label: "Revision", value: String(result.revision) },
               { label: "Canonical Mutation", value: result.canonical_mutation ? "Proven" : "Not claimed" },
               { label: "Receipt", value: result.receipt?.receipt_id ?? "Pending" },
