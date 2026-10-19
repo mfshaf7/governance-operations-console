@@ -94,3 +94,13 @@ Console can recover that decision and its original source authorization after
 reload. Start/continue and accepted-source recovery forward only the exact
 source-intent reference separately from the unchanged business/model inputs.
 These staged consumers still require composed review and operating proof.
+
+The shared authorization panel also recognizes the distinct staged
+`repository-bootstrap` subject. Its trusted-owner purpose displays the finite
+allowed control files, template/plan digests, actual proposed Intake reference
+and separate optional workflow-write approval. It is not an ordinary-source
+permission and grants no model application writing, Inventory admission or
+runtime activation. Ordinary Delivery/Prototype parsers remain closed to this
+purpose. The staged [Repository entry](repository-owner-setup.md) consumes its
+own OOS workflow; end-to-end operating proof remains pending. Recognizing an
+authorization is not completing owner setup.

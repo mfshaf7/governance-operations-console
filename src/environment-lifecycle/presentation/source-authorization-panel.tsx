@@ -14,12 +14,18 @@ export function SourceAuthorizationPanel({ subject, sourceStartDigest, decision 
   useEffect(() => { onIntentChange(preparation?.authorization.state === "approved" ? preparation.intent_id : null); }, [preparation, onIntentChange]);
   const canPrepare = preparationAllowed && (!preparation || preparation.authorization.state === "revoked");
   return <TerasPanel frame="padded" treatment="state" tone={runtime.error ? "danger" : "info"}>
-    <TerasPanelHeader kicker="Source Authorization" title="Review the exact ordinary-source scope" description={runtime.error ?? "Approval permits bounded source actions and renewal only until this expiry. Terminal close revokes this scope. The browser and model never receive a token."} statusLabel={preparation?.authorization.state ?? "Not prepared"} />
+    <TerasPanelHeader kicker="Source Authorization" title={subject.kind === "repository-bootstrap" ? "Review the restricted owner-control scope" : "Review the exact ordinary-source scope"} description={runtime.error ?? "Approval permits bounded source actions and renewal only until this expiry. Terminal close revokes this scope. The browser and model never receive a token."} statusLabel={preparation?.authorization.state ?? "Not prepared"} />
     <TerasFieldStack spacing="normal">
       {scope ? <TerasMetadataList items={[
         { label: "Repository", value: scope.repository }, { label: "Branch / fetched base", value: `${scope.branch} / ${scope.fetched_base}` },
         { label: "Provider repository / installation", value: `${scope.repository_id} / ${scope.installation_id}` },
-        { label: "Subject / accountable operator", value: `${scope.subject.kind === "prototype" ? scope.subject.prototype_id : scope.subject.work_item_ref} / ${scope.operator_id}` },
+        { label: "Subject / accountable operator", value: `${scope.subject.kind === "prototype" ? scope.subject.prototype_id : scope.subject.kind === "repository-bootstrap" ? scope.subject.owner_repo : scope.subject.work_item_ref} / ${scope.operator_id}` },
+        { label: "Purpose", value: scope.purpose },
+        ...(scope.subject.kind === "repository-bootstrap" ? [
+          { label: "Finite allowed files", value: scope.subject.allowed_paths.join(", ") },
+          { label: "Trusted plan / template", value: `${scope.subject.plan_digest} / ${scope.subject.template_digest}` },
+          { label: "Workflow permission", value: scope.subject.workflow_write ? "Separately approved workflow write" : "Not requested" },
+        ] : []),
         { label: "Source-start binding", value: scope.source_start_digest },
         { label: "Landing Unit", value: scope.landing_unit_id }, { label: "Human reviewer", value: scope.human_reviewer_id },
         { label: "Expiry", value: scope.expires_at }, { label: "Exact scope digest", value: preparation.source_intent_digest },

@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { assertSourceAuthorizationPreparation, type SourceAuthorizationPreparation, type SourceAuthorizationSelector } from "./source-authorization-contract.ts";
+import { assertSourceOperationPreparation as assertSourceAuthorizationPreparation, type SourceAuthorizationPreparation, type SourceAuthorizationSelector } from "./source-authorization-contract.ts";
 import { assertPlatformOperationRecord } from "./platform-operation-contract.ts";
 import type { PlatformOperationRecord } from "./platform-operation-types.ts";
 
@@ -20,7 +20,9 @@ export function useSourceAuthorization(subject: SourceAuthorizationSelector, sou
       if (!Array.isArray(values)) throw new Error("Source scope list unavailable.");
       const sameSubject = values.map(assertSourceAuthorizationPreparation).filter(value => {
         const actual = value.source_intent.subject;
-        return selection.subject.kind === "delivery" ? actual.kind === "delivery" && actual.work_item_ref === selection.subject.work_item_ref : actual.kind === "prototype" && actual.prototype_id === selection.subject.prototype_id && value.source_intent.source_start_digest === selection.sourceStartDigest;
+        return selection.subject.kind === "delivery" ? actual.kind === "delivery" && actual.work_item_ref === selection.subject.work_item_ref
+          : selection.subject.kind === "repository-bootstrap" ? actual.kind === "repository-bootstrap" && actual.owner_repo === selection.subject.owner_repo && value.source_intent.source_start_digest === selection.sourceStartDigest
+            : actual.kind === "prototype" && actual.prototype_id === selection.subject.prototype_id && value.source_intent.source_start_digest === selection.sourceStartDigest;
       }).sort((a, b) => b.created_at.localeCompare(a.created_at));
       const knownDigest = selection.sourceStartDigest ?? sameSubject.find(value => value.intent_id === selection.boundIntentRef)?.source_intent.source_start_digest ?? pinnedDigest.current;
       const matching = sameSubject.filter(value => knownDigest ? value.source_intent.source_start_digest === knownDigest : selection.decision !== null && stableJson(value.start_decision) === stableJson(selection.decision));

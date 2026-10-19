@@ -356,6 +356,20 @@ live-integration work resolves them.
 
 ## Public Repository Boundary
 
+The staged shared Platform source-authorization adapter explicitly dispatches
+the separately marked `trusted-owner-bootstrap` purpose. Only the real proposed
+repository and retained OOS request are browser selectors. OOS derives the
+canonical custody, Intake version/digest, source coordinates, finite template
+paths and plan. Optional workflow writing requires its distinct explicit
+approval and exact changed workflow path. The Console verifies marked receipt
+digests and exact permissions; ordinary Delivery/Prototype parsers still reject
+bootstrap. Neither this adapter nor its approval panel grants source-owner
+admission, model writing, runtime authority or operating activation. The staged
+Repository Intake entry uses server-derived operator decisions and separate CI
+approval, current source envelopes, bounded inert drafts and original-command
+recovery. Exact-source Security acceptance and composed browser/recovery proof remain
+required.
+
 The canonical primary Prototype and Delivery collection adapters use the same
 server-only OOS and negotiated source-envelope boundary. Owner records and
 caller-owned workflow progress reconstruct cold UI state; stale local overlays

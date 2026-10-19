@@ -3,7 +3,7 @@ import type {
   PlatformOperationCatalog,
   PlatformOperationRecord,
 } from "./platform-operation-types.ts";
-import { assertSourceCredentialIntent, assertSourceCredentialReceipt } from "./source-authorization-contract.ts";
+import { assertSourceOperationIntent as assertSourceCredentialIntent, assertSourceOperationReceipt as assertSourceCredentialReceipt } from "./source-authorization-contract.ts";
 
 const actions = new Set<PlatformOperationAction>([
   "agent-source.issue", "agent-source.renew", "agent-source.revoke",

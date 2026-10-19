@@ -1,5 +1,5 @@
 import { resolveConsoleOosOperatorConfiguration, type ConsoleOosOperatorConfiguration } from "../../console-integration/configuration/console-runtime-configuration.ts";
-import { assertSourceAuthorizationPreparation, sourceIntentFromReceipt, type SourceAuthorizationPreparation } from "../live-runtime/source-authorization-contract.ts";
+import { assertSourceOperationPreparation as assertSourceAuthorizationPreparation, sourceOperationIntentFromReceipt as sourceIntentFromReceipt, type SourceAuthorizationPreparation } from "../live-runtime/source-authorization-contract.ts";
 import { controlPlatformOperation, platformCanonicalDigest as digest, platformOwnerRequest, readPlatformOperation, readPlatformOperations, submitPlatformOperation } from "./platform-operation-oos-client.ts";
 
 type Options = { config?: ConsoleOosOperatorConfiguration; fetchImpl?: typeof fetch };
@@ -23,7 +23,10 @@ export async function prepareSourceAuthorization(input: unknown, options: Option
     if (Object.keys(subject).sort().join(",") !== "kind,prototype_id,source_request_id" || typeof subject.prototype_id !== "string" || !/^prototype:[a-z0-9]+(?:-[a-z0-9]+)*$/.test(subject.prototype_id) || typeof subject.source_request_id !== "string" || !/^prototype-source-request:[A-Za-z0-9][A-Za-z0-9._:-]{0,230}$/.test(subject.source_request_id) || input.decision !== null) throw new Error("Select the actual Prototype source request, not repository coordinates or a Delivery decision.");
   } else if (subject.kind === "delivery") {
     if (Object.keys(subject).sort().join(",") !== "kind,work_item_ref" || typeof subject.work_item_ref !== "string" || !/^work-item-[1-9][0-9]*$/.test(subject.work_item_ref) || (input.decision !== null && !object(input.decision))) throw new Error("Select the actual Delivery work item and its canonical start decision.");
-  } else throw new Error("Only Delivery and Prototype source authorization are admitted.");
+  } else if (subject.kind === "repository-bootstrap") {
+    if (Object.keys(subject).sort().join(",") !== "kind,owner_repo,source_request_id" || typeof subject.owner_repo !== "string" || !/^[a-z0-9][a-z0-9._-]*$/.test(subject.owner_repo) || input.decision !== null) throw new Error("Select the actual proposed owner request, not source coordinates or an ART decision.");
+    identifier(subject.source_request_id);
+  } else throw new Error("Only explicit Delivery, Prototype or repository-bootstrap source subjects are admitted.");
   const preparation = { preparation_id: input.preparationId, subject, decision: input.decision, expires_at: input.expiresAt, supersedes_intent_digest: input.supersedesIntentDigest };
   return verifyPreparation(await platformOwnerRequest(base, { method: "POST", body: JSON.stringify({ preparation }) }, options));
 }

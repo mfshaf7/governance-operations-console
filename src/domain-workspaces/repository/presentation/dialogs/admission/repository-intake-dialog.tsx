@@ -10,6 +10,7 @@ import type { RepositoryCustodyWorkflowResult } from "../../../live-runtime/repo
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import { emptyRepositoryIntakeDraft, repositoryIntakeCustody, repositoryIntakeRecord,
   type RepositoryIntakeDraft } from "./repository-intake-candidate.ts";
+import { RepositoryOwnerBootstrapDialog } from "./repository-owner-bootstrap-dialog.tsx";
 
 const validationPostures = ["catalog-owner", "runtime-consumer", "profile-gated-external-owner",
   "covered-by-owner-repo", "interface-contract-backed", "proposed-profile-gated", "build-admitted-profile-gated"];
@@ -21,6 +22,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, onClose }: {
 }) {
   const runtime = useWorkspaceIntakeLiveRuntime();
   const [draft, setDraft] = useState(emptyRepositoryIntakeDraft);
+  const [ownerSetup, setOwnerSetup] = useState(false);
   const [review, setReview] = useState<{ candidate: WorkspaceIntakeCandidate; custody?: WorkspaceIntakeCustodyPreparation; requestId?: string } | null>(null);
   const custody = repositoryIntakeCustody(repository, custodyResult);
   const targetName = custody?.target.name, custodyRequestId = custody?.requestId;
@@ -42,6 +44,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, onClose }: {
       source: source.source, requested_record: source.requested_record, evidence_refs: source.evidence_refs,
     } });
   }
+  if (ownerSetup && targetName && custodyRequestId) return <RepositoryOwnerBootstrapDialog key={`${targetName}:${custodyRequestId}`} ownerRepo={targetName} custodyRequestId={custodyRequestId} onClose={() => setOwnerSetup(false)} />;
   if (review) return <WorkspaceIntakeDialog candidate={review.candidate} repositoryCustody={review.custody}
     initialRequestId={review.requestId} onNewCandidate={() => {
       setReview(null);
@@ -57,6 +60,8 @@ export function RepositoryIntakeDialog({ repository, custodyResult, onClose }: {
       </TerasActionButton>
     </>}>
     <TerasFieldStack spacing="loose">
+      <TerasContentTray kicker="Proposed source-owner setup" description="After a successful proposed classification, inspect or recover the trusted owner-control workflow here before requesting source-only admission. Existing controls are preserved. Current proposed custody is verified by OOS, not inferred from this page."
+        actions={<TerasActionButton disabled={!custody || runtime.pending} onClick={() => setOwnerSetup(true)}>Prepare or recover repository owner controls</TerasActionButton>} />
       <TerasContentTray kicker="Retained Intake requests"
         description={runtime.requestPage ? runtime.requestPage.pending_request_count
           ? `${runtime.requestPage.pending_request_count} pending request(s). Reopen the original request before starting another classification.`

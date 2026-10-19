@@ -11,7 +11,8 @@ import {
   submitPlatformOperation,
   platformCanonicalDigest as hash,
 } from "../../src/environment-lifecycle/server/platform-operation-oos-client.ts";
-import { assertSourceCredentialReceipt } from "../../src/environment-lifecycle/live-runtime/source-authorization-contract.ts";
+import { assertSourceCredentialReceipt, assertSourceCredentialIntent, assertSourceAuthorizationPreparation,
+  assertSourceOperationIntent, assertSourceOperationReceipt, assertSourceOperationPreparation } from "../../src/environment-lifecycle/live-runtime/source-authorization-contract.ts";
 import { commandSourceAuthorization, prepareSourceAuthorization, readSourceAuthorization } from "../../src/environment-lifecycle/server/source-authorization-oos-client.ts";
 
 const now = "2026-10-15T00:00:00.000Z";
@@ -208,6 +209,71 @@ function sourceCommand() {
   intent.subject.ref = "profile:accepted-idea-delivery"; intent.input = { source_intent: sourcePreparation().source_intent, session_id: null };
   return { ...intent, intent_digest: hash(intent), approval: { ...approval, intent_digest: hash(intent) } };
 }
+function bootstrapPreparation(withCi = false) {
+  const value = sourcePreparation();
+  value.start_decision = null;
+  value.source_intent.purpose = "trusted-owner-bootstrap";
+  value.source_intent.subject = { kind: "repository-bootstrap", owner_repo: "example-source", intake_entry_ref: { id: "repo:example-source", version: 1, digest: hash("entry") },
+    custody_receipt_digest: hash("custody"), template_digest: hash("template"), plan_digest: hash("plan"), decision_ref: "operator:trusted-bootstrap",
+    workflow_write: withCi, workflow_approval_ref: withCi ? "operator:separate-ci-approval" : null,
+    allowed_paths: ["AGENTS.md", ...(withCi ? [".github/workflows/validate.yaml"] : [])].sort() };
+  value.source_intent_digest = hash(value.source_intent);
+  return value;
+}
+
+test("bootstrap stays a separately marked finite purpose; ordinary consumers reject it", () => {
+  for (const withCi of [false, true]) {
+    const preparation = bootstrapPreparation(withCi);
+    const bound = sourceCommand(); bound.input.source_intent = preparation.source_intent;
+    const raw = sourceReceipt(bound); delete raw.receipt_digest;
+    raw.purpose = "trusted-owner-bootstrap";
+    if (withCi) raw.permissions.workflows = "write";
+    const receipt = { ...raw, receipt_digest: hash(raw) };
+    assert.equal(assertSourceOperationIntent(preparation.source_intent).purpose, "trusted-owner-bootstrap");
+    assert.equal(assertSourceOperationPreparation(preparation).start_decision, null);
+    assert.equal(assertSourceOperationReceipt(receipt).purpose, "trusted-owner-bootstrap");
+    assert.throws(() => assertSourceCredentialIntent(preparation.source_intent), /unauthorized/);
+    assert.throws(() => assertSourceAuthorizationPreparation(preparation), /unauthorized/);
+    assert.throws(() => assertSourceCredentialReceipt(receipt), /unauthorized/);
+    for (const mutate of [
+      value => { value.subject.allowed_paths.push("app/main.mjs"); },
+      value => { value.subject.allowed_paths.push("AGENTS.md"); },
+      value => { value.subject.intake_entry_ref.id = "repo:other"; },
+      value => { value.subject.workflow_write = !withCi; },
+      value => { value.subject.workflow_approval_ref = withCi ? null : "operator:unneeded-grant"; },
+      value => { value.purpose = "ordinary-source"; },
+      value => { value.subject.work_item_ref = "work-item-42"; },
+    ]) { const changed = structuredClone(preparation.source_intent); mutate(changed); assert.throws(() => assertSourceOperationIntent(changed), /unauthorized/); }
+    const excessive = structuredClone(receipt); excessive.permissions.administration = "write";
+    assert.throws(() => assertSourceOperationReceipt(excessive), /unauthorized/);
+  }
+});
+
+test("the bootstrap authorization adapter sends only real owner/request selectors and rejects browser source coordinates", async () => {
+  const preparation = bootstrapPreparation(), input = { preparationId: "console-bootstrap", subject: { kind: "repository-bootstrap", owner_repo: "example-source", source_request_id: "bootstrap-request:example" },
+    decision: null, expiresAt: preparation.source_intent.expires_at, supersedesIntentDigest: null };
+  let sent;
+  const result = await prepareSourceAuthorization(input, { config, fetchImpl: async (_url, init) => { sent = JSON.parse(init.body); return Response.json(preparation); } });
+  assert.deepEqual(sent.preparation.subject, input.subject); assert.equal(result.source_intent.purpose, "trusted-owner-bootstrap");
+  await assert.rejects(prepareSourceAuthorization({ ...input, subject: { ...input.subject, repository: "attacker/source" } }, { config }), /actual proposed owner/);
+  await assert.rejects(prepareSourceAuthorization({ ...input, decision: { work_item_ref: "work-item-42" } }, { config }), /actual proposed owner/);
+});
+
+test("Platform operation readback verifies marked bootstrap receipts and rejects relabeled ordinary scope", async () => {
+  const bound = sourceCommand(); bound.input.source_intent = bootstrapPreparation(true).source_intent;
+  const { intent_digest, approval, ...body } = bound;
+  const exact = { ...body, intent_digest: hash(body), approval: { ...approval, intent_digest: hash(body) } };
+  const retained = operation(exact), raw = sourceReceipt(exact); delete raw.receipt_digest;
+  raw.purpose = "trusted-owner-bootstrap"; raw.permissions.workflows = "write";
+  const receipt = { ...raw, receipt_digest: hash(raw) };
+  retained.state = "succeeded"; retained.provider_operation.state = "succeeded"; retained.provider_operation.events[0].state = "succeeded";
+  retained.provider_operation.receipt = { receipt_ref: "platform:receipt:bootstrap", outcome: "succeeded", recorded_at: now, source_version: "version:1", effect: "verified", source_credential: receipt };
+  assert.equal(assertPlatformOperationRecord(retained).provider_operation.receipt.source_credential.purpose, "trusted-owner-bootstrap");
+  const result = await readPlatformOperations({ config, fetchImpl: async url => Response.json(String(url).endsWith("/catalog") ? sourceCatalog() : { workflow_id: "platform-operation-list", operations: [retained] }) });
+  assert.equal(result.operations.length, 1);
+  delete retained.provider_operation.receipt.source_credential.purpose;
+  assert.throws(() => assertPlatformOperationRecord(retained), /unauthorized/);
+});
 test("source preparation sends only actual subject/decision selectors and verifies the owner-derived scope", async () => {
   const input = { preparationId: "console-example", subject: { kind: "delivery", work_item_ref: "work-item-42" }, decision: null, expiresAt: sourcePreparation().source_intent.expires_at, supersedesIntentDigest: null };
   let sent;

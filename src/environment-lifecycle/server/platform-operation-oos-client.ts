@@ -17,7 +17,7 @@ import type {
   PlatformOperationRecord,
   PlatformOperationSubject,
 } from "../live-runtime/platform-operation-types.ts";
-import { assertSourceCredentialReceipt, sourceIntentFromReceipt } from "../live-runtime/source-authorization-contract.ts";
+import { assertSourceOperationReceipt as assertSourceCredentialReceipt, sourceOperationIntentFromReceipt as sourceIntentFromReceipt } from "../live-runtime/source-authorization-contract.ts";
 
 const timeoutMs = 12_000;
 const maxResponseBytes = 1_048_576;

@@ -92,6 +92,17 @@ source access or reconcile Catalog. Missing current custody/capability disables
 entry; owner readback failures remain explicit. See
 [`../workspace-intake-live-integration.md`](../workspace-intake-live-integration.md).
 
+That same Intake preparation surface hosts the staged **Repository Owner Setup**
+tool after proposed classification. OOS owns exact custody/proposed eligibility,
+finite trusted-control preparation, durable requests, credentials, source
+execution/recovery, review and canonical readback. The Console selects the
+actual project's evidence profile and optional CI, inspects inert source and
+binds explicit decisions through same-origin APIs. Existing valid owner controls
+use non-source checkout without a dummy PR. Setup grants neither admission nor
+app/runtime acceptance; ordinary source consumers reject its separate purpose.
+The primary procedure is [Repository owner setup](../repository-owner-setup.md).
+Exact composed acceptance and browser operating proof remain pending.
+
 Visible Repository summary cards must be computed from the current merged
 repository records and retained local setup receipt overlays. The control surface
 must not read fixture `summary` directly as live posture.
