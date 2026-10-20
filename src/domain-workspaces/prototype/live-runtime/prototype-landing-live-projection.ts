@@ -31,6 +31,7 @@ export function projectPrototypeLanding({
 
   return {
     ...landed,
+    landing: { ...landed.landing, lastLandingReceiptRef: result.receipt.receipt_id },
     name: result.readback.record.name,
     projectionFreshness: "current Prototype Studio merged authority",
     projectionVersion: result.receipt.receipt_digest,

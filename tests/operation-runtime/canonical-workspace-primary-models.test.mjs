@@ -83,6 +83,49 @@ test("registered terminal lifecycle survives a cold read without fake historical
   assert.equal(record.preview.proofState, "not-started");
 });
 
+function landedPrototype(lifecycle = "exploring") {
+  const value = prototype();
+  const setup = { scaffold_profile: "static-site", support_profile: "interactive", preview_mode: "static", data_mode: "synthetic", mutation_boundary: "local-only", visibility: "private",
+    support_rows: ["source", "studio-home", "interface", "runtime", "data", "integration", "tooling", "evidence", "visibility", "recovery"].map(dimension => ({ dimension, state: "ready", detail: `Accepted ${dimension}` })) };
+  value.registry.prototypes = [{ id: "proposal-71", name: "Accepted owner name", objective: "Accepted owner objective", owner: "Workspace Prototype Studio", lifecycle, data_mode: "synthetic", mutation_boundary: "prototype-local", visibility_tier: "private-internal", paths: {}, linked_records: [] }];
+  value.documents["records/prototype-landings/proposal-71/record.json"] = { id: "prototype:proposal-71", name: "Accepted owner name", objective: "Accepted owner objective", setup, next_action: "candidate-promotion", source: { posture: "create-studio-source", custody: "incubation-repo", ref: "repo://workspace-prototype-studio/prototypes/proposal-71" } };
+  return value;
+}
+
+test("cold canonical landed setup routes to Candidate without replaying Landing or inventing owner receipts", () => {
+  const value = landedPrototype();
+  const before = structuredClone(value);
+  const projected = projectCanonicalPrototypeWorkspace(value, at);
+  const record = projected.readModel.records[0];
+  assert.equal(record.landing.state, "landed");
+  assert.equal(record.landing.basePlatform, "static-site");
+  assert.equal(record.landing.supportProfile, "interactive-prototype");
+  assert.equal(record.currentMove.id, "candidate-promotion");
+  assert.equal(record.summary, "Accepted owner objective");
+  assert.equal(record.landing.lastLandingReceiptRef, null);
+  assert.equal(record.preview.runtimeState, "unknown");
+  assert.equal(record.preview.proofState, "not-started");
+  assert.deepEqual(record.receipts, []);
+  assert.deepEqual(value, before);
+  assert.deepEqual(projectCanonicalPrototypeWorkspace(value, at), projected);
+  const wrongIdentity = structuredClone(value);
+  wrongIdentity.documents["records/prototype-landings/proposal-71/record.json"].id = "prototype:other";
+  assert.throws(() => projectCanonicalPrototypeWorkspace(wrongIdentity, at));
+  const unknownNextAction = structuredClone(value);
+  unknownNextAction.documents["records/prototype-landings/proposal-71/record.json"].next_action = "invented-action";
+  assert.throws(() => projectCanonicalPrototypeWorkspace(unknownNextAction, at));
+});
+
+test("later canonical lifecycle does not reopen Landing or Candidate when owner workflow history is absent", () => {
+  for (const [lifecycle, next] of [["candidate", "preview-proof"], ["baseline-approved", "movement-request"], ["graduating", "closeout-retirement"], ["graduated", "archive"], ["retired", "archive"]]) {
+    const record = projectCanonicalPrototypeWorkspace(landedPrototype(lifecycle), at).readModel.records[0];
+    assert.equal(record.lifecycle, lifecycle);
+    assert.equal(record.currentMove.id, next);
+    assert.equal(record.preview.proofState, "not-started");
+    assert.deepEqual(record.receipts, []);
+  }
+});
+
 test("primary server adapters negotiate existing canonical envelopes and fail closed on legacy JSON or owner confusion", async () => {
   const currentDelivery = await readCanonicalDeliveryWorkspace({ env, fetchImpl: async (url, init) => {
     assertCanonicalSourceRequest(init);

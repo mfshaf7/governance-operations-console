@@ -251,12 +251,19 @@ test("Prototype Landing projects only terminal merged Studio authority", () => {
   });
 
   assert.equal(projected.landing.state, "landed");
+  assert.equal(projected.landing.lastLandingReceiptRef, succeeded.receipt.receipt_id);
   assert.equal(projected.lifecycle, "exploring");
   assert.equal(projected.currentMove.id, "candidate-promotion");
   assert.equal(projected.projectionVersion, succeeded.receipt.receipt_digest);
   assert.equal(projected.receipts.at(-1).authority, "source-projected");
   assert.equal(projected.sourceRef, "record://prototypes/client-review-portal");
   assert.equal(projected.sourcePath, succeeded.readback.record.source.ref);
+
+  const coldRecord = { ...projected, landing: { ...projected.landing, lastLandingReceiptRef: null }, receipts: [] };
+  const cold = projectPrototypeLanding({ record: coldRecord, projection: { draft, draftKey: prototypeLandingDraftKey(draft), recordId: coldRecord.id, result: succeeded } });
+  assert.equal(cold.landing.lastLandingReceiptRef, succeeded.receipt.receipt_id);
+  assert.equal(cold.receipts.at(-1).authority, "source-projected");
+  assert.equal(cold.currentMove.id, "candidate-promotion");
 
   const effective = projectPrototypeEffectiveReadModel({
     landingProjectionsByRecordId: {
