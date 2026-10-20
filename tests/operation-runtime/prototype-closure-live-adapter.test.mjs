@@ -284,6 +284,56 @@ test("Prototype Closure reads and resumes the exact OOS request", async () => {
   ]);
 });
 
+test("Closure review proof survives server JSON and browser validation across actions and phases", () => {
+  for (const action of ["apply-delivery", "graduate-source", "retire-incubation", "reopen-incubation"]) {
+    const from = { "apply-delivery": "baseline-approved", "graduate-source": "graduating",
+      "retire-incubation": "candidate", "reopen-incubation": "retired" }[action];
+    const to = { "apply-delivery": "graduating", "graduate-source": "graduated",
+      "retire-incubation": "retired", "reopen-incubation": "exploring" }[action];
+    const custody = action === "graduate-source" ? "dedicated-owner-repo" : "incubation-repo";
+    const command = buildPrototypeClosureCommand({ ...intent(), action,
+      preparation: preparation({ expected_state: { ...preparation().expected_state, lifecycle: from } }) }, config.callerId);
+    const phases = ["review-required", "pending-readback", "succeeded"];
+    if (action === "graduate-source") phases.push("pending-runtime-disposition");
+    for (const status of phases) {
+      const merged = status !== "review-required", terminal = status === "succeeded";
+      const raw = { ...acceptedResult(command), action, status, next_action: terminal ? "inspect-receipt" : "continue",
+        canonical_mutation: terminal,
+        source_snapshot: { source_revision: revision, record_digest: digest, lifecycle: from, source_custody: "incubation-repo" },
+        resolved_authority: { verification: { state: "accepted", source_revision: revision, evidence_refs: ["studio://authority/sample-tool"] } },
+        review: { number: 42, url: "https://github.com/example/repo/pull/42", state: merged ? "closed" : "open",
+          head_commit: "2".repeat(40), merged, merge_commit: merged ? "3".repeat(40) : null,
+          delegated_approval: merged ? { review_ref: "https://github.com/example/repo/pull/42#pullrequestreview-7",
+            head_commit: "2".repeat(40), reviewer_login: "example", execution: "agent-gary-delegated" } : null,
+          human_reviewed: true, provider_only_extra: "not-for-browser" },
+        readback: terminal || status === "pending-runtime-disposition"
+          ? { merged_source_revision: "3".repeat(40), observed_lifecycle: to, observed_source_custody: custody } : null,
+        runtime_disposition: terminal && action === "graduate-source"
+          ? { state: "accepted", disposition: "absent", ref: "platform://disposition/sample-tool" } : null,
+        receipt: terminal ? { receipt_id: "receipt://prototype-closure/sample-tool", outcome: "completed",
+          observed_lifecycle: to, observed_source_custody: custody, recorded_at: "2026-09-14T01:00:00Z" } : null,
+        history: [{ sequence: 1, at: "2026-09-14T01:00:00Z", status, details: null }],
+      };
+      const server = assertPrototypeClosureResult(raw, requestId);
+      const browser = assertPrototypeClosureResult(JSON.parse(JSON.stringify(server)), requestId);
+      assert.deepEqual(browser, server, `${action}/${status} must be idempotent across the real wire boundary`);
+      assert.equal(browser.review.head_commit, raw.review.head_commit);
+      assert.equal(browser.review.human_reviewed, merged, "A supplied boolean cannot replace delegated proof");
+      assert.equal(JSON.stringify(browser).includes("provider_only_extra"), false);
+      if (merged) {
+        const forged = JSON.parse(JSON.stringify(server));
+        forged.review.delegated_approval.head_commit = "4".repeat(40);
+        assert.throws(() => assertPrototypeClosureResult(forged, requestId), /delegated approval/);
+        if (terminal) {
+          forged.review.delegated_approval = null;
+          forged.review.human_reviewed = true;
+          assert.throws(() => assertPrototypeClosureResult(forged, requestId), /reviewed source/);
+        }
+      }
+    }
+  }
+});
+
 test("Prototype Closure cold read rejects a different or double-prefixed subject", async () => {
   const command = buildPrototypeClosureCommand(assertPrototypeClosureIntent(intent()), config.callerId);
   for (const recordRef of ["prototype://other-tool", "prototype://prototype:sample-tool"]) {

@@ -136,7 +136,14 @@ export type PrototypeClosureResult = Readonly<{
     url: string;
     state: string;
     merged: boolean;
+    head_commit: string;
     merge_commit: string | null;
+    delegated_approval: Readonly<{
+      review_ref: string;
+      head_commit: string;
+      reviewer_login: string;
+      execution: "agent-gary-delegated";
+    }> | null;
     human_reviewed: boolean;
   }> | null;
   readback: Readonly<{
