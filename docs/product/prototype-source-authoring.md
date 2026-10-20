@@ -41,6 +41,16 @@ the original owner-retained command rather than a newly generated timestamp.
 Source authorization displays the original issue/revoke operation and its
 owner failure/next action and uncertainty deadline. Reconcile that same
 operation; do not replace a possibly issued credential. Reads never renew.
+Canonical authorization loading and failed/offline reads disable preparation;
+they are not an empty authorization list. Refresh when unavailable. Use the
+retained **Recover original** scope action to select the exact intent and state;
+the selected intent remains selected while its owner operation is reconciled,
+even when a newer unapproved preparation exists. Selection grants no approval.
+Prepare a successor only after the selected predecessor is confirmed revoked,
+then inspect its new digest and expiry before explicitly approving it.
+An immutable command bound to an older Platform source cannot replay under a
+new executable revision. Follow its owner correction and the same stopped-scope
+procedure; do not change its source binding or invent a new business request.
 Expired or stopped authorization requires exact predecessor revocation and a
 fresh explicit successor approval for unchanged valid work. It does not require
 a new Prototype, branch, ART story or approval deadline extension by implication.
