@@ -341,10 +341,11 @@ export function assertPrototypeClosureResult(
   }
   const review = result.review === null ? null : record(result.review);
   let humanReviewed = false;
+  let delegatedApproval: Record<string, unknown> | null = null;
   if (review) {
     const headCommit = text(review.head_commit, "Closure review head", 40);
     if (!/^[0-9a-f]{40}$/.test(headCommit)) fail("Closure review head is invalid.");
-    const delegatedApproval = review.delegated_approval === null
+    delegatedApproval = review.delegated_approval === null
       ? null
       : record(review.delegated_approval);
     if (delegatedApproval) {
@@ -439,7 +440,14 @@ export function assertPrototypeClosureResult(
     } : null, preparation: result.preparation,
     review: review ? { number: review.number as number, url: review.url as string,
       state: review.state as string, merged: review.merged as boolean,
+      head_commit: review.head_commit as string,
       merge_commit: review.merge_commit as string | null,
+      delegated_approval: delegatedApproval ? {
+        review_ref: delegatedApproval.review_ref as string,
+        head_commit: delegatedApproval.head_commit as string,
+        reviewer_login: delegatedApproval.reviewer_login as string,
+        execution: "agent-gary-delegated",
+      } : null,
       human_reviewed: humanReviewed } : null,
     readback: readback ? {
       merged_source_revision: readback.merged_source_revision as string,

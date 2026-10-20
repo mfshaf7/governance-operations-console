@@ -40,6 +40,15 @@ within an active browser session. A successful Closure is recognized only from O
 `succeeded` state with a reviewed Studio readback and completed terminal
 receipt.
 
+The server's bounded review projection retains the already-validated head and
+delegated approval reference, reviewer, matching head and execution marker.
+The browser revalidates those same fields after JSON serialization. It derives
+`human_reviewed` from the proof instead of treating a supplied boolean as
+approval. Unknown provider fields are not forwarded. A terminal owner response
+is not visibly reconciled until that browser validation accepts its exact
+merged readback and receipt; a projection error must not reopen or duplicate
+the completed owner request.
+
 ## Current Limits
 
 Without the server OOS configuration, Closure is read-only and reports a
