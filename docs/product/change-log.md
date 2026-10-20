@@ -6,6 +6,18 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-20
+
+- Maintenance Landing Unit `maintenance-1275-cold-landing-console`
+  (`child_isolated_landing_unit`) repairs the canonical cold-read shape that
+  showed Landed alongside Complete Landing setup. Accepted owner setup and
+  current lifecycle now determine navigation; actual terminal Landing progress
+  restores its exact receipt link even on already-landed input. Captures remain
+  unaccepted, pending original readback remains continuable, and no local
+  transition, fake receipt or Preview proof is introduced. Native canonical
+  read-model cases cover missing workflow history, later lifecycle and denied
+  malformed owner identity/action. No layout, owner mutation or new workflow.
+
 ## 2026-10-16
 
 - Maintenance Landing Unit `maintenance-1275-console-journey-console`

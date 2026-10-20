@@ -45,6 +45,7 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
     if (canonicalLifecycle.has(slug)) invalid();
     const base = records.get(slug) ?? baseRecord(slug, text(item.name), typeof item.objective === "string" ? item.objective : "", revision);
     base.name = text(item.name); base.owner = typeof item.owner === "string" ? item.owner : "Workspace Prototype Studio";
+    if (typeof item.objective === "string") base.summary = item.objective;
     base.lifecycle = choice(item.lifecycle, ["exploring", "candidate", "baseline-approved", "graduating", "graduated", "retired"]);
     base.dataMode = choice(item.data_mode, ["mock", "synthetic", "real-readonly", "real-mutable"]);
     base.mutationBoundary = choice(item.mutation_boundary, ["none", "prototype-local", "read-only", "external-sandbox", "real-system"]);
@@ -59,6 +60,7 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
     const landingRecord = documents[`records/prototype-landings/${slug}/record.json`];
     if (landingRecord) {
       const landed = object(landingRecord), setup = object(landed.setup), custody = object(landed.source);
+      if (landed.id !== `prototype:${slug}` || landed.next_action !== "candidate-promotion") invalid();
       const draft = landingDraft(base, setup, { name: landed.name, objective: landed.objective }, custody.posture);
       base.landing = { ...base.landing, basePlatform: draft.basePlatform, sourceHome: draft.sourceHome, supportProfile: draft.supportProfile, supportRows: draft.supportRows, previewNeed: draft.previewNeed, state: "landed" };
       base.sourcePath = text(custody.ref);
@@ -95,6 +97,18 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
   for (const [slug, base] of records) {
     const lifecycle = canonicalLifecycle.get(slug);
     if (lifecycle) base.lifecycle = lifecycle;
+    // Canonical setup is already landed before historical workflows are
+    // replayed. Do not retain its capture action or rerun a local transition
+    // merely to reconstruct navigation after a cold read.
+    if (base.lifecycle === "exploring" && base.landing.state === "landed" && base.currentMove.id === "landing") {
+      base.currentMove = { id: "candidate-promotion", actionLabel: "Open Candidate Promotion", label: "Prepare candidate promotion", detail: "Canonical Studio Landing setup is accepted. Continue Candidate Promotion; no new Landing submission is required.", tone: "info" };
+    } else if (base.lifecycle === "candidate" && ["landing", "candidate-promotion"].includes(base.currentMove.id)) {
+      base.currentMove = base.landing.previewNeed === "none" || base.preview.proofState === "proof-ready"
+        ? { id: "baseline-promotion", actionLabel: "Open Baseline Promotion", label: "Review baseline evidence", detail: "Canonical Studio lifecycle is Candidate; inspect the separately owned baseline evidence.", tone: "info" }
+        : { id: "preview-proof", actionLabel: "Open Preview Runtime", label: "Inspect preview evidence", detail: "Canonical Studio lifecycle is Candidate. Preview proof is not inferred from Landing or promotion.", tone: "info" };
+    } else if (base.lifecycle === "baseline-approved" && ["landing", "candidate-promotion", "baseline-promotion", "preview-proof"].includes(base.currentMove.id)) {
+      base.currentMove = { id: "movement-request", actionLabel: "Open Movement Request", label: "Prepare owner-backed Delivery handoff", detail: "Canonical Studio lifecycle is Baseline approved; Delivery and custody retain their own gates.", tone: "info" };
+    }
     if (base.lifecycle === "graduated" || base.lifecycle === "retired") base.currentMove = { id: "archive", label: "Inspect retained source", actionLabel: "Open History", detail: "Canonical Studio lifecycle is terminal; mutation requires the owner's explicit reopen route.", tone: "muted" };
     else if (base.lifecycle === "graduating") base.currentMove = { id: "closeout-retirement", label: "Inspect source graduation", actionLabel: "Open Closeout", detail: "Continue the owner-backed graduation and custody handoff.", tone: "info" };
     const packetRef = deliveryPacketRefs.get(slug);

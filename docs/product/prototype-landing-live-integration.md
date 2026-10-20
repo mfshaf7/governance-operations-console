@@ -91,6 +91,12 @@ Cold reads restore review, continue, cancel and terminal receipt state from
 owners, not browser storage. Canonical registry lifecycle wins over older
 workflow history. Record identity (`record://prototypes/<id>`) is distinct from
 its repository source path. Preview runtime/proof retains its separate owner.
+Accepted owner Landing documents restore the actual setup and Candidate next
+action, not the capture-only prompt to repeat Landing. A later canonical
+lifecycle must not route back into an earlier completed promotion. Source
+presence alone invents no terminal receipt or Preview proof; when retained
+terminal owner progress exists, its exact Landing receipt link is restored
+even when the source record is already marked landed.
 Merged registry presence is not terminal workflow success: while that same
 accepted OOS request is pending, its draft stays read-only and Continue Landing
 remains available for merged readback (or cancellation reconciliation). Only
