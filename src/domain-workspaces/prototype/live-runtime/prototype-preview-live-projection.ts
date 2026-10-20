@@ -17,38 +17,45 @@ export function projectPrototypePreviewOwnerRecord(
   if (state === "loading") {
     return {
       ...record,
-      preview: { ...record.preview, runtimeState: "unknown" },
+      preview: { ...record.preview, runtimeState: "unknown", proofState: "not-started", lastProofRef: null, lastCheckedAt: null },
       projectionFreshness: "Studio Preview Runtime projection loading",
     };
   }
   if (state === "error" || !projection) {
     return {
       ...record,
-      preview: { ...record.preview, runtimeState: "unavailable" },
+      preview: { ...record.preview, runtimeState: "unavailable", proofState: "not-started", lastProofRef: null, lastCheckedAt: null },
       projectionFreshness: "Studio Preview Runtime projection unavailable",
     };
   }
-  const proofRef = proof?.receipt.ref ?? null;
+  const currentProof = projection.runtime_state === "running" && proof?.status === "proven" &&
+    proof.prototype_id === projection.prototype_id && proof.profile_id === projection.profile_id &&
+    proof.receipt.ref === projection.latest_receipt?.ref && proof.receipt.digest === projection.latest_receipt?.digest
+    ? proof : null;
+  const proofRef = currentProof?.receipt.ref ?? null;
   const evidence = proofRef
     ? upsertEvidence(record, proofRef, projection.source_revision)
     : record.evidence;
   return {
     ...record,
     evidence,
+    currentMove: currentProof && record.lifecycle === "candidate" && record.currentMove?.id === "preview-proof"
+      ? { id: "baseline-promotion", actionLabel: "Open Baseline Promotion", label: "Review baseline evidence", detail: "Current Studio Preview proof is available. Inspect application behavior and separately review baseline acceptance; runtime proof alone does not approve it.", tone: "info" }
+      : record.currentMove,
     preview: {
       ...record.preview,
       address: projection.endpoint ?? "Loopback endpoint available while running",
       command: "Workspace Prototype Studio bounded owner command",
       healthcheckPath: "/__preview/health",
       lastCheckLogRef: null,
-      lastCheckedAt: proof ? new Date().toISOString() : null,
+      lastCheckedAt: currentProof ? new Date().toISOString() : null,
       lastProofRef: proofRef,
       launchAdapter: "static-server",
       port: projection.endpoint ? new URL(projection.endpoint).port : "owner-managed",
       profileRef: `preview-runtime://profiles/${projection.profile_id}@${projection.profile_digest}`,
       profileSource: `Workspace Prototype Studio ${projection.source_revision}`,
       profileState: "profile-configured",
-      proofState: proof ? "proof-ready" : "not-started",
+      proofState: currentProof ? "proof-ready" : "not-started",
       runtimeState:
         projection.runtime_state === "stale"
           ? "unknown"

@@ -329,6 +329,46 @@ test("Console projection makes Studio authority and receipts visible", () => {
   assert.equal(projectedReceipt.sourceVersion, revision);
 });
 
+test("only current running owner proof opens Baseline without approving lifecycle or replacing pending Maturity", () => {
+  const projection = runningProjection(ownerReceipt());
+  const proof = { status: "proven", profile_id: projection.profile_id, prototype_id: projection.prototype_id, receipt: projection.latest_receipt };
+  const record = { ...recordFixture(), lifecycle: "candidate", currentMove: { id: "preview-proof", actionLabel: "Open Preview Runtime" } };
+  const current = projectPrototypePreviewOwnerRecord(record, projection, proof, "live");
+  assert.equal(current.preview.proofState, "proof-ready");
+  assert.equal(current.preview.lastProofRef, proof.receipt.ref);
+  assert.equal(current.currentMove.id, "baseline-promotion");
+  assert.equal(current.lifecycle, "candidate");
+  for (const id of ["candidate-promotion", "baseline-promotion", "movement-request", "archive", "closeout-retirement"]) {
+    const pending = { ...record, currentMove: { id } };
+    assert.deepEqual(projectPrototypePreviewOwnerRecord(pending, projection, proof, "live").currentMove, pending.currentMove);
+  }
+  for (const lifecycle of ["exploring", "baseline-approved", "graduated", "retired"]) {
+    assert.equal(projectPrototypePreviewOwnerRecord({ ...record, lifecycle }, projection, proof, "live").currentMove.id, "preview-proof");
+  }
+  const invalid = [
+    [projection, null, "live"],
+    [{ ...projection, runtime_state: "stopped" }, proof, "live"],
+    [{ ...projection, runtime_state: "stale" }, proof, "live"],
+    [projection, { ...proof, status: "failed" }, "live"],
+    [projection, { ...proof, profile_id: "wrong" }, "live"],
+    [projection, { ...proof, prototype_id: "prototype:wrong" }, "live"],
+    [projection, { ...proof, receipt: { ...proof.receipt, ref: "preview-runtime://receipts/old" } }, "live"],
+    [projection, { ...proof, receipt: { ...proof.receipt, digest: `sha256:${"0".repeat(64)}` } }, "live"],
+    [{ ...projection, latest_receipt: null }, proof, "live"],
+    [projection, proof, "loading"], [projection, proof, "error"], [null, proof, "live"],
+  ];
+  for (const [owner, retained, state] of invalid) {
+    // Start with retained proof-ready fields, as a real owner refresh does.
+    const stale = { ...current, currentMove: record.currentMove };
+    const denied = projectPrototypePreviewOwnerRecord(stale, owner, retained, state);
+    assert.equal(denied.preview.proofState, "not-started", JSON.stringify([owner?.runtime_state, retained?.profile_id, state]));
+    assert.equal(denied.preview.lastProofRef, null);
+    assert.equal(denied.preview.lastCheckedAt, null);
+    assert.equal(denied.currentMove.id, "preview-proof");
+    assert.deepEqual(denied.evidence, stale.evidence, "retain historical evidence without declaring it current");
+  }
+});
+
 function baseProjection() {
   return {
     boundary: {

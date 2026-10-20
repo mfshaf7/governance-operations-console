@@ -37,9 +37,12 @@ execution references.
    request. OOS never merges or writes `main` directly.
 4. Apply or continue again after merge. OOS verifies checks, human review,
    merge ancestry, and byte-identical Studio readback.
-5. The Console changes lifecycle only when the terminal receipt and merged
-   readback agree. Candidate success points to Baseline Promotion; Baseline
-   success points to Movement Request.
+5. Canonical Studio lifecycle and pending OOS acknowledgement remain distinct.
+   After source merge, reopen the same Candidate or Baseline Promotion action
+   to continue its retained request until terminal receipt and readback agree.
+   Candidate completion points to Preview when required, then Baseline review;
+   Baseline completion points to Movement Request. Source merge alone does not
+   complete the owner request.
 
 Maturity evidence uses committed Studio record/file references, not display
 receipt identifiers. The Console retains Landing and Candidate receipt IDs for
@@ -90,7 +93,9 @@ or cancelled attempts can create a fresh explicit request after correction;
 completed outcomes replay rather than creating another mutation.
 
 Reload restores owner progress from the primary canonical collection. A valid
-merged promotion receipt is not reapproved against missing browser preview
+pending request retains its promotion entrypoint even when the canonical source
+already reflects that promotion. Terminal Studio lifecycles remain read-only.
+A valid merged promotion receipt is not reapproved against missing browser preview
 state. It restores only its own lifecycle/decision evidence and does not invent
 preview proof, local receipt evidence, or downstream Delivery acceptance.
 

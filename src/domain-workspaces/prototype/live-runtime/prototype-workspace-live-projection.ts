@@ -113,7 +113,14 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
     // Canonical setup is already landed before historical workflows are
     // replayed. Do not retain its capture action or rerun a local transition
     // merely to reconstruct navigation after a cold read.
-    if (base.lifecycle === "exploring" && base.landing.state === "landed" && base.currentMove.id === "landing") {
+    const pendingMaturity = maturity[base.id]?.result;
+    if (["exploring", "candidate", "baseline-approved"].includes(base.lifecycle) && pendingMaturity &&
+      ["accepted", "evaluating", "decision-required", "preparing", "review-required", "cancelling"].includes(pendingMaturity.status)) {
+      // Source merge and the owner's final acknowledgement are separate facts.
+      // Keep the existing resume surface reachable until that request finishes.
+      const candidate = pendingMaturity.transition === "candidate-promotion";
+      base.currentMove = { id: pendingMaturity.transition, actionLabel: candidate ? "Open Candidate Promotion" : "Open Baseline Promotion", label: "Continue owner promotion", detail: "The retained owner request is still pending. Inspect its progress and complete its receipt/readback before moving on.", tone: "info" };
+    } else if (base.lifecycle === "exploring" && base.landing.state === "landed" && base.currentMove.id === "landing") {
       base.currentMove = { id: "candidate-promotion", actionLabel: "Open Candidate Promotion", label: "Prepare candidate promotion", detail: "Canonical Studio Landing setup is accepted. Continue Candidate Promotion; no new Landing submission is required.", tone: "info" };
     } else if (base.lifecycle === "candidate" && ["landing", "candidate-promotion"].includes(base.currentMove.id)) {
       base.currentMove = base.landing.previewNeed === "none" || base.preview.proofState === "proof-ready"
