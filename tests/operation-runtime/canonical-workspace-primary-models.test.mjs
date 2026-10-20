@@ -126,6 +126,30 @@ test("later canonical lifecycle does not reopen Landing or Candidate when owner 
   }
 });
 
+test("canonical design profile is retained as an unverified source reference, never inferred Preview proof", () => {
+  const value = landedPrototype();
+  value.registry.prototypes[0].paths.design_profile = "docs/prototypes/proposal-71/design-profile.md";
+  const record = projectCanonicalPrototypeWorkspace(value, at).readModel.records[0];
+  const ref = "repo://workspace-prototype-studio/docs/prototypes/proposal-71/design-profile.md";
+  assert.deepEqual(record.baseline.evidenceRefs, [ref]);
+  assert.equal(record.evidence[0].id, ref);
+  assert.equal(record.evidence[0].status, "Owner-declared reference");
+  assert.match(record.evidence[0].detail, /exact committed file resolution is required/);
+  assert.equal(record.preview.proofState, "not-started");
+  assert.equal(record.landing.lastLandingReceiptRef, null);
+  value.registry.prototypes[0].candidate_record_ref = "record://prototype-maturity/proposal-71/candidate-123456abcdef";
+  const reopened = projectCanonicalPrototypeWorkspace(value, at).readModel.records[0];
+  assert.ok(reopened.baseline.evidenceRefs.includes(value.registry.prototypes[0].candidate_record_ref));
+  assert.equal(reopened.preview.proofState, "not-started");
+  value.registry.prototypes[0].candidate_record_ref = "record://prototype-maturity/another-prototype/candidate";
+  assert.throws(() => projectCanonicalPrototypeWorkspace(value, at));
+  delete value.registry.prototypes[0].candidate_record_ref;
+  for (const path of ["/tmp/design.md", "docs/../private.md", "docs//design.md", "https://example.test/design.md", "docs\\design.md"]) {
+    value.registry.prototypes[0].paths.design_profile = path;
+    assert.throws(() => projectCanonicalPrototypeWorkspace(value, at));
+  }
+});
+
 test("primary server adapters negotiate existing canonical envelopes and fail closed on legacy JSON or owner confusion", async () => {
   const currentDelivery = await readCanonicalDeliveryWorkspace({ env, fetchImpl: async (url, init) => {
     assertCanonicalSourceRequest(init);

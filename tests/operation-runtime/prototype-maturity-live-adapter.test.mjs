@@ -168,6 +168,56 @@ test("Prototype Maturity builds the authoritative Baseline Promotion shape", () 
   );
 });
 
+test("cold owner Candidate binds committed Landing and registry evidence, not display IDs", () => {
+  const input = candidateRunInput();
+  input.record.sourceRef = "record://prototypes/sample-tool";
+  const before = structuredClone(input);
+  const intent = prototypeMaturitySubmissionIntent(input, {
+    acceptedAt: "2026-09-10T04:00:00.000Z", requestId: "prototype-maturity-request:sample-tool:40",
+  }, preparation());
+  const command = buildPrototypeMaturityCommand(intent, preparation(), config.callerId);
+  assert.deepEqual(command.request.inputs.source_refs, [
+    "record://prototype-landings/sample-tool", "repo://workspace-prototype-studio/prototypes.yaml",
+  ]);
+  for (const section of command.packet.sections) assert.deepEqual(section.evidence_refs, command.request.inputs.source_refs);
+  assert.equal(input.record.landing.lastLandingReceiptRef, "prototype-landing-receipt:sample-tool:1");
+  assert.deepEqual(input, before);
+  input.record.landing.lastLandingReceiptRef = null;
+  assert.throws(() => prototypeMaturitySubmissionIntent(input, {
+    acceptedAt: "2026-09-10T04:00:00.000Z", requestId: "prototype-maturity-request:sample-tool:41",
+  }, preparation()), /landed source receipt/);
+});
+
+test("Baseline retains source selections and Candidate authority without laundering runtime receipts", () => {
+  const input = baselineRunInput();
+  input.record.sourceRef = "record://prototypes/sample-tool";
+  const design = "repo://workspace-prototype-studio/docs/prototypes/sample-tool/design-profile.md";
+  input.record.baseline.evidenceRefs = [design];
+  input.record.evidence = [{ id: "proof://preview/local-receipt", label: "Preview proof", status: "proof ready", tone: "ok", detail: "Live owner condition, not committed evidence" }];
+  const intent = prototypeMaturitySubmissionIntent(input, {
+    acceptedAt: "2026-09-10T04:00:00.000Z", requestId: "prototype-maturity-request:sample-tool:42",
+  }, baselinePreparation());
+  const command = buildPrototypeMaturityCommand(intent, baselinePreparation(), config.callerId);
+  assert.deepEqual(command.request.inputs.editable_values["selected-evidence-refs"], [design, "record://prototype-maturity/sample-tool/candidate"]);
+  assert.ok(!JSON.stringify(command).includes("proof://preview/local-receipt"));
+  assert.ok(!JSON.stringify(command).includes("prototype-maturity-receipt:sample-tool:1"));
+  assert.equal(input.record.evidence[0].id, "proof://preview/local-receipt");
+  const active = "record://prototype-maturity/sample-tool/candidate-123456abcdef";
+  input.record.baseline.evidenceRefs = [design, active];
+  const reopened = prototypeMaturitySubmissionIntent(input, {
+    acceptedAt: "2026-09-10T04:00:00.000Z", requestId: "prototype-maturity-request:sample-tool:44",
+  }, baselinePreparation());
+  assert.deepEqual(reopened.record.evidence_refs, [design, active]);
+  assert.ok(!reopened.record.evidence_refs.includes("record://prototype-maturity/sample-tool/candidate"));
+  // Explicitly selected unsupported evidence must still reach owner denial;
+  // no filter can silently convert a bad selection into successful proof.
+  input.record.baseline.evidenceRefs = ["evidence://unresolved/explicit-selection"];
+  const bad = prototypeMaturitySubmissionIntent(input, {
+    acceptedAt: "2026-09-10T04:00:00.000Z", requestId: "prototype-maturity-request:sample-tool:43",
+  }, baselinePreparation());
+  assert.ok(bad.record.evidence_refs.includes("evidence://unresolved/explicit-selection"));
+});
+
 test("Prototype Maturity rejects a blocking Baseline decision without a visible blocker", () => {
   const runInput = baselineRunInput();
   assert.throws(
