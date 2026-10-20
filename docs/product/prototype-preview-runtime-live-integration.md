@@ -59,6 +59,13 @@ authority and is inactive outside that explicitly configured lane.
    accepts proof only when it binds the same projection and latest receipt.
 5. Review source-projected receipts in the existing command log.
 
+A current running proof exposes Baseline Promotion from a Candidate's Preview
+step; it does not approve the baseline or prove application behavior. The proof
+must match the owner Prototype, profile and latest receipt reference/digest.
+Stop, restart, stale source, loading or unavailable owner state cannot reuse a
+retained receipt as current proof. Historical receipts remain inspectable, and
+Preview never replaces a pending Candidate or Baseline request's resume action.
+
 If the owner state changes after review, the command returns
 `prototype_preview_expected_state_stale`; refresh before retrying. Owner
 timeout, malformed output, digest mismatch, wrong source revision, non-loopback

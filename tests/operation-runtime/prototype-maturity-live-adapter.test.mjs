@@ -4,6 +4,8 @@ import test from "node:test";
 
 import { assertPrototypeMaturityResult } from "../../src/domain-workspaces/prototype/live-runtime/prototype-maturity-live-contract.ts";
 import { projectPrototypeMaturity } from "../../src/domain-workspaces/prototype/live-runtime/prototype-maturity-live-projection.ts";
+import { projectCanonicalPrototypeWorkspace } from "../../src/domain-workspaces/prototype/live-runtime/prototype-workspace-live-projection.ts";
+import { prototypeDialogRouteForCurrentMove } from "../../src/domain-workspaces/prototype/presentation/surface/use-prototype-control-state.ts";
 import {
   PrototypeMaturityClientError,
   prototypeMaturityAllowsLocalFallback,
@@ -430,6 +432,78 @@ test("Prototype Maturity preparation rejects malformed authority", async () => {
       error.code === "prototype_maturity_projection_invalid",
   );
 });
+
+test("cold canonical navigation retains both pending Maturity routes before and after source merge", () => {
+  for (const transition of ["candidate-promotion", "baseline-promotion"]) {
+    const run = transition === "candidate-promotion" ? candidateRunInput() : baselineRunInput();
+    const prepared = transition === "candidate-promotion" ? preparation() : baselinePreparation();
+    const identity = { acceptedAt: "2026-09-10T04:00:00.000Z", requestId: "prototype-maturity-request:sample-tool:1" };
+    const command = buildPrototypeMaturityCommand(prototypeMaturitySubmissionIntent(run, identity, prepared), prepared, config.callerId);
+    for (const status of ["accepted", "evaluating", "decision-required", "preparing", "review-required", "cancelling"]) {
+      const result = acceptedResult(command);
+      result.status = status;
+      if (status === "review-required") {
+        result.review = { ...succeededResult(command).review, state: "open", merged: false, merge_commit: null, human_reviewed: false };
+        result.preparation = succeededResult(command).preparation;
+      }
+      for (const lifecycle of transition === "candidate-promotion" ? ["exploring", "candidate"] : ["candidate", "baseline-approved"]) {
+        const source = canonicalMaturitySource(lifecycle, [result]);
+        const before = structuredClone(source);
+        const projected = projectCanonicalPrototypeWorkspace(source, "2026-09-10T04:10:00Z");
+        const record = projected.readModel.records[0];
+        assert.equal(record.lifecycle, lifecycle);
+        assert.equal(record.currentMove.id, transition, `${transition}/${status}/${lifecycle}`);
+        assert.equal(prototypeDialogRouteForCurrentMove(record), transition);
+        assert.equal(projected.maturity[record.id].result.request_id, result.request_id);
+        assert.equal(record.preview.proofState, "not-started");
+        assert.deepEqual(record.receipts, []);
+        assert.deepEqual(source, before);
+      }
+      for (const [lifecycle, route] of [["graduating", "closeout-retirement"], ["graduated", "history"], ["retired", "history"]]) {
+        const record = projectCanonicalPrototypeWorkspace(canonicalMaturitySource(lifecycle, [result]), "2026-09-10T04:10:00Z").readModel.records[0];
+        assert.equal(prototypeDialogRouteForCurrentMove(record), route);
+      }
+    }
+    const succeeded = succeededResult(command);
+    if (transition === "baseline-promotion") {
+      succeeded.decision.decision = "approve-baseline";
+      succeeded.readback.decision = succeeded.receipt.decision = "approve-baseline";
+      succeeded.readback.transition = succeeded.receipt.transition = transition;
+      succeeded.readback.observed_lifecycle = succeeded.receipt.resulting_lifecycle = "baseline-approved";
+      succeeded.next_action = succeeded.receipt.next_action.code = "movement-request";
+    }
+    const lifecycle = transition === "candidate-promotion" ? "candidate" : "baseline-approved";
+    for (const status of ["requires-action", "cancelled", "rejected"]) {
+      const stopped = { ...acceptedResult(command), status };
+      const record = projectCanonicalPrototypeWorkspace(canonicalMaturitySource(lifecycle, [stopped]), "2026-09-10T04:10:00Z").readModel.records[0];
+      assert.equal(prototypeDialogRouteForCurrentMove(record), transition === "candidate-promotion" ? "preview-runtime" : "movement-request");
+      assert.deepEqual(record.receipts, []);
+    }
+    const done = projectCanonicalPrototypeWorkspace(canonicalMaturitySource(lifecycle, [succeeded]), "2026-09-10T04:10:00Z").readModel.records[0];
+    assert.equal(prototypeDialogRouteForCurrentMove(done), transition === "candidate-promotion" ? "preview-runtime" : "movement-request");
+    assert.equal(done.receipts[0].id, succeeded.receipt.receipt_id);
+    assert.equal(done.preview.proofState, "not-started");
+
+    // Older pending history cannot reopen a completed latest request, regardless of list order.
+    const olderCommand = buildPrototypeMaturityCommand(prototypeMaturitySubmissionIntent(run, { ...identity, acceptedAt: "2026-09-09T04:00:00Z", requestId: "prototype-maturity-request:sample-tool:0" }, prepared), prepared, config.callerId);
+    const older = acceptedResult(olderCommand);
+    older.history[0].at = "2026-09-09T04:00:00Z";
+    for (const history of [[succeeded, older], [older, succeeded]]) {
+      const selected = projectCanonicalPrototypeWorkspace(canonicalMaturitySource(lifecycle, history), "2026-09-10T04:10:00Z");
+      assert.equal(selected.maturity[done.id].result.request_id, succeeded.request_id);
+      assert.equal(prototypeDialogRouteForCurrentMove(selected.readModel.records[0]), prototypeDialogRouteForCurrentMove(done));
+    }
+  }
+});
+
+function canonicalMaturitySource(lifecycle, maturity) {
+  const slug = "sample-tool";
+  const setup = { scaffold_profile: "static-site", support_profile: "interactive", preview_mode: "static", data_mode: "synthetic", mutation_boundary: "local-only", visibility: "private", support_rows: [] };
+  return { schema_version: 1, workflow_id: "prototype-records", authority_revision: revision,
+    registry: { prototypes: [{ id: slug, name: "Synthetic tool", owner: "Workspace Prototype Studio", lifecycle, data_mode: "synthetic", mutation_boundary: "prototype-local", visibility_tier: "private-internal", paths: {}, linked_records: [] }] },
+    captures: [], documents: { [`records/prototype-landings/${slug}/record.json`]: { id: `prototype:${slug}`, name: "Synthetic tool", objective: "Test navigation only", setup, next_action: "candidate-promotion", source: { posture: "create-studio-source", ref: `repo://workspace-prototype-studio/prototypes/${slug}` } } },
+    workflows: { landing: [], maturity, closure: [] } };
+}
 
 function candidateRunInput() {
   const source = structuredClone(getPrototypeWorkspaceReadModel().records[0]);
