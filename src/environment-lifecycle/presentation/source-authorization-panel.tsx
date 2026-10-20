@@ -12,9 +12,9 @@ export function SourceAuthorizationPanel({ subject, sourceStartDigest, decision 
 }) {
   const runtime = useSourceAuthorization(subject, sourceStartDigest, decision, boundIntentRef), preparation = runtime.preparation, scope = preparation?.source_intent;
   useEffect(() => { onIntentChange(preparation?.authorization.state === "approved" ? preparation.intent_id : null); }, [preparation, onIntentChange]);
-  const canPrepare = preparationAllowed && (!preparation || preparation.authorization.state === "revoked");
+  const canPrepare = preparationAllowed && runtime.ready && (!preparation || preparation.authorization.state === "revoked");
   return <TerasPanel frame="padded" treatment="state" tone={runtime.error ? "danger" : "info"}>
-    <TerasPanelHeader kicker="Source Authorization" title={subject.kind === "repository-bootstrap" ? "Review the restricted owner-control scope" : "Review the exact ordinary-source scope"} description={runtime.error ?? "Approval permits bounded source actions and renewal only until this expiry. Terminal close revokes this scope. The browser and model never receive a token."} statusLabel={preparation?.authorization.state ?? "Not prepared"} />
+    <TerasPanelHeader kicker="Source Authorization" title={subject.kind === "repository-bootstrap" ? "Review the restricted owner-control scope" : "Review the exact ordinary-source scope"} description={runtime.error ?? "Approval permits bounded source actions and renewal only until this expiry. Terminal close revokes this scope. The browser and model never receive a token."} statusLabel={runtime.error ? "Unavailable" : !runtime.ready ? "Loading" : preparation?.authorization.state ?? "Not prepared"} />
     <TerasFieldStack spacing="normal">
       {scope ? <TerasMetadataList items={[
         { label: "Repository", value: scope.repository }, { label: "Branch / fetched base", value: `${scope.branch} / ${scope.fetched_base}` },
@@ -36,7 +36,7 @@ export function SourceAuthorizationPanel({ subject, sourceStartDigest, decision 
         ...(runtime.operation?.provider_operation.failure?.retry_after ? [{ label: "Retry no earlier than", value: runtime.operation.provider_operation.failure.retry_after }] : []),
       ]} /> : null}
       <TerasActionRow>
-        {onRecoverDecision ? runtime.candidates.filter(value => value.start_decision !== null).map(value => <TerasActionButton key={value.intent_id} disabled={runtime.pending} emphasis="secondary" onClick={() => { if (value.start_decision) { onRecoverDecision(value.start_decision); runtime.select(value); } }}>Recover original {value.source_intent.landing_unit_id} / {value.source_intent.branch} / {value.authorization.state}</TerasActionButton>) : null}
+        {runtime.candidates.filter(value => value.start_decision === null || onRecoverDecision).map(value => <TerasActionButton key={value.intent_id} disabled={runtime.pending} emphasis="secondary" onClick={() => { if (value.start_decision && onRecoverDecision) onRecoverDecision(value.start_decision); runtime.select(value); }}>Recover original {value.intent_id} / {value.authorization.state}</TerasActionButton>)}
         {canPrepare ? <TerasActionButton disabled={runtime.pending} onClick={() => void runtime.prepare()}>{preparation ? "Prepare explicit successor scope" : "Prepare source scope"}</TerasActionButton> : null}
         {preparation?.authorization.state === "prepared" ? <TerasActionButton disabled={runtime.pending} onClick={() => void runtime.command("issue")}>Approve this exact scope and issue source access</TerasActionButton> : null}
         {preparation?.authorization.state === "approved" && !preparation.authorization.credential_receipt ? <TerasActionButton disabled={runtime.pending || Boolean(runtime.operation?.provider_operation.failure?.retry_after && Date.parse(runtime.operation.provider_operation.failure.retry_after) > Date.now())} onClick={() => void runtime.command("issue")}>Reconcile original source issuance</TerasActionButton> : null}

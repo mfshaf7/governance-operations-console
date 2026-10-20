@@ -8,6 +8,17 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-20
 
+- Maintenance Landing Unit `maintenance-1275-source-authorization-recovery`
+  (`child_isolated_landing_unit`) makes canonical authorization loading and
+  failed reads unavailable for preparation, retains an explicitly selected
+  scope across reconciliation, and exposes existing scope recovery to Prototype
+  and Bootstrap as well as Delivery. Preparing a successor binds only the
+  selected confirmed-revoked predecessor; preparation alone grants no access.
+  Existing Teras presentation, backend authority and independent credential
+  guards remain unchanged. Deferred HTTP/hook and rendered-control units cover
+  all three consumers. Source validation is not live recovery or product proof;
+  exact Security acceptance and the real Console continuation remain required.
+
 - Maintenance Landing Unit `maintenance-1275-cold-landing-console`
   (`child_isolated_landing_unit`) repairs the canonical cold-read shape that
   showed Landed alongside Complete Landing setup. Accepted owner setup and
