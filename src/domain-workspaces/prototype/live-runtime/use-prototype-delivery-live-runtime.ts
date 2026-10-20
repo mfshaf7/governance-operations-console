@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import {
   assertPrototypeDeliveryApplicationResult,
@@ -9,6 +9,7 @@ import {
   prototypeDeliveryApplicationIdForPacket,
 } from "./prototype-delivery-live-contract.ts";
 import type {
+  PrototypeDeliveryApplicationResult,
   PrototypeDeliveryPacket,
   PrototypeDeliveryApplicationProjection,
   PrototypeDeliveryApplicationRequest,
@@ -19,6 +20,8 @@ export function usePrototypeDeliveryLiveRuntime() {
     Readonly<Record<string, PrototypeDeliveryApplicationProjection>>
   >({});
   const [errorsByPrototypeId, setErrorsByPrototypeId] = useState<Record<string, Error | null>>({});
+  const reader = useRef<ReturnType<typeof createPrototypeDeliveryApplicationReader> | null>(null);
+  if (reader.current === null) reader.current = createPrototypeDeliveryApplicationReader();
 
   const apply = useCallback(
     async (request: PrototypeDeliveryApplicationRequest) => {
@@ -43,18 +46,7 @@ export function usePrototypeDeliveryLiveRuntime() {
     [],
   );
 
-  const read = useCallback(async (applicationId: string) => {
-    const response = await fetch(
-      `/api/prototypes/delivery-applications/${encodeURIComponent(applicationId)}`,
-      { cache: "no-store" },
-    );
-    const body: unknown = await response.json().catch(() => null);
-    if (!response.ok) throw Object.assign(prototypeDeliveryClientError(body), {
-      status: response.status,
-      code: isPrototypeDeliveryLiveApiError(body) ? body.code : "prototype_delivery_read_failed",
-    });
-    return assertPrototypeDeliveryApplicationResult(body);
-  }, []);
+  const read = useCallback((applicationId: string) => reader.current!(applicationId), []);
 
   const load = useCallback(async (packet: PrototypeDeliveryPacket) => {
     const id = packet.content.source.prototype_id;
@@ -75,6 +67,30 @@ export function usePrototypeDeliveryLiveRuntime() {
   }, [read]);
 
   return { apply, errorsByPrototypeId, load, projectionsByPrototypeId, read };
+}
+
+export function createPrototypeDeliveryApplicationReader(fetchImpl: typeof fetch = fetch) {
+  const pending = new Map<string, Promise<PrototypeDeliveryApplicationResult>>();
+  return (applicationId: string) => {
+    const existing = pending.get(applicationId);
+    if (existing) return existing;
+    const request = Promise.resolve().then(async () => {
+      const response = await fetchImpl(
+        `/api/prototypes/delivery-applications/${encodeURIComponent(applicationId)}`,
+        { cache: "no-store" },
+      );
+      const body: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw Object.assign(prototypeDeliveryClientError(body), {
+        status: response.status,
+        code: isPrototypeDeliveryLiveApiError(body) ? body.code : "prototype_delivery_read_failed",
+      });
+      return assertPrototypeDeliveryApplicationResult(body);
+    }).finally(() => {
+      if (pending.get(applicationId) === request) pending.delete(applicationId);
+    });
+    pending.set(applicationId, request);
+    return request;
+  };
 }
 
 function prototypeDeliveryClientError(value: unknown) {
