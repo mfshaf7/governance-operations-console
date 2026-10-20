@@ -17,9 +17,11 @@ import {
 } from "@/teras";
 
 import { useWorkspaceIntakeLiveRuntime } from "../live-runtime/use-workspace-intake-live-runtime.ts";
+import { workspaceIntakeRecordForDecision } from "../workspace-intake-live-contract.ts";
 import type {
   WorkspaceIntakeCandidate,
   WorkspaceIntakeDecision,
+  WorkspaceIntakeCustodyPreparation,
   WorkspaceIntakeResult,
 } from "../workspace-intake-live-types.ts";
 
@@ -28,24 +30,52 @@ type IntakeDecisionSelection = WorkspaceIntakeDecision | "unselected";
 
 export function WorkspaceIntakeDialog({
   candidate,
+  repositoryCustody,
+  returnLabel = "Back to Delivery",
+  initialRequestId,
+  onNewCandidate,
   onClose,
 }: {
   candidate: WorkspaceIntakeCandidate;
+  repositoryCustody?: WorkspaceIntakeCustodyPreparation;
+  returnLabel?: string;
+  initialRequestId?: string;
+  onNewCandidate?: () => void;
   onClose: () => void;
 }) {
   const runtime = useWorkspaceIntakeLiveRuntime();
-  const [activeStep, setActiveStep] = useState<IntakeStep>("decision");
+  const [activeStep, setActiveStep] = useState<IntakeStep>(initialRequestId ? "result" : "decision");
   const [decision, setDecision] =
     useState<IntakeDecisionSelection>("unselected");
   const [confirmed, setConfirmed] = useState(false);
-  const [requestId, setRequestId] = useState(createRequestId);
+  const [requestId, setRequestId] = useState(() => initialRequestId ?? createRequestId());
+
+  const selectedCustody = useMemo(() => {
+    if (!repositoryCustody) return undefined;
+    const requested = workspaceIntakeRecordForDecision(repositoryCustody.requested_record,
+      decision === "unselected" ? "proposed" : decision);
+    if (requested.kind !== "repo") return undefined;
+    return { request_id: repositoryCustody.request_id, requested_record: requested };
+  }, [repositoryCustody, decision]);
+  const sourceCandidate = runtime.preparation?.source_candidate;
+  const reviewedCandidate: WorkspaceIntakeCandidate = sourceCandidate ? {
+    label: candidate.label, target: { kind: sourceCandidate.target.kind, name: sourceCandidate.target.name },
+    source: sourceCandidate.source, requested_record: sourceCandidate.requested_record,
+    evidence_refs: sourceCandidate.evidence_refs,
+  } : candidate;
 
   useEffect(() => {
-    void runtime.prepare(candidate).catch(() => undefined);
-  }, [candidate.target.kind, candidate.target.name, runtime.prepare]);
+    if (initialRequestId) {
+      void runtime.read(initialRequestId).catch(() => undefined);
+      return;
+    }
+    setConfirmed(false);
+    void runtime.prepare(candidate, selectedCustody).catch(() => undefined);
+  }, [candidate, selectedCustody, initialRequestId, runtime.read, runtime.prepare]);
 
   const decisionComplete = decision !== "unselected";
-  const reviewComplete = decisionComplete && confirmed && Boolean(runtime.preparation);
+  const reviewComplete = decisionComplete && confirmed && !runtime.pending && Boolean(runtime.preparation) &&
+    (!repositoryCustody || Boolean(sourceCandidate));
   const result = runtime.result;
   const steps = useMemo(
     () => [
@@ -77,17 +107,18 @@ export function WorkspaceIntakeDialog({
   async function submit() {
     if (!reviewComplete || runtime.pending) return;
     await runtime
-      .submit({ candidate, decision, requestId })
+      .submit({ candidate: reviewedCandidate, decision, requestId })
       .then(() => setActiveStep("result"))
       .catch(() => undefined);
   }
 
   function startCorrection() {
+    if (initialRequestId) { onNewCandidate?.(); return; }
     runtime.reset();
     setRequestId(createRequestId());
     setConfirmed(false);
     setActiveStep("decision");
-    void runtime.prepare(candidate).catch(() => undefined);
+    void runtime.prepare(candidate, selectedCustody).catch(() => undefined);
   }
 
   return (
@@ -109,18 +140,18 @@ export function WorkspaceIntakeDialog({
             activeStep === "review"
               ? { label: "Back", onClick: () => setActiveStep("decision") }
               : activeStep === "decision"
-                ? { label: "Back to Delivery", onClick: onClose }
+                ? { label: returnLabel, onClick: onClose }
                 : undefined
           }
           finish={
             activeStep === "result"
-              ? { label: "Back to Delivery", onClick: onClose }
+              ? { label: returnLabel, onClick: onClose }
               : undefined
           }
           next={
             activeStep === "decision"
               ? {
-                  disabled: !decisionComplete || !runtime.preparation,
+                  disabled: !decisionComplete || !runtime.preparation || runtime.pending || Boolean(repositoryCustody && !sourceCandidate),
                   label: "Review Classification",
                   onClick: () => setActiveStep("review"),
                 }
@@ -131,6 +162,7 @@ export function WorkspaceIntakeDialog({
       kicker="Workspace Intake"
       onClose={onClose}
       onStepSelect={(stepId) => {
+        if (initialRequestId) return;
         if (
           stepId === "decision" ||
           (stepId === "review" && decisionComplete) ||
@@ -141,7 +173,7 @@ export function WorkspaceIntakeDialog({
       }}
       statusLabel={result?.status ?? (runtime.preparation ? "Prepared" : "Unavailable")}
       statusTone={result ? resultTone(result) : runtime.preparation ? "info" : "warn"}
-      steps={steps}
+      steps={initialRequestId ? [{ id: "result", label: "Retained Request", stateLabel: result?.status ?? "Reading", tone: resultTone(result) }] : steps}
       subject={{
         detail: `${candidate.target.kind} / ${candidate.target.name}`,
         eyebrow: "Workspace Candidate",
@@ -149,13 +181,14 @@ export function WorkspaceIntakeDialog({
       }}
       support={
         <WorkspaceIntakeSupport
-          candidate={candidate}
+          candidate={reviewedCandidate}
           error={runtime.error?.message}
           onCancel={() => void runtime.cancel(requestId).catch(() => undefined)}
           onContinue={() => void runtime.continueRequest(requestId).catch(() => undefined)}
           onStartCorrection={startCorrection}
           pending={runtime.pending}
           preparation={runtime.preparation}
+          retained={Boolean(initialRequestId)}
           result={result}
         />
       }
@@ -170,9 +203,11 @@ export function WorkspaceIntakeDialog({
         >
           <TerasChoiceGroup<IntakeDecisionSelection>
             ariaLabel="Workspace classification"
+            disabled={runtime.pending}
             frame="tray"
             label="Classification"
             onSelect={(value) => {
+              if (runtime.pending) return;
               setDecision(value);
               setConfirmed(false);
             }}
@@ -205,7 +240,14 @@ export function WorkspaceIntakeDialog({
             items={[
               { label: "Decision", value: decision },
               { label: "Target", value: `${candidate.target.kind}:${candidate.target.name}` },
-              { label: "Source", value: candidate.source.class },
+              { label: "Source", value: reviewedCandidate.source.class },
+              ...(reviewedCandidate.requested_record.kind === "repo" ? [
+                { label: "Repository class", value: reviewedCandidate.requested_record.repo_class ?? "Not in scope" },
+                { label: "Security bindings", value: reviewedCandidate.requested_record.requires_security_bindings === null ? "Not in scope" : String(reviewedCandidate.requested_record.requires_security_bindings) },
+                { label: "Security owner", value: reviewedCandidate.requested_record.security_owner ?? "None" },
+                { label: "Provider identity", value: reviewedCandidate.requested_record.provider_repository ? `${reviewedCandidate.requested_record.provider_repository.full_name} / ${reviewedCandidate.requested_record.provider_repository.provider_repository_id}` : "Legacy source" },
+                { label: "Validation posture", value: reviewedCandidate.requested_record.validation_behavior?.posture ?? "Not in scope" },
+              ] : []),
               {
                 label: "Current Record",
                 value: runtime.preparation?.expected_state.record_version
@@ -248,6 +290,7 @@ function WorkspaceIntakeSupport({
   pending,
   preparation,
   result,
+  retained = false,
 }: {
   candidate: WorkspaceIntakeCandidate;
   error?: string;
@@ -257,6 +300,7 @@ function WorkspaceIntakeSupport({
   pending: boolean;
   preparation: ReturnType<typeof useWorkspaceIntakeLiveRuntime>["preparation"];
   result: WorkspaceIntakeResult | null;
+  retained?: boolean;
 }) {
   return (
     <>
@@ -264,16 +308,18 @@ function WorkspaceIntakeSupport({
         description="Source evidence and current canonical binding used for this classification."
         fit="content"
         kicker="Candidate Evidence"
-        title={preparation ? "Authority Current" : "Authority Unavailable"}
-        tone={preparation ? "info" : "warn"}
+        title={retained ? "Retained owner request" : preparation ? "Authority Current" : "Authority Unavailable"}
+        tone={retained || preparation ? "info" : "warn"}
         treatment="rail"
       >
         <TerasMetadataList
           columns={1}
           items={[
             { label: "Source ref", value: candidate.source.ref },
+            { label: "Source digest", value: candidate.source.digest },
+            ...(preparation?.source_candidate ? [{ label: "Candidate digest", value: preparation.source_candidate.candidate_digest }] : []),
             { label: "Evidence", value: String(candidate.evidence_refs.length) },
-            { label: "Authority", value: preparation?.authority_revision.slice(0, 12) ?? "Unavailable" },
+            { label: "Authority", value: preparation?.authority_revision.slice(0, 12) ?? (retained ? "OOS rechecks current authority before advancing" : "Unavailable") },
           ]}
         />
       </TerasWizardPanel>
@@ -295,7 +341,7 @@ function WorkspaceIntakeSupport({
                   </TerasActionButton>
                 ) : result.next_action === "submit-corrected-request" ? (
                   <TerasActionButton onClick={onStartCorrection}>
-                    Correct Request
+                    {retained ? "Prepare a reviewed correction" : "Correct Request"}
                   </TerasActionButton>
                 ) : undefined
           }
@@ -364,6 +410,7 @@ function WorkspaceIntakeResultPanel({
           <TerasMetadataList
             items={[
               { label: "Status", value: result.status },
+              { label: "Request", value: result.request_id },
               { label: "Revision", value: String(result.revision) },
               { label: "Canonical Mutation", value: result.canonical_mutation ? "Proven" : "Not claimed" },
               { label: "Receipt", value: result.receipt?.receipt_id ?? "Pending" },

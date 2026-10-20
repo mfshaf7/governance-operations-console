@@ -1,4 +1,5 @@
 import { PrototypeBaselinePromotionModal } from "../workflows/baseline-promotion/prototype-baseline-promotion-modal.tsx";
+import { PrototypeSourceAuthoringModal } from "../workflows/source-authoring/prototype-source-authoring-modal.tsx";
 import type { PrototypeBaselinePromotionInput } from "../../work-model/workflows/baseline-promotion/prototype-baseline-promotion-model.ts";
 import { PrototypeCandidatePromotionModal } from "../workflows/candidate-promotion/prototype-candidate-promotion-modal.tsx";
 import type { PrototypeCandidatePromotionInput } from "../../work-model/workflows/candidate-promotion/prototype-candidate-promotion-model.ts";
@@ -137,8 +138,10 @@ export function PrototypeControlDialogStack({
         onOpenCloseout={(record) => onOpenDialog("closeout-retirement", record)}
         onOpenHistory={(record) => onOpenDialog("history", record)}
         onOpenPreviewRuntime={() => onOpenDialog("preview-runtime")}
+        onOpenSourceAuthoring={() => onOpenDialog("source-authoring")}
         record={activeDialog === "dashboard" ? activeRecord : null}
       />
+      <PrototypeSourceAuthoringModal record={activeDialog === "source-authoring" ? activeRecord : null} onClose={onCloseDialog} />
       <PrototypeClosureModal
         onBackToDashboard={onBackToDashboard}
         onClose={onCloseDialog}

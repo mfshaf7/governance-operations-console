@@ -1,11 +1,14 @@
 import type {
   WorkspaceIntakeCandidate,
+  WorkspaceIntakeCustodyPreparation,
   WorkspaceIntakeExpectedState,
   WorkspaceIntakePreparation,
   WorkspaceIntakeRequestedRecord,
   WorkspaceIntakeResult,
   WorkspaceIntakeSubmissionIntent,
   WorkspaceIntakeTargetKind,
+  WorkspaceIntakeSourceCandidate,
+  WorkspaceIntakeRequestPage,
 } from "./workspace-intake-live-types.ts";
 
 const digestPattern = /^sha256:[0-9a-f]{64}$/;
@@ -40,6 +43,27 @@ const nextActions = new Set([
   "submit-corrected-request",
 ]);
 
+// Shared projection only: the server still constructs and verifies the command.
+// Changing classification requires a newly prepared custody candidate, not a
+// silent rewrite of the source the operator reviewed.
+export function workspaceIntakeRecordForDecision(
+  record: WorkspaceIntakeRequestedRecord,
+  decision: WorkspaceIntakeSubmissionIntent["decision"],
+): WorkspaceIntakeRequestedRecord {
+  if (decision !== "out-of-scope") return record;
+  if (record.kind === "repo") return {
+    kind: "repo", notes: record.notes,
+    ...(record.provider_repository ? { provider_repository: record.provider_repository } : {}),
+    repo_class: null, requires_security_bindings: null, security_owner: null,
+  };
+  if (record.kind === "product") return {
+    intended_endpoint: null, kind: "product", notes: record.notes,
+    platform_owner: null, runtime_owner: null, security_owner: null, source_owners: [],
+  };
+  return { component_class: null, kind: "component", notes: record.notes,
+    owner_repo: null, product: null, security_owner: null };
+}
+
 export class WorkspaceIntakeContractError extends Error {
   readonly code: string;
 
@@ -47,6 +71,46 @@ export class WorkspaceIntakeContractError extends Error {
     super(message);
     this.code = code;
   }
+}
+
+export function assertWorkspaceIntakeRequestPage(value: unknown, targetName: string, custodyRequestId: string): WorkspaceIntakeRequestPage {
+  const page = record(value, "retained request page");
+  const target = assertWorkspaceIntakeTarget(page.target);
+  const wireTarget = record(page.target, "retained request target");
+  if (Object.keys(page).sort().join(",") !== "custody_request_id,next_cursor,pending_request_count,records,revision,schema_version,target,updated_at,workflow_id" ||
+      page.schema_version !== 1 || page.workflow_id !== "workspace-intake" || target.kind !== "repo" || target.name !== targetName ||
+      wireTarget.record_id !== `repo:${targetName}` || page.custody_request_id !== custodyRequestId ||
+      !Number.isSafeInteger(page.revision) || Number(page.revision) < 0 ||
+      !Number.isSafeInteger(page.pending_request_count) || Number(page.pending_request_count) < 0 ||
+      (page.updated_at !== null && !dateTime(page.updated_at)) ||
+      (page.next_cursor !== null && (typeof page.next_cursor !== "string" || !/^[0-9a-f]{64}$/.test(page.next_cursor))) ||
+      !Array.isArray(page.records) || page.records.length > 25) throw invalid("Retained Intake page does not bind this exact custody target.");
+  const ids = new Set<string>();
+  const records = page.records.map(value => {
+    const entry = record(value, "retained request");
+    const requestId = assertWorkspaceIntakeRequestId(entry.request_id);
+    const projected = assertCustodySourceCandidate(entry.candidate, "repo", targetName, `repo:${targetName}`);
+    const sourcePrefix = `oos://repository-custody/requests/${encodeURIComponent(custodyRequestId)}/intake/`;
+    if (Object.keys(entry).sort().join(",") !== "candidate,classification,request_id,requested_at,revision,status,updated_at" ||
+        ids.has(requestId) || !dateTime(entry.requested_at) || !dateTime(entry.updated_at) ||
+        !workflowStatuses.has(String(entry.status)) || !decisions.has(String(entry.classification)) ||
+        !Number.isSafeInteger(entry.revision) || Number(entry.revision) < 1 ||
+        !projected.source.ref.startsWith(sourcePrefix) || !/^[0-9a-f]{64}$/.test(projected.source.ref.slice(sourcePrefix.length))) {
+      throw invalid("Retained Intake request has invalid or cross-custody metadata.");
+    }
+    ids.add(requestId);
+    return { request_id: requestId, requested_at: String(entry.requested_at), updated_at: String(entry.updated_at),
+      revision: Number(entry.revision), classification: entry.classification as WorkspaceIntakeRequestPage["records"][number]["classification"],
+      status: entry.status as WorkspaceIntakeResult["status"], candidate: projected };
+  });
+  const visiblePending = records.filter(entry => !["succeeded", "cancelled", "rejected", "requires-action"].includes(entry.status)).length;
+  if (Number(page.revision) < records.reduce((total, entry) => total + entry.revision, 0) ||
+      Number(page.pending_request_count) < visiblePending || Number(page.pending_request_count) > Number(page.revision) ||
+      (Number(page.revision) === 0 && (records.length > 0 || page.updated_at !== null || page.next_cursor !== null)) ||
+      (Number(page.revision) > 0 && page.updated_at === null)) throw invalid("Retained Intake counters do not match their visible metadata.");
+  return { schema_version: 1, workflow_id: "workspace-intake", target: { ...target, record_id: `repo:${targetName}` },
+    custody_request_id: custodyRequestId, revision: Number(page.revision), pending_request_count: Number(page.pending_request_count), updated_at: page.updated_at as string | null,
+    records, next_cursor: page.next_cursor as string | null };
 }
 
 export function assertWorkspaceIntakeRequestId(value: unknown) {
@@ -67,6 +131,16 @@ export function assertWorkspaceIntakeTarget(value: unknown) {
     throw invalid("Workspace Intake target is invalid.");
   }
   return { kind, name: target.name };
+}
+
+export function assertWorkspaceIntakeCustodyPreparation(value: unknown): WorkspaceIntakeCustodyPreparation {
+  const custody = record(value, "repository custody preparation");
+  if (Object.keys(custody).sort().join(",") !== "request_id,requested_record" || !text(custody.request_id)) {
+    throw invalid("Repository custody preparation requires exactly request_id and requested_record.");
+  }
+  const requested = assertRequestedRecord(custody.requested_record, "repo");
+  if (requested.kind !== "repo") throw invalid("Repository custody preparation requires a repository record.");
+  return { request_id: String(custody.request_id), requested_record: requested };
 }
 
 export function assertWorkspaceIntakeCandidate(
@@ -143,6 +217,10 @@ export function assertWorkspaceIntakePreparation(
     "canonical authority",
   );
   const kind = target.kind as WorkspaceIntakeTargetKind;
+  let sourceCandidate: WorkspaceIntakeSourceCandidate | undefined;
+  if (preparation.source_candidate !== undefined) {
+    sourceCandidate = assertCustodySourceCandidate(preparation.source_candidate, kind, String(target.name), String(target.record_id));
+  }
   if (
     preparation.schema_version !== 1 ||
     preparation.workflow_id !== "workspace-intake" ||
@@ -169,6 +247,7 @@ export function assertWorkspaceIntakePreparation(
     canonical_mutation: false,
     expected_state: expected,
     schema_version: 1,
+    ...(sourceCandidate ? { source_candidate: sourceCandidate } : {}),
     target: {
       kind,
       name: target.name,
@@ -176,6 +255,23 @@ export function assertWorkspaceIntakePreparation(
     },
     workflow_id: "workspace-intake",
   };
+}
+
+function assertCustodySourceCandidate(value: unknown, kind: WorkspaceIntakeTargetKind, name: string, recordId: string): WorkspaceIntakeSourceCandidate {
+  const wire = record(value, "custody source candidate");
+  const wireTarget = record(wire.target, "custody source target");
+  const candidate = assertWorkspaceIntakeCandidate({ ...wire, label: name });
+  if (Object.keys(wire).sort().join(",") !== "artifact_type,candidate_digest,evidence_refs,requested_record,schema_version,source,target" ||
+      wire.schema_version !== 1 || wire.artifact_type !== "workspace-intake-source-candidate" ||
+      typeof wire.candidate_digest !== "string" || !digestPattern.test(wire.candidate_digest) ||
+      candidate.source.class !== "repository-custody" || kind !== "repo" || candidate.target.kind !== kind ||
+      candidate.target.name !== name || wireTarget.record_id !== recordId) {
+    throw invalid("Repository custody source candidate does not match its exact target.");
+  }
+  return { schema_version: 1, artifact_type: "workspace-intake-source-candidate",
+    candidate_digest: wire.candidate_digest, source: candidate.source,
+    target: { ...candidate.target, record_id: recordId }, requested_record: candidate.requested_record,
+    evidence_refs: candidate.evidence_refs };
 }
 
 export function assertWorkspaceIntakeResult(
@@ -348,6 +444,17 @@ function assertRequestedRecord(
     };
   }
   if (expectedKind === "repo") {
+    let provider: Extract<WorkspaceIntakeRequestedRecord, { kind: "repo" }>["provider_repository"];
+    if (requested.provider_repository !== undefined) {
+      const binding = record(requested.provider_repository, "provider repository");
+      if (Object.keys(binding).sort().join(",") !== "full_name,provider,provider_repository_id" ||
+          binding.provider !== "github" || typeof binding.provider_repository_id !== "string" ||
+          !/^[1-9][0-9]*$/.test(binding.provider_repository_id) || typeof binding.full_name !== "string" ||
+          !/^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9._-]+$/.test(binding.full_name)) {
+        throw invalid("Repository provider binding is invalid.");
+      }
+      provider = { provider: "github", provider_repository_id: binding.provider_repository_id, full_name: binding.full_name };
+    }
     if (
       !nullableText(requested.repo_class) ||
       !nullableText(requested.security_owner) ||
@@ -358,6 +465,7 @@ function assertRequestedRecord(
     return {
       ...(normalizedValidation ? { validation_behavior: normalizedValidation } : {}),
       kind: "repo",
+      ...(provider ? { provider_repository: provider } : {}),
       notes: String(requested.notes),
       repo_class: requested.repo_class as string | null,
       requires_security_bindings: requested.requires_security_bindings as boolean | null,

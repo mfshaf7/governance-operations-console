@@ -3,8 +3,10 @@ import type {
   PlatformOperationCatalog,
   PlatformOperationRecord,
 } from "./platform-operation-types.ts";
+import { assertSourceOperationIntent as assertSourceCredentialIntent, assertSourceOperationReceipt as assertSourceCredentialReceipt } from "./source-authorization-contract.ts";
 
 const actions = new Set<PlatformOperationAction>([
+  "agent-source.issue", "agent-source.renew", "agent-source.revoke",
   "dev-integration.request-profile",
   "dev-integration.start",
   "dev-integration.status",
@@ -65,8 +67,13 @@ export function assertPlatformOperationRecord(value: unknown): PlatformOperation
   if (provider.schema_version !== 1 || !identifier(provider.operation_id) || !identifier(provider.command_id) || !identifier(provider.correlation_id) || !states.has(String(provider.state)) || !positiveInteger(provider.attempt) || !identifier(provider.subject_ref) || !identifier(provider.capability_id) || !actions.has(provider.action as PlatformOperationAction) || typeof provider.retryable !== "boolean" || typeof provider.cancel_available !== "boolean" || (provider.safe_log_ref !== null && !identifier(provider.safe_log_ref)) || !timestamp(provider.updated_at) || !Array.isArray(provider.events) || provider.events.length > 1024) invalid("provider_operation");
   if (provider.command_id !== command.command_id || provider.correlation_id !== command.correlation_id || provider.subject_ref !== subject.ref || provider.capability_id !== command.capability_id || provider.action !== command.action || provider.state !== operation.state) invalid("provider binding");
   validateBlocker(provider.blocker);
-  validateFailure(provider.failure);
-  validateReceipt(provider.receipt, String(provider.state));
+  if (String(command.action).startsWith("agent-source.")) {
+    exact(command.input, ["source_intent", "session_id"], "source input");
+    const intent = assertSourceCredentialIntent(command.input.source_intent);
+    if (intent.operator_id !== command.actor_ref || command.capability_id !== command.action || subject.kind !== "dev-integration-profile" || (command.input.session_id !== null && !identifier(command.input.session_id))) invalid("source input binding");
+  }
+  validateFailure(provider.failure, String(command.action));
+  validateReceipt(provider.receipt, String(provider.state), command);
   validateEvents(provider.events, String(provider.state));
   if (!Array.isArray(operation.controls) || operation.controls.length > 128) invalid("controls");
   operation.controls.forEach(validateControl);
@@ -104,18 +111,25 @@ function validateBlocker(value: unknown) {
   const dispositions = blocker.supported_dispositions;
   if (!identifier(blocker.code) || !identifier(blocker.owner) || !isText(blocker.reason) || !identifier(blocker.next_action) || !Array.isArray(dispositions) || dispositions.length === 0 || dispositions.length > 4 || new Set(dispositions).size !== dispositions.length || dispositions.some((entry) => !["remove", "workaround", "accept-risk", "defer"].includes(String(entry)))) invalid("provider_operation.blocker");
 }
-function validateFailure(value: unknown) {
+function validateFailure(value: unknown, action: string) {
   if (value === null) return;
   const failure = record(value, "provider_operation.failure");
-  exact(failure, ["code", "detail", "owner"], "provider_operation.failure");
+  const uncertainty = action.startsWith("agent-source.") && ["platform_source_issuance_uncertain", "platform_source_revocation_expiry_pending"].includes(String(failure.code));
+  exact(failure, ["code", "detail", "owner", ...(uncertainty ? ["retry_after"] : [])], "provider_operation.failure");
+  if (uncertainty && !timestamp(failure.retry_after)) invalid("provider_operation.failure.retry_after");
   if (!identifier(failure.code) || !isText(failure.detail) || !identifier(failure.owner)) invalid("provider_operation.failure");
 }
-function validateReceipt(value: unknown, state: string) {
+function validateReceipt(value: unknown, state: string, command: Record<string, unknown>) {
   const terminal = ["succeeded", "failed", "cancelled"].includes(state);
   if (value === null) { if (terminal) invalid("terminal receipt"); return; }
   if (!terminal) invalid("non-terminal receipt");
   const receipt = record(value, "provider_operation.receipt");
-  exact(receipt, ["receipt_ref", "outcome", "recorded_at", "source_version", "effect"], "provider_operation.receipt");
+  const sourceSuccess = String(command.action).startsWith("agent-source.") && state === "succeeded";
+  exact(receipt, ["receipt_ref", "outcome", "recorded_at", "source_version", "effect", ...(sourceSuccess ? ["source_credential"] : [])], "provider_operation.receipt");
+  if (sourceSuccess) {
+    const source = assertSourceCredentialReceipt(receipt.source_credential), input = record(command.input, "command.input"), intent = assertSourceCredentialIntent(input.source_intent);
+    if (source.command_id !== command.command_id || source.action !== command.action || source.source_intent_id !== intent.intent_id || source.session_id !== input.session_id || receipt.effect !== "verified") invalid("source receipt binding");
+  }
   if (!identifier(receipt.receipt_ref) || receipt.outcome !== state || !timestamp(receipt.recorded_at) || !identifier(receipt.source_version) || !["none", "partial", "verified"].includes(String(receipt.effect))) invalid("provider_operation.receipt");
 }
 function validateEvents(value: unknown[], state: string) {

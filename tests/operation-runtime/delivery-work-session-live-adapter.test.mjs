@@ -126,6 +126,18 @@ test("case:delivery-work-session-start preserves the reviewed decision and comma
   });
 });
 
+test("ordinary source authorization is forwarded separately from the unchanged actual Work Session decision", async () => {
+  const bodies = [], sourceIntentRef = "source-intent:actual-session/successor+1";
+  const fetchImpl = async (_url, init) => { bodies.push(JSON.parse(init.body)); return jsonResponse(projection({ receipt: true })); };
+  const decision = acceptedDecision();
+  await startDeliveryWorkSession(714, { commandId: "work-session-command:source-start", expectedSessionRevision: null, decision, sourceIntentRef }, { env, fetchImpl });
+  await continueDeliveryWorkSession(714, { commandId: "work-session-command:source-continue", expectedSessionRevision: "2026-08-27T02:00:00.000Z", sourceIntentRef }, { env, fetchImpl });
+  assert.deepEqual(bodies[0].command.decision, decision); assert.equal(bodies[0].command.source_intent_ref, sourceIntentRef); assert.equal(bodies[1].command.source_intent_ref, sourceIntentRef);
+  const value = projection(); value.source_authorization = { intent_ref: sourceIntentRef, session_id: value.session_id, revision: "2026-08-27T02:00:00.001Z" };
+  assert.equal(assertDeliveryWorkSessionProjection(value).source_authorization.intent_ref, sourceIntentRef);
+  value.source_authorization.session_id = "different-session"; assert.throws(() => assertDeliveryWorkSessionProjection(value), /another session/);
+});
+
 test("case:delivery-work-session-terminal-actions preserve exact revision and bounded routes", async () => {
   const calls = [];
   const fetchImpl = async (url, init) => {

@@ -126,6 +126,7 @@ export function PrototypeControlSurface({
         }
         selected={
           <PrototypeControlSelectedPanel
+            onOpenSourceAuthoring={(record) => controller.openDialog("source-authoring", record)}
             onOpenCurrentAction={(record) =>
               controller.openDialog(
                 prototypeDialogRouteForCurrentMove(record),

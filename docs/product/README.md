@@ -73,6 +73,16 @@ current and future product changes.
 
 ## Live Integration Surfaces
 
+- `repository-owner-setup.md`
+  - Staged Repository Intake entry for trusted owner controls, selected actual
+    project validation, separate optional CI approval, non-source existing-owner
+    checkout and original-request recovery. Exact composed acceptance is pending.
+
+- `prototype-source-authoring.md`
+  - Staged primary authoring procedure, shared ordinary-source authorization,
+    exact draft inspection, source delivery and cold recovery. This extension
+    still awaits exact composed acceptance and commissioning.
+
 - `console-runtime-operability.md`
   - Central server configuration, non-secret capability projection,
     server-issued API correlation, bounded errors, and canonical owner-audit

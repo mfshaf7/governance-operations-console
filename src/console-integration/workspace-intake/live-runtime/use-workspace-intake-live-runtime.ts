@@ -5,12 +5,15 @@ import { useCallback, useState } from "react";
 import {
   assertWorkspaceIntakePreparation,
   assertWorkspaceIntakeResult,
+  assertWorkspaceIntakeRequestPage,
 } from "../workspace-intake-live-contract.ts";
 import type {
   WorkspaceIntakeCandidate,
+  WorkspaceIntakeCustodyPreparation,
   WorkspaceIntakeDecision,
   WorkspaceIntakePreparation,
   WorkspaceIntakeResult,
+  WorkspaceIntakeRequestPage,
 } from "../workspace-intake-live-types.ts";
 
 export class WorkspaceIntakeClientError extends Error {
@@ -30,11 +33,25 @@ export function useWorkspaceIntakeLiveRuntime() {
   const [result, setResult] = useState<WorkspaceIntakeResult | null>(null);
   const [error, setError] = useState<WorkspaceIntakeClientError | null>(null);
   const [pending, setPending] = useState(false);
+  const [requestPage, setRequestPage] = useState<WorkspaceIntakeRequestPage | null>(null);
 
-  const prepare = useCallback(async (candidate: WorkspaceIntakeCandidate) => {
+  const list = useCallback(async (targetName: string, custodyRequestId: string, cursor: string | null = null) => {
+    setRequestPage(null);
+    return run(async () => {
+      const query = new URLSearchParams({ target_name: targetName, custody_request_id: custodyRequestId });
+      if (cursor !== null) query.set("cursor", cursor);
+      const body = await jsonRequest(`/api/workspace-intake/requests?${query}`, { method: "GET", cache: "no-store" });
+      const page = assertWorkspaceIntakeRequestPage(body, targetName, custodyRequestId);
+      setRequestPage(page);
+      return page;
+    });
+  }, []);
+
+  const prepare = useCallback(async (candidate: Pick<WorkspaceIntakeCandidate, "target">, custody?: WorkspaceIntakeCustodyPreparation) => {
+    setPreparation(null);
     return run(async () => {
       const body = await jsonRequest("/api/workspace-intake/preparations", {
-        body: JSON.stringify({ target: candidate.target }),
+        body: JSON.stringify({ target: candidate.target, ...(custody ? { repository_custody: custody } : {}) }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
@@ -135,6 +152,8 @@ export function useWorkspaceIntakeLiveRuntime() {
   }
 
   return {
+    list,
+    requestPage,
     cancel,
     continueRequest,
     error,

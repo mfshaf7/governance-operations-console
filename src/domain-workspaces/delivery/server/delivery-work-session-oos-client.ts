@@ -49,6 +49,7 @@ export async function startDeliveryWorkSession(
     commandId: string;
     decision?: DeliveryWorkSessionDecision;
     expectedSessionRevision: string | null;
+    sourceIntentRef?: string;
   },
   options: DeliveryWorkSessionClientOptions = {},
 ) {
@@ -64,6 +65,7 @@ export async function startDeliveryWorkSession(
           command_id: command.commandId,
           ...(command.decision ? { decision: command.decision } : {}),
           expected_session_revision: command.expectedSessionRevision,
+          ...(command.sourceIntentRef ? { source_intent_ref: command.sourceIntentRef } : {}),
         },
       }),
       method: "POST",
@@ -77,6 +79,7 @@ export async function continueDeliveryWorkSession(
   command: {
     commandId: string;
     expectedSessionRevision: string;
+    sourceIntentRef?: string;
   },
   options: DeliveryWorkSessionClientOptions = {},
 ) {
@@ -88,6 +91,7 @@ export async function continueDeliveryWorkSession(
         command: {
           command_id: command.commandId,
           expected_session_revision: command.expectedSessionRevision,
+          ...(command.sourceIntentRef ? { source_intent_ref: command.sourceIntentRef } : {}),
         },
       }),
       method: "POST",

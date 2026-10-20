@@ -104,13 +104,14 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
   }, [refresh, snapshot, workItemId]);
 
   const start = useCallback(
-    async (decision: DeliveryWorkSessionDecisionInput) => {
+    async (decision: DeliveryWorkSessionDecisionInput, sourceIntentRef?: string) => {
       const current = await currentSnapshot(snapshot, refresh);
       if (current.mode === "disconnected-preview") return current;
       return mutate({
         action: "start",
         body: {
           decision,
+          ...(sourceIntentRef ? { sourceIntentRef } : {}),
           expectedSessionRevision:
             current.projection?.session_revision ?? null,
         },
@@ -122,7 +123,7 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
     [refresh, snapshot, workItemId],
   );
 
-  const command = useCallback(async (action: "close" | "continue" | "merge") => {
+  const command = useCallback(async (action: "close" | "continue" | "merge", sourceIntentRef?: string) => {
     const current = await currentSnapshot(snapshot, refresh);
     if (current.mode === "disconnected-preview") return current;
     const revision = current.projection?.session_revision;
@@ -134,14 +135,14 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
     }
     return mutate({
       action,
-      body: { expectedSessionRevision: revision },
+      body: { expectedSessionRevision: revision, ...(sourceIntentRef ? { sourceIntentRef } : {}) },
       path: `${workSessionPath(requiredTarget(workItemId))}/${action}`,
       pendingCommands,
       setSnapshot,
     });
   }, [refresh, snapshot, workItemId]);
 
-  const continueWork = useCallback(() => command("continue"), [command]);
+  const continueWork = useCallback((sourceIntentRef?: string) => command("continue", sourceIntentRef), [command]);
   const mergeWork = useCallback(() => command("merge"), [command]);
   const closeWork = useCallback(() => command("close"), [command]);
 

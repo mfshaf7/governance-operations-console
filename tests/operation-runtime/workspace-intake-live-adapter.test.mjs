@@ -1,14 +1,17 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { deliveryWorkspaceIntakeCandidate } from "../../src/domain-workspaces/delivery/presentation/surfaces/execution-board/action-session/closeout/delivery-workspace-intake-candidate.ts";
+import { assertWorkspaceIntakeCandidate, workspaceIntakeRecordForDecision } from "../../src/console-integration/workspace-intake/workspace-intake-live-contract.ts";
 import {
   continueWorkspaceIntake,
   prepareWorkspaceIntake,
   readWorkspaceIntake,
   submitWorkspaceIntake,
   WorkspaceIntakeOosError,
+  listWorkspaceIntakeRequests,
 } from "../../src/console-integration/workspace-intake/server/workspace-intake-oos-client.ts";
 import {
   assertCanonicalSourceRequest,
@@ -22,6 +25,122 @@ const config = {
   callerId: "governance-operations-console",
   callerSecret: "server-only-secret",
 };
+
+function custodyPreparation() {
+  const selected = { kind: "repo", name: "synthetic-owner", record_id: "repo:synthetic-owner" };
+  const source = { schema_version: 1, artifact_type: "workspace-intake-source-candidate",
+    source: { class: "repository-custody", digest: digest("c"),
+      ref: `oos://repository-custody/requests/repository-custody-request%3Asynthetic/intake/${"d".repeat(64)}` },
+    target: selected, requested_record: { kind: "repo", notes: "Operator-reviewed synthetic owner.",
+      repo_class: "product", requires_security_bindings: false, security_owner: null,
+      provider_repository: { provider: "github", provider_repository_id: "123456789",
+        full_name: "example-organization/synthetic-owner" } },
+    evidence_refs: ["oos://receipts/repository-custody/synthetic.json", "oos://readbacks/repository-provider/synthetic.json"] };
+  function sorted(value) {
+    if (Array.isArray(value)) return value.map(sorted);
+    if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map((key) => [key, sorted(value[key])]));
+    return value;
+  }
+  return { ...preparation(), target: selected, source_candidate: { ...source,
+    candidate_digest: `sha256:${createHash("sha256").update(JSON.stringify(sorted(source))).digest("hex")}` } };
+}
+
+test("custody classification projection preserves identity while explicitly clearing out-of-scope ownership", () => {
+  const source = custodyPreparation().source_candidate.requested_record;
+  assert.equal(workspaceIntakeRecordForDecision(source, "proposed"), source);
+  assert.equal(workspaceIntakeRecordForDecision(source, "admitted"), source);
+  const outside = workspaceIntakeRecordForDecision(source, "out-of-scope");
+  assert.equal(outside.repo_class, null);
+  assert.equal(outside.requires_security_bindings, null);
+  assert.equal(outside.security_owner, null);
+  assert.equal(outside.validation_behavior, undefined);
+  assert.deepEqual(outside.provider_repository, source.provider_repository);
+  assert.equal(source.repo_class, "product");
+});
+
+test("retained Intake list verifies source authority, exact custody, closed metadata and candidate digest", async () => {
+  const wire = custodyPreparation().source_candidate;
+  const custodyId = "repository-custody-request:synthetic";
+  const query = new URLSearchParams({ target_kind: "repo", target_name: wire.target.name, custody_request_id: custodyId });
+  const page = { schema_version: 1, workflow_id: "workspace-intake", target: wire.target,
+    custody_request_id: custodyId, revision: 1, pending_request_count: 1, updated_at: "2026-10-19T01:00:00Z", next_cursor: null,
+    records: [{ request_id: "workspace-intake-request:retained", requested_at: "2026-10-19T01:00:00Z",
+      updated_at: "2026-10-19T01:00:00Z", revision: 1, status: "accepted", classification: "proposed", candidate: wire }] };
+  const options = value => ({ config, fetchImpl: async (url, init) => {
+    assert.equal(String(url), `${config.baseUrl}/v1/workspace-intake/requests?${query}`);
+    assert.equal(init.method, "GET");
+    assertCanonicalSourceRequest(init);
+    assert.equal(init.headers["x-oos-caller-secret"], config.callerSecret);
+    return canonicalSourceResponse(value, { recordRef: `oos://workspace-intake/requests?${query}`,
+      sourceOwner: "operator-orchestration-service" });
+  } });
+  const listed = await listWorkspaceIntakeRequests(wire.target.name, custodyId, null, options(page));
+  assert.equal(listed.records[0].request_id, "workspace-intake-request:retained");
+  assert.equal(listed.pending_request_count, 1);
+  for (const mutate of [
+    value => { value.target.name = "another-owner"; },
+    value => { value.custody_request_id = "repository-custody-request:other"; },
+    value => { value.records[0].candidate.requested_record.notes = "Substituted source metadata"; },
+    value => { value.records.push(structuredClone(value.records[0])); },
+    value => { value.records[0].token = "not-admitted"; },
+    value => { value.pending_request_count = 0; },
+    value => { value.next_cursor = "../private"; },
+  ]) {
+    const denied = structuredClone(page); mutate(denied);
+    await assert.rejects(listWorkspaceIntakeRequests(wire.target.name, custodyId, null, options(denied)), /target|custody|digest|metadata/i);
+  }
+});
+
+test("custody preparation preserves owner-derived provider binding and submission rereads the same source", async () => {
+  const reviewed = custodyPreparation();
+  const wire = reviewed.source_candidate;
+  const custody = { request_id: "repository-custody-request:synthetic", requested_record: wire.requested_record };
+  const bodies = [];
+  const options = { config, now: () => new Date("2026-09-06T01:00:00.000Z"), fetchImpl: async (url, init) => {
+    const body = JSON.parse(String(init.body));
+    bodies.push(body);
+    return String(url).endsWith("/preparations") ? json(reviewed) : json(result(body, "accepted"), 202);
+  } };
+  const prepared = await prepareWorkspaceIntake({ kind: "repo", name: "synthetic-owner" }, options, custody);
+  assert.deepEqual(prepared.source_candidate.requested_record.provider_repository, wire.requested_record.provider_repository);
+  const selected = { evidence_refs: wire.evidence_refs, label: "Synthetic owner", requested_record: wire.requested_record,
+    source: wire.source, target: { kind: "repo", name: "synthetic-owner" } };
+  await submitWorkspaceIntake({ ...intent(prepared), candidate: selected, decision: "proposed" }, options);
+  assert.deepEqual(bodies[0].repository_custody, custody);
+  assert.deepEqual(bodies[1].repository_custody, custody);
+  assert.deepEqual(bodies[2].request.requested_record.provider_repository, wire.requested_record.provider_repository);
+  assert.equal(bodies[2].request.source.class, "repository-custody");
+  assert.doesNotMatch(JSON.stringify(bodies), /server-only-secret/);
+});
+
+test("custody preparation rejects altered bytes, mismatched target and malformed provider identity", async () => {
+  for (const mode of ["digest", "target", "numeric-id", "extra-binding", "invalid-name"]) {
+    const reviewed = custodyPreparation();
+    const wire = reviewed.source_candidate;
+    if (mode === "digest") wire.requested_record.notes = "Substituted owner response";
+    if (mode === "target") wire.target.name = "another-owner";
+    if (mode === "numeric-id") wire.requested_record.provider_repository.provider_repository_id = 123456789;
+    if (mode === "extra-binding") wire.requested_record.provider_repository.installation_id = 123;
+    if (mode === "invalid-name") wire.requested_record.provider_repository.full_name = "../untrusted";
+    await assert.rejects(prepareWorkspaceIntake({ kind: "repo", name: "synthetic-owner" }, {
+      config, fetchImpl: async () => json(reviewed),
+    }));
+  }
+  const wire = custodyPreparation().source_candidate;
+  const candidateValue = { ...wire, label: "Synthetic owner" };
+  assert.deepEqual(assertWorkspaceIntakeCandidate(candidateValue).requested_record.provider_repository, wire.requested_record.provider_repository);
+});
+
+test("a custody classification that changes reviewed source metadata requires fresh preparation before any submit", async () => {
+  const reviewed = custodyPreparation();
+  const wire = reviewed.source_candidate;
+  let calls = 0;
+  const candidateValue = { ...wire, label: "Synthetic owner" };
+  await assert.rejects(submitWorkspaceIntake({ ...intent(reviewed), candidate: candidateValue, decision: "out-of-scope" }, {
+    config, fetchImpl: async () => { calls += 1; return json(reviewed); },
+  }), /fresh custody preparation/);
+  assert.equal(calls, 0);
+});
 
 test("case:console-adapters-positive prepares, submits, continues, and projects exact OOS evidence", async () => {
   const calls = [];

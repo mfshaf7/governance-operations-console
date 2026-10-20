@@ -162,6 +162,37 @@ test("Console invokes only the fixed Studio command and binds receipt to readbac
   });
 });
 
+test("Preview admits only Studio's paired metadata-only or browser-local boundaries", async () => {
+  for (const [mutation, persistence] of [["none", "runtime-metadata-only"], ["prototype-local", "browser-local"]]) {
+    const projection = runningProjection();
+    projection.boundary.mutation_boundary = mutation;
+    projection.boundary.persistence_model = persistence;
+    const result = await readPrototypePreviewOwner("client-review-portal", {
+      config, runner: queuedRunner([projection], []),
+    });
+    assert.deepEqual(result.boundary, projection.boundary);
+  }
+  for (const [mutation, persistence] of [["none", "browser-local"], ["prototype-local", "runtime-metadata-only"],
+    ["real-system", "browser-local"], ["prototype-local", "database"], ["none", null]]) {
+    const projection = runningProjection();
+    projection.boundary.mutation_boundary = mutation;
+    projection.boundary.persistence_model = persistence;
+    await assert.rejects(readPrototypePreviewOwner("client-review-portal", {
+      config, runner: queuedRunner([projection], []),
+    }), (error) => error.code === "prototype_preview_owner_contract_invalid");
+  }
+  for (const deniedBoundary of [{ data_mode: "real-readonly" }, { external_network: true },
+    { public_ingress: true }, { visibility_tier: "public" }]) {
+    const projection = runningProjection();
+    Object.assign(projection.boundary, {
+      mutation_boundary: "prototype-local", persistence_model: "browser-local", ...deniedBoundary,
+    });
+    assert.throws(() => assertPrototypePreviewProjection(projection, {
+      prototypeSlug: "client-review-portal", sourceRevision: revision,
+    }));
+  }
+});
+
 test("stale Console intent fails before Studio mutation", async () => {
   const calls = [];
   await assert.rejects(

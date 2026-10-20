@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   assertWorkspaceIntakeRequestId,
   assertWorkspaceIntakeTarget,
+  assertWorkspaceIntakeCustodyPreparation,
   WorkspaceIntakeContractError,
 } from "../workspace-intake-live-contract.ts";
 import {
@@ -10,6 +11,7 @@ import {
   continueWorkspaceIntake,
   prepareWorkspaceIntake,
   readWorkspaceIntake,
+  listWorkspaceIntakeRequests,
   submitWorkspaceIntake,
   workspaceIntakeOosConfigured,
   WorkspaceIntakeOosError,
@@ -17,11 +19,33 @@ import {
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
+export async function listWorkspaceIntakeRequestsRoute(request: NextRequest) {
+  return execute(async () => {
+    requireConfigured();
+    const parameters = request.nextUrl.searchParams, keys = [...parameters.keys()];
+    if (new Set(keys).size !== keys.length || keys.some(key => !["target_name", "custody_request_id", "cursor"].includes(key))) {
+      throw new WorkspaceIntakeContractError("Retained Intake list parameters are invalid.");
+    }
+    const target = assertWorkspaceIntakeTarget({ kind: "repo", name: parameters.get("target_name") });
+    const custody = parameters.get("custody_request_id"), cursor = parameters.get("cursor");
+    if (!custody || custody.length > 256 || (cursor !== null && !/^[0-9a-f]{64}$/.test(cursor))) {
+      throw new WorkspaceIntakeContractError("Retained Intake requires an exact custody selector and optional cursor.");
+    }
+    return listWorkspaceIntakeRequests(target.name, custody, cursor);
+  });
+}
+
 export async function prepareWorkspaceIntakeRoute(request: NextRequest) {
   return execute(async () => {
     requireConfigured();
     const input = parseRecord(await request.json().catch(() => null));
-    return prepareWorkspaceIntake(assertWorkspaceIntakeTarget(input.target));
+    if (Object.keys(input).some((key) => !["target", "repository_custody"].includes(key))) {
+      throw new WorkspaceIntakeContractError("Workspace Intake preparation fields are invalid.");
+    }
+    const target = assertWorkspaceIntakeTarget(input.target);
+    const custody = input.repository_custody === undefined ? undefined : assertWorkspaceIntakeCustodyPreparation(input.repository_custody);
+    if (custody && target.kind !== "repo") throw new WorkspaceIntakeContractError("Custody preparation requires a repository target.");
+    return prepareWorkspaceIntake(target, {}, custody);
   });
 }
 

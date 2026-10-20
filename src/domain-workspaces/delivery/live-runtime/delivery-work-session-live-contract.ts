@@ -53,6 +53,12 @@ export function assertDeliveryWorkSessionProjection(
   nullableText(projection.landing_unit_id, "projection Landing Unit identity");
   nullableText(projection.session_id, "projection session identity");
   nullableDateTime(projection.session_revision, "projection session revision");
+  if (projection.source_authorization !== undefined) {
+    const binding = record(projection.source_authorization, "source authorization");
+    match(binding.intent_ref, /^source-intent:[A-Za-z0-9][A-Za-z0-9._:/@+\-]{0,241}$/, "source authorization intent");
+    if (binding.session_id !== projection.session_id) invalid("Source authorization belongs to another session.");
+    if (binding.revision !== undefined) dateTime(binding.revision, "source authorization revision");
+  }
   text(projection.state, "projection state");
   if (projection.next_action !== null) {
     const action = record(projection.next_action, "projection next action");

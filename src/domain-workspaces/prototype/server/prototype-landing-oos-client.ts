@@ -401,6 +401,7 @@ async function request(
   options: RequestOptions,
   sourceExpectation?: ConsoleSourceAuthorityExpectation,
   responseLimit = maxResponseBytes,
+  requestTimeoutMs = timeoutMs,
 ) {
   const config = options.config ?? resolveConfig();
   let response: Response;
@@ -418,7 +419,7 @@ async function request(
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
       },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: AbortSignal.timeout(requestTimeoutMs),
     });
   } catch {
     throw new PrototypeLandingOosError(
@@ -520,6 +521,9 @@ function bindDigest<T extends Record<string, unknown>, K extends string>(
 function canonicalDigest(value: unknown) {
   return `sha256:${createHash("sha256").update(canonicalStringify(value)).digest("hex")}`;
 }
+
+// Shared owner transport and canonical JSON, not Landing business authority.
+export { request as prototypeOwnerRequest, canonicalDigest as prototypeCanonicalDigest };
 
 function canonicalStringify(value: unknown): string {
   if (value === null || typeof value === "boolean") return JSON.stringify(value);

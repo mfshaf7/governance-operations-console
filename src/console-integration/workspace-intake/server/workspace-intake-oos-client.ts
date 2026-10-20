@@ -20,12 +20,15 @@ import {
   assertWorkspaceIntakeSubmissionIntent,
   sameWorkspaceIntakePreparation,
   WorkspaceIntakeContractError,
+  workspaceIntakeRecordForDecision as recordForDecision,
+  assertWorkspaceIntakeRequestPage,
 } from "../workspace-intake-live-contract.ts";
 import type {
   WorkspaceIntakePreparation,
   WorkspaceIntakeResult,
   WorkspaceIntakeSubmissionIntent,
   WorkspaceIntakeTargetKind,
+  WorkspaceIntakeCustodyPreparation,
 } from "../workspace-intake-live-types.ts";
 
 const timeoutMs = 12_000;
@@ -50,13 +53,33 @@ export function workspaceIntakeOosConfigured(env = process.env) {
   return consoleOosModeSelected(env);
 }
 
+export async function listWorkspaceIntakeRequests(targetName: string, custodyRequestId: string,
+  cursor: string | null = null, options: RequestOptions = {}) {
+  const query = new URLSearchParams({ target_kind: "repo", target_name: targetName, custody_request_id: custodyRequestId });
+  if (cursor !== null) query.set("cursor", cursor);
+  const endpoint = `/v1/workspace-intake/requests?${query}`;
+  const value = await request(endpoint, { method: "GET" }, options, {
+    authority: "operator-orchestration-service", sourceOwner: "operator-orchestration-service",
+    recordRef: `oos://workspace-intake/requests?${query}`,
+  });
+  try {
+    const page = assertWorkspaceIntakeRequestPage(value, targetName, custodyRequestId);
+    for (const entry of page.records) {
+      const { candidate_digest: expected, ...content } = entry.candidate;
+      if (canonicalDigest(content) !== expected) throw contractError("Retained custody candidate digest does not match its content.");
+    }
+    return page;
+  } catch (error) { throw projectionError(error); }
+}
+
 export async function prepareWorkspaceIntake(
   target: { kind: WorkspaceIntakeTargetKind; name: string },
   options: RequestOptions = {},
+  repositoryCustody?: WorkspaceIntakeCustodyPreparation,
 ) {
   const body = await request(
     "/v1/workspace-intake/preparations",
-    { body: JSON.stringify({ target }), method: "POST" },
+    { body: JSON.stringify({ target, ...(repositoryCustody ? { repository_custody: repositoryCustody } : {}) }), method: "POST" },
     options,
   );
   return projectPreparation(body);
@@ -67,7 +90,29 @@ export async function submitWorkspaceIntake(
   options: RequestOptions = {},
 ) {
   const intent = assertWorkspaceIntakeSubmissionIntent(value);
-  const current = await prepareWorkspaceIntake(intent.candidate.target, options);
+  const reviewedSource = intent.reviewed_preparation.source_candidate;
+  let custody: WorkspaceIntakeCustodyPreparation | undefined;
+  if (reviewedSource) {
+    const ref = /^oos:\/\/repository-custody\/requests\/([^/]+)\/intake\/[0-9a-f]{64}$/.exec(reviewedSource.source.ref);
+    const selected = { source: intent.candidate.source, target: { ...intent.candidate.target,
+      record_id: `${intent.candidate.target.kind}:${intent.candidate.target.name}` },
+      requested_record: recordForDecision(intent.candidate.requested_record, intent.decision),
+      evidence_refs: intent.candidate.evidence_refs };
+    const expected = { source: reviewedSource.source, target: reviewedSource.target,
+      requested_record: reviewedSource.requested_record, evidence_refs: reviewedSource.evidence_refs };
+    if (!ref || reviewedSource.requested_record.kind !== "repo" || canonicalDigest(selected) !== canonicalDigest(expected)) {
+      throw new WorkspaceIntakeContractError("Review a fresh custody preparation for this exact classification and record before submitting.");
+    }
+    let requestId: string;
+    try {
+      requestId = decodeURIComponent(ref[1]);
+      if (encodeURIComponent(requestId) !== ref[1]) throw new Error();
+    } catch {
+      throw new WorkspaceIntakeContractError("Custody source request identity is invalid.");
+    }
+    custody = { request_id: requestId, requested_record: reviewedSource.requested_record };
+  }
+  const current = await prepareWorkspaceIntake(intent.candidate.target, options, custody);
   if (!sameWorkspaceIntakePreparation(intent.reviewed_preparation, current)) {
     throw new WorkspaceIntakeOosError(
       "Workspace authority changed after review. Refresh and review the current binding before submission.",
@@ -363,44 +408,14 @@ function contractError(message: string) {
   return new WorkspaceIntakeContractError(message);
 }
 
-function recordForDecision(
-  record: WorkspaceIntakeSubmissionIntent["candidate"]["requested_record"],
-  decision: WorkspaceIntakeSubmissionIntent["decision"],
-) {
-  if (decision !== "out-of-scope") return record;
-  if (record.kind === "repo") {
-    return {
-      kind: "repo" as const,
-      notes: record.notes,
-      repo_class: null,
-      requires_security_bindings: null,
-      security_owner: null,
-    };
-  }
-  if (record.kind === "product") {
-    return {
-      intended_endpoint: null,
-      kind: "product" as const,
-      notes: record.notes,
-      platform_owner: null,
-      runtime_owner: null,
-      security_owner: null,
-      source_owners: [],
-    };
-  }
-  return {
-    component_class: null,
-    kind: "component" as const,
-    notes: record.notes,
-    owner_repo: null,
-    product: null,
-    security_owner: null,
-  };
-}
-
 function projectPreparation(value: unknown) {
   try {
-    return assertWorkspaceIntakePreparation(value);
+    const result = assertWorkspaceIntakePreparation(value);
+    if (result.source_candidate) {
+      const { candidate_digest: expected, ...content } = result.source_candidate;
+      if (canonicalDigest(content) !== expected) throw contractError("Custody source candidate digest does not match its content.");
+    }
+    return result;
   } catch (error) {
     throw projectionError(error);
   }

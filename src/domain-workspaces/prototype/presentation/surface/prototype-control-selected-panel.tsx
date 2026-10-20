@@ -9,10 +9,12 @@ import {
 export function PrototypeControlSelectedPanel({
   onOpenCurrentAction,
   onOpenDashboard,
+  onOpenSourceAuthoring,
   selectedRecord,
 }: {
   onOpenCurrentAction: (record: PrototypeRecord) => void;
   onOpenDashboard: (record: PrototypeRecord) => void;
+  onOpenSourceAuthoring?: (record: PrototypeRecord) => void;
   selectedRecord: PrototypeRecord;
 }) {
   const selectedStatus = prototypeSelectedPanelStatus(selectedRecord);
@@ -43,6 +45,7 @@ export function PrototypeControlSelectedPanel({
             >
               Open Dashboard
             </TerasActionButton>
+            {onOpenSourceAuthoring ? <TerasActionButton emphasis="secondary" onClick={() => onOpenSourceAuthoring(selectedRecord)}>Open Source Authoring</TerasActionButton> : null}
           </TerasActionRow>
         ),
         title: selectedRecord.currentMove.label,

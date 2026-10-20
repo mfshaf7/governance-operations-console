@@ -26,7 +26,7 @@ export async function commandDeliverySourceRealization(workItemId: number, input
     ...(command.action === "continue" ? { accepted_change_set_digest: command.acceptedChangeSetDigest } : {}),
     ...(command.action === "cancel" ? { reason: command.reason } : {}),
   };
-  const result = await request(workItemId, `/${command.action}`, realization, options);
+  const result = await request(workItemId, `/${command.action}`, realization, options, command.sourceIntentRef);
   if (command.action === "start" && (result.attempt?.request_id !== (realization as { request_id: string }).request_id || result.attempt.objective_digest !== canonicalDigest(command.objective) || result.attempt.retry_of !== command.retryOf) ||
       command.action === "continue" && (result.state !== "source-created" || result.attempt?.change_set?.digest !== command.acceptedChangeSetDigest) ||
       command.action === "cancel" && result.state !== "cancelled" || command.action === "recover" && result.state !== "source-created") {
@@ -35,12 +35,12 @@ export async function commandDeliverySourceRealization(workItemId: number, input
   return result;
 }
 
-async function request(workItemIdInput: number, suffix: string, realization: unknown, options: Options) {
+async function request(workItemIdInput: number, suffix: string, realization: unknown, options: Options, sourceIntentRef?: string) {
   const workItemId = deliveryWorkSessionTargetId(workItemIdInput);
   const config = resolveDeliveryOosConfig(options.env);
   const body = await deliveryOosRequest(config, `/v1/delivery-work-items/${workItemId}/work-session/realization${suffix}`, {
     method: suffix ? "POST" : "GET",
-    ...(suffix ? { body: JSON.stringify({ realization }) } : {}),
+    ...(suffix ? { body: JSON.stringify({ realization, ...(sourceIntentRef ? { source_intent_ref: sourceIntentRef } : {}) }) } : {}),
     headers: { "x-oos-operator-id": config.operatorId },
   }, options.fetchImpl, suffix === "/start" ? 300000 : 75000, suffix ? undefined : {
     authority: "operator-orchestration-service", sourceOwner: "workspace-delivery-art",

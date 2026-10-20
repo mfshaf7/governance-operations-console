@@ -27,8 +27,30 @@ export type WorkspaceIntakePreparation = Readonly<{
   canonical_mutation: false;
   expected_state: WorkspaceIntakeExpectedState;
   schema_version: 1;
+  source_candidate?: WorkspaceIntakeSourceCandidate;
   target: WorkspaceIntakeTarget;
   workflow_id: "workspace-intake";
+}>;
+
+export type WorkspaceProviderRepository = Readonly<{
+  provider: "github";
+  provider_repository_id: string;
+  full_name: string;
+}>;
+
+export type WorkspaceIntakeCustodyPreparation = Readonly<{
+  request_id: string;
+  requested_record: Extract<WorkspaceIntakeRequestedRecord, { kind: "repo" }>;
+}>;
+
+export type WorkspaceIntakeSourceCandidate = Readonly<{
+  schema_version: 1;
+  artifact_type: "workspace-intake-source-candidate";
+  candidate_digest: string;
+  source: WorkspaceIntakeSource;
+  target: WorkspaceIntakeTarget;
+  requested_record: WorkspaceIntakeRequestedRecord;
+  evidence_refs: readonly string[];
 }>;
 
 export type WorkspaceIntakeSource = Readonly<{
@@ -47,6 +69,7 @@ export type WorkspaceIntakeValidationBehavior = Readonly<{
 export type WorkspaceIntakeRequestedRecord =
   | Readonly<{
       kind: "repo";
+      provider_repository?: WorkspaceProviderRepository;
       notes: string;
       repo_class: string | null;
       requires_security_bindings: boolean | null;
@@ -168,4 +191,26 @@ export type WorkspaceIntakeClientError = Readonly<{
   code: string;
   message: string;
   retryable: boolean;
+}>;
+
+export type WorkspaceIntakeRetainedRequest = Readonly<{
+  request_id: string;
+  requested_at: string;
+  updated_at: string;
+  status: WorkspaceIntakeResult["status"];
+  revision: number;
+  classification: WorkspaceIntakeDecision;
+  candidate: WorkspaceIntakeSourceCandidate;
+}>;
+
+export type WorkspaceIntakeRequestPage = Readonly<{
+  schema_version: 1;
+  workflow_id: "workspace-intake";
+  target: WorkspaceIntakeTarget;
+  custody_request_id: string;
+  revision: number;
+  pending_request_count: number;
+  updated_at: string | null;
+  records: readonly WorkspaceIntakeRetainedRequest[];
+  next_cursor: string | null;
 }>;

@@ -2,6 +2,7 @@
 
 import {
   TerasActionButton,
+  TerasActionRow,
   TerasEmptyState,
   TerasFilterBar,
   TerasRecordControlLayout,
@@ -130,7 +131,7 @@ export function RepositoryControlSurface({
             action={{
               description: selectedRepository.nextAction,
               kicker: "Required Action",
-              node: (
+              node: (<TerasActionRow>
                 <TerasActionButton
                   data-repository-selected-action="true"
                   onClick={controller.selectedRepositoryAction.open}
@@ -141,7 +142,11 @@ export function RepositoryControlSurface({
                     controller.selectedRepositoryCustodyResult,
                   )}
                 </TerasActionButton>
-              ),
+                <TerasActionButton emphasis="secondary" disabled={!controller.intake.canPrepare}
+                  data-repository-intake-open="true" onClick={controller.intake.open}>
+                  Prepare Workspace Intake
+                </TerasActionButton>
+              </TerasActionRow>),
               title: repositorySelectedActionTitle(
                 selectedRepository,
                 controller.selectedRepositoryCustodyResult,

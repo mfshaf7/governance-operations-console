@@ -85,6 +85,16 @@ test("unknown-outcome recovery, substantive cancellation and linked retry use on
   assert.throws(() => assertDeliverySourceRealizationInput({ action: "cancel", commandId: "console:cancel", requestedAt: at, expectedRevision: at, reason: "no" }));
 });
 
+test("explicit successor authorization reaches only the source-effect envelope, never the model/draft command", async () => {
+  const sourceIntentRef = "source-intent:actual-successor/1";
+  const input = { action: "continue", commandId: "console:scope-successor", requestedAt: at, expectedRevision: at, acceptedChangeSetDigest: digest, sourceIntentRef };
+  assert.equal(assertDeliverySourceRealizationInput(input).sourceIntentRef, sourceIntentRef);
+  let sent;
+  await commandDeliverySourceRealization(71, input, { env, fetchImpl: async (_url, init) => { sent = JSON.parse(init.body); return Response.json(projection("source-created")); } });
+  assert.equal(sent.source_intent_ref, sourceIntentRef); assert.equal(Object.hasOwn(sent.realization, "source_intent_ref"), false);
+  assert.throws(() => assertDeliverySourceRealizationInput({ ...input, sourceIntentRef: "arbitrary-credential" }));
+});
+
 test("legacy GET, wrong targets, malformed paths, source bytes, receipt mismatch and extra authority fail closed", async () => {
   await assert.rejects(readDeliverySourceRealization(71, { env, fetchImpl: async () => Response.json(projection()) }));
   const wrong = projection(); wrong.work_item_id = "work-item-72";

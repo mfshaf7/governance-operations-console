@@ -17,6 +17,7 @@ import type {
   PlatformOperationRecord,
   PlatformOperationSubject,
 } from "../live-runtime/platform-operation-types.ts";
+import { assertSourceOperationReceipt as assertSourceCredentialReceipt, sourceOperationIntentFromReceipt as sourceIntentFromReceipt } from "../live-runtime/source-authorization-contract.ts";
 
 const timeoutMs = 12_000;
 const maxResponseBytes = 1_048_576;
@@ -58,7 +59,9 @@ export async function readPlatformOperations(options: Options = {}) {
 }
 
 export async function readPlatformOperation(operationId: string, options: Options = {}) {
-  return assertPlatformOperationRecord(await request(`/v1/platform-operations/${encodeURIComponent(operationId)}`, { method: "GET" }, options));
+  const operation = assertPlatformOperationRecord(await request(`/v1/platform-operations/${encodeURIComponent(operationId)}`, { method: "GET" }, options));
+  if (operation.operation_id !== operationId) throw new PlatformOperationOosError("The Platform owner returned another retained operation.", "platform_operation_target_mismatch", 502);
+  return operation;
 }
 
 export async function submitPlatformOperation(value: unknown, options: Options = {}) {
@@ -69,7 +72,7 @@ export async function submitPlatformOperation(value: unknown, options: Options =
   if (catalog.freshness !== "current" || !capability.available || !capability.approval_required) {
     throw new PlatformOperationOosError(capability.unavailable_reason ?? "The current Platform capability is not executable.", "platform_operation_capability_unavailable", 409);
   }
-  const now = (options.now?.() ?? new Date()).toISOString();
+  const now = intent.requestedAt ?? (options.now?.() ?? new Date()).toISOString();
   const nonce = intent.requestId || (options.randomId ?? randomUUID)();
   const commandId = boundedId(`console-command:${nonce}`);
   const commandIntent = {
@@ -179,7 +182,24 @@ async function request(path: string, init: RequestInit, options: Options) {
       : "OOS rejected the Platform operation request.";
     throw new PlatformOperationOosError(message, code, response.status, source.retryable === true || response.status >= 500);
   }
+  verifySourceOperationEvidence(body);
   return body;
+}
+
+function verifySourceOperationEvidence(body: unknown) {
+  const candidates = isRecord(body) && body.workflow_id === "platform-operation-list" && Array.isArray(body.operations) ? body.operations : [body];
+  for (const value of candidates) {
+    if (!isRecord(value) || value.workflow_id !== "platform-operation" || !isRecord(value.command) || !String(value.command.action).startsWith("agent-source.")) continue;
+    const command = value.command, { approval: _approval, intent_digest: claimed, ...intent } = command;
+    if (canonicalDigest(intent) !== claimed) throw new PlatformOperationOosError("Source command intent digest does not verify.", "source_authorization_binding_invalid", 502);
+    const provider = isRecord(value.provider_operation) ? value.provider_operation : {};
+    const receipt = isRecord(provider.receipt) ? provider.receipt : {};
+    if (receipt.source_credential) {
+      const source = assertSourceCredentialReceipt(receipt.source_credential), { receipt_digest: digest, ...subject } = source;
+      const input = isRecord(command.input) ? command.input : {};
+      if (canonicalDigest(subject) !== digest || canonicalDigest(sourceIntentFromReceipt(source)) !== source.source_intent_digest || canonicalDigest(input.source_intent) !== source.source_intent_digest) throw new PlatformOperationOosError("Source credential receipt does not bind its exact approved intent.", "source_authorization_receipt_invalid", 502);
+    }
+  }
 }
 
 function selectCapability(subjects: readonly PlatformOperationSubject[], subjectRef: string, capabilityId: string): { subject: PlatformOperationSubject; capability: PlatformOperationCapability } {
@@ -188,9 +208,10 @@ function selectCapability(subjects: readonly PlatformOperationSubject[], subject
   return matches[0];
 }
 
-function assertBrowserIntent(value: unknown): { capabilityId: string; input: Record<string, unknown>; requestId: string; subjectRef: string } {
+function assertBrowserIntent(value: unknown): { capabilityId: string; input: Record<string, unknown>; requestId: string; subjectRef: string; requestedAt?: string } {
   if (!isRecord(value) || !isText(value.capabilityId) || !isText(value.subjectRef) || !isText(value.requestId) || !isRecord(value.input) || JSON.stringify(value.input).length > 32_768) throw new PlatformOperationOosError("Platform operation intent is invalid.", "platform_operation_intent_invalid", 400);
-  return value as { capabilityId: string; input: Record<string, unknown>; requestId: string; subjectRef: string };
+  if (value.requestedAt !== undefined && (typeof value.requestedAt !== "string" || !Number.isFinite(Date.parse(value.requestedAt)))) throw new PlatformOperationOosError("Platform operation request time is invalid.", "platform_operation_intent_invalid", 400);
+  return value as { capabilityId: string; input: Record<string, unknown>; requestId: string; subjectRef: string; requestedAt?: string };
 }
 function assertControlIntent(value: unknown): { action: "cancel" | "retry"; reason: string; requestId: string } {
   if (!isRecord(value) || !new Set(["cancel", "retry"]).has(String(value.action)) || !isText(value.reason) || !isText(value.requestId)) throw new PlatformOperationOosError("Platform operation control is invalid.", "platform_operation_control_invalid", 400);
@@ -206,3 +227,5 @@ function canonicalStringify(value: unknown): string {
 function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
 function isText(value: unknown): value is string { return typeof value === "string" && Boolean(value.trim()) && value.length <= 1024; }
 function isIdentifier(value: unknown): value is string { return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(value); }
+
+export { request as platformOwnerRequest, canonicalDigest as platformCanonicalDigest };

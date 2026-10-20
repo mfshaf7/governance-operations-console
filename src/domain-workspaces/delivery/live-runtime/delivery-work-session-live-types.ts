@@ -138,6 +138,7 @@ export type DeliveryWorkSessionCloseout = {
 };
 
 export type DeliveryWorkSessionProjection = {
+  source_authorization?: { intent_ref: string; session_id: string; revision?: string; state?: string; operation_ref?: string | null };
   agent_source?: Record<string, unknown> & { state: string };
   cleanup?: DeliveryWorkSessionCleanup;
   cleanup_receipt?: DeliveryWorkSessionCleanupReceipt;

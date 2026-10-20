@@ -79,6 +79,12 @@ All capabilities and transitions in this view are `approved-target`.
 
 ### Post-Baseline Authority Work
 
+- Bounded Prototype app/design authoring is source preparation in progress,
+  not an activated capability. Preserve OOS-native request/control recovery,
+  exact digest acceptance and distinct human PR review. The new native model
+  purpose stays suspended until exact composed acceptance and commissioning;
+  the real Console-only product journey remains outstanding.
+
 - Add or extend OOS APIs for Delivery, Model, Orchestration, and remaining
   correlated transition workflows.
 - Commission the implemented canonical Studio collection and exact packet
