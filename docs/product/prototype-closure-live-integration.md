@@ -31,6 +31,10 @@ The browser stores only the last request identifier per Prototype through the
 operation draft store. On reopening the surface, it re-reads that identifier from OOS. The
 identifier is a recovery pointer, not durable state or evidence. A missing OOS
 request clears the pointer; OOS unavailability leaves the pointer for retry.
+Cold request reads require the OOS Closure subject `prototype://<slug>` bound
+to Studio ownership. Closure uses a plain slug, not Maturity's separately
+prefixed prototype identifier; a different or double-prefixed subject fails
+closed rather than replacing the retained request or falling back to fixtures.
 Resubmission with unchanged inputs reuses the same in-memory request identity
 within an active browser session. A successful Closure is recognized only from OOS
 `succeeded` state with a reviewed Studio readback and completed terminal

@@ -215,7 +215,7 @@ function prototypeSourceExpectation(
   const slug = requestId.slice(`${prefix}:`.length).split(":", 1)[0];
   return {
     authority: "operator-orchestration-service",
-    recordRef: `prototype://prototype:${slug}`,
+    recordRef: `prototype://${slug}`,
     sourceOwner: "workspace-prototype-studio",
   };
 }

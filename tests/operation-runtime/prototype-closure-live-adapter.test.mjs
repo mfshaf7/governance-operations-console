@@ -266,7 +266,7 @@ test("Prototype Closure reads and resumes the exact OOS request", async () => {
     if (init.method === "GET") {
       assertCanonicalSourceRequest(init);
       return canonicalSourceResponse(acceptedResult(command), {
-        recordRef: "prototype://prototype:sample-tool",
+        recordRef: "prototype://sample-tool",
         sourceOwner: "workspace-prototype-studio",
       });
     }
@@ -282,6 +282,17 @@ test("Prototype Closure reads and resumes the exact OOS request", async () => {
     `${config.baseUrl}/v1/prototype-closures/requests/${encodeURIComponent(requestId)}/continue`,
     `${config.baseUrl}/v1/prototype-closures/requests/${encodeURIComponent(requestId)}/cancel`,
   ]);
+});
+
+test("Prototype Closure cold read rejects a different or double-prefixed subject", async () => {
+  const command = buildPrototypeClosureCommand(assertPrototypeClosureIntent(intent()), config.callerId);
+  for (const recordRef of ["prototype://other-tool", "prototype://prototype:sample-tool"]) {
+    await assert.rejects(readPrototypeClosure(requestId, { config,
+      fetchImpl: async () => canonicalSourceResponse(acceptedResult(command), {
+        recordRef, sourceOwner: "workspace-prototype-studio",
+      }),
+    }), /authority binding/);
+  }
 });
 
 test("Prototype Closure preparation rejects a misleading source authority", () => {
