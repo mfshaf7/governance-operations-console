@@ -17,10 +17,71 @@ import {
 } from "../../src/domain-workspaces/prototype/live-runtime/prototype-delivery-live-contract.ts";
 import { projectPrototypeDeliveryApplication } from "../../src/domain-workspaces/prototype/live-runtime/prototype-delivery-live-projection.ts";
 import { getPrototypeWorkspaceReadModel } from "../../src/domain-workspaces/prototype/read-model/prototype-workspace-read-model.ts";
+import { createPrototypeDeliveryApplicationReader } from "../../src/domain-workspaces/prototype/live-runtime/use-prototype-delivery-live-runtime.ts";
 
 const applicationDigest = "a".repeat(64);
 const applicationId = `prototype-delivery-application:${applicationDigest}`;
 const ingressId = `delivery-ingress:prototype:${"b".repeat(64)}`;
+
+test("overlapping Dashboard and Closure reads share only the pending exact application GET", async () => {
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const calls = [];
+  const read = createPrototypeDeliveryApplicationReader(async (url, init) => {
+    calls.push({ url, init });
+    await gate;
+    return Response.json(prototypeDeliveryApplicationResult());
+  });
+  const pending = Array.from({ length: 4 }, () => read(applicationId));
+  await new Promise(resolve => setImmediate(resolve));
+  const overlappingCalls = calls.length;
+  release();
+  const results = await Promise.all(pending);
+  assert.equal(overlappingCalls, 1, "Strict effect replay and navigation must not multiply the same owner read");
+  assert.ok(results.every(result => result.application_id === applicationId));
+  assert.equal(calls[0].init.method ?? "GET", "GET");
+  assert.equal(calls[0].init.cache, "no-store");
+  await read(applicationId);
+  assert.equal(calls.length, 2, "Completed results are not a substitute for fresh owner reads");
+});
+
+test("different immutable application identities retain independent concurrent reads", async () => {
+  const calls = [];
+  const otherId = `prototype-delivery-application:${"c".repeat(64)}`;
+  const read = createPrototypeDeliveryApplicationReader(async url => {
+    calls.push(url);
+    const result = prototypeDeliveryApplicationResult();
+    result.application_id = decodeURIComponent(url.split("/").at(-1));
+    return Response.json(result);
+  });
+  const results = await Promise.all([read(applicationId), read(otherId)]);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(results.map(result => result.application_id), [applicationId, otherId]);
+});
+
+test("failed pending reads stay fail-closed and release their identity for a real retry", async () => {
+  for (const failure of ["network", "owner", "malformed"]) {
+    let calls = 0, fail = true;
+    const read = createPrototypeDeliveryApplicationReader(async () => {
+      calls++;
+      if (!fail) return Response.json(prototypeDeliveryApplicationResult());
+      if (failure === "network") throw new Error("Owner connection unavailable");
+      if (failure === "owner") return Response.json({ mode: "live", status: "offline",
+        code: "prototype_delivery_oos_unavailable", error: "Owner read unavailable" }, { status: 502 });
+      return Response.json({ application_id: applicationId });
+    });
+    const results = await Promise.allSettled(Array.from({ length: 4 }, () => read(applicationId)));
+    assert.ok(results.every(result => result.status === "rejected"), failure);
+    assert.equal(calls, 1, `${failure}: one pending owner operation, no success fallback`);
+    if (failure === "owner") {
+      assert.equal(results[0].reason.status, 502);
+      assert.equal(results[0].reason.code, "prototype_delivery_oos_unavailable");
+    }
+    fail = false;
+    assert.equal((await read(applicationId)).application_id, applicationId);
+    assert.equal(calls, 2, `${failure}: retry must perform a fresh request`);
+  }
+});
 
 test("cold Delivery lookup uses the existing immutable packet identity and performs only an owner GET", async () => {
   const packet = prototypeDeliveryPacket();

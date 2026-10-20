@@ -49,13 +49,27 @@ operator attribution are assembled server-side.
 4. OOS returns the exact packet binding, target ref, readiness evidence, and
    durable OpenProject activity receipt.
 5. The Console rejects malformed, denied, or packet-mismatched results.
-6. Only a valid OOS result may project the Prototype as `graduated`, attach the
-   Delivery target link, and add a source-projected receipt.
+6. Only a valid OOS result may attach the Delivery target link and its
+   source-projected receipt. Canonical Prototype lifecycle and source custody
+   remain Studio truth; Delivery application does not graduate that source.
 7. Repeating the same packet and decision is deterministic and reuses the
    existing application.
 
 The Console never calls OpenProject or WGCF directly and never treats a local
 workflow receipt as proof of target application.
+
+## Owner Read Refresh
+
+Dashboard, Closure and effect replay may request the same immutable application
+concurrently. One hook instance shares only the pending GET for that exact
+identity. Different identities remain independent. Successful results are not
+cached after completion: a later Refresh performs a fresh owner read.
+
+Failed and malformed responses remain rejected for every waiting caller, and
+the pending identity is released so an explicit retry can reach the owner.
+This does not change apply commands, caller authority, validation, the server
+timeout, receipt integrity or Studio lifecycle decisions. A visible completed
+historical request is separate from a successful current-source preparation.
 
 ## Current Boundary
 
