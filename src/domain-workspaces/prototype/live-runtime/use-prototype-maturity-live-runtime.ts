@@ -160,10 +160,14 @@ export function prototypeMaturitySubmissionIntent(
     (issue) => issue.status === "blocked",
   );
   const decision = input.input.input.decision;
+  const slug = prototypeSlug(input.record);
+  // Display receipts and live Preview rows are not committed evidence refs.
+  // Preserve them in the record; submit only the retained source selection.
   const evidenceRefs = [
     ...input.record.baseline.evidenceRefs,
-    ...input.record.evidence.map((evidence) => evidence.id),
-    input.record.candidate.lastReceiptRef,
+    input.record.candidate.lastReceiptRef && !input.record.baseline.evidenceRefs.some(ref => ref.startsWith(`record://prototype-maturity/${slug}/candidate`))
+      ? `record://prototype-maturity/${slug}/candidate`
+      : null,
   ].filter((value): value is string => Boolean(value?.trim()));
   const landingReceipt = input.record.landing.lastLandingReceiptRef;
   if (!landingReceipt) {
@@ -187,9 +191,11 @@ export function prototypeMaturitySubmissionIntent(
           : null,
       evidence_refs: Array.from(new Set(evidenceRefs)),
       excluded_scope: input.record.candidate.scope.excluded,
-      landing_receipt_ref: landingReceipt,
+      landing_receipt_ref: `record://prototype-landings/${slug}`,
       owner_ref: input.record.owner,
-      source_ref: input.record.sourceRef,
+      source_ref: input.record.sourceRef === `record://prototypes/${slug}`
+        ? "repo://workspace-prototype-studio/prototypes.yaml"
+        : input.record.sourceRef,
     },
     request_id: identity.requestId,
     reviewed_preparation: preparation,

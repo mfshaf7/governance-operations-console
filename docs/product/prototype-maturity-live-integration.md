@@ -41,6 +41,20 @@ execution references.
    readback agree. Candidate success points to Baseline Promotion; Baseline
    success points to Movement Request.
 
+Maturity evidence uses committed Studio record/file references, not display
+receipt identifiers. The Console retains Landing and Candidate receipt IDs for
+inspection while submitting their canonical owner records. The registry's
+design profile is shown as an owner-declared reference; WGCF must resolve its
+exact committed file before promotion. Missing files remain blocking.
+
+Baseline selects retained source evidence. A live Preview receipt remains a
+separate owner runtime condition, not an automatically selected committed
+design document or proof of browser behavior. Inspect the actual app and record
+the applicable behavior evidence and limitations before accepting the baseline.
+Owner readiness findings show the exact problem, responsible owner and required
+fix. A corrected stopped request uses a fresh preparation and explicit request;
+the old request and its findings remain immutable recovery history.
+
 A block requires a visible issue, owner, and required fix. Block and closeout
 decisions preserve source lifecycle. Closeout records route intent only; the
 separate closeout workflow owns retirement. Read never advances a request and

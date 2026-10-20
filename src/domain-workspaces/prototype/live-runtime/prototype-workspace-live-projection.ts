@@ -53,10 +53,23 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
     base.sourceRef = `record://prototypes/${slug}`;
     const paths = item.paths ? object(item.paths) : {};
     base.sourcePath = typeof paths.source === "string" ? paths.source : typeof paths.brief === "string" ? paths.brief : "Owner record has no source path";
+    if (typeof paths.design_profile === "string") {
+      const path = paths.design_profile;
+      if (!/^[A-Za-z0-9][A-Za-z0-9._/-]*\.md$/.test(path) || path.split("/").some(part => !part || part === "." || part === "..")) invalid();
+      const ref = `repo://workspace-prototype-studio/${path}`;
+      base.evidence = [...base.evidence, { id: ref, label: "Owner design profile", status: "Owner-declared reference", tone: "info", detail: "Canonical registry reference; exact committed file resolution is required at maturity readiness. This is not Preview or application behavior proof." }];
+      base.baseline = { ...base.baseline, evidenceRefs: [...base.baseline.evidenceRefs, ref] };
+    }
     base.linkedRecords = list(item.linked_records ?? []).map((linked) => { const row = object(linked); return {
       label: text(row.label), level: text(row.level), role: text(row.role), ref: text(row.ref), system: text(row.system), tone: "info" as const,
       ...(typeof row.parent_ref === "string" ? { parentRef: row.parent_ref } : {}),
     }; });
+    if (typeof item.candidate_record_ref === "string") {
+      const ref = item.candidate_record_ref;
+      if (!new RegExp(`^record://prototype-maturity/${slug}/candidate(?:-[0-9a-f]{12})?$`).test(ref)) invalid();
+      base.baseline = { ...base.baseline, evidenceRefs: [...base.baseline.evidenceRefs, ref] };
+      base.evidence = [...base.evidence, { id: ref, label: "Active Candidate record", status: "Owner-declared reference", tone: "info", detail: "Canonical active cycle reference; exact committed record validation remains owned by WGCF." }];
+    }
     const landingRecord = documents[`records/prototype-landings/${slug}/record.json`];
     if (landingRecord) {
       const landed = object(landingRecord), setup = object(landed.setup), custody = object(landed.source);

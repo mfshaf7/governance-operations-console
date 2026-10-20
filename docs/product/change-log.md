@@ -8,6 +8,15 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-20
 
+- Maintenance Landing Unit `maintenance-1275-maturity-evidence`
+  (`child_isolated_landing_unit`) binds Candidate and Baseline evidence to
+  committed owner records/files rather than display receipt identifiers.
+  Canonical design and active Candidate references are retained explicitly;
+  ephemeral Preview rows are not silently selected as committed evidence.
+  Existing owner readiness findings expose their exact owner and required fix.
+  Missing and unsupported evidence still fail closed at WGCF. Source tests do
+  not prove a live promotion, browser behavior or downstream Delivery.
+
 - Maintenance Landing Unit `maintenance-1275-source-authorization-recovery`
   (`child_isolated_landing_unit`) makes canonical authorization loading and
   failed reads unavailable for preparation, retains an explicitly selected
