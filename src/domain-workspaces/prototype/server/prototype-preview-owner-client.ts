@@ -123,11 +123,17 @@ export async function commandPrototypePreviewOwner(
     throw contractFailure("Studio Preview receipt action differs from the reviewed command.");
   }
   const projection = await runProjection(context, "status");
+  // Studio removes running process state on stop. Its independently verified
+  // stop receipt binds the exact stopped readback without a running receipt.
+  const stoppedWithoutRunningReceipt = intent.action === "stop" &&
+    projection.runtime_state === "stopped" && projection.latest_receipt === null;
+  const exactReceipt = projection.latest_receipt?.ref === `preview-runtime://receipts/${command.receipt.receipt_id}` &&
+    projection.latest_receipt.digest === command.receipt.receipt_digest;
   if (
     command.receipt.after_state !== projection.runtime_state ||
     command.receipt.profile_digest !== projection.profile_digest ||
     command.receipt.source_digest !== projection.source_digest ||
-    projection.latest_receipt?.digest !== command.receipt.receipt_digest
+    (!stoppedWithoutRunningReceipt && !exactReceipt)
   ) {
     throw contractFailure("Studio Preview command readback is incomplete or conflicting.");
   }
