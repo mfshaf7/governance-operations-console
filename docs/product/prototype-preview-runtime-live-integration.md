@@ -59,6 +59,12 @@ authority and is inactive outside that explicitly configured lane.
    accepts proof only when it binds the same projection and latest receipt.
 5. Review source-projected receipts in the existing command log.
 
+Stop confirms the independently validated stop receipt against an exact stopped
+owner readback. Studio removes running state, so that readback can have no
+latest running receipt. Start/restart still require the exact latest receipt
+reference and digest; a conflicting non-null receipt fails closed for every
+action. Stopped status is not running proof and does not revive old evidence.
+
 A current running proof exposes Baseline Promotion from a Candidate's Preview
 step; it does not approve the baseline or prove application behavior. The proof
 must match the owner Prototype, profile and latest receipt reference/digest.

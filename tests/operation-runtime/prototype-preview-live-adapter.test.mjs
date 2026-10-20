@@ -162,6 +162,47 @@ test("Console invokes only the fixed Studio command and binds receipt to readbac
   });
 });
 
+test("stop acknowledges native stopped readback without inventing a latest running receipt", async () => {
+  const previous = ownerReceipt();
+  const current = runningProjection(previous);
+  const expected = { instance_id: current.instance_id, profile_digest: profileDigest, runtime_state: "running", source_digest: sourceDigest, source_revision: revision };
+  const { receipt_digest, ...body } = previous;
+  const stopBody = { ...body, action: "stop", before_state: "running", after_state: "stopped", expected, request_id: "console-preview:test:stop:001" };
+  const receipt = { ...stopBody, receipt_digest: canonicalDigest(stopBody) };
+  for (const status of ["applied", "replayed"]) {
+    const result = await commandPrototypePreviewOwner("client-review-portal", { action: "stop", expected, request_id: receipt.request_id }, {
+      config, runner: queuedRunner([current, { schema_version: 1, status, receipt }, stoppedProjection()], []),
+    });
+    assert.equal(result.projection.runtime_state, "stopped");
+    assert.equal(result.projection.latest_receipt, null);
+    assert.equal(result.command.receipt.receipt_digest, receipt.receipt_digest);
+  }
+  const conflicting = [
+    { ...stoppedProjection(), latest_receipt: { ref: `preview-runtime://receipts/${receipt.receipt_id}`, digest: `sha256:${"0".repeat(64)}` } },
+    { ...stoppedProjection(), latest_receipt: { ref: "preview-runtime://receipts/prototype-preview-receipt:aaaaaaaaaaaaaaaaaaaaaaaa", digest: receipt.receipt_digest } },
+    current,
+  ];
+  for (const readback of conflicting) await assert.rejects(commandPrototypePreviewOwner("client-review-portal", { action: "stop", expected, request_id: receipt.request_id }, {
+    config, runner: queuedRunner([current, { schema_version: 1, status: "applied", receipt }, readback], []),
+  }), error => error.code === "prototype_preview_owner_contract_invalid");
+});
+
+test("running start and restart cannot omit or substitute the exact latest receipt", async () => {
+  for (const action of ["start", "restart"]) {
+    const prior = runningProjection(ownerReceipt());
+    const initial = action === "start" ? stoppedProjection() : prior;
+    const expected = { instance_id: initial.instance_id, profile_digest: profileDigest, runtime_state: initial.runtime_state, source_digest: sourceDigest, source_revision: revision };
+    const { receipt_digest, ...body } = ownerReceipt();
+    const changed = { ...body, action, expected, before_state: expected.runtime_state, request_id: `console-preview:test:${action}:001` };
+    const receipt = { ...changed, receipt_digest: canonicalDigest(changed) };
+    for (const latest_receipt of [null, { ref: `preview-runtime://receipts/${receipt.receipt_id}`, digest: `sha256:${"0".repeat(64)}` }, { ref: "preview-runtime://receipts/prototype-preview-receipt:aaaaaaaaaaaaaaaaaaaaaaaa", digest: receipt.receipt_digest }]) {
+      await assert.rejects(commandPrototypePreviewOwner("client-review-portal", { action, expected, request_id: receipt.request_id }, {
+        config, runner: queuedRunner([initial, { schema_version: 1, status: "applied", receipt }, { ...runningProjection(receipt), latest_receipt }], []),
+      }), error => error.code === "prototype_preview_owner_contract_invalid");
+    }
+  }
+});
+
 test("Preview admits only Studio's paired metadata-only or browser-local boundaries", async () => {
   for (const [mutation, persistence] of [["none", "runtime-metadata-only"], ["prototype-local", "browser-local"]]) {
     const projection = runningProjection();
