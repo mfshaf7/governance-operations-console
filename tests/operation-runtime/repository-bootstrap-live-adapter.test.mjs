@@ -91,3 +91,20 @@ test("provider failures and oversized responses never expose private diagnostics
   await assert.rejects(readRepositoryBootstrap(id, { config, fetchImpl: async () => Response.json({ message: "private provider detail" }, { status: 503 }) }), error => !error.message.includes("private provider"));
   await assert.rejects(readRepositoryBootstrap(id, { config, fetchImpl: async () => new Response("x".repeat(1_048_577)) }), error => error.code === "repository_bootstrap_response_large");
 });
+
+test("a known record-authority blocker is named safely, while unknown, malformed and oversized owner errors stay opaque", async () => {
+  await assert.rejects(readRepositoryBootstrap(id, { config, fetchImpl: async () => Response.json({
+    error: "record_authority_unavailable", message: "private backend detail", details: { secret: "must-not-project" },
+  }, { status: 409 }) }), error => error.code === "record_authority_unavailable" &&
+    /Platform.*record refresh/.test(error.message) && !/private|must-not-project/.test(error.message));
+  for (const body of ['{"error":"unknown-owner-error","message":"private backend detail"}', 'broken-json',
+    JSON.stringify({ error: "record_authority_unavailable", message: "x".repeat(4096) })]) {
+    await assert.rejects(readRepositoryBootstrap(id, { config, fetchImpl: async () => new Response(body, { status: 409 }) }),
+      error => error.code === "repository_bootstrap_owner_rejected" && !/private|xxx|broken-json/.test(error.message));
+  }
+  let cancelled = false;
+  const stream = new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array(4097)); }, cancel() { cancelled = true; } });
+  await assert.rejects(readRepositoryBootstrap(id, { config, fetchImpl: async () => new Response(stream, { status: 503 }) }),
+    error => error.code === "repository_bootstrap_owner_rejected");
+  assert.equal(cancelled, true);
+});

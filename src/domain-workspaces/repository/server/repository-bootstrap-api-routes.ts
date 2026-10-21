@@ -17,5 +17,6 @@ async function respond(operation: () => Promise<unknown>) {
   if (!consoleOosModeSelected()) return NextResponse.json({ mode: "disconnected-preview", projection: null, error: "Owner setup requires the commissioned OOS workflow; no fixture source execution is available." }, { headers, status: 503 });
   try { return NextResponse.json({ mode: "live", projection: await operation(), error: null }, { headers }); }
   catch (error) { return NextResponse.json({ mode: "live", projection: null, code: error instanceof RepositoryBootstrapOosError ? error.code : "repository_bootstrap_contract_rejected",
-    error: "The owner did not confirm this exact setup. Refresh the original request; source readiness, app acceptance and admission remain separate." }, { headers, status: error instanceof RepositoryBootstrapOosError ? error.status : 400 }); }
+    error: error instanceof RepositoryBootstrapOosError && error.code === "record_authority_unavailable" ? error.message
+      : "The owner did not confirm this exact setup. Refresh the original request; source readiness, app acceptance and admission remain separate." }, { headers, status: error instanceof RepositoryBootstrapOosError ? error.status : 400 }); }
 }
