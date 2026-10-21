@@ -16,7 +16,7 @@ import { useWorkspaceRegistryLiveRuntime } from "../live-runtime/use-workspace-r
 import { useWorkspaceContinuityRuntime } from "../../workspace-continuity/live-runtime/use-workspace-continuity-runtime";
 import { reconcileWorkspaceRegistryContinuity } from "../../workspace-continuity/workspace-registry-continuity";
 import type {
-  WorkspaceRegistryCandidate,
+  WorkspaceRegistryTarget,
   WorkspaceRegistryRecord,
 } from "../model/workspace-registry-types";
 import { WorkspaceRegistryLifecycleWorkflow } from "./workspace-registry-lifecycle-workflow";
@@ -41,8 +41,8 @@ export function WorkspaceRegistryWorkspace({
   const runtime = useWorkspaceRegistryLiveRuntime();
   const continuity = useWorkspaceContinuityRuntime();
   const [view, setView] = useState<RegistryView>("registry");
-  const [promotionCandidate, setPromotionCandidate] =
-    useState<WorkspaceRegistryCandidate | null>(null);
+  const [promotionTarget, setPromotionTarget] =
+    useState<WorkspaceRegistryTarget | null>(null);
   const [lifecycleRecord, setLifecycleRecord] =
     useState<WorkspaceRegistryRecord | null>(null);
   const appliedEntryIntentRef = useRef<string | null>(null);
@@ -195,7 +195,8 @@ export function WorkspaceRegistryWorkspace({
             availabilityError={availabilityError}
             fixtureMode={fixtureMode}
             onLifecycle={setLifecycleRecord}
-            onPromote={setPromotionCandidate}
+            onPromote={candidate => setPromotionTarget(candidate.target)}
+            onPromotionHistory={record => setPromotionTarget({ kind: record.kind, name: record.name, record_id: record.id })}
             onRetry={() => {
               void Promise.allSettled([continuity.load(), runtime.load()]);
             }}
@@ -204,13 +205,15 @@ export function WorkspaceRegistryWorkspace({
           />
         </TerasFullscreenSurfaceFrame>
       </TerasModalShell>
-      {promotionCandidate ? (
+      {promotionTarget ? (
         <WorkspaceRegistryPromotionWorkflow
-          candidate={promotionCandidate}
+          key={promotionTarget.record_id}
+          candidate={snapshot?.eligible_promotions.find(candidate => candidate.target.record_id === promotionTarget.record_id) ?? null}
+          target={promotionTarget}
           fixtureMode={fixtureMode}
           onClose={() => {
             runtime.reset();
-            setPromotionCandidate(null);
+            setPromotionTarget(null);
           }}
           runtime={runtime}
         />

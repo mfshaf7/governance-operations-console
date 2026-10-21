@@ -24,6 +24,16 @@ const requestIdPattern = /^workspace-inventory-request:[A-Za-z0-9._:-]+$/;
 const lifecycleRequestIdPattern =
   /^workspace-inventory-lifecycle-request:[A-Za-z0-9._:-]+$/;
 const targetNamePattern = /^[a-z0-9][a-z0-9._-]*$/;
+
+// Native request IDs are opaque text, including older non-Console prefixes.
+// Submission intents retain their Console namespace checks. Resource readers
+// accept URL-encodable owner locators; bounded journal/response bytes limit
+// projection size. Do not invent another owner-ID alphabet or length rule.
+// IDs never confer authority and are percent-encoded before entering a URL.
+function retainedRequestIdentifier(value: unknown): value is string {
+  if (typeof value !== "string" || !value.length) return false;
+  try { encodeURIComponent(value); return true; } catch { return false; }
+}
 const targetKinds = new Set<WorkspaceRegistryKind>([
   "component",
   "product",
@@ -279,7 +289,7 @@ export function assertWorkspaceInventorySubmissionIntent(
 }
 
 export function assertWorkspaceInventoryRequestId(value: unknown) {
-  if (typeof value !== "string" || !requestIdPattern.test(value)) {
+  if (!retainedRequestIdentifier(value)) {
     throw invalid("Workspace Inventory request identity is invalid.");
   }
   return value;
@@ -294,7 +304,7 @@ export function assertWorkspaceInventoryResult(
     result.schema_version !== 1 ||
     result.workflow_id !== "workspace-inventory-promotion" ||
     typeof result.request_id !== "string" ||
-    !requestIdPattern.test(result.request_id) ||
+    !retainedRequestIdentifier(result.request_id) ||
     (expectedRequestId && result.request_id !== expectedRequestId) ||
     !statuses.has(result.status as WorkspaceInventoryStatus) ||
     !nextActions.has(String(result.next_action)) ||
@@ -490,7 +500,7 @@ export function assertWorkspaceInventoryLifecycleSubmissionIntent(
 }
 
 export function assertWorkspaceInventoryLifecycleRequestId(value: unknown) {
-  if (typeof value !== "string" || !lifecycleRequestIdPattern.test(value)) {
+  if (!retainedRequestIdentifier(value)) {
     throw invalid("Workspace Inventory lifecycle request identity is invalid.");
   }
   return value;
@@ -505,7 +515,7 @@ export function assertWorkspaceInventoryLifecycleResult(
     result.schema_version !== 1 ||
     result.workflow_id !== "workspace-inventory-lifecycle" ||
     typeof result.request_id !== "string" ||
-    !lifecycleRequestIdPattern.test(result.request_id) ||
+    !retainedRequestIdentifier(result.request_id) ||
     (expectedRequestId && result.request_id !== expectedRequestId) ||
     !text(result.session_ref) ||
     !text(result.execution_ref) ||

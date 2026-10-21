@@ -33,6 +33,7 @@ test("case:workspace-registry reads canonical records and submits a digest-bound
   let submitted;
   const fetchImpl = async (url, init) => {
     calls.push({ init, url: String(url) });
+    if (new URL(url).searchParams.has("target_kind")) return journalResponse(url, init);
     if (String(url).endsWith("/registry")) {
       assertCanonicalSourceRequest(init);
       return registryResponse(workspaceRegistryFixture);
@@ -87,6 +88,7 @@ test("case:workspace-registry rejects stale review before preparing or submittin
       {
         config,
         fetchImpl: async (url, init) => {
+          if (new URL(url).searchParams.has("target_kind")) return journalResponse(url, init);
           if (!String(url).endsWith("/registry")) writeCalls += 1;
           assertCanonicalSourceRequest(init);
           return registryResponse(stale);
@@ -122,6 +124,7 @@ test("case:workspace-registry fails closed on malformed registry and incomplete 
       {
         config,
         fetchImpl: async (url, init) => {
+          if (new URL(url).searchParams.has("target_kind")) return journalResponse(url, init);
           if (String(url).endsWith("/registry")) {
             assertCanonicalSourceRequest(init);
             return registryResponse(workspaceRegistryFixture);
@@ -173,6 +176,7 @@ test("case:console-adapters-positive submits a caller-bound Workspace Registry l
   const preparedFixture = workspaceInventoryLifecyclePreparationFixture(record);
   const fetchImpl = async (url, init) => {
     calls.push({ init, url: String(url) });
+    if (new URL(url).searchParams.has("target_kind")) return journalResponse(url, init);
     if (String(url).endsWith("/registry")) {
       assertCanonicalSourceRequest(init);
       return registryResponse(workspaceRegistryFixture);
@@ -235,6 +239,7 @@ test("case:console-adapters-negative rejects stale Workspace Registry lifecycle 
       {
         config,
         fetchImpl: async (url, init) => {
+          if (new URL(url).searchParams.has("target_kind")) return journalResponse(url, init);
           if (String(url).includes("/lifecycle/")) lifecycleCalls += 1;
           assertCanonicalSourceRequest(init);
           return registryResponse(stale);
@@ -258,6 +263,7 @@ test("case:console-adapters-negative rejects incomplete Workspace Registry lifec
       {
         config,
         fetchImpl: async (url, init) => {
+          if (new URL(url).searchParams.has("target_kind")) return journalResponse(url, init);
           if (String(url).endsWith("/registry")) {
             assertCanonicalSourceRequest(init);
             return registryResponse(workspaceRegistryFixture);
@@ -288,6 +294,35 @@ function intent(candidate, reviewedPreparation, snapshot) {
     },
   };
 }
+
+function journalResponse(url, init, pending = 0) {
+  assert.equal(init.method, "GET");
+  assertCanonicalSourceRequest(init);
+  const parsed = new URL(url), query = parsed.searchParams;
+  const kind = query.get("target_kind"), name = query.get("target_name");
+  return canonicalSourceResponse({ schema_version: 1,
+    workflow_id: parsed.pathname.includes("/lifecycle/") ? "workspace-inventory-lifecycle" : "workspace-inventory-promotion",
+    target: { kind, name, record_id: `${kind}:${name}` }, revision: pending,
+    pending_request_count: pending, updated_at: null, records: [], next_cursor: null, canonical_mutation: false,
+  }, { recordRef: `oos://workspace-inventory/${parsed.pathname.split("/workspace-inventory/")[1]}${parsed.search}`,
+    sourceOwner: "operator-orchestration-service" });
+}
+
+test("Pending original (even off-page) blocks new Console promotion and Lifecycle before any preparation or POST", async () => {
+  for (const family of ["promotion", "lifecycle"]) {
+    const calls = [];
+    const options = { config, fetchImpl: async (url, init) => {
+      calls.push([String(url), init.method]);
+      return journalResponse(url, init, 1);
+    } };
+    const operation = family === "promotion"
+      ? () => submitWorkspaceInventoryPromotion(intent(workspaceRegistryFixture.eligible_promotions[0], preparation(), workspaceRegistryFixture), options)
+      : () => submitWorkspaceInventoryLifecycle(lifecycleIntent(workspaceInventoryLifecyclePreparationFixture(workspaceRegistryFixture.records[0]), workspaceRegistryFixture), options);
+    await assert.rejects(operation(), error => error.code === "workspace_inventory_original_pending" && error.status === 409);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0][1], "GET");
+  }
+});
 
 function registryResponse(projection) {
   return canonicalSourceResponse(projection, {

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import {
   TerasActionButton,
+  TerasActionRow,
   TerasList,
   TerasMetadataList,
   TerasStatusItem,
@@ -19,28 +20,34 @@ import type { WorkspaceRegistryLiveRuntime } from "../live-runtime/use-workspace
 import type {
   WorkspaceInventoryResult,
   WorkspaceRegistryCandidate,
+  WorkspaceRegistryTarget,
 } from "../model/workspace-registry-types";
+import { useInventoryRequestJournal } from "../live-runtime/use-inventory-request-journal";
+import { WorkspaceRegistryRequestJournal } from "./workspace-registry-request-journal";
 
 type PromotionStep = "apply" | "result" | "review";
 
 export function WorkspaceRegistryPromotionWorkflow({
   candidate,
+  target,
   fixtureMode,
   onClose,
   runtime,
 }: {
-  candidate: WorkspaceRegistryCandidate;
+  candidate: WorkspaceRegistryCandidate | null;
+  target: WorkspaceRegistryTarget;
   fixtureMode: boolean;
   onClose: () => void;
   runtime: WorkspaceRegistryLiveRuntime;
 }) {
-  const [step, setStep] = useState<PromotionStep>("review");
+  const [step, setStep] = useState<PromotionStep>(candidate ? "review" : "result");
   const [localError, setLocalError] = useState<string | null>(null);
   const result = runtime.result;
+  const journal = useInventoryRequestJournal("promotion", target, fixtureMode);
   const steps = useMemo<TerasWizardStep[]>(
     () => [
       {
-        available: true,
+        available: Boolean(candidate) && !result,
         connectsToNext: true,
         id: "review",
         label: "Review",
@@ -48,7 +55,7 @@ export function WorkspaceRegistryPromotionWorkflow({
         tone: step === "review" ? "warn" : "ok",
       },
       {
-        available: step !== "review",
+        available: Boolean(candidate) && step !== "review" && !result,
         connectsToNext: true,
         id: "apply",
         label: "Apply",
@@ -65,10 +72,11 @@ export function WorkspaceRegistryPromotionWorkflow({
         tone: result ? resultTone(result) : "muted",
       },
     ],
-    [result, step],
+    [candidate, result, step],
   );
 
   async function prepare() {
+    if (!candidate || !journal.canStart || runtime.pending || result) return;
     setLocalError(null);
     if (fixtureMode) {
       setStep("apply");
@@ -83,6 +91,7 @@ export function WorkspaceRegistryPromotionWorkflow({
   }
 
   async function submit() {
+    if (!candidate || !journal.canStart || runtime.pending || result) return;
     setLocalError(null);
     try {
       await runtime.submit(
@@ -92,6 +101,9 @@ export function WorkspaceRegistryPromotionWorkflow({
       setStep("result");
     } catch (error) {
       setLocalError(message(error));
+      setStep("result");
+    } finally {
+      void journal.load();
     }
   }
 
@@ -102,7 +114,25 @@ export function WorkspaceRegistryPromotionWorkflow({
       await runtime.continuePromotion(result.request_id);
     } catch (error) {
       setLocalError(message(error));
+    } finally {
+      void journal.load();
     }
+  }
+
+  async function recover(requestId: string) {
+    if (runtime.pending) return;
+    setLocalError(null);
+    try {
+      await runtime.read(requestId);
+      setStep("result");
+    } catch (error) { setLocalError(message(error)); }
+  }
+
+  async function cancel() {
+    if (!result || runtime.pending) return;
+    try { await runtime.cancel(result.request_id); }
+    catch (error) { setLocalError(message(error)); }
+    finally { void journal.load(); }
   }
 
   const support = (
@@ -116,13 +146,13 @@ export function WorkspaceRegistryPromotionWorkflow({
     >
       <TerasList fit="fill">
         <TerasStatusItem
-          detail={candidate.target.record_id}
+          detail={target.record_id}
           label="Candidate identity"
           status="Bound"
           tone="ok"
         />
         <TerasStatusItem
-          detail={`${candidate.owner_refs.length} owner reference${candidate.owner_refs.length === 1 ? "" : "s"}`}
+          detail={candidate ? `${candidate.owner_refs.length} owner references` : "Retained promotion evidence for this canonical record"}
           label="Ownership"
           status="Present"
           tone="ok"
@@ -148,6 +178,12 @@ export function WorkspaceRegistryPromotionWorkflow({
           />
         ) : null}
       </TerasList>
+      {!fixtureMode ? <WorkspaceRegistryRequestJournal journal={journal} disabled={runtime.pending} onReopen={(id) => void recover(id)} /> : null}
+      {candidate && step === "result" && (!result || terminal(result.status)) ? <TerasActionButton
+        emphasis="secondary" disabled={runtime.pending || !journal.canStart}
+        onClick={() => { runtime.reset(); setLocalError(null); setStep("review"); }}>
+        Start a New Reviewed Promotion
+      </TerasActionButton> : null}
     </TerasWizardPanel>
   );
 
@@ -160,7 +196,7 @@ export function WorkspaceRegistryPromotionWorkflow({
           apply={
             step === "apply"
               ? {
-                  disabled: fixtureMode || runtime.pending,
+                  disabled: fixtureMode || runtime.pending || !journal.canStart || Boolean(result),
                   label: runtime.pending ? "Submitting" : "Apply Promotion",
                   onClick: () => void submit(),
                 }
@@ -172,10 +208,10 @@ export function WorkspaceRegistryPromotionWorkflow({
             onClick: step === "review" || step === "result" ? onClose : () => setStep("review"),
           }}
           finish={
-            step === "result" && result?.next_action === "continue"
+            step === "result" && result && canContinue(result.next_action)
               ? {
                   disabled: runtime.pending,
-                  label: runtime.pending ? "Continuing" : "Continue Promotion",
+                  label: runtime.pending ? "Continuing" : result.next_action === "review-and-merge" ? "Check Review" : "Continue Promotion",
                   onClick: () => void continuePromotion(),
                 }
               : undefined
@@ -183,7 +219,7 @@ export function WorkspaceRegistryPromotionWorkflow({
           next={
             step === "review"
               ? {
-                  disabled: runtime.pending,
+                  disabled: runtime.pending || !journal.canStart || !candidate || Boolean(result),
                   label: runtime.pending ? "Preparing" : "Review Promotion",
                   onClick: () => void prepare(),
                 }
@@ -194,6 +230,7 @@ export function WorkspaceRegistryPromotionWorkflow({
       kicker="Workspace Registry"
       onClose={onClose}
       onStepSelect={(nextStep) => {
+        if (result || !candidate) return;
         if (nextStep === "review" || (nextStep === "apply" && step !== "review")) {
           setStep(nextStep);
         }
@@ -202,15 +239,15 @@ export function WorkspaceRegistryPromotionWorkflow({
       statusTone={fixtureMode ? "info" : result ? resultTone(result) : "warn"}
       steps={steps}
       subject={{
-        detail: `${candidate.target.kind} entrant`,
+        detail: `${target.kind} ${candidate ? "entrant" : "canonical record"}`,
         eyebrow: "Promotion Candidate",
-        title: candidate.target.name,
+        title: target.name,
       }}
       support={support}
       surfaceId="workspace-registry-promotion"
       title="Workspace Inventory Promotion"
     >
-      {step === "review" ? (
+      {step === "review" && candidate ? (
         <TerasWizardPanel
           description="Confirm the entrant identity, ownership, and approved source before preparation."
           kicker="Candidate Review"
@@ -228,7 +265,7 @@ export function WorkspaceRegistryPromotionWorkflow({
             ]}
           />
         </TerasWizardPanel>
-      ) : step === "apply" ? (
+      ) : step === "apply" && candidate ? (
         <TerasWizardPanel
           description={
             fixtureMode
@@ -260,13 +297,16 @@ export function WorkspaceRegistryPromotionWorkflow({
           </TerasList>
         </TerasWizardPanel>
       ) : (
-        <PromotionResultPanel result={result} />
+        <PromotionResultPanel result={result} pending={runtime.pending}
+          onCancel={() => void cancel()} onRead={() => { if (result) void recover(result.request_id); }} />
       )}
     </TerasWizardModal>
   );
 }
 
-function PromotionResultPanel({ result }: { result: WorkspaceInventoryResult | null }) {
+function PromotionResultPanel({ result, pending, onCancel, onRead }: {
+  result: WorkspaceInventoryResult | null; pending: boolean; onCancel: () => void; onRead: () => void;
+}) {
   return (
     <TerasWizardPanel
       description="OOS status, review, readback, and receipt evidence remain attached to one request."
@@ -297,10 +337,24 @@ function PromotionResultPanel({ result }: { result: WorkspaceInventoryResult | n
               />
             ))}
           </TerasTimeline>
+          <TerasActionRow>
+            <TerasActionButton emphasis="secondary" disabled={pending} onClick={onRead}>Refresh Original Request</TerasActionButton>
+            {result.review ? <TerasActionButton emphasis="secondary"
+              onClick={() => window.open(result.review!.url, "_blank", "noopener,noreferrer")}>Open Review</TerasActionButton> : null}
+            {!terminal(result.status) ? <TerasActionButton emphasis="secondary" disabled={pending} onClick={onCancel}>Cancel Request</TerasActionButton> : null}
+          </TerasActionRow>
         </>
       ) : null}
     </TerasWizardPanel>
   );
+}
+
+function terminal(status: WorkspaceInventoryResult["status"]) {
+  return new Set(["succeeded", "cancelled", "rejected", "blocked", "stale"]).has(status);
+}
+
+function canContinue(action: WorkspaceInventoryResult["next_action"]) {
+  return new Set(["continue", "inspect-review-or-cancel", "restore-dependency-and-retry", "review-and-merge"]).has(action);
 }
 
 function resultStatusLabel(result: WorkspaceInventoryResult) {

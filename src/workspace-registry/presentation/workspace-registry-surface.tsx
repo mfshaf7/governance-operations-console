@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import {
   TerasActionButton,
+  TerasActionRow,
   TerasEmptyState,
   TerasFilterBar,
   TerasMetadataList,
@@ -34,6 +35,7 @@ export function WorkspaceRegistrySurface({
   fixtureMode,
   onLifecycle,
   onPromote,
+  onPromotionHistory,
   onRetry,
   snapshot,
   view,
@@ -42,6 +44,7 @@ export function WorkspaceRegistrySurface({
   fixtureMode: boolean;
   onLifecycle: (record: WorkspaceRegistryRecord) => void;
   onPromote: (candidate: WorkspaceRegistryCandidate) => void;
+  onPromotionHistory: (record: WorkspaceRegistryRecord) => void;
   onRetry: () => void;
   snapshot: WorkspaceRegistrySnapshot | null;
   view: RegistryView;
@@ -140,6 +143,7 @@ export function WorkspaceRegistrySurface({
             <RegistryRecordSelected
               fixtureMode={fixtureMode}
               onLifecycle={onLifecycle}
+              onPromotionHistory={onPromotionHistory}
               record={selected as WorkspaceRegistryRecord}
             />
           ) : (
@@ -160,10 +164,12 @@ export function WorkspaceRegistrySurface({
 function RegistryRecordSelected({
   fixtureMode,
   onLifecycle,
+  onPromotionHistory,
   record,
 }: {
   fixtureMode: boolean;
   onLifecycle: (record: WorkspaceRegistryRecord) => void;
+  onPromotionHistory: (record: WorkspaceRegistryRecord) => void;
   record: WorkspaceRegistryRecord;
 }) {
   return (
@@ -175,9 +181,12 @@ function RegistryRecordSelected({
             : "Review current authority before updating metadata or changing posture through OOS.",
           kicker: "Available Action",
           node: (
+            <TerasActionRow>
             <TerasActionButton onClick={() => onLifecycle(record)}>
               Manage Lifecycle
             </TerasActionButton>
+            <TerasActionButton emphasis="secondary" onClick={() => onPromotionHistory(record)}>View Promotion Requests</TerasActionButton>
+            </TerasActionRow>
           ),
           title: "Lifecycle control",
         }}

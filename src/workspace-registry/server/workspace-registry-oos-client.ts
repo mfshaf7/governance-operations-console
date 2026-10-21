@@ -38,6 +38,9 @@ import type {
   WorkspaceRegistryTarget,
 } from "../model/workspace-registry-types.ts";
 
+import { assertInventoryRequestJournal, inventoryJournalEndpoint,
+  type InventoryRequestFamily } from "../workspace-registry-request-journal.ts";
+
 const maxResponseBytes = 2_097_152;
 const timeoutMs = 12_000;
 
@@ -64,6 +67,26 @@ export class WorkspaceRegistryOosError extends Error {
 
 export function workspaceRegistryOosConfigured(env = process.env) {
   return consoleOosModeSelected(env);
+}
+
+export async function readWorkspaceInventoryRequestJournal(
+  family: InventoryRequestFamily, target: WorkspaceRegistryTarget, cursor?: string,
+  options: RequestOptions = {},
+) {
+  const suffix = inventoryJournalEndpoint(family, target, cursor);
+  const body = await request(`/v1/workspace-inventory/${suffix}`, { method: "GET" }, options, {
+    authority: "operator-orchestration-service", sourceOwner: "operator-orchestration-service",
+    recordRef: `oos://workspace-inventory/${suffix}`,
+  });
+  return assertInventoryRequestJournal(body, family, target);
+}
+
+async function requireNoOriginalPending(family: InventoryRequestFamily, target: WorkspaceRegistryTarget, options: RequestOptions) {
+  const journal = await readWorkspaceInventoryRequestJournal(family, target, undefined, options);
+  if (journal.pending_request_count > 0) throw new WorkspaceRegistryOosError(
+    "An original request is still pending for this target. Reopen it before starting another review.",
+    "workspace_inventory_original_pending", 409,
+  );
 }
 
 export async function readWorkspaceRegistry(
@@ -117,6 +140,7 @@ export async function submitWorkspaceInventoryLifecycle(
   options: RequestOptions = {},
 ) {
   const intent = assertWorkspaceInventoryLifecycleSubmissionIntent(value);
+  await requireNoOriginalPending("lifecycle", intent.reviewed_preparation.target, options);
   const currentSnapshot = await readWorkspaceRegistry(options);
   const currentRecord = currentSnapshot.records.find(
     (record) => record.id === intent.reviewed_preparation.target.record_id,
@@ -208,6 +232,7 @@ export async function submitWorkspaceInventoryPromotion(
   options: RequestOptions = {},
 ) {
   const intent = assertWorkspaceInventorySubmissionIntent(value);
+  await requireNoOriginalPending("promotion", intent.candidate.target, options);
   const currentSnapshot = await readWorkspaceRegistry(options);
   const currentCandidate = currentSnapshot.eligible_promotions.find(
     (candidate) => candidate.target.record_id === intent.candidate.target.record_id,

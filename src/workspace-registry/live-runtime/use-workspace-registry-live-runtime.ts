@@ -18,6 +18,7 @@ import type {
   WorkspaceRegistryCandidate,
   WorkspaceRegistryRecord,
   WorkspaceRegistrySnapshot,
+  WorkspaceRegistryTarget,
 } from "../model/workspace-registry-types.ts";
 
 export class WorkspaceRegistryClientError extends Error {
@@ -177,7 +178,7 @@ export function useWorkspaceRegistryLiveRuntime() {
     [lifecyclePreparation, snapshot],
   );
 
-  const readLifecycle = useCallback(async (requestId: string) => {
+  const readLifecycle = useCallback(async (requestId: string, target?: WorkspaceRegistryTarget) => {
     return runLifecycleResult(
       () =>
         jsonRequest(
@@ -185,6 +186,7 @@ export function useWorkspaceRegistryLiveRuntime() {
           { cache: "no-store", method: "GET" },
         ),
       requestId,
+      target,
     );
   }, []);
 
@@ -273,12 +275,14 @@ export function useWorkspaceRegistryLiveRuntime() {
   async function runLifecycleResult(
     operation: () => Promise<unknown>,
     requestId: string,
+    target?: WorkspaceRegistryTarget,
   ) {
     return run(async () => {
       const next = assertWorkspaceInventoryLifecycleResult(
         await operation(),
         requestId,
       );
+      assertRecoveredTarget(next.request.target, target);
       setLifecycleResult(next);
       if (next.status === "succeeded") {
         await load();
@@ -328,6 +332,12 @@ export function useWorkspaceRegistryLiveRuntime() {
 export type WorkspaceRegistryLiveRuntime = ReturnType<
   typeof useWorkspaceRegistryLiveRuntime
 >;
+
+function assertRecoveredTarget(actual: WorkspaceRegistryTarget, expected?: WorkspaceRegistryTarget) {
+  if (expected && (actual.kind !== expected.kind || actual.name !== expected.name || actual.record_id !== expected.record_id)) {
+    throw new WorkspaceRegistryClientError("Original request does not belong to this selected Inventory target.", "workspace_inventory_recovery_target_mismatch");
+  }
+}
 
 async function jsonRequest(path: string, init: RequestInit) {
   const response = await fetch(path, init);

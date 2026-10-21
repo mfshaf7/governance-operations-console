@@ -37,6 +37,8 @@ import {
   workspaceInventoryLifecycleNextPosture,
   workspaceInventoryLifecycleResultTone,
 } from "./workspace-registry-lifecycle-view-model";
+import { useInventoryRequestJournal } from "../live-runtime/use-inventory-request-journal";
+import { WorkspaceRegistryRequestJournal } from "./workspace-registry-request-journal";
 
 type LifecycleStep = "configure" | "result" | "review";
 
@@ -72,6 +74,8 @@ export function WorkspaceRegistryLifecycleWorkflow({
     ? fixturePreparation
     : runtime.lifecyclePreparation;
   const result = runtime.lifecycleResult;
+  const target = { kind: record.kind, name: record.name, record_id: record.id };
+  const journal = useInventoryRequestJournal("lifecycle", target, fixtureMode);
   const metadata = parseRequestedValue(
     metadataValue,
     preparation,
@@ -87,7 +91,7 @@ export function WorkspaceRegistryLifecycleWorkflow({
   const steps = useMemo<TerasWizardStep[]>(
     () => [
       {
-        available: true,
+        available: !result,
         connectsToNext: true,
         id: "configure",
         label: "Configure",
@@ -95,7 +99,7 @@ export function WorkspaceRegistryLifecycleWorkflow({
         tone: step === "configure" ? "warn" : "ok",
       },
       {
-        available: configured && step !== "configure",
+        available: configured && step !== "configure" && !result,
         connectsToNext: true,
         id: "review",
         label: "Review",
@@ -115,12 +119,22 @@ export function WorkspaceRegistryLifecycleWorkflow({
     [configured, result, step],
   );
 
-  useEffect(() => {
-    if (fixtureMode) return;
-    void runtime.prepareLifecycle(record).catch((error) => {
-      setLocalError(message(error));
-    });
-  }, [fixtureMode, record, runtime.prepareLifecycle]);
+  async function prepareNewAction() {
+    if (fixtureMode || runtime.pending || !journal.canStart || (result && !terminal(result.status))) return;
+    runtime.reset();
+    setLocalError(null);
+    setReason(""); setApprovalRef(""); setImpactConfirmed(false); setReviewConfirmed(false);
+    setStep("configure");
+    try { await runtime.prepareLifecycle(record); }
+    catch (error) { setLocalError(message(error)); }
+  }
+
+  async function recover(requestId: string) {
+    if (runtime.pending) return;
+    setLocalError(null);
+    try { await runtime.readLifecycle(requestId, target); setStep("result"); }
+    catch (error) { setLocalError(message(error)); }
+  }
 
   useEffect(() => {
     if (!preparation) return;
@@ -135,7 +149,7 @@ export function WorkspaceRegistryLifecycleWorkflow({
   }
 
   async function submit() {
-    if (!configured || !preparation || !reviewConfirmed || !metadata.valid) return;
+    if (!configured || !preparation || !reviewConfirmed || !metadata.valid || !journal.canStart || runtime.pending || result) return;
     setLocalError(null);
     try {
       await runtime.submitLifecycle({
@@ -149,6 +163,9 @@ export function WorkspaceRegistryLifecycleWorkflow({
       setStep("result");
     } catch (error) {
       setLocalError(message(error));
+      setStep("result");
+    } finally {
+      void journal.load();
     }
   }
 
@@ -159,6 +176,8 @@ export function WorkspaceRegistryLifecycleWorkflow({
       await runtime.continueLifecycle(result.request_id);
     } catch (error) {
       setLocalError(message(error));
+    } finally {
+      void journal.load();
     }
   }
 
@@ -169,6 +188,8 @@ export function WorkspaceRegistryLifecycleWorkflow({
       await runtime.cancelLifecycle(result.request_id);
     } catch (error) {
       setLocalError(message(error));
+    } finally {
+      void journal.load();
     }
   }
 
@@ -217,6 +238,12 @@ export function WorkspaceRegistryLifecycleWorkflow({
           />
         ) : null}
       </TerasList>
+      {!fixtureMode ? <>
+        <WorkspaceRegistryRequestJournal journal={journal} disabled={runtime.pending} onReopen={id => void recover(id)} />
+        <TerasActionButton emphasis="secondary"
+          disabled={runtime.pending || !journal.canStart || Boolean(result && !terminal(result.status))}
+          onClick={() => void prepareNewAction()}>Prepare a New Lifecycle Action</TerasActionButton>
+      </> : null}
     </TerasWizardPanel>
   );
 
@@ -229,7 +256,7 @@ export function WorkspaceRegistryLifecycleWorkflow({
           apply={
             step === "review"
               ? {
-                  disabled: fixtureMode || runtime.pending || !reviewConfirmed,
+                  disabled: fixtureMode || runtime.pending || !reviewConfirmed || !journal.canStart || Boolean(result),
                   label: runtime.pending ? "Applying" : "Apply Lifecycle Action",
                   onClick: () => void submit(),
                   tone: action === "retire" ? "danger" : "accent",
@@ -253,7 +280,7 @@ export function WorkspaceRegistryLifecycleWorkflow({
           next={
             step === "configure"
               ? {
-                  disabled: !configured || !metadata.valid,
+                  disabled: !configured || !metadata.valid || runtime.pending || !journal.canStart || Boolean(result),
                   label: "Review Action",
                   onClick: () => setStep("review"),
                 }
@@ -264,6 +291,7 @@ export function WorkspaceRegistryLifecycleWorkflow({
       kicker="Workspace Registry"
       onClose={onClose}
       onStepSelect={(stepId) => {
+        if (result) return;
         if (
           stepId === "configure" ||
           (stepId === "review" && configured) ||
@@ -394,6 +422,8 @@ export function WorkspaceRegistryLifecycleWorkflow({
       ) : (
         <LifecycleResultPanel
           onCancel={() => void cancelLifecycle()}
+          onRead={() => { if (result) void recover(result.request_id); }}
+          pending={runtime.pending}
           result={result}
         />
       )}
@@ -403,9 +433,13 @@ export function WorkspaceRegistryLifecycleWorkflow({
 
 function LifecycleResultPanel({
   onCancel,
+  onRead,
+  pending,
   result,
 }: {
   onCancel: () => void;
+  onRead: () => void;
+  pending: boolean;
   result: WorkspaceInventoryLifecycleResult | null;
 }) {
   return (
@@ -455,8 +489,9 @@ function LifecycleResultPanel({
               />
             ))}
           </TerasTimeline>
-          {result.review || !terminal(result.status) ? (
+          {(
             <TerasActionRow spacing="compact">
+              <TerasActionButton emphasis="secondary" disabled={pending} onClick={onRead}>Refresh Original Request</TerasActionButton>
               {result.review ? (
                 <TerasActionButton
                   emphasis="secondary"
@@ -466,12 +501,12 @@ function LifecycleResultPanel({
                 </TerasActionButton>
               ) : null}
               {!terminal(result.status) ? (
-                <TerasActionButton emphasis="secondary" onClick={onCancel}>
+                <TerasActionButton emphasis="secondary" disabled={pending} onClick={onCancel}>
                   Cancel Request
                 </TerasActionButton>
               ) : null}
             </TerasActionRow>
-          ) : null}
+          )}
         </TerasTrayStack>
       ) : null}
     </TerasWizardPanel>

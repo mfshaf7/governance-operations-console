@@ -16,6 +16,7 @@ import {
   readWorkspaceInventoryLifecycle,
   readWorkspaceInventoryPromotion,
   readWorkspaceRegistry,
+  readWorkspaceInventoryRequestJournal,
   submitWorkspaceInventoryLifecycle,
   submitWorkspaceInventoryPromotion,
   workspaceRegistryOosConfigured,
@@ -23,6 +24,20 @@ import {
 } from "./workspace-registry-oos-client.ts";
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
+
+export async function listWorkspaceInventoryRoute(request: NextRequest, family: "promotion" | "lifecycle") {
+  return execute(async () => {
+    requireConfigured();
+    const query = request.nextUrl.searchParams;
+    const keys = [...query.keys()];
+    if (keys.some(key => !["target_kind", "target_name", "cursor"].includes(key)) || new Set(keys).size !== keys.length) {
+      throw new WorkspaceRegistryContractError("Original-request selectors are invalid.");
+    }
+    const kind = query.get("target_kind"), name = query.get("target_name");
+    const target = assertWorkspaceRegistryTarget({ kind, name, record_id: `${kind}:${name}` });
+    return readWorkspaceInventoryRequestJournal(family, target, query.get("cursor") ?? undefined);
+  });
+}
 
 export async function readWorkspaceRegistryRoute() {
   return execute(async () => {
