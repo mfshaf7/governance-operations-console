@@ -65,11 +65,16 @@ The detailed cross-surface read contract is
 
 1. Open `Workspace Registry` from Console navigation.
 2. Inspect active records or filter entrants in `Eligible`.
-3. Review candidate identity, ownership, approvals, and digest-bound source.
+3. Inspect `Original Inventory requests` first. Reopen any pending original;
+   a missing, offline or invalid journal never enables a new review.
+   Otherwise review candidate identity, ownership, approvals and bound source.
 4. Request a current OOS preparation.
 5. Apply the promotion only against that reviewed preparation.
 6. Continue durable progress when OOS requires it and retain the returned
    review, readback, history, and receipt evidence.
+   At `review-and-merge`, use `Open Review` for the source review and the
+   existing accountable-human provider review/merge path. `Check Review`
+   reconciles the same original request; it is not a merge endpoint.
 
 Lifecycle completion is deliberately stricter than request acceptance. The
 Console reports a canonical change only when the exact reviewed source is
@@ -79,8 +84,10 @@ history-event evidence. An accepted or in-progress request remains pending.
 For an active inventory record:
 
 1. Open `Manage Lifecycle` from the selected record.
-2. Choose only an action allowed by the current posture: update, suspend,
-   restore, or retire.
+2. Inspect its original requests. Reopening reads the exact retained ID only;
+   it does not prepare a replacement or advance execution. With no pending
+   original, explicitly select `Prepare a New Lifecycle Action`, then choose
+   only an action allowed by posture: update, suspend, restore or retire.
 3. Record the reason, approval reference, acknowledged impact, and complete
    validated record value when updating metadata.
 4. Review the exact current and expected posture plus authority revision.
@@ -90,6 +97,39 @@ For an active inventory record:
 Suspension and retirement preserve identity and history. Restoration is a new
 reviewed action bound to the latest suspension or retirement event. No Console
 action performs hard deletion.
+
+## Cold Recovery And Uncertain Acknowledgement
+
+- Both request families list caller-bound original locators for the exact
+  selected kind/name through OOS, with at most25 rows/32KiB per page. The
+  displayed pending count covers every page; use `More original requests`
+  to find an older original. `Refresh original requests` returns to page1.
+- Discovery, pagination, reopening and `Refresh Original Request` are GET-only.
+  They do not create, prepare, continue or cancel anything. Original IDs are
+  opaque owner locators, including earlier non-Console prefixes; family and
+  caller authorization stay with OOS. New submissions keep their namespace.
+- Closing a dialog or restarting the browser does not lose workflow authority:
+  reopen its original journal. A lost POST acknowledgement returns to the
+  result/recovery surface and refreshes discovery instead of silently issuing
+  another command. Explicit continuation or cancellation always uses that ID.
+- An acknowledged result cannot navigate back to editing/applying its command.
+  A terminal correction requires a fresh journal with no pending request and
+  an explicit new preparation/review. The Console server repeats the pending
+  check before new submission; generic OOS replay and concurrency semantics
+  are unchanged. This is not a global single-request authority or lock.
+- Once the entrant leaves `Eligible`, the canonical record's
+  `View Promotion Requests` still reaches its promotion history. This history
+  surface cannot fabricate a new entrant or promotion preparation.
+- Offline, malformed, cross-target/family or stale-source responses remain
+  unavailable. They never become empty successful history or a fixture write.
+
+The isolated browser check `node --experimental-strip-types
+scripts/verify-registry-request-recovery-browser.mjs` uses a separate loopback
+test instance (default3318, never the operator port3317). It covers original
+review/continuation, reload, uncertain cancellation, both recovery families,
+off-page pending state and offline/corrupt denial using synthetic intercepted
+APIs. This is component/browser conformance, not real owner mutation, runtime
+commissioning, product acceptance or final-journey evidence.
 
 ## Completion Truth
 
