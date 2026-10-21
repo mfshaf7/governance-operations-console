@@ -118,6 +118,8 @@ try {
   await page.getByRole("button", { name: `Reopen original request ${promotionId}`, exact: true }).click();
   await page.getByRole("button", { name: "Cancel Request", exact: true }).click();
   await page.getByRole("button", { name: "Start a New Reviewed Promotion", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Start a New Reviewed Promotion", exact: true }).click();
+  assert.equal(await page.getByRole("button", { name: "Review Promotion", exact: true }).last().isEnabled(), true);
   assert.equal(writes.length, 3);
   await openRegistry();
   await page.getByRole("button", { name: "View Promotion Requests", exact: true }).click();

@@ -31,7 +31,7 @@ for (const family of ["promotion", "lifecycle"]) {
       { ...valid, canonical_mutation: true }, { ...valid, raw: "no raw data" },
       { ...valid, records: [...valid.records, ...valid.records] },
       { ...valid, records: [{ ...valid.records[0], raw: {} }] },
-      { ...valid, records: [{ ...valid.records[0], request_id: "bad\nheader" }] },
+      { ...valid, records: [{ ...valid.records[0], request_id: "" }] },
       { ...valid, records: [{ ...valid.records[0], request_id: "\ud800" }] },
       { ...valid, records: [{ ...valid.records[0], updated_at: "invalid" }] },
       { ...valid, records: [{ ...valid.records[0], revision: 0 }] },
@@ -67,4 +67,14 @@ test("Journal rejects count and UTF8 projection oversize without accepting a tru
   assert.throws(() => assertInventoryRequestJournal({ ...value, records: Array.from({ length: 26 }, (_, index) => ({ ...value.records[0], request_id: `original:${index}` })) }, "promotion", target));
   const rows = Array.from({ length: 10 }, (_, index) => ({ ...value.records[0], request_id: `${index}:${"界".repeat(2000)}` }));
   assert.throws(() => assertInventoryRequestJournal({ ...value, revision: 90, pending_request_count: 10, records: rows }, "promotion", target));
+});
+
+test("Opaque IDs preserve native text semantics without inventing a Console namespace/length rule", () => {
+  for (const id of ["native:\nline/%3A?query=日本語", "native:" + "x".repeat(5000)]) {
+    assert.equal(assertWorkspaceInventoryRequestId(id), id);
+    assert.equal(assertWorkspaceInventoryLifecycleRequestId(id), id);
+    const value = page();
+    assert.equal(assertInventoryRequestJournal({ ...value, records: [{ ...value.records[0], request_id: id }] }, "promotion", target).records[0].request_id, id);
+    assert.equal(decodeURIComponent(encodeURIComponent(id)), id);
+  }
 });

@@ -27,9 +27,11 @@ const targetNamePattern = /^[a-z0-9][a-z0-9._-]*$/;
 
 // Native request IDs are opaque text, including older non-Console prefixes.
 // Submission intents retain their Console namespace checks. Resource readers
-// accept bounded, URL-encodable owner locators; IDs never confer authority.
+// accept URL-encodable owner locators; bounded journal/response bytes limit
+// projection size. Do not invent another owner-ID alphabet or length rule.
+// IDs never confer authority and are percent-encoded before entering a URL.
 function retainedRequestIdentifier(value: unknown): value is string {
-  if (typeof value !== "string" || !value.length || value.length > 4096 || /[\u0000-\u001f\u007f]/.test(value)) return false;
+  if (typeof value !== "string" || !value.length) return false;
   try { encodeURIComponent(value); return true; } catch { return false; }
 }
 const targetKinds = new Set<WorkspaceRegistryKind>([
