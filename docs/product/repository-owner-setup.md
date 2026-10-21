@@ -58,3 +58,10 @@ uncertain source must be recovered/reviewed, not discarded as an unapplied draft
 Missing current classification/custody, permissions, applicable profile or exact
 readback stays blocked at its named owner. No fixture success, CLI-only fallback,
 new repair story, source-scope waiver or automatic admission substitutes for it.
+
+`record_authority_unavailable` identifies the Platform-owned canonical record
+refresh dependency. Restore its approved fresh snapshot, then retry the exact
+setup; this is not an instruction to admit the owner or replace a retained
+request. The Console maps only this known bounded code to fixed safe guidance.
+Unknown, malformed or oversized upstream errors remain opaque; backend message
+text, diagnostics and credentials are never displayed.

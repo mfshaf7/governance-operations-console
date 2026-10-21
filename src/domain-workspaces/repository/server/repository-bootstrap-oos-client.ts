@@ -9,7 +9,9 @@ const base = "/v1/repository-owner-bootstrap", requestPath = (id: string) => `${
 export class RepositoryBootstrapOosError extends Error {
   readonly code: string;
   readonly status: number;
-  constructor(code: string, status = 502) { super("The owner has not confirmed this repository setup. Refresh its original retained request; no fallback source or credential is substituted."); this.code = code; this.status = status; }
+  constructor(code: string, status = 502) { super(code === "record_authority_unavailable"
+    ? "Platform canonical records are unavailable or stale. Restore the approved record refresh, then retry this exact setup; no source access is granted."
+    : "The owner has not confirmed this repository setup. Refresh its original retained request; no fallback source or credential is substituted."); this.code = code; this.status = status; }
 }
 export const bootstrapCanonicalDigest = (value: unknown): string => `sha256:${createHash("sha256").update(canonical(value)).digest("hex")}`;
 function canonical(value: unknown): string {
@@ -139,6 +141,18 @@ export async function commandRepositoryBootstrap(id: string, value: unknown, opt
   await request(`${requestPath(id)}/${action}`, body, options);
   return readRepositoryBootstrap(id, options);
 }
+async function knownOwnerFailure(response: Response): Promise<string | null> {
+  const reader = response.body?.getReader(); if (!reader) return null;
+  const chunks: Uint8Array[] = []; let length = 0;
+  try {
+    while (true) { const { done, value } = await reader.read(); if (done) break; length += value.length;
+      if (length > 4096) { await reader.cancel(); return null; } chunks.push(value); }
+    const payload: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    return payload && typeof payload === "object" && !Array.isArray(payload) &&
+      (payload as { error?: unknown }).error === "record_authority_unavailable" ? "record_authority_unavailable" : null;
+  } catch { return null; }
+  finally { reader.releaseLock(); }
+}
 async function request(path: string, body: unknown, options: Options, recordRef?: string) {
   const config = options.config ?? resolveConsoleOosOperatorConfiguration();
   let response: Response;
@@ -148,7 +162,7 @@ async function request(path: string, body: unknown, options: Options, recordRef?
       "x-oos-caller-id": config.callerId, "x-oos-caller-secret": config.callerSecret, "x-oos-operator-id": config.operatorId },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   }); } catch { throw new RepositoryBootstrapOosError("repository_bootstrap_owner_unavailable"); }
-  if (!response.ok) { await response.body?.cancel(); throw new RepositoryBootstrapOosError("repository_bootstrap_owner_rejected", response.status); }
+  if (!response.ok) throw new RepositoryBootstrapOosError(await knownOwnerFailure(response) ?? "repository_bootstrap_owner_rejected", response.status);
   const reader = response.body?.getReader(); if (!reader) throw new RepositoryBootstrapOosError("repository_bootstrap_response_empty");
   const chunks: Uint8Array[] = []; let length = 0;
   try { while (true) { const { done, value } = await reader.read(); if (done) break; length += value.length;
