@@ -60,7 +60,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, onClose }: {
       </TerasActionButton>
     </>}>
     <TerasFieldStack spacing="loose">
-      <TerasContentTray kicker="Proposed source-owner setup" description="After a successful proposed classification, inspect or recover the trusted owner-control workflow here before requesting source-only admission. Existing controls are preserved. Current proposed custody is verified by OOS, not inferred from this page."
+      <TerasContentTray kicker="Pre-Inventory source-owner setup" description="Inspect or recover trusted owner controls for a proposed or admitted source-only repository before active Inventory. Existing project files and independent controls are preserved. OOS verifies current classification and custody; page-local labels grant no authority."
         actions={<TerasActionButton disabled={!custody || runtime.pending} onClick={() => setOwnerSetup(true)}>Prepare or recover repository owner controls</TerasActionButton>} />
       <TerasContentTray kicker="Retained Intake requests"
         description={runtime.requestPage ? runtime.requestPage.pending_request_count

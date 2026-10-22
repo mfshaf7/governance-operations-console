@@ -11,7 +11,8 @@ repositories on `main`, not private/client projects or arbitrary toolchains.
 1. Open the actual Repository's **Prepare Workspace Intake** surface after
    successful custody. Complete the existing `proposed` classification first.
    Open **Prepare or recover repository owner controls** from that surface.
-   OOS verifies current proposed classification and exact canonical custody;
+   OOS verifies current proposed or admitted source-only classification,
+   absence from active/retired Inventory and exact canonical custody;
    page-local labels do not grant eligibility.
 2. Refresh retained requests. An original pending request is recovered even
    when it is outside the bounded history page. Resume it rather than creating
@@ -26,12 +27,18 @@ repositories on `main`, not private/client projects or arbitrary toolchains.
    requires a separate explicit approval for the exact displayed workflow,
    plus the actual App/installation permission. Accept the exact preparation
    digest to retain one immutable request.
-5. Existing valid controls use the non-source canonical checkout action: no
+5. Complete existing controls use the non-source canonical checkout action: no
    credential, source branch or dummy PR. A changed profile requires a fresh
    inspection, never silent replacement of independent owner policy.
+   Missing review controls use the same finite trusted source plan, including
+   an admitted owner still absent from Inventory. Only absent control files and
+   append-only missing AGENTS review guidance may change; application files,
+   valid profiles and independent controls are preserved. Incomplete independent
+   review policy blocks rather than being overwritten. Optional bootstrap CI
+   does not waive the existing active-Inventory PR-control requirement.
 6. A source plan uses the existing Source Authorization panel with its distinct
    `trusted-owner-bootstrap` purpose. Inspect finite paths, plan/template
-   digests, proposed Intake binding, actual provider identity and expiry.
+   digests, exact current Intake binding, actual provider identity and expiry.
    Approve that exact scope, then start the owner-control session.
 7. Inspect the current source draft and explicitly accept its exact digest.
    Validate/publish through Gary, approve the exact retained PR head as the

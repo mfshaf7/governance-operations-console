@@ -45,8 +45,8 @@ export async function prepareRepositoryBootstrap(value: unknown, options: Option
   knownFields(authority, ["owner_repo", "intake_entry_ref", "provider_repository", "classification", "inventory_posture", "custody_receipt_digest", "source_bootstrap_eligible", "ordinary_source_eligible", "model_writes_allowed", "canonical_mutation", "runtime_activation"]);
   if (authority.intake_entry_ref) knownFields(authority.intake_entry_ref, ["id", "version", "digest"]);
   if (authority.provider_repository) knownFields(authority.provider_repository, ["provider", "provider_repository_id", "full_name"]);
-  if (authority.owner_repo !== input.owner_repo || authority.classification !== "proposed" || authority.inventory_posture !== null || authority.source_bootstrap_eligible !== true ||
-      ["ordinary_source_eligible", "model_writes_allowed", "canonical_mutation", "runtime_activation"].some(key => authority[key] !== false)) throw new Error("Owner setup requires current source-only proposed authority.");
+  if (authority.owner_repo !== input.owner_repo || !["proposed", "admitted"].includes(String(authority.classification)) || authority.inventory_posture !== null || authority.source_bootstrap_eligible !== true ||
+      ["ordinary_source_eligible", "model_writes_allowed", "canonical_mutation", "runtime_activation"].some(key => authority[key] !== false)) throw new Error("Owner setup requires current source-only proposed or admitted authority before Inventory.");
   if (result.plan !== null) {
     const plan = object(result.plan), { plan_digest: claimedPlan, ...planBody } = plan;
     knownFields(plan, ["schema_version", "workflow_id", "owner_repo", "provider_repository", "intake_entry_ref", "fetched_base", "template", "evidence_profile_digest", "application_markers", "ci_selected", "requires_workflow_permission", "source_change_required", "files", "model_invoked", "app_import", "canonical_mutation", "runtime_activation", "plan_digest"]);
@@ -54,14 +54,17 @@ export async function prepareRepositoryBootstrap(value: unknown, options: Option
     if (plan.intake_entry_ref) knownFields(plan.intake_entry_ref, ["id", "version", "digest"]);
     if (plan.template) knownFields(plan.template, ["id", "owner_repo", "digest"]);
     if (plan.owner_repo !== input.owner_repo || plan.ci_selected !== input.with_ci || bootstrapCanonicalDigest(planBody) !== bootstrapDigest(claimedPlan) ||
-        ["model_invoked", "app_import", "canonical_mutation", "runtime_activation"].some(key => plan[key] !== false) || !Array.isArray(plan.files) || plan.files.length < 9 || plan.files.length > 10) throw new Error("Trusted owner plan scope is invalid.");
+        ["model_invoked", "app_import", "canonical_mutation", "runtime_activation"].some(key => plan[key] !== false) || !Array.isArray(plan.files) || plan.files.length < ownerBootstrapFiles.length - 1 || plan.files.length > ownerBootstrapFiles.length) throw new Error("Trusted owner plan scope is invalid.");
     const paths = new Set<string>();
     for (const value of plan.files) {
       const file = closed(value, ["path", "action", "mode", "content", "expected_digest", "content_digest"]);
-      if (typeof file.path !== "string" || !ownerBootstrapFiles.includes(file.path) || paths.has(file.path) || file.mode !== "100644" || !["create", "unchanged"].includes(String(file.action)) ||
+      if (typeof file.path !== "string" || !ownerBootstrapFiles.includes(file.path) || paths.has(file.path) || file.mode !== "100644" || !["create", "replace", "unchanged"].includes(String(file.action)) ||
+          (file.action === "replace" && (file.path !== "AGENTS.md" || !bootstrapDigest(file.expected_digest))) ||
           typeof file.content !== "string" || Buffer.byteLength(file.content) > 65_536 || `sha256:${createHash("sha256").update(file.content).digest("hex")}` !== bootstrapDigest(file.content_digest)) throw new Error("Owner plan escapes trusted finite regular files.");
       paths.add(file.path);
     }
+    const expected = ownerBootstrapFiles.filter(path => input.with_ci || path !== ".github/workflows/validate.yaml").sort();
+    if ([...paths].sort().join("\0") !== expected.join("\0")) throw new Error("Inspect the complete finite owner-control plan.");
   } else {
     const existing = knownFields(result.existing_owner_controls, ["status", "owner_repo", "fetched_base", "evidence_profile", "evidence_profile_digest", "source_change_required", "ci_present", "app_acceptance", "inventory_admission", "runtime_activation"]);
     if (existing.owner_repo !== input.owner_repo) throw new Error("Existing owner controls do not match this repository.");
@@ -104,9 +107,9 @@ export async function createRepositoryBootstrap(value: unknown, options: Options
 export async function readRepositoryBootstrapDraft(id: string, options: Options = {}) {
   const current = await readRepositoryBootstrap(id, options), raw = closed(await request(`${requestPath(id)}/draft`, undefined, options, `oos://repository-owner-bootstrap/requests/${id}/draft`), ["schema_version", "workflow_id", "request_id", "revision", "digest", "change_set"]);
   const change = object(raw.change_set);
-  if (raw.schema_version !== 1 || raw.workflow_id !== "repository-owner-bootstrap-draft" || raw.request_id !== id || raw.revision !== current.sourceRevision || raw.digest !== current.draft?.digest || bootstrapCanonicalDigest(change) !== raw.digest || change.session_id !== current.sessionId || !Array.isArray(change.operations) || change.operations.length > 10) throw new Error("Owner draft does not bind the actual current request and digest.");
+  if (raw.schema_version !== 1 || raw.workflow_id !== "repository-owner-bootstrap-draft" || raw.request_id !== id || raw.revision !== current.sourceRevision || raw.digest !== current.draft?.digest || bootstrapCanonicalDigest(change) !== raw.digest || change.session_id !== current.sessionId || !Array.isArray(change.operations) || change.operations.length > ownerBootstrapFiles.length) throw new Error("Owner draft does not bind the actual current request and digest.");
   for (const value of change.operations) { const file = closed(value, ["action", "path", "content", "expected_digest"]);
-    if (file.action !== "create" || file.expected_digest !== null || typeof file.path !== "string" || !ownerBootstrapFiles.includes(file.path) || typeof file.content !== "string" || Buffer.byteLength(file.content) > 65_536) throw new Error("Owner draft escapes trusted control scope."); }
+    if (!["create", "replace"].includes(String(file.action)) || (file.action === "create" ? file.expected_digest !== null : file.path !== "AGENTS.md" || !bootstrapDigest(file.expected_digest)) || typeof file.path !== "string" || !ownerBootstrapFiles.includes(file.path) || typeof file.content !== "string" || Buffer.byteLength(file.content) > 65_536) throw new Error("Owner draft escapes trusted control scope."); }
   return raw;
 }
 export async function commandRepositoryBootstrap(id: string, value: unknown, options: Options = {}) {
