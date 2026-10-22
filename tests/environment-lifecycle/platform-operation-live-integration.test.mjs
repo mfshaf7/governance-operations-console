@@ -216,7 +216,7 @@ function bootstrapPreparation(withCi = false) {
   value.source_intent.subject = { kind: "repository-bootstrap", owner_repo: "example-source", intake_entry_ref: { id: "repo:example-source", version: 1, digest: hash("entry") },
     custody_receipt_digest: hash("custody"), template_digest: hash("template"), plan_digest: hash("plan"), decision_ref: "operator:trusted-bootstrap",
     workflow_write: withCi, workflow_approval_ref: withCi ? "operator:separate-ci-approval" : null,
-    allowed_paths: ["AGENTS.md", ...(withCi ? [".github/workflows/validate.yaml"] : [])].sort() };
+    allowed_paths: ["AGENTS.md", ".github/CODEOWNERS", ".github/pull_request_template.md", ...(withCi ? [".github/workflows/validate.yaml"] : [])].sort() };
   value.source_intent_digest = hash(value.source_intent);
   return value;
 }
