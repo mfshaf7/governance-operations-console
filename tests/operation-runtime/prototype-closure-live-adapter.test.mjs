@@ -112,7 +112,9 @@ function acceptedResult(command) {
   };
 }
 
-test("Prototype Closure binds a reviewed Studio source and server operator", async () => {
+test("Prototype Closure binds a reviewed Studio source and server operator", async (t) => {
+  const deadlines = [];
+  t.mock.method(AbortSignal, "timeout", (ms) => { deadlines.push(ms); return new AbortController().signal; });
   const calls = [];
   const command = buildPrototypeClosureCommand(assertPrototypeClosureIntent(intent()), config.callerId);
   const result = await submitPrototypeClosure(intent(), { config,
@@ -129,6 +131,7 @@ test("Prototype Closure binds a reviewed Studio source and server operator", asy
   assert.equal(calls[1].init.headers["x-oos-caller-secret"], config.callerSecret);
   assert.equal(JSON.parse(calls[1].init.body).request.operator_id, config.callerId);
   assert.equal(JSON.parse(calls[1].init.body).expected_record_digest, digest);
+  assert.deepEqual(deadlines, [12_000, 12_000], "Preparation and durable acknowledgement keep their short deadline");
 });
 
 test("Prototype Closure refuses stale Studio authority before sending a command", async () => {
@@ -258,7 +261,9 @@ test("Prototype Closure projects a reviewed and merged terminal receipt", () => 
   }, requestId), /reviewed source readback/);
 });
 
-test("Prototype Closure reads and resumes the exact OOS request", async () => {
+test("Prototype Closure reads and resumes the exact OOS request", async (t) => {
+  const deadlines = [];
+  t.mock.method(AbortSignal, "timeout", (ms) => { deadlines.push(ms); return new AbortController().signal; });
   const command = buildPrototypeClosureCommand(assertPrototypeClosureIntent(intent()), config.callerId);
   const urls = [];
   const options = { config, fetchImpl: async (url, init) => {
@@ -282,6 +287,8 @@ test("Prototype Closure reads and resumes the exact OOS request", async () => {
     `${config.baseUrl}/v1/prototype-closures/requests/${encodeURIComponent(requestId)}/continue`,
     `${config.baseUrl}/v1/prototype-closures/requests/${encodeURIComponent(requestId)}/cancel`,
   ]);
+  assert.deepEqual(deadlines, [12_000, 180_000, 180_000, 180_000],
+    "Reads stay short; same-request reconciliation contains nested owner proof without reminting");
 });
 
 test("Closure review proof survives server JSON and browser validation across actions and phases", () => {

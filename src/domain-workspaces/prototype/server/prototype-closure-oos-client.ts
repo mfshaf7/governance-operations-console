@@ -23,6 +23,7 @@ import {
 import type { PrototypeClosureIntent } from "../live-runtime/prototype-closure-live-types.ts";
 
 const timeoutMs = 12_000;
+const commandTimeoutMs = 180_000;
 const maxResponseBytes = 2_097_152;
 
 type Config = ConsoleOosConnection;
@@ -171,7 +172,8 @@ async function request(
           : Object.fromEntries(new Headers(init.headers).entries())),
         ...consoleMutationAttributionHeaders(), ...(!sourceExpectation ? { Accept: "application/json" } : {}), "Content-Type": "application/json",
         "x-oos-caller-id": config.callerId, "x-oos-caller-secret": config.callerSecret },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: AbortSignal.timeout(init.method === "POST" && /\/(continue|decisions|cancel)$/.test(path)
+        ? commandTimeoutMs : timeoutMs),
     });
   } catch {
     throw new PrototypeClosureOosError("Prototype Closure could not reach OOS.",

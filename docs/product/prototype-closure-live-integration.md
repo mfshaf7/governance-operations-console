@@ -27,6 +27,13 @@ merge Closure changes, decide Security acceptance, or revoke Platform runtime.
 
 ## Recovery
 
+Preparation, submit acknowledgement and read remain bounded to12 seconds.
+Same-request decision, continue and cancel commands use the existing180-second
+long-command budget to contain nested owner evidence and reconciliation. They
+do not mint a replacement request, extend authority expiry, waive proof or add
+background execution. A timeout remains uncertain acknowledgement: retain the
+original request pointer and read its actual OOS state before any retry.
+
 The browser stores only the last request identifier per Prototype through the
 operation draft store. On reopening the surface, it re-reads that identifier from OOS. The
 identifier is a recovery pointer, not durable state or evidence. A missing OOS
