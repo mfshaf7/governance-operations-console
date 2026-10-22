@@ -46,6 +46,10 @@ adds caller credentials and constructs the operator and acceptance records.
    unavailable and shows the OOS next action.
 3. Edit the projected tree. Existing items produce bounded revision commands;
    new items produce parent-first add commands.
+   An Epic can add its real PI Objective through this existing typed operation.
+   PI Objectives and Features are Epic-level peers; do not create a placeholder
+   story, nest a Feature below a PI Objective or a Task below a Feature. The
+   menu follows the canonical Delivery parent rules; OOS remains the authority.
 4. `Done Editing` opens explicit review when the draft changed. Record the
    acceptance note before applying.
 5. The Console submits one command at a time. OOS validates the exact source
