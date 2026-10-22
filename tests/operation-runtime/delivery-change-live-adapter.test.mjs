@@ -16,6 +16,7 @@ import { DeliveryOosError } from "../../src/domain-workspaces/delivery/server/de
 import {
   buildExecutionTreeChangePlan,
   createdWorkItemId,
+  executionTreeChildKinds,
 } from "../../src/domain-workspaces/delivery/work-model/execution/execution-tree-change-plan.ts";
 import { deliveryChangeOperationForExecutionAction } from "../../src/domain-workspaces/delivery/work-model/execution/execution-change-operation.ts";
 import {
@@ -31,6 +32,25 @@ const env = {
   OOS_CALLER_ID: "governance-operations-console",
   OOS_CALLER_SECRET: "test-only-console-secret",
 };
+
+test("execution add actions match canonical parent rules and expose a real Epic-level PI Objective", () => {
+  assert.deepEqual(executionTreeChildKinds("Epic"), ["PI Objective", "Feature", "Risk", "Milestone", "Defect"]);
+  assert.deepEqual(executionTreeChildKinds("Feature"), ["User story", "Defect"]);
+  assert.deepEqual(executionTreeChildKinds("User story"), ["Task", "Defect"]);
+  assert.deepEqual(executionTreeChildKinds("Defect"), ["Task"]);
+  for (const kind of ["PI Objective", "Task", "Risk", "Milestone"]) {
+    assert.deepEqual(executionTreeChildKinds(kind), []);
+  }
+  const root = {id:"epic",legacyWorkPackageId:1306,kind:"Epic",title:"Existing product",draftBody:"",remark:"",children:[]};
+  const objective = {id:"objective-local",legacyWorkPackageId:null,kind:"PI Objective",title:"Deliver the actual app",draftBody:"Real operator outcome",remark:"",children:[]};
+  const plan = buildExecutionTreeChangePlan({baseline:root,draft:{...root,children:[objective]}});
+  assert.equal(plan.length, 1);
+  const operation = plan[0].buildOperation(new Map());
+  assertDeliveryChangeOperation(operation);
+  assert.equal(operation.type, "add_work_item");
+  assert.equal(operation.payload.type, "PI Objective");
+  assert.equal(operation.payload.parent_work_item_id, "work-item-1306");
+});
 
 test("case:delivery-change-source-provenance-positive reads only canonical OOS change truth", async () => {
   const calls = [];

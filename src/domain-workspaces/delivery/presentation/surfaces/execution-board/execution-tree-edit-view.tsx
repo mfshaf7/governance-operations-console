@@ -1,6 +1,7 @@
 "use client";
 
 import type { DeliveryComponentType } from "../../../read-model/index.ts";
+import { executionTreeChildKinds } from "../../../work-model/execution/execution-tree-change-plan.ts";
 
 import {
   BuildTreeEditorTree,
@@ -116,54 +117,10 @@ export function ExecutionTreeEditView({
   function getAddActions(
     node: ExecutionTreeDraftNode,
   ): BuildTreeEditorTreeAddAction<ExecutionTreeDraftNode>[] {
-    if (node.kind === "Epic" || node.kind === "PI Objective") {
-      return [
-        {
-          label: "Add Feature",
-          onSelect: (target) => addChild(target, "Feature"),
-        },
-        {
-          label: "Add Risk",
-          onSelect: (target) => addChild(target, "Risk"),
-        },
-        {
-          label: "Add Milestone",
-          onSelect: (target) => addChild(target, "Milestone"),
-        },
-      ];
-    }
-
-    if (node.kind === "Feature") {
-      return [
-        {
-          label: "Add Story",
-          onSelect: (target) => addChild(target, "User story"),
-        },
-        {
-          label: "Add Task",
-          onSelect: (target) => addChild(target, "Task"),
-        },
-        {
-          label: "Add Defect",
-          onSelect: (target) => addChild(target, "Defect"),
-        },
-      ];
-    }
-
-    if (node.kind === "User story") {
-      return [
-        {
-          label: "Add Task",
-          onSelect: (target) => addChild(target, "Task"),
-        },
-        {
-          label: "Add Defect",
-          onSelect: (target) => addChild(target, "Defect"),
-        },
-      ];
-    }
-
-    return [];
+    return executionTreeChildKinds(node.kind).map((kind) => ({
+      label: kind === "User story" ? "Add Story" : `Add ${kind}`,
+      onSelect: (target) => addChild(target, kind),
+    }));
   }
 
   return (

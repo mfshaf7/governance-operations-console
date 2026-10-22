@@ -1,4 +1,16 @@
 import type { DeliveryChangeOperation } from "../../live-runtime/delivery-change-live-types.ts";
+import type { DeliveryComponentType } from "../../read-model/index.ts";
+
+const childKinds: Partial<Record<DeliveryComponentType, readonly DeliveryComponentType[]>> = {
+  Epic: ["PI Objective", "Feature", "Risk", "Milestone", "Defect"],
+  Feature: ["User story", "Defect"],
+  "User story": ["Task", "Defect"],
+  Defect: ["Task"],
+};
+
+export function executionTreeChildKinds(parentKind: DeliveryComponentType): DeliveryComponentType[] {
+  return [...(childKinds[parentKind] ?? [])];
+}
 
 export type ExecutionTreeChangeDraftNode = {
   children: ExecutionTreeChangeDraftNode[];
