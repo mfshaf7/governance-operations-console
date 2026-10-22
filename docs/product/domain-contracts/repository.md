@@ -93,11 +93,17 @@ entry; owner readback failures remain explicit. See
 [`../workspace-intake-live-integration.md`](../workspace-intake-live-integration.md).
 
 That same Intake preparation surface hosts the staged **Repository Owner Setup**
-tool after proposed classification. OOS owns exact custody/proposed eligibility,
+tool for proposed or admitted source-only Intake absent all Inventory. OOS owns
+exact custody/eligibility,
 finite trusted-control preparation, durable requests, credentials, source
 execution/recovery, review and canonical readback. The Console selects the
 actual project's evidence profile and optional CI, inspects inert source and
-binds explicit decisions through same-origin APIs. Existing valid owner controls
+binds explicit decisions through same-origin APIs. Missing review controls use
+the same finite plan: absent control files and digest-bound append-only AGENTS
+review guidance only. Existing profile, application and independent control
+bytes are preserved; incomplete independent review policy blocks for owner
+review. No model, application authoring or active-owner source authority is
+introduced by the adapter. Complete existing owner controls
 use non-source checkout without a dummy PR. Setup grants neither admission nor
 app/runtime acceptance; ordinary source consumers reject its separate purpose.
 The primary procedure is [Repository owner setup](../repository-owner-setup.md).

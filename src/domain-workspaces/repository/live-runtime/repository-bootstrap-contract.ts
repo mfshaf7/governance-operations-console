@@ -8,7 +8,7 @@ export type OwnerBootstrapSummary = {
 };
 export const ownerBootstrapFiles = ["AGENTS.md", "README.md", "Makefile", ".gitignore", "scripts/validate_owner.py", "tests/test_owner_bootstrap.py",
   "contracts/delivery-art-work-session/evidence-profile.json", "contracts/delivery-art-work-session/evidence-profile.schema.json",
-  "contracts/delivery-art-work-session/source-bootstrap.json", ".github/workflows/validate.yaml"];
+  "contracts/delivery-art-work-session/source-bootstrap.json", ".github/workflows/validate.yaml", ".github/CODEOWNERS", ".github/pull_request_template.md"];
 export function bootstrapObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Owner setup returned malformed evidence.");
   return value as Record<string, unknown>;

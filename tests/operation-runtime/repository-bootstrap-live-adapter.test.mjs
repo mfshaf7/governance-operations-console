@@ -33,11 +33,20 @@ test("cold list keeps the actual off-page pending request without source bodies"
   const result = await listRepositoryBootstraps(owner, { config, fetchImpl: async () => canonicalSourceResponse(body, { recordRef: `oos://repository-owner-bootstrap/${owner}`, sourceOwner: "operator-orchestration-service" }) });
   assert.equal(result.pendingRequest.requestId, id); assert.equal(result.records.length, 0);
 });
-test("trusted draft is bound to the source revision, exact digest, real session and finite create-only files", async () => {
+test("trusted draft is bound to exact source and permits only finite creates or digest-bound guidance repair", async () => {
   const body = { schema_version: 1, workflow_id: "repository-owner-bootstrap-draft", request_id: id, revision: time, digest: digest(change()), change_set: change() };
-  const options = { config, fetchImpl: async url => String(url).endsWith("/draft") ? response(body, "/draft") : response(raw()) };
+  const options = { config, fetchImpl: async url => {
+    const current = raw(); current.draft.digest = body.digest;
+    return String(url).endsWith("/draft") ? response(body, "/draft") : response(current);
+  } };
+  assert.equal((await readRepositoryBootstrapDraft(id, options)).digest, body.digest);
+  body.change_set.operations[0].action = "replace";
+  body.change_set.operations[0].expected_digest = digest("original guidance");
+  body.digest = digest(body.change_set);
   assert.equal((await readRepositoryBootstrapDraft(id, options)).digest, body.digest);
   body.change_set.operations[0].path = "app/main.mjs"; body.digest = digest(body.change_set);
+  await assert.rejects(readRepositoryBootstrapDraft(id, options));
+  body.change_set.operations[0].path = "Makefile"; body.digest = digest(body.change_set);
   await assert.rejects(readRepositoryBootstrapDraft(id, options));
 });
 test("uncertain publication reuses the original retained command across a newer request revision", async () => {
@@ -76,7 +85,7 @@ test("preparation derives operator decision server-side and verifies raw-byte te
   const selected = { ownerRepo: owner, custodyRequestId: "custody:fixture", evidenceProfile: { owner_repo: owner }, applicationMarkers: ["app/main.mjs"], withCi: false, nonce: "review:fixture" };
   const prepare = async (url, init) => {
     const input = JSON.parse(init.body); assert.equal(Object.hasOwn(input, "operator_id"), false); assert.match(input.decision_ref, /^console-bootstrap:/);
-    const files = ownerBootstrapFiles.slice(0, 9).map(path => ({ path, action: "create", mode: "100644", content: "# inert fixture\n", expected_digest: null, content_digest: `sha256:${createHash("sha256").update("# inert fixture\n").digest("hex")}` }));
+    const files = ownerBootstrapFiles.filter(path => path !== ".github/workflows/validate.yaml").map(path => ({ path, action: "create", mode: "100644", content: "# inert fixture\n", expected_digest: null, content_digest: `sha256:${createHash("sha256").update("# inert fixture\n").digest("hex")}` }));
     const plan = { owner_repo: owner, ci_selected: false, files, model_invoked: false, app_import: false, canonical_mutation: false, runtime_activation: false };
     const body = { schema_version: 1, workflow_id: "repository-owner-bootstrap-preparation", caller_id: config.callerId, operator_id: config.operatorId,
       custody_request_id: input.custody_request_id, decision_ref: input.decision_ref, authorization: "preparation-only", credential_issued: false, checkout_created: false,
@@ -84,7 +93,15 @@ test("preparation derives operator decision server-side and verifies raw-byte te
         ordinary_source_eligible: false, model_writes_allowed: false, canonical_mutation: false, runtime_activation: false }, plan: { ...plan, plan_digest: digest(plan) } };
     return Response.json({ ...body, preparation_digest: digest(body) });
   };
-  assert.equal((await prepareRepositoryBootstrap(selected, { config, fetchImpl: prepare })).plan.files.length, 9);
+  assert.equal((await prepareRepositoryBootstrap(selected, { config, fetchImpl: prepare })).plan.files.length, ownerBootstrapFiles.length - 1);
+  const withAuthority = classification => async (url, init) => {
+    const result = await (await prepare(url, init)).json();
+    result.owner_authority.classification = classification;
+    const { preparation_digest: ignored, ...body } = result;
+    return Response.json({ ...body, preparation_digest: digest(body) });
+  };
+  assert.equal((await prepareRepositoryBootstrap(selected, { config, fetchImpl: withAuthority("admitted") })).owner_authority.classification, "admitted");
+  await assert.rejects(prepareRepositoryBootstrap(selected, { config, fetchImpl: withAuthority("active") }));
   await assert.rejects(prepareRepositoryBootstrap({ ...selected, operatorId: "attacker" }, { config, fetchImpl: prepare }), /unauthorized fields/);
 });
 test("provider failures and oversized responses never expose private diagnostics", async () => {
