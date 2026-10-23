@@ -34,7 +34,9 @@ const env = {
   OOS_CALLER_SECRET: "test-only-server-secret",
 };
 
-test("case:refinement-live-positive reads, advises, applies, and polls canonical OOS truth", async () => {
+test("case:refinement-live-positive reads, advises, applies, and polls canonical OOS truth", async (t) => {
+  const deadlines = [];
+  t.mock.method(AbortSignal, "timeout", (ms) => { deadlines.push(ms); return new AbortController().signal; });
   const projection = refinementProjection();
   const calls = [];
   const fetchImpl = async (url, init) => {
@@ -84,6 +86,14 @@ test("case:refinement-live-positive reads, advises, applies, and polls canonical
     env,
     fetchImpl,
   });
+  await requestRefinementAdvice("delivery-package:846", read,
+    refinementAssistCommand(), { env, fetchImpl });
+  assert.notEqual(calls[4].body.request_id, calls[1].body.request_id,
+    "each explicit advice call is distinct from canonical apply retry identity");
+  assert.notEqual(calls[4].body.correlation_id, calls[1].body.correlation_id);
+  assert.deepEqual(calls[4].body.target, calls[1].body.target);
+  assert.deepEqual(deadlines, [12_000, 180_000, 12_000, 12_000, 180_000],
+    "only synchronous model advice gets the long budget; reads and async acknowledgement remain short");
   const packet = refinementPacketFromProjection({
     ...read,
     latest_run: polled,

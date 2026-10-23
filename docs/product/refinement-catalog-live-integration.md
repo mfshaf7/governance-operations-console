@@ -55,6 +55,14 @@ The bounded security decision is the
 6. Run failures remain visible in the existing apply log and never create a
    local success receipt.
 
+Advice has a bounded 180-second server-to-OOS deadline covering the existing
+60-second model budget and one retry. Ordinary reads and asynchronous apply
+acknowledgement retain the existing short deadline. A deliberate new advice
+action has a fresh invocation id for its new CGG request-time binding; it is
+not a retry or acceptance of canonical writes. Accepted apply keeps the same
+stable identity and idempotency key. No automatic retry or model-policy change
+is introduced.
+
 ## Catalog
 
 1. The Console reads Catalog items and values from the OOS projection and
