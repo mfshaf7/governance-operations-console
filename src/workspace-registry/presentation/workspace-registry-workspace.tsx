@@ -5,6 +5,7 @@ import type { ConsoleEntryIntent } from "../../console-architecture";
 
 import {
   TerasFullscreenSurfaceFrame,
+  TerasActionButton,
   TerasModalShell,
   TerasSurfaceNav,
   TerasSurfaceNavButton,
@@ -22,6 +23,7 @@ import type {
 import { WorkspaceRegistryLifecycleWorkflow } from "./workspace-registry-lifecycle-workflow";
 import { WorkspaceRegistryPromotionWorkflow } from "./workspace-registry-promotion-workflow";
 import { WorkspaceRegistrySurface } from "./workspace-registry-surface";
+import { WorkspaceRegistryIntakeDialog } from "./workspace-registry-intake-dialog";
 import {
   consoleActionExecutable,
   resolveConsoleFixtureIsolation,
@@ -41,6 +43,7 @@ export function WorkspaceRegistryWorkspace({
   const runtime = useWorkspaceRegistryLiveRuntime();
   const continuity = useWorkspaceContinuityRuntime();
   const [view, setView] = useState<RegistryView>("registry");
+  const [intakeOpen, setIntakeOpen] = useState(false);
   const [promotionTarget, setPromotionTarget] =
     useState<WorkspaceRegistryTarget | null>(null);
   const [lifecycleRecord, setLifecycleRecord] =
@@ -136,6 +139,8 @@ export function WorkspaceRegistryWorkspace({
               kicker="Registry Nav"
               title="Inventory Views"
             >
+              <TerasActionButton disabled={!liveActionExecutable || fixtureMode || !snapshot}
+                onClick={() => setIntakeOpen(true)}>Workspace Intake</TerasActionButton>
               <TerasSurfaceNavButton
                 current={view === "registry"}
                 kicker="01"
@@ -205,6 +210,8 @@ export function WorkspaceRegistryWorkspace({
           />
         </TerasFullscreenSurfaceFrame>
       </TerasModalShell>
+      {intakeOpen && snapshot && liveActionExecutable && !fixtureMode ? <WorkspaceRegistryIntakeDialog snapshot={snapshot}
+        onClose={() => { setIntakeOpen(false); void Promise.allSettled([continuity.load(), runtime.load()]); }} /> : null}
       {promotionTarget ? (
         <WorkspaceRegistryPromotionWorkflow
           key={promotionTarget.record_id}

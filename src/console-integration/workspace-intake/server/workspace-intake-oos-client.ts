@@ -56,6 +56,17 @@ export function workspaceIntakeOosConfigured(env = process.env) {
 export async function listWorkspaceIntakeRequests(targetName: string, custodyRequestId: string,
   cursor: string | null = null, options: RequestOptions = {}) {
   const query = new URLSearchParams({ target_kind: "repo", target_name: targetName, custody_request_id: custodyRequestId });
+  return listRequestPage(query, targetName, custodyRequestId, "repo", cursor, options);
+}
+
+export async function listDirectWorkspaceIntakeRequests(kind: "product" | "component", targetName: string,
+  cursor: string | null = null, options: RequestOptions = {}) {
+  const query = new URLSearchParams({ target_kind: kind, target_name: targetName, source_class: "direct" });
+  return listRequestPage(query, targetName, null, kind, cursor, options);
+}
+
+async function listRequestPage(query: URLSearchParams, targetName: string, custodyRequestId: string | null,
+  kind: WorkspaceIntakeTargetKind, cursor: string | null, options: RequestOptions) {
   if (cursor !== null) query.set("cursor", cursor);
   const endpoint = `/v1/workspace-intake/requests?${query}`;
   const value = await request(endpoint, { method: "GET" }, options, {
@@ -63,7 +74,7 @@ export async function listWorkspaceIntakeRequests(targetName: string, custodyReq
     recordRef: `oos://workspace-intake/requests?${query}`,
   });
   try {
-    const page = assertWorkspaceIntakeRequestPage(value, targetName, custodyRequestId);
+    const page = assertWorkspaceIntakeRequestPage(value, targetName, custodyRequestId, kind);
     for (const entry of page.records) {
       const { candidate_digest: expected, ...content } = entry.candidate;
       if (canonicalDigest(content) !== expected) throw contractError("Retained custody candidate digest does not match its content.");

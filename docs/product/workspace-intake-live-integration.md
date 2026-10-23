@@ -3,7 +3,8 @@
 ## Boundary
 
 Workspace Intake is a shared, source-embedded Console workflow. Delivery
-closeout currently supplies the first typed candidate. The browser calls only
+closeout supplies typed source candidates. Registry also exposes the existing
+direct product/component classification route. The browser calls only
 same-origin `/api/workspace-intake/*` routes and never receives OOS credentials,
 constructs canonical authority, or calls Git, GitHub, WGCF, or Workspace
 Governance directly.
@@ -35,6 +36,26 @@ exact merged Console and OOS revisions, Platform `#1217` activates their
 bounded composition, and operating proof `#1210` succeeds.
 
 ## Operator Flow
+
+For operator-authored product or component classification, open Workspace
+Registry → Workspace Intake, select the canonical key and inspect retained
+requests. Reopen an acknowledged request to inspect or continue its original
+Result. Reopening, refreshing and pagination only read OOS; no browser storage
+or new request is used for recovery. A pending request anywhere in the exact
+caller/target/direct-source journal blocks a new classification.
+
+For a new target, explicitly select active owner repositories, record purpose,
+boundary and contextual evidence, then Review direct candidate. Product
+metadata includes platform/runtime/security owners, source owners and intended
+endpoint. Component metadata includes owner, security owner, class and optional
+existing product association. There are no guessed owners or deployment
+defaults. Contextual references are retained in the exact reviewed notes;
+direct source metadata is operator-authored and never a Prototype/Delivery
+source-owner attestation. Continue through the shared Decision / Review /
+Result dialog below. Intake and Inventory promotion remain separate actions.
+An already registered target can inspect its original Intake history without
+repeating admission. Registry loading, unavailable, stale or fixture modes
+cannot open this mutation path.
 
 1. A successful Delivery closeout that emits a Workspace entrant exposes
    `Classify Candidate`.

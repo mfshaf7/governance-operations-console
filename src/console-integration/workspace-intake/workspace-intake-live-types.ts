@@ -207,7 +207,8 @@ export type WorkspaceIntakeRequestPage = Readonly<{
   schema_version: 1;
   workflow_id: "workspace-intake";
   target: WorkspaceIntakeTarget;
-  custody_request_id: string;
+  custody_request_id: string | null;
+  source_class?: "direct";
   revision: number;
   pending_request_count: number;
   updated_at: string | null;

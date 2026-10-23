@@ -12,6 +12,7 @@ import {
   prepareWorkspaceIntake,
   readWorkspaceIntake,
   listWorkspaceIntakeRequests,
+  listDirectWorkspaceIntakeRequests,
   submitWorkspaceIntake,
   workspaceIntakeOosConfigured,
   WorkspaceIntakeOosError,
@@ -23,9 +24,19 @@ export async function listWorkspaceIntakeRequestsRoute(request: NextRequest) {
   return execute(async () => {
     requireConfigured();
     const parameters = request.nextUrl.searchParams, keys = [...parameters.keys()];
-    if (new Set(keys).size !== keys.length || keys.some(key => !["target_name", "custody_request_id", "cursor"].includes(key))) {
+    if (new Set(keys).size !== keys.length || keys.some(key => !["target_kind", "target_name", "source_class", "custody_request_id", "cursor"].includes(key))) {
       throw new WorkspaceIntakeContractError("Retained Intake list parameters are invalid.");
     }
+    if (parameters.has("source_class")) {
+      const target = assertWorkspaceIntakeTarget({ kind: parameters.get("target_kind"), name: parameters.get("target_name") });
+      const cursor = parameters.get("cursor");
+      if (parameters.get("source_class") !== "direct" || parameters.has("custody_request_id") ||
+          (target.kind !== "product" && target.kind !== "component") || (cursor !== null && !/^[0-9a-f]{64}$/.test(cursor))) {
+        throw new WorkspaceIntakeContractError("Direct Intake requires one product/component selector without custody.");
+      }
+      return listDirectWorkspaceIntakeRequests(target.kind, target.name, cursor);
+    }
+    if (parameters.has("target_kind")) throw new WorkspaceIntakeContractError("Custody Intake uses the existing repository selector.");
     const target = assertWorkspaceIntakeTarget({ kind: "repo", name: parameters.get("target_name") });
     const custody = parameters.get("custody_request_id"), cursor = parameters.get("cursor");
     if (!custody || custody.length > 256 || (cursor !== null && !/^[0-9a-f]{64}$/.test(cursor))) {
