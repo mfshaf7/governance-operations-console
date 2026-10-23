@@ -174,8 +174,9 @@ export function executionCloseoutReadyToApply({
   projection: DeliveryCloseoutProjection | null;
 }) {
   return Boolean(
-    projection?.projection_state === "ready" &&
-      projection.readiness.ready_for_closeout &&
+    projection &&
+      ((projection.projection_state === "ready" && projection.readiness.ready_for_closeout) ||
+        (projection.projection_state === "not_ready" && projection.next_action.code === "prepare_delivery_closeout")) &&
       projection.readiness.evidence_refs.length > 0 &&
       executionCloseoutEvidenceComplete(draft) &&
       executionCloseoutImpactComplete(draft) &&

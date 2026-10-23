@@ -171,6 +171,29 @@ parent-closeout justification. This reuses OOS's existing stale-open operation,
 requires terminal children and completed related scope, and does not infer
 business acceptance from child status. Epics use `Inspect Closeout` instead.
 
+The Epic wizard follows OOS's explicit `prepare_delivery_closeout` action. With
+a clean execution tree, OOS may prepare the existing guided command while only
+its own Demo, Closing and Inspect & Adapt steps remain. The wizard collects
+and reviews that evidence before submission; it does not require a prior write
+through another client. Pending canonical readiness remains visible until the
+native command records and validates each step. Other blockers and an owner
+reconciliation action keep application disabled.
+
+For a PI Objective, this same form also reads its exact initiative, Target PI,
+planned value and currently recorded earned value/outcome. If earned review is
+missing, inspect the actual outcome and owner evidence, enter its actual business
+value, native review outcome and optional evidence note, then explicitly approve and
+choose `Record earned PI review`. The existing OOS initiative `pi-review`
+operation records those fields; it does not complete the objective or create
+source work. Re-read and separately approve normal completion evidence afterward.
+Native choices currently include `Met`, `Partially met` and `Not met`; OOS
+validates the actual form options. No planning value is copied into earned value.
+
+An uncertain PI-review response retains the original target and locks another
+write. `Read current target` verifies the same earned fields; an unresolved read
+leaves the write locked. A fresh browser reads canonical values, never a local
+success receipt. Existing matching earned fields do not need another write.
+
 If the transport outcome is uncertain, choose `Read current target` before
 another write. A successful read of an already completed target remains
 read-only. This path creates no source grant, worktree, PR, Review Packet or

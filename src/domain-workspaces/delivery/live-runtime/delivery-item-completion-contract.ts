@@ -22,7 +22,27 @@ export type ItemCompletionContext = {
   completion_evidence_valid: boolean;
   can_complete: boolean;
   blocking_reasons: string[];
+  pi_review?: {
+    delivery_id: string;
+    target_pi: string;
+    planned_business_value: number | null;
+    actual_business_value: number | null;
+    review_outcome: string | null;
+    can_review: boolean;
+  };
 };
+
+export type ItemPiReview = { actualBusinessValue: number; reviewOutcome: string; reviewNote: string };
+export function itemPiReview(value: unknown): ItemPiReview {
+  const body = completionObject(value);
+  if (Object.keys(body).some(key => !["actualBusinessValue", "reviewOutcome", "reviewNote"].includes(key)) ||
+    !Number.isSafeInteger(body.actualBusinessValue) || Number(body.actualBusinessValue) < 0 ||
+    typeof body.reviewOutcome !== "string" || !body.reviewOutcome.trim() ||
+    (body.reviewNote !== undefined && typeof body.reviewNote !== "string")) {
+    throw new Error("Review requires a non-negative actual business value and native review outcome; the note is optional.");
+  }
+  return { actualBusinessValue: Number(body.actualBusinessValue), reviewOutcome: body.reviewOutcome.trim(), reviewNote: typeof body.reviewNote === "string" ? body.reviewNote.trim() : "" };
+}
 
 export function completionTargetId(value: unknown) {
   const id = typeof value === "string" && /^[1-9][0-9]*$/.test(value) ? Number(value) : value;
@@ -79,6 +99,16 @@ export function assertCompletionContext(value: unknown): ItemCompletionContext {
   }
   if (body.can_complete && (body.status === "done" || body.source_session_active || body.open_descendant_count !== 0 || body.blocking_reasons.length !== 0)) {
     throw new Error("Completion eligibility contradicts its canonical prerequisites.");
+  }
+  if (body.pi_review !== undefined) {
+    const pi = completionObject(body.pi_review);
+    if (typeof pi.delivery_id !== "string" || !/^delivery-[1-9][0-9]*$/.test(pi.delivery_id) ||
+      typeof pi.target_pi !== "string" || !pi.target_pi.trim() ||
+      [pi.planned_business_value, pi.actual_business_value].some(v => v !== null && (!Number.isSafeInteger(v) || Number(v) < 0)) ||
+      !(pi.review_outcome === null || typeof pi.review_outcome === "string") || typeof pi.can_review !== "boolean" ||
+      (pi.can_review && (body.source_session_active || ["done", "retired"].includes(String(body.status))))) {
+      throw new Error("PI review is not bound to current native objective metadata.");
+    }
   }
   return value as ItemCompletionContext;
 }
