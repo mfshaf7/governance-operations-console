@@ -145,6 +145,37 @@ review authority.
    operator action. If the network outcome is unknown, retry retains the same
    command identity so OOS can replay the retained result safely.
 
+## Evidence-Only Completion And Completed Parents
+
+In live Execution Board, choose `Open Work Item`, enter the exact ART id and
+select the `Non-source completion` work path. `Open Completion` reads current
+native continuation context and any source session before presenting a review.
+Use this path only when the outcome requires no source change. A source-backed
+outcome must use its existing governed work session, merged evidence and close
+command; an existing source session blocks this form.
+
+Review the exact subject, owner, status and blocking reasons. Enter the four
+native evidence fields (completion summary, changed outcomes, test results and
+validation), with the displayed test and validation prefixes, and confirm the non-source
+outcome. The optional completion note adds context; it does not replace proof.
+The server rereads the target before submitting the existing OOS completion
+operation. It reports completion only after native success and canonical
+readback with valid evidence. Current descendants, blockers, required fields,
+narrative and native status-transition rules remain enforced by the owners.
+
+For an already completed parent scope still marked open, select
+`Reconcile a completed parent (stale-open closeout)` and enter an explicit
+parent-closeout justification. This reuses OOS's existing stale-open operation,
+requires terminal children and completed related scope, and does not infer
+business acceptance from child status. Epics use `Inspect Closeout` instead.
+
+If the transport outcome is uncertain, choose `Read current target` before
+another write. A successful read of an already completed target remains
+read-only. This path creates no source grant, worktree, PR, Review Packet or
+Console-owned completion receipt. The same-origin route is
+`/api/delivery/execution/{workItemId}/completion`; authenticated server-only
+calls reuse OOS `continuation-context`, `complete` and `stale-open-close`.
+
 ## Canonical Register And Bounded Source Realization
 
 In live mode the primary register reads OOS's canonical Delivery initiative

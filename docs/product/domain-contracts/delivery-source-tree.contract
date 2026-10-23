@@ -558,3 +558,7 @@ work-model/work-design/work-design-artifact-types.ts
 work-model/work-design/work-design-handoff-model.ts
 work-model/work-design/work-design-session-model.ts
 work-model/work-design/work-design-types.ts
+
+live-runtime/delivery-item-completion-contract.ts
+server/delivery-item-completion-client.ts
+presentation/surfaces/execution-board/work-session/execution-item-completion-modal.tsx

@@ -7,6 +7,7 @@ import {
   type ConsoleProductPublicationConfiguration,
 } from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
+import { readWorkspaceRegistry } from "../../../workspace-registry/server/workspace-registry-oos-client.ts";
 import {
   assertGovernedProductPublicationIntent,
   assertGovernedProductPublicationResult,
@@ -21,6 +22,7 @@ const maxResponseBytes = 2_097_152;
 const timeoutMs = 15_000;
 
 type RequestOptions = Readonly<{
+  readAuthority?: () => Promise<string>;
   attributionHeaders?: Readonly<Record<string, string>>;
   config?: ConsoleProductPublicationConfiguration;
   fetchImpl?: typeof fetch;
@@ -50,7 +52,7 @@ export async function submitGovernedProductPublication(
   options: RequestOptions = {},
 ): Promise<GovernedProductPublicationResult> {
   const intent = assertGovernedProductPublicationIntent(value);
-  const config = options.config ?? resolveConfiguration();
+  const configured = options.config ?? resolveConfiguration();
   const attribution = options.attributionHeaders ?? consoleMutationAttributionHeaders();
   const sessionRef = attribution["x-console-session-ref"];
   const correlationId = attribution["x-console-correlation-id"];
@@ -61,6 +63,20 @@ export async function submitGovernedProductPublication(
       401,
     );
   }
+  // Current mutable Inventory is owner-observed for every new command. The
+  // private configured source/Security binding is retained; it is not a stale
+  // record-head pin or permission to advance governing code.
+  let authorityRevision: string;
+  try {
+    authorityRevision = await (options.readAuthority ?? (async () =>
+      (await readWorkspaceRegistry({ config: configured, fetchImpl: options.fetchImpl })).authority_revision))();
+  } catch {
+    throw new ProductPublicationOosError("Current canonical Registry authority is unavailable; no publication was submitted.", "product_publication_authority_unavailable", 503);
+  }
+  if (!/^[a-f0-9]{40}$/.test(authorityRevision)) {
+    throw new ProductPublicationOosError("Current Workspace Governance authority is unavailable.", "product_publication_authority_unavailable", 503);
+  }
+  const config = { ...configured, authorityRevision };
   const command = buildProductPublicationCommand({
     config,
     correlationId,
