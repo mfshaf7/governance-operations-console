@@ -47,6 +47,18 @@ export function useWorkspaceIntakeLiveRuntime() {
     });
   }, []);
 
+  const listDirect = useCallback(async (kind: "product" | "component", targetName: string, cursor: string | null = null) => {
+    setRequestPage(null);
+    return run(async () => {
+      const query = new URLSearchParams({ target_kind: kind, target_name: targetName, source_class: "direct" });
+      if (cursor !== null) query.set("cursor", cursor);
+      const body = await jsonRequest(`/api/workspace-intake/requests?${query}`, { method: "GET", cache: "no-store" });
+      const page = assertWorkspaceIntakeRequestPage(body, targetName, null, kind);
+      setRequestPage(page);
+      return page;
+    });
+  }, []);
+
   const prepare = useCallback(async (candidate: Pick<WorkspaceIntakeCandidate, "target">, custody?: WorkspaceIntakeCustodyPreparation) => {
     setPreparation(null);
     return run(async () => {
@@ -153,6 +165,7 @@ export function useWorkspaceIntakeLiveRuntime() {
 
   return {
     list,
+    listDirect,
     requestPage,
     cancel,
     continueRequest,

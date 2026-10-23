@@ -73,13 +73,17 @@ export class WorkspaceIntakeContractError extends Error {
   }
 }
 
-export function assertWorkspaceIntakeRequestPage(value: unknown, targetName: string, custodyRequestId: string): WorkspaceIntakeRequestPage {
+export function assertWorkspaceIntakeRequestPage(value: unknown, targetName: string, custodyRequestId: string | null,
+  kind: WorkspaceIntakeTargetKind = "repo"): WorkspaceIntakeRequestPage {
   const page = record(value, "retained request page");
+  const direct = custodyRequestId === null;
   const target = assertWorkspaceIntakeTarget(page.target);
   const wireTarget = record(page.target, "retained request target");
-  if (Object.keys(page).sort().join(",") !== "custody_request_id,next_cursor,pending_request_count,records,revision,schema_version,target,updated_at,workflow_id" ||
-      page.schema_version !== 1 || page.workflow_id !== "workspace-intake" || target.kind !== "repo" || target.name !== targetName ||
-      wireTarget.record_id !== `repo:${targetName}` || page.custody_request_id !== custodyRequestId ||
+  const keys = "custody_request_id,next_cursor,pending_request_count,records,revision,schema_version," + (direct ? "source_class," : "") + "target,updated_at,workflow_id";
+  if (Object.keys(page).sort().join(",") !== keys ||
+      (direct ? !["product", "component"].includes(kind) || page.source_class !== "direct" : kind !== "repo") ||
+      page.schema_version !== 1 || page.workflow_id !== "workspace-intake" || target.kind !== kind || target.name !== targetName ||
+      wireTarget.record_id !== `${kind}:${targetName}` || page.custody_request_id !== custodyRequestId ||
       !Number.isSafeInteger(page.revision) || Number(page.revision) < 0 ||
       !Number.isSafeInteger(page.pending_request_count) || Number(page.pending_request_count) < 0 ||
       (page.updated_at !== null && !dateTime(page.updated_at)) ||
@@ -89,13 +93,13 @@ export function assertWorkspaceIntakeRequestPage(value: unknown, targetName: str
   const records = page.records.map(value => {
     const entry = record(value, "retained request");
     const requestId = assertWorkspaceIntakeRequestId(entry.request_id);
-    const projected = assertCustodySourceCandidate(entry.candidate, "repo", targetName, `repo:${targetName}`);
-    const sourcePrefix = `oos://repository-custody/requests/${encodeURIComponent(custodyRequestId)}/intake/`;
+    const projected = assertCustodySourceCandidate(entry.candidate, kind, targetName, `${kind}:${targetName}`, direct);
+    const sourcePrefix = `oos://repository-custody/requests/${encodeURIComponent(custodyRequestId ?? "")}/intake/`;
     if (Object.keys(entry).sort().join(",") !== "candidate,classification,request_id,requested_at,revision,status,updated_at" ||
         ids.has(requestId) || !dateTime(entry.requested_at) || !dateTime(entry.updated_at) ||
         !workflowStatuses.has(String(entry.status)) || !decisions.has(String(entry.classification)) ||
         !Number.isSafeInteger(entry.revision) || Number(entry.revision) < 1 ||
-        !projected.source.ref.startsWith(sourcePrefix) || !/^[0-9a-f]{64}$/.test(projected.source.ref.slice(sourcePrefix.length))) {
+        (!direct && (!projected.source.ref.startsWith(sourcePrefix) || !/^[0-9a-f]{64}$/.test(projected.source.ref.slice(sourcePrefix.length))))) {
       throw invalid("Retained Intake request has invalid or cross-custody metadata.");
     }
     ids.add(requestId);
@@ -108,7 +112,8 @@ export function assertWorkspaceIntakeRequestPage(value: unknown, targetName: str
       Number(page.pending_request_count) < visiblePending || Number(page.pending_request_count) > Number(page.revision) ||
       (Number(page.revision) === 0 && (records.length > 0 || page.updated_at !== null || page.next_cursor !== null)) ||
       (Number(page.revision) > 0 && page.updated_at === null)) throw invalid("Retained Intake counters do not match their visible metadata.");
-  return { schema_version: 1, workflow_id: "workspace-intake", target: { ...target, record_id: `repo:${targetName}` },
+  return { schema_version: 1, workflow_id: "workspace-intake", target: { ...target, record_id: `${kind}:${targetName}` },
+    ...(direct ? { source_class: "direct" as const } : {}),
     custody_request_id: custodyRequestId, revision: Number(page.revision), pending_request_count: Number(page.pending_request_count), updated_at: page.updated_at as string | null,
     records, next_cursor: page.next_cursor as string | null };
 }
@@ -257,14 +262,14 @@ export function assertWorkspaceIntakePreparation(
   };
 }
 
-function assertCustodySourceCandidate(value: unknown, kind: WorkspaceIntakeTargetKind, name: string, recordId: string): WorkspaceIntakeSourceCandidate {
+function assertCustodySourceCandidate(value: unknown, kind: WorkspaceIntakeTargetKind, name: string, recordId: string, direct = false): WorkspaceIntakeSourceCandidate {
   const wire = record(value, "custody source candidate");
   const wireTarget = record(wire.target, "custody source target");
   const candidate = assertWorkspaceIntakeCandidate({ ...wire, label: name });
   if (Object.keys(wire).sort().join(",") !== "artifact_type,candidate_digest,evidence_refs,requested_record,schema_version,source,target" ||
       wire.schema_version !== 1 || wire.artifact_type !== "workspace-intake-source-candidate" ||
       typeof wire.candidate_digest !== "string" || !digestPattern.test(wire.candidate_digest) ||
-      candidate.source.class !== "repository-custody" || kind !== "repo" || candidate.target.kind !== kind ||
+      (direct ? candidate.source.class !== "direct" || !["product", "component"].includes(kind) : candidate.source.class !== "repository-custody" || kind !== "repo") || candidate.target.kind !== kind ||
       candidate.target.name !== name || wireTarget.record_id !== recordId) {
     throw invalid("Repository custody source candidate does not match its exact target.");
   }
