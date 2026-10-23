@@ -212,6 +212,7 @@ export function workDesignApplyDraftViewModel({
     runtimeMode,
   });
   const historyReceiptRows = workDesignHistoryReceiptRows({
+    runtimeMode,
     applyReceiptId,
     applyReceiptRecorded,
     applyTargetRecordRef,
@@ -223,6 +224,7 @@ export function workDesignApplyDraftViewModel({
     sourceApplyComplete,
   });
   const historyTimelineRows = workDesignHistoryTimelineRows({
+    runtimeMode,
     applyRecordedAt: applyRunStartedAt,
     applyReceiptId,
     applyReceiptRecorded,
@@ -242,5 +244,9 @@ export function workDesignApplyDraftViewModel({
     applyTargetRecordRef,
     historyReceiptRows,
     historyTimelineRows,
+    runtimeMode,
+    applyLogDescription: runtimeMode === "live"
+      ? "Read-only summary of validated OOS apply evidence, not a streamed backend event log. Context snapshot files remain browser-local unless separately persisted."
+      : "Timestamped disconnected-preview record. These local rows are not canonical Delivery evidence.",
   };
 }

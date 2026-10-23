@@ -68,6 +68,22 @@ attribution are assembled server-side.
 
 ## Current Boundary
 
+### Evidence presentation
+
+Current Move, progress, History and Apply Run Log use the same explicit runtime
+mode. In live mode, only a validated OOS result or recovered canonical projection
+supplies the durable receipt identity and application time. Configuration alone,
+an unavailable projection, or a local receipt flag is not completion evidence.
+History keeps the durable receipt visible even after a completed projection is
+recovered. Its session draft reference and context artifacts remain local.
+
+The log is a read-only summary of returned evidence, not a streamed backend log.
+The OOS application receipt proves canonical application and complete readback;
+it does not attest that browser-local context snapshot files were uploaded.
+Disconnected-preview receipts, projections and simulated attachment status stay
+explicitly local. Suggestion-only advice does not imply activation of a separate
+tool-enabled model profile or grant mutation authority.
+
 Implemented:
 
 - server-only OOS authentication and operator attribution

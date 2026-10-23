@@ -169,6 +169,7 @@ export function WorkDesignSessionDialogs({
   return (
     <WorkDesignSessionDialogStack
       applyLogDialog={{
+        description: applyWorkflow.applyLogDescription,
         applyDraftRef,
         applyExecutionLogLines,
         applyLogRecordedAt,

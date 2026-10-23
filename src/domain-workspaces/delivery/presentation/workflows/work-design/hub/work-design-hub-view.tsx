@@ -1,6 +1,7 @@
 "use client";
 
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
+import type { WorkDesignLiveMode } from "../../../../live-runtime/work-design-live-types.ts";
 
 import {
   workDesignStepStatusLabel,
@@ -42,6 +43,7 @@ type WorkDesignHubViewProps = {
   onOpenBlockerRecovery: () => void;
   onSelectStep: (step: WorkDesignStep) => void;
   reviewReady: boolean;
+  runtimeMode: WorkDesignLiveMode;
   draftReviewAccepted: boolean;
   draftValidationAccepted: boolean;
   workDesignBlocked: boolean;
@@ -58,6 +60,7 @@ export function WorkDesignHubView({
   onOpenBlockerRecovery,
   onSelectStep,
   reviewReady,
+  runtimeMode,
   draftReviewAccepted,
   draftValidationAccepted,
   workDesignBlocked,
@@ -199,6 +202,7 @@ export function WorkDesignHubView({
                   available={available}
                   current={current}
                   detail={workDesignStepStatusLabel(item.id, {
+                    runtimeMode,
                     applyReceiptRecorded,
                     contextBriefAccepted,
                     contextDecision,

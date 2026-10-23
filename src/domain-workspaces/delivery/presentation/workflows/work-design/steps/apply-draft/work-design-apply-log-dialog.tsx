@@ -16,6 +16,7 @@ type WorkDesignApplyExecutionLogLine = {
 };
 
 type WorkDesignApplyLogDialogProps = {
+  description: string;
   applyDraftRef: string;
   applyExecutionLogLines: WorkDesignApplyExecutionLogLine[];
   applyLogRecordedAt: string;
@@ -27,6 +28,7 @@ type WorkDesignApplyLogDialogProps = {
 };
 
 export function WorkDesignApplyLogDialog({
+  description,
   applyDraftRef,
   applyExecutionLogLines,
   applyLogRecordedAt,
@@ -45,7 +47,7 @@ export function WorkDesignApplyLogDialog({
         </TerasActionButton>
       }
       closeLabel="Close full apply log"
-      description="Timestamped preview record for apply troubleshooting. Live wiring will replace these mock rows with streamed backend events."
+      description={description}
       facts={workDesignApplyLogFacts({
         applyDraftRef,
         applyLogRecordedAt,

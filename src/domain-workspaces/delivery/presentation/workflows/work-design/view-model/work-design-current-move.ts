@@ -1,4 +1,5 @@
 import type { DeliveryTone } from "../../../../read-model/index.ts";
+import type { WorkDesignLiveMode } from "../../../../live-runtime/work-design-live-types.ts";
 
 import type {
   WorkDesignBlockerDispositionReceipt,
@@ -53,6 +54,7 @@ export function workDesignCurrentMove({
   draftTreePresent,
   draftReviewAccepted,
   reviewReady,
+  runtimeMode = "disconnected-preview",
   sourceWorkDesignClosed,
   workDesignBlocked,
 }: {
@@ -66,6 +68,7 @@ export function workDesignCurrentMove({
   draftTreePresent: boolean;
   draftReviewAccepted: boolean;
   reviewReady: boolean;
+  runtimeMode?: WorkDesignLiveMode;
   sourceWorkDesignClosed: boolean;
   workDesignBlocked: boolean;
 }): WorkDesignCurrentMove {
@@ -101,7 +104,9 @@ export function workDesignCurrentMove({
   if (applyReceiptRecorded) {
     return {
       description:
-        "The mock Work Design receipt is captured. Refinement can consume the finalized draft reference next.",
+        runtimeMode === "live"
+          ? "The durable OOS Work Design receipt is captured. Refinement can consume the accepted Work Design application next."
+          : "The disconnected-preview Work Design receipt is captured locally; it is not canonical Delivery evidence.",
       label: "receipt",
       title: "Work Design Applied",
       tone: "ok",
@@ -182,7 +187,9 @@ export function workDesignCurrentMove({
   if (activeStep === "apply") {
     return {
       description: applyReady
-        ? "Approve the update. Validation, backend update, snapshot attach, and receipt return run in the same apply sequence."
+        ? runtimeMode === "live"
+          ? "Approve the reviewed tree for OOS validation, canonical application and receipt return. Context snapshot files remain browser-local."
+          : "Approve the update. Validation, backend update, snapshot attach, and receipt return run in the same apply sequence."
         : "Resolve the review and apply inputs before the work-design update can start.",
       label: "apply",
       title: applyReady ? "Apply Work Design" : "Apply Locked",

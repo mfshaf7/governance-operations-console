@@ -1,6 +1,7 @@
 "use client";
 
 import type { WorkDesignCurrentMove } from "../view-model/work-design-current-move.ts";
+import type { WorkDesignLiveMode } from "../../../../live-runtime/work-design-live-types.ts";
 import { workDesignProgressPanelProjection } from "../view-model/work-design-shell-view-model.ts";
 import {
   type WorkDesignProgressStep,
@@ -30,6 +31,7 @@ type WorkDesignProgressPanelProps = {
   progressActiveStep: WorkDesignProgressStep;
   draftReviewAccepted: boolean;
   reviewReady: boolean;
+  runtimeMode: WorkDesignLiveMode;
   sourceWorkDesignClosed: boolean;
   draftValidationAccepted: boolean;
   workDesignBlocked: boolean;
@@ -47,6 +49,7 @@ export function WorkDesignProgressPanel({
   progressActiveStep,
   draftReviewAccepted,
   reviewReady,
+  runtimeMode,
   sourceWorkDesignClosed,
   draftValidationAccepted,
   workDesignBlocked,
@@ -118,6 +121,7 @@ export function WorkDesignProgressPanel({
               workDesignBlocked && !archiveStep
                 ? "locked"
                 : workDesignStepStatusLabel(item.id, {
+                    runtimeMode,
                     applyReceiptRecorded,
                     contextBriefAccepted,
                     contextDecision,

@@ -10,6 +10,7 @@ export function workDesignApplyReadinessRows({
   applyTargetRecordRef,
   hasUnsavedSessionChanges,
   draftReviewAccepted,
+  runtimeMode = "disconnected-preview",
   snapshotAction,
   snapshotStatus,
   sourceApplyComplete,
@@ -17,6 +18,7 @@ export function workDesignApplyReadinessRows({
   applyTargetRecordRef: string;
   hasUnsavedSessionChanges: boolean;
   draftReviewAccepted: boolean;
+  runtimeMode?: WorkDesignLiveMode;
   snapshotAction: string;
   snapshotStatus: DeliveryWorkDesignSnapshotAttachmentDisplayStatus;
   sourceApplyComplete: boolean;
@@ -47,10 +49,12 @@ export function workDesignApplyReadinessRows({
         tone: "ok",
       },
       {
-        detail: `${snapshotAction} is retained with the source completion evidence.`,
+        detail: runtimeMode === "live"
+          ? "Context snapshot files remain browser-local; source completion does not prove a backend upload."
+          : `${snapshotAction} is retained with the source completion evidence.`,
         label: "Snapshot Action",
-        status: "complete",
-        tone: "ok",
+        status: runtimeMode === "live" ? "local only" : "complete",
+        tone: runtimeMode === "live" ? "info" : "ok",
       },
       {
         detail:
@@ -78,7 +82,9 @@ export function workDesignApplyReadinessRows({
       tone: applyTargetRecordRef ? "ok" : "warn",
     },
     {
-      detail: `${snapshotAction} during the apply run.`,
+      detail: runtimeMode === "live"
+        ? "Context snapshot files remain browser-local, separate from the canonical apply."
+        : `${snapshotAction} during the apply run.`,
       label: "Snapshot Action",
       status: snapshotReady ? "ready" : "blocked",
       tone: snapshotReady ? "ok" : "warn",
@@ -128,7 +134,7 @@ export function workDesignApplyBackendChecklistRows({
       ? "queued"
       : "locked";
 
-  if (sourceApplyComplete) {
+  if (sourceApplyComplete && !applyReceiptRecorded) {
     return [
       {
         detail: `Source completion resolves the draft input to ${applyTargetRecordRef}.`,
@@ -158,10 +164,12 @@ export function workDesignApplyBackendChecklistRows({
         tone: "ok",
       },
       {
-        detail: `${snapshotAction} is retained with the completed source evidence.`,
+        detail: runtimeMode === "live"
+          ? "The source completion does not prove a backend snapshot upload; context snapshot files remain browser-local."
+          : `${snapshotAction} is retained with the completed source evidence.`,
         label: "Attach Snapshot Evidence",
-        status: "complete",
-        tone: "ok",
+        status: runtimeMode === "live" ? "local only" : "complete",
+        tone: runtimeMode === "live" ? "info" : "ok",
       },
       {
         detail: `Source projection is available for ${applyTargetRecordRef}; History provides the read-only proof trail.`,
@@ -172,7 +180,7 @@ export function workDesignApplyBackendChecklistRows({
     ];
   }
 
-  if (runtimeError) {
+  if (runtimeError && !applyReceiptRecorded) {
     return [
       {
         detail: `Draft input remains bound to ${applyTargetRecordRef}.`,
@@ -254,14 +262,16 @@ export function workDesignApplyBackendChecklistRows({
       tone: backendReadyTone,
     },
     {
-      detail: applyReceiptRecorded
+      detail: runtimeMode === "live"
+        ? "Context snapshot files remain browser-local. The OOS receipt proves canonical application and readback, not a backend snapshot upload."
+        : applyReceiptRecorded
         ? `${snapshotAction} completed for the target package record.`
         : applyReady
           ? `${snapshotAction} will run after the backend accepts the update.`
           : "Snapshot evidence waits for a valid apply intent.",
       label: "Attach Snapshot Evidence",
-      status: backendReadyStatus,
-      tone: backendReadyTone,
+      status: runtimeMode === "live" ? "local only" : backendReadyStatus,
+      tone: runtimeMode === "live" ? "info" : backendReadyTone,
     },
     {
       detail: applyReceiptRecorded
@@ -306,7 +316,7 @@ export function workDesignApplyExecutionLogLines({
   timestamp: string;
   tone: DeliveryTone;
 }> {
-  if (sourceApplyComplete) {
+  if (sourceApplyComplete && !applyReceiptRecorded) {
     return [
       {
         marker: "[ok]",
@@ -322,14 +332,16 @@ export function workDesignApplyExecutionLogLines({
       },
       {
         marker: "[ok]",
-        text: `${snapshotAction} is retained as completed Work Design evidence.`,
+        text: runtimeMode === "live"
+          ? "Context snapshot files remain browser-local; source completion does not prove a backend upload."
+          : `${snapshotAction} is retained as completed Work Design evidence.`,
         timestamp: recordedAt,
         tone: "ok",
       },
     ];
   }
 
-  if (runtimeError) {
+  if (runtimeError && !applyReceiptRecorded) {
     return [
       {
         marker: "[ok]",
@@ -379,7 +391,9 @@ export function workDesignApplyExecutionLogLines({
       },
       {
         marker: "[..]",
-        text: "One approval will run validation, apply submit, governance checks, backend update, snapshot attach, and receipt return.",
+        text: runtimeMode === "live"
+          ? "One approval will submit the reviewed tree to OOS for validation, canonical application and receipt return. Context snapshot files remain browser-local."
+          : "One approval will run validation, apply submit, governance checks, backend update, snapshot attach, and receipt return.",
         timestamp: recordedAt,
         tone: "warn",
       },
@@ -422,9 +436,11 @@ export function workDesignApplyExecutionLogLines({
     },
     {
       marker: "[ok]",
-      text: `${snapshotAction} completed for the target package record.`,
+      text: runtimeMode === "live"
+        ? "Context snapshot files remain browser-local; the OOS application receipt does not prove a backend upload."
+        : `${snapshotAction} completed for the target package record.`,
       timestamp: recordedAt,
-      tone: "ok",
+      tone: runtimeMode === "live" ? "info" : "ok",
     },
     {
       marker: "[ok]",
