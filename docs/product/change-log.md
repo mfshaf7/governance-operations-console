@@ -6,6 +6,24 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-24
+
+- Maintenance Landing Unit `maintenance-1275-earned-pi-review`
+  (`child_isolated_landing_unit`) adds earned PI review to the existing
+  evidence-only completion surface. It reads exact native initiative/objective
+  metadata, requires explicit review, invokes the existing OOS PI-review
+  operation and independently reads the earned fields back. Source sessions,
+  foreign targets, changed revisions and unconfirmed outcomes fail closed.
+  Lost responses retain the original target without automatic replay; matching
+  canonical earned values need no replacement write. Review leaves objective
+  status unchanged and completion remains separately approved. No browser
+  credential, backend operation, source authority or new workflow is added.
+  Exact composed Security acceptance and normal activation precede live proof.
+  The same maintenance corrects the existing Epic wizard's circular requirement
+  for its own guided evidence to have been recorded already. It follows the
+  native prepare action, requires complete reviewed evidence and preserves
+  reconciliation and real execution/evidence blockers.
+
 ## 2026-10-20
 
 - Maintenance Landing Unit `maintenance-1275-maturity-evidence`

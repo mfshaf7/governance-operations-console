@@ -333,10 +333,10 @@ export function ExecutionCloseoutModal({
               <TerasSignalItem
                 label="Review Check"
                 statusLabel={
-                  projection?.readiness.ready_for_closeout ? "Ready" : "Blocked"
+                  projection?.readiness.ready_for_closeout ? "Ready" : projection?.next_action.code === "prepare_delivery_closeout" ? "Ready with reviewed evidence" : "Blocked"
                 }
                 title="Canonical readiness"
-                tone={projection?.readiness.ready_for_closeout ? "ok" : "warn"}
+                tone={projection?.next_action.code === "prepare_delivery_closeout" ? "ok" : "warn"}
               />
             </TerasList>
             <TerasNoteField

@@ -171,6 +171,21 @@ test("case:delivery-closeout-result preserves partial failure, replay, and outco
   assert.equal(projected.outcome_history[0].outcome_ref, partial.event.outcome_ref);
 });
 
+test("guided closeout follows the native prepare action while its reviewed evidence remains pending", () => {
+  const native = projection();
+  native.projection_state = "not_ready";
+  native.readiness.ready_for_closing = false;
+  native.readiness.ready_for_closeout = false;
+  native.readiness.reasons = ["system_demo_missing", "pm2_phase_not_closing", "inspect_and_adapt_missing"];
+  assert.equal(executionCloseoutReadyToApply({ draft: completeDraft(), projection: native }), true);
+  assert.equal(executionCloseoutReadyToApply({ draft: { ...completeDraft(), demoEvidence: "" }, projection: native }), false);
+  native.next_action.code = "resolve_delivery_closeout_gates";
+  assert.equal(executionCloseoutReadyToApply({ draft: completeDraft(), projection: native }), false);
+  native.next_action.code = "prepare_delivery_closeout";
+  native.projection_state = "reconciliation_required";
+  assert.equal(executionCloseoutReadyToApply({ draft: completeDraft(), projection: native }), false);
+});
+
 test("case:delivery-closeout-form projection blocks incomplete work and builds admitted impact", () => {
   const draft = completeDraft();
   assert.equal(executionCloseoutEvidenceComplete(draft), true);
