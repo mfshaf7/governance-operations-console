@@ -4,12 +4,15 @@ import { deliveryOosRequest, resolveDeliveryOosConfig, DeliveryOosError } from "
 import { readDeliveryWorkSession } from "./delivery-work-session-oos-client.ts";
 
 type Options = { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch };
+// Reuse the governed work-session ART budget for readiness, native forms and
+// canonical readback; these operations can exceed the generic 12s window.
+const completionOosTimeoutMs = 75_000;
 
 export async function readItemCompletionContext(target: number, options: Options = {}): Promise<ItemCompletionContext> {
   const id = completionTargetId(target);
   const config = resolveDeliveryOosConfig(options.env);
   const [raw, session] = await Promise.all([
-    deliveryOosRequest(config, `/v1/delivery-work-items/${id}/continuation-context`, { method: "GET" }, options.fetchImpl),
+    deliveryOosRequest(config, `/v1/delivery-work-items/${id}/continuation-context`, { method: "GET" }, options.fetchImpl, completionOosTimeoutMs),
     readDeliveryWorkSession(id, options),
   ]);
   const envelope = completionObject(raw);
@@ -66,7 +69,7 @@ export async function submitItemCompletion(target: number, value: unknown, optio
   const input = { ...evidence, ...(route === "stale-open-close" ? { stale_open_justification: String(body.staleOpenJustification).trim() } : {}) };
   if (!input.completion_note) delete (input as Partial<typeof input>).completion_note;
   const raw = completionObject(await deliveryOosRequest(resolveDeliveryOosConfig(options.env),
-    `/v1/delivery-work-items/${target}/${route}`, { method: "POST", body: JSON.stringify({ input }) }, options.fetchImpl));
+    `/v1/delivery-work-items/${target}/${route}`, { method: "POST", body: JSON.stringify({ input }) }, options.fetchImpl, completionOosTimeoutMs));
   const item = completionObject(raw.work_item);
   if (raw.workflow_id !== (route === "complete" ? "delivery-work-item-complete" : "delivery-work-item-stale-open-close") || raw.work_item_id !== `work-item-${target}` ||
     raw.work_item_record_ref !== current.record_ref || item.id !== target || item.status !== "done") {

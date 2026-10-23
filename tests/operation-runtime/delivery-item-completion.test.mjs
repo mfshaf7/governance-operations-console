@@ -91,3 +91,27 @@ test("completed-parent reconciliation uses the existing stale-open route and exp
   assert.equal(write.path, "/v1/delivery-work-items/42/stale-open-close");
   assert.equal(write.body.input.stale_open_justification, "Actual completed descendants satisfy the reviewed parent outcome.");
 });
+
+test("native paragraph and flat-bullet formats reject the actual input miss before any request", () => {
+  assert.throws(() => completionEvidence({ ...evidence, completion_summary: "- This outcome completed." }), /paragraph format/);
+  assert.throws(() => completionEvidence({ ...evidence, changed_surfaces: "Product admission completed with its actual receipt." }), /flat bullets/);
+  assert.equal(completionEvidence(evidence).changed_surfaces, evidence.changed_surfaces);
+});
+
+test("native ART can outlast the generic window and still return its actionable owner rejection", async t => {
+  t.mock.method(AbortSignal, "timeout", ms => ms > 12_000
+    ? new AbortController().signal : AbortSignal.abort(new DOMException("Generic request window elapsed", "TimeoutError")));
+  const runtime = owner(); const read = runtime.options.fetchImpl; let writes = 0;
+  const options = { ...runtime.options, fetchImpl: async (url, init) => {
+    init.signal.throwIfAborted();
+    if (init.method === "POST") {
+      writes++;
+      return Response.json({ code: "completion_evidence_invalid", error: "Changed surface paths must be code-formatted or markdown-linked." }, { status: 422 });
+    }
+    return read(url, init);
+  } };
+  const context = await readItemCompletionContext(42, options);
+  await assert.rejects(submitItemCompletion(42, { expectedRevision: context.revision, nonSourceConfirmed: true, evidence }, options),
+    error => error.code === "completion_evidence_invalid" && error.status === 422 && /code-formatted/.test(error.message));
+  assert.equal(writes, 1);
+});
