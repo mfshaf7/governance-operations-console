@@ -23,7 +23,6 @@ import {
   refinementHubViewProjection,
   type RefinementHubAction,
 } from "../view-model/refinement-hub-model.ts";
-import { refinementPacketStatusLabel } from "../view-model/refinement-packet-model.ts";
 import {
   refinementStepStateLabel,
   refinementSteps,
@@ -102,7 +101,7 @@ export function RefinementHubView({
         <TerasHubPanel slot="status" tone={hubProjection.hubTone}>
           <TerasPanelHeader
             kicker="Current Status"
-            statusLabel={refinementPacketStatusLabel(packet)}
+            statusLabel={hubProjection.statusLabel}
             statusTone={hubProjection.hubTone}
             title={hubProjection.statusTitle}
             description={hubProjection.statusDescription}

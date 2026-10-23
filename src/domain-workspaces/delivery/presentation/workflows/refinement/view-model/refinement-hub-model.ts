@@ -105,6 +105,7 @@ export function refinementHubViewProjection({
         packet,
       }),
     statusFacts,
+    statusLabel: blockerStatus ? "blocked" : activeReceipt ? "receipt recorded" : refinementPacketStatusLabel(packet),
     statusTitle: blockerStatus
       ? blockerStatus.title
       : activeReceipt
@@ -145,7 +146,9 @@ export function refinementHubStatusMetadata({
   return [
     { label: "Open Gates", value: String(openGateCount) },
     { label: "Packet", value: packet.packet_id },
-    { label: "Last Saved", value: packet.last_saved_at },
+    activeReceipt?.canonical_evidence
+      ? { label: "Applied At", value: activeReceipt.applied_at }
+      : { label: "Last Saved", value: packet.last_saved_at },
     {
       label: "Receipt",
       value: activeReceipt ? activeReceipt.receipt_id : "Pending",
@@ -347,6 +350,10 @@ export function refinementHubStatusSummary({
 
   if (packageProjection.posture === "Deferred") {
     return "Package is deferred outside Refinement. This workflow can inspect history, but it should not apply metadata until the package returns to an active posture.";
+  }
+
+  if (activeReceipt?.canonical_evidence || packet.receipt?.canonical_evidence) {
+    return "The canonical OOS Refinement receipt and accepted-value readback are recorded. Inspect the durable receipt and native event trail; source work and product delivery remain separate steps.";
   }
 
   if (activeReceipt && !packet.receipt) {

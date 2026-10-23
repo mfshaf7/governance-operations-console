@@ -55,6 +55,18 @@ The bounded security decision is the
 6. Run failures remain visible in the existing apply log and never create a
    local success receipt.
 
+Run polling uses OOS's native package-scoped canonical envelope, not the
+OpenProject record coordinates used by packet projection. The server binds
+the exact authority, owner, package and run source route, then checks the
+returned run/poll coordinates and any completed receipt's package and run.
+Existing command/operator acceptance checks remain; read-only history does
+not invent a same-operator restriction. A poll failure is not proof that apply
+failed: reopen the same package and inspect its retained run/receipt before
+considering any retry. Never resubmit a completed run to repair its display.
+Recovered live history preserves the native receipt URI, digests, operator,
+readback revision and actual event times. Those facts are distinct from
+disconnected-preview receipts and do not claim that source delivery is done.
+
 Advice has a bounded 180-second server-to-OOS deadline covering the existing
 60-second model budget and one retry. Ordinary reads and asynchronous apply
 acknowledgement retain the existing short deadline. A deliberate new advice

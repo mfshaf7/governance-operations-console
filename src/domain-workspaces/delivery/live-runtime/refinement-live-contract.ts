@@ -254,6 +254,17 @@ function refinementReceiptFromRun(
   const fields = packet.draft_groups.flatMap((group) => group.fields);
   return {
     applied_at: receipt.applied_at,
+    canonical_evidence: {
+      authority: "operator-orchestration-service",
+      receipt_ref: receipt.receipt_ref,
+      receipt_digest: receipt.receipt_digest,
+      accepted_draft_digest: receipt.accepted_draft_digest,
+      run_id: run.run_id,
+      applied_by: receipt.applied_by,
+      delivery_ref: receipt.target.delivery_ref,
+      source_revision: receipt.target.source_revision,
+      events: run.events,
+    },
     applied_payload: {
       apply_plan: packet.apply_plan,
       metadata_resolutions: Object.fromEntries(fields.map((field) => [field.field_key, "accepted"])),

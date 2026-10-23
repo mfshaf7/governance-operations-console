@@ -208,21 +208,40 @@ export async function readRefinementRun(
 ): Promise<RefinementOosRun> {
   const config = resolveDeliveryOosConfig(options.env);
   const identity = deliveryLiveIdentity(packageRef);
+  const pollPath = `/v1/delivery-refinement/${encodeURIComponent(packageRef)}/runs/${encodeURIComponent(runId)}`;
   const run = assertRefinementOosRun(
     await deliveryOosRequest(
       config,
-      `/v1/delivery-refinement/${encodeURIComponent(packageRef)}/runs/${encodeURIComponent(runId)}`,
+      pollPath,
       { method: "GET" },
       options.fetchImpl,
       undefined,
       {
         authority: "operator-orchestration-service",
-        recordRef: identity.sourceRef,
+        // The run resource is package-scoped in the native OOS envelope.
+        // Packet projection separately binds the OpenProject source record.
+        recordRef: `delivery-package://${packageRef}`,
         sourceOwner: "workspace-delivery-art",
+        sourceRef: `oos://${pollPath.slice(1)}`,
       },
     ),
   );
   if (run.run_id !== runId) throw new Error("OOS returned a different Refinement run.");
+  let returnedPollPath: string;
+  try {
+    returnedPollPath = decodeURIComponent(run.poll_ref);
+  } catch {
+    throw new Error("OOS returned an invalid Refinement poll path.");
+  }
+  if (returnedPollPath !== decodeURIComponent(pollPath)) {
+    throw new Error("OOS returned a Refinement poll path for another package or run.");
+  }
+  if (run.receipt !== null && (
+    run.receipt.run_id !== runId ||
+    run.receipt.target.delivery_ref !== identity.sourceRef
+  )) {
+    throw new Error("OOS returned a Refinement receipt for another package or run.");
+  }
   return run;
 }
 
