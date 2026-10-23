@@ -147,3 +147,42 @@ test("actual panel renders loading/offline controls and retained Prototype/Boots
     assert.match(render(kind), /Prepare explicit successor scope/);
   }
 });
+
+test("approved source continuation uses the selected intent and keeps revocation independent", async () => {
+  const buttons = [];
+  let runtime = { ready: true, pending: false, error: null,
+    preparation: scope("delivery", "old", "approved", "2030-10-20T10:00:00.000Z"),
+    operation: null, candidates: [], refresh() {}, command() {}, prepare() {}, select() {} };
+  const container = ({ children }) => React.createElement("section", null, children);
+  const teras = { TerasActionButton: props => { buttons.push(props); return React.createElement("button", { disabled: props.disabled }, props.children); },
+    TerasActionRow: container, TerasFieldStack: container, TerasPanel: container,
+    TerasMetadataList: () => null, TerasPanelHeader: () => null };
+  const { SourceAuthorizationPanel } = compile(panelPath, { "@/teras": teras,
+    "../live-runtime/use-source-authorization.ts": { useSourceAuthorization: () => runtime } });
+  const calls = [], callback = async intent => { calls.push(intent); };
+  const render = (extra = {}) => {
+    buttons.length = 0;
+    return renderToStaticMarkup(React.createElement(SourceAuthorizationPanel, {
+      subject: selector("delivery"), sourceStartDigest: sourceStart, onIntentChange() {},
+      onContinueApprovedScope: callback, ...extra,
+    }));
+  };
+  const continuation = () => buttons.find(button => button.children === "Continue Approved Source Access");
+  assert.match(render(), /Continue Approved Source Access/);
+  await continuation().onClick();
+  runtime.preparation = scope("delivery", "newer", "approved", "2030-10-20T11:00:00.000Z");
+  render(); await continuation().onClick();
+  assert.deepEqual(calls, ["source-intent:old", "source-intent:newer"]);
+
+  render({ continuePending: true }); assert.equal(continuation().disabled, true);
+  assert.equal(buttons.find(button => button.children === "Stop and revoke this exact scope").disabled, false);
+  runtime.pending = true; render(); assert.equal(continuation().disabled, true);
+  runtime.pending = false;
+  assert.doesNotMatch(render({ onContinueApprovedScope: undefined }), /Continue Approved Source Access/);
+  runtime.ready = false; assert.doesNotMatch(render(), /Continue Approved Source Access/);
+  runtime.ready = true;
+  for (const state of ["prepared", "revoked", "revocation-requested", "expired"]) {
+    runtime.preparation = { ...runtime.preparation, authorization: { state, credential_receipt: null } };
+    assert.doesNotMatch(render(), /Continue Approved Source Access/, state);
+  }
+});

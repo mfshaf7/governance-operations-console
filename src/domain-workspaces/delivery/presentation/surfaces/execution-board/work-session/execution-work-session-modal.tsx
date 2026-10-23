@@ -23,6 +23,7 @@ import type {
 } from "../../../../live-runtime/delivery-work-session-live-types.ts";
 import type { ExecutionWorkSessionTarget } from "./execution-work-session-target.ts";
 import { ExecutionSourceRealizationPanel } from "./execution-source-realization-panel.tsx";
+import { canContinueApprovedSourceAccess } from "./execution-source-access.ts";
 import { SourceAuthorizationPanel } from "../../../../../../environment-lifecycle/presentation/source-authorization-panel.tsx";
 import { assertDeliveryWorkSessionDecision } from "../../../../live-runtime/delivery-work-session-live-contract.ts";
 
@@ -282,6 +283,9 @@ export function ExecutionWorkSessionModal({
             decision={projection?.session_id || !decisionReady ? null : sourceDecision} onIntentChange={setSourceIntent}
             preparationAllowed={Boolean(projection?.session_id || decisionReady)}
             boundIntentRef={projection?.source_authorization?.intent_ref ?? null}
+            onContinueApprovedScope={canContinueApprovedSourceAccess(runtime)
+              ? (intentId) => run(() => runtime.continueWork(intentId)) : undefined}
+            continuePending={submitting}
             onRecoverDecision={(value) => {
               const original = assertDeliveryWorkSessionDecision(value);
               if (original.work_item_id !== `work-item-${target.workItemId}`) throw new Error("Source approval belongs to another Delivery target.");

@@ -4,11 +4,13 @@ import type { SourceAuthorizationSelector } from "../live-runtime/source-authori
 import { useSourceAuthorization } from "../live-runtime/use-source-authorization.ts";
 import { useEffect } from "react";
 
-export function SourceAuthorizationPanel({ subject, sourceStartDigest, decision = null, onIntentChange, onRecoverDecision, boundIntentRef = null, preparationAllowed = true }: {
+export function SourceAuthorizationPanel({ subject, sourceStartDigest, decision = null, onIntentChange, onRecoverDecision, boundIntentRef = null, preparationAllowed = true, onContinueApprovedScope, continuePending = false }: {
   subject: SourceAuthorizationSelector; sourceStartDigest: string | null; decision?: Record<string, unknown> | null; onIntentChange: (intentId: string | null) => void;
   onRecoverDecision?: (decision: Record<string, unknown>) => void;
   boundIntentRef?: string | null;
   preparationAllowed?: boolean;
+  onContinueApprovedScope?: (intentId: string) => Promise<unknown>;
+  continuePending?: boolean;
 }) {
   const runtime = useSourceAuthorization(subject, sourceStartDigest, decision, boundIntentRef), preparation = runtime.preparation, scope = preparation?.source_intent;
   useEffect(() => { onIntentChange(preparation?.authorization.state === "approved" ? preparation.intent_id : null); }, [preparation, onIntentChange]);
@@ -40,6 +42,7 @@ export function SourceAuthorizationPanel({ subject, sourceStartDigest, decision 
         {canPrepare ? <TerasActionButton disabled={runtime.pending} onClick={() => void runtime.prepare()}>{preparation ? "Prepare explicit successor scope" : "Prepare source scope"}</TerasActionButton> : null}
         {preparation?.authorization.state === "prepared" ? <TerasActionButton disabled={runtime.pending} onClick={() => void runtime.command("issue")}>Approve this exact scope and issue source access</TerasActionButton> : null}
         {preparation?.authorization.state === "approved" && !preparation.authorization.credential_receipt ? <TerasActionButton disabled={runtime.pending || Boolean(runtime.operation?.provider_operation.failure?.retry_after && Date.parse(runtime.operation.provider_operation.failure.retry_after) > Date.now())} onClick={() => void runtime.command("issue")}>Reconcile original source issuance</TerasActionButton> : null}
+        {runtime.ready && preparation?.authorization.state === "approved" && onContinueApprovedScope ? <TerasActionButton disabled={runtime.pending || continuePending} onClick={() => void onContinueApprovedScope(preparation.intent_id)}>Continue Approved Source Access</TerasActionButton> : null}
         {preparation && !["revoked", "revocation-requested"].includes(preparation.authorization.state) ? <TerasActionButton disabled={runtime.pending} emphasis="secondary" onClick={() => void runtime.command("revoke")}>Stop and revoke this exact scope</TerasActionButton> : null}
         {preparation?.authorization.state === "revocation-requested" ? <TerasActionButton disabled={runtime.pending} onClick={() => void runtime.command("revoke")}>Reconcile owned revocation</TerasActionButton> : null}
         <TerasActionButton disabled={runtime.pending} emphasis="secondary" onClick={() => void runtime.refresh()}>Refresh source authority</TerasActionButton>
