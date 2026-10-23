@@ -206,6 +206,9 @@ function assertDeliveryChangeNode(value: unknown): DeliveryChangeNode {
   for (const key of ["record_ref", "status", "subject", "type"]) {
     nonEmpty(node[key], `tree node ${key}`);
   }
+  if (node.description !== undefined && typeof node.description !== "string") {
+    invalid("Canonical tree node description must be text.");
+  }
   array(node.children, "tree node children").forEach(assertDeliveryChangeNode);
   return value as DeliveryChangeNode;
 }

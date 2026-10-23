@@ -46,6 +46,10 @@ adds caller credentials and constructs the operator and acceptance records.
    unavailable and shows the OOS next action.
 3. Edit the projected tree. Existing items produce bounded revision commands;
    new items produce parent-first add commands.
+   Existing descriptions load from canonical OOS text and remain intact when
+   editing another field. Missing canonical narrative blocks editing visibly.
+   Root Epic revisions stay with the native initiative writer. A rejected
+   command shows its returned owner reason; a review is never evidence of apply.
    An Epic can add its real PI Objective through this existing typed operation.
    PI Objectives and Features are Epic-level peers; do not create a placeholder
    story, nest a Feature below a PI Objective or a Task below a Feature. The
