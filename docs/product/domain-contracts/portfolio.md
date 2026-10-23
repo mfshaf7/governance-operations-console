@@ -10,6 +10,19 @@ work.
 
 Surface label: `Product Portfolio`.
 
+## Connected Operation
+
+Connected Products reads canonical continuity. Publication and Curation share
+one existing native OOS command path with explicit committed-manifest locator
+review and original-request GET recovery. Entered pointers do not attest
+product identity or readiness: native owners verify both from source.
+Connected views do not expose fixture registers, local listing mutations or
+fixture counts. Exact current Inventory authority is read server-side for each
+new command; historical reads preserve the original receipt. The source
+extension requires composed acceptance and operating proof before activation
+claims. The complete operator procedure is
+[Product Publication live integration](../product-publication-live-integration.md).
+
 ## Recommendation Result
 
 The architecture recommendation is:
@@ -102,10 +115,10 @@ Portfolio may receive publication candidates from:
 - a curated import of a currently managed active product
 
 Curated and adapter-projected candidates remain outside the Publication register
-until the operator uses `Capture Publication`. Capture records
-one version-matched prototype-local receipt against the catalogued publication
-source; it does not permit free-form product creation, assign product identity,
-or invent a publication packet.
+until reviewed. In disconnected preview, curated fixture candidates use `Capture Publication`
+and explicitly prototype-local receipts. Connected operation uses the native
+owner-manifest review described above; it never captures a fixture candidate
+as a canonical product or publication packet.
 
 When a new durable product boundary is discovered, its source workflow may emit
 a generic Workspace Intake candidate. Portfolio must not receive that candidate

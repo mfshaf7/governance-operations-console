@@ -59,6 +59,7 @@ import { ExecutionTreeEditSupportPanel } from "./execution-tree-edit-support-pan
 import { useDeliveryWorkSessionLiveRuntime } from "../../../live-runtime/use-delivery-work-session-live-runtime.ts";
 import { ExecutionWorkSessionModal } from "./work-session/execution-work-session-modal.tsx";
 import { ExecutionWorkSessionTargetDialog } from "./work-session/execution-work-session-target-dialog.tsx";
+import { ExecutionItemCompletionModal } from "./work-session/execution-item-completion-modal.tsx";
 import {
   directExecutionWorkSessionTarget,
   executionInspectionPackage,
@@ -140,6 +141,7 @@ export function DeliveryExecutionBoard({
   const [workSessionOpen, setWorkSessionOpen] = useState(false);
   const [workSessionTarget, setWorkSessionTarget] =
     useState<ExecutionWorkSessionTarget | null>(null);
+  const [completionTarget, setCompletionTarget] = useState<number | null>(null);
   const [workSessionTargetDialogOpen, setWorkSessionTargetDialogOpen] =
     useState(false);
   const [closeoutOpen, setCloseoutOpen] = useState(false);
@@ -779,6 +781,10 @@ export function DeliveryExecutionBoard({
         />
       ) : null}
       <ExecutionWorkSessionTargetDialog
+        onCompleteTarget={model.source_truth === "OpenProject-backed OOS" ? (workItemId) => {
+          setWorkSessionTargetDialogOpen(false);
+          setCompletionTarget(workItemId);
+        } : undefined}
         onInspectTarget={model.source_truth === "OpenProject-backed OOS" ? (workItemId) => {
           const target = executionInspectionPackage(workItemId, model);
           handleSelectedPackageChange(target.delivery_package_id);
@@ -793,6 +799,7 @@ export function DeliveryExecutionBoard({
         }}
         open={workSessionTargetDialogOpen}
       />
+      {completionTarget !== null ? <ExecutionItemCompletionModal workItemId={completionTarget} onClose={() => setCompletionTarget(null)} /> : null}
       {selectedPackage && closeoutOpen ? (
         <ExecutionCloseoutModal
           onClose={() => setCloseoutOpen(false)}

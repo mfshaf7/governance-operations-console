@@ -4,6 +4,8 @@ import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture
 import type { ConsoleWorkspaceId } from "../../../../console-architecture.ts";
 import type { OperationWorkbenchDomainContract } from "../../../../operation-workbench/operation-workbench-contract.ts";
 import { ProductPortfolioPublicationSurface } from "../surfaces/publication/publication-surface.tsx";
+import { OwnerPublicationSurface } from "../surfaces/publication/owner-publication-surface.tsx";
+import { TerasActionButton, TerasPanel, TerasPanelHeader } from "@/teras";
 import { ProductPortfolioCurationSurface } from "../surfaces/curation/curation-surface.tsx";
 import { ProductDashboardModal } from "../surfaces/products/dashboard/product-dashboard-modal.tsx";
 import { ProductPortfolioProductsSurface } from "../surfaces/products/products-surface.tsx";
@@ -61,6 +63,7 @@ export function PortfolioWorkspace({
           />
         )
       ) : controller.activeSurfaceId === "publication" ? (
+        controller.productContinuity.fixtureMode ? (
         <ProductPortfolioPublicationSurface
           publicationSources={controller.readModel.publicationSources}
           decidedByRef="operator://portfolio-console/local"
@@ -74,13 +77,19 @@ export function PortfolioWorkspace({
           runtime={controller.publicationRuntime}
           resolveRoute={controller.resolveRoute}
         />
+        ) : <OwnerPublicationSurface runtime={controller.nativePublicationRuntime} onApplied={() => void controller.productContinuity.reload().catch(() => undefined)} />
       ) : (
+        controller.productContinuity.fixtureMode ? (
         <ProductPortfolioCurationSurface
           entries={controller.readModel.entries}
           focusedProductId={controller.focusedCurationProductId}
           listingReceipts={controller.listingReceipts}
           onApplyListing={controller.applyListing}
         />
+        ) : <TerasPanel frame="padded" fit="content" treatment="neutral"><TerasPanelHeader kicker="Governed listing" title="Manage listing through Publication"
+          description="Use the actual publication receipt and a fresh owner manifest for audience and listing changes. Product metadata remains with Registry and the product owner; access remains owner-enforced." />
+          <TerasActionButton onClick={() => controller.setActiveSurfaceId("publication")}>Manage governed publication</TerasActionButton>
+        </TerasPanel>
       )}
 
       {controller.productContinuity.fixtureMode ? (

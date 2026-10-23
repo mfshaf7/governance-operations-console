@@ -3,6 +3,10 @@
 Staged operator procedure:
 [Prototype source authoring](docs/product/prototype-source-authoring.md).
 This source extension still requires exact composed acceptance and commissioning.
+The same applies to the current evidence-only Delivery completion and real
+owner-manifest Publication entry. Procedures:
+[Delivery completion](docs/product/delivery-execution-work-sessions.md#evidence-only-completion-and-completed-parents)
+and [Product Publication](docs/product/product-publication-live-integration.md).
 
 This repository owns the durable product source for the Governance Operations
 Console.

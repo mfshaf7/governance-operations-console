@@ -8,6 +8,8 @@ export type ProductContinuityWorkspaceProjection = Readonly<{
   fixtureMode: boolean;
   mode: "disconnected-preview" | "live" | "loading" | "unavailable";
   projection: WorkspaceContinuityProjection | null;
+  publicationMode?: "live" | "loading" | "unavailable";
+  publicationObserved?: { total: number; applied: number; rejected: number };
 }>;
 
 const disconnectedFixtureContinuity: ProductContinuityWorkspaceProjection = {
@@ -53,6 +55,8 @@ export function productPortfolioWorkspaceNavMeta(
   surfaceId: ProductPortfolioWorkspaceSurfaceId,
   continuity: ProductContinuityWorkspaceProjection = disconnectedFixtureContinuity,
 ) {
+  if (!continuity.fixtureMode && surfaceId === "publication") return continuity.publicationMode === "live" ? `${continuity.publicationObserved?.total ?? 0} read` : "Owner path";
+  if (!continuity.fixtureMode && surfaceId === "curation") return "Owner routes";
   switch (surfaceId) {
     case "publication":
       return String(readModel.publicationQueue.length);
@@ -88,6 +92,17 @@ export function productPortfolioWorkspaceSummaryMetrics(
   surfaceId: ProductPortfolioWorkspaceSurfaceId,
   continuity: ProductContinuityWorkspaceProjection = disconnectedFixtureContinuity,
 ) {
+  if (!continuity.fixtureMode && surfaceId === "publication") {
+    const observed = continuity.publicationObserved ?? { total: 0, applied: 0, rejected: 0 };
+    return [
+      { id: "read", label: "Requests read", tone: "info" as const, value: String(observed.total) },
+      { id: "applied", label: "Applied results read", tone: "ok" as const, value: String(observed.applied) },
+      { id: "rejected", label: "Rejected results read", tone: "warn" as const, value: String(observed.rejected) },
+    ];
+  }
+  if (!continuity.fixtureMode && surfaceId === "curation") return [
+    { id: "managed", label: "Managed products", tone: "info" as const, value: String(continuity.projection?.products.length ?? 0) },
+  ];
   switch (surfaceId) {
     case "publication":
       return [
@@ -211,6 +226,12 @@ export function productPortfolioWorkspaceStatuses(
   continuity: ProductContinuityWorkspaceProjection = disconnectedFixtureContinuity,
   surfaceId: ProductPortfolioWorkspaceSurfaceId = "products",
 ): OperationSurfaceStatusItem[] {
+  if (!continuity.fixtureMode && surfaceId !== "products") return [
+    { id: "source-mode", label: "Source mode", state: continuity.publicationMode === "live" ? "current" : "offline",
+      facts: [{ label: "Mode", value: "Owner-backed" }], detail: "Native owner requests and receipts; preview records are not admitted." },
+    { id: "publication", label: "Publication owner path", state: continuity.publicationMode === "live" ? "current" : "offline",
+      facts: [{ label: "Mode", value: continuity.publicationMode ?? "unavailable" }], detail: "Each action uses the current OOS/WGCF binding and actual owner evidence." },
+  ];
   if (surfaceId === "products" && !continuity.fixtureMode) {
     const projection = continuity.projection;
     const readinessAttention = productContinuitySummary(

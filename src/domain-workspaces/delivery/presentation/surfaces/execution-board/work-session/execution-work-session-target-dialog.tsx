@@ -7,6 +7,7 @@ import {
   TerasList,
   TerasSignalItem,
   TerasTextField,
+  TerasSelectField,
 } from "@/teras";
 import { parseExecutionWorkItemReference } from "./execution-work-session-target.ts";
 
@@ -14,20 +15,24 @@ export function ExecutionWorkSessionTargetDialog({
   onClose,
   onOpenTarget,
   onInspectTarget,
+  onCompleteTarget,
   open,
 }: {
   onClose: () => void;
   onOpenTarget: (workItemId: number) => void;
   onInspectTarget?: (workItemId: number) => void;
+  onCompleteTarget?: (workItemId: number) => void;
   open: boolean;
 }) {
   const [reference, setReference] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [workPath, setWorkPath] = useState("source");
 
   useEffect(() => {
     if (!open) {
       setReference("");
       setError(null);
+      setWorkPath("source");
     }
   }, [open]);
 
@@ -35,6 +40,7 @@ export function ExecutionWorkSessionTargetDialog({
     try {
       const workItemId = parseExecutionWorkItemReference(reference);
       if (inspect && onInspectTarget) onInspectTarget(workItemId);
+      else if (workPath === "completion" && onCompleteTarget) onCompleteTarget(workItemId);
       else onOpenTarget(workItemId);
       setReference("");
       setError(null);
@@ -60,7 +66,7 @@ export function ExecutionWorkSessionTargetDialog({
             </TerasActionButton>
           ) : null}
           <TerasActionButton disabled={!reference.trim()} onClick={() => openTarget()}>
-            Open Session
+            {workPath === "completion" ? "Open Completion" : "Open Session"}
           </TerasActionButton>
         </>
       }
@@ -75,6 +81,8 @@ export function ExecutionWorkSessionTargetDialog({
       width="compact"
     >
       <TerasFieldStack spacing="normal">
+        {onCompleteTarget ? <TerasSelectField label="Work path" value={workPath} onValueChange={setWorkPath}
+          options={[{ label: "Governed source session", value: "source" }, { label: "Non-source completion", value: "completion" }]} /> : null}
         <TerasTextField
           aria-label="ART work item"
           autoFocus

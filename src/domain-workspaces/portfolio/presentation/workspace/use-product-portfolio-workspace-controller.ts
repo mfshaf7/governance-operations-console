@@ -19,6 +19,7 @@ import {
 } from "../../local-runtime/product-portfolio-runtime.ts";
 import { projectProductPortfolioEffectiveProjection } from "../../local-runtime/product-portfolio-effective-projection.ts";
 import { productPortfolioReadModel } from "../../read-model/product-portfolio-read-model.ts";
+import { productPortfolioReadModelFromProjections } from "../../read-model/selectors/product-portfolio-selectors.ts";
 import type { ProductPortfolioEntry } from "@/domain-workspaces/portfolio/domain/product-portfolio-entry-types";
 import type { ProductListingCommand } from "../../work-model/listing/product-listing-types.ts";
 import { useProductPublicationLiveRuntime } from "../../live-runtime/use-product-publication-live-runtime.ts";
@@ -74,7 +75,7 @@ export function useProductPortfolioWorkspaceController({
       }),
     [runtimeProjection],
   );
-  const readModel = effectiveProjection.readModel;
+  const readModel = useMemo(() => productFixtureMode ? effectiveProjection.readModel : productPortfolioReadModelFromProjections([]), [productFixtureMode, effectiveProjection.readModel]);
   const [activeSurfaceId, setActiveSurfaceId] =
     useState<ProductPortfolioWorkspaceSurfaceId>("products");
   const [dashboardProductId, setDashboardProductId] = useState<string | null>(
@@ -169,6 +170,12 @@ export function useProductPortfolioWorkspaceController({
     if (appliedEntryIntentRef.current === entryKey) {
       return;
     }
+    if (!productFixtureMode && continuityRuntime.projection?.products.some(product => product.product_id === entryIntent.subjectRef)) {
+      appliedEntryIntentRef.current = entryKey;
+      setFocusedContinuityProductId(entryIntent.subjectRef);
+      setActiveSurfaceId("products");
+      return;
+    }
 
     const route = resolveProductPortfolioEntryIntent(entryIntent, readModel);
     if (!route || route.kind === "unavailable") {
@@ -177,7 +184,7 @@ export function useProductPortfolioWorkspaceController({
 
     appliedEntryIntentRef.current = entryKey;
     applyResolvedRoute(route);
-  }, [entryIntent, readModel]);
+  }, [entryIntent, readModel, productFixtureMode, continuityRuntime.projection]);
 
   function openProduct(entry: ProductPortfolioEntry) {
     if (!productFixtureMode) {
@@ -309,6 +316,7 @@ export function useProductPortfolioWorkspaceController({
       mode: publicationLiveRuntime.mode,
       pending: publicationLiveRuntime.pending,
     },
+    nativePublicationRuntime: publicationLiveRuntime,
     productContinuity: {
       error: continuityRuntime.error?.message ?? null,
       fixtureMode: productFixtureMode,
@@ -320,6 +328,13 @@ export function useProductPortfolioWorkspaceController({
       projection: continuityIsolation.liveAuthorityAllowed
         ? continuityRuntime.projection
         : null,
+      publicationMode: publicationLiveRuntime.mode?.mode === "live" ? "live" as const
+        : publicationLiveRuntime.mode === null ? "loading" as const : "unavailable" as const,
+      publicationObserved: {
+        total: Object.keys(publicationLiveRuntime.results).length,
+        applied: Object.values(publicationLiveRuntime.results).filter(result => result.state === "applied").length,
+        rejected: Object.values(publicationLiveRuntime.results).filter(result => result.state === "rejected").length,
+      },
       reload: continuityRuntime.load,
     },
     readModel,

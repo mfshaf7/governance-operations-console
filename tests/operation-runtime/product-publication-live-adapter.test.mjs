@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import test from "node:test";
+import { ownerPublicationIntent, emptyOwnerPublicationDraft } from "../../src/domain-workspaces/portfolio/live-runtime/owner-publication-intent.ts";
+import { workspaceRegistryFixture } from "../../src/workspace-registry/fixtures/workspace-registry.fixture.ts";
+import { canonicalSourceResponse } from "../support/console-source-projection.mjs";
 
 import {
   assertGovernedProductPublicationIntent,
@@ -69,6 +72,7 @@ test("case:1256-positive submits exact reviewed intent, reads authoritative stat
   const liveConfig = { ...config, baseUrl };
 
   const created = await submitGovernedProductPublication(intent(), {
+      readAuthority: async () => config.authorityRevision,
     attributionHeaders,
     config: liveConfig,
   });
@@ -207,7 +211,8 @@ test("case:1273-rejected preserves a governed future-request rejection", () => {
 
 test("case:1256-negative rejects missing session, stale or contradictory intent, and unbound owner evidence", async () => {
   await assert.rejects(
-    submitGovernedProductPublication(intent(), { config }),
+    submitGovernedProductPublication(intent(), {
+      readAuthority: async () => config.authorityRevision, config }),
     (error) =>
       error instanceof ProductPublicationOosError &&
       error.code === "product_publication_session_binding_required",
@@ -232,6 +237,7 @@ test("case:1256-negative rejects missing session, stale or contradictory intent,
   wrongCommandDigest.command_digest = `sha256:${"0".repeat(64)}`;
   await assert.rejects(
     submitGovernedProductPublication(intent(), {
+      readAuthority: async () => config.authorityRevision,
       attributionHeaders,
       config,
       fetchImpl: async () => Response.json(wrongCommandDigest),
@@ -751,3 +757,50 @@ function listen(server) {
     });
   });
 }
+
+
+test("owner locator review builds native initial intent and consumes only an applied prior receipt", () => {
+  const source = intent().manifest_source;
+  const draft = { ...emptyOwnerPublicationDraft, repo: source.repo, path: source.path,
+    sourceRevision: source.source_revision, manifestRevision: source.manifest_revision,
+    manifestDigest: source.manifest_digest, reason: "Publish the exact owner evidence internally." };
+  const initial = ownerPublicationIntent(draft, requestId, now, null);
+  assert.equal(initial.expected_publication_version, 0);
+  assert.equal(initial.previous_receipt, null);
+  assert.equal(initial.target_publication.posture, "internal");
+  assert.equal(Object.hasOwn(initial, "product_id"), false);
+  assert.throws(() => ownerPublicationIntent({ ...draft, action: "archive" }, requestId, now, null), /prior publication/);
+  const prior = resultFor(commandFor(intent()), "read");
+  const update = ownerPublicationIntent({ ...draft, action: "update" }, requestId, now, prior);
+  assert.equal(update.previous_receipt.receipt_digest, prior.receipt_digest);
+  assert.equal(update.expected_publication_version, prior.receipt.publication_version);
+  assert.throws(() => ownerPublicationIntent({ ...emptyOwnerPublicationDraft, action: "update", reason: "Fresh source required." }, requestId, now, prior));
+});
+
+test("new Publication observes current Registry authority while historical GET preserves the original receipt", async () => {
+  const calls = [], current = "d".repeat(40);
+  const fetchImpl = async (url, init) => {
+    calls.push(init.method);
+    if (String(url).endsWith("/v1/workspace-inventory/registry")) return canonicalSourceResponse({ ...workspaceRegistryFixture, authority_revision: current },
+      { recordRef: "repo://workspace-governance/contracts/inventory", sourceOwner: "workspace-governance" });
+    const command = JSON.parse(init.body);
+    assert.equal(command.authority_revision, current);
+    assert.deepEqual(command.security_decision, config.securityDecision);
+    return Response.json(resultFor(command, "created"));
+  };
+  const result = await submitGovernedProductPublication(intent(), { attributionHeaders, config, fetchImpl });
+  assert.equal(result.state, "applied"); assert.deepEqual(calls, ["GET", "POST"]);
+  const reads = [];
+  const historical = await readGovernedProductPublication(requestId, { attributionHeaders, config,
+    fetchImpl: async (_url, init) => { reads.push(init.method); return Response.json({ ...result, resolution: "read" }); } });
+  assert.equal(historical.command.authority_revision, current); assert.deepEqual(reads, ["GET"]);
+});
+
+test("missing or malformed Registry denies a new Publication before POST", async () => {
+  for (const response of [Response.json({ error: "unavailable" }, { status: 503 }), Response.json({ authority_revision: "not-authority" })]) {
+    const calls = [];
+    await assert.rejects(submitGovernedProductPublication(intent(), { attributionHeaders, config,
+      fetchImpl: async (_url, init) => { calls.push(init.method); return response; } }), error => error.code === "product_publication_authority_unavailable");
+    assert.deepEqual(calls, ["GET"]);
+  }
+});
