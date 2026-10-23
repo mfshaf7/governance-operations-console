@@ -13,6 +13,8 @@ import {
   requestRefinementAdvice,
 } from "../../src/domain-workspaces/delivery/server/refinement-catalog-oos-client.ts";
 import { DeliveryOosError } from "../../src/domain-workspaces/delivery/server/delivery-oos-client.ts";
+import { refinementHistoryReceiptRows, refinementHistoryTimelineRows, refinementHistoryViewProjection } from "../../src/domain-workspaces/delivery/presentation/workflows/refinement/view-model/refinement-history-model.ts";
+import { refinementHubViewProjection, refinementHubStatusSummary } from "../../src/domain-workspaces/delivery/presentation/workflows/refinement/view-model/refinement-hub-model.ts";
 import {
   assertRefinementApplyCommand,
   refinementPacketFromProjection,
@@ -55,8 +57,9 @@ test("case:refinement-live-positive reads, advises, applies, and polls canonical
     if (request.url.includes("/runs/")) {
       assertCanonicalSourceRequest(init);
       return canonicalSourceResponse(refinementRun(), {
-        recordRef: "openproject://work_packages/846",
+        recordRef: "delivery-package://delivery-package:846",
         sourceOwner: "workspace-delivery-art",
+        sourceRef: `oos://v1/delivery-refinement/delivery-package%3A846/runs/${encodeURIComponent(refinementRun().run_id)}`,
       });
     }
     assertCanonicalSourceRequest(init);
@@ -118,6 +121,92 @@ test("case:refinement-live-positive reads, advises, applies, and polls canonical
     calls[2].body.accepted_draft.metadata_resolutions["target_pi:846"],
     "accepted",
   );
+});
+
+test("Refinement run polling retains native package/route authority in running and cold completed reads", async () => {
+  for (const state of ["running", "completed"]) {
+    const run = refinementRun();
+    if (state === "running") {run.state = state;run.receipt = null;}
+    const result = await readRefinementRun("delivery-package:846", run.run_id, {env,fetchImpl:async(_url, init)=>{
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse(run, {
+        recordRef:"delivery-package://delivery-package:846",sourceOwner:"workspace-delivery-art",
+        sourceRef:`oos://v1/delivery-refinement/delivery-package%3A846/runs/${encodeURIComponent(run.run_id)}`,
+      });
+    }});
+    assert.equal(result.state,state);
+    if (state === "completed") assert.equal(result.receipt.receipt_id,"refinement-receipt:846");
+  }
+});
+
+test("Refinement run polling rejects foreign authority, package, route, run, poll path and receipt", async () => {
+  const runId = refinementRun().run_id;
+  for (const change of [
+    ({binding})=>{binding.authority="foreign-owner";},
+    ({binding})=>{binding.sourceOwner="foreign-owner";},
+    ({binding})=>{binding.recordRef="delivery-package://delivery-package:999";},
+    ({binding})=>{binding.recordRef="openproject://work_packages/846";},
+    ({binding})=>{binding.sourceRef="oos://v1/delivery-refinement/delivery-package%3A999/runs/refinement-run%3A846";},
+    ({run})=>{run.run_id="refinement-run:999";},
+    ({run})=>{run.poll_ref="/v1/delivery-refinement/delivery-package:999/runs/refinement-run:846";},
+    ({run})=>{run.poll_ref="/v1/delivery-refinement/delivery-package:846/runs/refinement-run:999";},
+    ({run})=>{run.receipt.run_id="refinement-run:999";},
+    ({run})=>{run.receipt.target.delivery_ref="openproject://work_packages/999";},
+  ]) {
+    const candidate={run:refinementRun(),binding:{recordRef:"delivery-package://delivery-package:846",sourceOwner:"workspace-delivery-art",sourceRef:`oos://v1/delivery-refinement/delivery-package%3A846/runs/${encodeURIComponent(runId)}`}};
+    change(candidate);
+    await assert.rejects(readRefinementRun("delivery-package:846",runId,{env,fetchImpl:async()=>canonicalSourceResponse(candidate.run,candidate.binding)}));
+  }
+});
+
+test("Refinement read-only history does not invent a same-operator gate", async () => {
+  const run=refinementRun();run.receipt.applied_by="operator:another-authorized-operator";
+  const result=await readRefinementRun("delivery-package:846",run.run_id,{env,fetchImpl:async()=>canonicalSourceResponse(run,{recordRef:"delivery-package://delivery-package:846",sourceOwner:"workspace-delivery-art",sourceRef:`oos://v1/delivery-refinement/delivery-package%3A846/runs/${encodeURIComponent(run.run_id)}`})});
+  assert.equal(result.receipt.applied_by,"operator:another-authorized-operator");
+});
+
+test("canonical Refinement recovery preserves native receipt provenance, event times and completed status", () => {
+  const run=refinementRun();
+  const packet=refinementPacketFromProjection({...refinementProjection(),active_run:null,latest_run:run,history:[run]});
+  const recordedReceipt=packet.receipt;
+  assert.equal(recordedReceipt.canonical_evidence.receipt_ref,run.receipt.receipt_ref);
+  assert.equal(recordedReceipt.canonical_evidence.receipt_digest,run.receipt.receipt_digest);
+  assert.equal(recordedReceipt.canonical_evidence.accepted_draft_digest,run.receipt.accepted_draft_digest);
+  assert.equal(recordedReceipt.canonical_evidence.applied_by,run.receipt.applied_by);
+  assert.equal(recordedReceipt.canonical_evidence.source_revision,run.receipt.target.source_revision);
+  const history=refinementHistoryViewProjection(recordedReceipt);
+  assert.match(history.receiptDescription,/Canonical OOS/);
+  assert.equal(history.packetTimeLabel,"Source Handoff Recorded");
+  assert.match(history.packetTimeDescription,/not Refinement completion/);
+  assert.doesNotMatch(history.receiptDescription,/local receipt/);
+  const rows=refinementHistoryReceiptRows({packet,recordedReceipt});
+  for (const value of [run.receipt.receipt_ref,run.receipt.receipt_digest,run.receipt.accepted_draft_digest,run.run_id,run.receipt.applied_by,run.receipt.target.source_revision]) {
+    assert.ok(rows.some(row=>row.value===value));
+  }
+  assert.doesNotMatch(rows.map(row=>row.detail).join(" "),/local prototype|Local immutable/);
+  const events=refinementHistoryTimelineRows({packet,recordedReceipt});
+  assert.deepEqual(events.map(event=>event.timestamp),run.events.map(event=>event.recorded_at));
+  assert.deepEqual(events.map(event=>event.detail),run.events.map(event=>event.message));
+  const deliveryPackage={delivery_package_id:"delivery-package:846",workflow_phase:"refinement",package_posture:"New",tone:"info",source_ref:"openproject://work_packages/846"};
+  const hub=refinementHubViewProjection({activeReceipt:recordedReceipt,deliveryPackage,hubAction:null,metadataReady:true,packet});
+  assert.equal(hub.statusTitle,"Receipt Recorded");
+  assert.equal(hub.statusLabel,"receipt recorded");
+  assert.equal(hub.statusFacts.find(row=>row.label==="Applied At").value,run.receipt.applied_at);
+  assert.match(hub.statusDescription,/canonical OOS/);
+  assert.doesNotMatch(hub.statusDescription,/before submitting|local Refinement/);
+  assert.match(refinementHubStatusSummary({activeReceipt:recordedReceipt,deliveryPackage,metadataReady:true,packet:{...packet,receipt:null}}),/canonical OOS/);
+  const view=readFileSync(new URL("../../src/domain-workspaces/delivery/presentation/workflows/refinement/hub/refinement-hub-view.tsx",import.meta.url),"utf8");
+  assert.match(view,/statusLabel=\{hubProjection.statusLabel\}/);
+});
+
+test("Refinement preview and absent receipts never acquire canonical evidence", () => {
+  const packet=refinementPacketFromProjection({...refinementProjection(),active_run:null,latest_run:null,history:[]});
+  assert.equal(packet.receipt,null);
+  const local={...refinementRun().receipt,canonical_evidence:undefined,receipt_id:"local-preview",lines:["Preview"],tone:"ok",outcome:"accepted"};
+  assert.match(refinementHistoryViewProjection(local).receiptDescription,/local receipt archive/);
+  assert.ok(refinementHistoryReceiptRows({packet,recordedReceipt:local}).some(row=>/local prototype/.test(row.detail)));
+  assert.equal(refinementHistoryReceiptRows({packet,recordedReceipt:null}).some(row=>row.label==="Durable Receipt"),false);
+  assert.equal(refinementHistoryReceiptRows({packet,recordedReceipt:local}).some(row=>row.label==="Durable Receipt"),false);
 });
 
 test("case:catalog-live-positive reads, mutates, and maps canonical readback", async () => {

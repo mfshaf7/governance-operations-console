@@ -98,6 +98,23 @@ export type DeliveryRefinementMetadataResolution =
   "accepted" | "ai_drafted" | "repaired";
 
 export type DeliveryRefinementApplyReceipt = {
+  canonical_evidence?: {
+    authority: "operator-orchestration-service";
+    receipt_ref: string;
+    receipt_digest: string;
+    accepted_draft_digest: string;
+    run_id: string;
+    applied_by: string;
+    delivery_ref: string;
+    source_revision: string;
+    events: {
+      event_id: string;
+      event_type: string;
+      message: string;
+      recorded_at: string;
+      status: string;
+    }[];
+  };
   applied_payload: {
     apply_plan: DeliveryRefinementApplyPlan;
     metadata_resolutions: Record<string, DeliveryRefinementMetadataResolution>;

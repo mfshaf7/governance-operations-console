@@ -24,6 +24,7 @@ export function refinementHistoryViewProjection(
 ) {
   const receiptRecorded = Boolean(recordedReceipt);
   const historyTone: DeliveryTone = recordedReceipt?.tone ?? "info";
+  const canonical = Boolean(recordedReceipt?.canonical_evidence);
 
   return {
     eventDescription: receiptRecorded
@@ -31,8 +32,14 @@ export function refinementHistoryViewProjection(
       : "Read-only event trail for the projected Refinement packet.",
     eventTitle: "Recorded Trail",
     historyTone,
+    packetTimeLabel: canonical ? "Source Handoff Recorded" : "Packet Saved",
+    packetTimeDescription: canonical
+      ? "Work Design handoff time carried by the packet, not Refinement completion time."
+      : "Last packet save before current archive view.",
     receiptDescription: receiptRecorded
-      ? "Immutable local receipt archive for this Refinement pass."
+      ? canonical
+        ? "Canonical OOS receipt and accepted-value readback for this Refinement pass. This does not complete product delivery."
+        : "Immutable local receipt archive for this Refinement pass."
       : "Apply Refinement must complete before immutable receipt evidence exists.",
     receiptRecorded,
     receiptStatusLabel: receiptRecorded ? "receipt" : "empty",
@@ -52,6 +59,15 @@ export function refinementHistoryTimelineRows({
   packet: DeliveryRefinementPacket;
   recordedReceipt: DeliveryRefinementApplyReceipt | null;
 }): RefinementHistoryTimelineRow[] {
+  if (recordedReceipt?.canonical_evidence) {
+    return recordedReceipt.canonical_evidence.events.map((event) => ({
+      detail: event.message,
+      label: event.event_type.replaceAll("_", " "),
+      status: event.status,
+      timestamp: event.recorded_at,
+      tone: event.status === "failed" ? "danger" : "ok",
+    }));
+  }
   const rows: RefinementHistoryTimelineRow[] = [
     {
       detail: `Source receipt ${packet.handoff.source_work_design_receipt_id}; ${packet.apply_plan.operations.length} planned operations across ${new Set(packet.apply_plan.expected_routes).size} bounded routes.`,
@@ -103,13 +119,13 @@ export function refinementHistoryReceiptRows({
 
   return [
     {
-      detail: "Local immutable receipt identifier.",
+      detail: recordedReceipt.canonical_evidence ? "Canonical OOS receipt identifier." : "Local immutable receipt identifier.",
       label: "Receipt ID",
       tone: recordedReceipt.tone,
       value: recordedReceipt.receipt_id,
     },
     {
-      detail: "Apply outcome recorded by the local prototype.",
+      detail: recordedReceipt.canonical_evidence ? "Canonical apply outcome after backend readback." : "Apply outcome recorded by the local prototype.",
       label: "Outcome",
       tone: recordedReceipt.tone,
       value: recordedReceipt.outcome,
@@ -132,6 +148,16 @@ export function refinementHistoryReceiptRows({
       tone: recordedReceipt.tone,
       value: recordedReceipt.lines.length.toString(),
     },
+    ...(recordedReceipt.canonical_evidence ? [
+      {label:"Authority",value:recordedReceipt.canonical_evidence.authority},
+      {label:"Durable Receipt",value:recordedReceipt.canonical_evidence.receipt_ref},
+      {label:"Receipt Digest",value:recordedReceipt.canonical_evidence.receipt_digest},
+      {label:"Accepted Draft Digest",value:recordedReceipt.canonical_evidence.accepted_draft_digest},
+      {label:"Run",value:recordedReceipt.canonical_evidence.run_id},
+      {label:"Applied By",value:recordedReceipt.canonical_evidence.applied_by},
+      {label:"Delivery",value:recordedReceipt.canonical_evidence.delivery_ref},
+      {label:"Readback Revision",value:recordedReceipt.canonical_evidence.source_revision},
+    ].map((row) => ({...row,detail:"Returned by the validated OOS canonical receipt; not browser-local evidence.",tone:"info" as DeliveryTone})) : []),
   ];
 }
 

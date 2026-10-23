@@ -118,8 +118,8 @@ export function RefinementHistoryView({
               value={packet.apply_plan.operations.length}
             />
             <TerasStatItem
-              detail="Last packet save before current archive view."
-              label="Packet Saved"
+              detail={historyProjection.packetTimeDescription}
+              label={historyProjection.packetTimeLabel}
               value={formatRefinementHistoryDateTime(packet.last_saved_at)}
             />
           </TerasStatGroup>
