@@ -9,7 +9,8 @@ import { canonicalSourceResponse, assertCanonicalSourceRequest } from "../suppor
 const owners = ["synthetic-app", "synthetic-platform", "synthetic-security"];
 const draft = { ...emptyDirectIntakeDraft, notes: "Synthetic local app; no deployed runtime.",
   evidence: "receipt://synthetic/graduation\nopenproject://work_packages/1", platformOwner: owners[1],
-  runtimeOwner: owners[0], securityOwner: owners[2], sourceOwners: owners[0], endpoint: "local-preview" };
+  runtimeOwner: owners[0], securityOwner: owners[2], sourceOwners: owners[0], endpoint: "local-preview",
+  validationPosture: "covered-by-owner-repo", graphRole: "product-readiness-aggregate", catalogRefs: "", validationNotes: "Owner checks prove source quality, not runtime activation." };
 const config = { baseUrl: "http://127.0.0.1:8080", callerId: "synthetic-caller", callerSecret: "synthetic-secret" };
 function sorted(value) {
   if (Array.isArray(value)) return value.map(sorted);
@@ -36,9 +37,12 @@ test("direct candidate preserves explicit owners and contextual evidence without
   for (const ref of draft.evidence.split("\n")) assert.ok(candidate.requested_record.notes.includes(ref));
   assert.equal(candidate.requested_record.runtime_owner, owners[0]);
   assert.equal(candidate.requested_record.intended_endpoint, "local-preview");
+  assert.equal(candidate.requested_record.validation_behavior.posture, "covered-by-owner-repo");
+  assert.deepEqual(candidate.requested_record.validation_behavior.catalog_refs, []);
   assert.deepEqual(await directWorkspaceIntakeCandidate(target, draft, owners, []), candidate);
   assert.notEqual((await directWorkspaceIntakeCandidate(target, { ...draft, notes: "Changed boundary" }, owners, [])).source.digest, candidate.source.digest);
-  for (const change of [{ platformOwner: "unknown" }, { sourceOwners: "" }, { sourceOwners: "unknown" }, { endpoint: "" }, { notes: "" }, { evidence: "" }]) {
+  for (const change of [{ platformOwner: "unknown" }, { sourceOwners: "" }, { sourceOwners: "unknown" }, { endpoint: "" }, { notes: "" }, { evidence: "" },
+    { validationPosture: "" }, { graphRole: "" }, { validationNotes: "" }]) {
     await assert.rejects(directWorkspaceIntakeCandidate(target, { ...draft, ...change }, owners, []));
   }
   for (const [kind, name] of [["repo", "synthetic-app"], ["product", "../path"], ["component", ""]]) assert.throws(() => directIntakeTarget(kind, name));

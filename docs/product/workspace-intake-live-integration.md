@@ -48,7 +48,11 @@ For a new target, explicitly select active owner repositories, record purpose,
 boundary and contextual evidence, then Review direct candidate. Product
 metadata includes platform/runtime/security owners, source owners and intended
 endpoint. Component metadata includes owner, security owner, class and optional
-existing product association. There are no guessed owners or deployment
+existing product association. Both carry explicit validation posture, WGCF
+graph role, applicable catalog references and owner evidence explanation into
+Intake so the resulting record can be evaluated for Inventory promotion.
+An empty catalog list is valid; no new profile or catalog is invented.
+There are no guessed owners or deployment
 defaults. Contextual references are retained in the exact reviewed notes;
 direct source metadata is operator-authored and never a Prototype/Delivery
 source-owner attestation. Continue through the shared Decision / Review /

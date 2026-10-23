@@ -108,6 +108,10 @@ function DirectIntakeTarget({ target, snapshot, onChangeTarget, onClose }: {
           options={[{ label: "No product association", value: "" }, ...products.map(value => ({ label: value, value }))]} />
       </>}
       {ownerField("Security owner", "securityOwner")}
+      <TerasTextField label="Validation posture" value={draft.validationPosture} disabled={busy} onValueChange={value => update("validationPosture", value)} />
+      <TerasTextField label="WGCF graph role" value={draft.graphRole} disabled={busy} onValueChange={value => update("graphRole", value)} />
+      <TerasTextField label="Applicable catalog references (comma-separated)" value={draft.catalogRefs} disabled={busy} onValueChange={value => update("catalogRefs", value)} />
+      <TerasNoteField label="Owner validation evidence and boundary" value={draft.validationNotes} disabled={busy} onValueChange={value => update("validationNotes", value)} />
       <TerasNoteField label="Purpose and ownership boundary" value={draft.notes} disabled={busy} onValueChange={value => update("notes", value)} />
       <TerasNoteField label="Contextual evidence references (one per line)" value={draft.evidence} disabled={busy} onValueChange={value => update("evidence", value)} />
       {error || runtime.error ? <TerasContentTray kicker="Intake unavailable" description={error ?? runtime.error!.message} /> : null}
