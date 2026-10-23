@@ -388,6 +388,8 @@ presentation/workflows/shared/blocker-recovery/index.ts
 presentation/workflows/shared/package-actions/package-action-routing.ts
 presentation/workflows/shared/package-actions/package-action-types.ts
 presentation/workflows/shared/package-actions/package-handoff-evidence.tsx
+presentation/workflows/shared/package-actions/package-work-design-receipt-dialog.tsx
+presentation/workflows/shared/package-actions/package-work-design-receipt-model.ts
 presentation/workflows/work-design/artifacts/context-brief/index.ts
 presentation/workflows/work-design/artifacts/context-brief/use-work-design-context-artifacts.ts
 presentation/workflows/work-design/artifacts/context-brief/work-design-brief-projection.ts

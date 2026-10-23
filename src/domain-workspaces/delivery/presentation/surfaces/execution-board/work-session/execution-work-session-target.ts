@@ -1,4 +1,21 @@
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
+import type { DeliveryReadModel, DeliveryArtNode } from "../../../../read-model/index.ts";
+
+// Resolves routing only. It does not infer start eligibility or mutation rights.
+export function executionInspectionPackage(workItemId: number, model: DeliveryReadModel) {
+  if (model.source_truth !== "OpenProject-backed OOS") {
+    throw new Error("Canonical initiative inspection requires the current OOS inventory.");
+  }
+  const contains = (node: DeliveryArtNode): boolean =>
+    node.legacy_work_package_id === workItemId || node.children.some(contains);
+  const roots = model.art_tree.roots.filter(contains);
+  const matches = model.packages.filter((item) =>
+    roots.some((root) => root.id === item.tree_root_id));
+  if (roots.length !== 1 || matches.length !== 1) {
+    throw new Error("The ART item is not uniquely present in the current initiative inventory. Refresh canonical records before inspecting it.");
+  }
+  return matches[0];
+}
 
 export type ExecutionWorkSessionTarget = {
   description: string;

@@ -63,6 +63,13 @@ Shape can differ by surface purpose. Visual language cannot drift.
 
 ## Baseline Visual Rule
 
+Live Delivery inventory status is owner-scoped read truth, not a blanket write
+readiness badge. Each workflow owns its live operation checks and durable
+evidence; Home must not describe a canonical OOS read as a prototype-local write
+path or claim mutation authority from inventory visibility. Explicit disconnected
+preview keeps local status. Read-only direct ART inspection, local tree drafting,
+reviewed canonical apply and source-session start remain distinct actions.
+
 No surface is visually baseline-approved unless it has:
 
 - accepted domain or surface contract

@@ -60,6 +60,7 @@ import { ExecutionWorkSessionModal } from "./work-session/execution-work-session
 import { ExecutionWorkSessionTargetDialog } from "./work-session/execution-work-session-target-dialog.tsx";
 import {
   directExecutionWorkSessionTarget,
+  executionInspectionPackage,
   packageExecutionWorkSessionTarget,
   type ExecutionWorkSessionTarget,
 } from "./work-session/execution-work-session-target.ts";
@@ -160,8 +161,8 @@ export function DeliveryExecutionBoard({
     [model, packages],
   );
   const boardPackageTreeById = useMemo(
-    () => deliveryControlBoardTreeByPackageId({ model, packages }),
-    [model, packages],
+    () => deliveryControlBoardTreeByPackageId({ model, packages: model.packages }),
+    [model],
   );
   const selectedPackage =
     getPackageById(selectedPackageId, model) ?? packages[0] ?? null;
@@ -415,9 +416,8 @@ export function DeliveryExecutionBoard({
     setTreeAddMenuNodeId(null);
   }
 
-  async function enterTreeEdit(action: DeliveryAvailableAction) {
+  async function enterTreeEdit() {
     if (
-      action.action_type !== "edit-work-tree" ||
       !selectedPackage ||
       !selectedTree
     ) {
@@ -485,7 +485,7 @@ export function DeliveryExecutionBoard({
 
     if (action.action_type === "edit-work-tree") {
       try {
-        if (await enterTreeEdit(action)) return;
+        if (await enterTreeEdit()) return;
       } catch (error) {
         setTreeEditEntryError(
           error instanceof Error
@@ -666,6 +666,19 @@ export function DeliveryExecutionBoard({
       />
     ) : selectedPackage ? (
       <ExecutionSelectedPackagePanel
+        onInspectCloseout={model.source_truth === "OpenProject-backed OOS"
+          ? () => setCloseoutOpen(true) : undefined}
+        onEditCanonicalTree={
+          deliveryChangeRuntime.mode === "live" ? () => {
+            void enterTreeEdit().catch((error) => setTreeEditEntryError(
+              error instanceof Error ? error.message : "Canonical tree inspection is unavailable.",
+            ));
+          } : undefined
+        }
+        canonicalTreeAvailable={
+          deliveryChangeRuntime.projectionStatus === "current" &&
+          Boolean(deliveryChangeRuntime.projection) && !treeChangeSubmitting
+        }
         auditEvents={selectedAuditEvents}
         details={selectedDetails}
         onActionSelect={handleActionSelect}
@@ -747,6 +760,12 @@ export function DeliveryExecutionBoard({
         />
       ) : null}
       <ExecutionWorkSessionTargetDialog
+        onInspectTarget={model.source_truth === "OpenProject-backed OOS" ? (workItemId) => {
+          const target = executionInspectionPackage(workItemId, model);
+          handleSelectedPackageChange(target.delivery_package_id);
+          setActiveView("art-tree");
+          setWorkSessionTargetDialogOpen(false);
+        } : undefined}
         onClose={() => setWorkSessionTargetDialogOpen(false)}
         onOpenTarget={(workItemId) => {
           setWorkSessionTarget(directExecutionWorkSessionTarget(workItemId));
