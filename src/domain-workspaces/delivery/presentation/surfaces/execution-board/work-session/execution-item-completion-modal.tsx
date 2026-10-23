@@ -6,8 +6,8 @@ import { assertCompletionContext, completionEvidence, type ItemCompletionContext
 
 const emptyEvidence: ItemCompletionEvidence = { completion_summary: "", changed_surfaces: "", test_result_evidence: "", validation_evidence: "", completion_note: "" };
 const fields: { key: keyof ItemCompletionEvidence; label: string; placeholder: string }[] = [
-  { key: "completion_summary", label: "Completion summary", placeholder: "Describe the actual completed non-source outcome." },
-  { key: "changed_surfaces", label: "Changed outcomes and owner evidence", placeholder: "Explain each domain outcome and its actual owner receipt; source files are not required for non-source work." },
+  { key: "completion_summary", label: "Completion summary", placeholder: "Describe the actual completed non-source outcome as a short paragraph, not bullets." },
+  { key: "changed_surfaces", label: "Changed outcomes and owner evidence", placeholder: "- Product admission: describe the actual change and owner evidence. Use flat bullets; code-format or link paths and receipt URIs. Source files are not required." },
   { key: "test_result_evidence", label: "Test result evidence", placeholder: "- PASS: Actual operating proof, or - NOT APPLICABLE: reason." },
   { key: "validation_evidence", label: "Validation evidence", placeholder: "- PASS: Canonical readback and actual receipt references." },
   { key: "completion_note", label: "Completion note (optional)", placeholder: "Optional operator note." },

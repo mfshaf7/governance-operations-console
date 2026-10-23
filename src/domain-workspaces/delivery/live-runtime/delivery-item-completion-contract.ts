@@ -41,6 +41,12 @@ export function completionEvidence(value: unknown): ItemCompletionEvidence {
     if (typeof body[key] !== "string" || !body[key].trim()) throw new Error(`Completion requires ${key.replaceAll("_", " ")}.`);
     return [key, body[key].trim()];
   })) as ItemCompletionEvidence;
+  if (evidence.completion_summary.startsWith("- ")) {
+    throw new Error("Completion summary must use the broker's paragraph format, not a bullet list.");
+  }
+  if (evidence.changed_surfaces.split("\n").some(line => line.trim() && !line.trim().startsWith("- "))) {
+    throw new Error("Changed outcomes must use the broker's flat bullets, for example - Product admission: actual change and owner evidence.");
+  }
   for (const [key, prefixes] of [
     ["test_result_evidence", ["PASS", "FAIL", "NOT APPLICABLE", "Attached artifact"]],
     ["validation_evidence", ["PASS", "FAIL", "CHECK", "NOT APPLICABLE", "Attached artifact"]],

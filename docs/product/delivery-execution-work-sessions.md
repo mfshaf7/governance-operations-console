@@ -155,8 +155,10 @@ outcome must use its existing governed work session, merged evidence and close
 command; an existing source session blocks this form.
 
 Review the exact subject, owner, status and blocking reasons. Enter the four
-native evidence fields (completion summary, changed outcomes, test results and
-validation), with the displayed test and validation prefixes, and confirm the non-source
+native evidence fields: a paragraph completion summary, explained flat changed-
+outcome bullets (for example `- Product admission: actual change and evidence`),
+and test and validation bullets with their displayed prefixes. Code-format or
+link paths and receipt URIs in changed outcomes. Confirm the non-source
 outcome. The optional completion note adds context; it does not replace proof.
 The server rereads the target before submitting the existing OOS completion
 operation. It reports completion only after native success and canonical
@@ -175,6 +177,10 @@ read-only. This path creates no source grant, worktree, PR, Review Packet or
 Console-owned completion receipt. The same-origin route is
 `/api/delivery/execution/{workItemId}/completion`; authenticated server-only
 calls reuse OOS `continuation-context`, `complete` and `stale-open-close`.
+These native ART requests use the existing 75-second governed-work budget so
+readiness/form validation can return its actual owner rejection. Other generic
+Console OOS calls retain their shorter budget. A timeout still requires reading
+the original target; it never authorizes an automatic replacement write.
 
 ## Canonical Register And Bounded Source Realization
 
