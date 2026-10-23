@@ -1,7 +1,7 @@
 "use client";
 
 import type { DeliveryComponentType } from "../../../read-model/index.ts";
-import { executionTreeChildKinds } from "../../../work-model/execution/execution-tree-change-plan.ts";
+import { executionTreeChildKinds, executionTreePlanningInputIssues } from "../../../work-model/execution/execution-tree-change-plan.ts";
 
 import {
   BuildTreeEditorTree,
@@ -56,6 +56,7 @@ export function ExecutionTreeEditView({
   tree: ExecutionTreeDraftNode;
 }) {
   const expandedNodeIdSet = new Set(expandedNodeIds);
+  const planningIssues = executionTreePlanningInputIssues(tree);
 
   function toggleNode(nodeId: string) {
     onTreeAddMenuNodeIdChange(null);
@@ -131,7 +132,7 @@ export function ExecutionTreeEditView({
             <TerasActionButton onClick={onDiscardDraft} emphasis="secondary">
               Discard Draft
             </TerasActionButton>
-            <TerasActionButton onClick={onDoneEditing} emphasis="primary">
+            <TerasActionButton disabled={planningIssues.length > 0} onClick={onDoneEditing} emphasis="primary">
               Done Editing
             </TerasActionButton>
           </TerasActionRow>
@@ -139,7 +140,7 @@ export function ExecutionTreeEditView({
         actionsLayout="inline"
         kicker="Inline Edit"
         title="Execution Tree Draft"
-        description="Edit this selected ART tree, then review and apply accepted changes through the governed Delivery route."
+        description={planningIssues[0] ?? "Edit this selected ART tree, then review and apply accepted changes through the governed Delivery route."}
       />
       <BuildTreeEditorTree
         addMenuNodeId={addMenuNodeId}

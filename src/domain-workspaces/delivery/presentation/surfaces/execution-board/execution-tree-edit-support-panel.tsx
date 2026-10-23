@@ -12,6 +12,8 @@ import {
   TerasPanel,
   TerasPanelHeader,
   TerasPanelStack,
+  TerasTextField,
+  TerasContentTray,
 } from "@/teras";
 import {
   executionTreeNodeDisplayTitle,
@@ -28,9 +30,11 @@ type AdvisorLine = {
 export function ExecutionTreeEditSupportPanel({
   packageSummary,
   selectedNode,
+  onUpdatePlanningInputs,
 }: {
   packageSummary: DeliveryPackageSummary;
   selectedNode: ExecutionTreeDraftNode;
+  onUpdatePlanningInputs?: (values: { targetPi?: string; iteration?: string }) => void;
 }) {
   const [advisorPrompt, setAdvisorPrompt] = useState("");
   const [advisorTurns, setAdvisorTurns] = useState<AdvisorLine[]>([]);
@@ -130,6 +134,31 @@ export function ExecutionTreeEditSupportPanel({
             ]}
           />
         </TerasInspectionSection>
+        {selectedNode.legacyWorkPackageId === null && onUpdatePlanningInputs ? (
+          <TerasInspectionSection title="New Item Planning">
+            {selectedNode.kind === "Feature" ? (
+              <TerasContentTray title="Backlog Feature creation">
+                Feature PI commitment uses coordinated initiative plan/apply.
+                This generic create path does not replace that workflow.
+              </TerasContentTray>
+            ) : (
+              <>
+                <TerasTextField
+                  aria-label="New item Target PI" label="New item Target PI"
+                  value={selectedNode.targetPi ?? ""}
+                  onValueChange={(targetPi) => onUpdatePlanningInputs({ targetPi })}
+                />
+                <p>Required for PI Objective, Task and Milestone. Other types may inherit the parent&apos;s PI through the native writer.</p>
+                <TerasTextField
+                  aria-label="New item Iteration" label="New item Iteration"
+                  value={selectedNode.iteration ?? ""}
+                  onValueChange={(iteration) => onUpdatePlanningInputs({ iteration })}
+                />
+                <p>Committed work needs &lt;Target PI&gt; / &lt;iteration&gt; or Program-wide / &lt;label&gt;, including when the PI is inherited. This does not make the item execution-ready.</p>
+              </>
+            )}
+          </TerasInspectionSection>
+        ) : null}
       </TerasPanel>
 
       <TerasAdvisorPanel

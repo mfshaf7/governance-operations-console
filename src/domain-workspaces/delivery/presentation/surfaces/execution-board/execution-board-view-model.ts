@@ -162,6 +162,8 @@ export type ExecutionTreeDraftNode = {
   id: string;
   kind: DeliveryComponentType;
   legacyWorkPackageId: number | null;
+  targetPi?: string;
+  iteration?: string;
   metadataStatus: DeliveryArtNode["metadata_status"];
   remark: string;
   title: string;

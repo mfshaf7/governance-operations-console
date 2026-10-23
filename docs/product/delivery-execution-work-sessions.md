@@ -100,6 +100,15 @@ Use the existing typed child menu (including PI Objective under Epic), then
 `Done Editing`, inspect the exact change plan and enter an acceptance note.
 Only `Apply Changes` submits canonical mutations; OOS rechecks source revision,
 operator and operation authority. A visible tree is not permission to mutate.
+For a new PI Objective, Task or Milestone, enter `New item Target PI` and
+`New item Iteration` in the selected node's planning panel before finishing the
+draft. Iteration must match `<Target PI> / <iteration>` or use a
+`Program-wide / <label>`. Other child types may inherit their parent's PI;
+committed children still need Iteration. A backlog Feature can be created here,
+but Feature PI commitment belongs to coordinated initiative plan/apply through
+Refinement, not this generic create path. Review shows submitted planning
+values. These inputs create a new item; they do not make it Ready or grant
+execution authority. Native OOS/OpenProject validation remains decisive.
 For a completed initiative, `Inspect Closeout` opens the existing native owner
 readiness/closeout flow. Neither inspection action grants source, closure or
 review authority.

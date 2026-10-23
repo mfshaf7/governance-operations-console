@@ -50,6 +50,7 @@ import {
   executionTreeDraftToControlBoardTreeNode,
   executionTreeInitialExpandedNodeIds,
   findExecutionTreeNode,
+  updateExecutionTreeNode,
   type ExecutionTreeDraftNode,
 } from "./execution-board-view-model.ts";
 import { ExecutionTreeChangeReviewDialog } from "./execution-tree-change-review-dialog.tsx";
@@ -69,6 +70,7 @@ import { useDeliveryCloseoutLiveRuntime } from "../../../live-runtime/use-delive
 import {
   buildExecutionTreeChangePlan,
   createdWorkItemId,
+  executionTreePlanningInputIssues,
 } from "../../../work-model/execution/execution-tree-change-plan.ts";
 import {
   deliveryChangeAcceptanceNote,
@@ -533,6 +535,13 @@ export function DeliveryExecutionBoard({
   }
 
   function finishTreeEditing() {
+    if (treeDraft) {
+      const issues = executionTreePlanningInputIssues(treeDraft);
+      if (issues.length) {
+        setTreeEditEntryError(issues.join(" "));
+        return;
+      }
+    }
     if (!treeDraftDirty) {
       setTreeEditPackageId(null);
       return;
@@ -661,6 +670,12 @@ export function DeliveryExecutionBoard({
   const selectedContent =
     selectedPackage && treeEditActive && selectedTreeEditNode ? (
       <ExecutionTreeEditSupportPanel
+        onUpdatePlanningInputs={(values) => {
+          if (selectedTreeEditNode.legacyWorkPackageId !== null) return;
+          handleTreeDraftChange(updateExecutionTreeNode(
+            treeEditActive, selectedTreeEditNode.id, (node) => ({ ...node, ...values }),
+          ));
+        }}
         packageSummary={selectedPackage}
         selectedNode={selectedTreeEditNode}
       />
