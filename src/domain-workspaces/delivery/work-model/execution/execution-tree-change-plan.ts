@@ -18,9 +18,34 @@ export type ExecutionTreeChangeDraftNode = {
   id: string;
   kind: string;
   legacyWorkPackageId: number | null;
+  targetPi?: string;
+  iteration?: string;
   remark: string;
   title: string;
 };
+
+// Generic creation stays new/backlog; these mirror the native planning inputs,
+// not execution readiness or permission. The native writer remains decisive.
+export function executionTreePlanningInputIssues(tree: ExecutionTreeChangeDraftNode) {
+  return flattenTree(tree).filter((node) => node.legacyWorkPackageId === null).flatMap((node) => {
+    const pi = node.targetPi?.trim() ?? "";
+    const iteration = node.iteration?.trim() ?? "";
+    const issues: string[] = [];
+    if (["PI Objective", "Task", "Milestone"].includes(node.kind) && !pi) {
+      issues.push("Target PI is required before this item can exist.");
+    }
+    if (node.kind === "Feature" && pi) {
+      issues.push("Feature PI commitment uses coordinated initiative plan/apply, not generic creation.");
+    }
+    if (pi && node.kind !== "Epic" && !iteration) {
+      issues.push("PI-committed work requires Iteration.");
+    }
+    if (pi && iteration && !iteration.startsWith(pi + " / ") && !iteration.startsWith("Program-wide / ")) {
+      issues.push("Iteration must match Target PI or use a Program-wide / label.");
+    }
+    return issues.map((issue) => `${node.title}: ${issue}`);
+  });
+}
 
 export type ExecutionTreeChangePlanItem = {
   buildOperation: (resolvedNodeIds: ReadonlyMap<string, string>) => DeliveryChangeOperation;
@@ -104,13 +129,17 @@ function walkNewNodes(
             description: node.draftBody.trim() || null,
             parent_work_item_id: parentWorkItemId,
             subject: node.title.trim(),
+            ...(node.targetPi?.trim() ? { target_pi: node.targetPi.trim() } : {}),
+            ...(node.iteration?.trim() ? { iteration: node.iteration.trim() } : {}),
             type: node.kind,
           },
           type: "add_work_item",
         };
       },
       id: `add-${node.id}`,
-      label: `Add ${node.kind}: ${node.title.trim()}`,
+      label: `Add ${node.kind}: ${node.title.trim()}` +
+        (node.targetPi?.trim() ? ` — Target PI: ${node.targetPi.trim()}` : "") +
+        (node.iteration?.trim() ? `; Iteration: ${node.iteration.trim()}` : ""),
       localNodeId: node.id,
     });
   }

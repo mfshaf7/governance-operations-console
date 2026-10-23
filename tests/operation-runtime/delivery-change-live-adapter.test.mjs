@@ -17,6 +17,7 @@ import {
   buildExecutionTreeChangePlan,
   createdWorkItemId,
   executionTreeChildKinds,
+  executionTreePlanningInputIssues,
 } from "../../src/domain-workspaces/delivery/work-model/execution/execution-tree-change-plan.ts";
 import { deliveryChangeOperationForExecutionAction } from "../../src/domain-workspaces/delivery/work-model/execution/execution-change-operation.ts";
 import {
@@ -42,7 +43,7 @@ test("execution add actions match canonical parent rules and expose a real Epic-
     assert.deepEqual(executionTreeChildKinds(kind), []);
   }
   const root = {id:"epic",legacyWorkPackageId:1306,kind:"Epic",title:"Existing product",draftBody:"",remark:"",children:[]};
-  const objective = {id:"objective-local",legacyWorkPackageId:null,kind:"PI Objective",title:"Deliver the actual app",draftBody:"Real operator outcome",remark:"",children:[]};
+  const objective = {id:"objective-local",legacyWorkPackageId:null,kind:"PI Objective",title:"Deliver the actual app",draftBody:"Real operator outcome",remark:"",targetPi:"PI-2026-04",iteration:"PI-2026-04 / Iteration 1",children:[]};
   const plan = buildExecutionTreeChangePlan({baseline:root,draft:{...root,children:[objective]}});
   assert.equal(plan.length, 1);
   const operation = plan[0].buildOperation(new Map());
@@ -50,6 +51,30 @@ test("execution add actions match canonical parent rules and expose a real Epic-
   assert.equal(operation.type, "add_work_item");
   assert.equal(operation.payload.type, "PI Objective");
   assert.equal(operation.payload.parent_work_item_id, "work-item-1306");
+  assert.equal(operation.payload.target_pi, "PI-2026-04");
+  assert.equal(operation.payload.iteration, "PI-2026-04 / Iteration 1");
+  assert.deepEqual(executionTreePlanningInputIssues({...root,children:[objective]}), []);
+});
+
+test("inline creation captures native planning requirements without inventing Ready authority", () => {
+  const root = {id:"root",legacyWorkPackageId:1306,kind:"Epic",title:"Product",draftBody:"",remark:"",children:[]};
+  const child = {id:"new",legacyWorkPackageId:null,kind:"PI Objective",title:"Outcome",draftBody:"",remark:"",children:[]};
+  for (const kind of ["PI Objective", "Task", "Milestone"]) {
+    assert.match(executionTreePlanningInputIssues({...root,children:[{...child,kind}]}).join(), /Target PI is required/);
+    assert.match(executionTreePlanningInputIssues({...root,children:[{...child,kind,targetPi:"PI-A"}]}).join(), /requires Iteration/);
+    assert.deepEqual(executionTreePlanningInputIssues({...root,children:[{...child,kind,targetPi:"PI-A",iteration:"Program-wide / Continuous"}]}), []);
+  }
+  assert.match(executionTreePlanningInputIssues({...root,children:[{...child,targetPi:"PI-A",iteration:"PI-B / Iteration 1"}]}).join(), /must match Target PI/);
+  assert.match(executionTreePlanningInputIssues({...root,children:[{...child,kind:"Feature",targetPi:"PI-A",iteration:"PI-A / Iteration 1"}]}).join(), /coordinated initiative/);
+  for (const kind of ["Feature", "User story", "Defect", "Risk"]) {
+    assert.deepEqual(executionTreePlanningInputIssues({...root,children:[{...child,kind}]}), []);
+  }
+  const committed = buildExecutionTreeChangePlan({baseline:root,draft:{...root,children:[{...child,targetPi:" PI-A ",iteration:" PI-A / Iteration 1 "}]}})[0];
+  const payload = committed.buildOperation(new Map()).payload;
+  assert.equal(payload.target_pi, "PI-A");
+  assert.equal(payload.iteration,"PI-A / Iteration 1");
+  assert.equal(Object.hasOwn(payload,"status"),false);
+  assert.match(committed.label,/Target PI: PI-A; Iteration: PI-A \/ Iteration 1/);
 });
 
 test("case:delivery-change-source-provenance-positive reads only canonical OOS change truth", async () => {
