@@ -88,6 +88,22 @@ parallel packet ledger or report success from browser state.
 
 ## Operator Flow
 
+For planning-stage hierarchy maintenance, choose `Open Work Item`, enter an
+exact canonical initiative or child id, then choose `Inspect ART Tree`.
+This resolves the item through the current inventory and selects its initiative
+without preparing or starting a source session. The normal Control Board still
+lists execution/audit work; inspection does not force planning work into Ready.
+Unknown, ambiguous, or unloaded targets are not guessed.
+
+`Edit ART Tree` reads a fresh OOS change projection before opening a local draft.
+Use the existing typed child menu (including PI Objective under Epic), then
+`Done Editing`, inspect the exact change plan and enter an acceptance note.
+Only `Apply Changes` submits canonical mutations; OOS rechecks source revision,
+operator and operation authority. A visible tree is not permission to mutate.
+For a completed initiative, `Inspect Closeout` opens the existing native owner
+readiness/closeout flow. Neither inspection action grants source, closure or
+review authority.
+
 1. Select a Delivery package whose structured action intent identifies an
    executable OpenProject work item and open `Start Work`, or choose
    `Open Work Item` and enter the exact ART work-item reference.

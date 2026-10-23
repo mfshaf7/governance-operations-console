@@ -17,13 +17,17 @@ export function deliveryWorkspaceComponentStatuses(
     "read_error",
   ].includes(model.projection_state.status);
   const sourceIsPrototypeLocal = model.source_truth === "mock";
+  const canonicalInventory = model.source_truth === "OpenProject-backed OOS";
+  const ownerScopedState = deliveryProjectionWorkspaceState(model.projection_state.status);
   return [
     {
       detail: sourceIsPrototypeLocal
         ? "Delivery is using the curated prototype read model; no live ART read path is connected."
         : backendIsOffline
           ? model.projection_state.detail
-          : "Prototype read path is available through the current Delivery projection.",
+          : canonicalInventory
+            ? "Canonical ART inventory is read through OOS. Each workflow resolves its own current mutation authority."
+            : "Prototype read path is available through the current Delivery projection.",
       facts: [
         {
           label: "Read Path",
@@ -86,7 +90,9 @@ export function deliveryWorkspaceComponentStatuses(
     },
     {
       detail:
-        "Delivery mutation remains prototype-local from this workspace; OpenProject-backed ART stays the source adapter and future write boundary.",
+        canonicalInventory
+          ? "Canonical mutations use each workflow's authenticated OOS route and fresh approval checks. Inventory visibility alone does not prove an operation is available or authorized."
+          : "Delivery mutation remains prototype-local from this workspace; OpenProject-backed ART stays the source adapter and future write boundary.",
       facts: [
         {
           label: "Source Truth",
@@ -94,7 +100,7 @@ export function deliveryWorkspaceComponentStatuses(
         },
         {
           label: "Mutation",
-          value: "prototype-local",
+          value: canonicalInventory ? "workflow-scoped OOS checks" : "prototype-local",
         },
         {
           label: "Adapter",
@@ -107,19 +113,22 @@ export function deliveryWorkspaceComponentStatuses(
       ],
       id: "write-path",
       label: "Write Path",
-      state: "local",
+      state: canonicalInventory ? ownerScopedState : "local",
+      tone: canonicalInventory && ownerScopedState === "current" ? "info" : undefined,
     },
     {
       detail:
-        "OOS is represented as the future workflow boundary; current prototype actions remain local until backend wiring is admitted.",
+        canonicalInventory
+          ? "OOS supplies this canonical inventory. Operation readiness, command authorization and durable receipts are resolved by the selected workflow, not granted by Home."
+          : "OOS is represented as the future workflow boundary; current prototype actions remain local until backend wiring is admitted.",
       facts: [
         {
           label: "Boundary",
-          value: "prototype-local / future OOS-mediated",
+          value: canonicalInventory ? "server-only OOS-mediated" : "prototype-local / future OOS-mediated",
         },
         {
           label: "Apply Authority",
-          value: "future OOS-mediated",
+          value: canonicalInventory ? "selected workflow; explicit owner checks" : "future OOS-mediated",
         },
         {
           label: "Workflow Role",
@@ -132,7 +141,8 @@ export function deliveryWorkspaceComponentStatuses(
       ],
       id: "oos",
       label: "OOS",
-      state: "local",
+      state: canonicalInventory ? ownerScopedState : "local",
+      tone: canonicalInventory && ownerScopedState === "current" ? "info" : undefined,
     },
   ];
 }

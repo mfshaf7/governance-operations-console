@@ -34,6 +34,9 @@ export function ExecutionSelectedPackagePanel({
   packageSummary,
   packageTree,
   selectedActions,
+  onEditCanonicalTree,
+  canonicalTreeAvailable = false,
+  onInspectCloseout,
 }: {
   auditEvents: ReturnType<typeof getPackageAuditEvents>;
   details: ReturnType<typeof getPackageDetailsById>;
@@ -41,6 +44,9 @@ export function ExecutionSelectedPackagePanel({
   packageSummary: DeliveryPackageSummary;
   packageTree: DeliveryArtNode | null;
   selectedActions: ReturnType<typeof getAvailableActions>;
+  onEditCanonicalTree?: () => void;
+  canonicalTreeAvailable?: boolean;
+  onInspectCloseout?: () => void;
 }) {
   const effectiveProjection =
     getDeliveryEffectivePackageProjection(packageSummary);
@@ -121,6 +127,16 @@ export function ExecutionSelectedPackagePanel({
       </TerasInspectionSection>
 
       <TerasInspectionSection title="Supporting Actions">
+        {onInspectCloseout ? (
+          <TerasActionButton emphasis="secondary" onClick={onInspectCloseout}>
+            Inspect Closeout
+          </TerasActionButton>
+        ) : null}
+        {onEditCanonicalTree ? (
+          <TerasActionButton disabled={!canonicalTreeAvailable} emphasis="secondary" onClick={onEditCanonicalTree}>
+            Edit ART Tree
+          </TerasActionButton>
+        ) : null}
         <TerasList frame="contained">
           {secondaryActions.map((action) => (
             <TerasSignalItem

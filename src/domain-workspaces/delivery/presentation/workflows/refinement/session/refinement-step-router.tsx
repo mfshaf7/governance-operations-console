@@ -153,7 +153,8 @@ export function RefinementStepRouter({
       </TerasContentFrame>
 
       <DeliveryWorkDesignHandoffEvidenceDialog
-        deliveryPackage={sourceWorkDesignPackage ?? null}
+        deliveryPackage={sourceWorkDesignPackage ?? deliveryPackage}
+        handoffReceiptId={packet.handoff.source_work_design_receipt_id}
         open={handoffDialogOpen}
         onClose={() => setHandoffDialogOpen(false)}
       />

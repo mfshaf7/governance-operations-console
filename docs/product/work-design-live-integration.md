@@ -70,6 +70,19 @@ attribution are assembled server-side.
 
 ### Evidence presentation
 
+After Work Design leaves the active register, use Refinement's
+`View Work Design Handoff` to read the canonical application and durable
+receipt. The existing OOS projection supplies the exact receipt, application
+time, draft digest, operator and canonical readback references. A handoff-bound
+application is selected from owner history rather than silently replaced by a
+different latest application. Missing or mismatched owner evidence stays
+unavailable with no fixture fallback. This read does not replay apply.
+
+The browser-local finalized brief and snapshot files are separate artifacts.
+Their absence must not hide a real canonical application, and a canonical
+receipt must not be presented as restoration or upload of those local files.
+Disconnected preview retains its local finalized-brief evidence view.
+
 Current Move, progress, History and Apply Run Log use the same explicit runtime
 mode. In live mode, only a validated OOS result or recovered canonical projection
 supplies the durable receipt identity and application time. Configuration alone,
@@ -95,8 +108,7 @@ Implemented:
 
 Still separate:
 
-- a canonical live Delivery package and register projection
-- live Intake, Execution, and closeout adapters
+- per-workflow operation eligibility beyond canonical inventory visibility
 - authenticated human identity beyond configured operator attribution
 - platform deployment and security acceptance
 

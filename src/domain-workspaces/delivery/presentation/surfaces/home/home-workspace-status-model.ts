@@ -16,6 +16,7 @@ export function getDeliveryHomeWorkspaceStatus(
   );
   const reviewItem = dangerItem ?? staleItem;
   const localItem = items.find((item) => item.state === "local");
+  const canonicalInventory = model.source_truth === "OpenProject-backed OOS";
 
   return {
     ariaLabel: "Delivery workspace status details",
@@ -24,21 +25,29 @@ export function getDeliveryHomeWorkspaceStatus(
     kicker: "Workspace Status",
     statusLabel: reviewItem
       ? "review"
+      : canonicalInventory
+        ? "owner-scoped"
       : localItem
         ? "prototype-local"
         : "online",
     summary:
       reviewItem?.detail ??
-      (localItem
+      (canonicalInventory
+        ? "Canonical ART inventory is current. Each workflow resolves its own OOS operation readiness and durable evidence; Home grants no mutation authority."
+        : localItem
         ? "Delivery is using a current prototype read model with prototype-local write and receipt paths. Open a signal for scoped authority facts."
         : "Backend, Projection, Write Path, and OOS signals match the persistent workspace status. Open a signal for scoped facts only."),
     title: reviewItem
       ? `${reviewItem.label} status needs review`
+      : canonicalInventory
+        ? "Canonical Delivery inventory"
       : localItem
         ? "Delivery workspace is prototype-local"
         : "Workspace status is online",
     tone: reviewItem
       ? resolveOperationSurfaceStatusTone(reviewItem)
+      : canonicalInventory
+        ? "info"
       : localItem
         ? "warn"
         : "ok",

@@ -13,10 +13,12 @@ import { parseExecutionWorkItemReference } from "./execution-work-session-target
 export function ExecutionWorkSessionTargetDialog({
   onClose,
   onOpenTarget,
+  onInspectTarget,
   open,
 }: {
   onClose: () => void;
   onOpenTarget: (workItemId: number) => void;
+  onInspectTarget?: (workItemId: number) => void;
   open: boolean;
 }) {
   const [reference, setReference] = useState("");
@@ -29,9 +31,11 @@ export function ExecutionWorkSessionTargetDialog({
     }
   }, [open]);
 
-  function openTarget() {
+  function openTarget(inspect = false) {
     try {
-      onOpenTarget(parseExecutionWorkItemReference(reference));
+      const workItemId = parseExecutionWorkItemReference(reference);
+      if (inspect && onInspectTarget) onInspectTarget(workItemId);
+      else onOpenTarget(workItemId);
       setReference("");
       setError(null);
     } catch (caught) {
@@ -50,14 +54,19 @@ export function ExecutionWorkSessionTargetDialog({
           <TerasActionButton emphasis="secondary" onClick={onClose}>
             Back to Board
           </TerasActionButton>
-          <TerasActionButton disabled={!reference.trim()} onClick={openTarget}>
+          {onInspectTarget ? (
+            <TerasActionButton disabled={!reference.trim()} emphasis="secondary" onClick={() => openTarget(true)}>
+              Inspect ART Tree
+            </TerasActionButton>
+          ) : null}
+          <TerasActionButton disabled={!reference.trim()} onClick={() => openTarget()}>
             Open Session
           </TerasActionButton>
         </>
       }
       closeLabel="Close work item entry"
       contentOverflow="auto"
-      description="Enter the exact ART item. OOS will read its current authority and lifecycle state before any action is available."
+      description="Enter the exact ART item. Inspect its canonical initiative tree without starting work, or open its governed session. Inspection does not grant execution eligibility or mutation authority."
       height="content"
       kicker="Execution Board"
       onClose={onClose}
@@ -67,6 +76,7 @@ export function ExecutionWorkSessionTargetDialog({
     >
       <TerasFieldStack spacing="normal">
         <TerasTextField
+          aria-label="ART work item"
           autoFocus
           label="ART work item"
           onKeyDown={(event) => {
