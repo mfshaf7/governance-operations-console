@@ -582,8 +582,12 @@ export function DeliveryExecutionBoard({
           throw new Error("Live Delivery change authority is unavailable.");
         }
         if (result.status !== "applied") {
+          const nativeError = result.event.effect.error;
+          const reason = nativeError && typeof nativeError === "object" && "message" in nativeError && typeof nativeError.message === "string"
+            ? nativeError.message
+            : `${result.next_action.label}: the Delivery change was ${result.status.replaceAll("_", " ")}.`;
           throw new Error(
-            `${result.next_action.label}: the Delivery change was ${result.status.replaceAll("_", " ")}.`,
+            reason,
           );
         }
         if (item.localNodeId) {

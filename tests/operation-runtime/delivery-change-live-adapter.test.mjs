@@ -34,6 +34,14 @@ const env = {
   OOS_CALLER_SECRET: "test-only-console-secret",
 };
 
+test("canonical change readback preserves description text and rejects malformed narratives", async () => {
+  const native=projection();
+  native.delivery_id="delivery-886";
+  const result=await readDeliveryChangeProjection("delivery-886",{env,fetchImpl:async()=>canonicalSourceResponse(native,{recordRef:"openproject://work_packages/886",sourceOwner:"workspace-delivery-art"})});
+  assert.equal(result.package.execution_tree.description,native.package.execution_tree.description);
+  assert.throws(()=>assertDeliveryChangeProjection({...native,package:{...native.package,execution_tree:{...native.package.execution_tree,description:23}}}),/description/);
+});
+
 test("execution add actions match canonical parent rules and expose a real Epic-level PI Objective", () => {
   assert.deepEqual(executionTreeChildKinds("Epic"), ["PI Objective", "Feature", "Risk", "Milestone", "Defect"]);
   assert.deepEqual(executionTreeChildKinds("Feature"), ["User story", "Defect"]);
@@ -368,6 +376,7 @@ function projection() {
       dependency_relations: [],
       execution_tree: {
         children: [],
+        description: "## Existing narrative\nPreserve Unicode — text and operator notes.",
         id: 886,
         record_ref: "openproject://work_packages/886",
         status: "in-progress",

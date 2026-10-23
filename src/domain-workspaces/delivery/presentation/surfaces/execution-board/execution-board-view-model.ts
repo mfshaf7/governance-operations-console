@@ -211,12 +211,15 @@ export function executionTreeDraftFromArtNode(
 export function executionTreeDraftFromChangeNode(
   node: DeliveryChangeNode,
 ): ExecutionTreeDraftNode {
+  if (typeof node.description !== "string") {
+    throw new Error(`Canonical narrative is unavailable for work item #${node.id}; refresh before editing.`);
+  }
   const backendStatus = deliveryChangeBackendStatus(node.status);
   return {
     backendStatus,
     children: node.children.map(executionTreeDraftFromChangeNode),
-    description: "",
-    draftBody: "",
+    description: node.description,
+    draftBody: node.description,
     id: `node-${node.id}`,
     kind: deliveryChangeNodeType(node.type),
     legacyWorkPackageId: node.id,

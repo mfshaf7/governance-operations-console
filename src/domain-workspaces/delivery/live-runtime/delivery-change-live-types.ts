@@ -2,6 +2,7 @@ export type DeliveryChangeMode = "disconnected-preview" | "live";
 
 export type DeliveryChangeNode = {
   children: DeliveryChangeNode[];
+  description?: string;
   id: number;
   record_ref: string;
   status: string;
