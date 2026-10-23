@@ -145,6 +145,26 @@ review authority.
    operator action. If the network outcome is unknown, retry retains the same
    command identity so OOS can replay the retained result safely.
 
+### Continue An Approved Source Scope
+
+Source Authorization displays the selected scope, its expiry, credential receipt
+and original owner operation. The scope approval and its short-lived source
+credential have separate lifetimes. When a current live session requires source
+credentials and the selected scope remains approved, choose
+`Continue Approved Source Access`. This submits the existing guarded OOS
+continuation with that exact selected intent. OOS revalidates the scope and
+renews its credential when needed before attempting source work. The primary
+owner next action remains authoritative; this supporting control grants no
+source permission or local success.
+
+After an interruption, use `Recover original` and `Refresh source authority` to
+inspect the same approval and owner operation. Wait for the current session
+projection before continuing. An unknown command outcome must be reconciled
+through the original session before another action. A valid approval does not
+require another scope or manual token handling just because its hourly
+credential expired. Expired or revoked approval requires the existing explicit
+scope review; unavailable or stale authority never enables continuation.
+
 ## Evidence-Only Completion And Completed Parents
 
 In live Execution Board, choose `Open Work Item`, enter the exact ART id and
