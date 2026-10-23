@@ -420,6 +420,7 @@ export function useWorkDesignSessionController({
       })
     : null;
   const currentMove = workDesignCurrentMove({
+    runtimeMode: liveRuntime.mode,
     activeStep,
     applyReceiptRecorded,
     applyReady,

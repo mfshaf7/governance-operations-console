@@ -1,4 +1,5 @@
 import type { DeliveryTone } from "../../../../read-model/index.ts";
+import type { WorkDesignLiveMode } from "../../../../live-runtime/work-design-live-types.ts";
 
 import { workDesignContextDecisionCopy } from "./work-design-context-decision-model.ts";
 import type { WorkDesignContextDecision } from "../model/work-design-model.ts";
@@ -101,6 +102,7 @@ export function workDesignHistoryReceiptRows({
   contextDecision,
   draftRef,
   recordedAt,
+  runtimeMode = "disconnected-preview",
   snapshotAction,
   snapshotStatus,
   sourceApplyComplete,
@@ -111,6 +113,7 @@ export function workDesignHistoryReceiptRows({
   contextDecision: WorkDesignContextDecision;
   draftRef: string;
   recordedAt: string;
+  runtimeMode?: WorkDesignLiveMode;
   snapshotAction: string;
   snapshotStatus: Parameters<typeof workDesignSnapshotAttachmentStatusLabel>[0];
   sourceApplyComplete: boolean;
@@ -170,7 +173,7 @@ export function workDesignHistoryReceiptRows({
     ];
   }
 
-  if (sourceApplyComplete) {
+  if (sourceApplyComplete && !localReceiptRecorded) {
     return [
       {
         detail: "Source read model marks this Work Design pass complete.",
@@ -192,10 +195,12 @@ export function workDesignHistoryReceiptRows({
         value: applyTargetRecordRef,
       },
       {
-        detail: snapshotAction,
+        detail: runtimeMode === "live"
+          ? "Source completion does not prove a backend snapshot upload; context snapshot files remain browser-local."
+          : snapshotAction,
         label: "Snapshot Evidence",
-        tone: "ok",
-        value: "Retained",
+        tone: runtimeMode === "live" ? "info" : "ok",
+        value: runtimeMode === "live" ? "Browser-local evidence" : "Retained",
       },
       {
         detail: "Projection proof comes from the completed source read model.",
@@ -215,7 +220,9 @@ export function workDesignHistoryReceiptRows({
   return [
     {
       detail: localReceiptRecorded
-        ? "Preview receipt is available for this Work Design pass."
+        ? runtimeMode === "live"
+          ? "Validated durable OOS receipt for this Work Design application."
+          : "Disconnected-preview receipt is available locally, not as canonical Delivery evidence."
         : "No apply receipt has been recorded for this Work Design pass.",
       label: "Receipt ID",
       tone: localReceiptRecorded ? "ok" : "muted",
@@ -224,8 +231,10 @@ export function workDesignHistoryReceiptRows({
         : "No receipt recorded",
     },
     {
-      detail: "Final draft reference carried to the backend apply path.",
-      label: "Draft Ref",
+      detail: runtimeMode === "live"
+        ? "Browser-session draft reference; the durable receipt identifies the canonical application."
+        : "Final draft reference carried to the backend apply path.",
+      label: runtimeMode === "live" ? "Session Draft Ref" : "Draft Ref",
       tone: "info",
       value: draftRef,
     },
@@ -236,22 +245,32 @@ export function workDesignHistoryReceiptRows({
       value: applyTargetRecordRef,
     },
     {
-      detail: snapshotAction,
+      detail: runtimeMode === "live"
+        ? "Context snapshot files are browser-local; the OOS application receipt does not prove a backend snapshot upload."
+        : snapshotAction,
       label: "Snapshot Evidence",
-      tone: localReceiptRecorded ? "ok" : snapshotTone,
-      value: localReceiptRecorded ? "Attached In Preview" : snapshotLabel,
+      tone: runtimeMode === "live" ? "info" : localReceiptRecorded ? "ok" : snapshotTone,
+      value: runtimeMode === "live"
+        ? "Browser-local evidence"
+        : localReceiptRecorded ? "Attached In Preview" : snapshotLabel,
     },
     {
       detail:
-        "Projection proof remains prototype-local until live backend wiring returns a receipt.",
+        runtimeMode === "live"
+          ? localReceiptRecorded
+            ? "OOS validated canonical Delivery readback and returned the durable application receipt."
+            : "No durable application receipt is available; configuration alone does not prove completion."
+          : "Projection proof remains disconnected-preview evidence, not canonical backend state.",
       label: "Projection",
       tone: localReceiptRecorded ? "ok" : "muted",
       value: localReceiptRecorded
-        ? "Refresh Recorded"
-        : "Prototype-local draft",
+        ? runtimeMode === "live" ? "Canonical readback complete" : "Refresh Recorded"
+        : runtimeMode === "live" ? "No completion evidence" : "Prototype-local draft",
     },
     {
-      detail: "Timestamp for the current preview receipt record.",
+      detail: runtimeMode === "live"
+        ? "Timestamp of the recorded OOS application."
+        : "Timestamp for the current preview receipt record.",
       label: "Recorded",
       tone: "muted",
       value: formatWorkDesignDateTime(recordedAt),
@@ -267,6 +286,7 @@ export function workDesignHistoryTimelineRows({
   contextDecision,
   contextRecordedAt,
   metrics,
+  runtimeMode = "disconnected-preview",
 }: {
   applyRecordedAt: string | null;
   applyReceiptId: string | null;
@@ -275,6 +295,7 @@ export function workDesignHistoryTimelineRows({
   contextDecision: WorkDesignContextDecision;
   contextRecordedAt: string | null;
   metrics: WorkDesignMetricsSummary;
+  runtimeMode?: WorkDesignLiveMode;
 }): Array<{
   detail: string;
   label: string;
@@ -306,7 +327,9 @@ export function workDesignHistoryTimelineRows({
 
   if (localReceiptRecorded && applyRecordedAt) {
     rows.push({
-      detail: `Receipt ${applyReceiptId} recorded for a draft with ${metrics.features} Feature branches, ${metrics.stories} User stories, and ${metrics.risks} Risk branches.`,
+      detail: runtimeMode === "live"
+        ? `Durable OOS receipt ${applyReceiptId} records the canonical Work Design application. Local tree counts are not canonical readback.`
+        : `Receipt ${applyReceiptId} recorded for a draft with ${metrics.features} Feature branches, ${metrics.stories} User stories, and ${metrics.risks} Risk branches.`,
       label: "Apply Receipt Recorded",
       status: "recorded",
       timestamp: applyRecordedAt,

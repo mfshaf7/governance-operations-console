@@ -1,6 +1,7 @@
 "use client";
 
 import { Download } from "lucide-react";
+import type { WorkDesignLiveMode } from "../../../../../live-runtime/work-design-live-types.ts";
 import type {
   DeliveryPackageSummary,
   DeliveryTone,
@@ -44,6 +45,7 @@ type WorkDesignApplyExecutionLogLine = {
 };
 
 type WorkDesignApplyDraftViewProps = {
+  runtimeMode: WorkDesignLiveMode;
   applyReceiptRecorded: boolean;
   applyBackendChecklistRows: WorkDesignApplyChecklistRow[];
   applyDraftRef: string;
@@ -62,6 +64,7 @@ type WorkDesignApplyDraftViewProps = {
 };
 
 export function WorkDesignApplyDraftView({
+  runtimeMode,
   applyReceiptRecorded,
   applyBackendChecklistRows,
   applyDraftRef,
@@ -155,6 +158,7 @@ export function WorkDesignApplyDraftView({
             />
             <TerasList>
               {workDesignApplyReadinessRows({
+                runtimeMode,
                 applyTargetRecordRef,
                 hasUnsavedSessionChanges,
                 draftReviewAccepted,

@@ -1,4 +1,5 @@
 import type { DeliveryTone } from "../../../../read-model/index.ts";
+import type { WorkDesignLiveMode } from "../../../../live-runtime/work-design-live-types.ts";
 
 import { workDesignContextDecisionCopy } from "./work-design-context-decision-model.ts";
 import type {
@@ -71,6 +72,7 @@ export function workDesignStepStatusLabel(
     reviewReady: boolean;
     draftReviewAccepted: boolean;
     draftValidationAccepted: boolean;
+    runtimeMode?: WorkDesignLiveMode;
     sourceWorkDesignClosed?: boolean;
   },
 ) {
@@ -88,7 +90,9 @@ export function workDesignStepStatusLabel(
         return "not required";
       }
       if (state.applyReceiptRecorded) {
-        return "preview receipt captured";
+        return state.runtimeMode === "live"
+          ? "durable OOS receipt captured"
+          : "preview receipt captured";
       }
       if (applyComplete) {
         return "source done";

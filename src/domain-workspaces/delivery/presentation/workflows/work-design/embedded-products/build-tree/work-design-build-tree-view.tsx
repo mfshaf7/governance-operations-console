@@ -402,7 +402,7 @@ export function WorkDesignBuildTreeView({
               value: buildAdvisorPrompt,
             }}
             statusLabel="tool-profile pending"
-            statusTitle="Target profile: governed work-design reasoning model with bounded tree-building tool access. Mock only until authoritative profile truth reports it active."
+            statusTitle="Tool-enabled authority is separate from suggestion-only advice. This panel does not establish tool-profile activation or grant tree mutation authority."
             statusTone="warn"
             transcript={buildAdvisorTranscript}
           />

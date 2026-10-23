@@ -189,6 +189,7 @@ export function WorkDesignSessionStepRouter({
     >
       {activeStep !== "context" && activeStep !== "hub" ? (
         <WorkDesignProgressPanel
+          runtimeMode={applyWorkflow.runtimeMode}
           activeStep={activeStep}
           applyReceiptRecorded={applyReceiptRecorded}
           contextBriefAccepted={contextBriefAccepted}
@@ -208,6 +209,7 @@ export function WorkDesignSessionStepRouter({
 
       {activeStep === "hub" ? (
         <WorkDesignHubView
+          runtimeMode={applyWorkflow.runtimeMode}
           applyReceiptRecorded={applyReceiptRecorded}
           contextBriefAccepted={contextBriefAccepted}
           contextDecision={contextDecision}
@@ -323,6 +325,7 @@ export function WorkDesignSessionStepRouter({
         />
       ) : activeStep === "apply" ? (
         <WorkDesignApplyDraftView
+          runtimeMode={applyWorkflow.runtimeMode}
           applyReceiptRecorded={applyReceiptRecorded}
           applyBackendChecklistRows={applyBackendChecklistRows}
           applyDraftRef={applyDraftRef}
