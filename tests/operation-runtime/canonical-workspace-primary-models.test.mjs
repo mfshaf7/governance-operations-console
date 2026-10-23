@@ -83,6 +83,46 @@ test("registered terminal lifecycle survives a cold read without fake historical
   assert.equal(record.preview.proofState, "not-started");
 });
 
+test("cold graduated source retains the exact unfinished Closure instead of routing it only to archive", () => {
+  const requestId = "prototype-closure-request:proposal-71:retained";
+  for (const status of ["review-required", "pending-readback", "pending-runtime-disposition", "succeeded"]) {
+    const value = landedPrototype("graduated");
+    const merged = status !== "review-required", terminal = status === "succeeded";
+    value.workflows.closure = [{
+      schema_version: 1, workflow_id: "prototype-closure", request_id: requestId,
+      prototype_id: "proposal-71", action: "graduate-source", status, revision: 1,
+      next_action: terminal ? "inspect-receipt" : "continue",
+      request: { request_id: requestId, prototype_id: "proposal-71", action: "graduate-source",
+        operator_id: "console", expected_lifecycle: "graduating", expected_source_revision: revision },
+      source_snapshot: { source_revision: revision, record_digest: "sha256:" + "b".repeat(64),
+        lifecycle: "graduating", source_custody: "incubation-repo" },
+      readiness: null, decision: null, preparation: null, failure: null,
+      resolved_authority: { verification: { state: "accepted", source_revision: revision,
+        evidence_refs: ["studio://authority/sample-tool"] } },
+      review: { number: 42, url: "https://github.com/example/studio/pull/42",
+        state: merged ? "closed" : "open", merged, head_commit: "c".repeat(40),
+        merge_commit: merged ? "d".repeat(40) : null,
+        delegated_approval: merged ? { review_ref: "https://github.com/example/studio/pull/42#pullrequestreview-1",
+          head_commit: "c".repeat(40), reviewer_login: "reviewer", execution: "agent-gary-delegated" } : null },
+      readback: status === "pending-runtime-disposition" || terminal
+        ? { merged_source_revision: "d".repeat(40), observed_lifecycle: "graduated",
+          observed_source_custody: "dedicated-owner-repo" } : null,
+      runtime_disposition: terminal ? { state: "accepted", disposition: "absent",
+        ref: "platform://prototype-closure/evidence/sample" } : null,
+      receipt: terminal ? { receipt_id: "receipt://prototype-closure/sample", outcome: "completed",
+        observed_lifecycle: "graduated", observed_source_custody: "dedicated-owner-repo", recorded_at: at } : null,
+      history: [{ sequence: 1, at, status, details: null }],
+      canonical_mutation: terminal, runtime_activation: true,
+    }];
+    const projected = projectCanonicalPrototypeWorkspace(value, at);
+    assert.equal(projected.readModel.records[0].lifecycle, "graduated");
+    assert.equal(projected.readModel.records[0].currentMove.id, terminal ? "archive" : "closeout-retirement");
+    assert.equal(projected.closure["prototype-proposal-71"].request_id, requestId);
+    assert.equal(projected.closure["prototype-proposal-71"].status, status);
+    assert.equal(projected.closure["prototype-proposal-71"].receipt?.outcome ?? null, terminal ? "completed" : null);
+  }
+});
+
 function landedPrototype(lifecycle = "exploring") {
   const value = prototype();
   const setup = { scaffold_profile: "static-site", support_profile: "interactive", preview_mode: "static", data_mode: "synthetic", mutation_boundary: "local-only", visibility: "private",

@@ -131,6 +131,10 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
     }
     if (base.lifecycle === "graduated" || base.lifecycle === "retired") base.currentMove = { id: "archive", label: "Inspect retained source", actionLabel: "Open History", detail: "Canonical Studio lifecycle is terminal; mutation requires the owner's explicit reopen route.", tone: "muted" };
     else if (base.lifecycle === "graduating") base.currentMove = { id: "closeout-retirement", label: "Inspect source graduation", actionLabel: "Open Closeout", detail: "Continue the owner-backed graduation and custody handoff.", tone: "info" };
+    const pendingClosure = closure[base.id];
+    if (pendingClosure && !["succeeded", "denied", "failed"].includes(pendingClosure.status)) {
+      base.currentMove = { id: "closeout-retirement", label: "Complete retained Closure", actionLabel: "Resume Closure", detail: "The Studio source transition and OOS completion are separate. Resume the existing request for review, readback and owner disposition; no new source transition is authorized.", tone: "info" };
+    }
     const packetRef = deliveryPacketRefs.get(slug);
     if (packetRef) {
       if (!/^record:\/\/delivery-packets\/[a-z0-9-]+$/.test(packetRef)) invalid();

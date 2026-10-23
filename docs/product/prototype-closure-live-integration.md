@@ -27,6 +27,13 @@ merge Closure changes, decide Security acceptance, or revoke Platform runtime.
 
 ## Recovery
 
+After a Studio source merge, use **Resume Closure** on the Dashboard or History
+while the retained OOS request is nonterminal. A graduated or retired Studio
+record does not imply that OOS has observed review, merged readback, Platform
+disposition or the terminal receipt. Resume keeps the original request; it
+does not authorize another source transition. Once OOS is terminal, normal
+archive inspection remains available.
+
 Preparation, submit acknowledgement and read remain bounded to12 seconds.
 Same-request decision, continue and cancel commands use the existing180-second
 long-command budget to contain nested owner evidence and reconciliation. They
