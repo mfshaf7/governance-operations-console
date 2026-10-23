@@ -374,7 +374,44 @@ export function assertWorkspaceIntakeResult(
   if (result.status === "succeeded" && !isRecord(result.readback)) {
     throw invalid("Succeeded Workspace Intake requires canonical readback.");
   }
+  const nativeReadiness = result.readiness == null ? null : record(record(result.readiness, "readiness").receipt, "readiness receipt");
+  if (nativeReadiness && (nativeReadiness.schema_version !== 1 || nativeReadiness.artifact_type !== "wgcf-workspace-intake-readiness" ||
+      record(nativeReadiness.request_ref, "readiness request").id !== result.request_id ||
+      !digestPattern.test(String(record(nativeReadiness.request_ref, "readiness request").digest)) ||
+      !digestPattern.test(String(nativeReadiness.receipt_digest)) || !["allowed", "denied", "requires-action"].includes(String(nativeReadiness.outcome)) ||
+      (nativeReadiness.outcome === "denied" && result.status !== "rejected") ||
+      (nativeReadiness.outcome === "requires-action" && result.status !== "requires-action"))) {
+    throw invalid("Workspace Intake readiness findings do not bind this request and outcome.");
+  }
+  const findingsInput = nativeReadiness?.findings ?? result.readiness_findings;
+  let findings: WorkspaceIntakeResult["readiness_findings"];
+  if (findingsInput !== undefined) {
+    if (!Array.isArray(findingsInput)) throw invalid("Workspace Intake readiness findings are invalid.");
+    findings = findingsInput.map(value => {
+      const finding = record(value, "readiness finding");
+      if (Object.keys(finding).sort().join(",") !== "code,message,next_action,severity" ||
+          !text(finding.code) || !text(finding.message) || !text(finding.next_action) || finding.severity !== "blocking") {
+        throw invalid("Workspace Intake readiness finding is invalid.");
+      }
+      return { code: String(finding.code), message: String(finding.message), next_action: String(finding.next_action), severity: "blocking" as const };
+    });
+    if (nativeReadiness && (nativeReadiness.outcome === "allowed" ? findings.length !== 0 : findings.length === 0)) {
+      throw invalid("Workspace Intake readiness findings contradict their outcome.");
+    }
+    if (findings.length && !["rejected", "requires-action"].includes(String(result.status))) {
+      throw invalid("Workspace Intake readiness findings contradict the workflow status.");
+    }
+    if (nativeReadiness && result.readiness_findings !== undefined) {
+      const projected = result.readiness_findings;
+      if (!Array.isArray(projected) || projected.length !== findings.length || projected.some((value, index) => {
+        const finding = record(value, "projected readiness finding"), expected = findings![index];
+        return Object.keys(finding).sort().join(",") !== "code,message,next_action,severity" ||
+          finding.code !== expected.code || finding.message !== expected.message || finding.next_action !== expected.next_action || finding.severity !== expected.severity;
+      })) throw invalid("Workspace Intake readiness finding projections conflict.");
+    }
+  }
   return {
+    ...(findings === undefined ? {} : { readiness_findings: findings }),
     canonical_mutation: result.canonical_mutation,
     failure: failure as WorkspaceIntakeResult["failure"],
     history,

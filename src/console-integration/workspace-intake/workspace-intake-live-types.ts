@@ -154,6 +154,7 @@ export type WorkspaceIntakeReceipt = Readonly<{
 }>;
 
 export type WorkspaceIntakeResult = Readonly<{
+  readiness_findings?: readonly Readonly<{ code: string; message: string; severity: "blocking"; next_action: string }>[];
   canonical_mutation: boolean;
   failure: Readonly<{
     code: string;

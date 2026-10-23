@@ -5,7 +5,7 @@ import { TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack,
   TerasList, TerasModalShell, TerasNoteField, TerasSelectField, TerasSignalItem, TerasTextField } from "@/teras";
 import { WorkspaceIntakeDialog } from "../../console-integration/workspace-intake/presentation/workspace-intake-dialog";
 import { useWorkspaceIntakeLiveRuntime } from "../../console-integration/workspace-intake/live-runtime/use-workspace-intake-live-runtime";
-import { directIntakeTarget, directWorkspaceIntakeCandidate, emptyDirectIntakeDraft,
+import { completedDirectIntakeCandidate, directIntakeTarget, directWorkspaceIntakeCandidate, emptyDirectIntakeDraft,
   type DirectIntakeDraft, type DirectIntakeKind } from "../../console-integration/workspace-intake/workspace-intake-direct-candidate";
 import type { WorkspaceIntakeCandidate } from "../../console-integration/workspace-intake/workspace-intake-live-types";
 import type { WorkspaceRegistrySnapshot } from "../model/workspace-registry-types";
@@ -50,6 +50,7 @@ function DirectIntakeTarget({ target, snapshot, onChangeTarget, onClose }: {
   const inInventory = snapshot.records.some(record => record.kind === target.kind && record.name === target.name);
   const busy = runtime.pending || building;
   const page = runtime.requestPage?.target.kind === target.kind && runtime.requestPage.target.name === target.name ? runtime.requestPage : null;
+  const completed = page?.records.find(entry => entry.status === "succeeded") ?? null;
   useEffect(() => { void runtime.listDirect(target.kind, target.name).catch(() => undefined); }, [target.kind, target.name, runtime.listDirect]);
   function update(field: keyof DirectIntakeDraft, value: string) { if (!busy) setDraft(current => ({ ...current, [field]: value })); }
   async function prepare() {
@@ -60,6 +61,20 @@ function DirectIntakeTarget({ target, snapshot, onChangeTarget, onClose }: {
       if (current.pending_request_count) throw new Error("Reopen the original pending request before another classification.");
       setReview({ candidate: await directWorkspaceIntakeCandidate(target, draft, owners, products) });
     } catch (failure) { setError(failure instanceof Error ? failure.message : "Intake preparation failed."); }
+    finally { setBuilding(false); }
+  }
+  async function reclassify() {
+    if (busy || !page || !completed || page.pending_request_count || inInventory) return;
+    setBuilding(true); setError(null);
+    try {
+      const candidate = completedDirectIntakeCandidate(page, completed.request_id);
+      const current = await runtime.listDirect(target.kind, target.name);
+      if (current.pending_request_count) throw new Error("Reopen the original pending request before another classification.");
+      // The selected completed request is immutable, including when its row
+      // came from an older page. Only fresh pending visibility is reread here;
+      // normal preparation and submission still bind current canonical state.
+      setReview({ candidate });
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "Reclassification unavailable."); }
     finally { setBuilding(false); }
   }
   if (review) return <WorkspaceIntakeDialog candidate={review.candidate} initialRequestId={review.requestId}
@@ -85,6 +100,8 @@ function DirectIntakeTarget({ target, snapshot, onChangeTarget, onClose }: {
           <TerasActionButton emphasis="secondary" disabled={busy} onClick={() => void runtime.listDirect(target.kind, target.name).catch(() => undefined)}>Refresh retained requests</TerasActionButton>
           {page?.next_cursor ? <TerasActionButton emphasis="secondary" disabled={busy}
             onClick={() => void runtime.listDirect(target.kind, target.name, page.next_cursor).catch(() => undefined)}>More retained requests</TerasActionButton> : null}
+          {completed ? <TerasActionButton emphasis="secondary" disabled={busy || Boolean(page?.pending_request_count) || inInventory}
+            onClick={() => void reclassify()}>Reclassify completed candidate</TerasActionButton> : null}
         </TerasActionRow>}>
         {page?.records.length ? <TerasList frame="contained" scrollHeight="short">
           {page.records.map(entry => <TerasSignalItem key={entry.request_id} label={entry.request_id}
@@ -95,6 +112,8 @@ function DirectIntakeTarget({ target, snapshot, onChangeTarget, onClose }: {
                   requested_record: entry.candidate.requested_record, evidence_refs: entry.candidate.evidence_refs } }) })} />)}
         </TerasList> : null}
       </TerasContentTray>
+      {completed ? <TerasContentTray kicker="Completed candidate origin"
+        description={`Reclassification reuses ${completed.request_id} with its original source and recorded metadata, then opens a fresh explicit Decision / Review. Changing new-entrant fields is a different candidate, not a change of classification.`} /> : null}
       {inInventory ? <TerasContentTray kicker="Already in Inventory" description="Use Registry to inspect this record. The retained Intake history remains readable; admission is not repeated." /> : null}
       {target.kind === "product" ? <>
         {ownerField("Platform owner", "platformOwner")}
