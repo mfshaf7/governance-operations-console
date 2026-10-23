@@ -94,6 +94,7 @@ export function PrototypeHistoryModal({
   const evidencePanelTone = preparation ? "info" : prototypeHistoryRecordEvidenceTone(record);
   const evidenceRowsTone = preparation ? "info" : prototypeHistoryEvidenceRowsTone(evidenceRows);
   const selectedResult = inspectedResult;
+  const pendingResult = closure?.result;
 
   async function inspectReceipt(requestId: string) {
     setReceiptError(null);
@@ -284,6 +285,13 @@ export function PrototypeHistoryModal({
                 ] : []),
               ]} topOffset="compact" shape="list" columns={1} /> : null}
             {receiptError ? <TerasEmptyState>{receiptError}</TerasEmptyState> : null}
+            {pendingResult && !["succeeded", "denied", "failed"].includes(pendingResult.status) ? (
+              <TerasActionRow>
+                <TerasActionButton emphasis="secondary" onClick={() => onOpenClosure(record!)}>
+                  Resume Closure
+                </TerasActionButton>
+              </TerasActionRow>
+            ) : null}
           </TerasPanel>
         </TerasZone>
       </TerasZoneLayout>

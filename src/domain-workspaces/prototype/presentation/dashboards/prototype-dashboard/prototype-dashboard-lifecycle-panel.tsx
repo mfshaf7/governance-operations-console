@@ -10,11 +10,13 @@ import type { PrototypeClosureLifecycle } from "../../../live-runtime/prototype-
 
 export function PrototypeDashboardLifecyclePanel({
   lifecycle,
+  pendingClosure = false,
   onOpenCloseout,
   onOpenHistory,
   record,
 }: {
   lifecycle: PrototypeClosureLifecycle;
+  pendingClosure?: boolean;
   onOpenCloseout: (record: PrototypeRecord) => void;
   onOpenHistory: (record: PrototypeRecord) => void;
   record: PrototypeRecord;
@@ -37,6 +39,11 @@ export function PrototypeDashboardLifecyclePanel({
           title="Review archive"
         />
         <TerasActionRow spacing="normal">
+          {pendingClosure ? (
+            <TerasActionButton onClick={() => onOpenCloseout(record)} emphasis="primary">
+              Resume Closure
+            </TerasActionButton>
+          ) : null}
           <TerasActionButton
             onClick={() => onOpenHistory(record)}
 
@@ -68,7 +75,7 @@ export function PrototypeDashboardLifecyclePanel({
 
           emphasis="secondary"
         >
-          Open Closure
+          {pendingClosure ? "Resume Closure" : "Open Closure"}
         </TerasActionButton>
       </TerasActionRow>
     </TerasPanel>

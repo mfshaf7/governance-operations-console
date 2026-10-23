@@ -308,6 +308,7 @@ export function PrototypeDashboardModal({
 
               <PrototypeDashboardLifecyclePanel
                 lifecycle={displayRecord.lifecycle}
+                pendingClosure={Boolean(closure?.result && !["succeeded", "denied", "failed"].includes(closure.result.status))}
                 onOpenCloseout={onOpenCloseout}
                 onOpenHistory={onOpenHistory}
                 record={record}
