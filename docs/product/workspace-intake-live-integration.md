@@ -61,6 +61,24 @@ An already registered target can inspect its original Intake history without
 repeating admission. Registry loading, unavailable, stale or fixture modes
 cannot open this mutation path.
 
+To change a completed Proposed classification to Admitted after its required
+reviews, select `Reclassify completed candidate` in that target's journal.
+The source request is shown alongside the control. It reuses the selected
+completed direct candidate's original source identity and recorded metadata,
+checks current pending visibility, then opens a fresh Decision / Review with
+current canonical preparation. It never advances or changes the completed
+request. Pending requests anywhere in the journal and existing active Inventory
+block this action. Rows from earlier pages retain their selected identity.
+Use this route for reclassification; adding context in the new-entrant form
+constructs a different origin and cannot replace an existing entrant's source.
+
+Owner readiness findings appear with the result, including the exact code,
+message and next action. Rejected requests preserve their original identity;
+a correction is a separately reviewed request. Findings are bounded by the
+existing response budget, validated as operator-safe diagnostic fields, and
+remain separate from canonical success/receipt evidence. Native findings must
+bind this request and readiness outcome; raw readiness receipts are not exposed.
+
 1. A successful Delivery closeout that emits a Workspace entrant exposes
    `Classify Candidate`.
 2. The operator chooses `admitted`, `proposed`, or `out-of-scope`.

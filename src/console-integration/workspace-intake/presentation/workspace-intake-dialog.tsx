@@ -324,6 +324,15 @@ function WorkspaceIntakeSupport({
         />
       </TerasWizardPanel>
       {result ? (
+        <>
+        {result.readiness_findings?.length ? <TerasWizardPanel fit="content" kicker="Owner readiness findings"
+          title="Classification requires correction" description="Owner findings for this exact request. Follow the recorded next action before preparing another decision."
+          tone="danger" treatment="rail">
+          <TerasList frame="contained">
+            {result.readiness_findings.map((finding, index) => <TerasSignalItem key={`${finding.code}:${index}`}
+              label={finding.code} title={finding.message} detail={finding.next_action.replaceAll("-", " ")} tone="danger" />)}
+          </TerasList>
+        </TerasWizardPanel> : null}
         <TerasWizardPanel
           actions={
             result.next_action === "continue" ||
@@ -369,6 +378,7 @@ function WorkspaceIntakeSupport({
             />
           ) : null}
         </TerasWizardPanel>
+        </>
       ) : null}
       {error ? (
         <TerasWizardPanel

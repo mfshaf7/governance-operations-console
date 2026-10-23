@@ -1,4 +1,4 @@
-import type { WorkspaceIntakeCandidate, WorkspaceIntakeRequestedRecord } from "./workspace-intake-live-types.ts";
+import type { WorkspaceIntakeCandidate, WorkspaceIntakeRequestedRecord, WorkspaceIntakeRequestPage } from "./workspace-intake-live-types.ts";
 
 export type DirectIntakeKind = "product" | "component";
 export type DirectIntakeDraft = Readonly<{
@@ -17,6 +17,19 @@ export function directIntakeTarget(kind: string, name: string) {
     throw new Error("Select product or component and enter its exact canonical key.");
   }
   return { kind: kind as DirectIntakeKind, name };
+}
+
+export function completedDirectIntakeCandidate(page: WorkspaceIntakeRequestPage, requestId: string): WorkspaceIntakeCandidate {
+  const entry = page.records.find(record => record.request_id === requestId);
+  const source = entry?.candidate;
+  if (page.source_class !== "direct" || page.custody_request_id !== null || !["product", "component"].includes(page.target.kind) ||
+      page.pending_request_count !== 0 || !entry || entry.status !== "succeeded" ||
+      !source || source.source.class !== "direct" || source.target.kind !== page.target.kind ||
+      source.target.name !== page.target.name || source.target.record_id !== page.target.record_id) {
+    throw new Error("Select a completed direct candidate after reading its exact journal with no pending requests.");
+  }
+  return { label: source.target.name, target: { kind: source.target.kind, name: source.target.name },
+    source: { ...source.source }, requested_record: structuredClone(source.requested_record), evidence_refs: [...source.evidence_refs] };
 }
 export async function directWorkspaceIntakeCandidate(target: { kind: DirectIntakeKind; name: string },
   draft: DirectIntakeDraft, activeOwners: readonly string[], activeProducts: readonly string[]): Promise<WorkspaceIntakeCandidate> {
