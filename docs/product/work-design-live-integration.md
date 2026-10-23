@@ -58,6 +58,13 @@ attribution are assembled server-side.
 8. Advice or apply rejection refreshes source truth. A successful apply remains
    successful if only its follow-up projection refresh is temporarily
    unavailable because the returned receipt already proves the mutation.
+9. Projection reads retain a 12-second deadline. Synchronous advice and apply
+   commands have a bounded 180-second deadline; the existing advice provider
+   permits 60 seconds and one retry, so a 12-second browser-server read budget
+   cannot represent its completion. This does not change model limits or
+   introduce automatic retries. Each explicit advice action has its own
+   invocation identity, since OOS binds a fresh request time into the CGG
+   projection. Accepted canonical apply retains its original stable identity.
 
 ## Current Boundary
 

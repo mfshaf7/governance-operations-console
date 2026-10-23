@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import {
   consoleOosModeSelected,
@@ -31,6 +31,7 @@ import type {
 } from "../live-runtime/work-design-live-types.ts";
 
 const workDesignOosTimeoutMs = 12_000;
+const workDesignCommandTimeoutMs = 180_000;
 
 type WorkDesignOosConfig = ConsoleOosOperatorConfiguration;
 
@@ -211,7 +212,11 @@ async function requestWorkDesignAdvice(
 ) {
   const config = resolveWorkDesignOosConfig(env);
   const identity = workDesignLiveIdentity(packageRef);
-  const requestIdentity = canonicalDigest({ packageRef, ...input }).slice(7, 47);
+  // Each explicit advice action is a new non-mutating invocation. OOS gives
+  // its CGG projection a new requested_at; reusing an old invocation id would
+  // correctly conflict with CGG's immutable replay binding. Apply identities
+  // remain stable and are derived from the operator's accepted draft above.
+  const requestIdentity = canonicalDigest({ packageRef, ...input, invocation: randomUUID() }).slice(7, 47);
   const request = {
     schema_version: 1,
     request_id: `console-work-design-request:${requestIdentity}`,
@@ -300,7 +305,8 @@ async function workDesignOosRequest(
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
       },
-      signal: AbortSignal.timeout(workDesignOosTimeoutMs),
+      signal: AbortSignal.timeout(init.method === "POST"
+        ? workDesignCommandTimeoutMs : workDesignOosTimeoutMs),
     });
   } catch (error) {
     throw new WorkDesignOosError(

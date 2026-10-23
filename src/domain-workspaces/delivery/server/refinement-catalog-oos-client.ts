@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
   assertCatalogRepositoryReadiness,
   assertCatalogOosMutationResult,
@@ -71,6 +73,7 @@ export async function requestRefinementAdvice(
   const packet = projection.packet;
   const identity = deliveryLiveIdentity(packageRef);
   const requestId = stableDigestId("console-refinement-assist", {
+    invocation: randomUUID(),
     fieldKey: command.fieldKey,
     packageRef,
     packetRevision: packet.packet_revision,
@@ -115,6 +118,7 @@ export async function requestRefinementAdvice(
       `/v1/delivery-refinement/${encodeURIComponent(packageRef)}/assist`,
       { body: JSON.stringify(request), method: "POST" },
       options.fetchImpl,
+      180_000,
     ),
   );
   if (

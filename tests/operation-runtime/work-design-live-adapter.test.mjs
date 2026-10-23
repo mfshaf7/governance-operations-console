@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import http from "node:http";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -29,7 +30,9 @@ const env = {
   OOS_CALLER_SECRET: "test-only-server-secret",
 };
 
-test("case:work-design-projection-positive reads canonical version-zero source and durable history", async () => {
+test("case:work-design-projection-positive reads canonical version-zero source and durable history", async (t) => {
+  const deadlines = [];
+  t.mock.method(AbortSignal, "timeout", (ms) => { deadlines.push(ms); return new AbortController().signal; });
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ init, url: String(url) });
@@ -55,9 +58,12 @@ test("case:work-design-projection-positive reads canonical version-zero source a
     "http://127.0.0.1:8080/v1/delivery-work-design/delivery-package%3A908/projection?source_ref=openproject%3A%2F%2Fwork_packages%2F908",
   );
   assert.equal(calls[0].init.headers["x-oos-caller-secret"], "test-only-server-secret");
+  assert.deepEqual(deadlines, [12_000]);
 });
 
-test("case:work-design-assist-positive binds context and tree advice to canonical source", async () => {
+test("case:work-design-assist-positive binds context and tree advice to canonical source", async (t) => {
+  const deadlines = [];
+  t.mock.method(AbortSignal, "timeout", (ms) => { deadlines.push(ms); return new AbortController().signal; });
   const calls = [];
   const fetchImpl = async (url, init) => {
     const body = JSON.parse(String(init.body));
@@ -98,9 +104,43 @@ test("case:work-design-assist-positive binds context and tree advice to canonica
     calls[1].body.tree_draft.tree_digest,
     canonicalDigest(calls[1].body.tree_draft.tree),
   );
+  await requestWorkDesignContextAdvice("delivery-package:908", {
+    contextDecision: "proceed", contextNote: "Shape the accepted package before Refinement.",
+    operatorPrompt: "Check the context boundary.", sourceRevision: "version-17",
+  }, { env, fetchImpl });
+  assert.notEqual(calls[2].body.request_id, calls[0].body.request_id,
+    "a new explicit non-mutating invocation must not collide with an earlier CGG timestamp binding");
+  assert.notEqual(calls[2].body.correlation_id, calls[0].body.correlation_id);
+  assert.deepEqual(calls[2].body.context_draft, calls[0].body.context_draft);
+  assert.deepEqual(deadlines, [180_000, 180_000, 180_000]);
 });
 
-test("case:work-design-apply-positive preserves stable acceptance, exact draft, and durable receipt", async () => {
+test("Work Design advice survives the short-read boundary over real delayed HTTP", async (t) => {
+  // Scale real timeout clocks by100: the old120ms budget aborts this250ms
+  // response; the unchanged provider-compatible command budget allows1800ms.
+  const nativeTimeout = AbortSignal.timeout.bind(AbortSignal);
+  t.mock.method(AbortSignal, "timeout", (ms) => nativeTimeout(ms / 100));
+  const server = http.createServer(async (request, response) => {
+    let raw = "";
+    for await (const chunk of request) raw += chunk;
+    const body = JSON.parse(raw);
+    setTimeout(() => {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify(assistResult(body)));
+    }, 250);
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise((resolve) => { server.closeAllConnections(); server.close(resolve); }));
+  const result = await requestWorkDesignContextAdvice("delivery-package:908", {
+    contextDecision: "proceed", contextNote: "Existing accepted context.",
+    operatorPrompt: "Inspect metadata, not app source.", sourceRevision: "version-17",
+  }, { env: { ...env, OOS_BASE_URL: `http://127.0.0.1:${server.address().port}` } });
+  assert.equal(result.task_kind, "context_advice");
+});
+
+test("case:work-design-apply-positive preserves stable acceptance, exact draft, and durable receipt", async (t) => {
+  const deadlines = [];
+  t.mock.method(AbortSignal, "timeout", (ms) => { deadlines.push(ms); return new AbortController().signal; });
   const calls = [];
   const command = {
     acceptanceId: "work-design-acceptance:123e4567-e89b-12d3-a456-426614174000",
@@ -135,6 +175,7 @@ test("case:work-design-apply-positive preserves stable acceptance, exact draft, 
   assert.deepEqual(calls[0], calls[1]);
   assert.equal(calls[0].acceptance.accepted_by, "operator:console-owner");
   assert.equal(calls[0].idempotency_key, calls[1].idempotency_key);
+  assert.deepEqual(deadlines, [180_000, 180_000]);
   assert.equal(
     calls[0].accepted_draft.draft_digest,
     canonicalDigest(calls[0].accepted_draft.tree),
