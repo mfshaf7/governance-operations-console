@@ -8,6 +8,9 @@ import {
   SendHorizonal,
   Square,
 } from "lucide-react";
+import { createPortal } from "react-dom";
+import { useAgentConsoleSession } from "../state/agent-console-session-provider";
+import { useAgentDockPortal } from "../state/use-agent-dock-portal";
 import type { AgentContextCandidate } from "../../console-shell/context/agent-context-candidate";
 import type { AgentInteractionMode } from "../model/agent-context-policy";
 import type { AgentProviderStatus } from "../model/agent-provider-status";
@@ -16,7 +19,8 @@ import { useAgentConsoleController } from "../state/use-agent-console-controller
 
 export function ModelInteractionDock({
   className = "",
-  contextCandidate,
+  contextCandidate: focusedContextCandidate,
+  workspaceContextCandidate = null,
   contextFallbackLabel = "No active context",
   listenForOpenEvent = true,
   placement,
@@ -26,17 +30,22 @@ export function ModelInteractionDock({
   className?: string;
   contextFallbackLabel?: string;
   contextCandidate: AgentContextCandidate | null;
+  workspaceContextCandidate?: AgentContextCandidate | null;
   listenForOpenEvent?: boolean;
   placement: AgentConsolePlacement;
   providerStatus: AgentProviderStatus | null;
   title?: string;
 }) {
+  const { agentContextMode: selectedMode } = useAgentConsoleSession();
+  const contextCandidate = selectedMode === "workspace" ? workspaceContextCandidate : focusedContextCandidate;
+  const portal = useAgentDockPortal(placement === "floating");
   const {
     agentBusy,
     agentContextMode,
     agentPrompt,
     agentTranscript,
     agentTranscriptRef,
+    contextModeChanging,
     contextBarTone,
     contextPill,
     contextPillTone,
@@ -65,15 +74,16 @@ export function ModelInteractionDock({
     useCompactFloatingControls,
   } = useAgentConsoleController({
     contextCandidate,
+    workspaceContextCandidate,
     contextFallbackLabel,
     listenForOpenEvent,
     placement,
     providerStatus,
   });
   const modeOptions: AgentInteractionMode[] = ["focused", "workspace"];
-  const workspaceModeAvailable = contextCandidate?.scope === "workspace";
+  const workspaceModeAvailable = workspaceContextCandidate?.scope === "workspace" && workspaceContextCandidate.sourceMode !== "unavailable";
 
-  return (
+  const presentation = (
     <>
       {modelDockExpanded && !floatingDockConstrainedByModal ? (
         <button
@@ -91,6 +101,13 @@ export function ModelInteractionDock({
         } ${className}`.trim()}
         role={modelDockExpanded && !floatingDockConstrainedByModal ? "dialog" : "region"}
         style={dockStyle}
+        hidden={portal.blocked}
+        onKeyDownCapture={(event) => {
+          if (portal.host && modelDockExpanded && event.key === "Escape") {
+            event.preventDefault(); event.stopPropagation(); setModelDockExpanded(false);
+            event.currentTarget.querySelector<HTMLButtonElement>(".model-dock-expand")?.focus();
+          }
+        }}
         data-agent-console-dock
       >
         <div
@@ -122,7 +139,7 @@ export function ModelInteractionDock({
                   aria-label="Floating agent context mode"
                   aria-expanded={floatingModeMenuOpen}
                   className="model-dock-mode-select"
-                  disabled={agentBusy}
+                  disabled={agentBusy || contextModeChanging}
                   type="button"
                   onClick={() => setFloatingModeMenuOpen((current) => !current)}
                 >
@@ -139,7 +156,7 @@ export function ModelInteractionDock({
                           key={mode}
                           className="model-dock-mode-menu-item"
                           data-active={agentContextMode === mode ? "true" : "false"}
-                          disabled={agentBusy || (mode === "workspace" && !workspaceModeAvailable)}
+                          disabled={agentBusy || contextModeChanging || (mode === "workspace" && !workspaceModeAvailable)}
                           title={
                             mode === "workspace"
                               ? "Workspace mode requires a current workspace context candidate."
@@ -163,7 +180,7 @@ export function ModelInteractionDock({
                     aria-pressed={agentContextMode === mode}
                     className="model-dock-mode-compact-button"
                     data-active={agentContextMode === mode ? "true" : "false"}
-                    disabled={agentBusy || (mode === "workspace" && !workspaceModeAvailable)}
+                    disabled={agentBusy || contextModeChanging || (mode === "workspace" && !workspaceModeAvailable)}
                     title={
                       mode === "workspace"
                         ? "Workspace mode requires a current workspace context candidate."
@@ -265,7 +282,7 @@ export function ModelInteractionDock({
               <textarea
                 aria-label="Agent terminal command input"
                 className="model-dock-input terminal-input mono"
-                disabled={agentBusy}
+                disabled={agentBusy || contextModeChanging}
                 placeholder='ask "what should I inspect next?"'
                 rows={2}
                 value={agentPrompt}
@@ -278,9 +295,9 @@ export function ModelInteractionDock({
                 Enter runs / Shift+Enter adds a line
               </span>
               <button
-                aria-label={agentBusy ? "Cancel agent request" : "Run agent command"}
+                aria-label={contextModeChanging ? "Changing agent mode" : agentBusy ? "Cancel agent request" : "Run agent command"}
                 className="model-dock-send terminal-run-button rounded-full px-3 py-1.5 text-xs"
-                disabled={!agentBusy && !agentPrompt.trim()}
+                disabled={contextModeChanging || (!agentBusy && !agentPrompt.trim())}
                 type={agentBusy ? "button" : "submit"}
                 onClick={agentBusy ? handleAgentCancel : undefined}
               >
@@ -289,7 +306,7 @@ export function ModelInteractionDock({
                 ) : (
                   <SendHorizonal className="h-3.5 w-3.5" />
                 )}
-                {agentBusy ? "cancel" : "run"}
+                {contextModeChanging ? "switching" : agentBusy ? "cancel" : "run"}
               </button>
             </div>
           </form>
@@ -297,4 +314,5 @@ export function ModelInteractionDock({
       </div>
     </>
   );
+  return portal.host ? createPortal(presentation, portal.host) : presentation;
 }

@@ -24,6 +24,7 @@ import { AgentContextPanel } from "./presentation/agent-context-panel";
 import { ConsoleActivityPanel } from "./presentation/console-activity-panel";
 import { ConsoleCommandBar } from "./presentation/console-command-bar";
 import { ConsoleFocusRouter } from "./presentation/console-focus-router";
+import { useAgentWorkspaceContext } from "./context/use-agent-workspace-context";
 import { useConsoleShellController } from "./use-console-shell-controller";
 
 const embeddedAgentRuntimeIdentity = {
@@ -60,6 +61,8 @@ function GovernanceConsoleContent({
   providerStatus: AgentProviderStatus | null;
 }) {
   const controller = useConsoleShellController();
+  const liveAgentContext = useAgentWorkspaceContext(controller.activeConsoleWorkspaceId);
+  const focusedContext = liveAgentContext.page ?? controller.activeAgentContextCandidate;
 
   return (
     <ConsoleShellFrame
@@ -171,13 +174,15 @@ function GovernanceConsoleContent({
           selectedResourceMetric={controller.selectedResourceMetric}
         />
         <EmbeddedAgentConsole
-          contextCandidate={controller.activeAgentContextCandidate}
+          contextCandidate={focusedContext}
+          workspaceContextCandidate={liveAgentContext.workspace}
           providerStatus={providerStatus}
         />
         <ConsoleActivityPanel snapshot={controller.consoleActivity} />
       </div>
       <DockingAgent
-        contextCandidate={controller.activeAgentContextCandidate}
+        contextCandidate={focusedContext}
+          workspaceContextCandidate={liveAgentContext.workspace}
         providerStatus={providerStatus}
       />
       <AgentRuntimeDock providerStatus={providerStatus} />
@@ -214,9 +219,11 @@ function GovernanceConsoleContent({
 
 function EmbeddedAgentConsole({
   contextCandidate,
+  workspaceContextCandidate,
   providerStatus,
 }: {
   contextCandidate: AgentContextCandidate | null;
+  workspaceContextCandidate: AgentContextCandidate | null;
   providerStatus: AgentProviderStatus | null;
 }) {
   return (
@@ -227,6 +234,7 @@ function EmbeddedAgentConsole({
     >
       <EmbeddedAgentConsoleContent
         contextCandidate={contextCandidate}
+        workspaceContextCandidate={workspaceContextCandidate}
         providerStatus={providerStatus}
       />
     </AgentConsoleSessionProvider>
@@ -235,9 +243,11 @@ function EmbeddedAgentConsole({
 
 function EmbeddedAgentConsoleContent({
   contextCandidate,
+  workspaceContextCandidate,
   providerStatus,
 }: {
   contextCandidate: AgentContextCandidate | null;
+  workspaceContextCandidate: AgentContextCandidate | null;
   providerStatus: AgentProviderStatus | null;
 }) {
   const { agentContextMode } = useAgentConsoleSession();
@@ -248,13 +258,14 @@ function EmbeddedAgentConsoleContent({
         className="model-dock-large lg:col-span-2"
         contextFallbackLabel="Page context unavailable"
         contextCandidate={contextCandidate}
+        workspaceContextCandidate={workspaceContextCandidate}
         placement="embedded"
         providerStatus={providerStatus}
         title="Agent Console"
       />
       <AgentContextPanel
         mode={agentContextMode}
-        candidate={contextCandidate}
+        candidate={agentContextMode === "workspace" ? workspaceContextCandidate : contextCandidate}
       />
     </>
   );
@@ -262,9 +273,11 @@ function EmbeddedAgentConsoleContent({
 
 function DockingAgent({
   contextCandidate,
+  workspaceContextCandidate,
   providerStatus,
 }: {
   contextCandidate: AgentContextCandidate | null;
+  workspaceContextCandidate: AgentContextCandidate | null;
   providerStatus: AgentProviderStatus | null;
 }) {
   return (
@@ -277,6 +290,7 @@ function DockingAgent({
         className="model-dock-floating"
         contextFallbackLabel="Floating context unavailable"
         contextCandidate={contextCandidate}
+        workspaceContextCandidate={workspaceContextCandidate}
         listenForOpenEvent={false}
         placement="floating"
         providerStatus={providerStatus}

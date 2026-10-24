@@ -11,6 +11,7 @@ type TerasModalShellAttributes = Omit<HTMLAttributes<HTMLElement>, "children"> &
   Record<`data-${string}`, string | number | boolean | undefined>;
 
 export function TerasModalShell({
+  agentHost = false,
   bodyLayout,
   children,
   description,
@@ -23,6 +24,7 @@ export function TerasModalShell({
   title,
   width,
 }: {
+  agentHost?: boolean;
   bodyLayout: "fill" | "scroll";
   children: ReactNode;
   description?: ReactNode;
@@ -81,6 +83,7 @@ export function TerasModalShell({
           {footer ? <footer className={styles.modalFooter}>{footer}</footer> : null}
         </section>
       </div>
+      {agentHost ? <div data-agent-console-host /> : null}
     </TerasModalFoundation>
   );
 }

@@ -122,6 +122,7 @@ export function WorkspaceRegistryWorkspace({
   return (
     <>
       <TerasModalShell
+        agentHost
         bodyLayout="fill"
         description="Inspect canonical workspace inventory and promote approved entrants through the owning workflow service."
         height="fill"
