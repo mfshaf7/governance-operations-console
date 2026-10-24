@@ -46,8 +46,10 @@ implementation.
   revoked.
 - Model Operations is a completed current-shape Compact Control with a stable
   profile dashboard, direct Workbench entry, normalized ownership tree, and
-  focused domain guards. Its backend request path remains unavailable, and the
-  surface is not baseline-approved.
+  focused domain guards. Purpose-profile requests use their existing live OOS
+  integration. Epic 1313 stages Models & routing in the same Compact Control
+  with existing Teras primitives; exact-source Security acceptance, commissioning
+  and operating proof remain required for the extension.
 - Orchestration is a completed current-shape fullscreen workspace with Home,
   Definitions, and Runs. Configured live mode now projects strict OOS
   definition and run truth and routes only currently available controls;

@@ -403,3 +403,19 @@ materially changes:
 - mutable backend actions or privileged host control
 - AI-enabled action paths
 - runtime exposure, ingress, deployment, or release behavior
+
+
+## Configurable runtime model settings
+
+Epic 1313 stages an operator configuration adapter within Model Operations.
+Verified sessions guard reads and writes, including private native device
+challenges. Browser inputs contain bounded request intent and revision controls;
+caller identity, roles, upstream addresses and credentials come from the server.
+The server checks exact owner command/actor/receipt digests and accepted
+historical configuration readback. Unknown completion resumes the original
+request and cannot trigger a replacement model invocation. Only a non-authoritative
+request reference may be retained for page reload; provider tokens, challenges
+and workflow outcomes are not stored as browser authority. Platform owns model
+verification, backend permissions, credential custody and invocation. The
+Console extension remains uncommissioned until the accepted actual-source
+Security and Platform sequence completes.

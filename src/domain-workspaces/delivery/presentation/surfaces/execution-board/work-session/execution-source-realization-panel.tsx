@@ -1,3 +1,4 @@
+import { effectiveModelLabel } from "../../../../../../console-integration/governed-ai/model-selection.ts";
 import { useState } from "react";
 import { TerasActionButton, TerasContentTray, TerasFieldStack, TerasList, TerasMetadataList, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSignalItem } from "@/teras";
 import { useDeliverySourceRealizationLiveRuntime } from "../../../../live-runtime/use-delivery-source-realization-live-runtime.ts";
@@ -26,6 +27,7 @@ export function ExecutionSourceRealizationPanel({ sessionId, sessionRevision, so
         { label: "Authority", value: current?.next_action.authority ?? "operator-orchestration-service" },
         { label: "Attempt", value: current?.attempt?.request_id ?? "Not started" },
         { label: "Model profile", value: current?.attempt?.model?.profile_id ?? "Awaiting commissioned owner invocation" },
+        ...(current?.attempt?.model?.effective_selection ? [{ label: "Actual model", value: effectiveModelLabel(current.attempt.model.effective_selection) }] : []),
         { label: "Context packet", value: current?.attempt?.context?.packet_ref ?? "Not yet admitted" },
         ...(current?.attempt?.failure ? [{ label: "Owner failure", value: current.attempt.failure.code }] : []),
       ]} />

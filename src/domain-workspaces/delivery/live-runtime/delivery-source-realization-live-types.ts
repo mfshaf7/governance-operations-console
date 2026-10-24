@@ -1,3 +1,4 @@
+import type { EffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
 export type DeliverySourceRealizationAction = "start" | "continue" | "cancel" | "recover";
 export type DeliverySourceRealizationProjection = {
   schema_version: 1;
@@ -11,7 +12,7 @@ export type DeliverySourceRealizationProjection = {
     state: string;
     retry_of: string | null;
     objective_digest: string;
-    model: { profile_id: string } | null;
+    model: { profile_id: string; effective_selection?: EffectiveModelSelection } | null;
     context: { packet_ref: string } | null;
     change_set: null | {
       digest: string;

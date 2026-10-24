@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { assertEffectiveModelSelection, type EffectiveModelSelection } from "../../console-integration/governed-ai/model-selection.ts";
 
 import {
   ConsoleRuntimeConfigurationError,
@@ -37,6 +38,7 @@ type Options = Readonly<{
 }>;
 
 export type GovernedAgentInvocationResult = Readonly<{
+  effectiveSelection?: EffectiveModelSelection;
   auditRef: string;
   contextArtifactDigest: string;
   invocationId: string;
@@ -146,6 +148,7 @@ export async function invokeGovernedAgent(
   }
   return {
     auditRef: model.audit_ref,
+    ...(Object.hasOwn(model, "effective_selection") ? { effectiveSelection: assertEffectiveModelSelection(model.effective_selection, governedAgentProfileId + "/assistant_response") } : {}),
     contextArtifactDigest: context.artifact_digest,
     invocationId: ids.invocationId,
     modelProfileId: model.profile_id,

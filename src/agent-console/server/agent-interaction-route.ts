@@ -1,3 +1,4 @@
+import { effectiveModelLabel } from "../../console-integration/governed-ai/model-selection.ts";
 import { NextRequest, NextResponse } from "next/server";
 
 import { authorizeConsoleMutation } from "../../console-integration/identity/server/console-session-authorization.ts";
@@ -70,6 +71,10 @@ async function submitGovernedAgentRequest(request: NextRequest) {
         "X-Agent-Context-Artifact": result.contextArtifactDigest,
         "X-Agent-Invocation": result.invocationId,
         "X-Agent-Model": result.modelProfileId,
+        ...(result.effectiveSelection ? {
+          "X-Agent-Effective-Model": encodeURIComponent(effectiveModelLabel(result.effectiveSelection)),
+          "X-Agent-Selection-Ref": result.effectiveSelection.selection_ref,
+        } : {}),
         "X-Agent-Provider": governedAgentProvider,
         "X-Agent-Receipt": result.receiptRef,
         "X-Agent-Receipt-Digest": result.receiptDigest,

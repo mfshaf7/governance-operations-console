@@ -1,3 +1,4 @@
+import type { EffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
 export type PrototypeSourceAction = "session" | "generate" | "accept" | "recover" | "cancel-attempt" | "publish" | "review" | "merge" | "close";
 import type { PrototypeDeliverySourceCustody } from "../domain/prototype-delivery.ts";
 
@@ -47,6 +48,7 @@ export type PrototypeSourceProjection = PrototypeSourceSummary & {
       request: PrototypeGenerationRequest; request_id: string; execution_id: string;
       retry_of: string | null; state: string; objective_digest: string;
       context_packet_ref: string | null; model_profile_id: string | null; failure: string | null;
+      effective_model_selection?: EffectiveModelSelection;
       owner_preparation: null | { plan_digest: string; request_digest: string };
       change_set: null | { digest: string; commit_message: string; operations: PrototypeSourceOperation[] };
       source_receipt: null | { head_commit: string; receipt_digest: string };

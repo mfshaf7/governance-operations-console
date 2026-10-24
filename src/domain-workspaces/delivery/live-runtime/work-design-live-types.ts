@@ -1,3 +1,4 @@
+import type { EffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
 import type { WorkDesignContextDecision, WorkDesignNode } from "../work-model/work-design/work-design-types.ts";
 
 export type WorkDesignLiveMode = "disconnected-preview" | "live";
@@ -55,6 +56,7 @@ export type WorkDesignOosAssistResult = {
   evidence: {
     cgg_packet_ref: string;
     gateway_audit_ref: string;
+    effective_selection?: EffectiveModelSelection;
     generated_at: string;
     model_profile_id: "delivery-work-design-advisor-v1";
     output_schema_ref: string;

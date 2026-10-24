@@ -1,3 +1,4 @@
+import { assertEffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
 import type { DeliverySourceRealizationInput, DeliverySourceRealizationProjection } from "./delivery-source-realization-live-types.ts";
 
 const digestPattern = /^sha256:[0-9a-f]{64}$/;
@@ -43,7 +44,9 @@ export function assertDeliverySourceRealizationProjection(value: unknown): Deliv
     replayed: boolean(item.replayed),
     attempt: attempt ? {
       request_id: stable(attempt.request_id), state: text(attempt.state), retry_of: nullableStable(attempt.retry_of), objective_digest: digest(attempt.objective_digest),
-      model: model ? { profile_id: text(model.profile_id) } : null,
+      model: model ? { profile_id: text(model.profile_id),
+        ...(Object.hasOwn(model, "effective_selection") ? { effective_selection: assertEffectiveModelSelection(model.effective_selection, text(model.profile_id) + "/source_realization") } : {}),
+      } : null,
       context: context ? { packet_ref: text(context.packet_ref, 1024) } : null,
       change_set: change ? { digest: digest(change.digest), commit_message: text(change.commit_message, 120), operations } : null,
       source_receipt: receipt ? { receipt_id: stable(receipt.receipt_id), receipt_digest: digest(receipt.receipt_digest), head_commit: commit(receipt.head_commit), change_set_digest: digest(receipt.change_set_digest) } : null,

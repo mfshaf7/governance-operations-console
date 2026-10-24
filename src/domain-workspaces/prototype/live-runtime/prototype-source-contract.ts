@@ -1,3 +1,4 @@
+import { assertEffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
 import type { PrototypeGenerationRequest, PrototypeOwnerPreparation, PrototypeSourceCommand, PrototypeSourceDraft, PrototypeSourceIntent, PrototypeSourceProjection, PrototypeSourceRequest, PrototypeSourceSummary } from "./prototype-source-types.ts";
 import { assertPrototypeDeliveryPreparation } from "./prototype-delivery-preparation-contract.ts";
 
@@ -113,6 +114,9 @@ export function projectPrototypeSource(value: unknown): PrototypeSourceProjectio
     realization: realization ? { session_id: sourceId(realization.session_id), revision: sourceTimestamp(realization.revision), state: String(realization.state), attempt: attempt ? {
       request: generation(attempt.request), request_id: sourceId(attempt.request_id), execution_id: sourceId(attempt.execution_id), retry_of: nullable(attempt.retry_of, sourceId), state: sourceText(attempt.state), objective_digest: sourceDigest(attempt.objective_digest),
       context_packet_ref: attempt.context ? sourceText(sourceObject(attempt.context).packet_ref, 1024) : null, model_profile_id: attempt.model ? sourceId(sourceObject(attempt.model).profile_id) : null, failure: attempt.failure ? sourceId(sourceObject(attempt.failure).code) : null,
+      ...(attempt.model && Object.hasOwn(sourceObject(attempt.model), "effective_selection") ? {
+        effective_model_selection: assertEffectiveModelSelection(sourceObject(attempt.model).effective_selection, sourceId(sourceObject(attempt.model).profile_id) + "/prototype_source_authoring"),
+      } : {}),
       owner_preparation: ownerPreparationEvidence(attempt.owner_preparation),
       change_set: change ? { digest: sourceDigest(change.digest), commit_message: sourceText(change.commit_message, 120), operations: array(change.operations, 64).map(value => { const row = sourceObject(value); if (!["create", "replace", "delete"].includes(String(row.action))) invalid(); return { action: row.action as "create" | "replace" | "delete", path: path(row.path), expected_digest: nullable(row.expected_digest, sourceDigest), content_digest: nullable(row.content_digest, sourceDigest) }; }) } : null,
       source_receipt: attempt.source_receipt ? { head_commit: sourceCommit(sourceObject(attempt.source_receipt).head_commit), receipt_digest: sourceDigest(sourceObject(attempt.source_receipt).receipt_digest) } : null,

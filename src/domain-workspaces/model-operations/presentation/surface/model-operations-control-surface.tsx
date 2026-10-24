@@ -1,10 +1,13 @@
 "use client";
 
 import { ScanSearch } from "lucide-react";
+import { useCallback, useState } from "react";
 
 import {
   TerasActionButton,
   TerasActionRow,
+  TerasDraftCloseGuardDialog,
+  TerasFieldStack,
   TerasEmptyState,
   TerasFilterBar,
   TerasMetadataList,
@@ -36,8 +39,28 @@ import {
   modelProfileSelectedMetadata,
 } from "./model-operations-control-view-model.ts";
 import { useModelOperationsControlController } from "./use-model-operations-control-controller.ts";
+import { ModelRuntimeControlSurface } from "./model-runtime-control-surface.tsx";
 
-export function ModelOperationsControlSurface() {
+export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
+  const [view, setView] = useState<"runtime" | "profiles">("runtime");
+  const [dirty, setDirty] = useState(false), [nextView, setNextView] = useState<"runtime" | "profiles" | null>(null);
+  const reportDirty = useCallback((value: boolean) => { setDirty(value); onDirtyChange?.(value); }, [onDirtyChange]);
+  const select = (value: "runtime" | "profiles") => { if (value === view) return; if (dirty) setNextView(value); else setView(value); };
+  return <>
+    <TerasFieldStack fill="last">
+      <TerasActionRow>
+        <TerasActionButton aria-pressed={view === "runtime"} emphasis={view === "runtime" ? "primary" : "secondary"} onClick={() => select("runtime")}>Models & routing</TerasActionButton>
+        <TerasActionButton aria-pressed={view === "profiles"} emphasis={view === "profiles" ? "primary" : "secondary"} onClick={() => select("profiles")}>Purpose profiles</TerasActionButton>
+      </TerasActionRow>
+      {view === "runtime" ? <ModelRuntimeControlSurface onDirtyChange={reportDirty} /> : <ModelProfileControlSurface />}
+    </TerasFieldStack>
+    <TerasDraftCloseGuardDialog kicker="Routing draft" title="Discard unsaved routing changes?" description="Saved routing remains with the model owner."
+      open={nextView !== null} keepEditingLabel="Keep editing" leaveLabel="Discard draft" onKeepEditing={() => setNextView(null)}
+      onLeave={() => { reportDirty(false); if (nextView) setView(nextView); setNextView(null); }} />
+  </>;
+}
+
+function ModelProfileControlSurface() {
   const controller = useModelOperationsControlController();
   const selectedProfile = controller.selectedProfile;
 
