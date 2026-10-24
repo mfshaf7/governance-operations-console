@@ -622,7 +622,9 @@ export function useAgentConsoleController({
 
       responseStarted = true;
       const responseModel =
-        response.headers.get("X-Agent-Model") ?? liveProviderStatus.model;
+        response.headers.has("X-Agent-Effective-Model")
+          ? decodeURIComponent(response.headers.get("X-Agent-Effective-Model")!)
+          : response.headers.get("X-Agent-Model") ?? liveProviderStatus.model;
       const responseProvider =
         response.headers.get("X-Agent-Provider") ?? liveProviderStatus.provider;
       const replyEntry = terminalEntry("agent", "", responseModel);

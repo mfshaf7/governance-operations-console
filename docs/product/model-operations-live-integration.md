@@ -5,11 +5,71 @@ exact Security decision and Platform composition.
 
 ## Operator Outcome
 
-Model Operations reads caller-owned request state from OOS and profile source
-truth from Platform Engineering. A verified Console operator can submit the
-existing two-step create request. The Console does not select a provider or
-model, write the profile registry, fulfill a request, approve Security posture,
-or activate a profile.
+Model Operations exposes two jobs in the existing Compact Control surface.
+**Models & routing** submits operator choices for admitted backend/model
+registration, native effort, system defaults, per-workflow overrides and ordered
+fallback. **Purpose profiles** retains the existing two-step request workflow
+for purpose and permission changes. OOS coordinates both workflows; Platform
+owns configuration, verification, profile source and provider credentials.
+Security acceptance and runtime activation remain with their existing owners.
+
+The runtime configuration extension is source-staged under Epic 1313.
+Live availability requires the subsequent exact-source Security acceptance
+and Platform commissioning. Merged Console source alone is not activation.
+
+## Models & Routing Procedure
+
+1. Open Model Operations, **Models & routing**. The server reads admitted
+   backends, current configuration and caller-owned history through OOS.
+   First registration needs no prior completed request or lifecycle receipt.
+   The existing OOS connection and verified operator session are sufficient
+   Console-side configuration.
+2. Select and register an admitted backend. Where account sign-in is supported,
+   choose **Connect account** and complete its native device challenge.
+   The code is private operator metadata. Provider tokens stay in Platform
+   custody and never enter Console configuration or browser storage.
+3. Choose **Discover models**, select an advertised model, then **Verify &
+   register model**. Discovery is metadata. Registration completes after the
+   Platform verification and receipt readback.
+4. Select **System default** or a workflow row. Configure an explicit model
+   route, use the existing profile binding, or inherit the default for that
+   workflow. Native effort choices come from registered model metadata.
+   Boolean thinking values remain booleans. Unsupported combinations cannot
+   be saved. The system does not rank models or impose a provider preference.
+5. Add up to four explicit fallbacks in the required order. Eligible fallback
+   is limited to known pre-submission unavailability/busy. Ambiguous completion,
+   policy, integrity and output failures stop with owner evidence.
+6. Save reviewed settings. The request retains the observed configuration
+   revision. Concurrent edits require reload and review; the Console never
+   silently changes the original expected revision. Dirty drafts are protected
+   on scope change, view change and workspace close.
+7. Inspect progress and the actual owner outcome. After a lost acknowledgement,
+   check or reconcile the original request. A known effect-free failure allows
+   an explicit numbered retry. Unknown completion keeps the original owner
+   command. Reload recovery retains only a request reference and reads the
+   authenticated owner again. Paginated history is available independently.
+8. Cancellation reports only the owner's confirmed outcome. To restore saved
+   settings, review a retained configuration revision and confirm restoration;
+   Platform creates a new revision.
+
+The closed same-origin adapter routes are:
+
+- GET /api/model-operations/runtime/registry
+- GET /api/model-operations/runtime/catalogue?backend_id=...
+- GET and POST /api/model-operations/runtime/requests
+- GET /api/model-operations/runtime/requests/{request_id}
+- POST /api/model-operations/runtime/requests/{request_id}/controls
+
+Reads and writes require the verified operator session. The browser cannot
+choose owner addresses, caller credentials, roles, policy permissions or
+provider secrets. Server validation binds operator, request, command and
+receipt digests, accepted historical readback, native login and terminal state.
+Owner failure is unavailable without fixture substitution.
+
+Existing Work Design, Refinement, Agent Console and source-authoring consumers
+accept optional, strictly task-bound effective-selection evidence. Legacy
+records remain readable. Task outputs, context admission, source-policy
+bindings and operator acceptance retain their existing contracts.
 
 ## Server-Only Configuration
 
@@ -21,8 +81,8 @@ Configure the existing OOS connection and operator/session boundary:
 - `GOVERNANCE_CONSOLE_OPERATOR_ID`
 - `GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH`
 
-Also mount the exact Platform artifacts as operator-private regular files and
-set:
+For **Purpose profiles**, also mount the exact Platform artifacts as
+operator-private regular files and set:
 
 - `GOVERNANCE_CONSOLE_MODEL_PROFILE_SOURCE_PROJECTION_PATH`
 - `GOVERNANCE_CONSOLE_MODEL_PROFILE_LIFECYCLE_RECEIPT_PATH`
@@ -34,7 +94,7 @@ and merged Platform revision. Selecting any part of the live configuration
 selects live mode. Partial or invalid configuration fails closed and never
 falls back to fixture success.
 
-## Normal Console Path
+## Purpose Profile Console Path
 
 1. Open Operation Workbench, then Model Operations.
 2. Confirm the workspace status is `Current` and inspect the Platform-projected

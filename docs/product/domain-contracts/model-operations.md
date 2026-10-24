@@ -6,9 +6,10 @@ Console is not a profile, lifecycle, or security authority.
 
 Surface mode: Compact Control Mode.
 
-Model Operations is the Operation Workbench domain for governed model-profile
-posture and caller-specific access readiness. It replaces Provider Registry as
-a profile-governance surface. It does not replace the fixed Agent Runtime dock,
+Model Operations is the Operation Workbench domain for operator-owned runtime
+model settings, governed purpose-profile posture and caller-specific access
+readiness. Models & routing and Purpose profiles share the existing Compact
+Control surface. It does not replace the fixed Agent Runtime dock,
 which reports provider health and source-backed active-runtime presence and
 remains owned by `agent-console`.
 
@@ -30,8 +31,10 @@ The operator uses Model Operations to answer:
 - which evidence is current, stale, or unavailable
 - which owner controls the next required move
 
-Model Operations does not choose models for an agent session and does not
-invoke a model.
+Operators configure admitted model, native effort and explicit fallback by
+workflow through OOS. Platform remains the configuration and invocation owner.
+The Console does not add an ad hoc session-model override or invoke a provider.
+Purpose-profile policy and permissions retain their existing review workflow.
 
 ## Workbench Placement And Mode
 
@@ -55,6 +58,7 @@ surface and is not mixed into governed profile truth.
 | Concern | Authority | Console posture |
 | --- | --- | --- |
 | Governed profile policy and canonical lifecycle | Platform Engineering model-profile registry | Read-only projection |
+| Backend/model registration and runtime task settings | Platform model-management owner, coordinated by OOS | Verified operator intent, revisioned receipts and owner progress |
 | Access-plane and provider-custody posture | Platform Engineering governed AI access plane | Read-only projection |
 | Security acceptance and exception evidence | Security Architecture | Read-only projection |
 | Registered consumer contract | Consumer owner plus workspace/platform contract | Read-only projection |
@@ -69,23 +73,18 @@ owning authorities.
 
 ## Current Proven Truth
 
-The current platform contract proves:
+Live owner projections supply the current profile set, lifecycle, eligible
+callers, admitted backends and revisioned model configuration. The canonical
+purpose registry remains Platform Engineering's governed AI model profiles.
+Invocation continues through the governed gateway after context and task
+permission checks. Registration or a saved routing choice does not activate a
+purpose profile or expand its caller, data or output permissions.
 
-- the canonical registry is
-  `platform-engineering/security/governed-ai-model-profiles.yaml`
-- the only currently registered profile is `intake-classifier-v1`
-- its lifecycle is `suspended`
-- its governed invocation path is `governed-ai-gateway`
-- its registered caller is `workspace-governance/intake-assist`
-- direct provider access is forbidden
-- human approval is required
-- access-plane profile activation remains disallowed
-
-OOS now proves the admitted request list, item, create, review-transition, and
-Platform fulfillment protocol. Platform now proves the source projection,
-lifecycle receipt, merged readback, and rollback binding. Neither backend
-grants the Console profile mutation, provider selection, Security acceptance,
-or activation authority.
+OOS proves caller-owned registration, native sign-in, configuration intent,
+progress, controls and exact owner receipt/readback. Platform owns verified
+model metadata, configuration history and provider-account custody. Epic 1313
+requires exact-source Security acceptance and Platform commissioning before
+this source extension can claim operating readiness.
 
 ## Read Model
 

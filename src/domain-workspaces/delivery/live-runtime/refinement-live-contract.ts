@@ -1,3 +1,4 @@
+import { assertEffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
 import type {
   DeliveryRefinementApplyReceipt,
   DeliveryRefinementDraftGroup,
@@ -116,6 +117,7 @@ export function assertRefinementOosAssistResult(
   for (const key of ["value", "summary", "rationale"]) string(suggestion[key], `suggestion ${key}`);
   exact(suggestion.resolution, "ai_drafted", "suggestion resolution");
   const evidence = record(result.evidence, "Refinement assist evidence");
+  if (Object.hasOwn(evidence, "effective_selection")) assertEffectiveModelSelection(evidence.effective_selection, "delivery-refinement-advisor-v1/metadata_advice");
   exact(evidence.model_profile_id, "delivery-refinement-advisor-v1", "assist profile");
   exact(evidence.task_contract_ref, "oos.delivery-refinement.v1", "assist contract");
   for (const key of ["generated_at", "output_schema_ref", "cgg_packet_ref", "redaction_receipt_ref", "gateway_audit_ref"]) nonEmpty(evidence[key], `assist evidence ${key}`);

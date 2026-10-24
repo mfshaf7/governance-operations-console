@@ -31,9 +31,9 @@ const selectorMetadata = {
   "model-operations": {
     availability: "available",
     detail:
-      "Inspect governed model profiles, caller eligibility, access readiness, and control evidence.",
-    navigationDescription: "Inspect model readiness.",
-    runtimeReadiness: "read-only",
+      "Configure admitted models and workflow routing, and inspect purpose-profile permissions and owner evidence.",
+    navigationDescription: "Configure models and routing.",
+    runtimeReadiness: "interactive",
     sourceMode: "prototype-local",
   },
   delivery: {

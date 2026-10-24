@@ -1,3 +1,4 @@
+import { assertEffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
 import type { DeliveryPackageSummary } from "../read-model/index.ts";
 import type { WorkDesignNode } from "../work-model/work-design/work-design-types.ts";
 import type {
@@ -98,6 +99,7 @@ export function assertWorkDesignOosAssistResult(
   oneOf(result.required_operator_action, ["review", "no_change"], "assist action");
   string(result.text, "assist text");
   const evidence = record(result.evidence, "Work Design assist evidence");
+  if (Object.hasOwn(evidence, "effective_selection")) assertEffectiveModelSelection(evidence.effective_selection, "delivery-work-design-advisor-v1/" + result.task_kind);
   exact(evidence.model_profile_id, "delivery-work-design-advisor-v1", "assist profile");
   exact(evidence.task_contract_ref, "oos.delivery-work-design.v1", "assist contract");
   for (const key of [

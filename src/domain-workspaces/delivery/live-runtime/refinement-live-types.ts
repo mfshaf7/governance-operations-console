@@ -1,3 +1,4 @@
+import type { EffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
 import type {
   DeliveryRefinementApplyPlan,
   DeliveryRefinementFieldKind,
@@ -144,6 +145,7 @@ export type RefinementOosAssistResult = {
   evidence: {
     cgg_packet_ref: string;
     gateway_audit_ref: string;
+    effective_selection?: EffectiveModelSelection;
     generated_at: string;
     model_profile_id: "delivery-refinement-advisor-v1";
     output_schema_ref: string;

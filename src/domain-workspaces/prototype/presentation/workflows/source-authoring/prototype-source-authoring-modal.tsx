@@ -1,4 +1,5 @@
 "use client";
+import { effectiveModelLabel } from "../../../../../console-integration/governed-ai/model-selection.ts";
 import { useState } from "react";
 import { TerasActionButton, TerasActionRow, TerasEmptyState, TerasFieldStack, TerasMetadataList, TerasModalShell, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSelectField, TerasTextField } from "@/teras";
 import { SourceAuthorizationPanel } from "../../../../../environment-lifecycle/presentation/source-authorization-panel.tsx";
@@ -55,6 +56,7 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
         { label: "Source scope", value: scopeLabel }, { label: "Session", value: current.session_id ?? "Not started" },
         { label: "Attempt", value: attempt?.request_id ?? "Not started" }, { label: "State / next action", value: `${state ?? current.state} / ${current.next_action.code}` },
         { label: "Context packet", value: attempt?.context_packet_ref ?? "Not admitted" }, { label: "Model purpose", value: attempt?.model_profile_id ?? "Not invoked" },
+        ...(attempt?.effective_model_selection ? [{ label: "Actual model", value: effectiveModelLabel(attempt.effective_model_selection) }] : []),
         ...(attempt?.owner_preparation ? [{ label: "Trusted Studio plan", value: attempt.owner_preparation.plan_digest }] : []),
         ...(attempt?.failure ? [{ label: "Owner failure", value: attempt.failure }] : []),
         ...Object.entries(current.source_delivery).map(([action, control]) => ({ label: `Source ${action}`, value: `${control.state}${control.failure ? ` / ${control.failure}` : ""} / ${control.command.command_id}` })),

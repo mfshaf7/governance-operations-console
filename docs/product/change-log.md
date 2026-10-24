@@ -8,6 +8,19 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-24
 
+- Staged Epic 1313 / Console 1318 Models & routing in the existing Model
+  Operations control: admitted backend/model registration, native account
+  challenge, per-workflow/default model and effort, explicit ordered fallback,
+  configuration restoration, conflict handling and owner-based recovery.
+- Kept purpose-profile review separate from ordinary runtime settings. The
+  same-origin adapter requires verified operator sessions and checks immutable
+  request, actor, native-login, command-digest, receipt and historical-readback
+  bindings. Provider credentials remain Platform-only.
+- Preserved canonical AI task outputs and optional historical compatibility
+  while validating effective-selection evidence in existing consumers. New
+  runtime activation remains assigned to Security 1319 and Platform 1320;
+  operating qualification remains 1321.
+
 - Maintenance Landing Unit `maintenance-1275-earned-pi-review`
   (`child_isolated_landing_unit`) adds earned PI review to the existing
   evidence-only completion surface. It reads exact native initiative/objective
