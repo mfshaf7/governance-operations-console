@@ -243,6 +243,7 @@ export function DeliveryWorkspaceModal({
 
   return (
     <TerasModalShell
+      agentHost
       bodyLayout="fill"
       description="Fullscreen Delivery workspace for intake, work design, refinement, execution, and Delivery Catalog."
       kicker="Delivery Workspace"

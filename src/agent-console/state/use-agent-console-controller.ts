@@ -1,5 +1,6 @@
 "use client";
 
+import { lockTerasDocumentScroll } from "../../teras/teras-document-scroll-lock";
 import {
   createAgentInvocation,
   isAgentRequestAbortReason,
@@ -97,12 +98,14 @@ function governedResponseHeaderMismatch(response: Response) {
 
 export function useAgentConsoleController({
   contextCandidate,
+  workspaceContextCandidate,
   contextFallbackLabel,
   listenForOpenEvent,
   placement,
   providerStatus,
 }: {
   contextCandidate: AgentContextCandidate | null;
+  workspaceContextCandidate?: AgentContextCandidate | null;
   contextFallbackLabel: string;
   listenForOpenEvent: boolean;
   placement: AgentConsolePlacement;
@@ -133,6 +136,8 @@ export function useAgentConsoleController({
     setCurrentInvocation,
   } = useAgentConsoleSession();
   const contextMode = agentContextMode;
+  const [contextModeChanging, setContextModeChanging] = useState(false);
+  const [pendingOpenCommand, setPendingOpenCommand] = useState<{ command: string; mode: AgentInteractionMode } | null>(null);
   const [floatingModeMenuOpen, setFloatingModeMenuOpen] = useState(false);
   const [modalSurfaceOpen, setModalSurfaceOpen] = useState(false);
   const agentTranscriptRef = useRef<HTMLDivElement | null>(null);
@@ -192,7 +197,7 @@ export function useAgentConsoleController({
 
       if (detail?.prompt) {
         if (detail.autoRun) {
-          await runAgentCommand(detail.prompt, requestedMode);
+          setPendingOpenCommand({ command: detail.prompt, mode: requestedMode });
         } else {
           setAgentPrompt(detail.prompt);
         }
@@ -210,8 +215,18 @@ export function useAgentConsoleController({
     providerStatus,
     contextMode,
     contextCandidate,
+    workspaceContextCandidate,
+    contextModeChanging,
     listenForOpenEvent,
   ]);
+
+  // Run after the provider has committed the mode and rotated session binding.
+  // An awaited mode-close handler still holds its previous render's values.
+  useEffect(() => {
+    if (!pendingOpenCommand || agentBusy || contextModeChanging || pendingOpenCommand.mode !== contextMode) return;
+    setPendingOpenCommand(null);
+    void runAgentCommand(pendingOpenCommand.command, pendingOpenCommand.mode);
+  }, [pendingOpenCommand, agentBusy, contextModeChanging, contextMode, agentSessionBinding.nonce, contextCandidate]);
 
   useEffect(() => {
     const floatingDockConstrainedByModal = isFloatingDock && modalSurfaceOpen;
@@ -220,8 +235,7 @@ export function useAgentConsoleController({
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockDocumentScroll = lockTerasDocumentScroll();
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -232,7 +246,7 @@ export function useAgentConsoleController({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      unlockDocumentScroll();
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isFloatingDock, modalSurfaceOpen, modelDockExpanded]);
@@ -492,7 +506,7 @@ export function useAgentConsoleController({
     command: string,
     requestedMode: AgentInteractionMode = contextMode,
   ) {
-    if (!command || agentBusy) {
+    if (!command || agentBusy || contextModeChanging) {
       return;
     }
 
@@ -769,7 +783,7 @@ export function useAgentConsoleController({
   }
 
   async function handleAgentContextModeChange(mode: AgentInteractionMode) {
-    if (agentBusy || mode === "general") {
+    if (agentBusy || contextModeChanging || mode === "general") {
       return false;
     }
 
@@ -777,29 +791,35 @@ export function useAgentConsoleController({
       return true;
     }
 
-    if (mode === "workspace" && contextCandidate?.scope !== "workspace") {
+    if (mode === "workspace" && (!workspaceContextCandidate || workspaceContextCandidate.sourceMode === "unavailable")) {
       appendAgentTranscript([
         terminalEntry("error", "Workspace mode requires a current workspace context candidate."),
       ]);
       return false;
     }
 
-    const response = await fetch("/api/agent-interaction", {
-      body: JSON.stringify({ mode: contextMode, session: agentSessionBinding }),
-      headers: { "Content-Type": "application/json" },
-      method: "DELETE",
-    });
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-      appendAgentTranscript([terminalEntry("error", payload?.error ?? "current governed session could not be closed")]);
+    setContextModeChanging(true);
+    try {
+      const response = await fetch("/api/agent-interaction", {
+        body: JSON.stringify({ mode: contextMode, session: agentSessionBinding }),
+        headers: { "Content-Type": "application/json" },
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "current governed session could not be closed");
+      }
+      rotateAgentSession();
+      setAgentConversationTurns([]);
+      setAgentContextMode(mode);
+      setFloatingModeMenuOpen(false);
+      return true;
+    } catch (error) {
+      appendAgentTranscript([terminalEntry("error", error instanceof Error ? error.message : "current governed session could not be closed")]);
       return false;
+    } finally {
+      setContextModeChanging(false);
     }
-
-    rotateAgentSession();
-    setAgentConversationTurns([]);
-    setAgentContextMode(mode);
-    setFloatingModeMenuOpen(false);
-    return true;
   }
 
   function handleAgentPromptKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
@@ -967,6 +987,7 @@ export function useAgentConsoleController({
       : undefined;
 
   return {
+    contextModeChanging,
     agentBusy,
     agentContextMode,
     agentPrompt,

@@ -81,6 +81,7 @@ export function LifecycleTransitionsWorkspace({
 
   return (
     <TerasModalShell
+      agentHost
       bodyLayout="fill"
       description="Read-only coordination for cross-domain validation, admission, application, receipts, and owner routing."
       height="fill"

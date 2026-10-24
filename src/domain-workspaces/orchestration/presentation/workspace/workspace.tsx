@@ -47,6 +47,7 @@ export function OrchestrationWorkspace({
 
   return (
     <TerasModalShell
+      agentHost
       bodyLayout="fill"
       description="Fullscreen orchestration workspace for durable-definition qualification, definition review, run inspection, and bounded run control."
       kicker="Orchestration Workspace"

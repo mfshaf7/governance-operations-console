@@ -418,6 +418,16 @@ export function systemMoodContextCandidate(mood: SystemMoodContextInput) {
 export function workspaceContextCandidate(
   workspaceId: ConsoleWorkspaceId,
 ): AgentContextCandidate {
+  if (workspaceId === "workspace-registry") {
+    return createAgentContextCandidate({
+      boundary: "Registry preview is read-only; canonical inventory authority remains with Workspace Governance.",
+      id: "workspace:workspace-registry", title: "Workspace Registry", surfaceKind: "workspace-registry",
+      scope: "workspace", sourceMode: "synthetic", sourceAuthority: "Workspace Registry preview",
+      summary: "Review workspace inventory and classification. This disconnected preview is not live inventory truth.",
+      signals: ["Preview-only inventory context"], safeActions: ["Explain Registry ownership and boundaries"],
+    });
+  }
+
   if (workspaceId === "lifecycle-transitions") {
     return createAgentContextCandidate({
       boundary:
@@ -523,7 +533,8 @@ export function resolveConsoleAgentContextCandidate({
   systemMoodOpen: boolean;
 }): AgentContextCandidate {
   if (activeWorkspaceId) {
-    return workspaceContextCandidate(activeWorkspaceId);
+    const candidate = workspaceContextCandidate(activeWorkspaceId);
+    return { ...candidate, id: `page:${activeWorkspaceId}`, scope: "page" };
   }
 
   if (selectedWorkbenchSurface) {

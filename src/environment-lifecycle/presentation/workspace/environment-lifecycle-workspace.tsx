@@ -219,6 +219,7 @@ export function EnvironmentLifecycleWorkspace({
   return (
     <>
       <TerasModalShell
+        agentHost
         bodyLayout="fill"
         description={copy.description}
         height="fill"

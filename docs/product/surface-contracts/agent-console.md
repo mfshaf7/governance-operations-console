@@ -25,8 +25,11 @@ current invocation, and optional model-profile and durable-run references.
 The embedded Agent Console and the Docking Agent are separate logical agents.
 Each keeps its browser presentation state but binds its generated nonce,
 interaction mode, invocation identity, and operator identity to an OOS-owned
-session. Both start in Focus mode. Workspace mode is selectable only when the
-Shell exposes a current workspace candidate; General mode is not an invocation
+session. Both start in Focus mode. Focus uses a page/record candidate; Workspace uses the bounded whole-Console
+owner-read overview, including from Command Center. The two candidates are
+selected independently and must match the server mode/scope contract. Workspace
+is selectable while at least one owner read is current, with explicit missing
+coverage. General mode is not an invocation
 path in the governed OOS contract.
 
 Both agents register independently through the `agent-console` source so the

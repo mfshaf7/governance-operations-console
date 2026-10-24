@@ -115,7 +115,7 @@ export function evaluateAgentContextPolicy({
     }
   }
 
-  if (!candidate || candidate.sourceMode === "unavailable") {
+  if (!candidate || candidate.sourceMode === "unavailable" || (mode === "focused" && candidate.scope !== "page")) {
     return decision({
       attached: false,
       candidate,
@@ -134,7 +134,7 @@ export function evaluateAgentContextPolicy({
       candidateChars,
       code: "context-budget-exceeded",
       mode,
-      reason: `The synthetic candidate exceeds the ${agentContextBudgetLimitChars} character prototype context budget.`,
+      reason: `The candidate exceeds the ${agentContextBudgetLimitChars} character context budget.`,
     });
   }
 

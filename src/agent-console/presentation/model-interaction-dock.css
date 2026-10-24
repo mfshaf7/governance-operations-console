@@ -875,3 +875,6 @@ body:has([data-teras-modal]) .model-dock-floating.model-dock-expanded:not(.model
 .model-dock-input::placeholder {
   color: rgba(212, 212, 212, 0.42);
 }
+
+/* Hidden during a nested authority/review dialog; display:flex must not override it. */
+.model-dock[hidden] { display: none; }

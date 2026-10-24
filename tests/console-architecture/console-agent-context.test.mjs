@@ -110,8 +110,8 @@ test("Full-screen workspace context takes priority over stale page selection", (
     systemMoodOpen: false,
   });
 
-  assert.equal(candidate.id, "workspace:dev-integration");
-  assert.equal(candidate.scope, "workspace");
+  assert.equal(candidate.id, "page:dev-integration");
+  assert.equal(candidate.scope, "page");
   assert.equal(candidate.sourceMode, "synthetic");
 });
 

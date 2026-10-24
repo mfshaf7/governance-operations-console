@@ -419,3 +419,13 @@ and workflow outcomes are not stored as browser authority. Platform owns model
 verification, backend permissions, credential custody and invocation. The
 Console extension remains uncommissioned until the accepted actual-source
 Security and Platform sequence completes.
+
+Agent Workspace context extends the existing read-only candidate path with a
+bounded composition of already validated same-origin owner reads. It exposes
+explicit per-source coverage and expiry, never substitutes preview fixtures for
+live facts, and preserves the independent server mode/scope checks and eight-entry
+limits. The presentation can enter explicitly supported native workspace dialogs;
+nested authority dialogs retain their focus and approval boundary. This grants
+no new tool, source-authoring or mutation permission. Exact-source acceptance
+continues through the existing configurable-AI-routing Security decision and
+complete-runtime commissioning path.

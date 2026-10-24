@@ -46,6 +46,7 @@ export function ProductPortfolioWorkspaceShell({
 }) {
   return (
     <TerasModalShell
+      agentHost
       bodyLayout="fill"
       description="Fullscreen product catalog for managed-product discovery, publication, and Portfolio-owned listing curation."
       kicker="Product Portfolio"

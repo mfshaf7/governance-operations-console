@@ -63,3 +63,50 @@ Source merge-readiness is covered by
 `case:agent-console-console-protocol-negative`. Routine operating activation
 still requires `gate:agent-console-operating-acceptance` and the Platform
 commissioning proof owned by work item #1246.
+
+## Focus and Workspace
+
+Both agents start in **Focus**. Focus describes the selected visible page or
+record; a workspace screen is a page in this mode. **Workspace** attaches the
+same cross-Console overview from Command Center and supported workspace screens.
+Changing mode closes the current OOS session before rotating its browser nonce.
+The visible context title and Inspect context show what will be submitted.
+
+Workspace is a bounded Console composition of the existing validated read APIs:
+WGCF continuity for Registry/Portfolio, OOS Proposal, Prototype, Delivery,
+Orchestration and Lifecycle, Platform operation coverage, and current Models
+configuration. The separate Registry read supplies Registry page context. Only
+allowlisted counts, lifecycle/status summaries, short product names, configuration
+selection and source revisions enter the candidate. Prompts, source bytes, raw
+logs, credentials, native sign-in data and private connection details do not.
+This remains operator-supplied context, subject to the unchanged CGG admission
+and redaction path; the Console does not attest new canonical authority.
+
+Each source is explicitly current, unavailable/expired or preview-only. Reads
+refresh while the page is visible, do not overlap, abort at teardown, and expire
+after two minutes. A missing source contributes no retained facts. An empty
+current collection is valid. Other current sources remain usable; the Agent
+must explain incomplete coverage instead of inventing missing facts. Workspace
+is unavailable when no source qualifies. Full records remain in their owner
+views, and a bounded overview does not establish exhaustive record knowledge.
+Legacy environment cards and selected profile details remain preview-only unless
+their owner specifically supplies live evidence; the admitted Platform subject
+catalog is not proof of their runtime status.
+
+The floating Agent presentation enters the native dialog for Dev Integration,
+Governed Releases, Lifecycle Transitions, Registry, Delivery, Portfolio and
+Orchestration. Its provider, transcript, prompt and request controller stay
+mounted. Escape inside an expanded Agent collapses it first; Escape outside it
+retains normal workspace behavior. Nested review/approval dialogs hide the
+floating presentation and retain their native focus protections. Compact domain
+controls still decide their own assist placement; this does not enable an Agent
+on every approval surface.
+
+Regression checks include the actual producer-to-request mode matrix and owner
+DTO/coverage/budget tests in `tests/console-architecture`. The native-dialog
+interaction suite in `tests/browser/agent-workspace.spec.mjs` uses explicit
+synthetic owner responses, never operating evidence. Run it against a separate
+local preview on port 3320 with
+`npx playwright test tests/browser/agent-workspace.spec.mjs --workers=1`. Final commissioning also
+requires real Console interaction and OOS/CGG/model receipts on the accepted
+source revision; passing synthetic browser tests cannot establish that proof.
