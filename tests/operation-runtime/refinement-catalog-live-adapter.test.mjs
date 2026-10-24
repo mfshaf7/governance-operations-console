@@ -123,6 +123,29 @@ test("case:refinement-live-positive reads, advises, applies, and polls canonical
   );
 });
 
+test("Refinement advice preserves the required empty allowed-values array for every field type", async () => {
+  // OOS contracts/refinement/assist-request.schema.json requires this target
+  // property even for unconstrained text/number fields. It is not optional.
+  for (const fieldKind of ["short_text", "long_text", "number", "select"]) {
+    let calls = 0;
+    const fetchImpl = async (_url, init) => {
+      const body = JSON.parse(String(init.body));
+      calls++;
+      assert.equal(init.method, "POST");
+      assert.equal(body.target.field_kind, fieldKind);
+      assert.deepEqual(Object.keys(body.target).sort(), [
+        "allowed_values", "draft_value", "field_key", "field_kind", "field_label",
+        "required", "selected_node_ids", "source_value",
+      ]);
+      assert.deepEqual(body.target.allowed_values, []);
+      return jsonResponse(refinementAssistResult(body));
+    };
+    await requestRefinementAdvice("delivery-package:846", refinementProjection(),
+      { ...refinementAssistCommand(), fieldKind, allowedValues: [] }, { env, fetchImpl });
+    assert.equal(calls, 1);
+  }
+});
+
 test("Refinement run polling retains native package/route authority in running and cold completed reads", async () => {
   for (const state of ["running", "completed"]) {
     const run = refinementRun();

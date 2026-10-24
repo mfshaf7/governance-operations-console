@@ -106,9 +106,7 @@ export async function requestRefinementAdvice(
       source_value: command.sourceValue,
       draft_value: command.draftValue,
       selected_node_ids: command.selectedNodeIds,
-      ...(command.allowedValues.length > 0
-        ? { allowed_values: command.allowedValues }
-        : {}),
+      allowed_values: command.allowedValues,
     },
     operator_prompt: command.operatorPrompt,
   };

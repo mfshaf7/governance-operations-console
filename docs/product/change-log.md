@@ -6,6 +6,15 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-25
+
+- Preserved OOS's required `target.allowed_values` array in Refinement advice,
+  including an empty array for unconstrained text and number fields. This repairs
+  normal advice submission without changing the owner schema, model permissions
+  or canonical apply. Wire-contract coverage includes all four admitted field
+  types and retains existing nonempty select behavior. Existing Epic1313
+  operating qualification owns live proof and composed-source acceptance.
+
 ## 2026-10-24
 
 - Staged Epic 1313 / Console 1318 Models & routing in the existing Model
