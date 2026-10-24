@@ -3,6 +3,7 @@ import type {
 } from "../../command-center/read-model/command-center-attention.ts";
 import type { ConsoleWorkspaceId } from "../../console-architecture";
 import {
+  agentContextMaxListItems,
   createAgentContextCandidate,
   type AgentContextCandidate,
   type AgentContextCandidateTone,
@@ -203,6 +204,13 @@ function attentionSourceMode(
 export function attentionContextCandidate(
   candidate: CommandCenterAttentionCandidate,
 ) {
+  const references = [...new Set([
+    candidate.subject.ref,
+    candidate.source.ref,
+    ...candidate.receiptRefs,
+    ...candidate.evidenceRefs,
+  ])];
+  const refs = references.slice(0, agentContextMaxListItems);
   return createAgentContextCandidate({
     boundary:
       "Command Center Focus is read-only. The owning surface retains action, decision, and mutation authority.",
@@ -211,12 +219,7 @@ export function attentionContextCandidate(
     id: `page:command-center-focus:${candidate.candidateId}`,
     observedAt: asObservedAt(candidate.source.observedAt),
     projectedAt: candidate.source.projectedAt,
-    refs: [
-      candidate.subject.ref,
-      candidate.source.ref,
-      ...candidate.receiptRefs,
-      ...candidate.evidenceRefs,
-    ],
+    refs,
     safeActions: [
       "Explain the selected required move",
       "Summarize the owner projection",
@@ -228,6 +231,9 @@ export function attentionContextCandidate(
       `owner: ${candidate.owner.label}`,
       `urgency: ${candidate.urgency}`,
       `attention class: ${candidate.attentionClass}`,
+      ...(references.length > refs.length
+        ? [`Showing ${refs.length} of ${references.length} unique references; full evidence remains in Focus and the owning surface.`]
+        : []),
     ],
     sourceAuthority: candidate.source.authority,
     sourceMode: attentionSourceMode(candidate),

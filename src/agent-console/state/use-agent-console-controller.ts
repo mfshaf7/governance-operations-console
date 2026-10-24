@@ -583,7 +583,7 @@ export function useAgentConsoleController({
       appendAgentTranscript([
         terminalEntry(
           "system",
-          "candidate submitted to the OOS session; CGG admission, model binding, and receipt evidence must all succeed",
+          "sending context for validation; waiting for OOS, CGG admission, model binding, and receipt evidence",
         ),
       ]);
 

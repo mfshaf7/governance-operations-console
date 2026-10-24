@@ -3,11 +3,12 @@ import type {
   AgentContextCandidateTone,
   AgentContextSourceMode,
 } from "../../console-shell/context/agent-context-candidate";
+import { agentContextMaxListItems } from "../../console-shell/context/agent-context-candidate.ts";
 import type { AgentInteractionMode } from "../model/agent-context-policy.ts";
 import { hasSecretLikeMaterial, inspectAgentInput } from "../model/agent-input-policy.ts";
 
 const maxCandidateStringChars = 600;
-const maxCandidateListItems = 8;
+const maxCandidateListItems = agentContextMaxListItems;
 const maxCandidateListItemChars = 300;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
