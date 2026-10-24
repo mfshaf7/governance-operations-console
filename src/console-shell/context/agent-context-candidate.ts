@@ -1,3 +1,5 @@
+export const agentContextMaxListItems = 8;
+
 export type AgentContextCandidateTone =
   | "danger"
   | "info"

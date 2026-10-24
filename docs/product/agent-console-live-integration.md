@@ -41,6 +41,15 @@ closes it before the browser rotates its nonce. An absent session is already
 clean. A conflicting, stale, unauthorized, malformed, failed, or incomplete
 projection never becomes a successful Console response.
 
+Focus context uses the same eight-entry list limit as request validation.
+It selects unique references in subject, source, receipt and evidence order.
+When the owner has more references, the visible candidate states how many
+were selected and directs the operator to the full evidence in Focus and the
+owning surface. The original owner projection and evidence lists remain intact.
+The request validator still rejects oversized or unsafe browser input. Sending
+context is not an OOS acknowledgement; only validated owner receipts establish
+successful admission and invocation.
+
 ## Authority Boundary
 
 The Console submits intent and renders evidence. OOS owns session and
