@@ -74,7 +74,7 @@ export function executionSelectedPackageMetadata({
     {
       label: "Open Children",
       value: String(
-        childCounts?.open_child_count ?? packageSummary.open_child_count,
+        childCounts?.open_child_count ?? packageSummary.open_child_count ?? "Details not loaded",
       ),
     },
     {
@@ -108,7 +108,7 @@ export function executionPackageDetailsMetadata({
     {
       label: "Open Children",
       value: String(
-        childCounts?.open_child_count ?? packageSummary.open_child_count,
+        childCounts?.open_child_count ?? packageSummary.open_child_count ?? "Details not loaded",
       ),
     },
     {

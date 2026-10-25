@@ -40,10 +40,21 @@ contract requires caller/operator equality.
 
 ## Live Behavior
 
-1. The surface lists up to 25 canonical Proposal records from OOS.
-2. It reads each typed projection and bounded history before presenting it.
+1. The surface follows native25-record OOS pages to retain the complete global
+   Proposal register, with an explicit8192-record bound. Page numbers advance
+   by one; changed totals, missing records or repeated identities fail the
+   read instead of presenting the newest25 as the whole inventory.
+2. It reads each typed projection and original first history page through one
+   fresh OOS snapshot. At most four snapshots run concurrently; simultaneous
+   same-authority GETs can share only a pending read. Completed reads are never
+   cached and operator/credential/endpoint scopes cannot share responses.
 3. It refreshes immediately on open and every 15 seconds while the page is
    visible.
+   One poll is in flight per mounted surface. After a mutation, refresh waits
+   for any older read and then obtains fresh owner state. Transient failures
+   retain last verified rows with stale/read-only posture and their original
+   observation time; denied identity clears them. Original history cursors and
+   all owner command/version/approval checks remain unchanged.
 4. Capture writes through `/v1/ideas/capture`, then refreshes the canonical
    projection.
 5. Triage, Disposition, and Handoff send deterministic idempotent command IDs,

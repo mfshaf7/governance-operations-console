@@ -26,10 +26,24 @@ export type DeliveryHistoryProjection = {
   event_count: number; history_state: "current" | "partial"; mutation_authority: "none"; projected_at: string;
 };
 export type DeliveryIntakePage = {
+  page?: { number: number; has_more: boolean };
+  inspected_target_refs?: string[];
   schema_version: 1; workflow_id: "delivery-intake-sources"; sources: DeliveryIntakeRecord[];
   issues: Array<{ target_ref: string; state: "unavailable"; detail: string }>;
   next_cursor: string | null; coverage: { state: "current" | "partial"; detail: string }; projected_at: string;
 };
+
+export type DeliveryIntakeSnapshot = { sources: DeliveryIntakeRecord[]; issues: Array<{target_ref:string;detail:string}>; observed_at:string; source_revision:string; page?: { number: number; has_more: boolean }; inspected_target_refs?: string[] };
+export function assertDeliveryIntakeSnapshot(value: unknown): DeliveryIntakeSnapshot {
+  const v = object(value);timestamp(v.observed_at);
+  if (!/^sha256:[a-f0-9]{64}$/.test(text(v.source_revision)) || !Array.isArray(v.sources) ||
+      v.sources.length > 512 || !Array.isArray(v.issues) || v.issues.length > 512) fail();
+  v.sources.forEach(assertDeliveryIntakeRecord);
+  if (new Set(v.sources.map(x => object(x).source_id)).size !== v.sources.length) fail();
+  for (const issue of v.issues) { const i = object(issue);targetRef(i.target_ref);text(i.detail); }
+  if (v.page) { const p=object(v.page);if(!Number.isSafeInteger(p.number)||Number(p.number)<1||typeof p.has_more!=="boolean"||!Array.isArray(v.inspected_target_refs)||v.inspected_target_refs.length>20)fail();v.inspected_target_refs.forEach(targetRef); }
+  return value as DeliveryIntakeSnapshot;
+}
 
 export function deliveryHistoryId(value: string) {
   if (!/^delivery-[1-9][0-9]*$/.test(value)) throw new Error("An exact Delivery package is required.");
@@ -42,6 +56,7 @@ export function assertDeliveryIntakePage(value: unknown): DeliveryIntakePage {
       !(v.next_cursor === null || typeof v.next_cursor === "string" && /^after:[1-9][0-9]*$/.test(v.next_cursor)) ||
       !["current", "partial"].includes(String(object(v.coverage).state))) fail();
   timestamp(v.projected_at);text(object(v.coverage).detail);
+  if (v.page) { const p=object(v.page);if(!Number.isSafeInteger(p.number)||Number(p.number)<1||typeof p.has_more!=="boolean"||!Array.isArray(v.inspected_target_refs)||v.inspected_target_refs.length>20)fail();v.inspected_target_refs.forEach(targetRef); }
   v.sources.forEach(assertDeliveryIntakeRecord);
   for (const issue of v.issues) { const i = object(issue); targetRef(i.target_ref); text(i.detail); if(i.state!=="unavailable") fail(); }
   return value as DeliveryIntakePage;

@@ -95,6 +95,23 @@ without preparing or starting a source session. The normal Control Board still
 lists execution/audit work; inspection does not force planning work into Ready.
 Unknown, ambiguous, or unloaded targets are not guessed.
 
+The global Delivery register includes all current and retained package roots.
+Its routine refresh loads full active and parked execution trees while
+explicitly deferring completed and retired child graphs. Unloaded archived
+counts are unknown, never zero. Current/History navigation, global package
+totals, filters and cross-project active actions keep their existing meaning.
+History uses the original exact owner stage reads; these do not require
+scanning every archived execution graph before the register can appear.
+
+Original Intake evidence loads independently through bounded target pages.
+Verified rows can appear progressively, but global admission totals remain
+loading until every inspected target is reconciled against the global root
+inventory. Missing evidence stays partial or unavailable. Operational package
+custody is read separately even before History is opened. An unsuccessful
+refresh retains last verified rows with their original timestamp and stale
+label; denied identity clears them. Neither retained display nor a shared
+pending GET can grant execution, review, mutation or completion authority.
+
 `Edit ART Tree` reads a fresh OOS change projection before opening a local draft.
 Use the existing typed child menu (including PI Objective under Epic), then
 `Done Editing`, inspect the exact change plan and enter an acceptance note.

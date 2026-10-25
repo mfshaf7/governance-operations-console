@@ -30,10 +30,10 @@ export type ControlBoardPackageProgress = {
 
 export type ControlBoardPackage = {
   displayName: string;
-  openChildCount: number;
+  openChildCount: number | null;
   packageId: string;
   posture: ControlBoardPackagePosture;
-  progress: ControlBoardPackageProgress;
+  progress: ControlBoardPackageProgress | null;
   sourceRef: string;
   tone: TerasTone;
 };

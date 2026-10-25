@@ -32,6 +32,27 @@ const env = {
 const handoffRef19 = "proposal-handoff:idea-851:version-19";
 const handoffRef21 = "proposal-handoff:idea-851:version-21";
 
+test("global Proposal reads retain older pages, bound snapshot concurrency and reject shifting or repeated inventory",async()=>{
+ const total=142;let concurrent=0,maximum=0,snapshots=0;
+ const read=async(url,init)=>{
+  const parsed=new URL(url);
+  if(parsed.pathname==='/v1/ideas'){
+   const offset=Number(parsed.searchParams.get('offset')),start=(offset-1)*25,count=Math.min(25,total-start),more=start+count<total;
+   return jsonResponse({ideas:Array.from({length:count},(_,i)=>({idea_id:`idea-${start+i+1}`})),page:{offset,limit:25,count,total,has_more:more,next_offset:more?offset+1:null}});
+  }
+  const id=Number(/idea-([0-9]+)/.exec(parsed.pathname)[1]);concurrent++;maximum=Math.max(maximum,concurrent);snapshots++;
+  await new Promise(resolve=>setImmediate(resolve));concurrent--;
+  const bound=JSON.parse(JSON.stringify({projection:proposalProjection(),history:proposalHistory()}).replaceAll('851',String(id)));
+  return canonicalSourceResponse({schema_version:1,workflow_id:'proposal-read-snapshot',...bound},{recordRef:`openproject://work_packages/${id}`,sourceOwner:'workspace-proposals'});
+ };
+ const records=await listProposalLiveRecords({env,fetchImpl:read});
+ assert.equal(records.length,total);assert.equal(records.at(-1).projection.proposal_id,`idea-${total}`);assert.equal(snapshots,total);assert.equal(maximum,4);
+ for(const kind of ['duplicate','shift','empty'])await assert.rejects(listProposalLiveRecords({env,fetchImpl:async(url,init)=>{
+  const response=await read(url,init);if(!String(url).includes('/v1/ideas?')||new URL(url).searchParams.get('offset')!=='2')return response;
+  const body=await response.json();if(kind==='duplicate')body.ideas[0].idea_id='idea-1';if(kind==='shift')body.page.total++;if(kind==='empty'){body.ideas=[];body.page.count=0;}return jsonResponse(body);
+ }}),ProposalOosError);
+});
+
 test("Repository gate adapter binds successful owner receipt, preserves source and returns durable resolution", async () => {
   const intent = { proposalId: "idea-851", recordRef: "openproject://work_packages/851", recordVersion: "version-17",
     custodyRequestId: "repository-custody-request:todo", custodyReceiptRef: { uri: "oos://receipts/repository-custody/todo.json", digest: `sha256:${"a".repeat(64)}` }, notes: "Use the reviewed private repository." };
@@ -91,7 +112,14 @@ test("case:console-proposal-adapter-positive projects OOS truth and submits a ve
     if (String(url).includes("/v1/ideas?")) {
       return jsonResponse({
         ideas: [{ created_at: "2026-08-16T00:00:00Z", idea_id: "idea-851" }],
-        page: { count: 1, has_more: false },
+        page: { count: 1, has_more: false, offset:1,limit:25,total:1,next_offset:null },
+      });
+    }
+    if (String(url).endsWith("/projection?include_history=true")) {
+      assertCanonicalSourceRequest(init);
+      return canonicalSourceResponse({ schema_version: 1, workflow_id: "proposal-read-snapshot",
+        projection: proposalProjection(), history: proposalHistory() }, {
+        recordRef: "openproject://work_packages/851", sourceOwner: "workspace-proposals",
       });
     }
     if (String(url).endsWith("/projection")) {
@@ -194,7 +222,7 @@ test("case:console-proposal-adapter-negative fails closed without fixture or dir
   );
   assert.doesNotMatch(clientSource, /proposalWorkspace(ReadModel|Scenarios)/);
   assert.doesNotMatch(clientSource, /openproject/i);
-  assert.match(clientSource, /response\.status === 409|await refresh\(\)/);
+  assert.match(clientSource, /response\.status === 409|await refresh\((?:true)?\)/);
 });
 
 test("case:console-proposal-delivery-application submits a stable version-bound application", async () => {

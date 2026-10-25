@@ -51,6 +51,7 @@ export function formatControlBoardPackageRef(sourceRef: string) {
 export function controlBoardPackageProgressLabels(
   packageSummary: ControlBoardPackage,
 ) {
+  if (packageSummary.progress === null) return { progressLabel: "Progress: Details not loaded", totalLabel: "Total: Details not loaded" };
   const { completedChildCount, progressPercent, totalChildCount } =
     packageSummary.progress;
 
