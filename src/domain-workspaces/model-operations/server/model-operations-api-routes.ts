@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { consoleModelOperationsModeSelected } from "../../../console-integration/configuration/console-runtime-configuration.ts";
+import { consoleModelOperationsModeSelected, consoleModelOperationsReadMode } from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { modelOperationsReadModel } from "../read-model/model-operations-read-model.ts";
 import { projectLiveModelOperationsReadModel } from "../live-runtime/model-operations-live-projection.ts";
 import { projectModelOperationsOperatingEvidence } from "../live-runtime/model-operations-operating-projection.ts";
@@ -18,7 +18,15 @@ import {
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
 export async function listModelOperationsRoute() {
-  if (!consoleModelOperationsModeSelected()) {
+  const mode = consoleModelOperationsReadMode();
+  if (mode === "unavailable") {
+    return errorResponse(new ModelOperationsOosError(
+      "Purpose profiles are unavailable because accepted Platform profile evidence is not configured. Models & routing remains a separate live view.",
+      "model_operations_profile_source_unavailable",
+      503,
+    ));
+  }
+  if (mode === "disconnected-preview") {
     return NextResponse.json(
       {
         error: null,

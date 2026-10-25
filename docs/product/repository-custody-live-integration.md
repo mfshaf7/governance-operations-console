@@ -92,3 +92,20 @@ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types -
 node scripts/guards/run-guards.mjs --domain repository
 npm run check
 ```
+
+## Current Admission And Custody History
+
+Repository Control reconciles retained OOS custody records against the current
+canonical Workspace inventory from the existing WGCF continuity read. The
+approved custody workspace-owner reference must exactly match a repository
+inventory identity. Names, URLs and product records cannot establish admission.
+Current active inventory shows Admitted, suspended inventory shows Blocked,
+and retired inventory shows Retired across the register, counts, review and
+next action. The original provider receipt remains unchanged as history.
+
+Prepare Workspace Intake is available only for a repository absent from a
+successful current inventory read. An existing inventory identity never offers
+duplicate intake. Missing, invalid or failed current owner reads show admission
+unavailable and block intake without falling back to old receipt handoffs.
+Visible-page polling refreshes current inventory. Inventory admission alone
+proves neither runtime readiness nor Security acceptance; consult those owners.
