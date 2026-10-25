@@ -920,3 +920,8 @@ canonical package truth visible with explicit unavailable evidence. Foreign
 source bindings, conflicting identities and pagination failures cannot produce
 consumed rows or successful receipts. The composed revision includes Intake
 proof so evidence changes refresh even when ART inventory is unchanged.
+
+Unverified Intake evidence uses the existing bounded scrolling Teras list so a
+long historical list cannot crowd the source register. Issues follow the record
+scope and text search; an unverified source does not match a selected owner or
+consumption-state filter. The overall coverage message remains explicit.
