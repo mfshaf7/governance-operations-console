@@ -9,6 +9,7 @@ import { usePrototypeSourceRuntime } from "../../../live-runtime/use-prototype-s
 import type { PrototypeOwnerPreparation, PrototypePreviewPreparation, PrototypeSourceAction } from "../../../live-runtime/prototype-source-types.ts";
 import { assertPrototypeOwnerPreparation } from "../../../live-runtime/prototype-source-contract.ts";
 import { emptyPrototypeDeliveryPreparation, PrototypeDeliveryPreparationFields } from "./prototype-delivery-preparation-fields.tsx";
+import { SourceEditorWorkspace } from "../../../../../console-integration/source-authoring/presentation/source-editor-workspace.tsx";
 
 export function PrototypeSourceAuthoringModal({ record, onClose }: { record: PrototypeRecord | null; onClose: () => void }) {
   if (!record) return null;
@@ -26,6 +27,7 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
   const [support, setSupport] = useState<PrototypePreviewPreparation["support_profile"]>("interactive");
   const [activation, setActivation] = useState<"draft" | "active">("draft");
   const [sourceIntent, setSourceIntent] = useState<string | null>(null), current = runtime.projection, realization = current?.realization;
+  const [editorOpen, setEditorOpen] = useState(false);
   const revision = record.sourceEvidence?.authority === "workspace-prototype-studio" ? record.sourceEvidence.revision : null;
   const state = realization?.state, attempt = realization?.attempt;
   const controlAction: Partial<Record<string, PrototypeSourceAction>> = { "prototype-source-publish-required": "publish", "prototype-source-human-review-required": "review", "prototype-source-merge-required": "merge", "prototype-source-close-required": "close" };
@@ -62,7 +64,7 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
         ...Object.entries(current.source_delivery).map(([action, control]) => ({ label: `Source ${action}`, value: `${control.state}${control.failure ? ` / ${control.failure}` : ""} / ${control.command.command_id}` })),
       ]} /> : null}
       {!current || current.state === "succeeded" ? <>
-        <TerasSelectField label="Source purpose" value={purpose} onValueChange={setPurpose} disabled={runtime.pending} options={[{ value: "app-design", label: "Model-drafted app/design" }, { value: "preview-profile", label: "Trusted Studio Preview profile" }, { value: "delivery-packet", label: "Native Studio Delivery packet" }]} />
+        <TerasSelectField label="Source purpose" value={purpose} onValueChange={setPurpose} disabled={runtime.pending} options={[{ value: "app-design", label: "App/design — edit, import or optional model draft" }, { value: "preview-profile", label: "Trusted Studio Preview profile" }, { value: "delivery-packet", label: "Native Studio Delivery packet" }]} />
         <TerasNoteField label="New source-work objective" value={objective} onValueChange={setObjective} minimumHeight="medium" maxLength={16384} />
         {purpose === "preview-profile" ? <TerasFieldStack spacing="normal">
           <TerasTextField label="Reviewed loopback port" value={port} onValueChange={setPort} inputMode="numeric" maxLength={5} />
@@ -80,6 +82,7 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
       <TerasPanel frame="padded" treatment="neutral">
         <TerasPanelHeader kicker="Bounded Authoring Controls" title="Draft, inspect and deliver source" description="Generation creates no source commit. Exact draft acceptance and accountable human PR approval are separate actions." />
         <TerasActionRow>
+          {current.session_id && realization && !current.source_request.owner_preparation ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => setEditorOpen(true)}>Edit or import source</TerasActionButton> : null}
           {!current.session_id || current.state === "source-authorization-required" ? <TerasActionButton disabled={runtime.pending || !sourceIntent} onClick={() => run("session")}>Start scoped source session</TerasActionButton> : null}
           {realization && ["not-started", "failed", "cancelled", "accepted"].includes(realization.state) ? <TerasActionButton disabled={runtime.pending || !sourceIntent} onClick={() => run("generate")}>{current.source_request.owner_preparation ? state === "accepted" ? "Resume original owner preparation" : attempt ? "Prepare explicitly linked owner retry" : "Prepare trusted Studio owner draft" : state === "accepted" ? "Resume original generation" : attempt ? "Generate explicitly linked retry" : "Generate app/design draft"}</TerasActionButton> : null}
           {attempt?.change_set ? <TerasActionButton disabled={runtime.pending} emphasis="secondary" onClick={() => void runtime.inspectDraft()}>Inspect exact draft source text</TerasActionButton> : null}
@@ -98,5 +101,10 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
       <TerasPanelHeader kicker="Inert Draft Inspection" title={runtime.draft.change_set.commit_message} description={`Exact reviewed digest: ${runtime.draft.digest}`} />
       <TerasFieldStack spacing="normal">{runtime.draft.change_set.operations.map(operation => <TerasNoteField key={operation.path} label={`${operation.action}: ${operation.path}`} readOnly value={operation.content ?? "(delete)"} onValueChange={() => undefined} minimumHeight="medium" />)}</TerasFieldStack>
     </TerasPanel> : null}
+    {editorOpen && current?.session_id && realization && !current.source_request.owner_preparation ? <SourceEditorWorkspace key={current.session_id}
+      target={{ endpoint: `/api/prototypes/source-requests/${encodeURIComponent(current.request_id)}`, label: `${record.name} — app/design source`,
+        current: { sessionId: current.session_id, revision: realization.revision, state: realization.state, attempt: attempt ? { requestId: attempt.request_id, executionId: attempt.execution_id, objectiveDigest: attempt.objective_digest, digest: attempt.change_set?.digest ?? null } : null },
+        objective: current.source_request.objective, objectiveReadOnly: true, objectiveMin: 8, objectiveMax: 16384, scope: current.source_scope }}
+      onClose={() => setEditorOpen(false)} onSaved={() => void runtime.refresh(current.request_id)} onReviewed={() => void runtime.inspectDraft()} /> : null}
   </TerasFieldStack>;
 }

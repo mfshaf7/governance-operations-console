@@ -6662,3 +6662,15 @@
     min-height: auto;
   }
 }
+.terasCodeEditor {
+  min-width: 0;
+  min-height: 20rem;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.terasCodeEditor > div {
+  height: 100%;
+}

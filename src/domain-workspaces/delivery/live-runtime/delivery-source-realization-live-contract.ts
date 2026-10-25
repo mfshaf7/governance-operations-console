@@ -44,6 +44,7 @@ export function assertDeliverySourceRealizationProjection(value: unknown): Deliv
     replayed: boolean(item.replayed),
     attempt: attempt ? {
       request_id: stable(attempt.request_id), state: text(attempt.state), retry_of: nullableStable(attempt.retry_of), objective_digest: digest(attempt.objective_digest),
+      ...(attempt.execution_id === undefined ? {} : { execution_id: stable(attempt.execution_id) }),
       model: model ? { profile_id: text(model.profile_id),
         ...(Object.hasOwn(model, "effective_selection") ? { effective_selection: assertEffectiveModelSelection(model.effective_selection, text(model.profile_id) + "/source_realization") } : {}),
       } : null,

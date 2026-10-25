@@ -1,5 +1,11 @@
 # Governance Operations Console
 
+Staged source-editing procedure:
+[Source editor and import](docs/product/source-editor-and-import.md).
+Epic 1323 adds a shared text/diff editor and VS Code file/folder import to
+Prototype app/design and ordinary Delivery. Exact composed Security acceptance
+and commissioning remain required before operating qualification.
+
 Staged operator procedure:
 [Prototype source authoring](docs/product/prototype-source-authoring.md).
 This source extension still requires exact composed acceptance and commissioning.

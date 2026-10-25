@@ -1,4 +1,5 @@
 import type { EffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
+import type { SourceDraft } from "../../../console-integration/source-authoring/source-editor-contract.ts";
 export type PrototypeSourceAction = "session" | "generate" | "accept" | "recover" | "cancel-attempt" | "publish" | "review" | "merge" | "close";
 import type { PrototypeDeliverySourceCustody } from "../domain/prototype-delivery.ts";
 
@@ -45,7 +46,7 @@ export type PrototypeSourceProjection = PrototypeSourceSummary & {
   realization: null | {
     session_id: string; revision: string; state: string;
     attempt: null | {
-      request: PrototypeGenerationRequest; request_id: string; execution_id: string;
+      request: PrototypeGenerationRequest | { kind: "operator"; command_id: string; execution_id: string; objective: string }; request_id: string; execution_id: string;
       retry_of: string | null; state: string; objective_digest: string;
       context_packet_ref: string | null; model_profile_id: string | null; failure: string | null;
       effective_model_selection?: EffectiveModelSelection;
@@ -55,12 +56,7 @@ export type PrototypeSourceProjection = PrototypeSourceSummary & {
     };
   };
 };
-export type PrototypeSourceDraft = {
-  request_id: string; session_id: string; revision: string; digest: string; accepted: boolean;
-  change_set: { commit_message: string; operations: {
-    action: "create" | "replace" | "delete"; path: string; content: string | null; expected_digest: string | null;
-  }[] };
-};
+export type PrototypeSourceDraft = SourceDraft & { request_id: string };
 export type PrototypeSourceIntent = {
   action: PrototypeSourceAction; commandId: string; requestedAt: string;
   sourceIntentRef: string | null; expectedRevision: string; reason?: string; acceptedChangeSetDigest?: string;

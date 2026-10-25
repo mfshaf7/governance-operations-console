@@ -236,10 +236,12 @@ retries a failed read without fixture fallback. Visible-page polling is bounded.
 
 Inside an active Governed Work Session, the source-realization panel provides:
 
-1. A bounded objective submitted to OOS's commissioned context/model path.
-2. Owner-generated draft metadata: paths, actions, commit message and exact
-   change-set digest, never generated file contents or a browser source editor.
-3. Explicit acceptance of that displayed digest before the existing Agent Gary
+1. A bounded source objective. **Edit or import source** opens the shared
+   [source workspace](source-editor-and-import.md); optional model generation
+   remains a separate action using configured model selection.
+2. Caller-bound source text, original/diff inspection, file/folder import and
+   private manual or amended drafts. Save creates no Git or model effect.
+3. Explicit inspection and acceptance of the saved exact digest before Agent Gary
    source executor can create a commit. This acceptance does not approve a PR,
    merge source, close ART, or grant Platform or Security authority.
 4. Owner refresh, reason-bound cancellation before apply, and linked retry.
@@ -249,7 +251,9 @@ Inside an active Governed Work Session, the source-realization panel provides:
 
 All realization routes are under the existing work-session route's
 `realization` suffix, with `start`, `continue`, `cancel`, and `recover` commands.
-They reuse verified mutation authorization and server-built caller/operator/
+The staged editor adds bounded `files` reads and `draft` reads/saves. These
+private source routes require the verified Console session, and retain original
+save identity on an uncertain response. They reuse server-built caller/operator/
 session bindings. Canonical GET envelopes, terminal receipt integrity, target,
 objective and accepted-digest bindings must agree before success is displayed.
 Source merge alone does not commission `source-realization-v1` or activate its

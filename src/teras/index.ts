@@ -206,3 +206,5 @@ export type {
   TerasWizardSubject,
 } from "./teras-wizard";
 export { TerasZone, TerasZoneLayout } from "./teras-zone-layout";
+export { TerasCodeEditor } from "./teras-code-editor.tsx";
+export { TerasFilePicker } from "./teras-file-picker.tsx";
