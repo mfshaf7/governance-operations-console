@@ -10,6 +10,7 @@ import {
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
 import type { OperationWorkbenchDomainContract } from "../../../../operation-workbench/operation-workbench-contract.ts";
 import { useConsoleRuntimeCapabilities } from "../../../../console-integration/configuration/use-console-runtime-capabilities.ts";
+import { deliveryModelForScope } from "../../live-runtime/delivery-history-projection.ts";
 import { useDeliveryWorkspaceLiveRuntime } from "../../live-runtime/use-delivery-workspace-live-runtime.ts";
 import {
   resolveConsolePrimaryRecordIsolation,
@@ -109,7 +110,8 @@ function AvailableDeliveryWorkspaceController({
     useState<DeliveryWorkspaceSurfaceId>("home");
   const [workspaceMounted, setWorkspaceMounted] = useState(false);
   const appliedEntryIntentRef = useRef<string | null>(null);
-  const model = useMemo(
+  const [recordScope,setRecordScope] = useState<"current"|"history">("current");
+  const completeModel = useMemo(
     () =>
       allowLocalProjection ? projectDeliveryEffectiveReadModel({
         model: baseModel,
@@ -117,6 +119,7 @@ function AvailableDeliveryWorkspaceController({
       }) : baseModel,
     [allowLocalProjection, baseModel, localProjection],
   );
+  const model = useMemo(() => allowLocalProjection ? completeModel : deliveryModelForScope(completeModel,recordScope),[allowLocalProjection,completeModel,recordScope]);
   const executionCount = useMemo(
     () => getExecutionBoardPackages(model).length,
     [model],
@@ -143,6 +146,13 @@ function AvailableDeliveryWorkspaceController({
       return;
     }
 
+    if (!allowLocalProjection) {
+      const target = completeModel.packages.find(p => p.delivery_package_id === entryIntent.subjectRef);
+      const source = completeModel.intake_sources.find(s => s.accepted_source_id === entryIntent.subjectRef);
+      if ((target && ["done", "retired", "parked"].includes(target.backend_status)) || source?.intake_status === "consumed") {
+        setRecordScope("history");
+      }
+    }
     appliedEntryIntentRef.current = entryKey;
     if (surfaceId === "work-design" || surfaceId === "refinement") {
       focusPackageRegister(surfaceId, entryIntent.subjectRef);
@@ -150,7 +160,7 @@ function AvailableDeliveryWorkspaceController({
     }
 
     setActiveWorkspaceSurfaceId(surfaceId);
-  }, [entryIntent]);
+  }, [entryIntent, allowLocalProjection, completeModel]);
 
   function focusPackageRegister(
     surfaceId: Extract<
@@ -186,6 +196,7 @@ function AvailableDeliveryWorkspaceController({
       entryIntent={entryIntent}
       executionCount={executionCount}
       model={model}
+      onRecordScopeChange={allowLocalProjection ? undefined : setRecordScope}
       onActiveSurfaceChange={setActiveWorkspaceSurfaceId}
       onClose={onClose}
       onConsumeSource={consumeIntakeSource}

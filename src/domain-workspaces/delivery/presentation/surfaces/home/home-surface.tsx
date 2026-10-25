@@ -9,6 +9,7 @@ import {
   getDeliveryHomeViewModel,
   type DeliveryHomeTarget,
 } from "./home-view-model.ts";
+import { DeliveryHistoryRegister } from "../../workflows/shared/history/delivery-history-register.tsx";
 import { DeliveryHomeAgentConsole } from "./home-agent-console.tsx";
 import { DeliveryHomeAttentionQueuePanel } from "./home-attention-queue-panel.tsx";
 import { DeliveryHomeRecentActivityPanel } from "./home-recent-activity-panel.tsx";
@@ -52,7 +53,7 @@ export function DeliveryHomeSurface({
         />
       }
       primaryMain={
-        <DeliveryHomeAttentionQueuePanel
+        model.history_scope === "history" ? <DeliveryHistoryRegister model={model} section="closeout"/> : <DeliveryHomeAttentionQueuePanel
           attentionQueue={viewModel.attentionQueue}
           onRouteToTarget={routeToTarget}
         />
@@ -60,6 +61,7 @@ export function DeliveryHomeSurface({
       sideTop={
         <DeliveryHomeRecentActivityPanel
           recentActivity={viewModel.recentActivity}
+          sourceDetail={model.evidence_coverage?.activity.detail}
         />
       }
       sideFill={<DeliveryHomeAgentConsole viewModel={viewModel} />}

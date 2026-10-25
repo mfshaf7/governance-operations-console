@@ -69,6 +69,9 @@ export function deliveryWorkspaceSummaryStats({
   executionCount: number;
   model: DeliveryReadModel;
 }): DeliveryWorkspaceSummaryCard[] {
+  if (model.history_scope === "history" && !["catalog", "intake"].includes(activeSurfaceId)) {
+    return deliveryOverviewStats(model, executionCount);
+  }
   switch (activeSurfaceId) {
     case "intake":
       return intakeWorkspaceSummaryStats(model);

@@ -27,6 +27,7 @@ export function deliverySurfaceItemCount({
 }) {
   switch (surfaceId) {
     case "home":
+      if (model.history_scope === "history") return model.packages.length;
       return (
         getOpenIntakeSourceCount(model) +
         getDeliveryWorkflowPhaseCount("work_design", model) +
@@ -36,7 +37,7 @@ export function deliverySurfaceItemCount({
     case "execution-board":
       return executionCount;
     case "intake":
-      return getOpenIntakeSourceCount(model);
+      return model.history_scope === "history" ? model.intake_sources.length : getOpenIntakeSourceCount(model);
     case "work-design":
       return getDeliveryWorkflowPhaseCount("work_design", model);
     case "refinement":
@@ -50,6 +51,13 @@ export function deliveryOverviewStats(
   model: DeliveryReadModel,
   executionCount: number,
 ): Array<{ id: string; label: string; tone: DeliveryTone; value: string }> {
+  if(model.history_scope === "history")return [
+    {id:"packages",label:"Retained packages",tone:"info",value:String(model.packages.length)},
+    {id:"intake",label:"Consumed sources",tone:"info",value:String(model.intake_sources.filter(s=>s.intake_status==="consumed").length)},
+    {id:"done",label:"Completed packages",tone:"ok",value:String(model.packages.filter(p=>p.backend_status==="done").length)},
+    {id:"inactive",label:"Inactive packages",tone:"muted",value:String(model.packages.filter(p=>["parked","retired"].includes(p.backend_status)).length)},
+    {id:"issues",label:"Intake evidence issues",tone:model.evidence_coverage?.intake.state==="current"?"muted":"warn",value:model.evidence_coverage?.intake.state==="unavailable"?"Unavailable":String(model.evidence_coverage?.intake.issue_count??0)},
+  ];
   const blockedSignalCount = getDeliveryBlockedSignalCount(model);
 
   return [

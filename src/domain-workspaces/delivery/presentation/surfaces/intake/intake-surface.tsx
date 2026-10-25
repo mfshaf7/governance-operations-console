@@ -1,5 +1,6 @@
 "use client";
 
+import { DeliveryHistoryDialog } from "../../workflows/shared/history/delivery-history-dialog.tsx";
 import { useEffect, useRef, useState } from "react";
 
 import type {
@@ -14,6 +15,7 @@ import {
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
+  TerasList, TerasSignalItem, TerasActionButton,
 } from "@/teras";
 import {
   intakeOwnerFilterOptions,
@@ -43,6 +45,7 @@ export function DeliveryIntakeSurface({
   surface: DeliverySurfaceConfig;
 }) {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [nativeHistoryId,setNativeHistoryId] = useState<string|null>(null);
   const [consumeSourceId, setConsumeSourceId] = useState<string | null>(null);
   const [consumedSummarySourceId, setConsumedSummarySourceId] = useState<
     string | null
@@ -89,9 +92,8 @@ export function DeliveryIntakeSurface({
     return matchesOwner && matchesStatus && matchesSearch;
   });
   const selectedSource =
-    sources.find((source) => source.accepted_source_id === selectedSourceId) ??
+    filteredSources.find((source) => source.accepted_source_id === selectedSourceId) ??
     filteredSources[0] ??
-    sources[0] ??
     null;
   const consumeSource =
     sources.find((source) => source.accepted_source_id === consumeSourceId) ??
@@ -125,6 +127,7 @@ export function DeliveryIntakeSurface({
     setSelectedSourceId(focusedSource.accepted_source_id);
 
     if (focusedSource.intake_status === "consumed") {
+      if(model.source_truth === "OpenProject-backed OOS") {setNativeHistoryId(focusedSource.delivery_package_id);return;}
       setConsumeSourceId(null);
       setReturnToFocusedSourceAfterConsume(false);
       setReturnToFocusedSourceAfterConsumedSummary(true);
@@ -144,6 +147,7 @@ export function DeliveryIntakeSurface({
     setReturnToFocusedSourceAfterConsumedSummary(false);
 
     if (source.intake_status === "consumed") {
+      if(model.source_truth === "OpenProject-backed OOS") {setNativeHistoryId(source.delivery_package_id);return;}
       setConsumedSummarySourceId(source.accepted_source_id);
       return;
     }
@@ -169,13 +173,14 @@ export function DeliveryIntakeSurface({
 
   return (
     <>
+      <DeliveryHistoryDialog deliveryId={nativeHistoryId} onClose={()=>setNativeHistoryId(null)} focus="intake"/>
       <TerasRecordControlLayout
         composition="fullscreen-register"
         data-delivery-surface-register="intake"
         mode="register-selected"
         register={
           <TerasRegisterPanel
-            description="Default view shows accepted sources that still need a Delivery shell."
+            description={model.evidence_coverage ? `${model.history_scope === "history" ? "Original admitted and consumed sources. " : "Handoffs awaiting application remain in their origin workflow. Switch to History for consumed sources. "}${model.evidence_coverage.intake.detail}` : "Default view shows accepted sources that still need a Delivery shell."}
             filterBar={
               <TerasFilterBar
                 search={{
@@ -208,6 +213,10 @@ export function DeliveryIntakeSurface({
             statusTone="warn"
             title="Accepted Source Register"
           >
+            {model.evidence_coverage?.intake.issues?.length ? <TerasList frame="contained">
+              {model.evidence_coverage.intake.issues.map(issue=><TerasSignalItem key={issue.target_ref} tone="warn" label="Intake evidence unavailable" title={issue.target_ref} detail={issue.detail}
+                actions={<TerasActionButton emphasis="secondary" onClick={()=>setNativeHistoryId(`delivery-${issue.target_ref.split("/").at(-1)}`)}>Inspect owner history</TerasActionButton>}/>)}
+            </TerasList> : null}
             {filteredSources.length > 0 ? (
               <DeliveryIntakeRegisterTable
                 onAction={openSourceAction}
@@ -219,7 +228,7 @@ export function DeliveryIntakeSurface({
               />
             ) : (
               <TerasEmptyState fill>
-                No intake sources match the current filters.
+                {model.evidence_coverage?.intake.state === "unavailable" ? "Native Intake evidence is unavailable. Refresh to retry; no empty-history claim is made." : model.history_scope === "current" ? "No admitted sources require a Delivery shell. Consumed sources remain in History." : "No verified Intake sources match these filters. Evidence issues are listed separately."}
               </TerasEmptyState>
             )}
           </TerasRegisterPanel>

@@ -202,7 +202,7 @@ export function getDeliveryPackagesByWorkflowPhase(
   workflowPhase: DeliveryWorkflowPhase,
   model: DeliveryReadModel = deliveryReadModel,
 ): DeliveryPackageSummary[] {
-  return getDeliveryPackages(model).filter(
+  return model.history_scope === "history" ? getDeliveryPackages(model) : getDeliveryPackages(model).filter(
     (deliveryPackage) => deliveryPackage.workflow_phase === workflowPhase,
   );
 }
@@ -210,7 +210,7 @@ export function getDeliveryPackagesByWorkflowPhase(
 export function getExecutionBoardPackages(
   model: DeliveryReadModel = deliveryReadModel,
 ): DeliveryPackageSummary[] {
-  return getDeliveryPackages(model).filter(
+  return model.history_scope === "history" ? getDeliveryPackages(model) : getDeliveryPackages(model).filter(
     (deliveryPackage) =>
       deliveryPackage.workflow_phase === "execution" ||
       deliveryPackage.workflow_phase === "audit_only",

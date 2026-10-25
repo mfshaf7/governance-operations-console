@@ -18,6 +18,7 @@ import {
   TerasModalShell,
   TerasFullscreenSurfaceFrame,
   TerasSurfaceNav,
+  TerasSegmentedControl,
   TerasSurfaceNavButton,
   TerasSurfaceSummaryHeader,
 } from "@/teras";
@@ -51,6 +52,7 @@ import {
   deliveryWorkspaceSummaryStats,
   deliveryWorkspaceSummaryTitle,
 } from "./workspace-view-model.ts";
+import { DeliveryHistoryRegister } from "../workflows/shared/history/delivery-history-register.tsx";
 import { DeliveryPackageWorkflowRouter } from "../package-register/index.ts";
 
 export function DeliveryWorkspaceModal({
@@ -60,6 +62,7 @@ export function DeliveryWorkspaceModal({
   executionCount,
   model,
   onActiveSurfaceChange,
+  onRecordScopeChange,
   onClose,
   onConsumeSource,
   onRequestPackageRegisterFocus,
@@ -73,6 +76,7 @@ export function DeliveryWorkspaceModal({
   model: DeliveryReadModel;
   onActiveSurfaceChange: (surfaceId: DeliveryWorkspaceSurfaceId) => void;
   onClose: () => void;
+  onRecordScopeChange?: (scope: "current" | "history") => void;
   onConsumeSource: (source: DeliveryIntakeSource) => void;
   onRequestPackageRegisterFocus: (
     surfaceId: Extract<
@@ -110,6 +114,7 @@ export function DeliveryWorkspaceModal({
         surfaceId: DeliveryWorkspaceSurfaceId;
         type: "surface";
       }
+    | { type: "scope"; scope: "current" | "history" }
     | null
   >(null);
   const workspaceSummaryStats = deliveryWorkspaceSummaryStats({
@@ -195,6 +200,7 @@ export function DeliveryWorkspaceModal({
       return;
     }
 
+    if(pendingExit.type === "scope") { onRecordScopeChange?.(pendingExit.scope); return; }
     onActiveSurfaceChange(pendingExit.surfaceId);
   }
 
@@ -262,6 +268,9 @@ export function DeliveryWorkspaceModal({
             kicker="Workspace Nav"
             title="Delivery Areas"
           >
+            {onRecordScopeChange ? <TerasSegmentedControl ariaLabel="Delivery record scope" value={model.history_scope??"current"}
+              options={[{label:"Current",value:"current" as const},{label:"History",value:"history" as const}]}
+              onValueChange={scope=>{if(dirtyExecutionTreeDraftActive())setPendingWorkspaceExit({type:"scope",scope});else onRecordScopeChange(scope);}}/> : null}
             {deliveryWorkspaceSurfaces.map((surface) => {
               const count = deliverySurfaceItemCount({
                 executionCount,
@@ -298,11 +307,12 @@ export function DeliveryWorkspaceModal({
             statuses={projectOperationSurfaceStatusItems(
               deliveryWorkspaceComponentStatuses(model),
             )}
-            title={deliveryWorkspaceSummaryTitle(activeSurfaceId)}
+            title={`${model.history_scope ? model.history_scope === "history" ? "History · " : "Current · " : ""}${deliveryWorkspaceSummaryTitle(activeSurfaceId)}`}
           />
         }
       >
         <DeliveryWorkspaceSurfaceContent
+          key={`${activeSurfaceId}:${model.history_scope??"preview"}`}
           activeSurfaceId={activeSurfaceId}
           catalogDeliveryLinkTarget={catalogDeliveryLinkTarget}
           catalogRepositoryFocusId={
@@ -428,6 +438,9 @@ function DeliveryWorkspaceSurfaceContent({
     );
   }
 
+  if(model.history_scope === "history" && ["work-design","refinement","execution-board"].includes(activeSurfaceId)) {
+    return <DeliveryHistoryRegister model={model} focusPackageId={activeSurfaceId === "execution-board" ? executionFocusPackageId : packageRegisterFocus?.surfaceId === activeSurfaceId ? packageRegisterFocus.packageId : null} section={activeSurfaceId==="work-design"?"work_design":activeSurfaceId==="refinement"?"refinement":"closeout"}/>;
+  }
   if (activeSurfaceId === "catalog") {
     return (
       <DeliveryCatalogSurface
