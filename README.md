@@ -141,6 +141,22 @@ npm run dev
 
 The local preview binds to `http://127.0.0.1:3317`.
 
+Before advancing a checkout used by an active Console, inspect the actual
+running command and working directory. A running development server watches
+its source checkout: pulling a merge can activate new source immediately,
+before dependency installation, Security acceptance or Platform commissioning.
+A successful build elsewhere does not prove the running process uses it.
+
+Use the existing Platform complete-runtime procedure to retain every live
+source consumer on the accepted revision until commissioning. Check both the
+frontend process and repository-credential refresh; pinning only the refresh
+consumer does not isolate the frontend. Preserve the existing private
+environment and account custody. After acceptance, install the selected locked
+dependencies and use normal activation to replace temporary source-path
+overrides. Verify actual process source, refresh readiness and HTTP/native
+workflow readback before retiring the accepted snapshot. Checkout advancement,
+service existence and source merge alone do not establish operating readiness.
+
 Use `npm run check` for the complete architecture, semantic, type, and
 production-build validation.
 
