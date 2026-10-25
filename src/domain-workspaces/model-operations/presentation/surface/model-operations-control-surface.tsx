@@ -93,7 +93,7 @@ function ModelProfileControlSurface() {
               "data-model-profile-register": "standard",
             }}
             density="compact-control"
-            description="Canonical profile records and caller-specific readiness projections."
+            description={controller.source.description}
             filterBar={
               <TerasFilterBar
                 filters={[
@@ -138,7 +138,7 @@ function ModelProfileControlSurface() {
               />
             ) : (
               <TerasEmptyState fill>
-                No profiles match the current search and filters.
+                {controller.source.unavailable ? controller.source.description : "No profiles match the current search and filters."}
               </TerasEmptyState>
             )}
           </TerasRegisterPanel>

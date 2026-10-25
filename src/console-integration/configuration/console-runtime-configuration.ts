@@ -370,6 +370,14 @@ export function consoleModelOperationsModeSelected(
   );
 }
 
+export function consoleModelOperationsReadMode(
+  env: NodeJS.ProcessEnv = process.env,
+): "disconnected-preview" | "live" | "unavailable" {
+  if (consoleModelOperationsModeSelected(env)) return "live";
+  return projectConsoleRuntimeCapabilities(env).mode === "disconnected-preview"
+    ? "disconnected-preview" : "unavailable";
+}
+
 export function resolveConsoleModelOperationsConfiguration(
   env: NodeJS.ProcessEnv = process.env,
 ): ConsoleModelOperationsConfiguration {

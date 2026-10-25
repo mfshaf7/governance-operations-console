@@ -7,6 +7,7 @@ import test from "node:test";
 
 import {
   consoleModelOperationsModeSelected,
+  consoleModelOperationsReadMode,
   projectConsoleRuntimeCapabilities,
   resolveConsoleModelOperationsConfiguration,
 } from "../../src/console-integration/configuration/console-runtime-configuration.ts";
@@ -472,4 +473,33 @@ function canonicalStringify(value) {
   if (value === null || typeof value === "boolean" || typeof value === "number" || typeof value === "string") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalStringify).join(",")}]`;
   return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalStringify(value[key])}`).join(",")}}`;
+}
+
+
+test("Purpose profile samples require a wholly disconnected Console, never missing live owner evidence", () => {
+  assert.equal(consoleModelOperationsReadMode({}), "disconnected-preview");
+  for (const env of [
+    { OOS_BASE_URL: "http://owner.test" },
+    { OOS_CALLER_SECRET: "partial-test-only" },
+    { WGCF_BASE_URL: "http://continuity.test" },
+    { GOVERNANCE_CONSOLE_PROTOTYPE_PREVIEW_OWNER_REPO_ROOT: "/test-only/studio" },
+    baseConfigEnv(),
+  ]) {
+    assert.equal(consoleModelOperationsReadMode(env), "unavailable");
+  }
+  const partial = { GOVERNANCE_CONSOLE_MODEL_PROFILE_SOURCE_PROJECTION_PATH: "/test-only/projection.json" };
+  assert.equal(consoleModelOperationsReadMode(partial), "live");
+  assert.throws(() => resolveConsoleModelOperationsConfiguration(partial));
+  const configured = {
+    ...baseConfigEnv(),
+    ...partial,
+    GOVERNANCE_CONSOLE_MODEL_PROFILE_LIFECYCLE_RECEIPT_PATH: "/test-only/receipt.json",
+    GOVERNANCE_CONSOLE_MODEL_PROFILE_MERGED_READBACK_PATH: "/test-only/readback.json",
+  };
+  assert.equal(consoleModelOperationsReadMode(configured), "live");
+  assert.equal(resolveConsoleModelOperationsConfiguration(configured).sourceProjectionPath, partial.GOVERNANCE_CONSOLE_MODEL_PROFILE_SOURCE_PROJECTION_PATH);
+});
+
+function baseConfigEnv() {
+  return { OOS_BASE_URL: "http://owner.test", OOS_CALLER_SECRET: "test-only-secret", GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:synthetic" };
 }

@@ -160,3 +160,17 @@ npm run build
 The focused tests cover current projection, exact request submission, source
 envelope consumption, private artifact validation, reconciliation, and
 fail-closed malformed or incomplete evidence.
+
+## Purpose Profile Source Availability
+
+Purpose profiles uses the accepted Platform source projection, lifecycle
+receipt and merged readback already required by this workflow. In a Console
+with live or partially configured owner integrations, absence of that evidence
+shows Unavailable and disables profile requests. No suspended, active or
+pending-selection profile is inferred from the historical sample. Models &
+routing continues to report its independently admitted live configuration.
+
+Sample purpose profiles remain available only in the explicit wholly
+disconnected design preview, which is labelled as sample data rather than
+current Platform state. Partial, stale or invalid profile artifacts continue
+to fail closed under the existing verification path.

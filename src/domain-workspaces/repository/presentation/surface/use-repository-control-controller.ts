@@ -46,6 +46,8 @@ import {
   repositoryCanResolveProposalGate,
   repositorySummaryFromRecords,
 } from "../shared/repository-control-projection.ts";
+import { useWorkspaceContinuityRuntime } from "../../../../workspace-continuity/live-runtime/use-workspace-continuity-runtime.ts";
+import { projectRepositoryCurrentInventory } from "../../live-runtime/repository-inventory-live-projection.ts";
 import { useRepositoryCustodyLiveRuntime } from "../../live-runtime/use-repository-custody-live-runtime.ts";
 import { repositoryIntakeCustody } from "../dialogs/admission/repository-intake-candidate.ts";
 import {
@@ -84,6 +86,22 @@ export function useRepositoryControlController({
   const runtimeCapabilities = getRepositoryRuntimeCapabilities();
   const consoleRuntime = useConsoleRuntimeCapabilities();
   const custodyRuntime = useRepositoryCustodyLiveRuntime();
+  const continuityRuntime = useWorkspaceContinuityRuntime();
+  useEffect(() => {
+    if (consoleRuntime.projection?.mode !== "live" && consoleRuntime.projection?.mode !== "invalid") return;
+    let pending = false;
+    const refresh = async () => {
+      if (pending) return;
+      pending = true;
+      try { await continuityRuntime.load(); } catch { /* Owner error clears current inventory. */ }
+      finally { pending = false; }
+    };
+    void refresh();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [consoleRuntime.projection?.mode, continuityRuntime.load]);
   const primaryRecordIsolation = resolveConsolePrimaryRecordIsolation({
     liveAuthorityAvailable: custodyRuntime.sourceStatus === "current",
     runtimeMode: consoleRuntime.projection?.mode ?? null,
@@ -142,15 +160,19 @@ export function useRepositoryControlController({
         recordProjections.map((projection) => projection.record),
         custodyRuntime.provisioningResultsByRequestId,
       );
-      return projectRepositoryCustodyResults(
+      const custodyRecords = projectRepositoryCustodyResults(
         provisionedRecords,
         custodyRuntime.resultsByRepositoryId,
       );
+      return primaryRecordIsolation.fixtureAllowed ? custodyRecords
+        : projectRepositoryCurrentInventory(custodyRecords, continuityRuntime.projection);
     },
     [
       custodyRuntime.provisioningResultsByRequestId,
       custodyRuntime.resultsByRepositoryId,
       recordProjections,
+      continuityRuntime.projection,
+      primaryRecordIsolation.fixtureAllowed,
     ],
   );
   const recordProjectionById = useMemo(
@@ -319,6 +341,8 @@ export function useRepositoryControlController({
     () => repositorySummaryFromRecords(records),
     [records],
   );
+  const currentOwnersAvailable = custodyRuntime.sourceStatus === "current" && continuityRuntime.mode === "live";
+  const canPrepareIntake = canClassifyRepository && currentOwnersAvailable && selectedRepository?.admissionState === "ready" && Boolean(selectedIntakeCustody);
   const workspaceStatus: OperationSurfaceStatusModel =
     primaryRecordIsolation.fixtureAllowed
       ? repositoryWorkspaceReadModel.workspaceStatus
@@ -326,17 +350,18 @@ export function useRepositoryControlController({
           ariaLabel: "Repository control status",
           items: [
             {
-              detail: custodyRuntime.sourceStatus === "current"
-                ? "Repository records are projected from retained OOS custody requests."
-                : custodyRuntime.sourceError ?? "Canonical Repository records are loading.",
+              detail: currentOwnersAvailable
+                ? "Custody history is projected from OOS; current admission is reconciled with canonical Workspace inventory."
+                : custodyRuntime.sourceError ?? continuityRuntime.error?.message ?? "Current repository owner records are loading.",
               facts: [
-                { label: "Primary records", value: custodyRuntime.sourceStatus },
+                { label: "Custody history", value: custodyRuntime.sourceStatus },
+                { label: "Current inventory", value: continuityRuntime.mode },
                 { label: "Fixture fallback", value: "disabled" },
               ],
               id: "source",
               label: "Source",
-              state: custodyRuntime.sourceStatus === "current" ? "online" : custodyRuntime.sourceStatus === "loading" ? "syncing" : "offline",
-              tone: custodyRuntime.sourceStatus === "current" ? "ok" : custodyRuntime.sourceStatus === "loading" ? "info" : "danger",
+              state: currentOwnersAvailable ? "online" : custodyRuntime.sourceStatus === "loading" ? "syncing" : "offline",
+              tone: currentOwnersAvailable ? "ok" : custodyRuntime.sourceStatus === "loading" ? "info" : "danger",
             },
             {
               detail: canProvisionRepository
@@ -355,11 +380,11 @@ export function useRepositoryControlController({
             },
           ],
           kicker: "Repository Status",
-          statusLabel: custodyRuntime.sourceStatus === "current" ? "Canonical source current" : "Canonical source unavailable",
+          statusLabel: currentOwnersAvailable ? "Canonical source current" : "Current admission unavailable",
           summary:
             "Live mode shows only authoritative Repository results returned by owner workflows.",
           title: "Repository control status",
-          tone: custodyRuntime.sourceStatus === "current" ? "ok" : "danger",
+          tone: currentOwnersAvailable ? "ok" : "danger",
         };
   const requestDraftDirty = repositoryRequestDraftDirty(requestDraft);
   const activeRequestResult = custodyRuntime.provisioningResultsByRequestId[requestId];
@@ -619,8 +644,8 @@ export function useRepositoryControlController({
 
   return {
     intake: {
-      canPrepare: canClassifyRepository && custodyRuntime.sourceStatus === "current" && Boolean(selectedIntakeCustody),
-      open: () => { if (canClassifyRepository && selectedRepository && selectedIntakeCustody) setIntakeRepositoryId(selectedRepository.id); },
+      canPrepare: canPrepareIntake,
+      open: () => { if (canPrepareIntake && selectedRepository) setIntakeRepositoryId(selectedRepository.id); },
       close: () => setIntakeRepositoryId(null),
       repository: intakeRepository,
       custodyResult: intakeCustodyResult,

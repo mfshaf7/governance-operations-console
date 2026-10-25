@@ -52,8 +52,10 @@ export function useModelOperationsControlController() {
   const [selectedProfileId, setSelectedProfileId] = useState(
     readModel.profiles[0]?.policy.profileId ?? null,
   );
-  const [dashboardProfile, setDashboardProfile] =
-    useState<ModelProfileRecord | null>(null);
+  const [dashboardProfileId, setDashboardProfileId] = useState<string | null>(null);
+  const dashboardProfile = readModel.profiles.find(
+    (profile) => profile.policy.profileId === dashboardProfileId,
+  ) ?? null;
   const [requestSupportOpen, setRequestSupportOpen] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestStep, setRequestStep] = useState<ModelProfileRequestStep>("intent");
@@ -102,8 +104,8 @@ export function useModelOperationsControlController() {
 
   return {
     dashboard: {
-      close: () => setDashboardProfile(null),
-      open: (profile: ModelProfileRecord) => setDashboardProfile(profile),
+      close: () => setDashboardProfileId(null),
+      open: (profile: ModelProfileRecord) => setDashboardProfileId(profile.policy.profileId),
       profile: dashboardProfile,
     },
     filters: {
@@ -135,6 +137,14 @@ export function useModelOperationsControlController() {
       filtered: filteredProfiles,
     },
     readModel,
+    source: {
+      unavailable: liveRuntime.snapshot?.status === "offline",
+      description: fixtureIsolation.fixtureAllowed
+        ? "Disconnected design preview; these sample profiles are not current Platform state."
+        : liveRuntime.snapshot?.status === "offline"
+          ? liveRuntime.snapshot.error ?? "Current Purpose profile evidence is unavailable."
+          : "Canonical profile records and caller-specific readiness projections.",
+    },
     request: {
       available:
         consoleActionExecutable(fixtureIsolation, "durable-command") &&
