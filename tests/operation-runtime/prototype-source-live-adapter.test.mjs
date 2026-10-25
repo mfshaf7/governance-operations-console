@@ -89,7 +89,7 @@ test("unknown publication replays its original exact control rather than current
 });
 test("draft reads verify full native change-set digest and current scope and session", async () => {
   const source = raw(), change = changeSet();
-  const draft = { schema_version: 1, workflow_id: "prototype-source-draft", request_id: requestId, session_id: sessionId, revision: later, digest: digest(change), accepted: false, change_set: change };
+  const draft = { schema_version: 1, workflow_id: "prototype-source-draft", request_id: requestId, session_id: sessionId, revision: later, digest: digest(change), objective: request().objective, accepted: false, change_set: change };
   const options = { config, fetchImpl: async url => String(url).endsWith("/draft") ? response(draft, "/draft") : response(source) };
   assert.equal((await readPrototypeSourceDraft(requestId, options)).change_set.operations[0].content, "<script>inert()</script>");
   change.operations[0].content = "changed"; await assert.rejects(readPrototypeSourceDraft(requestId, options), /digest/);

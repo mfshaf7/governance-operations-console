@@ -668,6 +668,19 @@ A local component is a Teras promotion candidate when:
 If a new primitive or variant is needed, pause for discussion before
 implementation.
 
+## Text source fields
+
+Epic 1323 extends Teras with the operator-approved lightweight code/diff field
+and neutral local file picker. Both Prototype app/design and ordinary Delivery
+consume these primitives through the shared source workspace. `TerasCodeEditor`
+owns keyboard search, undo/redo, highlighting, byte-preserving text edits and
+read-only/diff presentation. `TerasFilePicker` owns only the browser picker
+control. Neither owns import policy, source scope, requests, credentials,
+private draft state, model invocation, acceptance or Git delivery. The shared
+workspace and domain adapters retain those responsibilities. See
+[`source-editor-and-import.md`](source-editor-and-import.md) for the operator
+procedure and evidence boundaries.
+
 ## Sources
 
 - `operation-workbench-contract.md`

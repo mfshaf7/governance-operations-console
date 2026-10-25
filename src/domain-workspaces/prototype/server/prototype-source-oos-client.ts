@@ -2,6 +2,7 @@ import { resolveConsoleOosOperatorConfiguration, type ConsoleOosOperatorConfigur
 import { assertPrototypeSourceIntent, assertPrototypeSourceRequest, projectPrototypeSource, projectPrototypeSourceDraft, projectPrototypeSourceSummary, prototypeSourceRequestId, sourceDigest, sourceObject } from "../live-runtime/prototype-source-contract.ts";
 import type { PrototypeSourceIntent, PrototypeSourceProjection } from "../live-runtime/prototype-source-types.ts";
 import { prototypeCanonicalDigest as digest, prototypeOwnerRequest } from "./prototype-landing-oos-client.ts";
+import { sourceBoundedFetch, sourceEditorState, verifySourceDraft } from "../../../console-integration/source-authoring/server/source-editor-evidence.ts";
 
 type Options = { config?: ConsoleOosOperatorConfiguration; fetchImpl?: typeof fetch };
 const basePath = "/v1/prototype-source-requests";
@@ -28,12 +29,14 @@ export async function createPrototypeSource(input: unknown, options: Options = {
   return result;
 }
 export async function readPrototypeSourceDraft(id: string, options: Options = {}) {
+  options = { ...options, fetchImpl: sourceBoundedFetch(options.fetchImpl) };
   const current = await readPrototypeSource(id, options);
   const raw = sourceObject(await request(`${requestPath(id)}/draft`, undefined, options));
   const draft = projectPrototypeSourceDraft(raw), change = sourceObject(raw.change_set);
   if (digest(raw.change_set) !== draft.digest || current.realization?.attempt?.change_set?.digest !== draft.digest || change.session_id !== current.session_id || draft.session_id !== current.session_id || draft.request_id !== id || draft.revision !== current.realization.revision) throw new Error("Source draft does not match the exact current request, session and change-set digest.");
   for (const row of draft.change_set.operations) assertScope(row.path, current);
-  return draft;
+  verifySourceDraft(raw, { sessionId: current.session_id!, base: current.landing_unit.fetched_base, revision: current.realization!.revision, digest: current.realization!.attempt?.change_set?.digest ?? null, accepted: current.realization!.state === "source-created" }, "prototype-source-draft");
+  return { ...draft, editorState: sourceEditorState(current.realization!) };
 }
 export async function commandPrototypeSource(id: string, value: unknown, options: Options = {}) {
   const intent = assertPrototypeSourceIntent(value), current = await readPrototypeSource(id, options);
@@ -53,7 +56,10 @@ export function buildPrototypeSourceCommand(current: PrototypeSourceProjection, 
   };
   if (!realization) throw new Error("Start the actual source session before authoring.");
   if (intent.action === "generate") {
-    if (attempt?.state === "accepted") return { ...attempt.request, source_intent_ref: authorized() };
+    if (attempt?.state === "accepted") {
+      if ("kind" in attempt.request) throw new Error("An operator draft cannot be resumed as model generation.");
+      return { ...attempt.request, source_intent_ref: authorized() };
+    }
     if (attempt && !["failed", "cancelled"].includes(attempt.state)) throw new Error("Reconcile the current attempt instead of generating another draft.");
     return { schema_version: 1, request_id: `prototype-generation:${digest({ request: current.request_id, nonce: intent.commandId }).slice(7, 47)}`,
       execution_id: `prototype-execution:${digest({ request: current.request_id, nonce: intent.commandId }).slice(7, 47)}`, expected_revision: realization.revision,

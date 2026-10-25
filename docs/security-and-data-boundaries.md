@@ -373,10 +373,20 @@ required.
 The canonical primary Prototype and Delivery collection adapters use the same
 server-only OOS and negotiated source-envelope boundary. Owner records and
 caller-owned workflow progress reconstruct cold UI state; stale local overlays
-cannot change canonical lifecycle. Bounded Delivery realization accepts only an
-objective, reviewed digest and finite recovery intent. OOS retains context/model,
-source-executor, file bytes and receipt authority; the browser receives curated
-metadata only. This source extension does not activate source realization or
+cannot change canonical lifecycle. The staged Epic 1323 source editor extends
+ordinary Delivery and Prototype app/design with caller-bound bounded source
+text reads and private manual/imported draft saves. Every private source route
+uses the verified Console session and server-only authenticated OOS adapter.
+The browser supplies closed text operations, expected revision/digest and a
+stable save identity, never repository/caller/credential authority. Original
+model evidence does not attest operator-amended bytes. Current owner readback
+and exact-digest inspection precede separate acceptance and Gary delivery.
+Local buffers are memory-only, imported source remains inert, and neither the
+editor nor importer adds text to Agent context or invokes a model. OOS retains
+scope, private history, source execution and receipt authority. Unknown or
+conflicting outcomes preserve local edits and use original-command recovery.
+Trusted owner preparations remain inspect-only. This source extension does not
+activate the editor, source realization or
 expand provider installation scope. Commissioning requires the existing bounded
 source-realization review and exact-composition Security decision.
 

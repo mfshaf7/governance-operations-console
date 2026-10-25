@@ -1,4 +1,5 @@
 import { assertEffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
+import { assertSourceDraft } from "../../../console-integration/source-authoring/source-editor-contract.ts";
 import type { PrototypeGenerationRequest, PrototypeOwnerPreparation, PrototypeSourceCommand, PrototypeSourceDraft, PrototypeSourceIntent, PrototypeSourceProjection, PrototypeSourceRequest, PrototypeSourceSummary } from "./prototype-source-types.ts";
 import { assertPrototypeDeliveryPreparation } from "./prototype-delivery-preparation-contract.ts";
 
@@ -63,6 +64,12 @@ function generation(value: unknown): PrototypeGenerationRequest {
   if (item.schema_version !== 1 || !Number.isInteger(item.budget_tokens) || Number(item.budget_tokens) < 1 || Number(item.budget_tokens) > 8000) invalid();
   return { schema_version: 1, request_id: sourceId(item.request_id), execution_id: sourceId(item.execution_id), expected_revision: sourceTimestamp(item.expected_revision), budget_tokens: Number(item.budget_tokens), retry_of: nullable(item.retry_of, sourceId), requested_at: sourceTimestamp(item.requested_at), source_intent_ref: sourceIntentReference(item.source_intent_ref) };
 }
+function sourceAttemptRequest(value: unknown): NonNullable<NonNullable<PrototypeSourceProjection["realization"]>["attempt"]>["request"] {
+  const item = sourceObject(value);
+  if (item.kind !== "operator") return generation(value);
+  exact(item, ["kind", "command_id", "execution_id", "objective"]);
+  return { kind: "operator", command_id: sourceId(item.command_id), execution_id: sourceId(item.execution_id), objective: sourceText(item.objective, 16384) };
+}
 export function assertPrototypeSourceRequest(value: unknown): PrototypeSourceRequest {
   const item = sourceObject(value);
   exact(item, ["schema_version", "request_id", "prototype_id", "expected_registry_revision", "expected_source_revision", "objective", "requested_at", ...(Object.hasOwn(item, "owner_preparation") ? ["owner_preparation"] : [])]);
@@ -112,7 +119,7 @@ export function projectPrototypeSource(value: unknown): PrototypeSourceProjectio
   const change = attempt?.change_set ? sourceObject(attempt.change_set) : null;
   const result: PrototypeSourceProjection = { ...summary, source_request: request, source_intent_ref: nullable(item.source_intent_ref, sourceIntentReference), source_delivery: sourceDelivery,
     realization: realization ? { session_id: sourceId(realization.session_id), revision: sourceTimestamp(realization.revision), state: String(realization.state), attempt: attempt ? {
-      request: generation(attempt.request), request_id: sourceId(attempt.request_id), execution_id: sourceId(attempt.execution_id), retry_of: nullable(attempt.retry_of, sourceId), state: sourceText(attempt.state), objective_digest: sourceDigest(attempt.objective_digest),
+      request: sourceAttemptRequest(attempt.request), request_id: sourceId(attempt.request_id), execution_id: sourceId(attempt.execution_id), retry_of: nullable(attempt.retry_of, sourceId), state: sourceText(attempt.state), objective_digest: sourceDigest(attempt.objective_digest),
       context_packet_ref: attempt.context ? sourceText(sourceObject(attempt.context).packet_ref, 1024) : null, model_profile_id: attempt.model ? sourceId(sourceObject(attempt.model).profile_id) : null, failure: attempt.failure ? sourceId(sourceObject(attempt.failure).code) : null,
       ...(attempt.model && Object.hasOwn(sourceObject(attempt.model), "effective_selection") ? {
         effective_model_selection: assertEffectiveModelSelection(sourceObject(attempt.model).effective_selection, sourceId(sourceObject(attempt.model).profile_id) + "/prototype_source_authoring"),
@@ -122,19 +129,14 @@ export function projectPrototypeSource(value: unknown): PrototypeSourceProjectio
       source_receipt: attempt.source_receipt ? { head_commit: sourceCommit(sourceObject(attempt.source_receipt).head_commit), receipt_digest: sourceDigest(sourceObject(attempt.source_receipt).receipt_digest) } : null,
     } : null } : null };
   const projected = result.realization?.attempt;
-  if (projected && (projected.state !== result.realization?.state || projected.request_id !== projected.request.request_id || projected.execution_id !== projected.request.execution_id || projected.retry_of !== projected.request.retry_of)) invalid();
+  if (projected && (projected.state !== result.realization?.state || projected.execution_id !== projected.request.execution_id ||
+      ("kind" in projected.request ? projected.request_id !== projected.request.command_id || projected.request.objective !== request.objective
+        : projected.request_id !== projected.request.request_id || projected.retry_of !== projected.request.retry_of))) invalid();
   return result;
 }
 export function projectPrototypeSourceDraft(value: unknown): PrototypeSourceDraft {
-  const item = sourceObject(value), change = sourceObject(item.change_set);
-  if (item.schema_version !== 1 || item.workflow_id !== "prototype-source-draft" || typeof item.accepted !== "boolean") invalid();
-  return { request_id: prototypeSourceRequestId(item.request_id), session_id: sourceId(item.session_id), revision: sourceTimestamp(item.revision), digest: sourceDigest(item.digest), accepted: item.accepted,
-    change_set: { commit_message: sourceText(change.commit_message, 120), operations: array(change.operations, 64).map(value => { const row = sourceObject(value); if (!["create", "replace", "delete"].includes(String(row.action))) invalid(); return { action: row.action as "create" | "replace" | "delete", path: path(row.path), content: row.content === null ? null : sourceContent(row.content), expected_digest: nullable(row.expected_digest, sourceDigest) }; }) } };
-}
-function sourceContent(value: unknown): string {
-  if (typeof value !== "string" || new TextEncoder().encode(value).length > 65536) invalid();
-  try { encodeURIComponent(value); } catch { invalid(); }
-  return value;
+  const item = sourceObject(value);
+  return { ...assertSourceDraft(value, "prototype-source-draft"), request_id: prototypeSourceRequestId(item.request_id) };
 }
 export function assertPrototypeSourceIntent(value: unknown): PrototypeSourceIntent {
   const item = sourceObject(value);

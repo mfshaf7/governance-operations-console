@@ -8,6 +8,20 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-25
 
+- Epic 1323 / source child 1326 / Landing Unit
+  `delivery-1323-source-editor-shared-editor` uses the accepted
+  `child_isolated_landing_unit` owner boundary: one coherent Console editor,
+  import, verified adapter, documentation and validation change. OOS, Security
+  and real application source have separate review and rollback owners.
+- Added the shared private source workspace for Prototype app/design and
+  ordinary Delivery: lazy CodeMirror text/diff, search/undo, file selection,
+  explicit creation/deletion, mapped file/folder import, byte-preserving UTF-8,
+  private save/readback, retained original-command retry and unsaved-close
+  protection. Kept optional model generation, exact-digest inspection,
+  acceptance, Gary publication and human approval separate. The browser gains
+  no source, credential, model or runtime authority. Source landing is distinct
+  from Security 1327, Platform 1328 and real operating proof 1329.
+
 - Preserved OOS's required `target.allowed_values` array in Refinement advice,
   including an empty array for unconstrained text and number fields. This repairs
   normal advice submission without changing the owner schema, model permissions

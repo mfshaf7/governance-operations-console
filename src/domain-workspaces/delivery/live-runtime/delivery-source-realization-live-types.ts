@@ -9,6 +9,7 @@ export type DeliverySourceRealizationProjection = {
   state: "not-started" | "accepted" | "draft-ready" | "applying" | "apply-unknown" | "source-created" | "cancelled" | "failed";
   attempt: null | {
     request_id: string;
+    execution_id?: string;
     state: string;
     retry_of: string | null;
     objective_digest: string;

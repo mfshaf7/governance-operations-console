@@ -2,6 +2,7 @@ import { effectiveModelLabel } from "../../../../../../console-integration/gover
 import { useState } from "react";
 import { TerasActionButton, TerasContentTray, TerasFieldStack, TerasList, TerasMetadataList, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSignalItem } from "@/teras";
 import { useDeliverySourceRealizationLiveRuntime } from "../../../../live-runtime/use-delivery-source-realization-live-runtime.ts";
+import { SourceEditorWorkspace } from "../../../../../../console-integration/source-authoring/presentation/source-editor-workspace.tsx";
 
 export function ExecutionSourceRealizationPanel({ sessionId, sessionRevision, sourceWorkRequired, workItemId, sourceIntentRef }: {
   sessionId: string; sessionRevision: string; sourceWorkRequired: boolean; workItemId: number; sourceIntentRef?: string | null;
@@ -9,11 +10,12 @@ export function ExecutionSourceRealizationPanel({ sessionId, sessionRevision, so
   const runtime = useDeliverySourceRealizationLiveRuntime(workItemId, sessionId);
   const [objective, setObjective] = useState("");
   const [reason, setReason] = useState("");
+  const [editorOpen, setEditorOpen] = useState(false), [reviewed, setReviewed] = useState<{ digest: string; revision: string } | null>(null);
   const current = runtime.projection;
   const draft = current?.attempt?.change_set;
   const canStart = sourceWorkRequired && ["source-realization-start-required", "source-realization-retry-available"].includes(current?.next_action.code ?? "");
   const canCancel = current && ["accepted", "draft-ready"].includes(current.state);
-  const canAccept = sourceWorkRequired && current?.state === "draft-ready" && current.next_action.code === "source-realization-acceptance-required" && draft;
+  const canAccept = sourceWorkRequired && current?.state === "draft-ready" && current.next_action.code === "source-realization-acceptance-required" && draft && reviewed?.digest === draft.digest && reviewed.revision === current.revision;
 
   function run(command: () => Promise<unknown>) { void command().catch(() => undefined); }
   const authorization = sourceIntentRef ? { sourceIntentRef } : {};
@@ -23,6 +25,7 @@ export function ExecutionSourceRealizationPanel({ sessionId, sessionRevision, so
       description={runtime.error ?? current?.next_action.reason ?? "Reading authoritative source realization state."}
       statusLabel={runtime.pending ? "Working" : current?.state ?? "Unavailable"} />
     <TerasFieldStack spacing="normal">
+      <TerasActionButton emphasis="secondary" disabled={runtime.pending || !current || !sourceWorkRequired && current.state !== "source-created"} onClick={() => setEditorOpen(true)}>Edit or import source</TerasActionButton>
       <TerasMetadataList items={[
         { label: "Authority", value: current?.next_action.authority ?? "operator-orchestration-service" },
         { label: "Attempt", value: current?.attempt?.request_id ?? "Not started" },
@@ -61,6 +64,9 @@ export function ExecutionSourceRealizationPanel({ sessionId, sessionRevision, so
         { label: "Receipt digest", value: current.attempt.source_receipt.receipt_digest },
       ]} /> : null}
       <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => run(runtime.refresh)}>Refresh source realization</TerasActionButton>
+      {editorOpen && current ? <SourceEditorWorkspace key={sessionId} target={{ endpoint: `/api/delivery/execution/${workItemId}/work-session/realization`, label: "Delivery source workspace",
+        current: { sessionId, revision: current.revision, state: current.state, attempt: current.attempt ? { requestId: current.attempt.request_id, executionId: current.attempt.execution_id ?? "", objectiveDigest: current.attempt.objective_digest, digest: current.attempt.change_set?.digest ?? null } : null },
+        objective, objectiveMin: 20, objectiveMax: 12000, scope: null }} onClose={() => setEditorOpen(false)} onSaved={() => { setReviewed(null); run(runtime.refresh); }} onReviewed={draft => setReviewed({ digest: draft.digest, revision: draft.revision })} /> : null}
     </TerasFieldStack>
   </TerasPanel>;
 }

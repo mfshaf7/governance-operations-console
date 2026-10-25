@@ -73,6 +73,12 @@ current and future product changes.
 
 ## Live Integration Surfaces
 
+- `source-editor-and-import.md`
+  - Primary procedure for the shared bounded editor/diff and file/folder import
+    in Prototype app/design and ordinary Delivery. Private saves and source
+    acceptance/delivery are separate; operating qualification uses the exact
+    Epic 1323 acceptance and commissioning evidence.
+
 - `repository-owner-setup.md`
   - Staged Repository Intake entry for trusted owner controls, selected actual
     project validation, separate optional CI approval, non-source existing-owner

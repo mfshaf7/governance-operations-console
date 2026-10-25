@@ -535,6 +535,8 @@ server/delivery-work-session-api-routes.ts
 server/delivery-work-session-oos-client.ts
 server/delivery-source-realization-api-routes.ts
 server/delivery-source-realization-oos-client.ts
+server/delivery-source-editor-api-routes.ts
+server/delivery-source-editor-oos-client.ts
 server/delivery-workspace-oos-client.ts
 server/refinement-catalog-api-routes.ts
 server/refinement-catalog-oos-client.ts

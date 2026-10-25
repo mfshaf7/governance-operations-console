@@ -1,5 +1,14 @@
 # Prototype source authoring
 
+App/design work also uses the shared [source editor and import workspace](source-editor-and-import.md).
+Choose **Edit or import source** after preparing the actual scoped session.
+Manual editing, VS Code file/folder import and operator amendments retain private
+OOS drafts without invoking a model or committing source. Inspect the saved
+digest before the separate Gary source acceptance/delivery controls. Trusted
+Preview and Delivery owner preparations retain their inspect-only path. The
+editor extension requires Epic 1323's exact composed acceptance and operating
+commissioning before it can claim normal live qualification.
+
 This is the primary Console procedure for the staged bounded app/design source
 tool. It is source preparation, not an activated capability. Exact merged-source
 Security acceptance and coherent Platform commissioning are still required.
