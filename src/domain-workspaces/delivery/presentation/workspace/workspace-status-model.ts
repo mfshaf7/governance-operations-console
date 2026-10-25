@@ -20,6 +20,10 @@ export function deliveryWorkspaceComponentStatuses(
   const canonicalInventory = model.source_truth === "OpenProject-backed OOS";
   const ownerScopedState = deliveryProjectionWorkspaceState(model.projection_state.status);
   return [
+    ...(model.evidence_coverage && model.evidence_coverage.intake.state !== "current" ? [{
+      id:"intake-evidence",label:"Intake evidence",state:model.evidence_coverage.intake.state === "unavailable"?("offline" as const):("stale" as const),
+      detail:model.evidence_coverage.intake.detail,facts:[{label:"Coverage",value:model.evidence_coverage.intake.state}],
+    }] : []),
     {
       detail: sourceIsPrototypeLocal
         ? "Delivery is using the curated prototype read model; no live ART read path is connected."

@@ -874,3 +874,49 @@ Delivery must not:
 - turn Context Board or Build Tree into Teras primitives
 - hide backend mutation behind local prototype state
 - treat a current folder layout as correct merely because it renders today
+
+
+## Current and retained owner history
+
+`presentation/workflows/shared/history/` owns the cross-stage read-only history
+register and dialog. `live-runtime/` owns their owner-bound read contracts and
+projection; `server/` owns authenticated canonical reads.
+
+In configured live mode, the primary collection includes completed and inactive
+packages. **Current** keeps active packages in their current-stage workflows.
+**History** keeps all retained packages discoverable, including completed and
+parked work. Work Design, Refinement and Delivery history registers open the
+same read-only original owner evidence view. Its badges describe the current
+package posture; they do not claim that a stage ran successfully.
+
+To inspect an earlier delivery, open Delivery, choose History, then select the
+package in Intake, Work Design, Refinement or Execution and open its history.
+The history view reads the exact native Intake application, Work Design
+application, Refinement runs and closeout outcomes. It shows original IDs,
+actors, times, custody, receipt coordinates and linked evidence. An unavailable
+owner section is shown independently; it does not become an empty or successful
+stage. Refresh retries only the owner read and cannot replay an application.
+
+Native Proposal and Prototype application already creates or links its Delivery
+shell and retains the consumption receipt. Intake History exposes that original
+result. A handoff awaiting application stays at its origin workflow; the Console
+does not add a second Consume step. Historical source custody remains the
+original receipt custody even if the package's current owner later changes.
+Unproven historical timestamps remain explicitly unprojected.
+
+Home activity states its bounded coverage: original native Intake receipts.
+Work Design, Refinement and closeout history is read on demand for the selected
+package, rather than repeatedly scanning every workflow for every package.
+Counts, filtered registers and selection follow the same Current/History scope.
+Catalog remains the independent live metadata register, with its existing owner
+and command authorization. History or inventory does not grant work-start,
+source-authoring, acceptance or mutation permission.
+
+The source contract is OOS GET `/v1/delivery-intake/sources` (paginated, at most
+20 candidate targets per page) and GET
+`/v1/delivery-initiatives/{delivery_id}/history` (at most 200 records per owner
+section, with total and truncation disclosed). Native Intake read failure leaves
+canonical package truth visible with explicit unavailable evidence. Foreign
+source bindings, conflicting identities and pagination failures cannot produce
+consumed rows or successful receipts. The composed revision includes Intake
+proof so evidence changes refresh even when ART inventory is unchanged.

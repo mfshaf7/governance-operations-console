@@ -13,7 +13,9 @@ import {
 
 export function DeliveryHomeRecentActivityPanel({
   recentActivity,
+  sourceDetail,
 }: {
+  sourceDetail?: string;
   recentActivity: DeliveryHomeRecentActivity[];
 }) {
   const panelProjection = deliveryHomeRecentActivityPanelProjection(
@@ -33,7 +35,7 @@ export function DeliveryHomeRecentActivityPanel({
         statusLabel={panelProjection.statusLabel}
         statusTone={panelProjection.tone}
         title="System activity"
-        description="Delivery audit events from projected packages, receipts, and system state."
+        description={sourceDetail??"Delivery audit events from projected packages, receipts, and system state."}
       />
       {recentActivity.length > 0 ? (
         <TerasList
@@ -54,7 +56,7 @@ export function DeliveryHomeRecentActivityPanel({
         </TerasList>
       ) : (
         <TerasEmptyState fill>
-          No recent Delivery audit events are projected.
+          {sourceDetail??"No recent Delivery audit events are projected."}
         </TerasEmptyState>
       )}
     </TerasPanel>

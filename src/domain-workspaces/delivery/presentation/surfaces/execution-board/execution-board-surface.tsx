@@ -9,7 +9,6 @@ import {
   getDeliveryEffectivePackageProjection,
   getExecutionBoardPackages,
   getPackageAuditEvents,
-  getPackageById,
   getPackageDetailsById,
   getPackageTree,
 } from "../../../read-model/index.ts";
@@ -104,7 +103,7 @@ export function DeliveryExecutionBoard({
   const [activeView, setActiveView] =
     useState<ControlBoardViewMode>("control-board");
   const [selectedPackageId, setSelectedPackageId] = useState(
-    model.selected_delivery_package_id,
+    getExecutionBoardPackages(model)[0]?.delivery_package_id ?? "",
   );
   const [treeDraftPackageId, setTreeDraftPackageId] = useState<string | null>(
     null,
@@ -150,7 +149,7 @@ export function DeliveryExecutionBoard({
   useEffect(() => {
     if (
       focusPackageId &&
-      model.packages.some(
+      getExecutionBoardPackages(model).some(
         (deliveryPackage) =>
           deliveryPackage.delivery_package_id === focusPackageId,
       )
@@ -169,7 +168,7 @@ export function DeliveryExecutionBoard({
     [model],
   );
   const selectedPackage =
-    getPackageById(selectedPackageId, model) ?? packages[0] ?? null;
+    packages.find(p => p.delivery_package_id === selectedPackageId) ?? packages[0] ?? null;
   const selectedDetails = selectedPackage
     ? getPackageDetailsById(selectedPackage.delivery_package_id, model)
     : null;

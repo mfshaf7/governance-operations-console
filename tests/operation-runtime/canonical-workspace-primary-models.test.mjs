@@ -193,7 +193,8 @@ test("canonical design profile is retained as an unverified source reference, ne
 test("primary server adapters negotiate existing canonical envelopes and fail closed on legacy JSON or owner confusion", async () => {
   const currentDelivery = await readCanonicalDeliveryWorkspace({ env, fetchImpl: async (url, init) => {
     assertCanonicalSourceRequest(init);
-    assert.ok(url.endsWith("/v1/delivery-initiatives?include_done=false"));
+    if (url.includes("/v1/delivery-intake/sources")) return canonicalSourceResponse({schema_version:1,workflow_id:"delivery-intake-sources",sources:[],issues:[],next_cursor:null,coverage:{state:"current",detail:"No target-backed sources"},projected_at:new Date().toISOString()}, {recordRef:"openproject://projects/workspace-delivery-art/intake",sourceOwner:"workspace-delivery-art"});
+    assert.ok(url.endsWith("/v1/delivery-initiatives?include_done=true&include_inactive=true"));
     return canonicalSourceResponse(delivery(), { recordRef: "openproject://projects/workspace-delivery-art/initiatives", sourceOwner: "workspace-delivery-art" });
   } });
   assert.equal(currentDelivery.packages[0].legacy_epic_id, 71);

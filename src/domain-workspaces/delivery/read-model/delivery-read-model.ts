@@ -15,6 +15,11 @@ import type { DeliveryIntakeSource } from "../domain/delivery-intake.ts";
 import type { DeliveryPackageSummary } from "../domain/delivery-package.ts";
 
 export type DeliveryReadModel = {
+  history_scope?: "current" | "history";
+  evidence_coverage?: {
+    intake: { state: "current" | "partial" | "unavailable"; detail: string; issue_count: number; issues?: Array<{target_ref:string;detail:string}> };
+    activity: { state: "current" | "partial" | "unavailable"; detail: string };
+  };
   apply_intents: DeliveryApplyIntent[];
   family_map: {
     groups: DeliveryFamilyMapGroup[];

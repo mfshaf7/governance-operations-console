@@ -175,6 +175,7 @@ presentation/workflows/refinement/support
 presentation/workflows/refinement/support/blocker-recovery
 presentation/workflows/refinement/view-model
 presentation/workflows/shared
+presentation/workflows/shared/history
 presentation/workflows/shared/blocker-recovery
 presentation/workflows/shared/package-actions
 presentation/workflows/work-design
@@ -227,6 +228,10 @@ work-model/refinement
 work-model/work-design
 
 [files]
+live-runtime/delivery-history-live-contract.ts
+live-runtime/delivery-history-projection.ts
+presentation/workflows/shared/history/delivery-history-dialog.tsx
+presentation/workflows/shared/history/delivery-history-register.tsx
 domain/delivery-audit.ts
 domain/delivery-catalog.ts
 domain/delivery-common.ts
