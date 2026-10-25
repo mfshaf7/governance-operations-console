@@ -28,7 +28,8 @@ export async function sourceEditorOwnerFixture(kind, { model = false } = {}) {
     const change = { schema_version: 1, change_set_id: `operator-change-set:${digest(command).slice(7)}`, session_id: sessionId, base_commit: base, objective_digest: digest(command.objective), commit_message: command.commit_message, operations: command.operations };
     const previous = attempt, originalModel = previous?.operator_draft?.original_model ?? previous?.model ?? null;
     const provenance = initialModel ? null : { origin: originalModel ? "operator-amended-model" : "operator", input_origin: command.input_origin, operator_id: "operator:test-owner", command_id: command.command_id,
-      amended_at: revision, previous_draft_ref: previous ? "history:previous" : null, previous_draft_digest: previous?.change_set.digest ?? null, original_model: originalModel };
+      amended_at: revision, previous_draft_ref: previous ? kind === "prototype" ? { request_id: requestId, digest: digest(previous) } : `draft-history-${previous.change_set.digest.slice(7)}.json` : null,
+      previous_draft_digest: previous?.change_set.digest ?? null, original_model: originalModel };
     const generation = { schema_version: 1, request_id: command.command_id, execution_id: command.execution_id, expected_revision: at, budget_tokens: 4000, retry_of: null, requested_at: at, source_intent_ref: "source-intent:sample" };
     attempt = { request: previous?.request ?? (initialModel ? generation : { kind: "operator", command_id: command.command_id, execution_id: command.execution_id, objective: command.objective }),
       request_id: previous?.request_id ?? command.command_id, execution_id: command.execution_id, requested_at: at, completed_at: revision, retry_of: null, objective_digest: change.objective_digest, state: "draft-ready",

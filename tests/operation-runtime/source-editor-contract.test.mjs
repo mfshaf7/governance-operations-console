@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "nod
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { assertOperatorDraftCommand, sourcePathIssue, sourceEditorLimits } from "../../src/console-integration/source-authoring/source-editor-contract.ts";
+import { assertOperatorDraftCommand, assertSourceDraft, sourcePathIssue, sourceEditorLimits } from "../../src/console-integration/source-authoring/source-editor-contract.ts";
 import { sourceBufferOperations, sourceSaveCommand, sourceEditable, draftBuffers, sourceDraftFingerprint, replaceSourceBuffer } from "../../src/console-integration/source-authoring/source-editor-model.ts";
 import { decodeImportedSource, mapSourceImports, browserImportFiles } from "../../src/console-integration/source-authoring/source-import.ts";
 import { applyCodeTextChanges, normalizedCodeText } from "../../src/teras/teras-code-text.ts";
@@ -21,6 +21,23 @@ const command = () => sourceSaveCommand(state, objective, "Update the sample sou
 function draft(command, base = "a".repeat(40)) {
   const change = { schema_version: 1, change_set_id: `operator-change-set:${digest(command).slice(7)}`, session_id: sessionId, base_commit: base, objective_digest: digest(command.objective), commit_message: command.commit_message, operations: command.operations };
   return { schema_version: 1, workflow_id: "delivery-art-source-draft", session_id: sessionId, revision: later, digest: digest(change), objective: command.objective, accepted: false, change_set: change, operator_draft: null };
+}
+
+for (const workflow of ["prototype-source-draft", "delivery-art-source-draft"]) {
+  test(`native history references retain their owner format and binding: ${workflow}`, () => {
+    const requestId = "prototype-source-request:sample", priorDigest = `sha256:${"b".repeat(64)}`;
+    const native = workflow === "prototype-source-draft" ? { request_id: requestId, digest: `sha256:${"c".repeat(64)}` } : `draft-history-${"b".repeat(64)}.json`;
+    const value = { ...draft(command()), workflow_id: workflow, ...(workflow === "prototype-source-draft" ? { request_id: requestId } : {}),
+      operator_draft: { origin: "operator-amended-model", input_origin: "import", operator_id: "operator:test-owner", command_id: "operator-source-save:amend",
+        amended_at: later, previous_draft_ref: native, previous_draft_digest: priorDigest, original_model: { profile_id: "synthetic-source-profile" } } };
+    const read = assertSourceDraft(value, workflow);
+    assert.equal(read.provenance.origin, "operator-amended-model"); assert.equal(read.provenance.originalModel, true);
+    if (workflow === "prototype-source-draft") assert.notEqual(native.digest, priorDigest);
+    const invalid = workflow === "prototype-source-draft"
+      ? [`draft-history-${"b".repeat(64)}.json`, { ...native, request_id: "prototype-source-request:other" }, { ...native, digest: "not-a-digest" }, { ...native, path: "untrusted" }]
+      : [{ request_id: requestId, digest: `sha256:${"c".repeat(64)}` }, 7];
+    for (const reference of invalid) assert.throws(() => assertSourceDraft({ ...value, operator_draft: { ...value.operator_draft, previous_draft_ref: reference } }, workflow), /bounded/);
+  });
 }
 
 test("actual CodeMirror undo/redo restores mixed newline bytes and the BOM, including grouped edits", () => {
