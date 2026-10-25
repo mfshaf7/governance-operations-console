@@ -37,6 +37,7 @@ export function deliverySurfaceItemCount({
     case "execution-board":
       return executionCount;
     case "intake":
+      if(model.history_scope==="history"&&model.evidence_coverage?.intake.state==="unavailable")return "Unavailable";
       if(model.history_scope==="history"&&model.evidence_coverage?.intake.complete===false)return "Loading";
       return model.history_scope === "history" ? model.intake_sources.length : getOpenIntakeSourceCount(model);
     case "work-design":
