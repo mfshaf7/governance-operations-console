@@ -19,6 +19,7 @@ import {
 } from "@/teras";
 import {
   intakeOwnerFilterOptions,
+  intakeEvidenceIssuesForView,
   intakeStatusFilterOptions,
 } from "./intake-view-model.ts";
 import {
@@ -91,6 +92,7 @@ export function DeliveryIntakeSurface({
 
     return matchesOwner && matchesStatus && matchesSearch;
   });
+  const evidenceIssues = intakeEvidenceIssuesForView(model, search, ownerFilter, statusFilter);
   const selectedSource =
     filteredSources.find((source) => source.accepted_source_id === selectedSourceId) ??
     filteredSources[0] ??
@@ -213,8 +215,8 @@ export function DeliveryIntakeSurface({
             statusTone="warn"
             title="Accepted Source Register"
           >
-            {model.evidence_coverage?.intake.issues?.length ? <TerasList frame="contained">
-              {model.evidence_coverage.intake.issues.map(issue=><TerasSignalItem key={issue.target_ref} tone="warn" label="Intake evidence unavailable" title={issue.target_ref} detail={issue.detail}
+            {evidenceIssues.length ? <TerasList ariaLabel="Unverified Intake source evidence" frame="contained" scrollHeight="short">
+              {evidenceIssues.map(issue=><TerasSignalItem key={issue.target_ref} tone="warn" label="Intake evidence unavailable" title={issue.target_ref} detail={issue.detail}
                 actions={<TerasActionButton emphasis="secondary" onClick={()=>setNativeHistoryId(`delivery-${issue.target_ref.split("/").at(-1)}`)}>Inspect owner history</TerasActionButton>}/>)}
             </TerasList> : null}
             {filteredSources.length > 0 ? (

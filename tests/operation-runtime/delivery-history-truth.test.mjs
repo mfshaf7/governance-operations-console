@@ -5,6 +5,7 @@ import { deliveryModelForScope, projectDeliveryIntakeHistory } from "../../src/d
 import { assertDeliveryHistoryProjection } from "../../src/domain-workspaces/delivery/live-runtime/delivery-history-live-contract.ts";
 import { projectCanonicalDeliveryWorkspace } from "../../src/domain-workspaces/delivery/live-runtime/delivery-workspace-live-projection.ts";
 import { getDeliveryPackagesByWorkflowPhase, getExecutionBoardPackages } from "../../src/domain-workspaces/delivery/read-model/selectors/workflow-package-selectors.ts";
+import { intakeEvidenceIssuesForView } from "../../src/domain-workspaces/delivery/presentation/surfaces/intake/intake-view-model.ts";
 import { deliveryOverviewStats } from "../../src/domain-workspaces/delivery/presentation/workspace/workspace-count-model.ts";
 import { canonicalSourceResponse, assertCanonicalSourceRequest } from "../support/console-source-projection.mjs";
 
@@ -106,4 +107,20 @@ test("package history preserves original owner evidence and rejects foreign, mal
  assert.deepEqual(got.sections.intake.data,source());assert.equal(got.package.owner_repo,"later-owner");assert.equal(reads,1);
  await assert.rejects(readCanonicalDeliveryHistory("71",{env,fetchImpl:async()=>{throw Error("must not read");}}));
  await assert.rejects(readCanonicalDeliveryHistory("delivery-71",{env,fetchImpl:async()=>canonicalSourceResponse(native,binding("openproject://work_packages/99"))}));
+});
+
+
+test("unverified historical bindings respect Current/History and never pretend to match a proved owner or consumed filter", () => {
+ const model=projectCanonicalDeliveryWorkspace(inventory(),"scope-source",at);
+ const issues=Array.from({length:37},(_,i)=>({target_ref:`openproject://work_packages/${i+100}`,detail:"Original handoff proof unavailable"}));
+ issues.push({target_ref:"openproject://work_packages/72",detail:"Current target proof unavailable"});
+ const observed=projectDeliveryIntakeHistory(model,[source()],issues);
+ assert.deepEqual(intakeEvidenceIssuesForView(deliveryModelForScope(observed,"current"),""),[issues.at(-1)]);
+ const retained=deliveryModelForScope(observed,"history");
+ assert.equal(intakeEvidenceIssuesForView(retained,"").length,38);
+ assert.equal(intakeEvidenceIssuesForView(retained,"work_packages/100").length,1);
+ assert.equal(intakeEvidenceIssuesForView(retained,"delivery-71").length,0);
+ assert.equal(intakeEvidenceIssuesForView(retained,"","original-owner").length,0);
+ assert.equal(intakeEvidenceIssuesForView(retained,"","all","consumed").length,0);
+ assert.equal(retained.intake_sources.length,1);assert.equal(retained.evidence_coverage.intake.issue_count,38);
 });

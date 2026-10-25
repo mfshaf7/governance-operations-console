@@ -7,6 +7,7 @@ import type {
 import type {
   DeliveryIntakeSource,
   DeliveryIntakeSourceStatus,
+  DeliveryReadModel,
 } from "../../../read-model/index.ts";
 
 export const intakeStatusFilterOptions: Array<{
@@ -376,4 +377,22 @@ function intakeSourceCustodyGateLabel(
     case "resolved":
       return "Resolved";
   }
+}
+
+
+// Unverified bindings have no proved source owner or consumption state. They
+// must not masquerade as matches for those filters or for another record scope.
+export function intakeEvidenceIssuesForView(
+  model: DeliveryReadModel,
+  search: string,
+  ownerFilter = "all",
+  statusFilter: DeliveryIntakeSourceStatus | "all" = "all",
+) {
+  if (ownerFilter !== "all" || statusFilter !== "all") return [];
+  const refs = new Set(model.packages.map(p => p.source_ref));
+  const query = search.trim().toLowerCase();
+  return (model.evidence_coverage?.intake.issues ?? []).filter(issue =>
+    (model.history_scope !== "current" || refs.has(issue.target_ref)) &&
+    (!query || `${issue.target_ref} ${issue.detail}`.toLowerCase().includes(query)),
+  );
 }
