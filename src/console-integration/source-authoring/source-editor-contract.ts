@@ -113,7 +113,14 @@ export function assertSourceDraft(value: unknown, workflow: "prototype-source-dr
     sourceExact(p, ["origin", "input_origin", "operator_id", "command_id", "amended_at", "previous_draft_ref", "previous_draft_digest", "original_model"]);
     if (!["operator", "operator-amended-model"].includes(String(p.origin)) || !["manual", "import"].includes(String(p.input_origin))) invalid();
     sourceString(p.operator_id); sourceId(p.command_id); if (p.previous_draft_digest !== null) sourceDigest(p.previous_draft_digest);
-    if (p.previous_draft_ref !== null) sourceString(p.previous_draft_ref, 4096);
+    if (p.previous_draft_ref !== null) {
+      if (workflow === "prototype-source-draft") {
+        const reference = sourceObject(p.previous_draft_ref);
+        sourceExact(reference, ["request_id", "digest"]);
+        if (sourceId(reference.request_id) !== sourceId(item.request_id)) invalid();
+        sourceDigest(reference.digest);
+      } else sourceString(p.previous_draft_ref, 4096);
+    }
     if (p.original_model !== null) sourceObject(p.original_model);
     if ((p.origin === "operator-amended-model") !== (p.original_model !== null)) invalid();
     provenance = { origin: p.origin as "operator" | "operator-amended-model", inputOrigin: p.input_origin as "manual" | "import", amendedAt: sourceDate(p.amended_at), originalModel: p.original_model !== null };

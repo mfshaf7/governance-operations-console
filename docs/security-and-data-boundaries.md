@@ -385,6 +385,10 @@ Local buffers are memory-only, imported source remains inert, and neither the
 editor nor importer adds text to Agent context or invokes a model. OOS retains
 scope, private history, source execution and receipt authority. Unknown or
 conflicting outcomes preserve local edits and use original-command recovery.
+Prototype history references retain their closed request-bound digest object;
+Delivery retains its artifact-name string. Console validates those native forms
+without dereferencing history or treating its artifact hash as the prior
+change-set hash. The original model evidence remains separate from amended bytes.
 Trusted owner preparations remain inspect-only. This source extension does not
 activate the editor, source realization or
 expand provider installation scope. Commissioning requires the existing bounded
