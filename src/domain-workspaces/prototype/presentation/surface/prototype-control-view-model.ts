@@ -3,6 +3,7 @@ import type { OperationSurfaceStatusModel } from "@/domain-workspaces/operation-
 
 import type { PrototypeWorkspaceReadModel } from "../../read-model/prototype-workspace-read-model.ts";
 import type { PrototypeWorkspaceStats } from "../../read-model/selectors/prototype-workspace-selectors.ts";
+import { prototypeIsIncubating } from "../../read-model/selectors/prototype-workspace-selectors.ts";
 
 export type PrototypeSummaryMetric = {
   id: string;
@@ -34,6 +35,8 @@ export function prototypeSummaryMetrics(
       tone: "ok",
       value: stats.baselineApproved,
     },
+    { id: "graduating", label: "Graduating", tone: "warn", value: stats.graduating },
+    { id: "graduated", label: "Graduated", tone: "muted", value: stats.graduated },
     { id: "retired", label: "Retired", tone: "muted", value: stats.retired },
   ];
 }
@@ -50,7 +53,7 @@ export function prototypeWorkspaceStatus(
     (record) => record.ingress === "local-entry",
   ).length;
   const returnedMovementCount = readModel.records.filter(
-    (record) => record.movementRequest.state === "returned",
+    (record) => prototypeIsIncubating(record) && record.movementRequest.state === "returned",
   ).length;
   const needsAttention = stats.blocked > 0 || returnedMovementCount > 0;
   const postureTone =

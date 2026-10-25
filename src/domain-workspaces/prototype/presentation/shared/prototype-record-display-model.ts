@@ -7,10 +7,12 @@ import {
   prototypeLifecycleLabel,
   prototypeLifecycleTone,
   prototypeMovementStateLabel,
+  prototypeMovementRequestStateTone,
   prototypePreviewLabel,
   prototypePreviewTone,
   prototypeRecordStatusLabel,
   prototypeRecordTone,
+  prototypeIsTerminal,
 } from "../../read-model/selectors/prototype-workspace-selectors.ts";
 import { prototypeLandingStateLabel } from "../../work-model/workflows/landing/prototype-landing-model.ts";
 
@@ -67,7 +69,17 @@ export function prototypeLifecycleStatus(record: PrototypeRecord) {
 export function prototypeBaselineStatus(record: PrototypeRecord) {
   return {
     label: prototypeBaselineLabel(record.baseline.state),
-    tone: prototypeBaselineTone(record.baseline.state),
+    tone: prototypeIsTerminal(record) ? "muted" : prototypeBaselineTone(record.baseline.state),
+  };
+}
+
+export function prototypeMovementStatus(record: PrototypeRecord) {
+  if (prototypeIsTerminal(record) || record.lifecycle === "graduating") {
+    return prototypeLifecycleStatus(record);
+  }
+  return {
+    label: prototypeMovementStateLabel(record.movementRequest.state),
+    tone: prototypeMovementRequestStateTone(record.movementRequest.state),
   };
 }
 

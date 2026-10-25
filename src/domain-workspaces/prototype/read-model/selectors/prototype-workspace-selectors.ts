@@ -24,6 +24,8 @@ export type PrototypeWorkspaceStats = {
   blocked: number;
   candidate: number;
   exploring: number;
+  graduated: number;
+  graduating: number;
   movementReady: number;
   retired: number;
   total: number;
@@ -70,7 +72,7 @@ export function getSelectedPrototypeRecord(
 ) {
   return (
     readModel.records.find((record) => record.id === selectedRecordId) ??
-    readModel.records.find((record) => record.lifecycle !== "retired") ??
+    readModel.records.find((record) => !prototypeIsTerminal(record)) ??
     readModel.records[0] ??
     null
   );
@@ -85,16 +87,23 @@ export function getPrototypeWorkspaceStats(
     ).length,
     blocked: records.filter(
       (record) =>
-        record.landing.state === "blocked" ||
-        record.baseline.state === "blocked" ||
-        record.openIssues.some((issue) => issue.status === "blocked"),
+        !prototypeIsTerminal(record) && (
+          record.landing.state === "blocked" ||
+          record.baseline.state === "blocked" ||
+          record.openIssues.some((issue) => issue.status === "blocked")),
     ).length,
     candidate: records.filter((record) => record.lifecycle === "candidate")
       .length,
     exploring: records.filter((record) => record.lifecycle === "exploring")
       .length,
+    graduated: records.filter((record) => record.lifecycle === "graduated").length,
+    graduating: records.filter((record) => record.lifecycle === "graduating").length,
     movementReady: records.filter(
-      (record) => record.baseline.state === "ready-for-movement",
+      (record) => record.lifecycle === "baseline-approved" &&
+        record.baseline.state === "ready-for-movement" &&
+        record.movementRequest.state !== "returned" &&
+        record.landing.state === "landed" &&
+        !record.openIssues.some((issue) => issue.status === "blocked"),
     ).length,
     retired: records.filter((record) => record.lifecycle === "retired").length,
     total: records.length,
@@ -263,8 +272,8 @@ export function prototypePreviewTone(record: PrototypeRecord): OperationTone {
 }
 
 export function prototypeRecordStatusLabel(record: PrototypeRecord) {
-  if (record.lifecycle === "retired") {
-    return "Retired";
+  if (prototypeIsTerminal(record) || record.lifecycle === "graduating") {
+    return prototypeLifecycleLabel(record.lifecycle);
   }
 
   if (record.landing.state !== "landed") {
@@ -291,8 +300,8 @@ export function prototypeRecordStatusLabel(record: PrototypeRecord) {
 }
 
 export function prototypeRecordTone(record: PrototypeRecord): OperationTone {
-  if (record.lifecycle === "retired") {
-    return "muted";
+  if (prototypeIsTerminal(record) || record.lifecycle === "graduating") {
+    return prototypeLifecycleTone(record.lifecycle);
   }
 
   if (record.landing.state === "blocked") {
@@ -320,6 +329,14 @@ export function prototypeRecordTone(record: PrototypeRecord): OperationTone {
 
 export function prototypeRecordActionEmphasis(record: PrototypeRecord) {
   return prototypeRecordTone(record) === "danger" ? "primary" : "secondary";
+}
+
+export function prototypeIsTerminal(record: PrototypeRecord) {
+  return record.lifecycle === "graduated" || record.lifecycle === "retired";
+}
+
+export function prototypeIsIncubating(record: PrototypeRecord) {
+  return ["exploring", "candidate", "baseline-approved"].includes(record.lifecycle);
 }
 
 function prototypeRecordSearchText(record: PrototypeRecord) {

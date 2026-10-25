@@ -26,6 +26,7 @@ import type {
   PrototypeRecord,
 } from "../../../read-model/prototype-workspace-read-model.ts";
 import type { PrototypeClosureViewState } from "../../shared/prototype-closure-presentation-model.ts";
+import { prototypeDashboardRecord } from "../../shared/prototype-closure-presentation-model.ts";
 import {
   prototypeDashboardAreas,
   prototypeDashboardCards,
@@ -71,15 +72,16 @@ export function PrototypeDashboardModal({
     return null;
   }
 
-  const sourceLifecycle = closure?.preparation?.expected_state.lifecycle;
-  const displayRecord = sourceLifecycle ? { ...record, lifecycle: sourceLifecycle } : record;
+  const displayRecord = prototypeDashboardRecord(record, closure?.preparation);
+  const sourceLifecycle = record.sourceEvidence?.authority === "workspace-prototype-studio"
+    ? record.lifecycle : closure?.preparation?.expected_state.lifecycle;
   const selectedStatus = prototypeSelectedPanelStatus(displayRecord);
   const previewStatus = prototypePreviewStatus(displayRecord);
   const landingStatus = prototypeLandingStatus(record);
   const openIssueTone = prototypeOpenIssueTone(record);
   const isTerminal =
     displayRecord.lifecycle === "retired" || displayRecord.lifecycle === "graduated";
-  const statusAreas = prototypeDashboardAreas(record, receipts);
+  const statusAreas = prototypeDashboardAreas(displayRecord, receipts);
   const openIssuesScrollable = record.openIssues.length > 2;
 
   function closeDashboard() {
@@ -155,7 +157,7 @@ export function PrototypeDashboardModal({
                     </TerasStatusPill>
                   }
                   actionsLayout="inline"
-                  description={sourceLifecycle ? "Studio lifecycle with local preview posture for the remaining fields." :
+                  description={record.sourceEvidence?.authority === "workspace-prototype-studio" ? "Current Studio lifecycle and owner-backed workflow projection. Historical evidence remains separate from current readiness." : sourceLifecycle ? "Studio lifecycle with local preview posture for the remaining fields." :
                     "Local preview posture; Studio lifecycle is not verified."}
                   kicker="Record Status"
                   title="Project posture"
@@ -301,7 +303,7 @@ export function PrototypeDashboardModal({
                 )}
               </TerasPanel>
 
-              {onOpenSourceAuthoring ? <TerasPanel frame="padded" treatment="rail" tone="info" fit="content" spacing="normal">
+              {onOpenSourceAuthoring && !isTerminal ? <TerasPanel frame="padded" treatment="rail" tone="info" fit="content" spacing="normal">
                 <TerasPanelHeader kicker="Source Authoring" title="App and design source" description="Open the owner-backed authoring tool. Source delivery does not replace Preview or maturity approval." />
                 <TerasActionButton emphasis="secondary" onClick={onOpenSourceAuthoring}>Open Source Authoring</TerasActionButton>
               </TerasPanel> : null}
@@ -322,7 +324,7 @@ export function PrototypeDashboardModal({
         areaId={openArea}
         onClose={() => setOpenArea(null)}
         receipts={receipts}
-        record={record}
+        record={displayRecord}
       />
     </>
   );
