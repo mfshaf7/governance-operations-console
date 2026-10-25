@@ -23,6 +23,16 @@ export type PrototypeClosureViewActions = Readonly<{
     action: "continue" | "cancel" | "approve" | "deny") => Promise<PrototypeClosureResult>;
 }>;
 
+export function prototypeDashboardRecord(
+  record: PrototypeRecord,
+  preparation: PrototypeClosurePreparation | null | undefined,
+) {
+  // The live register already composes current Studio truth. A retained
+  // Closure preparation describes its original input, not the current phase.
+  if (record.sourceEvidence?.authority === "workspace-prototype-studio" || !preparation) return record;
+  return { ...record, lifecycle: preparation.expected_state.lifecycle };
+}
+
 export function prototypeClosureAuthorityFact(result: PrototypeClosureResult) {
   switch (result.action) {
     case "apply-delivery": return {

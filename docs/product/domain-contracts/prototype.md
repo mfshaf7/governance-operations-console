@@ -34,6 +34,18 @@ record authority. Preview proof and Delivery application retain their separate
 owner-backed reads. The primary operator procedure is
 [`prototype-landing-live-integration.md`](../prototype-landing-live-integration.md).
 
+Graduated and retired records remain inspectable history. Their register,
+selected panel and Dashboard show that lifecycle with a muted status; graduating
+records show graduation in progress. Retained baseline readiness and old Closure
+preparation inputs never replace current canonical lifecycle. After handoff,
+the Dashboard labels baseline evidence as historical and routes handoff details
+to lifecycle/history rather than claiming another unprepared movement request.
+Only an unblocked, baseline-approved incubation record counts as Movement Ready.
+Completed records do not contribute historical blockers or returned movement
+requests to current attention, and do not expose source-authoring entry actions.
+History and Preview inspection remain available; none of these display rules
+changes the owner's lifecycle, source custody or approval authority.
+
 Allowed ingress classes:
 
 - `local-entry`

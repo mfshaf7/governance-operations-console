@@ -87,6 +87,8 @@ test("prototype summary keeps lifecycle metrics separate from record posture", (
     blocked: 2,
     candidate: 3,
     exploring: 4,
+    graduated: 0,
+    graduating: 0,
     movementReady: 1,
     retired: 1,
     total: 8,
@@ -96,6 +98,8 @@ test("prototype summary keeps lifecycle metrics separate from record posture", (
     Baseline: 1,
     Candidate: 3,
     Exploring: 4,
+    Graduated: 0,
+    Graduating: 0,
     Retired: 1,
     Total: 8,
   });

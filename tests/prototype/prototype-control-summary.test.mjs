@@ -18,7 +18,7 @@ test("Prototype summary keeps lifecycle and record posture separate", () => {
 
   assert.deepEqual(
     summary.map((metric) => metric.label),
-    ["Total", "Exploring", "Candidate", "Baseline", "Retired"],
+    ["Total", "Exploring", "Candidate", "Baseline", "Graduating", "Graduated", "Retired"],
   );
   assert.equal(summary.find((metric) => metric.label === "Baseline")?.value, 2);
   assert.equal(workspaceStatus.statusLabel, "attention");

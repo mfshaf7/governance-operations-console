@@ -1,6 +1,7 @@
 import { TerasActionButton, TerasActionRow, TerasSelectedPanel } from "@/teras";
 
 import type { PrototypeRecord } from "../../read-model/prototype-workspace-read-model.ts";
+import { prototypeIsTerminal } from "../../read-model/selectors/prototype-workspace-selectors.ts";
 import {
   prototypeSelectedPanelMeta,
   prototypeSelectedPanelStatus,
@@ -23,7 +24,7 @@ export function PrototypeControlSelectedPanel({
     <TerasSelectedPanel
       action={{
         description: selectedRecord.currentMove.detail,
-        kicker: "Required Action",
+        kicker: prototypeIsTerminal(selectedRecord) ? "History" : "Required Action",
         node: (
           <TerasActionRow spacing="tight">
             <TerasActionButton
@@ -45,7 +46,7 @@ export function PrototypeControlSelectedPanel({
             >
               Open Dashboard
             </TerasActionButton>
-            {onOpenSourceAuthoring ? <TerasActionButton emphasis="secondary" onClick={() => onOpenSourceAuthoring(selectedRecord)}>Open Source Authoring</TerasActionButton> : null}
+            {onOpenSourceAuthoring && !prototypeIsTerminal(selectedRecord) ? <TerasActionButton emphasis="secondary" onClick={() => onOpenSourceAuthoring(selectedRecord)}>Open Source Authoring</TerasActionButton> : null}
           </TerasActionRow>
         ),
         title: selectedRecord.currentMove.label,

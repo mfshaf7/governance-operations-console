@@ -1,9 +1,10 @@
 import type { TerasTone } from "@/teras";
 
 import type { PrototypeProjectedReceipt } from "../../../read-model/prototype-workspace-read-model.ts";
-import { prototypeBasePlatformLabel } from "@/domain-workspaces/prototype/domain/support/prototype-setup-profile-model";
+import { prototypeBasePlatformLabel } from "../../../domain/support/prototype-setup-profile-model.ts";
 import type { PrototypeRecord } from "../../../read-model/prototype-workspace-read-model.ts";
 import { prototypeMovementRequestStateTone } from "../../../read-model/selectors/prototype-workspace-selectors.ts";
+import { prototypeIsTerminal } from "../../../read-model/selectors/prototype-workspace-selectors.ts";
 import {
   prototypeBaselineStatus,
   prototypeCompactSupportBundleLabel,
@@ -12,6 +13,7 @@ import {
   prototypeLandingStatus,
   prototypeLifecycleStatus,
   prototypeMovementStateLabel,
+  prototypeMovementStatus,
   prototypeMutationBoundaryLabel,
   prototypePreviewStatus,
   prototypeVisibilityLabel,
@@ -45,7 +47,7 @@ export function prototypeDashboardFacts(record: PrototypeRecord) {
     { label: "Freshness", value: record.projectionFreshness },
     {
       label: "Movement",
-      value: prototypeMovementStateLabel(record.movementRequest.state),
+      value: prototypeMovementStatus(record).label,
     },
   ];
 }
@@ -55,19 +57,17 @@ export function prototypeDashboardCards(record: PrototypeRecord) {
   const landing = prototypeLandingStatus(record);
   const preview = prototypePreviewStatus(record);
   const baseline = prototypeBaselineStatus(record);
-  const movementTone = prototypeMovementRequestStateTone(
-    record.movementRequest.state,
-  );
+  const movement = prototypeMovementStatus(record);
 
   return [
     { label: "Lifecycle", tone: lifecycle.tone, value: lifecycle.label },
     { label: "Landing", tone: landing.tone, value: landing.label },
     { label: "Preview", tone: preview.tone, value: preview.label },
-    { label: "Baseline", tone: baseline.tone, value: baseline.label },
+    { label: prototypeIsTerminal(record) || record.lifecycle === "graduating" ? "Historical baseline" : "Baseline", tone: baseline.tone, value: baseline.label },
     {
       label: "Movement",
-      tone: movementTone,
-      value: prototypeMovementStateLabel(record.movementRequest.state),
+      tone: movement.tone,
+      value: movement.label,
     },
   ];
 }
@@ -96,6 +96,13 @@ export function prototypeDashboardPostureFacts(record: PrototypeRecord) {
 }
 
 export function prototypeDashboardMovementFacts(record: PrototypeRecord) {
+  if (prototypeIsTerminal(record) || record.lifecycle === "graduating") {
+    return [
+      { label: "Lifecycle", value: prototypeLifecycleStatus(record).label },
+      { label: "Current action", value: record.currentMove.actionLabel },
+      { label: "Evidence", value: "Inspect Closure history for the owner handoff and source custody receipts." },
+    ];
+  }
   return [
     {
       label: "State",
@@ -163,12 +170,12 @@ export function prototypeDashboardAreas(
       tone: receipts.length > 0 ? "info" : "muted",
     },
     {
-      badge: prototypeMovementStateLabel(record.movementRequest.state),
-      detail: "Movement target, reason, and current gate snapshot.",
+      badge: prototypeMovementStatus(record).label,
+      detail: prototypeIsTerminal(record) ? "Retained handoff history; this prototype has no pending incubation movement." : record.lifecycle === "graduating" ? "Delivery handoff and source graduation retain their own owner evidence." : "Movement target, reason, and current gate snapshot.",
       id: "movement",
       kicker: "Movement",
-      title: "Movement Request",
-      tone: prototypeMovementRequestStateTone(record.movementRequest.state),
+      title: prototypeIsTerminal(record) ? "Handoff History" : record.lifecycle === "graduating" ? "Source Graduation" : "Movement Request",
+      tone: prototypeIsTerminal(record) || record.lifecycle === "graduating" ? prototypeMovementStatus(record).tone : prototypeMovementRequestStateTone(record.movementRequest.state),
     },
   ];
 }
