@@ -75,7 +75,7 @@ export type DeliveryPackageSummary = {
   execution_handoff?: DeliveryExecutionHandoffProjection;
   local_workflow_projection?: DeliveryLocalWorkflowProjection;
   legacy_epic_id: number;
-  open_child_count: number;
+  open_child_count: number | null;
   package_posture: DeliveryPackagePosture;
   source_custody: OperationResolvedSourceCustody | null;
   source_ref: string;

@@ -5,6 +5,7 @@ import {
   ConsoleRuntimeConfigurationError,
 } from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { createHash } from "node:crypto";
+import { concurrentSourceRead } from "../../../console-integration/source-authority/concurrent-source-read.ts";
 import type { ProposalRepositoryResolutionIntent } from "../../operation-contracts/proposal-repository-live.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 import {
@@ -108,34 +109,46 @@ export async function listProposalLiveRecords({
   fetchImpl?: typeof fetch;
 } = {}): Promise<ProposalLiveRecord[]> {
   const config = resolveProposalOosConfig(env);
-  const list = await proposalOosRequest(
-    config,
-    `/v1/ideas?limit=${proposalListLimit}&offset=1`,
-    { method: "GET" },
-    fetchImpl,
-  );
-  if (!isRecord(list) || !Array.isArray(list.ideas)) {
-    throw new ProposalOosError(
-      "OOS returned an invalid Proposal list.",
-      "proposal_list_invalid",
-      502,
-    );
+  return concurrentSourceRead("proposal-list", config, fetchImpl, async () => {
+  const ideas: ProposalIdeaListItem[] = [], seen = new Set<string>();
+  let expectedTotal: number | null = null;
+  for (let page = 1; ; page++) {
+    const list = await proposalOosRequest(config, `/v1/ideas?limit=${proposalListLimit}&offset=${page}`, {method:"GET"}, fetchImpl);
+    if (!isRecord(list) || !Array.isArray(list.ideas) || list.ideas.length > proposalListLimit || !isRecord(list.page) ||
+        list.page.offset !== page || list.page.count !== list.ideas.length || !Number.isSafeInteger(list.page.total) ||
+        Number(list.page.total) < 0 || Number(list.page.total) > 8192 || typeof list.page.has_more !== "boolean" ||
+        list.page.limit !== proposalListLimit || (expectedTotal !== null && list.page.total !== expectedTotal)) {
+      throw new ProposalOosError("Proposal inventory changed or exceeded its bounded global read. Refresh the owner list.", "proposal_list_invalid", 502);
+    }
+    expectedTotal=Number(list.page.total);
+    for (const item of list.ideas.map(assertIdeaListItem)) {
+      if(seen.has(item.idea_id))throw new ProposalOosError("Repeated Proposal owner identity.","proposal_list_invalid",502);
+      seen.add(item.idea_id);ideas.push(item);
+    }
+    const more=page*proposalListLimit<expectedTotal;
+    if(list.page.has_more!==more || list.page.next_offset!==(more?page+1:null) || (more && list.ideas.length!==proposalListLimit)) {
+      throw new ProposalOosError("Invalid Proposal page continuation.","proposal_list_invalid",502);
+    }
+    if(!more){if(ideas.length!==expectedTotal)throw new ProposalOosError("Incomplete global Proposal list.","proposal_list_invalid",502);break;}
   }
-
-  const ideas = list.ideas.map(assertIdeaListItem);
-  return Promise.all(
-    ideas.map(async (idea) => {
-      const [projection, history] = await Promise.all([
-        readProposalProjection(config, idea.idea_id, fetchImpl),
-        readProposalHistory(config, idea.idea_id, fetchImpl),
-      ]);
-      return {
-        createdAt: idea.created_at ?? projection.updated_at,
-        history,
-        projection,
-      };
-    }),
-  );
+  const records: ProposalLiveRecord[] = [];
+  for (let offset = 0; offset < ideas.length; offset += 4) {
+    records.push(...await Promise.all(ideas.slice(offset, offset + 4).map(async (idea) => {
+      const value = await proposalOosRequest(config,
+        `/v1/proposals/${encodeURIComponent(idea.idea_id)}/projection?include_history=true`,
+        { method: "GET" }, fetchImpl, proposalSourceExpectation(idea.idea_id));
+      if (!isRecord(value) || value.schema_version !== 1 || value.workflow_id !== "proposal-read-snapshot") {
+        throw new ProposalOosError("Invalid Proposal owner snapshot.", "proposal_snapshot_invalid", 502);
+      }
+      const projection = assertProposalOosProjection(value.projection), history = assertProposalOosHistory(value.history);
+      if (projection.proposal_id !== idea.idea_id || history.proposal_id !== projection.proposal_id || history.record_version !== projection.record_version) {
+        throw new ProposalOosError("Proposal history does not match the current owner record.", "proposal_snapshot_binding", 502);
+      }
+      return { createdAt: idea.created_at ?? projection.updated_at, history, projection };
+    })));
+  }
+  return records;
+  });
 }
 
 export async function captureProposal(

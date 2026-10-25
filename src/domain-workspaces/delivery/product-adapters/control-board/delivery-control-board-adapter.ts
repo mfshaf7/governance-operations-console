@@ -92,12 +92,12 @@ function deliveryPackageToControlBoardPackage({
   const packageProjection =
     getDeliveryEffectivePackageProjection(packageSummary);
   const totalChildCount = Math.max(
-    childCounts?.total_child_count ?? packageSummary.open_child_count,
-    packageSummary.open_child_count,
+    childCounts?.total_child_count ?? packageSummary.open_child_count ?? 0,
+    packageSummary.open_child_count ?? 0,
   );
   const completedChildCount = Math.max(
     0,
-    totalChildCount - packageSummary.open_child_count,
+    totalChildCount - (packageSummary.open_child_count ?? 0),
   );
   const progressPercent =
     totalChildCount > 0
@@ -109,7 +109,7 @@ function deliveryPackageToControlBoardPackage({
     openChildCount: packageSummary.open_child_count,
     packageId: packageSummary.delivery_package_id,
     posture: packageProjection.posture,
-    progress: {
+    progress: packageSummary.open_child_count === null ? null : {
       completedChildCount,
       progressPercent,
       totalChildCount,

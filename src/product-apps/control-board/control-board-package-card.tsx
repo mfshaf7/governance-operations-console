@@ -37,7 +37,7 @@ export function ControlBoardPackageCard({
             {packageSummary.posture}
           </TerasStatusPill>
           <TerasStatusPill tone="muted">
-            {packageSummary.openChildCount} open
+            {packageSummary.openChildCount === null ? "Child counts not loaded" : `${packageSummary.openChildCount} open`}
           </TerasStatusPill>
         </>
       }

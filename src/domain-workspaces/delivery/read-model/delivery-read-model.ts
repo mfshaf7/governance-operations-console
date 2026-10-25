@@ -16,8 +16,9 @@ import type { DeliveryPackageSummary } from "../domain/delivery-package.ts";
 
 export type DeliveryReadModel = {
   history_scope?: "current" | "history";
+  deferred_history_tree_refs?: string[];
   evidence_coverage?: {
-    intake: { state: "current" | "partial" | "unavailable"; detail: string; issue_count: number; issues?: Array<{target_ref:string;detail:string}> };
+    intake: { state: "current" | "partial" | "unavailable"; detail: string; issue_count: number; complete?: boolean; issues?: Array<{target_ref:string;detail:string}> };
     activity: { state: "current" | "partial" | "unavailable"; detail: string };
   };
   apply_intents: DeliveryApplyIntent[];

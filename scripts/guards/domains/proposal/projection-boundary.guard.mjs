@@ -120,7 +120,7 @@ export const guard = {
       'fetch("/api/proposals"',
       "proposalPollIntervalMs",
       'document.visibilityState === "visible"',
-      "await refresh()",
+      "await refresh(true)",
     ]);
     assertOmits(failures, liveRuntime, [
       "proposalWorkspaceReadModel",

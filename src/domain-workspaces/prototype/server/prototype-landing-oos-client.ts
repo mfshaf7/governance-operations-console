@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { concurrentSourceRead } from "../../../console-integration/source-authority/concurrent-source-read.ts";
 import { projectCanonicalPrototypeWorkspace } from "../live-runtime/prototype-workspace-live-projection.ts";
 
 import {
@@ -59,11 +60,14 @@ export function prototypeLandingOosConfigured(env = process.env) {
 }
 
 export async function readCanonicalPrototypeWorkspace(options: RequestOptions = {}) {
-  const body = await request("/v1/prototypes", { method: "GET" }, options, {
+  const config=options.config??resolveConfig();
+  return concurrentSourceRead("prototype-workspace",config,options.fetchImpl??fetch,async()=>{
+  const body = await request("/v1/prototypes", { method: "GET" }, {...options,config}, {
     authority: "operator-orchestration-service", sourceOwner: "workspace-prototype-studio",
     recordRef: "repo://workspace-prototype-studio/prototypes", sourceRef: "repo://workspace-prototype-studio@main",
   }, 5 * 1024 * 1024);
   return projectCanonicalPrototypeWorkspace(body, new Date().toISOString(), canonicalDigest(body));
+  });
 }
 
 export async function preparePrototypeLanding(
