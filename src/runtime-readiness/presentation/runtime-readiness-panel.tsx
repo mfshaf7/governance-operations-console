@@ -17,6 +17,7 @@ import {
   buildResourceMetricDetail,
   formatBandwidth,
   formatBytes,
+  formatCommitPercent,
   formatPercent,
   formatUptime,
   usageTone,
@@ -282,12 +283,12 @@ export function WslResourceUsage({
           },
           {
             label: "VMEM",
-            tone: latestSample ? usageTone(latestSample.virtualMemoryPercent) : ("info" as Tone),
-            value: latestSample ? formatPercent(latestSample.virtualMemoryPercent) : "--",
+            tone: "info" as Tone,
+            value: latestSample ? formatCommitPercent(latestSample.virtualMemoryPercent) : "--",
             detail: latest
               ? `${formatBytes(latest.virtualMemory.committedBytes)} committed / ${formatBytes(
                   latest.virtualMemory.commitLimitBytes,
-                )} limit`
+                )} commit reference; not RAM pressure`
               : "sampling",
           },
           {

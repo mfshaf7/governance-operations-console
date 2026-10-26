@@ -24,7 +24,6 @@ import { AgentContextPanel } from "./presentation/agent-context-panel";
 import { ConsoleActivityPanel } from "./presentation/console-activity-panel";
 import { ConsoleCommandBar } from "./presentation/console-command-bar";
 import { ConsoleFocusRouter } from "./presentation/console-focus-router";
-import { useAgentWorkspaceContext } from "./context/use-agent-workspace-context";
 import { useConsoleShellController } from "./use-console-shell-controller";
 
 const embeddedAgentRuntimeIdentity = {
@@ -61,8 +60,8 @@ function GovernanceConsoleContent({
   providerStatus: AgentProviderStatus | null;
 }) {
   const controller = useConsoleShellController();
-  const liveAgentContext = useAgentWorkspaceContext(controller.activeConsoleWorkspaceId);
-  const focusedContext = liveAgentContext.page ?? controller.activeAgentContextCandidate;
+  const liveAgentContext = controller.liveAgentContext;
+  const focusedContext = liveAgentContext.page ?? (controller.selectedWorkbenchSurface ? liveAgentContext.pageFor(controller.selectedWorkbenchSurface.label) : controller.activeAgentContextCandidate);
 
   return (
     <ConsoleShellFrame
@@ -260,6 +259,7 @@ function EmbeddedAgentConsoleContent({
         contextCandidate={contextCandidate}
         workspaceContextCandidate={workspaceContextCandidate}
         placement="embedded"
+        listenForOpenEvent={false}
         providerStatus={providerStatus}
         title="Agent Console"
       />
@@ -291,7 +291,7 @@ function DockingAgent({
         contextFallbackLabel="Floating context unavailable"
         contextCandidate={contextCandidate}
         workspaceContextCandidate={workspaceContextCandidate}
-        listenForOpenEvent={false}
+        listenForOpenEvent={true}
         placement="floating"
         providerStatus={providerStatus}
         title="Docking Agent"

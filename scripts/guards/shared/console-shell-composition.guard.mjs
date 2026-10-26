@@ -250,7 +250,7 @@ export const guard = {
     assertIncludes(failures, commandBarPath, [
       "OperatorAccountCard",
       "OperatorAccountCenter",
-      "consoleOperatorAccountFixture",
+      "useOperatorAccountSnapshot",
       "useOperatorAccountController",
     ]);
     assertOmits(failures, commandBarPath, [

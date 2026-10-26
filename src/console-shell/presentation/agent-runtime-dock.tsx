@@ -65,7 +65,7 @@ export function AgentRuntimeDock({
           : "UNAVAILABLE"
         : runtimeHasFailure || runtimeIsWaiting
           ? "ATTENTION"
-          : "HEALTHY"
+          : "OOS REACHABLE"
     : "PROBING";
   const providerLabel = providerStatus
     ? providerOnline
@@ -78,7 +78,7 @@ export function AgentRuntimeDock({
     : "Resolving governed path";
   const modelLabel = providerStatus
     ? providerOnline
-      ? providerStatus.model ?? "model ready"
+      ? providerStatus.model ?? "configured profile"
       : providerState === "offline"
         ? "no model"
         : providerStatus.model ?? "waiting"
@@ -87,7 +87,7 @@ export function AgentRuntimeDock({
     ? providerOnline
       ? `${activeRuntimes.length} active runtime${
           activeRuntimes.length === 1 ? "" : "s"
-        } / OOS and governed profile reachable`
+        } / OOS reachable; model readiness is not probed`
       : providerStatus.error ??
         (providerState === "offline"
           ? "orchestration path unavailable"

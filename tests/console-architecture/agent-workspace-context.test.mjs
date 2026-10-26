@@ -9,12 +9,12 @@ import { bodies } from "./agent-workspace-fixtures.mjs";
 function snapshots() { return Object.fromEntries(Object.keys(agentContextSources).map(key => [key, projectAgentOwnerSnapshot(key, bodies[key], now)])); }
 test("actual owner DTO shapes produce a bounded current whole-Console candidate accepted by the independent server", () => {
  const candidate = buildAgentWorkspaceContext(snapshots(), now);
- assert.equal(candidate.status, "8/8 sources current");
+ assert.equal(candidate.status, "9/9 sources current");
  assert.equal(candidate.scope, "workspace");
  assert.equal(parseAgentContextRequest({ candidate, mode: "workspace" }).mode, "workspace");
  assert.equal(evaluateAgentContextPolicy({ candidate, mode: "workspace" }).code, "cgg-required");
  assert.ok(JSON.stringify(projectAgentContextCandidate(candidate)).length <= agentContextBudgetLimitChars);
- assert.equal(candidate.signals.length, 8); assert.equal(candidate.refs.length, 8);
+ assert.equal(candidate.signals.length, 8); assert.equal(candidate.refs.length, 1);
  assert.match(candidate.signals.join(" "), /example-backend\/example-model/);
  assert.doesNotMatch(JSON.stringify(candidate), /PRIVATE BODY|PRIVATE SOURCE PATH/);
 });
@@ -39,7 +39,7 @@ test("missing, expired and preview owner reads never become live facts or requir
  state.registry = { ...state.registry, capturedAt: "2026-10-25T00:57:59.000Z", detail: "STALE REGISTRY FACT" };
  state.proposals = projectAgentOwnerSnapshot("proposals", { mode: "disconnected-preview", records: [{ title: "FAKE FIXTURE" }] }, now);
  const global = buildAgentWorkspaceContext(state, now);
- assert.equal(global.status, "6/8 sources current");
+ assert.equal(global.status, "7/9 sources current");
  assert.doesNotMatch(JSON.stringify(global), /SECRET OR STALE FACT|FAKE FIXTURE/);
  assert.match(global.signals.join(" "), /delivery: unavailable.*proposals|proposals: preview only/s);
  const registry = buildAgentWorkspaceContext(state, now, "workspace-registry");

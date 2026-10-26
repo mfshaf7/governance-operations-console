@@ -22,6 +22,10 @@ export function formatPercent(value: number) {
   return `${Math.round(clampPercent(value))}%`;
 }
 
+export function formatCommitPercent(value: number) {
+  return `${Math.round(Math.max(0, value))}%`;
+}
+
 export function formatBytes(bytes: number) {
   const gib = bytes / 1024 ** 3;
   return `${gib.toFixed(gib >= 10 ? 0 : 1)} GiB`;
@@ -209,6 +213,7 @@ function resourceMetricValue(
 }
 
 function formatResourceMetricValue(metric: ResourceMetricId, value: number) {
+  if (metric === "VMEM") return formatCommitPercent(value);
   if (metric === "Bandwidth") {
     return formatBandwidth(value);
   }
@@ -225,10 +230,11 @@ function resourceMetricTone(
   value: number,
   fallback: Tone,
 ) {
-  return metric === "Bandwidth" ? fallback : usageTone(value);
+  return metric === "VMEM" ? "info" : metric === "Bandwidth" ? fallback : usageTone(value);
 }
 
 function resourceMetricThreshold(metric: ResourceMetricId) {
+  if (metric === "VMEM") return "Commit accounting is informational; no memory-pressure threshold is established.";
   if (metric === "Bandwidth" || metric === "Uptime") {
     return "No threshold; this metric is informational.";
   }
@@ -277,6 +283,7 @@ function shortSampleLabel(value: string | undefined) {
 }
 
 function resourceOperatorRead(metric: ResourceMetricId, tone: Tone) {
+  if (metric === "VMEM") return "Committed address space versus the kernel commit reference. This can exceed 100% under overcommit and is not measured RAM pressure.";
   if (metric === "Bandwidth") {
     return "RX/TX throughput sample. No capacity threshold.";
   }
@@ -365,11 +372,9 @@ function resourceMetricChartSeries(
           ? "wsl-chart-line-vmem"
           : "wsl-chart-line-disk";
 
-  const path = buildChartPath(
-    samples,
-    (sample) => resourceMetricValue(sample, metric),
-    RESOURCE_PERFORMANCE_CHART_HEIGHT,
-  );
+  const path = metric === "VMEM"
+    ? buildRelativeChartPath(samples, Math.max(100, ...samples.map(sample => sample.virtualMemoryPercent)), sample => sample.virtualMemoryPercent, RESOURCE_PERFORMANCE_CHART_HEIGHT)
+    : buildChartPath(samples, (sample) => resourceMetricValue(sample, metric), RESOURCE_PERFORMANCE_CHART_HEIGHT);
 
   return [
     {
@@ -378,7 +383,7 @@ function resourceMetricChartSeries(
       label: metric.toUpperCase(),
       path,
       value: samples.at(-1)
-        ? formatPercent(resourceMetricValue(samples.at(-1)!, metric))
+        ? formatResourceMetricValue(metric, resourceMetricValue(samples.at(-1)!, metric))
         : "--",
     },
   ];
@@ -392,6 +397,10 @@ function chartYForPercent(
 }
 
 function resourceMetricScale(metric: ResourceMetricId, values: number[]) {
+  if (metric === "VMEM") {
+    const ceiling = Math.max(100, ...values);
+    return { axisTicks: [{ label: formatCommitPercent(ceiling), y: 0 }, { label: formatCommitPercent(ceiling / 2), y: RESOURCE_PERFORMANCE_CHART_HEIGHT / 2 }, { label: "0%", y: RESOURCE_PERFORMANCE_CHART_HEIGHT }], normalRange: "Commit accounting; overcommit can exceed 100%. No pressure band applies.", referenceBands: [], referenceLines: [] };
+  }
   if (metric === "Bandwidth") {
     const maxValue = Math.max(1, ...values);
 

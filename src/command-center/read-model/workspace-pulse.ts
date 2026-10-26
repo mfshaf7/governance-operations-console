@@ -119,8 +119,8 @@ export type WorkspacePulseSnapshot = Readonly<{
 
 const signalDefinitions = {
   "active-operations": {
-    description: "Governed activity currently running across registered owners.",
-    label: "Active operations",
+    description: "Owner-issued actions and follow-ups in the attention projection.",
+    label: "Required actions",
   },
   "blocked-operations": {
     description: "Work that cannot progress without intervention.",
@@ -177,23 +177,26 @@ function operationalSignal(
 ): WorkspacePulseSignal {
   const records = recordsFor(input, signalId);
   const definition = signalDefinitions[signalId];
+  const incomplete = input.sources.some((source) => source.state !== "current");
+  const coverage = incomplete ? " Other sources are unavailable or stale; this is not a workspace total." : "";
+  const value = `${records.length}${incomplete ? "+" : ""}`;
 
   if (signalId === "required-decisions") {
     return {
       ...definition,
       detail:
         records.length === 0
-          ? "No operator decision is waiting."
-          : `${records.length} operator ${records.length === 1 ? "decision needs" : "decisions need"} review.`,
+          ? `No decision is projected by current sources.${coverage}`
+          : `${records.length} projected operator ${records.length === 1 ? "decision needs" : "decisions need"} review.${coverage}`,
       id: signalId,
       projectionAuthority: input.projectionAuthority,
       projectionLabel,
       projectionMode: input.projectionMode,
       records,
       sourceSummary,
-      stateLabel: records.length === 0 ? "CLEAR" : "WAITING",
-      tone: records.length === 0 ? "ok" : "warn",
-      value: String(records.length),
+      stateLabel: incomplete ? "INCOMPLETE" : records.length === 0 ? "CLEAR" : "WAITING",
+      tone: incomplete || records.length > 0 ? "warn" : "ok",
+      value,
     };
   }
 
@@ -202,17 +205,17 @@ function operationalSignal(
       ...definition,
       detail:
         records.length === 0
-          ? "No registered operation is blocked."
-          : `${records.length} ${records.length === 1 ? "operation cannot" : "operations cannot"} progress.`,
+          ? `No blocker is projected by current sources.${coverage}`
+          : `${records.length} projected ${records.length === 1 ? "operation cannot" : "operations cannot"} progress.${coverage}`,
       id: signalId,
       projectionAuthority: input.projectionAuthority,
       projectionLabel,
       projectionMode: input.projectionMode,
       records,
       sourceSummary,
-      stateLabel: records.length === 0 ? "CLEAR" : "BLOCKED",
-      tone: records.length === 0 ? "ok" : "danger",
-      value: String(records.length),
+      stateLabel: records.length > 0 ? "BLOCKED" : incomplete ? "INCOMPLETE" : "CLEAR",
+      tone: records.length > 0 ? "danger" : incomplete ? "warn" : "ok",
+      value,
     };
   }
 
@@ -220,17 +223,17 @@ function operationalSignal(
     ...definition,
     detail:
       records.length === 0
-        ? "No governed operation is currently active."
-        : `${records.length} governed ${records.length === 1 ? "operation is" : "operations are"} in motion.`,
+        ? `No required action is projected by current sources.${coverage}`
+        : `${records.length} projected ${records.length === 1 ? "action needs" : "actions need"} attention.${coverage}`,
     id: signalId,
     projectionAuthority: input.projectionAuthority,
     projectionLabel,
     projectionMode: input.projectionMode,
     records,
     sourceSummary,
-    stateLabel: records.length === 0 ? "QUIET" : "IN MOTION",
-    tone: records.length === 0 ? "muted" : "info",
-    value: String(records.length),
+    stateLabel: incomplete ? "INCOMPLETE" : records.length === 0 ? "QUIET" : "ACTION NEEDED",
+    tone: incomplete ? "warn" : records.length === 0 ? "muted" : "info",
+    value,
   };
 }
 
@@ -558,7 +561,7 @@ function candidatePulseState(candidate: CommandCenterAttentionCandidate) {
     case "external-follow-up":
       return "FOLLOW UP";
     case "required-action":
-      return "ACTIVE";
+      return "ACTION NEEDED";
   }
 }
 

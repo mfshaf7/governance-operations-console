@@ -4,6 +4,41 @@ import type {
   ConsoleAttentionSource,
   ConsoleAttentionSourceSnapshot,
 } from "../../../console-integration/attention-contract.ts";
+import { ownerAttentionSnapshot, type ConsoleOwnerRead } from "../../../console-integration/live-attention.ts";
+import { assertProposalLiveSnapshot } from "../live-runtime/proposal-live-contract.ts";
+import { projectProposalLiveRecords } from "../live-runtime/proposal-live-projection.ts";
+import type { NativeLifecycleOutcome } from "../../../console-integration/native-lifecycle-outcome.ts";
+
+export function projectProposalLifecycleOutcomes(payload: unknown): NativeLifecycleOutcome[] {
+  const snapshot = assertProposalLiveSnapshot(payload);
+  if (snapshot.mode !== "live" || snapshot.status !== "current") throw new Error("Proposal unavailable");
+  return snapshot.records.flatMap(({ projection, history }) => {
+    const handoff = projection.handoff;
+    const target = projection.route?.target;
+    if (handoff.state !== "applied" || (target !== "prototype" && target !== "delivery")) return [];
+    const event = history.events.find(event => event.event_type === "handoff-applied" && Boolean(handoff.target_receipt_ref && event.receipt_refs.includes(handoff.target_receipt_ref)));
+    return [{ id: `native:${target}:${projection.proposal_id}:${handoff.packet_ref ?? handoff.target_receipt_ref ?? "source-report"}`,
+      routeId: target === "prototype" ? "proposal-to-prototype" as const : "proposal-to-delivery" as const,
+      sourceId: projection.proposal_id, sourceVersion: handoff.packet_ref ?? projection.record_version,
+      title: projection.title, owner: "workspace-proposals", sourceRef: projection.record_ref,
+      targetRef: handoff.target_record_ref, receiptRef: handoff.target_receipt_ref,
+      recordedAt: event?.occurred_at ?? projection.updated_at,
+      observationKind: "source-acknowledgement" as const,
+      evidenceRefs: [projection.record_ref, ...(handoff.target_receipt_ref ? [handoff.target_receipt_ref] : [])],
+      detail: "Current Proposal owner readback reports the handoff applied. Original target receipt and journal validation/admission phases are not independently projected by this source acknowledgement.",
+    }];
+  });
+}
+
+export function projectProposalOwnerAttention(read: ConsoleOwnerRead | undefined) {
+  return ownerAttentionSnapshot(registration, read, "workspace-proposals", (payload, observedAt) => {
+    const snapshot = assertProposalLiveSnapshot(payload);
+    if (snapshot.mode !== "live" || snapshot.status !== "current") throw new Error("Proposal unavailable");
+    return projectProposalLiveRecords(snapshot.records)
+      .filter(record => !["done", "parked", "waiting-on-repository"].includes(record.status))
+      .map(record => proposalAttentionCandidate(record, observedAt, false));
+  });
+}
 import { consoleAttentionSourceRegistrations } from "../../../console-integration/attention-source-registry.ts";
 import {
   getProposalRepositoryGateResolutions,

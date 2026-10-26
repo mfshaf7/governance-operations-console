@@ -1,5 +1,6 @@
 const sha = "a".repeat(40);
 export const bodies = {
+ repositories: { mode: "live", status: "current", records: [] },
  continuity: { artifact_type: "workspace-continuity-projection", projection_state: "current", authority: { revision: sha }, inventory: [{ posture: "active" }], intake: [], products: [{ name: "Example", posture: "active" }] },
  registry: { workflow_id: "workspace-inventory-registry", authority_revision: sha, records: [{ posture: "active" }] },
  proposals: { mode: "live", records: [{ projection: { status: "captured", projection_state: "current", body: "PRIVATE BODY MUST NOT ENTER MODEL" } }] },

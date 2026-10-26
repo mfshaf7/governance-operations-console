@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   OperatorAccountProfile,
@@ -24,6 +24,13 @@ export function useOperatorAccountController(
   const [identityDetailsOpen, setIdentityDetailsOpen] = useState(false);
   const [savedProfile, setSavedProfile] = useState(initialSnapshot.profile);
   const [profileDraft, setProfileDraft] = useState(initialSnapshot.profile);
+  const previousInitialProfile = useRef(initialSnapshot.profile);
+  useEffect(() => {
+    const previous = previousInitialProfile.current;
+    previousInitialProfile.current = initialSnapshot.profile;
+    setSavedProfile(current => operatorAccountProfilesMatch(current, previous) ? initialSnapshot.profile : current);
+    setProfileDraft(current => operatorAccountProfilesMatch(current, previous) ? initialSnapshot.profile : current);
+  }, [initialSnapshot.profile]);
 
   const account = useMemo(
     () => ({

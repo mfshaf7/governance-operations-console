@@ -2,15 +2,17 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 
-import { deliveryAttentionSource } from "../../domain-workspaces/delivery";
-import { orchestrationAttentionSource } from "../../domain-workspaces/orchestration";
-import { portfolioAttentionSource } from "../../domain-workspaces/portfolio";
-import { proposalAttentionSource } from "../../domain-workspaces/proposal";
-import { prototypeAttentionSource } from "../../domain-workspaces/prototype";
-import { repositoryAttentionSource } from "../../domain-workspaces/repository";
+import { deliveryAttentionSource, projectDeliveryOwnerAttention } from "../../domain-workspaces/delivery";
+import { orchestrationAttentionSource, projectOrchestrationOwnerAttention } from "../../domain-workspaces/orchestration";
+import { portfolioAttentionSource, projectPortfolioOwnerAttention } from "../../domain-workspaces/portfolio";
+import { proposalAttentionSource, projectProposalOwnerAttention } from "../../domain-workspaces/proposal";
+import { prototypeAttentionSource, projectPrototypeOwnerAttention } from "../../domain-workspaces/prototype";
+import { repositoryAttentionSource, projectRepositoryOwnerAttention } from "../../domain-workspaces/repository";
+import type { ConsoleOwnerReads } from "../../console-integration/live-attention";
 import {
   devIntegrationAttentionSource,
   governedReleaseAttentionSource,
+  projectEnvironmentOwnerAttention,
 } from "../../environment-lifecycle";
 import {
   projectLifecycleTransitionAttentionSnapshot,
@@ -25,9 +27,13 @@ import { resolveConsoleFixtureIsolation } from "../../console-integration/fixtur
 export function useCommandCenterAttention({
   disconnectedPreview = false,
   lifecycleSnapshot = null,
+  ownerReads = {},
+  ownerReadAt = "",
 }: {
   disconnectedPreview?: boolean;
   lifecycleSnapshot?: LifecycleTransitionLiveSnapshot | null;
+  ownerReads?: ConsoleOwnerReads;
+  ownerReadAt?: string;
 } = {}) {
   const proposal = useAttentionSource(proposalAttentionSource);
   const repository = useAttentionSource(repositoryAttentionSource);
@@ -52,7 +58,17 @@ export function useCommandCenterAttention({
     }).fixtureAllowed
       ? "disconnected-preview"
       : "live";
-    const sources = [
+    const sources = (runtimeMode === "live" ? [
+      projectProposalOwnerAttention(ownerReads.proposals),
+      projectRepositoryOwnerAttention(ownerReads.repositories, ownerReads.continuity),
+      projectDeliveryOwnerAttention(ownerReads.delivery),
+      projectPrototypeOwnerAttention(ownerReads.prototypes),
+      projectPortfolioOwnerAttention(ownerReads.continuity),
+      projectOrchestrationOwnerAttention(ownerReads.orchestration),
+      lifecycle,
+      projectEnvironmentOwnerAttention(ownerReads.platform, "dev-integration"),
+      projectEnvironmentOwnerAttention(ownerReads.platform, "governed-releases"),
+    ] : [
       proposal,
       repository,
       delivery,
@@ -62,7 +78,7 @@ export function useCommandCenterAttention({
       lifecycle,
       devIntegration,
       governedReleases,
-    ].map((source) =>
+    ]).map((source) =>
       normalizeCommandCenterAttentionSourceForRuntime(source, runtimeMode),
     );
     const projectedAt =
@@ -73,6 +89,8 @@ export function useCommandCenterAttention({
 
     return projectCommandCenterAttention(sources, projectedAt);
   }, [
+    ownerReads,
+    ownerReadAt,
     delivery,
     devIntegration,
     governedReleases,

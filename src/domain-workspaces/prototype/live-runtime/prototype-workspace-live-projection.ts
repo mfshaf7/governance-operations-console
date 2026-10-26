@@ -9,6 +9,8 @@ import type { PrototypeMaturityInput, PrototypeMaturityLiveProjection, Prototype
 import { projectPrototypeMaturity } from "./prototype-maturity-live-projection.ts";
 import { assertPrototypeClosureResult } from "./prototype-closure-live-contract.ts";
 import type { PrototypeClosureResult } from "./prototype-closure-live-types.ts";
+import type { NativeLifecycleOutcome } from "../../../console-integration/native-lifecycle-outcome.ts";
+import { prototypeClosureLifecycleOutcome } from "../read-model/native-lifecycle-outcomes.ts";
 import { assertPrototypeDeliveryPacket } from "./prototype-delivery-live-contract.ts";
 import type { PrototypeDeliveryPacketProjection } from "../domain/prototype-delivery.ts";
 
@@ -18,6 +20,7 @@ export type PrototypeWorkspaceLiveProjection = {
   landing: Record<string, PrototypeLandingLiveProjection>;
   maturity: Record<string, PrototypeMaturityLiveProjection>;
   closure: Record<string, PrototypeClosureResult>;
+  nativeLifecycleOutcomes: NativeLifecycleOutcome[];
 };
 
 // Builds UI records only from canonical owner facts and durable OOS progress.
@@ -85,6 +88,7 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
   const landing: PrototypeWorkspaceLiveProjection["landing"] = {};
   const maturity: PrototypeWorkspaceLiveProjection["maturity"] = {};
   const closure: PrototypeWorkspaceLiveProjection["closure"] = {};
+  const nativeLifecycleOutcomes: NativeLifecycleOutcome[] = [];
   for (const entry of ordered(list(workflows.landing))) {
     const result = assertPrototypeLandingResult(entry), slug = slugOf(result.prototype_id), base = records.get(slug);
     if (!base) continue;
@@ -104,7 +108,7 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
   }
   for (const entry of ordered(list(workflows.closure))) {
     const result = assertPrototypeClosureResult(entry, text(object(entry).request_id)), slug = slugOf(`prototype:${result.prototype_id}`), base = records.get(slug);
-    if (base) closure[base.id] = result;
+    if (base) { closure[base.id] = result; nativeLifecycleOutcomes.push(...prototypeClosureLifecycleOutcome(base, result)); }
   }
   const deliveryPackets: Record<string, PrototypeDeliveryPacketProjection> = {};
   for (const [slug, base] of records) {
@@ -144,7 +148,7 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
     }
   }
   return { sourceRevision: sourceRevision ?? revision, readModel: { records: [...records.values()], deliveryPacketsByPrototypeId: deliveryPackets,
-    source: { lastRead: observedAt, project: "Workspace Prototype Studio", recordSystem: "Canonical Studio records and OOS progress", registry: `main@${revision}`, mutationGateway: "OOS owner workflows" } }, landing, maturity, closure };
+    source: { lastRead: observedAt, project: "Workspace Prototype Studio", recordSystem: "Canonical Studio records and OOS progress", registry: `main@${revision}`, mutationGateway: "OOS owner workflows" } }, landing, maturity, closure, nativeLifecycleOutcomes };
 }
 
 function baseRecord(slug: string, name: string, objective: string, revision: string): PrototypeRecord {

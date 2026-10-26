@@ -97,7 +97,7 @@ export const agentRuntimeGovernanceLabel: Record<
   AgentRuntimeGovernancePosture,
   string
 > = {
-  governed: "Governed profile",
+  governed: "Governed request path",
   "prototype-local": "Prototype-local only",
   unresolved: "Profile unresolved",
 };

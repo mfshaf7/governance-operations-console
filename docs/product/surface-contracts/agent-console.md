@@ -58,6 +58,25 @@ aware, abortable during teardown, and backed off after transport failures.
 Detailed provider inventory and credentials are not path-health facts and must
 not enter the polling response.
 
+The dock, embedded header and status command describe this result as OOS
+reachable. A configured profile identifier does not establish entitlement,
+provider health or successful generation. Runtime presence counts logical
+browser agents with current heartbeats, not backend generation jobs.
+An idle runtime does not populate its model from the configured purpose-profile
+alias or invent a profile version. Only a returned effective model selection
+supplies an observed model; profile version remains unobserved until an owner
+projection actually provides it. The governance badge describes the enforced
+request path, not current profile approval.
+
+Delivery Home opens the existing Docking Agent through its shared entry.
+It does not create another assistant, invoke a model on open, or generate local
+keyword replies. Workbench Focus uses a current bounded owner collection
+summary with explicit missing coverage. Workspace adds Repository custody to
+the existing overview; Inventory/custody share one bounded signal so the
+unchanged eight-item admission limit still holds. The whole overview references
+its visible Console composition rather than pretending one owner attests all
+other sources. Private source, raw logs and full records remain excluded.
+
 ## Request Lifecycle Boundary
 
 Each browser agent permits one active governed request through its

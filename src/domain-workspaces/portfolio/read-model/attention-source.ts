@@ -4,6 +4,22 @@ import type {
   ConsoleAttentionSourceMode,
   ConsoleAttentionSourceSnapshot,
 } from "../../../console-integration/attention-contract.ts";
+import { ownerAttentionSnapshot, attentionRecord, attentionRows, type ConsoleOwnerRead } from "../../../console-integration/live-attention.ts";
+
+export function projectPortfolioOwnerAttention(read: ConsoleOwnerRead | undefined) {
+  return ownerAttentionSnapshot(registration, read, "workspace-governance", (payload) => {
+    const body = attentionRecord(payload);
+    if (body.artifact_type !== "workspace-continuity-projection" || body.projection_state !== "current") throw new Error("Portfolio unavailable");
+    for (const value of attentionRows(body.products)) {
+      const product = attentionRecord(value);
+      if (typeof product.product_id !== "string" || !["active", "suspended", "retired"].includes(String(product.posture))) throw new Error("Product posture unavailable");
+    }
+    // Products are a current register, not an outstanding-command queue.
+    // Native Publication returns terminal applied/rejected outcomes. Eligibility
+    // and expired publication readiness do not issue a required operator move.
+    return [];
+  });
+}
 import { consoleAttentionSourceRegistrations } from "../../../console-integration/attention-source-registry.ts";
 import { projectProductPortfolioEffectiveProjection } from "../local-runtime/product-portfolio-effective-projection.ts";
 import {

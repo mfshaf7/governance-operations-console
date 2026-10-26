@@ -119,9 +119,9 @@ export function LifecycleTransitionSelected({
         treatment="neutral"
       >
         <TerasPanelHeader
-          description="Immutable transition artifacts in newest-first order."
+          description="Owner-published evidence in newest-first order. Native readbacks do not reconstruct missing journal phases."
           kicker="History"
-          title="Receipt trail"
+          title="Evidence history"
         />
         {item.history.length > 0 ? (
           <TerasTimeline ariaLabel="Transition receipt history">

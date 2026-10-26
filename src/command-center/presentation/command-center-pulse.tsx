@@ -357,7 +357,7 @@ function PulseRecordList({
                     onOpen={onOpenRoute}
                   />
                 ) : (
-                  <small>No dedicated surface</small>
+                  <small>No current attention route</small>
                 )}
               </span>
             </article>

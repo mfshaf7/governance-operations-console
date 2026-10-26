@@ -246,6 +246,7 @@ export function EnvironmentLifecycleWorkspace({
             <>
               <PlatformOperationsLiveSurface
                 kind={activeWorkspaceId}
+                focusRecordRef={entryIntent?.subjectRef}
                 onControl={liveRuntime.control}
                 onRefresh={liveRuntime.load}
                 onSubmit={liveRuntime.submit}

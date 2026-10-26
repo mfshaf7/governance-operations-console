@@ -86,6 +86,10 @@ separately governed OOS integration slices:
   or activation authority
 - owner-backed Command Center Focus and Workspace Pulse composition from one
   freshness-aware, deduplicated attention snapshot
+- safe read-only Operator Account projection from the same Platform session
+  that enforces commands, independently of local display preferences
+- read-only Lifecycle coordination over native owner handoff evidence alongside
+  OOS journal records, with explicit origin and unprojected control history
 - bounded Governance Activity composition from canonical OOS workflow activity
   and WGCF governance history, with owner evidence routes and no Console ledger
 - Workspace Prototype Studio-owned Preview Runtime status, bounded lifecycle

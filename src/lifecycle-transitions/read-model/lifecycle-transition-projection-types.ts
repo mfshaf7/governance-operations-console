@@ -18,14 +18,14 @@ export type LifecycleTransitionValidationProjection = Readonly<{
   gates: readonly LifecycleTransitionGateSnapshot[];
   receiptRef: string | null;
   runRef: string | null;
-  state: "blocked" | "not-started" | "passed" | "returned" | "running";
+  state: "blocked" | "not-started" | "not-projected" | "passed" | "returned" | "running";
 }>;
 
 export type LifecycleTransitionAdmissionProjection = Readonly<{
   reasonCode: string | null;
   receiptRef: string | null;
   recordedAt: string | null;
-  state: "admitted" | "not-started" | "rejected";
+  state: "admitted" | "not-started" | "not-projected" | "rejected";
   targetRecordRef: string | null;
 }>;
 
@@ -72,6 +72,7 @@ export type LifecycleTransitionHistoryProjection = Readonly<{
 }>;
 
 export type LifecycleTransitionProjection = Readonly<{
+  nativeEvidence?: Readonly<{ kind: "source-acknowledgement" | "owner-confirmation"; title: string; authority: string; sourceRef: string; evidenceRefs: readonly string[] }>;
   activityArtifacts?: readonly LifecycleTransitionArtifact[];
   admission: LifecycleTransitionAdmissionProjection;
   application: LifecycleTransitionApplicationProjection;

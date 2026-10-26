@@ -23,7 +23,7 @@ const columns: TerasRecordTableColumn<LifecycleTransitionOverviewItem>[] = [
     render: (item) => (
       <TerasRecordCellText
         meta={item.sourceVersion}
-        title={lifecycleTransitionShortReference(item.sourceRecordId)}
+        title={item.sourceTitle ?? lifecycleTransitionShortReference(item.sourceRecordId)}
       />
     ),
   },

@@ -41,3 +41,4 @@ export const environmentLifecycleBoundary: ConsoleBoundary = {
   ],
   status: "active-contract",
 };
+export { projectEnvironmentOwnerAttention } from "./read-model/attention-source.ts";

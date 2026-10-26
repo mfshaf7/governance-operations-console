@@ -3,6 +3,23 @@ import type {
   ConsoleAttentionSource,
   ConsoleAttentionSourceSnapshot,
 } from "../../../console-integration/attention-contract.ts";
+import { ownerAttentionSnapshot, currentOwnerRead, attentionRows, type ConsoleOwnerRead } from "../../../console-integration/live-attention.ts";
+import { projectRepositoryProvisioningResults } from "../live-runtime/repository-custody-live-projection.ts";
+import { projectRepositoryCurrentInventory } from "../live-runtime/repository-inventory-live-projection.ts";
+import { assertRepositoryCustodyWorkflowResult } from "../live-runtime/repository-custody-live-contract.ts";
+import type { WorkspaceContinuityProjection } from "../../../workspace-continuity/workspace-continuity-types.ts";
+
+export function projectRepositoryOwnerAttention(read: ConsoleOwnerRead | undefined, continuity: ConsoleOwnerRead | undefined) {
+  return ownerAttentionSnapshot(registration, read, "Workspace repository control", (payload, observedAt) => {
+    if (!currentOwnerRead(continuity)) throw new Error("Inventory unavailable");
+    const results = attentionRows(payload).map(assertRepositoryCustodyWorkflowResult);
+    const records = projectRepositoryCurrentInventory(projectRepositoryProvisioningResults([], Object.fromEntries(results.map(result => [result.request.request_id, result]))), continuity!.payload as WorkspaceContinuityProjection);
+    return records.flatMap(record => {
+      const candidate = repositoryAttentionCandidate({ record, local: false, projectedAt: observedAt, receiptRefs: [] });
+      return candidate ? [candidate] : [];
+    });
+  });
+}
 import { consoleAttentionSourceRegistrations } from "../../../console-integration/attention-source-registry.ts";
 import {
   getProposalRepositoryRequestRecords,

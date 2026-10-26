@@ -97,12 +97,12 @@ export function AgentRuntimePresenceDialog({
             value: interactionModeLabel(runtime.interactionMode),
           },
           { label: "Provider", value: runtime.provider },
-          { label: "Model", value: runtime.model ?? "Unresolved" },
+          { label: "Observed model", value: runtime.model ?? "No effective model observed" },
           {
             detail: runtime.modelProfileVersion
               ? `Version ${runtime.modelProfileVersion}`
-              : undefined,
-            label: "Model Profile",
+              : "Profile version not observed; this reference does not establish current profile approval",
+            label: "Configured profile",
             value: runtime.modelProfileRef ?? "No governed profile",
           },
           {

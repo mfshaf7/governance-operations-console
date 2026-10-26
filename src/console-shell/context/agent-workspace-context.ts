@@ -1,5 +1,6 @@
 import { createAgentContextCandidate, type AgentContextCandidate } from "./agent-context-candidate.ts";
 import type { ConsoleWorkspaceId } from "../../console-architecture.ts";
+import type { OperationWorkbenchPathLabel } from "../../operation-workbench/operation-workbench-domain-registry.ts";
 
 // Read only the already validated same-origin projections. Never copy arbitrary
 // owner payloads, credentials, prompts, drafts, endpoints or source bytes.
@@ -13,6 +14,7 @@ export const agentContextSources = {
   lifecycle: "/api/lifecycle-transitions",
   platform: "/api/environment-operations",
   models: "/api/model-operations/runtime/registry",
+  repositories: "/api/repositories/custody/requests",
 } as const;
 export type AgentContextSource = keyof typeof agentContextSources;
 export type AgentOwnerSnapshot = { state: "current" | "unavailable" | "preview"; detail: string; revision: string | null; capturedAt: string };
@@ -40,6 +42,9 @@ export function projectAgentOwnerSnapshot(source: AgentContextSource, value: unk
   } else if (source === "registry") {
     if (body.workflow_id !== "workspace-inventory-registry" || !revision(body.authority_revision)) throw new Error("Registry not current");
     const rows = list(body.records); detail = `${rows.length} Registry entries (${tally(rows, "posture")}); ${examples(rows, "id", "name")}`; sourceRevision = revision(body.authority_revision);
+  } else if (source === "repositories") {
+    if (body.mode !== "live" || body.status !== "current") throw new Error("Repository not current");
+    const rows = list(body.records); detail = `${rows.length} retained repository operations (${tally(rows, "status")}); current inventory and exact provider readback remain separate`;
   } else if (source === "models") {
     const configuration = object(body.configuration); const settings = object(configuration.configuration);
     const selected = object(object(settings.default).primary);
@@ -61,12 +66,13 @@ export function projectAgentOwnerSnapshot(source: AgentContextSource, value: unk
     } else if (source === "delivery") {
       const projection = object(body.projection); const state = object(projection.projection_state);
       if (state.status !== "fresh") throw new Error("Delivery not fresh");
-      const rows = list(projection.packages); detail = `${rows.length} open Delivery initiatives (${tally(rows, "backend_status")}); ${examples(rows, "delivery_package_id", "display_name")}; done excluded`;
+      const rows = list(projection.packages); const active = rows.filter(row => !["done", "retired", "parked"].includes(String(object(row).backend_status)));
+      detail = `${rows.length} retained Delivery initiatives; ${active.length} current (${tally(rows, "backend_status")}); terminal and parked records are history`;
       sourceRevision = revision(state.source_revision);
     } else if (source === "orchestration") {
       const rows = list(body.runs); detail = `${list(body.definitions).length} definitions; ${rows.length} runs (${tally(rows, "state")})`;
     } else if (source === "lifecycle") {
-      const rows = list(body.transitions); detail = `${rows.length} lifecycle transitions (${tally(rows, "state")}); ${body.truncated ? "truncated collection" : "complete collection"}`;
+      const rows = list(body.transitions); detail = `${rows.length} OOS journal records (${tally(rows, "state")}); native owner handoff readbacks are shown separately in Lifecycle; ${body.truncated ? "truncated" : "bounded owner read"}`;
     } else {
       const catalog = object(body.catalog);
       if (catalog.freshness !== "current") throw new Error("Platform catalog not current");
@@ -76,26 +82,33 @@ export function projectAgentOwnerSnapshot(source: AgentContextSource, value: unk
   }
   return { state: "current", detail: detail.slice(0, 160), revision: sourceRevision, capturedAt };
 }
-const titles = { "dev-integration": "Dev Integration", "governed-releases": "Governed Releases", "lifecycle-transitions": "Lifecycle Transitions", "workspace-registry": "Workspace Registry" } satisfies Record<ConsoleWorkspaceId, string>;
-const pageSources = { "dev-integration": "platform", "governed-releases": "platform", "lifecycle-transitions": "lifecycle", "workspace-registry": "registry" } satisfies Record<ConsoleWorkspaceId, AgentContextSource>;
-export function buildAgentWorkspaceContext(snapshots: AgentOwnerSnapshots, now = new Date().toISOString(), workspaceId?: ConsoleWorkspaceId): AgentContextCandidate {
-  const sources: AgentContextSource[] = workspaceId ? [pageSources[workspaceId]] : ["continuity", "proposals", "prototypes", "delivery", "orchestration", "lifecycle", "platform", "models"];
+export type ConsoleOwnerPage = ConsoleWorkspaceId | OperationWorkbenchPathLabel;
+const titles = { "dev-integration": "Dev Integration", "governed-releases": "Governed Releases", "lifecycle-transitions": "Lifecycle Transitions", "workspace-registry": "Workspace Registry", PROPOSAL: "Proposal", REPOSITORY: "Repository", DELIVERY: "Delivery", PROTOTYPE: "Prototype", PORTFOLIO: "Portfolio", MODEL: "Model Operations", ORCHESTRATION: "Orchestration" } satisfies Record<ConsoleOwnerPage, string>;
+const pageSources = { "dev-integration": "platform", "governed-releases": "platform", "lifecycle-transitions": "lifecycle", "workspace-registry": "registry", PROPOSAL: "proposals", REPOSITORY: "repositories", DELIVERY: "delivery", PROTOTYPE: "prototypes", PORTFOLIO: "continuity", MODEL: "models", ORCHESTRATION: "orchestration" } satisfies Record<ConsoleOwnerPage, AgentContextSource>;
+export function buildAgentWorkspaceContext(snapshots: AgentOwnerSnapshots, now = new Date().toISOString(), workspaceId?: ConsoleOwnerPage): AgentContextCandidate {
+  const sources: AgentContextSource[] = workspaceId ? [pageSources[workspaceId]] : ["continuity", "repositories", "proposals", "prototypes", "delivery", "orchestration", "lifecycle", "platform", "models"];
   let current = 0;
-  const signals = sources.map(source => {
+  const sourceSignals = sources.map(source => {
     const snapshot = snapshots[source]; const age = snapshot ? Date.parse(now) - Date.parse(snapshot.capturedAt) : Infinity;
     if (!snapshot || snapshot.state !== "current" || !Number.isFinite(age) || age < 0 || age > 120_000) return `${source}: ${snapshot?.state === "preview" ? "preview only" : "unavailable or expired"}; no live facts attached`;
     current += 1;
     return `${source}: ${snapshot.detail}; ${snapshot.revision ? `revision ${snapshot.revision.slice(0, 19)}` : `read ${snapshot.capturedAt}`}`.slice(0, 225);
   });
+  // Registry continuity and repository custody share one bounded inventory
+  // signal. Preserve both coverage states without increasing the eight-item
+  // admission contract or dropping an owner from the overview.
+  const signals = workspaceId ? sourceSignals : [sourceSignals[0].slice(0, 145) + "; " + sourceSignals[1].slice(0, 145), ...sourceSignals.slice(2)];
   return createAgentContextCandidate({
     id: workspaceId ? `page:${workspaceId}` : "workspace:console", scope: workspaceId ? "page" : "workspace",
     title: workspaceId ? titles[workspaceId] : "Console workspace", surfaceKind: workspaceId ?? "console-workspace",
     sourceMode: current ? "source-projected" : "unavailable", sourceAuthority: "Console composition of validated OOS, WGCF and Platform reads",
     status: `${current}/${sources.length} sources current`, displayTone: current === sources.length ? "info" : "warn",
-    summary: workspaceId ? `${titles[workspaceId]} page context. ${workspaceId === "dev-integration" || workspaceId === "governed-releases" ? "Platform coverage does not establish live status for legacy preview cards or a selected profile." : "Page collection summary; individual record details require the owning view."}` : "Current cross-Console overview: Registry/Portfolio, Proposal, Prototype, Delivery, Orchestration, Lifecycle, Platform and Models. Coverage below is explicit; omitted records and private details are not known.",
+    summary: workspaceId ? `${titles[workspaceId]} page context. ${workspaceId === "dev-integration" || workspaceId === "governed-releases" ? "Platform coverage does not establish live status for legacy preview cards or a selected profile." : "Page collection summary; individual record details require the owning view."}` : "Current cross-Console overview: Registry/Portfolio, Repository, Proposal, Prototype, Delivery, Orchestration, Lifecycle, Platform and Models. Coverage below is explicit; omitted records and private details are not known.",
     freshness: "Owner read snapshots expire after 120 seconds; unavailable sources have no attached facts", projectedAt: now, observedAt: current ? now : null,
     boundary: "Read-only operator context; CGG admission required. No approval, mutation, source authoring or release authority. Preview fixtures, raw source, logs, secrets and host telemetry excluded. Open the owner view for full evidence.",
-    refs: sources.map(source => `console:${agentContextSources[source]}`), signals,
+    // Reference this visible Console composition, not an arbitrary first owner
+    // as if it attested the other inputs. More sources do not grow the refs cap.
+    refs: workspaceId ? sources.map(source => `console:${agentContextSources[source]}`) : ["console://agent-context/workspace-overview"], signals,
     safeActions: ["Explain the visible current facts and coverage limits", "Direct the operator to the owning surface for missing details"],
   });
 }

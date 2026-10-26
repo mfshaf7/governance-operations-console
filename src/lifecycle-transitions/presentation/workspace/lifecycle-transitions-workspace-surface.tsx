@@ -56,6 +56,7 @@ export function LifecycleTransitionsWorkspaceSurface({
         !normalizedQuery ||
         [
           item.sourceRecordId,
+          item.sourceTitle ?? "",
           item.transitionId,
           item.nextAction?.ownerLabel ?? "",
           item.targetRecordRef ?? item.targetHomeRef,

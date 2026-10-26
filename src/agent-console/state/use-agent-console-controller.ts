@@ -272,7 +272,7 @@ export function useAgentConsoleController({
           ? {
               ...entry,
               kind: "system",
-              text: `governed Agent Console recovered: ${providerStatus.model ?? "profile ready"}`,
+              text: `OOS reachability recovered; configured profile: ${providerStatus.model ?? "not resolved"}. Model readiness is not probed.`,
             }
           : entry,
       ),
@@ -333,7 +333,7 @@ export function useAgentConsoleController({
     }
 
     return [
-      "governed Agent Console: online",
+      "governed Agent Console: OOS reachable; model readiness is not probed",
       `profile: ${status.model}`,
       `provider path: ${status.provider}`,
       `operator mode: ${agentInteractionModeLabel(contextMode)}`,
@@ -577,7 +577,7 @@ export function useAgentConsoleController({
     const invocation = createAgentInvocation({
       contextDecision,
       id: `agent-invocation-${invocationNonce}`,
-      model: liveProviderStatus.model,
+      model: null,
       provider: liveProviderStatus.provider,
     });
     const requestSignal = beginAgentRequest(invocation.id);
@@ -652,7 +652,7 @@ export function useAgentConsoleController({
               ...current,
               cggReceiptRef: response.headers.get("X-Agent-CGG-Receipt"),
               contextAttached: true,
-              model: responseModel,
+              model: response.headers.has("X-Agent-Effective-Model") ? responseModel : null,
               provider: responseProvider,
             }
           : current,

@@ -78,7 +78,8 @@ export function AgentRuntimeStatusDialog({
         items={[
           { label: "Status", tone: statusTone, value: statusLabel },
           { label: "Provider Path", value: "Governed AI Gateway" },
-          { label: "Profile", value: providerStatus?.model ?? "not resolved" },
+          { label: "Configured profile", value: providerStatus?.model ?? "not resolved" },
+          { label: "Probe coverage", value: "OOS reachability only; provider, profile entitlement and model generation are not probed" },
           { label: "Active Runtimes", value: String(activeRuntimeCount) },
           {
             label: "Request Boundary",

@@ -218,11 +218,11 @@ export function AgentConsoleSessionProvider({
     governancePosture: "governed",
     interactionMode: agentContextMode,
     invocationRef: currentInvocation?.id ?? null,
-    model: currentInvocation?.model ?? providerStatus?.model ?? null,
+    model: currentInvocation?.model ?? null,
     modelProfileRef: providerStatus?.model
       ? `platform://profiles/${providerStatus.model}`
       : null,
-    modelProfileVersion: providerStatus?.model ? "1.0" : null,
+    modelProfileVersion: null,
     operationRunRef: null,
     provider: providerStatus?.provider ?? "governed-ai-gateway",
     state: runtimeState,

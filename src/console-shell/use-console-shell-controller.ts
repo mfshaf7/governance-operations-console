@@ -26,6 +26,7 @@ import {
 import {
   lifecycleTransitionProjectionFixtures,
   useLifecycleTransitionLiveRuntime,
+  composeLifecycleTransitionSnapshot,
 } from "../lifecycle-transitions";
 import {
   devIntegrationProfileHistoryFixtures,
@@ -49,6 +50,9 @@ import { useConsoleActivity } from "./activity/use-console-activity";
 import { resolveConsoleAgentContextCandidate } from "./context/agent-context-candidates";
 import { consoleWorkbenchTargetId } from "./navigation/console-entry-model";
 import { useConsoleShellSelection } from "./use-console-shell-selection";
+import { useAgentWorkspaceContext } from "./context/use-agent-workspace-context";
+import { projectProposalLifecycleOutcomes } from "../domain-workspaces/proposal";
+import { projectPrototypeLifecycleOutcomes } from "../domain-workspaces/prototype";
 
 export function useConsoleShellController() {
   const consoleHomeRef = useRef<HTMLDivElement | null>(null);
@@ -56,6 +60,7 @@ export function useConsoleShellController() {
   const [activeConsoleWorkspaceId, setActiveConsoleWorkspaceId] =
     useState<ConsoleWorkspaceId | null>(null);
   const [consoleDevMode, setConsoleDevMode] = useState(false);
+  const liveAgentContext = useAgentWorkspaceContext(activeConsoleWorkspaceId);
   const [componentScenarioId, setComponentScenarioId] = useState(
     componentStatusScenarios[0].id,
   );
@@ -74,7 +79,7 @@ export function useConsoleShellController() {
     scenarioId: componentScenarioId,
   });
   const lifecycleTransitionRuntime = useLifecycleTransitionLiveRuntime();
-  const lifecycleTransitionSnapshot = lifecycleTransitionRuntime.snapshot;
+  const lifecycleTransitionSnapshot = useMemo(() => composeLifecycleTransitionSnapshot(lifecycleTransitionRuntime.snapshot, liveAgentContext.ownerReads, { proposals: projectProposalLifecycleOutcomes, prototypes: projectPrototypeLifecycleOutcomes }), [lifecycleTransitionRuntime.snapshot, liveAgentContext.ownerReads, liveAgentContext.ownerReadAt]);
   const lifecycleFixtureIsolation = resolveConsoleFixtureIsolation({
     mode: lifecycleTransitionSnapshot?.mode ?? null,
     status: lifecycleTransitionSnapshot?.status ?? "loading",
@@ -94,6 +99,8 @@ export function useConsoleShellController() {
       (scenario) => scenario.id === resourceScenarioId,
     ) ?? resourceUsageScenarios[0];
   const attentionSnapshot = useCommandCenterAttention({
+    ownerReads: liveAgentContext.ownerReads,
+    ownerReadAt: liveAgentContext.ownerReadAt,
     disconnectedPreview:
       consoleDevMode && lifecycleFixtureIsolation.fixtureAllowed,
     lifecycleSnapshot: lifecycleTransitionSnapshot,
@@ -327,6 +334,7 @@ export function useConsoleShellController() {
   }
 
   return {
+    liveAgentContext,
     activeComponentScenario,
     activeConsoleEntryIntent,
     activeConsoleWorkspaceId,
@@ -352,6 +360,7 @@ export function useConsoleShellController() {
           observedAt: lifecycleTransitionSnapshot.observedAt,
           status: lifecycleTransitionSnapshot.status,
           truncated: lifecycleTransitionSnapshot.truncated,
+          sourceScope: lifecycleTransitionSnapshot.sourceScope,
         }
       : null,
     lifecycleTransitions,
