@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DeliveryReadModel } from "../read-model/delivery-read-model.ts";
 import { assertDeliveryIntakeSnapshot, type DeliveryIntakeRecord } from "./delivery-history-live-contract.ts";
-import { projectDeliveryIntakeHistory } from "./delivery-history-projection.ts";
+import { projectDeliveryIntakeHistory, deliveryIntakeRefreshSnapshot } from "./delivery-history-projection.ts";
 
 type Evidence = { sources: DeliveryIntakeRecord[]; issues: Array<{target_ref:string;detail:string}>;
-  inspected: Set<string>; revisions: string[]; complete: boolean; full: boolean; started: number };
+  inspected: Set<string>; revisions: string[]; complete: boolean; full: boolean; started: number; refresh_failed?: boolean };
 
 export function useDeliveryWorkspaceLiveRuntime(enabled: boolean, includeHistoryEvidence = false) {
   const [model, setModel] = useState<DeliveryReadModel | null>(null), [error, setError] = useState<string | null>(null);
@@ -29,7 +29,8 @@ export function useDeliveryWorkspaceLiveRuntime(enabled: boolean, includeHistory
         next = {...next,projection_state:{...next.projection_state,
           source_revision:`${next.projection_state.source_revision}:${proof.revisions.join(":")}`},
           evidence_coverage:{...next.evidence_coverage!,intake:{...next.evidence_coverage!.intake,complete:proof.complete&&proof.full,
-            ...(!proof.full?{detail:"Operational package custody has its own current owner reads. Retained admissions are read independently when History is requested."}:
+            ...(proof.refresh_failed?{state:"partial" as const,detail:"Last verified original Intake records. Refresh failed; observation time is unchanged and exact owner reads retain command authority."}:
+            !proof.full?{detail:"Operational package custody has its own current owner reads. Retained admissions are read independently when History is requested."}:
             !proof.complete?{state:"partial" as const,detail:"Loading original owner evidence across bounded pages. Visible rows are verified; global evidence totals remain pending."}:{})}}};
       } catch { evidence.current = null; }
     }
@@ -41,6 +42,7 @@ export function useDeliveryWorkspaceLiveRuntime(enabled: boolean, includeHistory
     if (!active.current || (!requested.current&&!inventory.current) || evidenceRequest.current === generation.current) return;
     const ticket = generation.current;evidenceRequest.current=ticket;
     const full=requested.current;
+    const previous=evidence.current;let denied=false;
     const operational=inventory.current?.packages.filter(p=>!["done","retired"].includes(p.backend_status))??[];
     const next: Evidence = {sources:[],issues:[],inspected:new Set(),revisions:[],complete:false,full,started:Date.now()};
     const identities = new Set<string>();
@@ -49,11 +51,13 @@ export function useDeliveryWorkspaceLiveRuntime(enabled: boolean, includeHistory
       for (let page = 1; page <= (full?410:operational.length); page++) {
         if (!active.current || generation.current !== ticket || requested.current!==full || Date.now()-next.started > 240000) throw Error("Evidence read is no longer current.");
         const query=full?`page=${page}`:`delivery_id=${encodeURIComponent(operational[page-1].delivery_package_id)}`;
-        const response = await fetch(`/api/delivery/intake?${query}`,{cache:"no-store"}),body = await response.json();
+        const response = await fetch(`/api/delivery/intake?${query}`,{cache:"no-store"});
         if ([401,403].includes(response.status)) {
+          denied=true;
           if(active.current&&generation.current===ticket){inventory.current=null;evidence.current=null;setModel(null);setError("Delivery owner denied access. Refresh the current authorized session.");}
           throw Error("Delivery owner denied access.");
         }
+        const body = await response.json();
         if (!response.ok || body.mode !== "live") throw Error("Intake owner unavailable.");
         const value = assertDeliveryIntakeSnapshot(body.projection);
         if (value.page?.number !== (full?page:1) || !value.inspected_target_refs || Date.now()-Date.parse(value.observed_at)>300000 || Date.parse(value.observed_at)>Date.now()+30000) throw Error("Invalid Intake page.");
@@ -61,11 +65,11 @@ export function useDeliveryWorkspaceLiveRuntime(enabled: boolean, includeHistory
         for (const source of value.sources) {if(identities.has(source.source_id))throw Error("Conflicting owner source.");identities.add(source.source_id);next.sources.push(source);}
         next.issues.push(...value.issues);next.revisions.push(value.source_revision);next.complete=full?!value.page.has_more:page===operational.length;
         if (!active.current || generation.current !== ticket) return;
-        evidence.current=next;compose();
+        evidence.current=deliveryIntakeRefreshSnapshot(previous,next,Date.now());compose();
         if(next.complete)return;
       }
       throw Error("Evidence exceeds the bounded overview scope.");
-    } catch { if(active.current && generation.current===ticket){evidence.current=null;compose();} }
+    } catch { if(active.current && generation.current===ticket){evidence.current=denied?null:deliveryIntakeRefreshSnapshot(previous,next,Date.now(),true);compose();} }
     finally { if(evidenceRequest.current===ticket)evidenceRequest.current=null;if(active.current&&generation.current===ticket&&requested.current!==full)void readEvidence(); }
   }, [compose]);
 

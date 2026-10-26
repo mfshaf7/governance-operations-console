@@ -2,12 +2,24 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {projectCanonicalDeliveryWorkspace} from '../../src/domain-workspaces/delivery/live-runtime/delivery-workspace-live-projection.ts';
 import {projectCanonicalDeliveryOverview} from '../../src/domain-workspaces/delivery/live-runtime/delivery-overview-live-projection.ts';
-import {deliveryModelForScope,projectDeliveryIntakeHistory} from '../../src/domain-workspaces/delivery/live-runtime/delivery-history-projection.ts';
+import {deliveryModelForScope,projectDeliveryIntakeHistory,deliveryIntakeRefreshSnapshot} from '../../src/domain-workspaces/delivery/live-runtime/delivery-history-projection.ts';
+import {deliveryWorkspaceSummaryStats} from '../../src/domain-workspaces/delivery/presentation/workspace/workspace-summary-model.ts';
 import {getDeliveryPackagesByWorkflowPhase,getExecutionBoardPackages} from '../../src/domain-workspaces/delivery/read-model/selectors/workflow-package-selectors.ts';
 import {deliveryOverviewStats,deliverySurfaceItemCount} from '../../src/domain-workspaces/delivery/presentation/workspace/workspace-count-model.ts';
 
 const at='2026-10-26T00:00:00Z',revision='synthetic-source';
 const ref=id=>`openproject://work_packages/${id}`;
+
+test('background Intake pages cannot erase a complete verified register or advance its observation',()=>{
+ const previous={complete:true,full:true,started:1000,sources:['original-source'],revisions:['original-version']};
+ const partial={complete:false,full:true,started:2000,sources:[],revisions:['new-page-1']};
+ assert.deepEqual(deliveryIntakeRefreshSnapshot(previous,partial,2100),previous);
+ const failed=deliveryIntakeRefreshSnapshot(previous,partial,2200,true);assert.deepEqual(failed.sources,['original-source']);assert.equal(failed.started,1000);assert.equal(failed.refresh_failed,true);
+ const complete={...partial,complete:true,sources:['original-source','new-source']};assert.deepEqual(deliveryIntakeRefreshSnapshot(previous,complete,2300),complete);
+ assert.equal(deliveryIntakeRefreshSnapshot(previous,partial,302000,true),null);
+ assert.deepEqual(deliveryIntakeRefreshSnapshot(null,partial,2100),partial);
+ assert.deepEqual(deliveryIntakeRefreshSnapshot({...previous,full:false},partial,2100),partial);
+});
 function initiative(id,status,children=[]){
  const epic={id,type:'Epic',subject:`Synthetic package ${id}`,status,record_ref:ref(id),owner_repo:'sample-owner',target_pi:'sample-pi',architecture_anchor_ref:null,required_upstream_ref:null};
  return {epic,execution_tree:{...epic,children},summary:{open_descendant_count:children.filter(n=>!['done','retired'].includes(n.status)).length}};
@@ -39,6 +51,8 @@ test('History keeps every global package and totals; archived children are expli
  assert.deepEqual(after.deferred_history_tree_refs,[ref(1),ref(5)]);
  const unread={...after,evidence_coverage:{intake:{state:'unavailable',issue_count:0,detail:'Independent owner read not yet available'},activity:{state:'unavailable',detail:'Not yet loaded'}}};
  assert.equal(deliverySurfaceItemCount({surfaceId:'intake',executionCount:5,model:unread}),'Unavailable');
+ assert.ok(deliveryWorkspaceSummaryStats({activeSurfaceId:'intake',executionCount:5,model:unread}).every(s=>s.value==='Unavailable'));
+ assert.ok(deliveryWorkspaceSummaryStats({activeSurfaceId:'intake',executionCount:5,model:{...unread,evidence_coverage:{...unread.evidence_coverage,intake:{...unread.evidence_coverage.intake,state:'partial',complete:false}}}}).every(s=>s.value==='Loading'));
  assert.equal(deliverySurfaceItemCount({surfaceId:'intake',executionCount:5,model:{...unread,evidence_coverage:{...unread.evidence_coverage,intake:{...unread.evidence_coverage.intake,state:'partial',complete:false}}}}),'Loading');
  assert.equal(after.packages[0].open_child_count,null);assert.equal(after.art_tree.roots.some(n=>n.legacy_work_package_id===1),false);
  const admission={source_id:'prototype:original',source_kind:'prototype',source_ref:'record://prototype/example',source_version:'v1',packet_ref:'packet:original',delivery_id:'delivery-1',target_ref:ref(1),title:'Original title',owner_repo:'original-owner',state:'consumed',custody:{classification:'existing-repo',owner:'original-owner',rationale:'Original accepted custody',source_ref:'repo://original-owner',repository_gate_state:'resolved'},receipt_ref:'receipt:original',receipt_digest:'sha256:original',recorded_at:at,actor:'operator:sample',evidence_refs:[ref(1)]};

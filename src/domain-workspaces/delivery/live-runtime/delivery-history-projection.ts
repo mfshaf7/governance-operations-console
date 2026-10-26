@@ -1,6 +1,14 @@
 import type { DeliveryReadModel } from "../read-model/delivery-read-model.ts";
 import type { DeliveryIntakeRecord } from "./delivery-history-live-contract.ts";
 
+// A complete verified register stays visible until its replacement is complete.
+// Observation time never advances merely because another page was requested.
+export function deliveryIntakeRefreshSnapshot<T extends {complete:boolean;full:boolean;started:number;refresh_failed?:boolean}>(previous:T|null,next:T,now:number,failed=false):T|null {
+  const retained=previous?.complete && previous.full===next.full && now-previous.started<=300000;
+  if(failed)return retained?{...previous,refresh_failed:true}:null;
+  return retained&&!next.complete?previous:next;
+}
+
 export function projectDeliveryIntakeHistory(model: DeliveryReadModel, records: DeliveryIntakeRecord[], issues: Array<{target_ref:string;detail:string}>): DeliveryReadModel {
   const ids=new Set(model.packages.map(p=>p.delivery_package_id));
   for(const item of records)if(!ids.has(item.delivery_id))throw new Error("Intake target is absent from the complete canonical Delivery inventory.");
