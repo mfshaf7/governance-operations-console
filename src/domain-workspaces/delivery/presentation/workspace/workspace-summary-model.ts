@@ -92,6 +92,10 @@ export function deliveryWorkspaceSummaryStats({
 function intakeWorkspaceSummaryStats(
   model: DeliveryReadModel,
 ): DeliveryWorkspaceSummaryCard[] {
+  const coverage=model.evidence_coverage?.intake;
+  if(model.history_scope==="history"&&coverage&&(coverage.state==="unavailable"||coverage.complete===false)){
+    return ["accepted","failed","sources","consumed"].map(id=>({id,label:id[0].toUpperCase()+id.slice(1),tone:"muted",value:coverage.state==="unavailable"?"Unavailable":"Loading"}));
+  }
   const acceptedCount = getDeliveryIntakeSourceCount("needs_consume", model);
   const failedCount = getDeliveryIntakeSourceCount("consume_failed", model);
   const consumedCount = getDeliveryIntakeSourceCount("consumed", model);

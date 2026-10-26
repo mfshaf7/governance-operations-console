@@ -211,7 +211,7 @@ export function DeliveryIntakeSurface({
               />
             }
             kicker={surface.title}
-            statusLabel={`${filteredSources.length}/${sources.length} shown`}
+            statusLabel={model.history_scope==="history"&&model.evidence_coverage?.intake.complete===false?"Loading original evidence":`${filteredSources.length}/${sources.length} shown`}
             statusTone="warn"
             title="Accepted Source Register"
           >
@@ -230,7 +230,7 @@ export function DeliveryIntakeSurface({
               />
             ) : (
               <TerasEmptyState fill>
-                {model.evidence_coverage?.intake.state === "unavailable" ? "Native Intake evidence is unavailable. Refresh to retry; no empty-history claim is made." : model.history_scope === "current" ? "No admitted sources require a Delivery shell. Consumed sources remain in History." : "No verified Intake sources match these filters. Evidence issues are listed separately."}
+                {model.evidence_coverage?.intake.state === "unavailable" ? "Native Intake evidence is unavailable. Refresh to retry; no empty-history claim is made." : model.history_scope === "history"&&model.evidence_coverage?.intake.complete===false ? "Loading original Intake evidence. Global totals and filter results are not complete yet." : model.history_scope === "current" ? "No admitted sources require a Delivery shell. Consumed sources remain in History." : "No verified Intake sources match these filters. Evidence issues are listed separately."}
               </TerasEmptyState>
             )}
           </TerasRegisterPanel>

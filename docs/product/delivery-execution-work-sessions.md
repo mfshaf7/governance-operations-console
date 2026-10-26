@@ -112,6 +112,13 @@ refresh retains last verified rows with their original timestamp and stale
 label; denied identity clears them. Neither retained display nor a shared
 pending GET can grant execution, review, mutation or completion authority.
 
+A background Intake refresh keeps the last complete verified register visible
+until its replacement is complete. A transient refresh failure retains those
+rows with explicit stale coverage and their original observation, for at most
+the existing five-minute bound. Denied access clears them. During the first
+load, unknown totals and filter results remain explicitly loading; a partial
+first page must not temporarily erase a previously verified source.
+
 `Edit ART Tree` reads a fresh OOS change projection before opening a local draft.
 Use the existing typed child menu (including PI Objective under Epic), then
 `Done Editing`, inspect the exact change plan and enter an acceptance note.
