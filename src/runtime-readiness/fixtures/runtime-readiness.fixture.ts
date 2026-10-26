@@ -47,14 +47,14 @@ export const runtimeReadinessFixture = {
       href: null,
       id: "wgcf-api",
       label: "WGCF API",
-      surface: "10.43.86.50:8080",
+      surface: "Owner route not observed",
     },
     {
       ...catalogSource,
       href: null,
       id: "cgg-api",
       label: "CGG API",
-      surface: "10.43.227.159:8080",
+      surface: "Owner route not observed",
     },
     {
       ...catalogSource,

@@ -4,6 +4,18 @@ import type {
   ConsoleAttentionSource,
   ConsoleAttentionSourceSnapshot,
 } from "../../../console-integration/attention-contract.ts";
+import { ownerAttentionSnapshot, attentionRecord, type ConsoleOwnerRead } from "../../../console-integration/live-attention.ts";
+
+export function projectDeliveryOwnerAttention(read: ConsoleOwnerRead | undefined) {
+  return ownerAttentionSnapshot(registration, read, "Workspace Delivery ART", (payload) => {
+    const body = attentionRecord(payload), projection = attentionRecord(body.projection);
+    if (body.mode !== "live" || body.error || attentionRecord(projection.projection_state).status !== "fresh") throw new Error("Delivery unavailable");
+    const owner = projection as unknown as DeliveryReadModel;
+    const model = { ...owner, packages: owner.packages.filter(record => !["done", "retired", "parked"].includes(record.backend_status)) };
+    const source = deliverySourceMetadata(model);
+    return getDeliveryAttentionItems(model).map(item => deliveryAttentionCandidate(item, model, source));
+  });
+}
 import { consoleAttentionSourceRegistrations } from "../../../console-integration/attention-source-registry.ts";
 import {
   getDeliveryWorkspaceProjectionSnapshot,

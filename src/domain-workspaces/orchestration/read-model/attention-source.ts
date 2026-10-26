@@ -4,6 +4,19 @@ import type {
   ConsoleAttentionSource,
   ConsoleAttentionUrgency,
 } from "../../../console-integration/attention-contract.ts";
+import { ownerAttentionSnapshot, attentionRecord, type ConsoleOwnerRead } from "../../../console-integration/live-attention.ts";
+import { assertOosOrchestrationDefinitions, assertOosOrchestrationRuns } from "../live-runtime/orchestration-live-contract.ts";
+import { projectLiveOrchestrationWorkspace } from "../live-runtime/orchestration-live-projection.ts";
+
+export function projectOrchestrationOwnerAttention(read: ConsoleOwnerRead | undefined) {
+  return ownerAttentionSnapshot(registration, read, "operator-orchestration-service", (payload, observedAt) => {
+    const body = attentionRecord(payload);
+    if (body.mode !== "live" || body.status !== "current" || body.error) throw new Error("Orchestration unavailable");
+    const definitions = assertOosOrchestrationDefinitions({ schema_version: 1, definitions: body.definitions });
+    const runs = assertOosOrchestrationRuns({ schema_version: 1, runs: body.runs });
+    return projectLiveOrchestrationWorkspace(definitions, runs, observedAt).attention.map(item => orchestrationAttentionCandidate(item, observedAt));
+  });
+}
 import { consoleAttentionSourceRegistrations } from "../../../console-integration/attention-source-registry.ts";
 import type {
   OrchestrationAttentionCondition,

@@ -4,7 +4,7 @@ import { Clock3 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ConsoleShellPanel } from "../console-shell-panel";
-import { consoleOperatorAccountFixture } from "../fixtures/console-operator.fixture";
+import { useOperatorAccountSnapshot } from "../identity/use-operator-account-snapshot";
 import type { OperatorAccountProfile } from "../identity/operator-account-model";
 import { OperatorAccountCard } from "./operator-account/operator-account-card";
 import { OperatorAccountCenter } from "./operator-account/operator-account-center";
@@ -55,7 +55,7 @@ function ConsoleCommandClock({
 
 export function ConsoleCommandBar() {
   const accountController = useOperatorAccountController(
-    consoleOperatorAccountFixture,
+    useOperatorAccountSnapshot(),
   );
 
   return (

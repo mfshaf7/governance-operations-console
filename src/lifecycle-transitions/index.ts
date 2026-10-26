@@ -19,6 +19,7 @@ export type {
 export type {
   LifecycleTransitionProjection,
 } from "./read-model/lifecycle-transition-projection-types.ts";
+export { composeLifecycleTransitionSnapshot } from "./read-model/native-transition-composition";
 export {
   lifecycleTransitionAttentionSource,
   projectLifecycleTransitionAttentionSnapshot,

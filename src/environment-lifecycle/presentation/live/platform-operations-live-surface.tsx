@@ -1,19 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TerasActionButton, TerasActionRow, TerasDialog, TerasEmptyState, TerasList, TerasMetadataList, TerasPanel, TerasPanelHeader, TerasRecordControlLayout, TerasRegisterPanel, TerasSelectedPanel, TerasStatusItem } from "@/teras";
 import type { PlatformOperationCapability, PlatformOperationRecord, PlatformOperationSubject, PlatformOperationsLiveSnapshot } from "../../live-runtime/platform-operation-types.ts";
 import { projectPlatformRuntimeReadiness } from "../../read-model/platform-runtime-readiness.ts";
 
-export function PlatformOperationsLiveSurface({ kind, onControl, onRefresh, onSubmit, snapshot }: {
+export function PlatformOperationsLiveSurface({ kind, onControl, onRefresh, onSubmit, snapshot, focusRecordRef }: {
   kind: "dev-integration" | "governed-releases";
   onControl: (operationId: string, action: "cancel" | "retry", reason: string) => Promise<PlatformOperationRecord>;
   onRefresh: () => Promise<unknown>;
   onSubmit: (subjectRef: string, capabilityId: string) => Promise<PlatformOperationRecord>;
   snapshot: PlatformOperationsLiveSnapshot;
+  focusRecordRef?: string | null;
 }) {
   const subjects = useMemo(() => (snapshot.catalog?.subjects ?? []).filter((subject) => kind === "dev-integration" ? subject.kind === "dev-integration-profile" || subject.kind === "profile-request" : subject.kind === "product-release" || subject.kind === "product-runtime-lifecycle"), [kind, snapshot.catalog]);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
+  useEffect(() => {
+    const operation = snapshot.operations.find(item => item.operation_id === focusRecordRef);
+    const ref = operation?.command.subject.ref ?? focusRecordRef;
+    if (ref && subjects.some(subject => subject.ref === ref)) setSelectedRef(ref);
+  }, [focusRecordRef, snapshot.operations, subjects]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [destructiveCapability, setDestructiveCapability] = useState<PlatformOperationCapability | null>(null);

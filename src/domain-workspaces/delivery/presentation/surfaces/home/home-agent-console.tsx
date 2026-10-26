@@ -1,72 +1,17 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { useState } from "react";
+import { openGovernedAgentConsole } from "@/agent-console";
+import { TerasActionButton, TerasPanel, TerasPanelHeader, TerasMetadataList } from "@/teras";
+import type { DeliveryHomeViewModel } from "./home-view-model.ts";
 
-import { TerasAdvisorPanel } from "@/teras";
-
-import {
-  deliveryHomeAgentResponse,
-  type DeliveryHomeAgentTranscriptLine,
-  type DeliveryHomeViewModel,
-} from "./home-view-model.ts";
-
-export function DeliveryHomeAgentConsole({
-  viewModel,
-}: {
-  viewModel: DeliveryHomeViewModel;
-}) {
-  const [homeAgentPrompt, setHomeAgentPrompt] = useState("");
-  const [homeAgentTurns, setHomeAgentTurns] = useState<
-    DeliveryHomeAgentTranscriptLine[]
-  >([]);
-  const homeAgentTranscript = [
-    ...viewModel.agentConsole.transcript,
-    ...homeAgentTurns,
-  ];
-
-  function submitHomeAgentPrompt(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const prompt = homeAgentPrompt.trim();
-    if (!prompt) {
-      return;
-    }
-
-    const turnId = Date.now();
-    setHomeAgentTurns((current) => [
-      ...current,
-      {
-        id: `delivery-home-agent-operator-${turnId}`,
-        role: "operator",
-        text: prompt,
-      },
-      {
-        id: `delivery-home-agent-response-${turnId}`,
-        role: "advisor",
-        text: deliveryHomeAgentResponse({ prompt, viewModel }),
-      },
-    ]);
-    setHomeAgentPrompt("");
-  }
-
-  return (
-    <TerasAdvisorPanel
-      density="compact"
-      fill
-      profileLabel={viewModel.agentConsole.profileLabel}
-      prompt={{
-        ariaLabel: "Delivery Home agent prompt",
-        onChange: setHomeAgentPrompt,
-        onSubmit: submitHomeAgentPrompt,
-        placeholder: "Ask about Delivery Home...",
-        rows: 1,
-        value: homeAgentPrompt,
-      }}
-      statusLabel={viewModel.agentConsole.statusLabel}
-      statusTitle={viewModel.agentConsole.statusTitle}
-      statusTone={viewModel.agentConsole.statusTone}
-      transcript={homeAgentTranscript}
-    />
-  );
+export function DeliveryHomeAgentConsole({ viewModel }: { viewModel: DeliveryHomeViewModel }) {
+  return <TerasPanel frame="padded" fit="content" treatment="neutral">
+    <TerasPanelHeader kicker="Manual assistance" title="Governed Agent Console"
+      description="Use the shared Docking Agent with current Delivery owner context. OOS and CGG govern each request; opening this entry does not invoke a model." />
+    <TerasMetadataList items={[
+      { label: "Workspace", value: viewModel.workspaceStatus.title },
+      { label: "Context", value: "Current owner collection summary; inspect the candidate before sending" },
+    ]} />
+    <TerasActionButton onClick={openGovernedAgentConsole}>Open Agent Console</TerasActionButton>
+  </TerasPanel>;
 }

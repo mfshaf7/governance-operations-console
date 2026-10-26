@@ -1,6 +1,7 @@
 import type { ConsoleBoundary } from "../console-architecture";
 
 export { ModelInteractionDock } from "./presentation/model-interaction-dock";
+export { openGovernedAgentConsole } from "./model/open-agent-console";
 export { AgentRobotIcon } from "./presentation/agent-robot-icon";
 export { AgentRuntimePresenceDialog } from "./presentation/agent-runtime-presence-dialog";
 export { AgentRuntimeStatusDialog } from "./presentation/agent-runtime-status-dialog";

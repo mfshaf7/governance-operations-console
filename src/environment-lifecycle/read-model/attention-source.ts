@@ -3,17 +3,31 @@ import type {
   ConsoleAttentionSource,
   ConsoleAttentionSourceMode,
 } from "../../console-integration/attention-contract";
-import { consoleAttentionSourceRegistrations } from "../../console-integration/attention-source-registry";
+import { ownerAttentionSnapshot, ownerActionCandidate, attentionRecord, type ConsoleOwnerRead } from "../../console-integration/live-attention.ts";
+import { assertPlatformOperationCatalog, assertPlatformOperationList } from "../live-runtime/platform-operation-contract.ts";
+
+export function projectEnvironmentOwnerAttention(read: ConsoleOwnerRead | undefined, workspaceId: "dev-integration" | "governed-releases") {
+  return ownerAttentionSnapshot(workspaceId === "dev-integration" ? devRegistration : releaseRegistration, read, "platform-engineering", (payload, observedAt) => {
+    const body = attentionRecord(payload);
+    if (body.mode !== "live" || body.status !== "current" || body.error) throw new Error("Platform unavailable");
+    const catalog = assertPlatformOperationCatalog(body.catalog);
+    const operations = assertPlatformOperationList({ workflow_id: "platform-operation-list", operations: body.operations });
+    const subjects = new Set(catalog.subjects.filter(subject => workspaceId === "dev-integration" ? ["dev-integration-profile", "profile-request"].includes(subject.kind) : ["product-release", "product-runtime-lifecycle"].includes(subject.kind)).map(subject => subject.ref));
+    return operations.filter(operation => subjects.has(operation.command.subject.ref) && (operation.next_action.authority === "operator" || ["blocked", "failed"].includes(operation.state)) && !["succeeded", "cancelled"].includes(operation.state) && !["complete", "wait-for-provider", "poll-operation"].includes(operation.next_action.code))
+      .map(operation => ownerActionCandidate({ id: `platform:${operation.operation_id}:${operation.next_action.code}`, title: operation.command.subject.ref, subjectRef: operation.operation_id, move: operation.next_action.code, reason: operation.next_action.reason, owner: operation.next_action.authority, observedAt, recovery: operation.state === "blocked" || operation.state === "failed", target: { id: workspaceId, kind: "workspace", workspaceId } }));
+  });
+}
+import { consoleAttentionSourceRegistrations } from "../../console-integration/attention-source-registry.ts";
 import {
   devIntegrationProfileFixtures,
-} from "../fixtures/dev-integration-profiles.fixture";
+} from "../fixtures/dev-integration-profiles.fixture.ts";
 import {
   productReleaseCapabilityFixtures,
-} from "../fixtures/product-release-capabilities.fixture";
+} from "../fixtures/product-release-capabilities.fixture.ts";
 import { getEnvironmentLifecycleLocalRuntime } from "../local-runtime/environment-lifecycle-runtime-provider.ts";
 import type { DevIntegrationProfile } from "../model/dev-integration-profile";
 import type { ProductReleaseCapability } from "../model/product-release-capability";
-import { selectProductReleaseNextMove } from "./product-release-selectors";
+import { selectProductReleaseNextMove } from "./product-release-selectors.ts";
 
 const devRegistration =
   consoleAttentionSourceRegistrations.devIntegration;

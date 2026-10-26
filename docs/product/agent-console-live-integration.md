@@ -66,6 +66,21 @@ commissioning proof owned by work item #1246.
 
 ## Focus and Workspace
 
+Workbench Focus reads the same current owner collections as Workspace, scoped
+to the selected domain. Its summary distinguishes retained Delivery history from
+current work and never substitutes the synthetic Workbench registry descriptor
+for live record knowledge. Collection context does not claim selected-record
+detail. Delivery Home's Open Agent Console entry expands the shared floating
+agent, preserves its existing session and uses manual requests; no local mock
+answer or automatic model turn is generated.
+
+The whole overview covers nine owner inputs within the unchanged admission
+limits. Inventory and repository custody occupy one bounded signal with both
+coverage states retained. The reference identifies the visible Console
+composition; individual source read times remain in the bounded signals.
+Lifecycle's raw owner summary is explicitly an OOS journal count, while its
+coordinator also displays separately labelled native owner handoff readbacks.
+
 Both agents start in **Focus**. Focus describes the selected visible page or
 record; a workspace screen is a page in this mode. **Workspace** attaches the
 same cross-Console overview from Command Center and supported workspace screens.

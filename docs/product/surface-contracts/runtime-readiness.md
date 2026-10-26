@@ -26,6 +26,13 @@ runtime. The current resource snapshot includes:
 - system uptime
 - host and platform identity
 
+VMEM is kernel commit accounting (`Committed_AS / CommitLimit`), not measured
+RAM pressure. Its value may exceed 100% under overcommit. Numeric values and
+the selected detail chart retain that range; generic pressure thresholds,
+normal bands and pressure alerts do not apply to this metric. The adapter does
+not change host overcommit policy or diagnose Windows desktop memory usage.
+An unverified catalog address is not replaced with a guessed runtime endpoint.
+
 Component catalog entries are not health probes. A component observation must
 declare:
 

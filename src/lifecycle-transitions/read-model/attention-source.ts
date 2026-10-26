@@ -81,12 +81,12 @@ export function projectLifecycleTransitionAttentionSnapshot(
 
   const freshness = snapshot.truncated ? "unverified" : "current";
   const source = {
-    authority: "operator-orchestration-service",
+    authority: snapshot.sourceScope ? "Console composition of native OOS owner readbacks and journal" : "operator-orchestration-service",
     freshness,
     mode: "source-projected" as const,
     observedAt: snapshot.observedAt,
     projectedAt: snapshot.observedAt,
-    ref: "oos://lifecycle-transitions",
+    ref: snapshot.sourceScope ? "console://lifecycle-owner-history" : "oos://lifecycle-transitions",
     version: lifecycleTransitionAttentionVersion(snapshot.transitions),
   } as const;
 

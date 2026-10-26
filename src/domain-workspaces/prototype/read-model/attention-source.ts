@@ -4,6 +4,27 @@ import type {
   ConsoleAttentionSourceSnapshot,
   ConsoleAttentionUrgency,
 } from "../../../console-integration/attention-contract.ts";
+import { ownerAttentionSnapshot, attentionRecord, attentionRows, type ConsoleOwnerRead } from "../../../console-integration/live-attention.ts";
+import type { NativeLifecycleOutcome } from "../../../console-integration/native-lifecycle-outcome.ts";
+
+export function projectPrototypeLifecycleOutcomes(payload: unknown): NativeLifecycleOutcome[] {
+  const body = attentionRecord(payload);
+  if (body.mode !== "live" || body.error) throw new Error("Prototype unavailable");
+  const outcomes = attentionRows(attentionRecord(body.projection).nativeLifecycleOutcomes) as NativeLifecycleOutcome[];
+  if (outcomes.some(outcome => outcome.routeId !== "prototype-to-delivery" || outcome.observationKind !== "owner-confirmation")) throw new Error("Native origin mismatch");
+  return outcomes;
+}
+
+export function projectPrototypeOwnerAttention(read: ConsoleOwnerRead | undefined) {
+  return ownerAttentionSnapshot(registration, read, "workspace-prototype-studio", (payload, observedAt) => {
+    const body = attentionRecord(payload);
+    if (body.mode !== "live" || body.error) throw new Error("Prototype unavailable");
+    const model = attentionRecord(attentionRecord(body.projection).readModel);
+    return (attentionRows(model.records) as PrototypeRecord[])
+      .filter(record => !["retired", "graduated", "graduating"].includes(record.lifecycle) && !["archive", "history"].includes(record.currentMove.id))
+      .map(record => prototypeAttentionCandidate({ record, local: false, projectedAt: observedAt, receiptRefs: [] }));
+  });
+}
 import { consoleAttentionSourceRegistrations } from "../../../console-integration/attention-source-registry.ts";
 import {
   getPrototypeEntryPacketProjections,

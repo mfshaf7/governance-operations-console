@@ -3,6 +3,7 @@ import type { LifecycleTransitionProjection } from "../read-model/lifecycle-tran
 export type LifecycleTransitionLiveMode = "disconnected-preview" | "live";
 
 export type LifecycleTransitionLiveSnapshot = Readonly<{
+  sourceScope?: "owner-readbacks-and-journal";
   error: string | null;
   mode: LifecycleTransitionLiveMode;
   observedAt: string;
@@ -13,7 +14,7 @@ export type LifecycleTransitionLiveSnapshot = Readonly<{
 
 export type LifecycleTransitionRuntimePosture = Pick<
   LifecycleTransitionLiveSnapshot,
-  "error" | "mode" | "observedAt" | "status" | "truncated"
+  "error" | "mode" | "observedAt" | "status" | "truncated" | "sourceScope"
 >;
 
 export type LifecycleTransitionLiveApiError = Readonly<{

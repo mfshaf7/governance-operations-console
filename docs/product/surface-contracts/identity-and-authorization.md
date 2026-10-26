@@ -129,6 +129,20 @@ POST route that omits the shared authorization entry point.
 
 ## Operator Surfaces
 
+The Account display reads the same verified Platform session used by command
+enforcement through the read-only same-origin `/api/console/operator-identity`
+route. The server validates private-file custody, source-issued times and the
+exact configured operator match before returning the typed identity projection.
+No credential, private path or raw diagnostic is returned. Missing, expired,
+unsafe or conflicting configured source clears identity claims; only explicit
+disconnected preview may display the synthetic fixture. Source expiry also
+clears the live badge locally; the browser cannot extend the session.
+
+Profile and clock preferences remain page-local and independent of identity.
+Refreshing session evidence preserves edited preferences and dirty drafts.
+This readback does not introduce federated sign-in, account switching, access
+requests, session revocation or any new authorization authority.
+
 ### Command Card
 
 The command bar keeps one compact pale `Operator Account` card with:

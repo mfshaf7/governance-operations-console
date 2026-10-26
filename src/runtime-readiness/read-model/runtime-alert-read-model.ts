@@ -97,11 +97,6 @@ export function buildRuntimeAlerts({
             value: formatPercent(latestSample.memoryPercent),
           },
           {
-            label: "VMEM pressure",
-            tone: usageTone(latestSample.virtualMemoryPercent),
-            value: formatPercent(latestSample.virtualMemoryPercent),
-          },
-          {
             label: "Disk pressure",
             tone: usageTone(latestSample.diskPercent),
             value: formatPercent(latestSample.diskPercent),

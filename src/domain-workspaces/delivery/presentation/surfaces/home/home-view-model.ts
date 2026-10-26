@@ -12,7 +12,6 @@ import type { DeliveryHomeViewModel } from "./home-types.ts";
 export type DeliveryHomeAttentionFilter =
   "all" | "danger" | "info" | "muted" | "warn";
 
-export { deliveryHomeAgentResponse } from "./home-agent-model.ts";
 export type {
   DeliveryHomeActionSurfaceId,
   DeliveryHomeAgentConsole,

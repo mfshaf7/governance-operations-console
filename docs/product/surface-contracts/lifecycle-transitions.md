@@ -19,6 +19,23 @@ Architecture recommendation outcome:
 
 ## Purpose
 
+The live read-only coordinator combines retained OOS journal records with
+current native Proposal handoff acknowledgements and retained Prototype Closure
+confirmations. These reuse the same owner inventories already read by the
+Console; no additional global scan, journal write, retroactive gate or business
+replay is needed. All qualifying retained Closure outcomes survive a later
+Closure action rather than being replaced by the latest request alone.
+
+Native rows identify source-readback versus owner-confirmed evidence. Original
+target receipt references, confirmed target identity and actual owner timestamps
+are preserved where available; absent details stay unprojected. Source-reported
+application is labelled accordingly and is not independently verified target
+proof. Validation/admission not projected by that native source are explicitly
+shown as Not projected, never invented passing phases. Native confirmations are
+not new journal events. Exact matching receipt identities deduplicate against
+the journal; missing/stale sources remain explicit partial coverage. The view
+does not claim a complete historical ledger from current owner pointers.
+
 Lifecycle Transition Control provides one structured way to validate, apply,
 observe, and audit changes that cross domain, ownership, custody, runtime,
 visibility, or trust boundaries.

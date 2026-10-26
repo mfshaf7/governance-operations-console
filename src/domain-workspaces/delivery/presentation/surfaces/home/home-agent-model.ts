@@ -2,7 +2,6 @@ import type {
   DeliveryHomeAgentConsole,
   DeliveryHomeAttentionItem,
   DeliveryHomeRecentActivity,
-  DeliveryHomeViewModel,
   DeliveryHomeWorkspaceStatus,
 } from "./home-types.ts";
 
@@ -26,11 +25,11 @@ export function getDeliveryHomeAgentConsole({
   ).length;
 
   return {
-    profileLabel: "Delivery Home Agent",
-    statusLabel: "mock profile",
+    profileLabel: "Governed Agent Console",
+    statusLabel: "manual entry",
     statusTitle:
-      "Target profile: governed Delivery Home reasoning model locked to read-model projection. Mock only until authoritative profile truth reports it active.",
-    statusTone: "warn",
+      "Open the existing Docking Agent; current owner context and provider posture are inspected there before a manual request.",
+    statusTone: "info",
     transcript: [
       {
         id: "delivery-home-agent-context",
@@ -47,51 +46,8 @@ export function getDeliveryHomeAgentConsole({
       {
         id: "delivery-home-agent-boundary",
         role: "advisor",
-        text: "I can summarize Home routing from the projected read model. Workflow mutation and blocker disposition stay with the owning surface.",
+        text: "This entry does not generate responses. The shared governed Agent owns manual assistance; workflow mutation stays with the owning surface.",
       },
     ],
   };
-}
-
-export function deliveryHomeAgentResponse({
-  prompt,
-  viewModel,
-}: {
-  prompt: string;
-  viewModel: DeliveryHomeViewModel;
-}) {
-  const normalizedPrompt = prompt.toLowerCase();
-  const blockedItems = viewModel.attentionQueue.filter(
-    (item) => item.tone === "danger",
-  );
-  const latestActivity = viewModel.recentActivity[0];
-
-  if (normalizedPrompt.includes("block")) {
-    return [
-      `${blockedItems.length} unique blocked route(s) are in Attention after intake source/package dedupe.`,
-      blockedItems
-        .slice(0, 4)
-        .map((item) => `- ${item.label}: ${item.title}`)
-        .join("\n"),
-    ].join("\n");
-  }
-
-  if (
-    normalizedPrompt.includes("activity") ||
-    normalizedPrompt.includes("audit") ||
-    normalizedPrompt.includes("receipt")
-  ) {
-    return latestActivity
-      ? `Latest projected activity: ${latestActivity.categoryLabel} ${latestActivity.eventRef} on ${latestActivity.packageRef}; receipt ${latestActivity.receiptLabel}.`
-      : "No Delivery audit activity is projected for Home.";
-  }
-
-  if (normalizedPrompt.includes("status")) {
-    return `${viewModel.workspaceStatus.title}. ${viewModel.workspaceStatus.summary}`;
-  }
-
-  return [
-    "Home is routing work through Workspace Status, Attention, Recent Activity, and this locked agent console.",
-    `${blockedItems.length} blocked route(s), ${viewModel.recentActivity.length} audit event(s), workspace status ${viewModel.workspaceStatus.statusLabel}.`,
-  ].join("\n");
 }

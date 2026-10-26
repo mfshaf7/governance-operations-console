@@ -582,6 +582,10 @@ export function resolveConsoleOperatorBinding(
   return operatorId;
 }
 
+export function consoleSessionModeSelected(env: NodeJS.ProcessEnv = process.env) {
+  return Boolean(env.GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH?.trim());
+}
+
 export function resolveConsoleSessionProjectionPath(
   env: NodeJS.ProcessEnv = process.env,
 ): string {

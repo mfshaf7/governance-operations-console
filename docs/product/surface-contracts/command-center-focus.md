@@ -78,6 +78,21 @@ coverage until an owner-backed adapter exists. Explicit disconnected preview
 retains the synthetic design state. Workspace Pulse derives its aggregate from
 the same validated and deduplicated attention snapshot used by Focus.
 
+Configured live attention now consumes the current public domain projections
+from the shared bounded owner-read pass. Proposal and Prototype use their
+existing required-move selectors; Delivery excludes terminal and parked roots;
+Repository reconciles custody with current Inventory; Orchestration uses its
+owner definition/run queue. Portfolio eligibility or expired readiness does
+not create a required action. Environment attention uses only explicit required
+moves from the finite current Platform catalog, never the legacy preview arrays.
+Missing, failed, expired or conflicting input supplies no executable candidate.
+
+Pulse counts projected attention, not every operation in the workspace.
+Required actions are not running jobs. Under incomplete source coverage, counts
+are known lower bounds with an explicit incomplete posture; zero cannot certify
+that the whole workspace has no decisions or blockers. Coverage links describe
+available attention routes rather than claiming a domain surface does not exist.
+
 ## Source Admission
 
 The pre-baseline projection admits public sources from:

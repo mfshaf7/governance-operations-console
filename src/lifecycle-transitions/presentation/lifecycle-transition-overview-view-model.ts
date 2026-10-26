@@ -35,6 +35,7 @@ export type LifecycleTransitionHistoryItem = Readonly<{
 }>;
 
 export type LifecycleTransitionOverviewItem = Readonly<{
+  sourceTitle?: string;
   admissionTargetRecordRef: string | null;
   applicationRunRef: string | null;
   attentionDetail: string | null;
@@ -238,7 +239,7 @@ export function buildLifecycleTransitionOverviewItem(
     applicationRunRef: transition.application.runRef,
     attentionDetail: transitionAttentionDetail(transition),
     history: transition.history
-      .map(buildLifecycleTransitionHistoryItem)
+      .map(artifact => ({ ...buildLifecycleTransitionHistoryItem(artifact), ...(transition.nativeEvidence ? { label: transition.nativeEvidence.kind === "source-acknowledgement" ? "Source handoff readback" : "Native owner confirmation" } : {}) }))
       .sort((left, right) => right.recordedAt.localeCompare(left.recordedAt)),
     nextAction: transition.nextAction
       ? {
@@ -250,6 +251,7 @@ export function buildLifecycleTransitionOverviewItem(
         }
       : null,
     posture: [
+      ...(transition.nativeEvidence ? [{ label: "Evidence origin", stateLabel: `${transition.nativeEvidence.authority} · ${transition.nativeEvidence.kind}`, tone: "info" as const }] : []),
       {
         label: "Validation",
         stateLabel: projectionStateLabel(transition.validation.state),
@@ -262,17 +264,18 @@ export function buildLifecycleTransitionOverviewItem(
       },
       {
         label: "Application",
-        stateLabel: projectionStateLabel(transition.application.state),
+        stateLabel: transition.nativeEvidence?.kind === "source-acknowledgement" ? "Source reports applied" : projectionStateLabel(transition.application.state),
         tone: applicationTone(transition.application.state),
       },
     ],
     reasonDetail: transition.reason.detail,
     routeId: transition.route.routeId,
     sourceDomain: transition.source.domain,
+    sourceTitle: transition.nativeEvidence?.title,
     sourceRecordId: transition.source.recordId,
     sourceVersion: transition.source.sourceVersion,
     state: transition.state,
-    stateLabel: stateLabels[transition.state],
+    stateLabel: transition.nativeEvidence ? transition.nativeEvidence.kind === "source-acknowledgement" ? "Applied · source readback" : "Applied · owner confirmed" : stateLabels[transition.state],
     targetDomain: transition.target.domain,
     targetHomeRef: transition.target.homeRef,
     targetRecordRef,
@@ -476,6 +479,7 @@ function validationTone(
     case "running":
       return "info";
     case "not-started":
+    case "not-projected":
       return "muted";
   }
 }
@@ -489,6 +493,7 @@ function admissionTone(
     case "rejected":
       return "danger";
     case "not-started":
+    case "not-projected":
       return "muted";
   }
 }
