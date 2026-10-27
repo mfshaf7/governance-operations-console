@@ -88,6 +88,9 @@ register ID such as `delivery-1332` remains the local selection reference; the
 native assist package is `delivery-package:1332`, with the canonical source and
 current source revision. Both context and tree advisors use that same adapter.
 The server rejects an alias substituted for the native package reference.
+The final OOS advice body retains the validated optional draft scope, bounded
+conversation and response instructions for both Context and Build Tree. Ordinary
+advice without that scope retains its existing contract.
 
 These proposals grant no submit, approve, reject, record, activate, close,
 publish, merge, model or credential authority. Final decisions remain separate
