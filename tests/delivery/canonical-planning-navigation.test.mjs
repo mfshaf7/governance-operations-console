@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { executionInspectionPackage } from "../../src/domain-workspaces/delivery/presentation/surfaces/execution-board/work-session/execution-work-session-target.ts";
-import { getExecutionBoardPackages } from "../../src/domain-workspaces/delivery/read-model/selectors/workflow-package-selectors.ts";
+import { getExecutionBoardPackages, getExecutionBoardSelectedPackage } from "../../src/domain-workspaces/delivery/read-model/selectors/workflow-package-selectors.ts";
 import { deliveryWorkspaceComponentStatuses } from "../../src/domain-workspaces/delivery/presentation/workspace/workspace-status-model.ts";
 import { workDesignHandoffApplication } from "../../src/domain-workspaces/delivery/presentation/workflows/shared/package-actions/package-work-design-receipt-model.ts";
 
@@ -36,8 +36,25 @@ test("direct canonical inspection reaches planning root and child without invent
     assert.equal(selected.legacy_epic_id, 908);
     assert.equal(selected.workflow_phase, "refinement");
     assert.deepEqual(selected.available_actions, []);
+    const rendered = getExecutionBoardSelectedPackage(selected.delivery_package_id, model);
+    assert.equal(rendered, selected, "the actual board selection must retain the resolved planning root");
+    assert.equal(rendered.workflow_phase, "refinement");
+    assert.deepEqual(rendered.available_actions, [], "inspection cannot invent execution actions");
+    assert.deepEqual(getExecutionBoardPackages(model).map(item => item.legacy_epic_id), [910], "inspection does not change current execution membership");
   }
   assert.equal(JSON.stringify(model), before);
+});
+
+test("planning inspection works with an empty execution register and clears absent selections", () => {
+  const model = inventory();
+  model.packages = model.packages.slice(0, 1);
+  model.art_tree.roots = model.art_tree.roots.slice(0, 1);
+  assert.deepEqual(getExecutionBoardPackages(model), []);
+  const target = executionInspectionPackage(909, model);
+  assert.equal(getExecutionBoardSelectedPackage(target.delivery_package_id, model), target);
+  assert.equal(getExecutionBoardSelectedPackage("delivery-package:missing", model), null);
+  assert.equal(getExecutionBoardSelectedPackage("", model), null);
+  assert.equal(getExecutionBoardSelectedPackage("missing", inventory()).legacy_epic_id, 910);
 });
 
 test("unknown, ambiguous and disconnected inspection cannot select a guessed initiative", () => {
@@ -101,6 +118,7 @@ test("actual UI entry, native editor refresh and evidence handoff are composed t
   const board = read("presentation/surfaces/execution-board/execution-board-surface.tsx");
   assert.match(board, /executionInspectionPackage\(workItemId, model\)/);
   assert.match(board, /handleSelectedPackageChange\(target.delivery_package_id\)/);
+  assert.match(board, /getExecutionBoardSelectedPackage\(selectedPackageId, model\)/);
   assert.match(board, /deliveryControlBoardTreeByPackageId\(\{ model, packages: model.packages \}\)/);
   assert.match(board, /const canonicalSnapshot = await deliveryChangeRuntime.refresh\(\)/);
   assert.match(board, /canonicalSnapshot.projection.package.execution_tree/);

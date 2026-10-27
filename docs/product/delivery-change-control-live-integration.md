@@ -41,7 +41,12 @@ adds caller credentials and constructs the operator and acceptance records.
 
 ## Execution Edit Flow
 
-1. Select an active Delivery package and choose `Edit Work`.
+1. Select an active Delivery package and choose `Edit Work`. For planning work
+   that is still in Work Design or Refinement, choose **Open Work Item**, enter
+   its canonical ART item id, then **Inspect ART Tree**. The inspected initiative
+   stays selected even when the current execution register is empty. Choose
+   **Edit ART Tree** after the owner projection is current. Inspection does not
+   add the package to current execution counts or grant start rights.
 2. In live mode, wait for the current OOS projection. A failed read leaves edit
    unavailable and shows the OOS next action.
 3. Edit the projected tree. Existing items produce bounded revision commands;

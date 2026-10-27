@@ -262,3 +262,7 @@ The repository validator checks the owner and source structure and rejects
 common public-source leaks, unresolved placeholders, secret-bearing files, and
 disposable runtime artifacts. The product check runs the complete approved
 architecture and behavior baseline.
+
+
+For direct inspection of planning work and PI Objective creation, use the
+[Delivery change-control instructions](docs/product/delivery-change-control-live-integration.md#execution-edit-flow).
