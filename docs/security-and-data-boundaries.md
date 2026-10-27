@@ -83,17 +83,28 @@ them or imply that a local UI state is an authority decision.
 Model Operations is a same-origin, server-only composition over three distinct
 owners. OOS owns request and review state, Platform Engineering owns profile
 source, lifecycle application, and merged readback, and Security Architecture
-owns acceptance and exception decisions. The browser may submit only a bounded
-create intent; it cannot select a provider or model, supply caller authority or
-credentials, write Platform artifacts, approve its own request, or assert
-completion. The Console re-reads every OOS item through the canonical source
+owns acceptance and exception decisions. The browser may submit a bounded
+create intent or an explicitly reviewed native operator action. It cannot
+select a provider/model, supply caller authority or credentials, write Platform
+artifacts, impersonate the distinct Platform fulfiller, automatically approve a
+request or assert completion. OOS permits the same bound operator to submit
+and explicitly review its caller-owned request; that caller cannot fulfill it.
+These review controls are staged under Epic 1332 and need final exact composed
+Security acceptance and commissioning before live qualification. The Console
+re-reads every OOS item through the canonical source
 envelope and accepts Platform evidence only from regular, same-owner `0600`
 files whose digests and cross-artifact bindings reconcile. Partial
 configuration, stale or conflicting OOS evidence, unsafe files, incomplete
-fulfillment, or owner failure blocks the live surface without fixture fallback.
-The read-only operating projection exists only after the exact approved OOS
-request, Platform lifecycle receipt, merged readback, and current profile
-projection agree; it grants the Console no profile mutation authority.
+fulfillment or owner failure never falls back to fixtures. Current registry
+availability requires its own accepted source, not a previous transaction.
+Historical fulfillment uses only the selected request's private bounded bundle
+from a trusted directory and hashed request filename. A browser or receipt URI
+never selects a local path. Unsafe, missing or mismatched history is unavailable
+for that request; another transaction cannot replace it. The operating
+projection requires its exact approved OOS request, original Platform lifecycle
+receipt and merged readback with its own source snapshot. A later registry
+cannot rewrite that historical truth. Neither projection grants Console
+profile mutation or runtime activation authority.
 
 Agent Console is a same-origin, server-only OOS adapter. The browser may send
 only a generated session nonce, an invocation nonce, the current Focus or

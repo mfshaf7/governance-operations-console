@@ -12,6 +12,8 @@ import {
 import {
   assertModelProfileRequestDraft,
   assertModelProfileRequestProjection,
+  assertModelProfileRequestId,
+  assertModelProfileReviewCommandDraft,
   operationalExpectations,
   parseRegisteredCallers,
 } from "../live-runtime/model-operations-live-contract.ts";
@@ -64,6 +66,8 @@ export async function readModelProfileRequest(
   requestId: string,
   options: Options = {},
 ) {
+  try { assertModelProfileRequestId(requestId); }
+  catch { throw new ModelOperationsOosError("Model-profile request identity is invalid.", "model_profile_request_id_invalid", 400); }
   const value = await request(
     `/v1/model-profile-requests/${encodeURIComponent(requestId)}`,
     { method: "GET" },
@@ -71,6 +75,44 @@ export async function readModelProfileRequest(
     requestId,
   );
   return assertModelProfileRequestProjection(value);
+}
+
+export async function commandModelProfileRequest(requestId: string, value: unknown, options: Options = {}) {
+  let draft;
+  try { draft = assertModelProfileReviewCommandDraft(value, requestId); }
+  catch (error) { throw new ModelOperationsOosError(error instanceof Error ? error.message : "Invalid review input.", "model_profile_review_input_invalid", 400); }
+  const config = options.config ?? resolveConfig();
+  if (Date.parse(draft.issuedAt) > (options.now?.() ?? new Date()).getTime() + 60_000) {
+    throw new ModelOperationsOosError("Review time is ahead of the owner clock.", "model_profile_review_time_invalid", 400);
+  }
+  let revisedIntent = null;
+  if (draft.revisedIntentDraft) {
+    const current = await readModelProfileRequest(requestId, { ...options, config });
+    revisedIntent = {
+      ...createRequest(draft.revisedIntentDraft, config.operatorId, new Date(draft.issuedAt)).profile_intent,
+      // Revision edits the selected request, not its protected identity or
+      // source coordinates. Native OOS remains the state/permission authority.
+      profile_id: current.request.profile_intent.profile_id,
+      source: current.request.profile_intent.source,
+      requested_environments: current.request.profile_intent.requested_environments.length > 1
+        ? current.request.profile_intent.requested_environments
+        : [draft.revisedIntentDraft.environment],
+    };
+  }
+  const result = assertModelProfileRequestProjection(await request(
+    `/v1/model-profile-requests/${encodeURIComponent(requestId)}/commands`,
+    { method: "POST", body: JSON.stringify({
+      schema_version: 1, command_id: draft.commandId, request_id: requestId,
+      expected_revision: draft.expectedRevision, action: draft.action,
+      operator_id: config.operatorId, issued_at: draft.issuedAt, reason: draft.reason,
+      decision_ref: draft.decisionRef, requirements: draft.requirements,
+      revised_profile_intent: revisedIntent, idempotency_key: `${draft.commandId}:operator-action`,
+    }) }, { ...options, config },
+  ));
+  if (result.request_id !== requestId || !result.history.some(event => event.command_id === draft.commandId)) {
+    throw projectionError("OOS did not confirm the original request review command.");
+  }
+  return result;
 }
 
 export async function submitCreateModelProfileRequest(

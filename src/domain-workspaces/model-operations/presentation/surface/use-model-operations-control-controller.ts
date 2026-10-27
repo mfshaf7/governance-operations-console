@@ -148,11 +148,14 @@ export function useModelOperationsControlController() {
     request: {
       available:
         consoleActionExecutable(fixtureIsolation, "durable-command") &&
-        liveRuntime.snapshot?.status === "current",
+        liveRuntime.snapshot?.status === "current" && !liveRuntime.pending,
       close: () => setRequestOpen(false),
       draft: requestDraft,
       error: liveRuntime.error,
-      latest: liveRuntime.snapshot?.requests.at(-1) ?? null,
+      latest: [...(liveRuntime.snapshot?.requests ?? [])].sort((a, b) => b.request.requested_at.localeCompare(a.request.requested_at))[0] ?? null,
+      all: liveRuntime.snapshot?.requests ?? [],
+      historyAvailable: liveRuntime.snapshot?.mode === "live",
+      refresh: liveRuntime.refresh,
       onStepChange: setRequestStep,
       open: requestOpen,
       pending: liveRuntime.pending,

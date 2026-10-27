@@ -3,10 +3,55 @@ import type {
   ModelOperationsLiveSnapshot,
   ModelProfileRequestDraft,
   ModelProfileRequestProjection,
+  ModelProfileReviewCommandDraft,
 } from "./model-operations-live-types.ts";
 
 const digestPattern = /^sha256:[0-9a-f]{64}$/;
 const requestIdPattern = /^model-profile-request:[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+
+export function assertModelProfileRequestId(value: string) {
+  if (!requestIdPattern.test(value)) invalid("Model-profile request identity is invalid.");
+  return value;
+}
+
+export function assertModelProfileReviewCommandDraft(value: unknown, requestId: string): ModelProfileReviewCommandDraft {
+  assertModelProfileRequestId(requestId);
+  const draft = record(value, "model-profile review command");
+  const keys = ["action", "commandId", "expectedRevision", "issuedAt", "reason", "decisionRef", "requirements", "revisedIntentDraft"];
+  if (Object.keys(draft).length !== keys.length || keys.some(key => !Object.hasOwn(draft, key)) ||
+      !["start-review", "approve", "reject", "request-changes", "withdraw", "revise", "submit"].includes(text(draft.action)) ||
+      !/^model-profile-command:[A-Za-z0-9][A-Za-z0-9._:-]{0,160}$/.test(text(draft.commandId)) ||
+      !Number.isSafeInteger(draft.expectedRevision) || (draft.expectedRevision as number) < 1 ||
+      !Number.isFinite(Date.parse(text(draft.issuedAt))) || !Array.isArray(draft.requirements) || draft.requirements.length > 32) {
+    invalid("Model-profile review command is invalid.");
+  }
+  if (draft.reason !== null && (typeof draft.reason !== "string" || !draft.reason.trim() || draft.reason.length > 2000)) {
+    invalid("Model-profile review reason is invalid.");
+  }
+  const decision = ["approve", "reject"].includes(text(draft.action));
+  if (decision) {
+    const ref = record(draft.decisionRef, "review decision reference");
+    if (Object.keys(ref).length !== 2 || !digestPattern.test(text(ref.digest))) invalid("Review decision evidence is invalid.");
+    try { new URL(text(ref.uri)); } catch { invalid("Review decision reference is invalid."); }
+    if (!draft.reason) invalid("An explicit review reason is required.");
+  } else if (draft.decisionRef !== null) invalid("This review action cannot carry a decision reference.");
+  if (draft.action === "request-changes") {
+    if (!draft.reason || !draft.requirements.length) invalid("Requested changes need a reason and at least one requirement.");
+    for (const value of draft.requirements) {
+      const requirement = record(value, "review requirement");
+      if (Object.keys(requirement).length !== 4 ||
+          !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(text(requirement.requirement_id)) ||
+          !/^[a-z0-9][a-z0-9._-]{0,127}$/.test(text(requirement.owner_repo)) ||
+          !text(requirement.summary).trim() || text(requirement.summary).length > 1000 ||
+          !text(requirement.next_action).trim() || text(requirement.next_action).length > 1000) invalid("A requested change is invalid.");
+    }
+  } else if (draft.requirements.length) invalid("Only request-changes may carry requirements.");
+  if (draft.action === "revise") {
+    const revised = assertModelProfileRequestDraft(draft.revisedIntentDraft);
+    if (revised.requestId !== requestId || !draft.reason) invalid("Revision must retain the original request identity and explicit reason.");
+  } else if (draft.revisedIntentDraft !== null) invalid("This action cannot revise the profile intent.");
+  return value as ModelProfileReviewCommandDraft;
+}
 
 export function assertModelOperationsLiveSnapshot(
   value: unknown,

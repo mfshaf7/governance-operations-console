@@ -39,6 +39,7 @@ export function projectModelOperationsOperatingEvidence(
     platform_source_ref: {
       lifecycle_receipt_digest: text(lifecycle.digest),
       merged_readback_digest: text(readback.digest),
+      source_version: text(readback.source_version),
     },
   };
 }

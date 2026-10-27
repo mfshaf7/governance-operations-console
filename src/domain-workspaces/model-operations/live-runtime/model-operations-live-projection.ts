@@ -8,8 +8,8 @@ import type {
 } from "../read-model/types/model-operations-types.ts";
 
 type PlatformArtifacts = Readonly<{
-  lifecycleReceipt: Record<string, unknown>;
-  mergedReadback: Record<string, unknown>;
+  lifecycleReceipt?: Record<string, unknown>;
+  mergedReadback?: Record<string, unknown>;
   sourceProjection: Record<string, unknown>;
 }>;
 
@@ -82,18 +82,6 @@ export function projectLiveModelOperationsReadModel(
           state: "current",
           tone: "ok",
         },
-        {
-          detail: "The lifecycle receipt, merged readback, and projected source are digest-bound.",
-          facts: [
-            { label: "Lifecycle receipt", value: text(artifacts.lifecycleReceipt.digest) },
-            { label: "Merged readback", value: text(artifacts.mergedReadback.digest) },
-            { label: "Authority", value: "Platform Engineering" },
-          ],
-          id: "reconciliation",
-          label: "Reconciliation",
-          state: "current",
-          tone: "ok",
-        },
       ],
       kicker: "Workspace Status",
       statusLabel: "Current",
@@ -153,8 +141,8 @@ export function unavailableModelOperationsReadModel(
 function projectProfile(
   profile: Record<string, unknown>,
   source: ModelProjectionSource,
-  lifecycleReceipt: Record<string, unknown>,
-  mergedReadback: Record<string, unknown>,
+  lifecycleReceipt?: Record<string, unknown>,
+  mergedReadback?: Record<string, unknown>,
 ): ModelProfileRecord {
   const profileId = text(profile.profile_id);
   const lifecycle = oneOf(profile.lifecycle, ["active", "exception", "retired", "suspended"] as const);
@@ -171,7 +159,7 @@ function projectProfile(
   const callers = stringArray(profile.allowed_callers);
   const selectedEnvironments = stringArray(profile.selected_environments);
   const reviewRef = referenceLabel(record(profile.security_review_ref));
-  const receiptMatches = lifecycleReceipt.profile_id === profileId;
+  const receiptMatches = Boolean(lifecycleReceipt && mergedReadback && lifecycleReceipt.profile_id === profileId);
   return {
     accessPlane: {
       activationAllowed,
@@ -208,12 +196,12 @@ function projectProfile(
       source,
     })),
     latestAudit: {
-      eventRef: receiptMatches ? `platform-model-profile-lifecycle://${text(lifecycleReceipt.receipt_id)}` : null,
-      observedAt: receiptMatches ? text(lifecycleReceipt.recorded_at) : null,
+      eventRef: receiptMatches ? `platform-model-profile-lifecycle://${text(lifecycleReceipt?.receipt_id)}` : null,
+      observedAt: receiptMatches ? text(lifecycleReceipt?.recorded_at) : null,
       source,
       state: receiptMatches ? "ready" : "unknown",
       summary: receiptMatches
-        ? `Platform lifecycle receipt reconciles through merged readback ${text(mergedReadback.source_version)}.`
+        ? `Platform lifecycle receipt reconciles through merged readback ${text(mergedReadback?.source_version)}.`
         : "No lifecycle receipt in the current bounded projection applies to this profile.",
     },
     policy: {

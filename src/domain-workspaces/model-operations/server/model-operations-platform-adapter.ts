@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
-import { lstat, readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, open } from "node:fs/promises";
+import { join } from "node:path";
 
 import {
   ConsoleRuntimeConfigurationError,
@@ -17,6 +19,10 @@ export type PlatformModelOperationsArtifacts = Readonly<{
   sourceProjection: Record<string, unknown>;
 }>;
 
+export type PlatformModelRegistryArtifacts = Readonly<{
+  sourceProjection: Record<string, unknown>;
+}>;
+
 export class ModelOperationsPlatformError extends Error {
   readonly code: string;
   readonly status = 503;
@@ -31,6 +37,7 @@ export class ModelOperationsPlatformError extends Error {
 export async function readPlatformModelOperationsArtifacts(
   options: {
     config?: ConsoleModelOperationsConfiguration;
+    requestId?: string;
   } = {},
 ): Promise<PlatformModelOperationsArtifacts> {
   let config: ConsoleModelOperationsConfiguration;
@@ -46,15 +53,56 @@ export async function readPlatformModelOperationsArtifacts(
       code,
     );
   }
-  const [sourceProjection, lifecycleReceipt, mergedReadback] = await Promise.all([
-    readPrivateJson(config.sourceProjectionPath),
-    readPrivateJson(config.lifecycleReceiptPath),
-    readPrivateJson(config.mergedReadbackPath),
-  ]);
+  let lifecycleReceipt: Record<string, unknown>;
+  let mergedReadback: Record<string, unknown>;
+  if (options.requestId && config.requestHistoryRoot) {
+    if (!/^model-profile-request:[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(options.requestId)) {
+      invalid("The Platform history request identity is invalid.");
+    }
+    const root = await lstat(config.requestHistoryRoot).catch(() => null);
+    if (!root?.isDirectory() || root.isSymbolicLink() || (root.mode & 0o777) !== 0o700 ||
+        (typeof process.getuid === "function" && root.uid !== process.getuid())) {
+      invalid("The Platform request history root is not operator-private.");
+    }
+    // Only a trusted configured directory and an identity hash select a file.
+    // Never follow browser input or an OOS/Platform receipt URI as a local path.
+    const filename = createHash("sha256").update(options.requestId).digest("hex") + ".json";
+    const bundle = await readPrivateJson(join(config.requestHistoryRoot, filename));
+    exactKeys(bundle, ["artifact_type", "digest", "lifecycle_receipt", "merged_readback", "request_id", "schema_version"]);
+    if (bundle.schema_version !== 1 || bundle.artifact_type !== "platform-model-profile-request-evidence" ||
+        bundle.request_id !== options.requestId || canonicalDigest(bundle, "digest") !== bundle.digest) {
+      invalid("The Platform request history bundle is malformed or bound to another request.");
+    }
+    lifecycleReceipt = record(bundle.lifecycle_receipt);
+    mergedReadback = record(bundle.merged_readback);
+  } else {
+    if (!config.lifecycleReceiptPath || !config.mergedReadbackPath) {
+      invalid("No Platform fulfillment evidence is configured for this request.");
+    }
+    [lifecycleReceipt, mergedReadback] = await Promise.all([
+      readPrivateJson(config.lifecycleReceiptPath),
+      readPrivateJson(config.mergedReadbackPath),
+    ]);
+  }
+  // Fulfillment is historical, bound to its own merged snapshot. An unrelated
+  // later registry publication cannot invalidate or complete this transaction.
+  const sourceProjection = record(mergedReadback.source_projection);
   assertSourceProjection(sourceProjection);
   assertLifecycleReceipt(lifecycleReceipt);
   assertMergedReadback(mergedReadback, sourceProjection, lifecycleReceipt);
+  if (options.requestId && lifecycleReceipt.request_id !== options.requestId) {
+    invalid("The Platform fulfillment evidence belongs to another request.");
+  }
   return { lifecycleReceipt, mergedReadback, sourceProjection };
+}
+
+export async function readPlatformModelRegistryArtifacts(
+  options: { config?: ConsoleModelOperationsConfiguration } = {},
+): Promise<PlatformModelRegistryArtifacts> {
+  const config = options.config ?? resolveConsoleModelOperationsConfiguration();
+  const sourceProjection = await readPrivateJson(config.sourceProjectionPath);
+  assertSourceProjection(sourceProjection);
+  return { sourceProjection };
 }
 
 function assertSourceProjection(value: Record<string, unknown>) {
@@ -144,20 +192,32 @@ function assertMergedReadback(
   if (source.source_version !== value.source_version) {
     invalid("The Platform source projection is not from the merged readback revision.");
   }
+  const resultSource = record(lifecycleReceipt.result_source);
+  for (const key of ["registry_digest", "access_plane_digest", "runtime_assist_digest"]) {
+    if (source[key] !== resultSource[key]) {
+      invalid("The Platform merged snapshot does not match the lifecycle result source.");
+    }
+  }
   const fulfillment = record(value.oos_fulfillment);
   const fulfillmentReceipt = record(fulfillment.receipt_ref);
   if (
+    fulfillment.schema_version !== 1 ||
+    fulfillment.actor_id !== "platform-engineering/model-profile-lifecycle" ||
     fulfillment.state !== "applied" ||
     fulfillment.request_id !== lifecycleReceipt.request_id ||
     fulfillment.expected_revision !== lifecycleReceipt.request_revision ||
-    fulfillmentReceipt.digest !== lifecycleReceipt.digest
+    fulfillmentReceipt.digest !== lifecycleReceipt.digest ||
+    record(fulfillment.source).owner_repo !== "platform-engineering" ||
+    record(fulfillment.source).result_version !== value.source_version
   ) invalid("The Platform OOS fulfillment readback is incomplete or mismatched.");
 }
 
 async function readPrivateJson(path: string) {
   let raw: string;
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
   try {
-    const info = await lstat(path);
+    handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const info = await handle.stat();
     if (
       !info.isFile() ||
       info.isSymbolicLink() ||
@@ -166,13 +226,25 @@ async function readPrivateJson(path: string) {
       info.size <= 0 ||
       info.size > maxArtifactBytes
     ) invalid("A Platform model-profile evidence file is not operator-private.");
-    raw = await readFile(path, "utf8");
+    // Bound the actual read, not just an earlier pathname stat. Atomic owner
+    // publication and replacement cannot turn this into an unbounded read.
+    const buffer = Buffer.alloc(maxArtifactBytes + 1);
+    let bytes = 0;
+    while (bytes < buffer.length) {
+      const part = await handle.read(buffer, bytes, buffer.length - bytes, bytes);
+      if (!part.bytesRead) break;
+      bytes += part.bytesRead;
+    }
+    if (!bytes || bytes > maxArtifactBytes) invalid("A Platform model-profile evidence file exceeds its bounded size.");
+    raw = new TextDecoder("utf-8", { fatal: true }).decode(buffer.subarray(0, bytes));
   } catch (error) {
     if (error instanceof ModelOperationsPlatformError) throw error;
     throw new ModelOperationsPlatformError(
       "Platform model-profile evidence could not be read safely.",
       "console_model_profile_evidence_invalid",
     );
+  } finally {
+    await handle?.close();
   }
   try {
     return record(JSON.parse(raw));

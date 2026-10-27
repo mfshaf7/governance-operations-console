@@ -60,8 +60,9 @@ export type ConsoleRuntimeObservationConfiguration = Readonly<{
 
 export type ConsoleModelOperationsConfiguration = ConsoleOosOperatorConfiguration &
   Readonly<{
-    lifecycleReceiptPath: string;
-    mergedReadbackPath: string;
+    lifecycleReceiptPath: string | null;
+    mergedReadbackPath: string | null;
+    requestHistoryRoot?: string | null;
     sourceProjectionPath: string;
   }>;
 
@@ -366,7 +367,8 @@ export function consoleModelOperationsModeSelected(
   return Boolean(
     env.GOVERNANCE_CONSOLE_MODEL_PROFILE_SOURCE_PROJECTION_PATH?.trim() ||
       env.GOVERNANCE_CONSOLE_MODEL_PROFILE_LIFECYCLE_RECEIPT_PATH?.trim() ||
-      env.GOVERNANCE_CONSOLE_MODEL_PROFILE_MERGED_READBACK_PATH?.trim(),
+      env.GOVERNANCE_CONSOLE_MODEL_PROFILE_MERGED_READBACK_PATH?.trim() ||
+      env.GOVERNANCE_CONSOLE_MODEL_PROFILE_REQUEST_HISTORY_ROOT?.trim(),
   );
 }
 
@@ -388,17 +390,26 @@ export function resolveConsoleModelOperationsConfiguration(
       "console_model_profile_source_projection_unavailable",
       "The Platform model-profile source projection is not configured.",
     ),
-    lifecycleReceiptPath: absolutePath(
+    lifecycleReceiptPath: optionalModelArtifactPath(
       env.GOVERNANCE_CONSOLE_MODEL_PROFILE_LIFECYCLE_RECEIPT_PATH,
       "console_model_profile_lifecycle_receipt_unavailable",
       "The Platform model-profile lifecycle receipt is not configured.",
     ),
-    mergedReadbackPath: absolutePath(
+    mergedReadbackPath: optionalModelArtifactPath(
       env.GOVERNANCE_CONSOLE_MODEL_PROFILE_MERGED_READBACK_PATH,
       "console_model_profile_merged_readback_unavailable",
       "The Platform model-profile merged readback is not configured.",
     ),
+    requestHistoryRoot: optionalModelArtifactPath(
+      env.GOVERNANCE_CONSOLE_MODEL_PROFILE_REQUEST_HISTORY_ROOT,
+      "console_model_profile_request_history_invalid",
+      "The Platform model-profile request history root is invalid.",
+    ),
   };
+}
+
+function optionalModelArtifactPath(value: string | undefined, code: string, message: string) {
+  return value?.trim() ? absolutePath(value, code, message) : null;
 }
 
 export function consoleProductPublicationModeSelected(

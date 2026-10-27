@@ -39,6 +39,9 @@ export function ModelProfileRequestModal({
   pending,
   result,
   step,
+  mode = "create",
+  onRecover,
+  retainedEnvironments = [],
 }: {
   draft: ModelProfileRequestDraft;
   error: string | null;
@@ -53,6 +56,9 @@ export function ModelProfileRequestModal({
   pending: boolean;
   result: ModelProfileRequestProjection | null;
   step: ModelProfileRequestStep;
+  mode?: "create" | "revise";
+  onRecover?: () => void;
+  retainedEnvironments?: readonly string[];
 }) {
   if (!open) return null;
   const intentComplete = modelProfileIntentComplete(draft);
@@ -86,14 +92,15 @@ export function ModelProfileRequestModal({
   return (
     <TerasModalShell
       bodyLayout="scroll"
-      description="Submit one governed create request to OOS. Platform selects the provider and model; the Console never writes the profile registry."
+      description={mode === "revise" ? "Revise the original requested intent. Saving does not submit, approve or fulfill it." : "Submit one governed create request to OOS. Platform selects the provider and model; the Console never writes the profile registry."}
       footer={
         <>
           <TerasActionButton onClick={onClose} emphasis="secondary">
             Back To Register
           </TerasActionButton>
+          {onRecover && (error || result) ? <TerasActionButton onClick={onRecover} disabled={pending} emphasis="secondary">Recover original request</TerasActionButton> : null}
           {step === "review" ? (
-            <TerasActionButton onClick={() => onStepChange("intent")} emphasis="secondary">
+            <TerasActionButton disabled={pending} onClick={() => onStepChange("intent")} emphasis="secondary">
               Back
             </TerasActionButton>
           ) : null}
@@ -109,7 +116,7 @@ export function ModelProfileRequestModal({
               disabled={!reviewComplete || pending}
               onClick={() => void onSubmit().catch(() => undefined)}
             >
-              {pending ? "Submitting Request" : "Submit Request"}
+              {pending ? "Recording Request" : mode === "revise" ? "Save Revised Intent" : "Submit Request"}
             </TerasActionButton>
           ) : null}
         </>
@@ -125,13 +132,14 @@ export function ModelProfileRequestModal({
         <TerasProgressStepList
           activeStepId={step}
           ariaLabel="Model profile request progress"
-          onSelectStep={onStepChange}
+          onSelectStep={(value) => { if (!pending) onStepChange(value); }}
           steps={steps}
         />
         {step === "intent" ? (
-          <ProfileIntentStep draft={draft} onUpdateDraft={onUpdateDraft} />
+          <ProfileIntentStep draft={draft} onUpdateDraft={onUpdateDraft} retainedEnvironments={retainedEnvironments} disabled={pending} />
         ) : step === "review" ? (
           <ProfileReviewStep
+            disabled={pending}
             draft={draft}
             error={error}
             onUpdateDraft={onUpdateDraft}
@@ -139,7 +147,7 @@ export function ModelProfileRequestModal({
         ) : result ? (
           <TerasPanel frame="padded" treatment="rail" tone="ok">
             <TerasPanelHeader
-              description="OOS recorded and submitted the request. Approval, Platform fulfillment, Security acceptance, and activation remain separate owner actions."
+              description="The state below is confirmed by OOS. Submission, explicit approval, distinct Platform fulfillment, Security acceptance and activation remain separate steps."
               kicker="Submission Result"
               statusLabel={result.review_state}
               statusTone="ok"
@@ -156,8 +164,12 @@ export function ModelProfileRequestModal({
 function ProfileIntentStep({
   draft,
   onUpdateDraft,
+  retainedEnvironments,
+  disabled,
 }: {
+  disabled: boolean;
   draft: ModelProfileRequestDraft;
+  retainedEnvironments: readonly string[];
   onUpdateDraft: <TKey extends keyof ModelProfileRequestDraft>(
     key: TKey,
     value: ModelProfileRequestDraft[TKey],
@@ -172,14 +184,16 @@ function ProfileIntentStep({
       />
       <TerasFieldStack spacing="loose">
         <TerasFieldGrid spacing="loose">
-          <TerasTextField label="Display name" value={draft.displayName} onValueChange={(value) => onUpdateDraft("displayName", value)} />
-          <TerasTextField label="Requesting owner repo" value={draft.ownerRepo} onValueChange={(value) => onUpdateDraft("ownerRepo", value)} />
+          <TerasTextField disabled={disabled} label="Display name" value={draft.displayName} onValueChange={(value) => onUpdateDraft("displayName", value)} />
+          <TerasTextField disabled={disabled} label="Requesting owner repo" value={draft.ownerRepo} onValueChange={(value) => onUpdateDraft("ownerRepo", value)} />
         </TerasFieldGrid>
-        <TerasNoteField label="Intended purpose" value={draft.purpose} onValueChange={(value) => onUpdateDraft("purpose", value)} />
-        <TerasTextField label="Registered callers" placeholder="caller-id=owner-repo, another-caller=owner-repo" value={draft.registeredCallers} onValueChange={(value) => onUpdateDraft("registeredCallers", value)} />
+        <TerasNoteField disabled={disabled} label="Intended purpose" value={draft.purpose} onValueChange={(value) => onUpdateDraft("purpose", value)} />
+        <TerasTextField disabled={disabled} label="Registered callers" placeholder="caller-id=owner-repo, another-caller=owner-repo" value={draft.registeredCallers} onValueChange={(value) => onUpdateDraft("registeredCallers", value)} />
         <TerasFieldGrid spacing="loose">
           <TerasSelectField
             label="Environment"
+            disabled={disabled || retainedEnvironments.length > 1}
+            helper={retainedEnvironments.length > 1 ? `Original environment scope is retained: ${retainedEnvironments.join(", ")}.` : undefined}
             value={draft.environment}
             onValueChange={(value) => onUpdateDraft("environment", value as ModelProfileRequestDraft["environment"])}
             options={[
@@ -190,6 +204,7 @@ function ProfileIntentStep({
           />
           <TerasSelectField
             label="Input data classification"
+            disabled={disabled}
             value={draft.dataClassification}
             onValueChange={(value) => onUpdateDraft("dataClassification", value as ModelProfileRequestDraft["dataClassification"])}
             options={[
@@ -201,15 +216,15 @@ function ProfileIntentStep({
           />
         </TerasFieldGrid>
         <TerasFieldGrid spacing="loose">
-          <TerasTextField label="Admitted context URI" value={draft.admittedContextUri} onValueChange={(value) => onUpdateDraft("admittedContextUri", value)} />
-          <TerasTextField label="Admitted context digest" placeholder="sha256:..." value={draft.admittedContextDigest} onValueChange={(value) => onUpdateDraft("admittedContextDigest", value)} />
+          <TerasTextField disabled={disabled} label="Admitted context URI" value={draft.admittedContextUri} onValueChange={(value) => onUpdateDraft("admittedContextUri", value)} />
+          <TerasTextField disabled={disabled} label="Admitted context digest" placeholder="sha256:..." value={draft.admittedContextDigest} onValueChange={(value) => onUpdateDraft("admittedContextDigest", value)} />
         </TerasFieldGrid>
         <TerasFieldGrid spacing="loose">
-          <TerasTextField label="Output schema repo" value={draft.outputSchemaRepo} onValueChange={(value) => onUpdateDraft("outputSchemaRepo", value)} />
-          <TerasTextField label="Output schema path" value={draft.outputSchemaPath} onValueChange={(value) => onUpdateDraft("outputSchemaPath", value)} />
-          <TerasTextField label="Output schema version" value={draft.outputSchemaVersion} onValueChange={(value) => onUpdateDraft("outputSchemaVersion", value)} />
+          <TerasTextField disabled={disabled} label="Output schema repo" value={draft.outputSchemaRepo} onValueChange={(value) => onUpdateDraft("outputSchemaRepo", value)} />
+          <TerasTextField disabled={disabled} label="Output schema path" value={draft.outputSchemaPath} onValueChange={(value) => onUpdateDraft("outputSchemaPath", value)} />
+          <TerasTextField disabled={disabled} label="Output schema version" value={draft.outputSchemaVersion} onValueChange={(value) => onUpdateDraft("outputSchemaVersion", value)} />
         </TerasFieldGrid>
-        <TerasNoteField label="Operational expectations" placeholder="One expectation per line" value={draft.operationalExpectations} onValueChange={(value) => onUpdateDraft("operationalExpectations", value)} />
+        <TerasNoteField disabled={disabled} label="Operational expectations" placeholder="One expectation per line" value={draft.operationalExpectations} onValueChange={(value) => onUpdateDraft("operationalExpectations", value)} />
       </TerasFieldStack>
     </TerasPanel>
   );
@@ -217,9 +232,11 @@ function ProfileIntentStep({
 
 function ProfileReviewStep({
   draft,
+  disabled,
   error,
   onUpdateDraft,
 }: {
+  disabled: boolean;
   draft: ModelProfileRequestDraft;
   error: string | null;
   onUpdateDraft: <TKey extends keyof ModelProfileRequestDraft>(
@@ -256,6 +273,7 @@ function ProfileReviewStep({
       </TerasList>
       <TerasNoteField
         label="Operator justification"
+        disabled={disabled}
         placeholder="Explain why this governed profile is needed and why its caller and data boundary are appropriate."
         value={draft.justification}
         onValueChange={(value) => onUpdateDraft("justification", value)}
