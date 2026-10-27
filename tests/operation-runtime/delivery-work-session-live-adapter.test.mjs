@@ -27,6 +27,7 @@ import {
   assertCanonicalSourceRequest,
   canonicalSourceResponse,
 } from "../support/console-source-projection.mjs";
+import { submitDeliveryWorkSessionCommand } from "../../src/domain-workspaces/delivery/live-runtime/use-delivery-work-session-live-runtime.ts";
 
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:console-owner",
@@ -34,6 +35,52 @@ const env = {
   OOS_CALLER_ID: "governance-operations-console",
   OOS_CALLER_SECRET: "test-only-console-secret",
 };
+
+test("a committed owner command with lost HTTP acknowledgement retains exact retry identity and input", async (t) => {
+  for (const status of [408, 502, 503]) {
+    const calls = [], accepted = [];
+    const pendingCommands = { current: {} };
+    const original = globalThis.fetch;
+    globalThis.fetch = async (_path, init) => {
+      const body = JSON.parse(init.body); calls.push(body);
+      if (calls.length === 1) return jsonResponse({ code: "delivery_oos_unavailable", error: "The operation was aborted due to timeout", mode: "live", status: "offline" }, status);
+      // The owner committed the first request. A second identity would be a
+      // different operation, not reconciliation of its lost acknowledgement.
+      assert.deepEqual(body, calls[0]);
+      const result = projection({ receipt: true }); result.command_receipt.command_id = body.commandId;
+      return jsonResponse({ error: null, mode: "live", observedAt: "2026-10-08T17:00:00Z", projection: result, status: "current" });
+    };
+    try {
+      const command = { action: "continue", body: { expectedSessionRevision: "2026-08-27T02:00:00.000Z", sourceIntentRef: "source-intent:original-source-scope" }, path: "/api/delivery/execution/714/work-session/continue", pendingCommands, setSnapshot: value => accepted.push(value) };
+      await assert.rejects(submitDeliveryWorkSessionCommand(command), /aborted due to timeout/);
+      assert.equal(accepted.length, 0);
+      assert.equal(pendingCommands.current.continue.commandId, calls[0].commandId);
+      await submitDeliveryWorkSessionCommand(command);
+      assert.equal(accepted.length, 1);
+      assert.equal(pendingCommands.current.continue, undefined);
+    } finally { globalThis.fetch = original; }
+  }
+});
+
+test("known rejection and changed target or scope cannot reuse another command identity", async () => {
+  const original = globalThis.fetch, calls = [];
+  const pendingCommands = { current: {} };
+  let responseStatus = 400;
+  globalThis.fetch = async (_path, init) => { calls.push(JSON.parse(init.body)); return jsonResponse({ code: "delivery_work_session_adapter_request_invalid", error: "Request rejected before effects", mode: "live", status: "offline" }, responseStatus); };
+  const command = { action: "continue", body: { expectedSessionRevision: "2026-08-27T02:00:00.000Z", sourceIntentRef: "source-intent:first-scope" }, path: "/api/delivery/execution/714/work-session/continue", pendingCommands, setSnapshot: () => assert.fail("Rejected input cannot produce local progress") };
+  try {
+    await assert.rejects(submitDeliveryWorkSessionCommand(command));
+    assert.equal(pendingCommands.current.continue, undefined);
+    await assert.rejects(submitDeliveryWorkSessionCommand(command));
+    assert.notEqual(calls[0].commandId, calls[1].commandId);
+    responseStatus = 502;
+    await assert.rejects(submitDeliveryWorkSessionCommand(command));
+    await assert.rejects(submitDeliveryWorkSessionCommand({ ...command, path: "/api/delivery/execution/715/work-session/continue" }));
+    assert.notEqual(calls[2].commandId, calls[3].commandId);
+    await assert.rejects(submitDeliveryWorkSessionCommand({ ...command, path: "/api/delivery/execution/715/work-session/continue", body: { ...command.body, sourceIntentRef: "source-intent:second-scope" } }));
+    assert.notEqual(calls[3].commandId, calls[4].commandId);
+  } finally { globalThis.fetch = original; }
+});
 
 test("case:delivery-execution-source-provenance-positive reads and advances only OOS-owned state", async () => {
   const calls = [];
