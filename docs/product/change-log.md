@@ -6,6 +6,19 @@ Historical entries describe the architecture that existed when each change was
 made. They do not override current contracts. Active lifecycle-transition truth
 lives in `surface-contracts/lifecycle-transitions.md`.
 
+## 2026-10-28
+
+- Owner maintenance `maintenance-orchestration-run-start`, Landing Unit Decision
+  `feature_single_landing_unit`, closes the missing Console origination path
+  exposed by Epic1332's native operating proof. The existing admitted OOS
+  validation-readiness-run v1 receives current owner source coordinates and an
+  explicit bound human approval through the Definition Dashboard. Queued
+  acknowledgement, unknown response, immutable retry and original-run readback
+  remain separate from completion. Models gain no decision authority; no new
+  backend, caller, worker, queue, activation generation or ART child is created.
+  Exact-source Security acceptance, commissioning and real operating proof
+  remain required before this source can satisfy the Epic.
+
 ## 2026-10-25
 
 - Epic 1323 / source child 1326 / Landing Unit
