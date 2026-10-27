@@ -52,7 +52,8 @@ implementation.
   and operating proof remain required for the extension.
 - Orchestration is a completed current-shape fullscreen workspace with Home,
   Definitions, and Runs. Configured live mode now projects strict OOS
-  definition and run truth and routes only currently available controls;
+  definition and run truth, requests the admitted validation run after explicit
+  source/approval review, and routes only currently available controls;
   disconnected preview remains explicitly local and is not durable evidence.
 - Lifecycle Transitions now uses its accepted dedicated full-viewport Teras
   workspace. Runtime Readiness and Agent Console have completed capability

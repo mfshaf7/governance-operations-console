@@ -12,7 +12,9 @@ export class OrchestrationOosError extends Error {
   readonly status: number;
   constructor(message: string, code: string, status: number) { super(message); this.name = "OrchestrationOosError"; this.code = code; this.status = status; }
 }
-type Options = Readonly<{ config?: ConsoleOosOperatorConfiguration; fetchImpl?: typeof fetch; now?: () => Date; randomId?: () => string }>;
+export type OrchestrationClientOptions = Readonly<{ config?: ConsoleOosOperatorConfiguration; fetchImpl?: typeof fetch; now?: () => Date; randomId?: () => string; timeoutMs?: number }>;
+type Options = OrchestrationClientOptions;
+export { request as orchestrationOosRequest, resolveConfig as resolveOrchestrationConfig };
 
 export async function readOrchestrationWorkspace(options: Options = {}) {
   const [definitions, runs] = await Promise.all([
@@ -45,7 +47,7 @@ async function request(path: string, init: RequestInit, options: Options) {
   const config = options.config ?? resolveConfig();
   let response: Response;
   try {
-    response = await (options.fetchImpl ?? fetch)(`${config.baseUrl}${path}`, { ...init, cache: "no-store", redirect: "error", headers: { ...Object.fromEntries(new Headers(init.headers).entries()), ...consoleMutationAttributionHeaders(), Accept: "application/json", "Content-Type": "application/json", "x-oos-caller-id": config.callerId, "x-oos-caller-secret": config.callerSecret, "x-oos-operator-id": config.operatorId }, signal: AbortSignal.timeout(timeoutMs) });
+    response = await (options.fetchImpl ?? fetch)(`${config.baseUrl}${path}`, { ...init, cache: "no-store", redirect: "error", headers: { ...Object.fromEntries(new Headers(init.headers).entries()), ...consoleMutationAttributionHeaders(), Accept: new Headers(init.headers).get("accept") ?? "application/json", "Content-Type": "application/json", "x-oos-caller-id": config.callerId, "x-oos-caller-secret": config.callerSecret, "x-oos-operator-id": config.operatorId }, signal: AbortSignal.timeout(options.timeoutMs ?? timeoutMs) });
   } catch { throw new OrchestrationOosError("Orchestration could not reach OOS.", "orchestration_oos_unavailable", 502); }
   const raw = await response.text();
   if (Buffer.byteLength(raw) > maxResponseBytes) throw new OrchestrationOosError("Orchestration response exceeded the Console limit.", "orchestration_response_large", 502);

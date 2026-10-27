@@ -29,9 +29,39 @@ Its records and receipts are explicitly local and cannot enter the live path.
 5. Follow the returned state, owner, exact next action, events, blocker or
    failure, and terminal receipt. A failed or cancelled operation never renders
    as successful, and cancellation never implies rollback.
-6. Use **Refresh owner truth** when a dependency is degraded or stale. The
-   Console also refreshes every 15 seconds while visible and briefly reconciles
-   an accepted nonterminal operation from its exact OOS record.
+6. Use **Refresh owner truth** when a dependency is degraded or stale.
+   Environment controls also refresh every 15 seconds while visible and briefly
+   reconcile an accepted nonterminal operation from its exact OOS record.
+   Orchestration refreshes on entry, after controls, and through its explicit
+   refresh and original-run reads.
+
+### Start the admitted validation run
+
+1. Open **Orchestration → Definitions → Open Definition → Start Run** for the
+   admitted Validation readiness run v1. Stale or blocked admission disables
+   the action; disconnected preview has no live start.
+2. Enter the Delivery initiative's ART Epic number and the run purpose, then
+   select **Review current source**. The server reads the selected initiative's
+   current canonical owner projection and returns its title and exact version.
+   The browser does not choose a provider, worker, queue or source artifact.
+3. Review the displayed scope. This definition performs workspace-governance
+   smoke validation and WGCF readiness. The initiative binds the request and
+   evidence; the run does not complete ART items or validate every project task.
+4. Select the explicit read-only approval and **Start reviewed run**. Approval
+   binds that source and purpose for fifteen minutes. The server rechecks
+   current source and admission, derives the exact intent digest, and supplies
+   the bound authenticated operator. There is no model-submitted decision.
+5. Keep the original request and run references. **Run admitted** confirms OOS
+   admission, including when no worker projection is available yet. It is not
+   a completion receipt. Use **Read original run** or **View Runs** for actual
+   owner state and receipts.
+
+A first explicit pre-dispatch refusal permits source review again. An unknown
+outcome freezes the original request; **Retry original start** sends that same
+request and approval. A later refusal cannot erase its earlier unknown effect.
+After reload, use the workspace's **Read original run** entry with the retained
+reference. No replacement start is submitted automatically, and reading does
+not grant execution or control authority.
 
 ## Recovery
 

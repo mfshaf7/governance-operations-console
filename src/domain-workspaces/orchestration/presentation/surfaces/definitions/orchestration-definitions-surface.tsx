@@ -27,9 +27,11 @@ import { useOrchestrationDefinitionsController } from "./use-orchestration-defin
 export function OrchestrationDefinitionsSurface({
   focusRecordId = null,
   records,
+  onStartRun,
 }: {
   focusRecordId?: string | null;
   records: OrchestrationDefinitionRecord[];
+  onStartRun?: () => void;
 }) {
   const controller = useOrchestrationDefinitionsController(
     records,
@@ -175,6 +177,7 @@ export function OrchestrationDefinitionsSurface({
         }}
       />
       <DefinitionDashboardModal
+        onStartRun={onStartRun ? () => { controller.dashboard.close(); onStartRun(); } : undefined}
         onDesignDefinition={controller.design.open}
         onClose={controller.dashboard.close}
         record={controller.dashboard.record}

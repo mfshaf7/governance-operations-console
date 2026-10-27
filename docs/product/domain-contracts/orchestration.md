@@ -1,8 +1,10 @@
 # Orchestration Domain Contract
 
-Status: accepted local-baseline domain and visual architecture. All seven local
-implementation phases are complete; the surface remains fixture-backed and
-local-only.
+Status: accepted local-baseline domain and visual architecture. The seven local
+baseline phases are historical completion. Configured live mode now reads OOS
+definitions and runs, requests the admitted read-only validation run, recovers
+its original identity and routes available controls. Platform commissioning and
+operating acceptance remain separate from this source implementation.
 
 Orchestration owns the Console surface for durable definition qualification,
 definition visibility, run visibility, and bounded run control. It must not
@@ -41,6 +43,8 @@ The operator uses Orchestration to:
 - determine whether a proposed backend operation needs durable orchestration
 - design and review an implementation-ready orchestration definition
 - inspect active, suspended, retired, and candidate definitions
+- explicitly approve the admitted read-only validation run against a current
+  initiative source and recover its original request/run after interruption
 - inspect orchestration requests, runs, activities, waits, failures, events,
   and receipts
 - request allowed retry, resume, signal, cancel, or defer operations
@@ -73,8 +77,11 @@ After backend admission:
 - Platform Engineering and Security Architecture retain runtime and trust
   acceptance authority.
 
-Before baseline, Orchestration definitions and runs are synthetic fixtures or
-prototype-local projections only. They must not claim active runtime evidence.
+Disconnected preview definitions and runs are explicitly local projections.
+Configured live mode never substitutes those records for unavailable owner
+truth. Source proof does not attest that workers or the composed runtime are
+operational. Use the [live operator procedure](../orchestration-and-environment-live-controls.md)
+for current-source review, explicit start, original-run recovery and controls.
 
 ## Entry Profile
 

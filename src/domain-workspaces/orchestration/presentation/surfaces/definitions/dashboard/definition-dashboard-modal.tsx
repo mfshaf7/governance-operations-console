@@ -50,10 +50,12 @@ export function DefinitionDashboardModal({
   onDesignDefinition,
   onClose,
   record,
+  onStartRun,
 }: {
   onDesignDefinition: (record: OrchestrationDefinitionRecord) => void;
   onClose: () => void;
   record: OrchestrationDefinitionRecord | null;
+  onStartRun?: () => void;
 }) {
   const [activeNode, setActiveNode] =
     useState<OrchestrationDefinitionNode | null>(null);
@@ -69,6 +71,9 @@ export function DefinitionDashboardModal({
 
   const posture = orchestrationDefinitionPosture(record);
   const definitionAction = orchestrationDefinitionAction(record);
+  const canStart = record.source.mode === "live-authority" && record.source.freshness === "current" &&
+    record.definitionId === "validation-readiness-run" && record.version === "1" && record.lifecycle === "active" &&
+    record.admissionChecks.length > 0 && record.admissionChecks.every(check => check.state === "ready");
 
   function closeDashboard() {
     setActiveNode(null);
@@ -193,6 +198,11 @@ export function DefinitionDashboardModal({
                 ) : null}
               </TerasPanel>
 
+              {onStartRun && record.source.mode === "live-authority" ? <TerasPanel frame="padded" treatment="rail" fit="content" tone={canStart ? "ok" : "warn"}>
+                <TerasPanelHeader kicker="Admitted run" title="Run the reviewed validation"
+                  description={canStart ? "Review the current initiative source and explicitly approve a read-only run." : "Current owner admission and source freshness are required before starting."} />
+                <TerasActionRow><TerasActionButton disabled={!canStart} onClick={onStartRun}>Start Run</TerasActionButton></TerasActionRow>
+              </TerasPanel> : null}
               <TerasPanel frame="padded" treatment="neutral" fit="content">
                 <TerasPanelHeader
                   description="Implementation, validation, platform, security, and runtime admission remain separate checks."

@@ -62,6 +62,8 @@ export function useOrchestrationWorkspaceController({
   return {
     activeSurfaceId,
     controlRun,
+    refreshOwnerTruth: liveRuntime.load,
+    sourceMode: liveRuntime.snapshot.mode,
     readModel: effectiveReadModel,
     setActiveSurfaceId,
     summaryMetrics: orchestrationWorkspaceSummaryMetrics(

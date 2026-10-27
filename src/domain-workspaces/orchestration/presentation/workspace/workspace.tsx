@@ -1,6 +1,11 @@
 "use client";
 
+import { useState } from "react";
+
 import {
+  TerasActionButton,
+  TerasActionRow,
+  TerasFieldStack,
   TerasFullscreenSurfaceFrame,
   TerasModalShell,
   TerasSurfaceNav,
@@ -23,6 +28,7 @@ import {
   type OrchestrationWorkspaceSurfaceId,
 } from "./orchestration-workspace-view-model.ts";
 import { useOrchestrationWorkspaceController } from "./use-orchestration-workspace-controller.ts";
+import { OrchestrationRunStartDialog } from "../workflows/run-start/orchestration-run-start-dialog.tsx";
 import type { OrchestrationRunControlInput, OrchestrationRunControlReceipt } from "../../work-model/run-control/run-control-types.ts";
 
 export type OrchestrationWorkspaceProps = {
@@ -39,14 +45,18 @@ export function OrchestrationWorkspace({
   const {
     activeSurfaceId,
     controlRun,
+    refreshOwnerTruth,
+    sourceMode,
     readModel,
     setActiveSurfaceId,
     summaryMetrics,
     summaryTitle,
   } = useOrchestrationWorkspaceController({ entryIntent });
+  const [runDialog, setRunDialog] = useState<"start" | "recover" | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   return (
-    <TerasModalShell
+    <><TerasModalShell
       agentHost
       bodyLayout="fill"
       description="Fullscreen orchestration workspace for durable-definition qualification, definition review, run inspection, and bounded run control."
@@ -92,15 +102,29 @@ export function OrchestrationWorkspace({
           />
         }
       >
-        <OrchestrationWorkspaceSurfaceContent
+        <TerasFieldStack fill="last">
+          {sourceMode !== "disconnected-preview" ? <TerasActionRow>
+            <TerasActionButton emphasis="secondary" disabled={refreshing} onClick={() => {
+              setRefreshing(true); void refreshOwnerTruth().finally(() => setRefreshing(false));
+            }}>{refreshing ? "Reading owner truth" : "Refresh owner truth"}</TerasActionButton>
+            <TerasActionButton emphasis="secondary" onClick={() => setRunDialog("recover")}>Read original run</TerasActionButton>
+          </TerasActionRow> : null}
+          <OrchestrationWorkspaceSurfaceContent
           activeSurfaceId={activeSurfaceId}
           controlRun={controlRun}
           entryIntent={entryIntent}
           onOpenSurface={setActiveSurfaceId}
           readModel={readModel}
+          onStartRun={() => setRunDialog("start")}
         />
+        </TerasFieldStack>
       </TerasFullscreenSurfaceFrame>
     </TerasModalShell>
+    {runDialog ? <OrchestrationRunStartDialog mode={runDialog} onClose={() => setRunDialog(null)} onViewRuns={async () => {
+      const current = await refreshOwnerTruth();
+      if (current.mode !== "live" || current.status !== "current") throw new Error("The original run remains retained; its current owner list is unavailable.");
+      setActiveSurfaceId("runs"); setRunDialog(null);
+    }} /> : null}</>
   );
 }
 
@@ -110,12 +134,14 @@ function OrchestrationWorkspaceSurfaceContent({
   entryIntent,
   onOpenSurface,
   readModel,
+  onStartRun,
 }: {
   activeSurfaceId: OrchestrationWorkspaceSurfaceId;
   controlRun: (runId: string, input: OrchestrationRunControlInput) => Promise<OrchestrationRunControlReceipt>;
   entryIntent: ConsoleSurfaceEntryIntent | null;
   onOpenSurface: (surfaceId: OrchestrationWorkspaceSurfaceId) => void;
   readModel: OrchestrationWorkspaceReadModel;
+  onStartRun: () => void;
 }) {
   switch (activeSurfaceId) {
     case "home":
@@ -130,6 +156,7 @@ function OrchestrationWorkspaceSurfaceContent({
         <OrchestrationDefinitionsSurface
           focusRecordId={orchestrationFocusRecordId(entryIntent, "definition")}
           records={readModel.definitions}
+          onStartRun={onStartRun}
         />
       );
     case "runs":
