@@ -163,6 +163,7 @@ export function ProposalControlSurface({
         proposal={controller.details.proposal}
       />
       <ProposalCaptureModal
+        previewMode={controller.capture.previewMode}
         canSubmit={controller.capture.canSubmit}
         context={controller.capture.context}
         onClose={controller.capture.close}

@@ -11,6 +11,7 @@ import {
 
 export function ProposalCaptureModal({
   canSubmit,
+  previewMode,
   context,
   onClose,
   onContextChange,
@@ -20,6 +21,7 @@ export function ProposalCaptureModal({
   title,
 }: {
   canSubmit: boolean;
+  previewMode: boolean;
   context: string;
   onClose: () => void;
   onContextChange: (value: string) => void;
@@ -37,7 +39,7 @@ export function ProposalCaptureModal({
       bodyLayout="scroll"
       height="content"
       width="standard"
-      description="Prototype-local console ingress for creating a captured proposal in this control surface."
+      description={previewMode ? "Capture a proposal in the disconnected preview." : "Capture a proposal in Workspace Proposals for review."}
       footer={
         <>
           <TerasActionButton onClick={onClose} emphasis="secondary">
@@ -69,8 +71,9 @@ export function ProposalCaptureModal({
           value={context}
         />
         <TerasContentTray kicker="Capture Boundary">
-          This adds a captured proposal to the local preview register. It does
-          not send a backend proposal command yet.
+          {previewMode
+            ? "Creates a local preview proposal. No backend proposal is sent."
+            : "Creates a proposal in Workspace Proposals. Triage, disposition and handoff remain separate reviewed actions."}
         </TerasContentTray>
       </TerasFieldStack>
     </TerasModalShell>

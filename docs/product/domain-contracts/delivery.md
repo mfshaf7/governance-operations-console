@@ -519,6 +519,9 @@ Source ownership facts:
   artifact-oriented Context Board DTO aliases only. Transient Context Board
   interaction aliases used by Work Design session code come from the Context
   Board product-adapter facade.
+- Context note edits, whether manual or advisor-proposed, retain the native
+  8000-character note boundary. Older overlong local text stays available for
+  correction, with finalization blocked; read-only finalized briefs remain locked.
 - Work Design restores a changed current autosave ahead of its older named
   checkpoint, preserving unapplied note and diagram edits for local continuity.
   An authoritative source seed retains priority; equal content keeps its named

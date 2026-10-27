@@ -16,6 +16,8 @@ import type {
   WorkDesignStep,
 } from "../model/work-design-model.ts";
 
+import { WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH } from "../../../../work-model/work-design/work-design-session-model.ts";
+
 type UseWorkDesignContextActionsParams = {
   active: boolean;
   coreNodes: Array<{ id: string; label: string; detail: string }>;
@@ -94,6 +96,11 @@ export function useWorkDesignContextActions({
     apply: (edits) => applyDraft(edits), restore: (edits) => { applyDraft(edits, true); },
     transport: requestContextAdvice,
   });
+  function updateContextOperatorNote(value: string) {
+    if (contextBriefReadOnly || (value.length > WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH && value.length >= contextOperatorNote.length)) return;
+    applyDraft([{ field: "note", value }]);
+  }
+
   function updateContextDecision(decision: WorkDesignContextDecision) {
     if (contextBriefReadOnly) {
       return;
@@ -187,5 +194,6 @@ export function useWorkDesignContextActions({
     acceptContextBrief,
     submitContextAdvisorPrompt,
     updateContextDecision,
+    updateContextOperatorNote,
   };
 }
