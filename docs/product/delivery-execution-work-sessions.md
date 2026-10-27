@@ -169,6 +169,15 @@ review authority.
    operator action. If the network outcome is unknown, retry retains the same
    command identity so OOS can replay the retained result safely.
 
+After an uncertain network, HTTP timeout or server failure, use **Read Current
+Session** before another decision. That action only reads the original OOS
+session; it neither resubmits the source command nor grants authority. An
+accepted operation may have completed after its HTTP acknowledgement was lost.
+Retrying unchanged input retains the original command identity even after a
+server error. A different target, scope or reviewed input gets its own identity;
+an explicit rejection still allows a corrected operator action. Source tests
+for this recovery do not replace exact composed acceptance or live qualification.
+
 ### Continue An Approved Source Scope
 
 Source Authorization displays the selected scope, its expiry, credential receipt

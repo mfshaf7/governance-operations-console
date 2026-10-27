@@ -139,6 +139,11 @@ export function ExecutionWorkSessionModal({
             treatment="state"
           >
             <TerasPanelHeader
+              actions={runtime.mode === "live" ? (
+                <TerasActionButton disabled={submitting} emphasis="secondary" onClick={() => run(runtime.refresh)}>
+                  Read Current Session
+                </TerasActionButton>
+              ) : undefined}
               description={target.description}
               kicker="Selected Target"
               title={target.title}

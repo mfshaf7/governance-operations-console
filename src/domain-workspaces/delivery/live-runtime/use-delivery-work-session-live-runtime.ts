@@ -91,7 +91,7 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
   const prepare = useCallback(async () => {
     const current = await currentSnapshot(snapshot, refresh);
     if (current.mode === "disconnected-preview") return current;
-    return mutate({
+    return submitDeliveryWorkSessionCommand({
       action: "prepare",
       body: {
         expectedSessionRevision:
@@ -107,7 +107,7 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
     async (decision: DeliveryWorkSessionDecisionInput, sourceIntentRef?: string) => {
       const current = await currentSnapshot(snapshot, refresh);
       if (current.mode === "disconnected-preview") return current;
-      return mutate({
+      return submitDeliveryWorkSessionCommand({
         action: "start",
         body: {
           decision,
@@ -133,7 +133,7 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
         "delivery_work_session_not_started",
       );
     }
-    return mutate({
+    return submitDeliveryWorkSessionCommand({
       action,
       body: { expectedSessionRevision: revision, ...(sourceIntentRef ? { sourceIntentRef } : {}) },
       path: `${workSessionPath(requiredTarget(workItemId))}/${action}`,
@@ -192,7 +192,7 @@ function commandIdentity(action: string, _requestKey: string) {
   return `work-session-command:console-${action}-${randomId}`;
 }
 
-async function mutate({
+export async function submitDeliveryWorkSessionCommand({
   action,
   body,
   path,
@@ -205,7 +205,7 @@ async function mutate({
   pendingCommands: React.MutableRefObject<Record<string, PendingCommand>>;
   setSnapshot: React.Dispatch<React.SetStateAction<DeliveryWorkSessionSnapshot | null>>;
 }) {
-  const requestKey = JSON.stringify(body);
+  const requestKey = JSON.stringify({ path, body });
   const pending = pendingCommands.current[action];
   const commandId =
     pending?.requestKey === requestKey
@@ -219,7 +219,11 @@ async function mutate({
   });
   const value: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    delete pendingCommands.current[action];
+    // A server/timeout failure may follow an accepted owner effect. Retain the
+    // exact command for recovery; only a known rejection releases its identity.
+    if (response.status < 500 && response.status !== 408) {
+      delete pendingCommands.current[action];
+    }
     throw clientError(value);
   }
   const next = assertDeliveryWorkSessionSnapshot(value);
