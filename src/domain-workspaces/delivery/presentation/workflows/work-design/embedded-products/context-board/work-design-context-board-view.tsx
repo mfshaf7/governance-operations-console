@@ -22,6 +22,8 @@ type WorkDesignContextBoardViewProps = {
   applyCompleted: boolean;
   board: ContextBoardController;
   contextAdvisorPrompt: string;
+  contextOperatorNote: string;
+  updateContextOperatorNote: (value: string) => void;
   contextAdvisorTranscript: WorkDesignAdvisorTranscriptLine[];
   contextBriefAccepted: boolean;
   contextBriefDisplayTitle: string;
@@ -46,6 +48,8 @@ export function WorkDesignContextBoardView({
   applyCompleted,
   board,
   contextAdvisorPrompt,
+  contextOperatorNote,
+  updateContextOperatorNote,
   contextAdvisorTranscript,
   contextBriefAccepted,
   contextBriefDisplayTitle,
@@ -94,6 +98,8 @@ export function WorkDesignContextBoardView({
         <WorkDesignContextBoardRail
           applyCompleted={applyCompleted}
           contextAdvisorControls={contextAdvisorControls}
+          contextOperatorNote={contextOperatorNote}
+          updateContextOperatorNote={updateContextOperatorNote}
           contextAdvisorPrompt={contextAdvisorPrompt}
           contextAdvisorTranscript={contextAdvisorTranscript}
           contextBriefAccepted={contextBriefAccepted}

@@ -60,6 +60,11 @@ stop waiting and Undo advisor edit to restore its last changed fields. Later
 manual edits are preserved; a source, selection or draft change during inference
 prevents the pending proposal from applying. Save/finalize the draft through the
 surface's normal controls. A model failure leaves manual drafting available.
+Work Design's Context note is editable directly as well as through an explicit
+advisor request. Both use the existing 8000-character native note limit. An
+older overlong draft remains visible for shortening; it is not truncated, and
+finalization stays blocked until it fits. Editing invalidates prior local
+acceptance while preserving the diagram and separate final controls.
 Work Design reopening restores changed local autosave content ahead of an older
 named checkpoint. Save Session still creates an explicit named checkpoint;
 canonical handoffs, finalization and Apply retain their separate authority.

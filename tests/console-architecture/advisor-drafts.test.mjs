@@ -27,6 +27,23 @@ const node = (id, kind, children = []) => ({ id, kind, title: id, description: "
 const addition = (id, kind) => { const { tone, ...value } = node(id, kind); return value; };
 const board = () => ({ customItems: [{ id: "manual", kind: "note", label: "Manual note", detail: "Keep this", x: 100, y: 100 }], connections: [], positions: { core: { x: 0, y: 0 } }, removedCoreIds: [], sketchStrokes: [{ id: "manual-sketch" }], templateTrays: [], style: "architecture" });
 
+test("Context note proposals stay consumable by the native 8000-character note contract", () => {
+  const current = "x".repeat(9347);
+  const descriptor = createWorkDesignAdvisorScope({ legacy_epic_id: 1332 }, {
+    role: "work-design-context", ref: "delivery-1332", sourceRevision: "current", context: "Current local draft",
+    fields: [{ key: "note", label: "Context note", value: current }],
+  });
+  assertAdvisorScope(descriptor);
+  assert.equal(descriptor.fields[0].value, current, "Retain overlong legacy content for manual recovery; do not truncate it");
+  assert.equal(descriptor.fields[0].maxLength, 8000);
+  for (const size of [0, 8000]) {
+    const value = "n".repeat(size);
+    assert.equal(parseAdvisorReply(JSON.stringify(draft([{ field: "note", value }])), descriptor).edits[0].value, value);
+  }
+  assert.throws(() => parseAdvisorReply(JSON.stringify(draft([{ field: "note", value: "n".repeat(8001) }])), descriptor));
+  assert.equal(descriptor.fields[0].value, current);
+});
+
 test("draft advisor constructs the current canonical request envelope instead of bypassing ordinary request validation", () => {
   const session = { nonce: "550e8400-e29b-41d4-a716-446655440000", openedAt: new Date().toISOString() };
   const invocation = "550e8400-e29b-41d4-a716-446655440001";

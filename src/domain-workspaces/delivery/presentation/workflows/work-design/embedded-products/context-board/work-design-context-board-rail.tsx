@@ -4,6 +4,8 @@ import styles from "@/product-apps/context-board/context-board-workbench.module.
 import {
   TerasAdvisorPanel,
   TerasPanel,
+  TerasNoteField,
+  TerasContentTray,
   TerasPanelHeader,
   TerasStatusPill,
   type TerasTone,
@@ -15,9 +17,13 @@ import type {
   WorkDesignContextDecisionOption,
 } from "./work-design-context-board-types.ts";
 
+import { WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH } from "../../../../../work-model/work-design/work-design-session-model.ts";
+
 type WorkDesignContextBoardRailProps = {
   applyCompleted: boolean;
   contextAdvisorPrompt: string;
+  contextOperatorNote: string;
+  updateContextOperatorNote: (value: string) => void;
   contextAdvisorControls?: import("react").ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
   contextAdvisorTranscript: WorkDesignAdvisorTranscriptLine[];
   contextBriefAccepted: boolean;
@@ -42,6 +48,8 @@ type WorkDesignContextBoardRailProps = {
 export function WorkDesignContextBoardRail({
   applyCompleted,
   contextAdvisorPrompt,
+  contextOperatorNote,
+  updateContextOperatorNote,
   contextAdvisorControls,
   contextAdvisorTranscript,
   contextBriefAccepted,
@@ -126,6 +134,7 @@ export function WorkDesignContextBoardRail({
             </button>
             <button
               className={styles.contextBoardContextBriefPrimaryAction}
+              disabled={!contextBriefReadOnly && contextOperatorNote.length > WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH}
               onClick={() => setContextFinalizeDialogOpen(true)}
               type="button"
             >
@@ -135,6 +144,21 @@ export function WorkDesignContextBoardRail({
             </button>
           </div>
         </div>
+        <TerasNoteField
+          aria-label="Work Design context note"
+          density="compact"
+          label={`Context note (${contextOperatorNote.length}/${WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH})`}
+          maxLength={WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH}
+          minimumHeight="short"
+          onValueChange={updateContextOperatorNote}
+          readOnly={contextBriefReadOnly}
+          value={contextOperatorNote}
+        />
+        {contextOperatorNote.length > WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH ? (
+          <TerasContentTray kicker="Shorten context note">
+            Keep the note within {WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH} characters before finalizing. Your current text is retained for editing.
+          </TerasContentTray>
+        ) : null}
       </TerasPanel>
 
       <TerasPanel

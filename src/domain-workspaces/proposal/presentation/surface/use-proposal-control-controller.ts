@@ -406,6 +406,7 @@ export function useProposalControlController({
 
   return {
     capture: {
+      previewMode,
       available: previewMode || liveSnapshot?.status === "current",
       canSubmit: canSubmitCapture,
       close: () => setCaptureOpen(false),

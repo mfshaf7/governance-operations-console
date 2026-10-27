@@ -21,6 +21,7 @@ import type { ProposalTargetApplicationResult } from "../../live-runtime/proposa
 
 export type ProposalControlController = {
   capture: {
+    previewMode: boolean;
     available: boolean;
     canSubmit: boolean;
     close: () => void;

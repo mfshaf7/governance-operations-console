@@ -226,6 +226,8 @@ export function WorkDesignSessionStepRouter({
         />
       ) : activeStep === "context" ? (
         <WorkDesignContextStep
+          contextOperatorNote={contextOperatorNote}
+          updateContextOperatorNote={contextActions.updateContextOperatorNote}
           contextAdvisorControls={contextActions.contextAdvisorControls}
           applyCompleted={applyCompleted}
           board={contextBoard}
