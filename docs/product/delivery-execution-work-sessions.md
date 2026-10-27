@@ -1,5 +1,14 @@
 # Delivery Execution Work Sessions
 
+Before source authorization, use **Covered ART items (comma-separated)** to
+review every story sharing the same source landing and rollback unit. The
+selected work item must remain included; enter IDs such as `1338, 1340, 1344`.
+The source approval and start decision retain that exact coverage. OOS still
+verifies every item's current owner, readiness and exact Architecture Packet
+Landing Unit match; entering an ID grants no authority. Original-scope recovery
+restores its recorded coverage. Existing single-item clients retain their
+owner-generated default.
+
 ## Purpose
 
 This is the primary Console instruction surface for running a governed Delivery

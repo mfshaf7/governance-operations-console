@@ -66,12 +66,14 @@ export function ExecutionWorkSessionModal({
   }, [draft]);
 
   const decisionReady = useMemo(
-    () => (decision ? workSessionDecisionReady(decision) : false),
-    [decision],
+    () => (decision ? workSessionDecisionReady(decision) &&
+      (!decision.coveredWorkItemIds || decision.coveredWorkItemIds.includes(`work-item-${target.workItemId}`)) : false),
+    [decision, target.workItemId],
   );
   const projection = runtime.projection;
   const sourceDecision = draft && decision ? {
     ...draft,
+    covered_work_item_ids: decision.coveredWorkItemIds ?? draft.covered_work_item_ids,
     architecture: { required: decision.architecture.required, artifact_location: decision.architecture.artifactLocation },
     landing_unit: { ...draft.landing_unit, branch: decision.branch, decision: decision.landingUnitDecision, id: decision.landingUnitId, rollback_boundary: decision.rollbackBoundary, split_reason: decision.splitReason },
   } : null;
@@ -166,7 +168,7 @@ export function ExecutionWorkSessionModal({
                 },
                 {
                   label: "Landing unit scope",
-                  value: workSessionScope(projection),
+                  value: workSessionScope(projection, decision?.coveredWorkItemIds),
                 },
               ]}
             />
@@ -185,6 +187,14 @@ export function ExecutionWorkSessionModal({
                 title="Work Session Decision"
               />
               <TerasFieldStack spacing="normal">
+                <TerasTextField
+                  label="Covered ART items (comma-separated)"
+                  onValueChange={(value) => setDecision(current => current ? { ...current,
+                    coveredWorkItemIds: value.split(",").map(item => item.trim().replace(/^#?([1-9][0-9]*)$/, "work-item-$1"))
+                  } : current)}
+                  value={(decision.coveredWorkItemIds ?? draft?.covered_work_item_ids ?? [])
+                    .map(item => item.replace(/^work-item-/, "")).join(", ")}
+                />
                 <TerasSelectField
                   label="Landing unit model"
                   onValueChange={(value) =>
@@ -534,6 +544,7 @@ function decisionInputFromDraft(
       required: draft.architecture.required === true,
     },
     branch: draft.landing_unit.branch,
+    coveredWorkItemIds: draft.covered_work_item_ids,
     landingUnitDecision: draft.landing_unit.decision,
     landingUnitId: draft.landing_unit.id,
     rollbackBoundary: cleanRequiredMarker(draft.landing_unit.rollback_boundary),
@@ -589,8 +600,9 @@ function workSessionCommandLabel(code: string) {
   return continueCommandLabels[code] ?? "Continue";
 }
 
-function workSessionScope(projection: DeliveryWorkSessionProjection | null) {
+function workSessionScope(projection: DeliveryWorkSessionProjection | null, selected?: string[]) {
   const workItemIds =
+    (projection?.session_id ? projection.covered_work_item_ids : selected) ??
     projection?.covered_work_item_ids ??
     projection?.decision_draft?.covered_work_item_ids ??
     (projection?.work_item_id ? [projection.work_item_id] : []);
@@ -693,6 +705,9 @@ function updateDecision(
 
 function workSessionDecisionReady(decision: DeliveryWorkSessionDecisionInput) {
   return Boolean(
+    (!decision.coveredWorkItemIds || (decision.coveredWorkItemIds.length > 0 &&
+      new Set(decision.coveredWorkItemIds).size === decision.coveredWorkItemIds.length &&
+      decision.coveredWorkItemIds.every(item => /^work-item-[1-9][0-9]*$/.test(item)))) &&
     decision.branch.trim() &&
       decision.landingUnitId.trim() &&
       decision.rollbackBoundary.trim() &&

@@ -139,6 +139,10 @@ export async function prepareDeliveryWorkSessionDecision(
   expectedSessionRevision: string | null,
   options: DeliveryWorkSessionClientOptions = {},
 ): Promise<DeliveryWorkSessionDecision> {
+  if (input.coveredWorkItemIds && !input.coveredWorkItemIds.includes(`work-item-${workItemId}`)) {
+    throw new DeliveryOosError("Covered ART items must include the selected work item.",
+      "delivery_work_session_coverage_target_required", 400);
+  }
   const prepared = await startDeliveryWorkSession(
     workItemId,
     {
@@ -157,6 +161,7 @@ export async function prepareDeliveryWorkSessionDecision(
   }
   return {
     ...draft,
+    covered_work_item_ids: input.coveredWorkItemIds ?? draft.covered_work_item_ids,
     architecture: {
       artifact_location: input.architecture.artifactLocation,
       required: input.architecture.required,

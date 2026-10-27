@@ -269,6 +269,13 @@ export function assertDeliveryWorkSessionDecisionInput(
   value: unknown,
 ): DeliveryWorkSessionDecisionInput {
   const input = record(value, "Delivery work-session decision input");
+  if (input.coveredWorkItemIds !== undefined) {
+    workItemIdList(input.coveredWorkItemIds, "covered ART items");
+    const covered = input.coveredWorkItemIds as string[];
+    if (covered.length === 0 || new Set(covered).size !== covered.length) {
+      invalid("Covered ART items must be non-empty and unique.");
+    }
+  }
   oneOf(
     input.landingUnitDecision,
     ["child_isolated_landing_unit", "feature_single_landing_unit"],

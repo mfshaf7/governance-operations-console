@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   assertDeliveryWorkSessionDecision,
+  assertDeliveryWorkSessionDecisionInput,
   assertDeliveryWorkSessionProjection,
   assertDeliveryWorkSessionSnapshot,
   deliveryWorkSessionTargetId,
@@ -236,6 +237,37 @@ test("case:delivery-execution-end-to-end-positive rebuilds accepted input from a
   );
   assert.equal(calls[0].body.command.decision, undefined);
   assert.deepEqual(decision, acceptedDecision());
+});
+
+test("explicit shared landing coverage survives fresh source preparation without browser-derived identity", async () => {
+  const input = { ...decisionInput(), coveredWorkItemIds: ["work-item-714", "work-item-715", "work-item-716"],
+    caller_id: "untrusted-caller", operator: { id: "untrusted-operator" } };
+  assert.equal(assertDeliveryWorkSessionDecisionInput(input), input);
+  const draft = preparedDecisionDraft();
+  const result = await prepareDeliveryWorkSessionDecision(714, input, "work-session-command:coverage-714", null, {
+    env, fetchImpl: async (_url, init) => {
+      assert.equal(JSON.parse(init.body).command.decision, undefined);
+      return jsonResponse({ ...projection({ session: false }), decision_draft: draft });
+    },
+  });
+  assert.deepEqual(result.covered_work_item_ids, input.coveredWorkItemIds);
+  assert.equal(result.work_item_id, "work-item-714");
+  assert.equal(result.caller_id, env.OOS_CALLER_ID);
+  assert.equal(result.operator.id, env.GOVERNANCE_CONSOLE_OPERATOR_ID);
+  assert.deepEqual(draft.covered_work_item_ids, ["work-item-714"]);
+  assertDeliveryWorkSessionDecision(result);
+});
+
+test("invalid coverage cannot replace the selected target or create an owner preparation", async () => {
+  for (const coveredWorkItemIds of [[], ["work-item-714", "work-item-714"], ["714"], ["work-item-0"]]) {
+    assert.throws(() => assertDeliveryWorkSessionDecisionInput({ ...decisionInput(), coveredWorkItemIds }));
+  }
+  let calls = 0;
+  await assert.rejects(prepareDeliveryWorkSessionDecision(714,
+    { ...decisionInput(), coveredWorkItemIds: ["work-item-715"] }, "work-session-command:wrong-coverage", null,
+    { env, fetchImpl: async () => { ++calls; assert.fail("No owner preparation for another target"); } }),
+  error => error.code === "delivery_work_session_coverage_target_required");
+  assert.equal(calls, 0);
 });
 
 test("case:delivery-execution-source-provenance-negative rejects mismatched source and malformed drafts", async () => {
