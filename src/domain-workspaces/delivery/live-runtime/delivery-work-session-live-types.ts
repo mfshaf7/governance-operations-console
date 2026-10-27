@@ -180,6 +180,7 @@ export type DeliveryWorkSessionSnapshot = {
 };
 
 export type DeliveryWorkSessionDecisionInput = {
+  coveredWorkItemIds?: string[];
   architecture: {
     artifactLocation: DeliveryWorkSessionArchitectureLocation | null;
     required: boolean;
