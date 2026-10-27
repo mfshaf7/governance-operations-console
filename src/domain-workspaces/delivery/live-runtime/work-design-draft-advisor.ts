@@ -1,6 +1,17 @@
 import { parseAdvisorReply, type AdvisorScope, type GovernedAdvisorReply } from "../../../agent-console/model/advisor-drafts.ts";
 import { effectiveModelLabel } from "../../../console-integration/governed-ai/model-selection.ts";
 import { assertWorkDesignOosAssistResult } from "./work-design-live-contract.ts";
+import { deliveryLiveIdentity, deliveryLivePackageRef } from "./delivery-live-identity.ts";
+import type { DeliveryPackageSummary } from "../read-model/index.ts";
+
+/** Public register IDs and native package refs are distinct existing contracts. */
+export function createWorkDesignAdvisorScope(
+  deliveryPackage: Pick<DeliveryPackageSummary, "legacy_epic_id">,
+  draft: Omit<AdvisorScope, "packageRef" | "sourceRef">,
+): AdvisorScope {
+  const { packageRef, sourceRef } = deliveryLiveIdentity(deliveryLivePackageRef(deliveryPackage));
+  return { ...draft, packageRef, sourceRef };
+}
 
 /** Draft formatting stays on the existing Work Design profile and caller. */
 export function normalizeWorkDesignDraftAdvice(data: unknown, scope: AdvisorScope): GovernedAdvisorReply {

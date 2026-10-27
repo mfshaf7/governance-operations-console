@@ -4,6 +4,22 @@ import { assertAdvisorScope, assertAdvisorReply, parseAdvisorReply, advisorScope
 import { applyContextBoardAdvisorPatch } from "../../src/product-apps/context-board/context-board-advisor-patch.ts";
 import { applyWorkDesignAdvisorPatch } from "../../src/domain-workspaces/delivery/product-adapters/build-tree/work-design-advisor-patch.ts";
 import { buildAdvisorAgentRequest } from "../../src/agent-console/server/advisor-draft-request.ts";
+import { createWorkDesignAdvisorScope } from "../../src/domain-workspaces/delivery/live-runtime/work-design-draft-advisor.ts";
+
+test("public Delivery register identity cannot substitute for native Work Design package binding", () => {
+  const record = { delivery_package_id: "delivery-1332", legacy_epic_id: 1332 };
+  for (const role of ["work-design-context", "work-design-tree"]) {
+    const local = { ...scope(), role, ref: record.delivery_package_id };
+    const { sourceRef: _unused, ...draft } = local;
+    const result = createWorkDesignAdvisorScope(record, draft);
+    assert.equal(result.ref, "delivery-1332");
+    assert.equal(result.packageRef, "delivery-package:1332");
+    assert.equal(result.sourceRef, "openproject://work_packages/1332");
+    assert.equal(result.sourceRevision, local.sourceRevision);
+    assert.deepEqual(result.fields, local.fields);
+    assertAdvisorScope(result);
+  }
+});
 
 const scope = () => ({ role: "proposal-triage", ref: "proposal:test", sourceRef: "proposal:test", sourceRevision: "1", context: "Selected proposal", fields: [{ key: "summary", label: "Summary", value: "Manual draft" }] });
 const draft = (edits) => ({ intent: "draft", message: "Requested edits", edits });

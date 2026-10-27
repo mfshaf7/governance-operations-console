@@ -1,6 +1,7 @@
 "use client";
 
 import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { createWorkDesignAdvisorScope } from "../../../../live-runtime/work-design-draft-advisor.ts";
 import { useDraftAdvisor } from "@/agent-console";
 import type { AdvisorTransport, AdvisorEdit } from "@/agent-console/model/advisor-drafts";
 import { applyContextBoardAdvisorPatch, type ContextBoardSnapshot } from "@/product-apps/context-board";
@@ -84,8 +85,8 @@ export function useWorkDesignContextActions({
   const advisor = useDraftAdvisor({
     active,
     disabled: contextBriefReadOnly,
-    getScope: () => ({ role: "work-design-context", ref: deliveryPackage.delivery_package_id,
-      sourceRef: deliveryPackage.source_ref, sourceRevision, packageRef: deliveryPackage.delivery_package_id,
+    getScope: () => createWorkDesignAdvisorScope(deliveryPackage, { role: "work-design-context", ref: deliveryPackage.delivery_package_id,
+      sourceRevision,
       context: JSON.stringify({ packageTitle: deliveryPackage.display_name, summary: deliveryPackage.summary, contextDecision, coreNodes, sources }),
       fields: [{ key: "note", label: "Context note", value: contextOperatorNote },
         { key: "board", label: "Context diagram", value: captureBoard(), kind: "board" }],
