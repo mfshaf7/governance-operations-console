@@ -251,6 +251,7 @@ local-runtime/commands/workflow-receipts.ts
 local-runtime/index.ts
 local-runtime/ingress/delivery-ingress-runtime.ts
 local-runtime/persistence/refinement-session-persistence.ts
+local-runtime/persistence/work-design-context-resume.ts
 local-runtime/persistence/work-design-session-persistence.ts
 local-runtime/projections/delivery-effective-projection.ts
 local-runtime/projections/workspace-projection.ts

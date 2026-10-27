@@ -14,6 +14,7 @@ import {
 import {
   loadWorkDesignSessionDraft,
   saveWorkDesignSessionDraft,
+  workDesignResumeContextSession,
 } from "../../../../local-runtime/index.ts";
 import { findWorkDesignNode } from "../../../../product-adapters/build-tree/index.ts";
 import type {
@@ -236,14 +237,12 @@ export function useWorkDesignSessionPersistence({
       const persistedLoadedSessionId =
         persistedContext?.loadedSessionId ?? null;
       const persistedCurrentSession = persistedContext?.current ?? null;
-      const resumeSession =
-        seededContextSession ??
-        mergedSessions.find(
-          (session) => session.id === persistedLoadedSessionId,
-        ) ??
-        persistedCurrentSession ??
-        mergedSessions[0] ??
-        null;
+      const resumeSession = workDesignResumeContextSession({
+        seededSession: seededContextSession,
+        currentSession: persistedCurrentSession,
+        loadedSessionId: persistedLoadedSessionId,
+        savedSessions: mergedSessions,
+      });
       const persistedBriefVersions = persistedSession?.briefVersions ?? [];
       const nextBriefVersions = seededBriefVersion
         ? [
