@@ -217,6 +217,15 @@ export function getExecutionBoardPackages(
   );
 }
 
+// Explicit inspection may select planning work without adding it to the
+// execution register or changing its available owner-authorized actions.
+export function getExecutionBoardSelectedPackage(
+  selectedPackageId: string,
+  model: DeliveryReadModel = deliveryReadModel,
+): DeliveryPackageSummary | null {
+  return getPackageById(selectedPackageId, model) ?? getExecutionBoardPackages(model)[0] ?? null;
+}
+
 export function getDeliveryWorkflowPhaseCount(
   workflowPhase: DeliveryWorkflowPhase,
   model: DeliveryReadModel = deliveryReadModel,

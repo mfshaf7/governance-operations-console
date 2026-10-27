@@ -8,6 +8,7 @@ import {
   getAvailableActions,
   getDeliveryEffectivePackageProjection,
   getExecutionBoardPackages,
+  getExecutionBoardSelectedPackage,
   getPackageAuditEvents,
   getPackageDetailsById,
   getPackageTree,
@@ -149,7 +150,7 @@ export function DeliveryExecutionBoard({
   useEffect(() => {
     if (
       focusPackageId &&
-      getExecutionBoardPackages(model).some(
+      model.packages.some(
         (deliveryPackage) =>
           deliveryPackage.delivery_package_id === focusPackageId,
       )
@@ -167,8 +168,7 @@ export function DeliveryExecutionBoard({
     () => deliveryControlBoardTreeByPackageId({ model, packages: model.packages }),
     [model],
   );
-  const selectedPackage =
-    packages.find(p => p.delivery_package_id === selectedPackageId) ?? packages[0] ?? null;
+  const selectedPackage = getExecutionBoardSelectedPackage(selectedPackageId, model);
   const selectedDetails = selectedPackage
     ? getPackageDetailsById(selectedPackage.delivery_package_id, model)
     : null;

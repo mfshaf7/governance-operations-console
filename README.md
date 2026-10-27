@@ -262,3 +262,14 @@ The repository validator checks the owner and source structure and rejects
 common public-source leaks, unresolved placeholders, secret-bearing files, and
 disposable runtime artifacts. The product check runs the complete approved
 architecture and behavior baseline.
+
+
+### Inspect planning work before execution
+
+In Delivery → Execution, use **Open Work Item**, enter the canonical ART item,
+and choose **Inspect ART Tree** to inspect its initiative even while it is in
+Work Design or Refinement. The explicit selection uses the canonical inventory;
+it does not add the initiative to current execution counts or grant start rights.
+Tree edits continue to require the current owner-backed change projection,
+review and explicit Apply. This path supports adding a genuine PI Objective
+before PI commitment; retain current source state and reload after stale input.
