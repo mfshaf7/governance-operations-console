@@ -61,9 +61,11 @@ manual edits are preserved; a source, selection or draft change during inference
 prevents the pending proposal from applying. Save/finalize the draft through the
 surface's normal controls. A model failure leaves manual drafting available.
 
-Both primary agents use the same owning advisor in Focus mode when a draft
-surface is active. Their session identity and conversation stay separate.
-Workspace mode continues to provide the bounded workspace overview. The visible
+Both primary agents use the same owning advisor in Focus mode where the active
+surface admits their presentation. Their session identity and conversation stay
+separate. Nested workflow and decision dialogs retain their existing focus
+boundary; use the owning workflow's local advisor there. Workspace mode
+continues to provide the bounded workspace overview. The visible
 draft panel shows the last verified effective model and any edit/conflict notice.
 
 Proposal triage/disposition, Prototype Candidate/Baseline, Delivery Work Design,
@@ -88,6 +90,9 @@ register ID such as `delivery-1332` remains the local selection reference; the
 native assist package is `delivery-package:1332`, with the canonical source and
 current source revision. Both context and tree advisors use that same adapter.
 The server rejects an alias substituted for the native package reference.
+The final OOS advice body retains the validated optional draft scope, bounded
+conversation and response instructions for both Context and Build Tree. Ordinary
+advice without that scope retains its existing contract.
 
 These proposals grant no submit, approve, reject, record, activate, close,
 publish, merge, model or credential authority. Final decisions remain separate

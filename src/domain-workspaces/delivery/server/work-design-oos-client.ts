@@ -193,6 +193,7 @@ export async function applyWorkDesignDraft(
 }
 
 type WorkDesignAdviceInput = {
+  draft_scope?: WorkDesignContextAssistCommand["draftScope"];
   context_draft?: { decision: string; note: string };
   operator_prompt: string;
   source_revision: string;
@@ -234,6 +235,7 @@ async function requestWorkDesignAdvice(
       version: "1.0",
     },
     operator_prompt: input.operator_prompt,
+    ...(input.draft_scope ? { draft_scope: input.draft_scope } : {}),
     ...(input.context_draft ? { context_draft: input.context_draft } : {}),
     ...(input.tree_draft ? { tree_draft: input.tree_draft } : {}),
   };

@@ -21,6 +21,8 @@ import {
   assertCanonicalSourceRequest,
   canonicalSourceResponse,
 } from "../support/console-source-projection.mjs";
+import { createWorkDesignAdvisorScope, normalizeWorkDesignDraftAdvice } from "../../src/domain-workspaces/delivery/live-runtime/work-design-draft-advisor.ts";
+import { advisorDraftInstructions } from "../../src/agent-console/model/advisor-drafts.ts";
 
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_HANDLE: "Console Owner",
@@ -113,6 +115,42 @@ test("case:work-design-assist-positive binds context and tree advice to canonica
   assert.notEqual(calls[2].body.correlation_id, calls[0].body.correlation_id);
   assert.deepEqual(calls[2].body.context_draft, calls[0].body.context_draft);
   assert.deepEqual(deadlines, [180_000, 180_000, 180_000]);
+});
+
+test("native Context and Build Tree HTTP requests retain the public-record draft scope and format", async (t) => {
+  const bodies = [];
+  const server = http.createServer(async (request, response) => {
+    let raw = "";
+    for await (const chunk of request) raw += chunk;
+    const body = JSON.parse(raw);
+    bodies.push(body);
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify({ ...assistResult(body), text: JSON.stringify({ intent: "answer", message: "No draft was changed.", edits: [] }) }));
+  });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
+  const options = { env: { ...env, OOS_BASE_URL: `http://127.0.0.1:${server.address().port}` } };
+  for (const role of ["work-design-context", "work-design-tree"]) {
+    const scope = createWorkDesignAdvisorScope({ delivery_package_id: "delivery-908", legacy_epic_id: 908 }, {
+      role, ref: "delivery-908", sourceRevision: "version-17", context: "Selected local planning draft",
+      fields: role === "work-design-context"
+        ? [{ key: "note", label: "Context note", value: "Preserve the manual note." }]
+        : [{ key: "tree", label: "Work Design tree", kind: "tree", value: consoleTree() }],
+    });
+    const draftScope = { scope, conversation: [{ role: "operator", text: "Keep the manual content." }], response_format: advisorDraftInstructions };
+    const common = { sourceRevision: scope.sourceRevision, operatorPrompt: "Explain the draft without editing it.", draftScope };
+    const result = role === "work-design-context"
+      ? await requestWorkDesignContextAdvice(scope.packageRef, { ...common, contextDecision: "proceed", contextNote: "Preserve the manual note." }, options)
+      : await requestWorkDesignTreeAdvice(scope.packageRef, { ...common, selectedNodeId: "epic-908", tree: consoleTree() }, options);
+    const sent = bodies.at(-1);
+    assert.deepEqual(sent.draft_scope, draftScope, "the final emitted HTTP body must retain fields, conversation and response format");
+    assert.equal(sent.package_ref, "delivery-package:908");
+    assert.equal(sent.source_ref, scope.sourceRef);
+    assert.equal(sent.source_revision, scope.sourceRevision);
+    assert.equal(normalizeWorkDesignDraftAdvice(result, scope).intent, "answer");
+  }
+  await requestWorkDesignContextAdvice("delivery-package:908", { contextDecision: "proceed", contextNote: "Legacy advice", sourceRevision: "version-17", operatorPrompt: "Explain only" }, options);
+  assert.equal(Object.hasOwn(bodies.at(-1), "draft_scope"), false, "legacy advice does not gain a fabricated draft scope");
 });
 
 test("Work Design advice survives the short-read boundary over real delayed HTTP", async (t) => {
