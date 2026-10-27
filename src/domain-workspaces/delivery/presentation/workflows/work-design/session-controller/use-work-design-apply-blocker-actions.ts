@@ -1,13 +1,13 @@
 "use client";
 
 import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useBlockerDraftAdvisor } from "../../shared/blocker-recovery/use-blocker-draft-advisor.ts";
 
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
 import { createLocalDeliveryBlockerDispositionReceipt } from "../../../../local-runtime/index.ts";
 import type { WorkDesignApplyReceipt } from "../../../../work-model/work-design/work-design-types.ts";
 
 import {
-  workDesignBlockerAdvisorResponse,
   workDesignBlockerRecoveryDefaultJustification,
   workDesignBlockerRecoveryRequiresNote,
   workDesignDefaultBlockerRecoveryActionId,
@@ -22,6 +22,7 @@ import type {
 } from "../model/work-design-model.ts";
 
 type UseWorkDesignApplyBlockerActionsParams = {
+  open: boolean;
   activeBlockerIssue: WorkDesignBlockerIssue | null;
   blockerAdvisorPrompt: string;
   blockerDispositionJustification: string;
@@ -50,6 +51,7 @@ type UseWorkDesignApplyBlockerActionsParams = {
 };
 
 export function useWorkDesignApplyBlockerActions({
+  open,
   activeBlockerIssue,
   blockerAdvisorPrompt,
   blockerDispositionJustification,
@@ -70,7 +72,10 @@ export function useWorkDesignApplyBlockerActions({
   setHasUnsavedSessionChanges,
   setDraftValidationAccepted,
 }: UseWorkDesignApplyBlockerActionsParams) {
-  function submitBlockerAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
+  const advisor = useBlockerDraftAdvisor({ role: "work-design-blocker", deliveryPackage, active: open,
+    issue: activeBlockerIssue, action: selectedBlockerRecoveryAction, justification: blockerDispositionJustification,
+    setJustification: (value) => { setBlockerDispositionJustification(value); setHasUnsavedSessionChanges(true); }, disabled: !activeBlockerIssue });
+  async function submitBlockerAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const prompt = blockerAdvisorPrompt.trim();
@@ -80,11 +85,9 @@ export function useWorkDesignApplyBlockerActions({
     }
 
     const turnId = Date.now();
-    const response = workDesignBlockerAdvisorResponse({
-      deliveryPackage,
-      prompt,
-      recoveryAction: selectedBlockerRecoveryAction,
-    });
+    let response: string;
+    try { response = (await advisor.run(prompt)).message; }
+    catch (error) { response = error instanceof Error ? error.message : "Governed advisor unavailable."; }
 
     setBlockerAdvisorPrompt("");
     setBlockerAdvisorTurns((current) => [
@@ -164,6 +167,7 @@ export function useWorkDesignApplyBlockerActions({
   }
 
   return {
+    blockerAdvisorControls: advisor.panelControls,
     openBlockerRecovery,
     recordBlockerDisposition,
     runApplyDraft,

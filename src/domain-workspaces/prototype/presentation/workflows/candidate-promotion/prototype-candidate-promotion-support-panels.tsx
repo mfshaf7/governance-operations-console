@@ -38,6 +38,7 @@ export function PrototypeCandidatePromotionSupportPanels({
   issueTone,
   onDraftChange,
   onRunAdvisor,
+  advisorControls,
   record,
   reviewReady,
   reviewTone,
@@ -55,6 +56,7 @@ export function PrototypeCandidatePromotionSupportPanels({
   issueTone: ReturnType<typeof candidatePromotionReadyTone>;
   onDraftChange: CandidateDraftPatchHandler;
   onRunAdvisor: (event: FormEvent<HTMLFormElement>) => void;
+  advisorControls?: import("react").ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
   record: PrototypeRecord;
   reviewReady: boolean;
   reviewTone: ReturnType<typeof candidatePromotionReadyTone>;
@@ -141,6 +143,7 @@ export function PrototypeCandidatePromotionSupportPanels({
           </TerasList>
         </TerasWizardPanel>
         <TerasAdvisorPanel
+          draftControls={advisorControls}
           density="compact"
           fill
           profileLabel="Candidate Advisor"
@@ -158,7 +161,7 @@ export function PrototypeCandidatePromotionSupportPanels({
               : undefined
           }
           statusLabel={draftStatus.label}
-          statusTitle="Local mock advisor only. Future live support must run through CGG admission and OOS-owned workflow tooling."
+          statusTitle="Request local draft edits through the governed model. Promotion remains an explicit operator decision."
           statusTone={draftStatus.tone}
           transcript={advisorTranscript}
         />

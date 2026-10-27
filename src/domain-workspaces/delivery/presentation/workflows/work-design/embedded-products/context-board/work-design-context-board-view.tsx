@@ -1,6 +1,7 @@
 "use client";
 
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+import type { ComponentProps, Dispatch, FormEvent, SetStateAction } from "react";
+import { TerasAdvisorPanel } from "@/teras";
 
 import {
   ContextBoardWorkbenchView,
@@ -17,6 +18,7 @@ import type {
 } from "./work-design-context-board-types.ts";
 
 type WorkDesignContextBoardViewProps = {
+  contextAdvisorControls?: ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
   applyCompleted: boolean;
   board: ContextBoardController;
   contextAdvisorPrompt: string;
@@ -40,6 +42,7 @@ type WorkDesignContextBoardViewProps = {
 };
 
 export function WorkDesignContextBoardView({
+  contextAdvisorControls,
   applyCompleted,
   board,
   contextAdvisorPrompt,
@@ -90,6 +93,7 @@ export function WorkDesignContextBoardView({
       rail={
         <WorkDesignContextBoardRail
           applyCompleted={applyCompleted}
+          contextAdvisorControls={contextAdvisorControls}
           contextAdvisorPrompt={contextAdvisorPrompt}
           contextAdvisorTranscript={contextAdvisorTranscript}
           contextBriefAccepted={contextBriefAccepted}

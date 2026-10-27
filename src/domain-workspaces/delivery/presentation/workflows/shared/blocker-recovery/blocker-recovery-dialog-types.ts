@@ -44,6 +44,7 @@ export type DeliveryBlockerRecoveryDialogCopy = {
 };
 
 export type DeliveryBlockerRecoveryDialogProps = {
+  blockerAdvisorControls?: import("react").ComponentProps<typeof import("@/teras").TerasAdvisorPanel>["draftControls"];
   activeBlockerIssue: DeliveryBlockerIssue | null;
   blockerAdvisorPrompt: string;
   blockerAdvisorTranscript: DeliveryBlockerAdvisorTranscriptLine[];

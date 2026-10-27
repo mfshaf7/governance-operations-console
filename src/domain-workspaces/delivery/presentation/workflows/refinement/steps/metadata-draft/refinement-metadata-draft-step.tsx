@@ -21,6 +21,7 @@ import type {
 import type {
   RefinementAssistCommand,
   RefinementLiveMode,
+  RefinementOosAssistResult,
 } from "../../../../../live-runtime/refinement-live-types.ts";
 import { RefinementMetadataAdvisor } from "./refinement-metadata-advisor.tsx";
 import { RefinementMetadataWorkbenchView } from "./refinement-metadata-workbench-view.tsx";
@@ -78,9 +79,7 @@ export function RefinementMetadataDraftStep({
     command: RefinementAssistCommand,
   ) => Promise<{
     mode: RefinementLiveMode;
-    result: {
-      suggestion: { rationale: string; summary: string; value: string };
-    } | null;
+    result: RefinementOosAssistResult | null;
   }>;
   resetMetadataDraftValue: (fieldKey: string, value: string) => void;
   resetMetadataDraftValues: (values: Record<string, string>) => void;
@@ -137,6 +136,9 @@ export function RefinementMetadataDraftStep({
       <RefinementSelectedMetadataFieldEditor
         advisor={
           <RefinementMetadataAdvisor
+            sourceRef={deliveryPackage.source_ref}
+            sourceRevision={packet.packet_revision ?? packet.last_saved_at}
+            metadataDraftValues={metadataDraftValues}
             activeStep={activeStep}
             advisorTranscript={advisorTranscript}
             collapsed={advisorCollapsed}

@@ -126,10 +126,12 @@ export function useWorkDesignApplyWorkflow({
   });
   const {
     openBlockerRecovery,
+    blockerAdvisorControls,
     recordBlockerDisposition,
     runApplyDraft,
     submitBlockerAdvisorPrompt,
   } = useWorkDesignApplyBlockerActions({
+    open: applyState.blockerDispositionOpen,
     activeBlockerIssue,
     blockerAdvisorPrompt,
     blockerDispositionJustification,
@@ -170,6 +172,7 @@ export function useWorkDesignApplyWorkflow({
   });
 
   return {
+    blockerAdvisorControls,
     ...applyState,
     activeBlockerIssue,
     matchingBlockerDispositionReceipt,

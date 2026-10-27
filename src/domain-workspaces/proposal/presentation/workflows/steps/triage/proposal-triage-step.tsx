@@ -1,6 +1,7 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useRef, type FormEvent } from "react";
+import { useDraftAdvisor } from "@/agent-console";
 
 import {
   TerasActionRow,
@@ -24,7 +25,6 @@ import type { ProposalWorkspaceScenario } from "../../../../read-model/proposal-
 import { ProposalWorkflowProgressPanel } from "../../session/proposal-workflow-progress-panel.tsx";
 import { proposalSubjectMetadata } from "../../../shared/proposal-display-model.ts";
 import {
-  proposalTriageAdvisorDraft,
   proposalTriageStepProjection,
 } from "./proposal-triage-step-view-model.ts";
 
@@ -47,6 +47,8 @@ export function ProposalTriageStep({
   progressSteps: ProposalWorkflowStepProjection[];
   readOnly?: boolean;
 }) {
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const {
     advisorStatusLabel,
     advisorStatusTitle,
@@ -72,13 +74,24 @@ export function ProposalTriageStep({
       return;
     }
 
-    onChangeDraft({
-      ...draft,
-      ...patch,
-    });
+    const next = { ...draftRef.current, ...patch };
+    draftRef.current = next;
+    onChangeDraft(next);
   }
 
-  function runAdvisor(event: FormEvent<HTMLFormElement>) {
+  const advisor = useDraftAdvisor({
+    disabled: triageLocked,
+    getScope: () => ({ role: "proposal-triage", ref: proposal.id, sourceRef: proposal.backendRecordId,
+      sourceRevision: proposal.recordVersion, context: JSON.stringify({ title: proposal.title, body: proposal.bodyPreview, status: proposal.status }),
+      fields: [{ key: "summary", label: "Triage summary", value: draft.summary, maxLength: 8000 }] }),
+    apply: (edits) => {
+      const summary = edits.find((edit) => edit.field === "summary");
+      if (summary) updateDraft({ summary: String(summary.value) });
+      return edits;
+    },
+  });
+
+  async function runAdvisor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (triageLocked) {
@@ -91,10 +104,9 @@ export function ProposalTriageStep({
       return;
     }
 
-    updateDraft({
-      advisorDraft: proposalTriageAdvisorDraft({ proposal, prompt }),
-      advisorPrompt: "",
-    });
+    updateDraft({ advisorPrompt: "" });
+    try { const reply = await advisor.run(prompt); updateDraft({ advisorDraft: reply.message }); }
+    catch (error) { updateDraft({ advisorDraft: error instanceof Error ? error.message : "Governed advisor unavailable." }); }
   }
 
   return (
@@ -186,6 +198,7 @@ export function ProposalTriageStep({
           <TerasAdvisorPanel
             fill
             profileLabel="Proposal Triage Advisor"
+            draftControls={advisor.panelControls}
             prompt={{
               ariaLabel: "Proposal triage advisor prompt",
               disabled: triageLocked,

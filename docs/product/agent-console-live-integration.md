@@ -50,7 +50,48 @@ The request validator still rejects oversized or unsafe browser input. Sending
 context is not an OOS acknowledgement; only validated owner receipts establish
 successful admission and invocation.
 
-## Authority Boundary
+## Draft assistance from chat
+
+When a visible workflow exposes editable local fields, its advisor can draft or
+revise them on an explicit chat request. Questions and evaluations return an
+answer without edits; ambiguous requests ask for clarification. Nothing runs on
+opening, selecting, refreshing or polling a surface. Use the panel's Cancel to
+stop waiting and Undo advisor edit to restore its last changed fields. Later
+manual edits are preserved; a source, selection or draft change during inference
+prevents the pending proposal from applying. Save/finalize the draft through the
+surface's normal controls. A model failure leaves manual drafting available.
+
+Both primary agents use the same owning advisor in Focus mode when a draft
+surface is active. Their session identity and conversation stay separate.
+Workspace mode continues to provide the bounded workspace overview. The visible
+draft panel shows the last verified effective model and any edit/conflict notice.
+
+Proposal triage/disposition, Prototype Candidate/Baseline, Delivery Work Design,
+Refinement, Execution selected-node text, blocker justification and Definition
+Design expose only their admitted local fields. The active field/section limits
+the scope; opening an unrelated section does not grant broader editing. Work
+Design retains its configured Work Design profile and Refinement its configured
+Refinement profile. Other draft advisors reuse the Agent Console profile and
+current model/effort selection.
+
+For those advisors, `/api/advisor-interaction` verifies the operator session and
+submits the actual bounded local draft and response format as digest-bound CGG
+context through existing OOS sessions. It does not put raw draft bytes into the
+operator prompt. The provider returns inert advice text; strict product
+validation checks its intent, selected fields and complete board/tree transaction
+before a domain setter runs. Existing Work Design assist carries an optional
+`draft_scope` through its own CGG path; no canonical command is added. Refinement
+uses its existing typed selected-field response, including answer-only `none`.
+
+These proposals grant no submit, approve, reject, record, activate, close,
+publish, merge, model or credential authority. Final decisions remain separate
+operator controls. Oversized, malformed, stale, foreign-scope, unreceipted and
+secret-like context fails closed. A canceled or unknown provider completion is
+not silently retried on another model. Source merge alone does not commission
+the extension: exact composed Security acceptance and Platform activation are
+required before operating qualification.
+
+## Canonical authority
 
 The Console submits intent and renders evidence. OOS owns session and
 invocation truth; CGG owns context admission; Platform owns model profile and

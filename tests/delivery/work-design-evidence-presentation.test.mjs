@@ -150,7 +150,9 @@ test("real UI compositions pass runtime mode and log description without hardcod
   assert.match(dialog, /description=\{description\}/);
   assert.doesNotMatch(dialog, /replace these mock rows/);
   for (const path of ["embedded-products/context-board/work-design-context-board-rail.tsx", "embedded-products/build-tree/work-design-build-tree-view.tsx"]) {
-    assert.match(read(path), /Tool-enabled authority is separate from suggestion-only advice/);
-    assert.match(read(path), /statusLabel="tool-profile pending"/);
+    assert.match(read(path), /explicit chat request can/i);
+    assert.match(read(path), /Apply remain operator actions/);
+    assert.match(read(path), /statusLabel="draft assistance"/);
+    assert.match(read(path), /draftControls=/);
   }
 });

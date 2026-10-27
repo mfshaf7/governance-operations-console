@@ -14,6 +14,8 @@ import {
   type AgentInteractionMode,
 } from "../model/agent-context-policy";
 import { inspectAgentInput } from "../model/agent-input-policy";
+import { useFocusedDraftScope } from "./draft-advisor-scope-provider";
+import { advisorScopeIdentity } from "../model/advisor-drafts";
 import {
   deriveAgentProviderReadinessState,
   isAgentProviderStatus,
@@ -136,6 +138,8 @@ export function useAgentConsoleController({
     setCurrentInvocation,
   } = useAgentConsoleSession();
   const contextMode = agentContextMode;
+  const focusedDraft = useFocusedDraftScope();
+  const lastDraftConversationScope = useRef<string | null>(null);
   const [contextModeChanging, setContextModeChanging] = useState(false);
   const [pendingOpenCommand, setPendingOpenCommand] = useState<{ command: string; mode: AgentInteractionMode } | null>(null);
   const [floatingModeMenuOpen, setFloatingModeMenuOpen] = useState(false);
@@ -477,6 +481,17 @@ export function useAgentConsoleController({
     }
 
     if (command === "context" || command === "why this context?") {
+      if (requestedMode === "focused" && focusedDraft) {
+        const scope = focusedDraft.getScope();
+        appendAgentTranscript([terminalEntry("system", [
+          `Active local draft: ${scope.role}`, `Selected draft: ${scope.ref}`,
+          `Source: ${scope.sourceRef} / ${scope.sourceRevision}`,
+          `Fields admitted on the next manual request: ${scope.fields.map((field) => field.label).join(", ")}`,
+          `Draft payload: ${JSON.stringify(scope).length} characters; subject to CGG redaction and budget.`,
+          `Editing: ${scope.readOnly ? "read-only" : "only on an explicit drafting request"}`,
+          "No final workflow action is exposed. CGG/model evidence appears only after a verified reply.",
+        ].join("\n"))]); return true;
+      }
       const contextDecision = evaluateAgentContextPolicy({
         candidate: contextCandidate,
         mode: requestedMode,
@@ -538,6 +553,39 @@ export function useAgentConsoleController({
     setAgentHistoryCursor(null);
     appendAgentTranscript([terminalEntry("operator", command)]);
 
+    if (requestedMode === "focused" && focusedDraft) {
+      const contextDecision = evaluateAgentContextPolicy({ candidate: contextCandidate, mode: requestedMode });
+      if (contextDecision.code !== "cgg-required") {
+        appendAgentTranscript([terminalEntry("error", contextDecision.reason)]); return;
+      }
+      const invocation = createAgentInvocation({ contextDecision, id: `agent-invocation-${crypto.randomUUID()}`, model: null, provider: "governed-workflow-advisor" });
+      const signal = beginAgentRequest(invocation.id);
+      if (!signal) { appendAgentTranscript([terminalEntry("error", "another agent request is already running")]); return; }
+      setCurrentInvocation(invocation);
+      try {
+        const scope = focusedDraft.getScope();
+        const identity = advisorScopeIdentity(scope);
+        const conversation = lastDraftConversationScope.current === identity ? agentConversationTurns.slice(-6) : [];
+        if (lastDraftConversationScope.current !== identity) setAgentConversationTurns([]);
+        lastDraftConversationScope.current = identity;
+        appendAgentTranscript([terminalEntry("system", `Using the active ${scope.role} local draft. Waiting for governed context and model evidence; final workflow decisions remain yours.`)]);
+        const reply = await focusedDraft.run(message, { signal, session: agentSessionBinding,
+          conversation: conversation.map((turn) => ({ role: turn.role === "user" ? "operator" : "advisor", text: turn.content })) });
+        appendAgentTranscript([terminalEntry("agent", reply.message, reply.evidence.effectiveModel ?? reply.evidence.profileId),
+          terminalEntry("system", `CGG projection: ${reply.evidence.contextRef}\nGoverned audit: ${reply.evidence.auditRef}${reply.evidence.receiptRef ? `\nOOS receipt: ${reply.evidence.receiptRef}` : ""}`)]);
+        setCurrentInvocation((current) => current?.id === invocation.id ? { ...current, contextAttached: true,
+          cggReceiptRef: reply.evidence.contextRef, model: reply.evidence.effectiveModel ?? null } : current);
+        setAgentConversationTurns((current) => [...current, { role: "user" as const, content: message }, { role: "assistant" as const, content: reply.message }].slice(-16));
+        settleCurrentAgentInvocation(invocation.id, { state: "completed" });
+      } catch (error) {
+        const text = error instanceof Error ? error.message : "Governed advisor unavailable.";
+        appendAgentTranscript([terminalEntry("error", text)]);
+        settleCurrentAgentInvocation(invocation.id, signal.aborted ? { state: "cancelled" } : { state: "failed", failureCode: "provider-request-failed", error: text });
+      } finally { finishAgentRequest(invocation.id); }
+      return;
+    }
+
+    lastDraftConversationScope.current = null;
     let liveProviderStatus = providerStatus;
 
     if (
@@ -928,7 +976,8 @@ export function useAgentConsoleController({
             ? "Stale"
             : "Unavailable"
           : "Probing";
-  const providerStatusLabel =
+  const focusedDraftScope = contextMode === "focused" ? focusedDraft?.getScope() : null;
+  const providerStatusLabel = focusedDraftScope ? "governed workflow advisor / checked on request" :
     providerState === "online"
       ? `governed AI / ${providerStatus?.model}`
       : providerState === "offline"
@@ -943,14 +992,14 @@ export function useAgentConsoleController({
     mode: contextMode,
   });
   const contextSummary =
-    contextMode === "focused"
+    focusedDraftScope ? `Selected local draft fields: ${focusedDraftScope.fields.map((field) => field.label).join(", ")}. Questions do not edit; final decisions remain yours.` : contextMode === "focused"
       ? contextCandidate?.summary ??
         "Ask generally; no console context candidate is available."
       : contextMode === "workspace"
         ? contextCandidate?.summary ?? "Workspace mode requires a current workspace context candidate."
         : "General mode selected; workspace and active UI context will not be attached.";
   const contextTitle =
-    contextMode === "focused"
+    focusedDraftScope ? `${focusedDraftScope.role} / local draft` : contextMode === "focused"
       ? contextCandidateBadgeLabel(contextCandidate, contextFallbackLabel)
       : contextMode === "workspace"
         ? contextCandidateBadgeLabel(contextCandidate, "Workspace context")

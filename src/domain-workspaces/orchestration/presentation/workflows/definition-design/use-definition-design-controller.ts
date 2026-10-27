@@ -2,6 +2,8 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useDraftAdvisor } from "@/agent-console";
+import { definitionDraftAdvisorFields, applyDefinitionDraftAdvisorEdits } from "./support/definition-draft-advisor-fields.ts";
 
 import type { OrchestrationDefinitionRecord } from "@/domain-workspaces/orchestration/domain/orchestration-definition-types";
 import {
@@ -29,7 +31,6 @@ import type {
   OrchestrationDefinitionValidationFinding,
 } from "../../../work-model/definition-design/definition-design-types.ts";
 import {
-  createDefinitionAdvisorTurn,
   initialDefinitionAdvisorTranscript,
   type DefinitionAdvisorTranscriptLine,
 } from "./support/definition-advisor-context.ts";
@@ -68,6 +69,16 @@ export function useDefinitionDesignController({
   );
   const [closeGuardOpen, setCloseGuardOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const draftAdvisor = useDraftAdvisor({
+    active: draft.activeStage !== "review-request" && !receipt,
+    disabled: Boolean(receipt) || draft.activeStage === "review-request",
+    getScope: () => ({ role: "definition-design", ref: `${draft.draftId}:${draft.activeStage}:${draft.activeSection}:${selectedNodeId}`,
+      sourceRef: draft.baselineRecordId ?? draft.draftId, sourceRevision: "local-definition-draft",
+      context: JSON.stringify({ draft, boundary: "Local definition drafting only. Qualification classification, approval, admission and request routing are operator decisions." }),
+      fields: definitionDraftAdvisorFields(draft, selectedNodeId),
+    }),
+    apply: (edits) => { setDraft(applyDefinitionDraftAdvisorEdits(draft, selectedNodeId, edits)); return edits; },
+  });
 
   useEffect(() => {
     setDraft(initial.draft);
@@ -182,7 +193,7 @@ export function useDefinitionDesignController({
     setStage("define");
   }
 
-  function runAdvisor(event: FormEvent<HTMLFormElement>) {
+  async function runAdvisor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const prompt = advisorPrompt.trim();
 
@@ -190,11 +201,10 @@ export function useDefinitionDesignController({
       return;
     }
 
-    const turn = createDefinitionAdvisorTurn({
-      draft,
-      prompt,
-      sequence: advisorTranscript.length + 1,
-    });
+    setAdvisorPrompt("");
+    let response: string;
+    try { response = (await draftAdvisor.run(prompt)).message; }
+    catch (error) { response = error instanceof Error ? error.message : "Governed advisor unavailable."; }
 
     setAdvisorTranscript((current) => [
       ...current,
@@ -206,11 +216,10 @@ export function useDefinitionDesignController({
       {
         id: `definition-advisor-response-${current.length + 2}`,
         role: "advisor",
-        text: turn.response,
+        text: response,
       },
     ]);
     setAdvisorPrompt("");
-    setPendingPatch(turn.patch);
   }
 
   function applyAdvisorPatch() {
@@ -323,6 +332,7 @@ export function useDefinitionDesignController({
   return {
     actionError,
     advisor: {
+      draftControls: draftAdvisor.panelControls,
       applyPatch: applyAdvisorPatch,
       onPromptChange: setAdvisorPrompt,
       onSubmit: runAdvisor,

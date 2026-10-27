@@ -96,6 +96,7 @@ export async function requestWorkDesignContextAdvice(
         decision: command.contextDecision,
         note: command.contextNote,
       },
+      ...(command.draftScope ? { draft_scope: command.draftScope } : {}),
       operator_prompt: command.operatorPrompt,
       source_revision: command.sourceRevision,
       task_kind: "context_advice",
@@ -121,6 +122,7 @@ export async function requestWorkDesignTreeAdvice(
         tree,
         tree_digest: canonicalDigest(tree),
       },
+      ...(command.draftScope ? { draft_scope: command.draftScope } : {}),
     },
     options,
   );

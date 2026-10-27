@@ -7,6 +7,7 @@ import type { DeliveryBlockerRecoveryDialogProps } from "./blocker-recovery-dial
 type DeliveryBlockerRecoveryAdvisorPanelProps = Pick<
   DeliveryBlockerRecoveryDialogProps,
   | "blockerAdvisorPrompt"
+  | "blockerAdvisorControls"
   | "blockerAdvisorTranscript"
   | "copy"
   | "onChangeBlockerAdvisorPrompt"
@@ -14,6 +15,7 @@ type DeliveryBlockerRecoveryAdvisorPanelProps = Pick<
 >;
 
 export function DeliveryBlockerRecoveryAdvisorPanel({
+  blockerAdvisorControls,
   blockerAdvisorPrompt,
   blockerAdvisorTranscript,
   copy,
@@ -22,6 +24,7 @@ export function DeliveryBlockerRecoveryAdvisorPanel({
 }: DeliveryBlockerRecoveryAdvisorPanelProps) {
   return (
     <TerasAdvisorPanel
+      draftControls={blockerAdvisorControls}
       density="compact"
       fill
       profileLabel={copy?.advisorProfileLabel ?? "Blocker Recovery Advisor"}
@@ -35,10 +38,10 @@ export function DeliveryBlockerRecoveryAdvisorPanel({
         rows: 2,
         value: blockerAdvisorPrompt,
       }}
-      statusLabel="mock only"
+      statusLabel="draft assistance"
       statusTitle={
         copy?.advisorStatusTitle ??
-        "Local mock advisor only. Future live support must run through CGG admission and OOS-owned Work Design tooling."
+        "An explicit chat request may draft the local justification. Record and recovery actions remain operator decisions."
       }
       statusTone="warn"
       transcript={blockerAdvisorTranscript}

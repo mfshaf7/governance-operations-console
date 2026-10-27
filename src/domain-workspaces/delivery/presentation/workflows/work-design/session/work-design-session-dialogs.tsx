@@ -187,6 +187,7 @@ export function WorkDesignSessionDialogs({
         selectedBlockerRecoveryAction,
       }}
       blockerRecoveryDialog={{
+        blockerAdvisorControls: applyWorkflow.blockerAdvisorControls,
         activeBlockerIssue,
         blockerAdvisorPrompt,
         blockerAdvisorTranscript,

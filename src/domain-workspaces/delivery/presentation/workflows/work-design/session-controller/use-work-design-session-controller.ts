@@ -38,8 +38,8 @@ import {
 } from "../view-model/work-design-current-move.ts";
 import { workDesignProgressActiveStep } from "../view-model/work-design-step-model.ts";
 import type { WorkDesignBoardSnapshot } from "../model/work-design-model.ts";
-import { workDesignMockContextAdvisorAdapter } from "../view-model/work-design-context-advisor-view-model.ts";
-import { workDesignBuildAdvisorAdapter } from "../../../../product-adapters/build-tree/index.ts";
+import { normalizeWorkDesignDraftAdvice } from "../../../../live-runtime/work-design-draft-advisor.ts";
+import type { AdvisorTransport } from "@/agent-console/model/advisor-drafts";
 
 type UseWorkDesignSessionControllerParams = {
   deliveryPackage: DeliveryPackageSummary;
@@ -265,31 +265,17 @@ export function useWorkDesignSessionController({
   const sourceApplyComplete =
     sourceWorkDesignComplete && contextDecision === "proceed";
   const applyCompleted = applyReceiptRecorded || sourceWorkDesignClosed;
-  const requestTreeAdvice = useCallback(
-    async ({
-      operatorPrompt,
-      selectedNode,
-      tree,
-    }: {
-      operatorPrompt: string;
-      selectedNode: typeof initialTree;
-      tree: typeof initialTree;
-    }) => {
+  const requestTreeAdvice = useCallback<AdvisorTransport>(
+    async (scope, operatorPrompt, _signal, conversation) => {
+      const context = JSON.parse(scope.context);
       const live = await liveRuntime.treeAdvice({
         operatorPrompt,
-        selectedNodeId: selectedNode.id,
-        tree,
+        selectedNodeId: context.selectedNodeId,
+        tree: scope.fields.find((field) => field.key === "tree")!.value as typeof initialTree,
+        draftScope: { scope, conversation },
       });
-      if (live.result) return live.result;
-      return workDesignBuildAdvisorAdapter({
-        finalized_brief_ref: contextFinalizedBrief.metadataPacketRef,
-        operator_prompt: operatorPrompt,
-        package_ref: deliveryPackage.delivery_package_id,
-        request_id: `build-tree-${Date.now()}`,
-        selected_node: selectedNode,
-        source_ref: deliveryPackage.source_ref,
-        tree_snapshot: tree,
-      });
+      if (!live.result) throw Error("A live governed advisor is required. Manual drafting remains available.");
+      return normalizeWorkDesignDraftAdvice(live.result, scope);
     },
     [
       contextFinalizedBrief.metadataPacketRef,
@@ -299,6 +285,7 @@ export function useWorkDesignSessionController({
     ],
   );
   const buildTree = useWorkDesignBuildTree({
+    active: activeStep === "build",
     applyCompleted,
     contextFinalizedBrief,
     deliveryPackage,
@@ -313,33 +300,34 @@ export function useWorkDesignSessionController({
       setDraftReviewAccepted(false);
     },
     requestTreeAdvice,
+    sourceRevision: liveRuntime.projection?.source.revision ?? "disconnected-preview",
   });
   const { metrics, tree } = buildTree;
   const reviewTreeDialog = useWorkDesignReviewTreeDialog({ tree });
   const contextActions = useWorkDesignContextActions({
+    coreNodes: contextBoardCoreNodes,
+    sources: contextSources,
+    active: activeStep === "context",
     contextAdvisorPrompt,
     contextBriefReadOnly,
     contextBriefReady,
     contextDecision,
     contextOperatorNote,
     deliveryPackage,
-    requestContextAdvice: async (request) => {
+    sourceRevision: liveRuntime.projection?.source.revision ?? "disconnected-preview",
+    captureBoard: contextBoard.captureContextBoardSnapshot,
+    commitBoard: contextBoard.commitCurrentContextBoardHistorySnapshot,
+    restoreBoard: contextBoard.restoreContextBoardSnapshot,
+    setContextOperatorNote,
+    requestContextAdvice: async (scope, operatorPrompt, _signal, conversation) => {
       const live = await liveRuntime.contextAdvice({
-        contextDecision: request.context_decision ?? "proceed",
-        contextNote: request.context_note ?? "",
-        operatorPrompt: request.operator_prompt,
+        contextDecision,
+        contextNote: String(scope.fields.find((field) => field.key === "note")!.value),
+        operatorPrompt,
+        draftScope: { scope, conversation },
       });
-      if (live.result) {
-        return {
-          advisor_mode: "context_session",
-          confidence: live.result.confidence,
-          required_operator_action: live.result.required_operator_action,
-          response_id: live.result.response_id,
-          status: live.result.status,
-          text: live.result.text,
-        };
-      }
-      return workDesignMockContextAdvisorAdapter(request);
+      if (!live.result) throw Error("A live governed advisor is required. Manual drafting remains available.");
+      return normalizeWorkDesignDraftAdvice(live.result, scope);
     },
     setActiveStep,
     setApplyReceiptRecorded,

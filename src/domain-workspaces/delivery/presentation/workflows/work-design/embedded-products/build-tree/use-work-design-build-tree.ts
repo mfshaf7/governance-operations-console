@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useDraftAdvisor } from "@/agent-console";
+import type { AdvisorTransport } from "@/agent-console/model/advisor-drafts";
+import { applyWorkDesignAdvisorPatch } from "../../../../../product-adapters/build-tree/index.ts";
 
 import type { DeliveryPackageSummary } from "../../../../../read-model/index.ts";
 import {
@@ -43,28 +46,25 @@ import {
 import type { WorkDesignScaffoldSection } from "../../../../../product-adapters/build-tree/index.ts";
 
 type UseWorkDesignBuildTreeOptions = {
+  active: boolean;
   applyCompleted: boolean;
   contextFinalizedBrief: WorkDesignFinalizedBrief;
   deliveryPackage: DeliveryPackageSummary;
   initialTree: WorkDesignNode;
   onTreeDirty: () => void;
-  requestTreeAdvice: (request: {
-    operatorPrompt: string;
-    selectedNode: WorkDesignNode;
-    tree: WorkDesignNode;
-  }) => Promise<{
-    response_id: string;
-    text: string;
-  }>;
+  requestTreeAdvice: AdvisorTransport;
+  sourceRevision: string;
 };
 
 export function useWorkDesignBuildTree({
+  active,
   applyCompleted,
   contextFinalizedBrief,
   deliveryPackage,
   initialTree,
   onTreeDirty,
   requestTreeAdvice,
+  sourceRevision,
 }: UseWorkDesignBuildTreeOptions) {
   const [deleteBlockedNode, setDeleteBlockedNode] =
     useState<WorkDesignNode | null>(null);
@@ -101,6 +101,23 @@ export function useWorkDesignBuildTree({
     () => findWorkDesignNode(tree, selectedNodeId) ?? tree,
     [selectedNodeId, tree],
   );
+  const advisor = useDraftAdvisor({
+    active,
+    disabled: applyCompleted,
+    getScope: () => ({ role: "work-design-tree", ref: `${deliveryPackage.delivery_package_id}:${selectedNode.id}`,
+      sourceRef: deliveryPackage.source_ref, sourceRevision, packageRef: deliveryPackage.delivery_package_id,
+      context: JSON.stringify({ packageTitle: deliveryPackage.display_name, selectedNodeId: selectedNode.id,
+        contextBrief: contextFinalizedBrief.note, posture: "Local planning draft; no canonical apply or PI commitment." }),
+      fields: [{ key: "tree", label: "Work Design tree", value: tree, kind: "tree" }],
+    }),
+    apply: (edits) => {
+      const next = applyWorkDesignAdvisorPatch(tree, edits[0].value);
+      markTreeDirty(next); setExpandedNodeIds(workDesignInitialExpandedNodeIds(next));
+      return [{ field: "tree", value: next }];
+    },
+    restore: (edits) => { markTreeDirty(edits[0].value as WorkDesignNode); },
+    transport: requestTreeAdvice,
+  });
   const scaffoldNode = scaffoldNodeId
     ? findWorkDesignNode(tree, scaffoldNodeId)
     : null;
@@ -323,7 +340,6 @@ export function useWorkDesignBuildTree({
       return;
     }
 
-    const node = selectedNode;
     const turnId = Date.now();
     setBuildAdvisorTurns((current) => [
       ...current,
@@ -335,17 +351,13 @@ export function useWorkDesignBuildTree({
     ]);
     setBuildAdvisorPrompt("");
     try {
-      const response = await requestTreeAdvice({
-        operatorPrompt: prompt,
-        selectedNode: node,
-        tree,
-      });
+      const response = await advisor.run(prompt);
       setBuildAdvisorTurns((current) => [
         ...current,
         {
-          id: response.response_id,
+          id: `advisor-build-${turnId}`,
           role: "advisor",
-          text: response.text,
+          text: response.message,
         },
       ]);
     } catch (error) {
@@ -467,6 +479,7 @@ export function useWorkDesignBuildTree({
   }
 
   return {
+    treeAdvisorControls: advisor.panelControls,
     addFeature,
     addRiskBranch,
     addStory,
@@ -515,6 +528,7 @@ export function useWorkDesignBuildTree({
     updateNodeTitle,
     updateScaffoldSection,
   } satisfies {
+    treeAdvisorControls: typeof advisor.panelControls;
     addFeature: (parentId?: string) => void;
     addRiskBranch: (parentId?: string) => void;
     addStory: (parentId: string) => void;

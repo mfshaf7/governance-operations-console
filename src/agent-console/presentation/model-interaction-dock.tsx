@@ -127,7 +127,7 @@ export function ModelInteractionDock({
                 {title}
               </p>
               <p className="model-dock-subtitle mt-1 truncate text-xs">
-                {providerOnline ? `OOS reachable · ${providerStatus?.model ?? "configured profile"}` : "OOS reachability is not confirmed"}
+                {providerStatusLabel}
               </p>
             </div>
           </div>

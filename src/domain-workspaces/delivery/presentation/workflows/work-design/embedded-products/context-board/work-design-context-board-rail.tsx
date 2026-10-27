@@ -18,6 +18,7 @@ import type {
 type WorkDesignContextBoardRailProps = {
   applyCompleted: boolean;
   contextAdvisorPrompt: string;
+  contextAdvisorControls?: import("react").ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
   contextAdvisorTranscript: WorkDesignAdvisorTranscriptLine[];
   contextBriefAccepted: boolean;
   contextBriefDisplayTitle: string;
@@ -41,6 +42,7 @@ type WorkDesignContextBoardRailProps = {
 export function WorkDesignContextBoardRail({
   applyCompleted,
   contextAdvisorPrompt,
+  contextAdvisorControls,
   contextAdvisorTranscript,
   contextBriefAccepted,
   contextBriefDisplayTitle,
@@ -169,6 +171,7 @@ export function WorkDesignContextBoardRail({
       </TerasPanel>
 
       <TerasAdvisorPanel
+        draftControls={contextAdvisorControls}
         className={styles.contextBoardAdvisorPanel}
         density="compact"
         fill
@@ -186,9 +189,9 @@ export function WorkDesignContextBoardRail({
           rows: 1,
           value: contextAdvisorPrompt,
         }}
-        statusLabel="tool-profile pending"
-        statusTitle="Tool-enabled authority is separate from suggestion-only advice. This panel does not establish tool-profile activation or grant ART/OOS mutation authority."
-        statusTone="warn"
+        statusLabel="draft assistance"
+        statusTitle="An explicit chat request can edit this local note or diagram. Finalize and Apply remain operator actions."
+        statusTone="info"
         transcript={contextAdvisorTranscript}
       />
     </aside>

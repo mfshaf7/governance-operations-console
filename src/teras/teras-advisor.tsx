@@ -13,6 +13,7 @@ import { TerasPanel } from "./teras-panel";
 import { TerasStatusPill } from "./teras-status-pill";
 import type { TerasTone } from "./teras-types";
 import { cx } from "./teras-utils";
+import { TerasActionButton, TerasActionRow } from "./teras-action";
 
 type TerasAdvisorPromptConfig = {
   ariaLabel: string;
@@ -29,6 +30,7 @@ export function TerasAdvisorPanel({
   className,
   collapsed = false,
   density = "standard",
+  draftControls,
   fill = false,
   footer,
   onToggleCollapsed,
@@ -42,6 +44,10 @@ export function TerasAdvisorPanel({
   className?: string;
   collapsed?: boolean;
   density?: "compact" | "standard";
+  draftControls?: {
+    busy: boolean; canUndo: boolean; onUndo: () => void; onCancel: () => void;
+    notice: string | null; evidenceLabel: string | null;
+  };
   fill?: boolean;
   footer?: ReactNode;
   onToggleCollapsed?: () => void;
@@ -146,7 +152,7 @@ export function TerasAdvisorPanel({
                 <textarea
                   aria-label={prompt.ariaLabel}
                   className={styles.advisorTerminalInput}
-                  disabled={prompt.disabled}
+                  disabled={prompt.disabled || draftControls?.busy}
                   onChange={(event) => prompt.onChange(event.target.value)}
                   placeholder={prompt.placeholder}
                   readOnly={prompt.readOnly}
@@ -156,12 +162,13 @@ export function TerasAdvisorPanel({
                 <button
                   className={styles.advisorTerminalRunButton}
                   disabled={
-                    prompt.disabled || prompt.readOnly || !prompt.value.trim()
+                    prompt.disabled || prompt.readOnly || (!draftControls?.busy && !prompt.value.trim())
                   }
-                  type="submit"
+                  type={draftControls?.busy ? "button" : "submit"}
+                  onClick={draftControls?.busy ? draftControls.onCancel : undefined}
                 >
                   <SendHorizonal aria-hidden="true" size={14} />
-                  run
+                  {draftControls?.busy ? "cancel" : "run"}
                 </button>
               </div>
             </form>
@@ -169,6 +176,15 @@ export function TerasAdvisorPanel({
         </div>
       )}
       {collapsed ? null : footer}
+      {collapsed || !draftControls ? null : (
+        <div aria-live="polite">
+          {draftControls.notice ? <p>{draftControls.notice}</p> : null}
+          {draftControls.evidenceLabel ? <small>{draftControls.evidenceLabel}</small> : null}
+          {draftControls.canUndo ? <TerasActionRow spacing="compact"><TerasActionButton
+            disabled={draftControls.busy} onClick={draftControls.onUndo} emphasis="secondary"
+          >Undo advisor edit</TerasActionButton></TerasActionRow> : null}
+        </div>
+      )}
     </TerasPanel>
   );
 }

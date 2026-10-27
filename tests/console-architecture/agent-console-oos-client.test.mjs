@@ -161,6 +161,23 @@ test("case:agent-console-console-protocol-negative rejects wrong caller, profile
   );
 });
 
+test("local draft bytes and response instructions enter digest-bound CGG content without changing the operator prompt", async () => {
+  const calls = [];
+  const scope = { role: "proposal-triage", ref: "proposal:test", sourceRef: "proposal:test", sourceRevision: "1",
+    context: "Current selected proposal", fields: [{ key: "summary", label: "Summary", value: "Original manual text" }] };
+  const request = input(); request.message = "Draft the summary.";
+  const result = await invokeGovernedAgent(request, { config, draftContext: { scope, conversation: [{ role: "operator", text: "Keep the original scope" }] },
+    fetchImpl: async (url, init) => { calls.push(JSON.parse(init.body)); return Response.json(calls.length === 1 ? projection() : completedProjection()); } });
+  const invocation = calls[1], content = JSON.parse(invocation.candidate.content);
+  assert.deepEqual(content.operator_draft, scope);
+  assert.equal(content.conversation[0].text, "Keep the original scope");
+  assert.match(content.requested_response_format, /Questions.*edits=\[\]/s);
+  assert.equal(invocation.prompt, "Draft the summary.");
+  assert.equal(invocation.budget_tokens, 8000);
+  assert.equal(invocation.candidate.content_digest, `sha256:${createHash("sha256").update(invocation.candidate.content).digest("hex")}`);
+  assert.equal(result.modelProfileId, "agent-console-assistant-v1");
+});
+
 test("session close reads the exact revision before closing and treats absence as clean", async () => {
   const calls = [];
   const fetchImpl = async (url, init) => {

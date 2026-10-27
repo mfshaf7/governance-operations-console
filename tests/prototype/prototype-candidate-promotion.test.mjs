@@ -8,6 +8,25 @@ import {
 } from "../../src/domain-workspaces/prototype/work-model/workflows/candidate-promotion/prototype-candidate-promotion-model.ts";
 import { baselinePromotionDraftFromRecord } from "../../src/domain-workspaces/prototype/presentation/workflows/baseline-promotion/prototype-baseline-promotion-view-model.ts";
 import { candidatePromotionDraftFromRecord } from "../../src/domain-workspaces/prototype/presentation/workflows/candidate-promotion/prototype-candidate-promotion-view-model.ts";
+import { candidateAdvisorFields, applyCandidateAdvisorEdits, baselineAdvisorFields, applyBaselineAdvisorEdits } from "../../src/domain-workspaces/prototype/presentation/workflows/shared/prototype-advisor-fields.ts";
+
+test("governed maturity drafts expose narrative fields and preserve manual fields and separate promotion decisions", () => {
+  const draft = candidatePromotionDraftFromRecord(null);
+  draft.objective = "Manual objective"; draft.scope.included = ["Manual first line", "", ""];
+  const fields = candidateAdvisorFields(draft);
+  assert.ok(!fields.some((field) => field.key === "decision"));
+  const next = applyCandidateAdvisorEdits(draft, [{ field: "proof.criterion", value: "Demonstrate the requested workflow" }]);
+  assert.equal(next.objective, "Manual objective"); assert.equal(next.decision, draft.decision);
+  assert.deepEqual(next.scope.included, draft.scope.included);
+  assert.deepEqual(applyCandidateAdvisorEdits(next, [{ field: "scope.included", value: fields.find((field) => field.key === "scope.included").value }]).scope.included, draft.scope.included);
+  assert.throws(() => applyCandidateAdvisorEdits(draft, [{ field: "objective", value: "Partial overwrite" }, { field: "scope.included", value: "x".repeat(121) }]));
+  assert.equal(draft.objective, "Manual objective");
+  assert.throws(() => applyCandidateAdvisorEdits(draft, [{ field: "decision", value: "promote-candidate" }]));
+  const baseline = baselinePromotionDraftFromRecord(null);
+  assert.ok(!baselineAdvisorFields(baseline).some((field) => field.key === "decision"));
+  assert.equal(applyBaselineAdvisorEdits(baseline, [{ field: "baselineTitle", value: "Requested title" }]).decision, baseline.decision);
+  assert.throws(() => applyBaselineAdvisorEdits(baseline, [{ field: "decision", value: "approve-baseline" }]));
+});
 
 test("Candidate Promotion requires structured audience, proof, and scope truth", () => {
   const record = prototypeWorkspaceReadModel.records.find(

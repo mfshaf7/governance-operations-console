@@ -45,6 +45,7 @@ export function DefinitionDesignSupport({
   setSection,
 }: {
   advisor: {
+    draftControls?: import("react").ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
     applyPatch: () => void;
     onPromptChange: (value: string) => void;
     onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -178,6 +179,7 @@ function DefinitionAdvisor({
   draft,
 }: {
   advisor: {
+    draftControls?: import("react").ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
     applyPatch: () => void;
     onPromptChange: (value: string) => void;
     onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -190,6 +192,7 @@ function DefinitionAdvisor({
 }) {
   return (
     <TerasAdvisorPanel
+      draftControls={advisor.draftControls}
       density="compact"
       fill
       footer={
@@ -234,8 +237,8 @@ function DefinitionAdvisor({
         rows: 2,
         value: advisor.prompt,
       }}
-      statusLabel="Prototype local"
-      statusTitle="Synthetic advisor only. It cannot approve, route, mutate, or activate a definition."
+      statusLabel="draft assistance"
+      statusTitle="Explicit chat requests may edit the current local section. Qualification, routing and activation remain operator decisions."
       statusTone="info"
       transcript={advisor.transcript}
     />

@@ -1,11 +1,13 @@
 "use client";
 
 import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useDraftAdvisor } from "@/agent-console";
+import type { AdvisorTransport, AdvisorEdit } from "@/agent-console/model/advisor-drafts";
+import { applyContextBoardAdvisorPatch, type ContextBoardSnapshot } from "@/product-apps/context-board";
 
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
 
 import {
-  workDesignMockContextAdvisorAdapter,
   type WorkDesignAdvisorTranscriptLine,
 } from "../view-model/work-design-context-advisor-view-model.ts";
 import type {
@@ -14,15 +16,21 @@ import type {
 } from "../model/work-design-model.ts";
 
 type UseWorkDesignContextActionsParams = {
+  active: boolean;
+  coreNodes: Array<{ id: string; label: string; detail: string }>;
+  sources: unknown;
   contextAdvisorPrompt: string;
   contextBriefReadOnly: boolean;
   contextBriefReady: boolean;
   contextDecision: WorkDesignContextDecision;
   contextOperatorNote: string;
   deliveryPackage: DeliveryPackageSummary;
-  requestContextAdvice: (
-    request: Parameters<typeof workDesignMockContextAdvisorAdapter>[0],
-  ) => Promise<ReturnType<typeof workDesignMockContextAdvisorAdapter>>;
+  requestContextAdvice: AdvisorTransport;
+  sourceRevision: string;
+  captureBoard: () => ContextBoardSnapshot;
+  restoreBoard: (snapshot: ContextBoardSnapshot) => void;
+  commitBoard: () => void;
+  setContextOperatorNote: Dispatch<SetStateAction<string>>;
   setActiveStep: Dispatch<SetStateAction<WorkDesignStep>>;
   setApplyReceiptRecorded: Dispatch<SetStateAction<boolean>>;
   setApplyRunStartedAt: Dispatch<SetStateAction<string | null>>;
@@ -40,6 +48,8 @@ type UseWorkDesignContextActionsParams = {
 };
 
 export function useWorkDesignContextActions({
+  active,
+  coreNodes, sources,
   contextAdvisorPrompt,
   contextBriefReadOnly,
   contextBriefReady,
@@ -47,6 +57,7 @@ export function useWorkDesignContextActions({
   contextOperatorNote,
   deliveryPackage,
   requestContextAdvice,
+  sourceRevision, captureBoard, restoreBoard, commitBoard, setContextOperatorNote,
   setActiveStep,
   setApplyReceiptRecorded,
   setApplyRunStartedAt,
@@ -60,6 +71,28 @@ export function useWorkDesignContextActions({
   setDraftValidationAccepted,
   treeDraftStale,
 }: UseWorkDesignContextActionsParams) {
+  function applyDraft(edits: AdvisorEdit[], undo = false) {
+    const boardEdit = edits.find((edit) => edit.field === "board");
+    const nextBoard = boardEdit ? (undo ? boardEdit.value as ContextBoardSnapshot : applyContextBoardAdvisorPatch(captureBoard(), boardEdit.value, coreNodes.map((node) => node.id))) : null;
+    if (nextBoard) { commitBoard(); restoreBoard(nextBoard); }
+    for (const edit of edits) if (edit.field === "note") setContextOperatorNote(String(edit.value));
+    setContextBriefAccepted(false); setHasUnsavedSessionChanges(true);
+    setApplyReceiptRecorded(false); setApplyRunStartedAt(null);
+    setDraftValidationAccepted(false); setDraftReviewAccepted(false);
+    return edits.map((edit) => edit.field === "board" ? { field: "board", value: nextBoard } : edit);
+  }
+  const advisor = useDraftAdvisor({
+    active,
+    disabled: contextBriefReadOnly,
+    getScope: () => ({ role: "work-design-context", ref: deliveryPackage.delivery_package_id,
+      sourceRef: deliveryPackage.source_ref, sourceRevision, packageRef: deliveryPackage.delivery_package_id,
+      context: JSON.stringify({ packageTitle: deliveryPackage.display_name, summary: deliveryPackage.summary, contextDecision, coreNodes, sources }),
+      fields: [{ key: "note", label: "Context note", value: contextOperatorNote },
+        { key: "board", label: "Context diagram", value: captureBoard(), kind: "board" }],
+    }),
+    apply: (edits) => applyDraft(edits), restore: (edits) => { applyDraft(edits, true); },
+    transport: requestContextAdvice,
+  });
   function updateContextDecision(decision: WorkDesignContextDecision) {
     if (contextBriefReadOnly) {
       return;
@@ -98,22 +131,13 @@ export function useWorkDesignContextActions({
       },
     ]);
     try {
-      const response = await requestContextAdvice({
-        advisor_mode: "context_session",
-        allowed_response_types: ["text"],
-        context_decision: contextDecision,
-        context_note: contextOperatorNote,
-        operator_prompt: prompt,
-        package_ref: deliveryPackage.delivery_package_id,
-        request_id: `context-session-${turnId}`,
-        source_ref: deliveryPackage.source_ref,
-      });
+      const response = await advisor.run(prompt);
       setContextAdvisorTurns((current) => [
         ...current,
         {
-          id: response.response_id,
+          id: `advisor-context-${turnId}`,
           role: "advisor",
-          text: response.text,
+          text: response.message,
         },
       ]);
     } catch (error) {
@@ -158,6 +182,7 @@ export function useWorkDesignContextActions({
   }
 
   return {
+    contextAdvisorControls: advisor.panelControls,
     acceptContextBrief,
     submitContextAdvisorPrompt,
     updateContextDecision,

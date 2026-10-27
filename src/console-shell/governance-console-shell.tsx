@@ -5,6 +5,7 @@ import {
   type AgentProviderStatus,
   type AgentRuntimeIdentity,
   AgentRuntimePresenceProvider,
+  DraftAdvisorScopeProvider,
   ModelInteractionDock,
   useAgentConsoleSession,
   useAgentProviderStatus,
@@ -49,7 +50,9 @@ export function GovernanceConsoleShell() {
 
   return (
     <AgentRuntimePresenceProvider>
+      <DraftAdvisorScopeProvider>
       <GovernanceConsoleContent providerStatus={providerStatus} />
+      </DraftAdvisorScopeProvider>
     </AgentRuntimePresenceProvider>
   );
 }

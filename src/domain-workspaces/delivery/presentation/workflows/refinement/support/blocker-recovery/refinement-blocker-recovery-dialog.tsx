@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
+import { useBlockerDraftAdvisor } from "../../../shared/blocker-recovery/use-blocker-draft-advisor.ts";
 
 import type { DeliveryPackageSummary } from "../../../../../read-model/index.ts";
 
@@ -19,7 +20,6 @@ import {
 } from "../../../shared/blocker-recovery/index.ts";
 import { formatDeliveryDateTime } from "../../../../shared/format/format-date-time.ts";
 import {
-  refinementBlockerAdvisorResponse,
   refinementBlockerIssue,
   refinementBlockerRecoveryActions,
   refinementBlockerResultProjection,
@@ -118,7 +118,10 @@ export function DeliveryRefinementBlockerRecoveryDialog({
     ...blockerAdvisorTurns,
   ];
 
-  function submitBlockerAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
+  const advisor = useBlockerDraftAdvisor({ role: "refinement-blocker", deliveryPackage, active: open,
+    issue: activeBlockerIssue, action: selectedBlockerRecoveryAction, justification: blockerDispositionJustification,
+    setJustification: setBlockerDispositionJustification, disabled: !open || !activeBlockerIssue });
+  async function submitBlockerAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const prompt = blockerAdvisorPrompt.trim();
@@ -128,6 +131,9 @@ export function DeliveryRefinementBlockerRecoveryDialog({
     }
 
     const turnId = Date.now();
+    let response: string;
+    try { response = (await advisor.run(prompt)).message; }
+    catch (error) { response = error instanceof Error ? error.message : "Governed advisor unavailable."; }
 
     setBlockerAdvisorPrompt("");
     setBlockerAdvisorTurns((current) => [
@@ -140,12 +146,7 @@ export function DeliveryRefinementBlockerRecoveryDialog({
       {
         id: `advisor-refinement-blocker-${turnId}`,
         role: "advisor",
-        text: refinementBlockerAdvisorResponse({
-          activeBlockerIssue,
-          deliveryPackage,
-          prompt,
-          recoveryAction: selectedBlockerRecoveryAction,
-        }),
+        text: response,
       },
     ]);
   }
@@ -177,6 +178,7 @@ export function DeliveryRefinementBlockerRecoveryDialog({
   return (
     <>
       <DeliveryBlockerRecoveryDialog
+        blockerAdvisorControls={advisor.panelControls}
         activeBlockerIssue={activeBlockerIssue}
         blockerAdvisorPrompt={blockerAdvisorPrompt}
         blockerAdvisorTranscript={blockerAdvisorTranscript}
@@ -216,7 +218,7 @@ export function DeliveryRefinementBlockerRecoveryDialog({
             "Ask which metadata recovery action fits this blocker...",
           advisorProfileLabel: "Refinement Blocker Advisor",
           advisorStatusTitle:
-            "Local mock advisor only. Future live support must run through CGG admission and OOS-owned Refinement tooling.",
+            "An explicit chat request can draft the justification. Record and recovery actions remain operator decisions.",
           description:
             "Normal Refinement stays locked. Diagnose the blocked metadata gate here, choose a valid recovery action, and record proof that either clears the blocker or keeps it blocked.",
           kicker: "Refinement Blocker",

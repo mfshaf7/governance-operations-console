@@ -2,6 +2,8 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { useDraftAdvisor } from "@/agent-console";
+import { baselineAdvisorFields, applyBaselineAdvisorEdits } from "../shared/prototype-advisor-fields.ts";
 
 import {
   TerasDraftCloseGuardDialog,
@@ -35,7 +37,6 @@ import {
   baselineDecisionActionLabel,
   baselineDecisionTone,
   baselineEvidenceChecklistRows,
-  baselinePromotionAdvisorDraft,
   baselinePromotionDraftComplete,
   baselinePromotionDraftDirty,
   baselinePromotionDraftFromRecord,
@@ -72,6 +73,19 @@ export function PrototypeBaselinePromotionModal({
   );
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const advisor = useDraftAdvisor({
+    active: Boolean(record),
+    disabled: !record || submitting || ownerProgress?.pending === true ||
+      prototypeMaturityRequestPending(ownerProgress) || Boolean(record && getPrototypeCommandView(record, "record-baseline-promotion").disabledReason),
+    getScope: () => {
+      if (!record) throw Error("Select a Prototype record first.");
+      return { role: "prototype-baseline", ref: record.id, sourceRef: record.sourceRef,
+        sourceRevision: record.projectionVersion,
+        context: JSON.stringify({ name: record.name, summary: record.summary, candidate: record.candidate, baseline: record.baseline, decision: draft.decision }),
+        fields: baselineAdvisorFields(draft) };
+    },
+    apply: (edits) => { setDraft(applyBaselineAdvisorEdits(draft, edits)); return edits; },
+  });
 
   useEffect(() => {
     if (record) {
@@ -186,7 +200,7 @@ export function PrototypeBaselinePromotionModal({
     }
   }
 
-  function runAdvisor(event: FormEvent<HTMLFormElement>) {
+  async function runAdvisor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!draftMutable) {
@@ -199,10 +213,9 @@ export function PrototypeBaselinePromotionModal({
       return;
     }
 
-    updateDraft({
-      advisorDraft: baselinePromotionAdvisorDraft(activeRecord, draft, prompt),
-      advisorPrompt: "",
-    });
+    setDraft((current) => ({ ...current, advisorPrompt: "" }));
+    try { const reply = await advisor.run(prompt); setDraft((current) => ({ ...current, advisorDraft: reply.message })); }
+    catch (error) { setDraft((current) => ({ ...current, advisorDraft: error instanceof Error ? error.message : "Governed advisor unavailable." })); }
   }
 
   async function recordBaselineDecision() {
@@ -299,6 +312,7 @@ export function PrototypeBaselinePromotionModal({
             draftMutable={draftMutable}
             onDraftChange={updateDraft}
             onRunAdvisor={runAdvisor}
+            advisorControls={advisor.panelControls}
             packetDefinitionReady={packetDefinitionReady}
             packetDispositionsReady={packetDispositionsReady}
             packetReady={packetReady}

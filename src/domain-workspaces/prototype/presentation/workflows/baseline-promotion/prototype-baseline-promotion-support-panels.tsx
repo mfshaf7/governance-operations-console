@@ -38,6 +38,7 @@ export function PrototypeBaselinePromotionSupportPanels({
   draftMutable,
   onDraftChange,
   onRunAdvisor,
+  advisorControls,
   packetDefinitionReady,
   packetDispositionsReady,
   packetReady,
@@ -61,6 +62,7 @@ export function PrototypeBaselinePromotionSupportPanels({
   draftMutable: boolean;
   onDraftChange: BaselineDraftPatchHandler;
   onRunAdvisor: (event: FormEvent<HTMLFormElement>) => void;
+  advisorControls?: import("react").ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
   packetDefinitionReady: boolean;
   packetDispositionsReady: boolean;
   packetReady: boolean;
@@ -133,6 +135,7 @@ export function PrototypeBaselinePromotionSupportPanels({
           </TerasList>
         </TerasWizardPanel>
         <TerasAdvisorPanel
+          draftControls={advisorControls}
           density="compact"
           fill
           profileLabel="Baseline Advisor"
@@ -150,7 +153,7 @@ export function PrototypeBaselinePromotionSupportPanels({
               : undefined
           }
           statusLabel={packetStatus.label}
-          statusTitle="Local mock advisor only. Future live support must run through CGG admission and OOS-owned workflow tooling."
+          statusTitle="Request local draft edits through the governed model. Baseline acceptance remains an explicit operator decision."
           statusTone={packetStatus.tone}
           transcript={advisorTranscript}
         />
