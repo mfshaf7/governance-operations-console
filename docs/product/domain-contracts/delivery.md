@@ -519,6 +519,10 @@ Source ownership facts:
   artifact-oriented Context Board DTO aliases only. Transient Context Board
   interaction aliases used by Work Design session code come from the Context
   Board product-adapter facade.
+- Work Design restores a changed current autosave ahead of its older named
+  checkpoint, preserving unapplied note and diagram edits for local continuity.
+  An authoritative source seed retains priority; equal content keeps its named
+  checkpoint identity. Restoring a draft does not finalize or apply it.
 - Refinement's metadata draft step keeps many local subcomponents. That is
   acceptable only while they are step-local. Product-app viewer/selector host
   behavior must be classified explicitly instead of hidden in a step file.

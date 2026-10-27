@@ -60,6 +60,9 @@ stop waiting and Undo advisor edit to restore its last changed fields. Later
 manual edits are preserved; a source, selection or draft change during inference
 prevents the pending proposal from applying. Save/finalize the draft through the
 surface's normal controls. A model failure leaves manual drafting available.
+Work Design reopening restores changed local autosave content ahead of an older
+named checkpoint. Save Session still creates an explicit named checkpoint;
+canonical handoffs, finalization and Apply retain their separate authority.
 
 Both primary agents use the same owning advisor in Focus mode where the active
 surface admits their presentation. Their session identity and conversation stay
