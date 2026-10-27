@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { createWorkDesignAdvisorScope } from "../../../../../live-runtime/work-design-draft-advisor.ts";
 import { useDraftAdvisor } from "@/agent-console";
 import type { AdvisorTransport } from "@/agent-console/model/advisor-drafts";
 import { applyWorkDesignAdvisorPatch } from "../../../../../product-adapters/build-tree/index.ts";
@@ -104,8 +105,8 @@ export function useWorkDesignBuildTree({
   const advisor = useDraftAdvisor({
     active,
     disabled: applyCompleted,
-    getScope: () => ({ role: "work-design-tree", ref: `${deliveryPackage.delivery_package_id}:${selectedNode.id}`,
-      sourceRef: deliveryPackage.source_ref, sourceRevision, packageRef: deliveryPackage.delivery_package_id,
+    getScope: () => createWorkDesignAdvisorScope(deliveryPackage, { role: "work-design-tree", ref: `${deliveryPackage.delivery_package_id}:${selectedNode.id}`,
+      sourceRevision,
       context: JSON.stringify({ packageTitle: deliveryPackage.display_name, selectedNodeId: selectedNode.id,
         contextBrief: contextFinalizedBrief.note, posture: "Local planning draft; no canonical apply or PI commitment." }),
       fields: [{ key: "tree", label: "Work Design tree", value: tree, kind: "tree" }],
