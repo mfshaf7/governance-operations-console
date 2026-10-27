@@ -21,6 +21,8 @@ export function ModelOperationsControlOverviewPanel({
   onOpenRequest,
   requestAvailable,
   latestRequest,
+  onOpenHistory,
+  historyAvailable,
   summary,
   workspaceStatus,
 }: {
@@ -28,6 +30,8 @@ export function ModelOperationsControlOverviewPanel({
   onOpenRequest: () => void;
   requestAvailable: boolean;
   latestRequest: ModelProfileRequestProjection | null;
+  onOpenHistory: () => void;
+  historyAvailable: boolean;
   summary: ModelOperationsSummaryMetric[];
   workspaceStatus: OperationSurfaceStatusModel;
 }) {
@@ -48,6 +52,13 @@ export function ModelOperationsControlOverviewPanel({
             <TerasActionButton disabled={!requestAvailable} onClick={onOpenRequest}>
               <Plus aria-hidden="true" size={14} />
               Request Profile
+            </TerasActionButton>
+            <TerasActionButton
+              onClick={onOpenHistory}
+              disabled={!historyAvailable}
+              emphasis="secondary"
+            >
+              Request History
             </TerasActionButton>
             <TerasActionButton
               onClick={onOpenRequestSupport}

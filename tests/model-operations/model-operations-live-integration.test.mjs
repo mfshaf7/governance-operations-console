@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -16,13 +16,17 @@ import { projectModelOperationsOperatingEvidence } from "../../src/domain-worksp
 import {
   listModelProfileRequests,
   submitCreateModelProfileRequest,
+  commandModelProfileRequest,
 } from "../../src/domain-workspaces/model-operations/server/model-operations-oos-client.ts";
-import { readPlatformModelOperationsArtifacts } from "../../src/domain-workspaces/model-operations/server/model-operations-platform-adapter.ts";
+import { readPlatformModelOperationsArtifacts, readPlatformModelRegistryArtifacts } from "../../src/domain-workspaces/model-operations/server/model-operations-platform-adapter.ts";
+import { assertModelProfileReviewCommandDraft } from "../../src/domain-workspaces/model-operations/live-runtime/model-operations-live-contract.ts";
+import { fetchModelProfileFulfillment, submitModelProfileReviewCommand } from "../../src/domain-workspaces/model-operations/live-runtime/model-profile-operator-client.ts";
+import { modelProfileReviewActions, modelProfileDraftFromRequest } from "../../src/domain-workspaces/model-operations/work-model/profile-requests/model-profile-review-model.ts";
 
 const revision = "a".repeat(40);
 const zeroDigest = `sha256:${"0".repeat(64)}`;
 
-test("configuration fails closed unless OOS and every Platform artifact path are present", () => {
+test("registry configuration requires its owner source and OOS binding, independently of transaction evidence", () => {
   assert.equal(consoleModelOperationsModeSelected({}), false);
   assert.equal(
     consoleModelOperationsModeSelected({ OOS_BASE_URL: "http://127.0.0.1:8080" }),
@@ -38,6 +42,80 @@ test("configuration fails closed unless OOS and every Platform artifact path are
   }).capabilities.find(({ id }) => id === "model-operations");
   assert.equal(capability?.source.state, "invalid");
   assert.equal(capability?.mutation.state, "invalid");
+});
+
+test("first-use registry needs no previous lifecycle receipt or merged transaction", async () => {
+  const fixture = await platformFixture();
+  try {
+    await rm(fixture.config.lifecycleReceiptPath);
+    await rm(fixture.config.mergedReadbackPath);
+    const env = { ...baseConfigEnv(), GOVERNANCE_CONSOLE_MODEL_PROFILE_SOURCE_PROJECTION_PATH: fixture.config.sourceProjectionPath };
+    const config = resolveConsoleModelOperationsConfiguration(env);
+    assert.equal(config.lifecycleReceiptPath, null);
+    assert.equal(config.mergedReadbackPath, null);
+    assert.equal(projectConsoleRuntimeCapabilities(env).capabilities.find(({ id }) => id === "model-operations")?.source.state, "available");
+    const artifacts = await readPlatformModelRegistryArtifacts({ config });
+    const readModel = projectLiveModelOperationsReadModel(artifacts);
+    assert.equal(readModel.profiles.length, 1);
+    assert.equal(readModel.profiles[0].latestAudit.state, "unknown");
+    assert.equal(readModel.workspaceStatus.items.find(({ id }) => id === "reconciliation"), undefined);
+    await assert.rejects(readPlatformModelOperationsArtifacts({ config, requestId: fixture.lifecycleReceipt.request_id }), /No Platform fulfillment evidence/);
+  } finally { await rm(fixture.root, { recursive: true, force: true }); }
+});
+
+test("a later current registry does not invalidate an earlier exact request's fulfillment", async () => {
+  const fixture = await platformFixture();
+  try {
+    const newer = structuredClone(fixture.mergedReadback.source_projection);
+    newer.source.source_version = "c".repeat(40);
+    newer.profiles[0].purpose = "A legitimate later registry revision";
+    await writeFile(fixture.config.sourceProjectionPath, JSON.stringify(withDigest(newer)), { mode: 0o600 });
+    const current = await readPlatformModelRegistryArtifacts({ config: fixture.config });
+    const historical = await readPlatformModelOperationsArtifacts({ config: fixture.config, requestId: fixture.lifecycleReceipt.request_id });
+    assert.equal(current.sourceProjection.source.source_version, "c".repeat(40));
+    assert.equal(historical.sourceProjection.source.source_version, revision);
+    assert.equal(historical.lifecycleReceipt.digest, fixture.lifecycleReceipt.digest);
+    await assert.rejects(readPlatformModelOperationsArtifacts({ config: fixture.config, requestId: "model-profile-request:another-request" }), /another request/);
+  } finally { await rm(fixture.root, { recursive: true, force: true }); }
+});
+
+test("request history selects only its hashed private file, preserves old requests and never borrows latest evidence", async () => {
+  const fixture = await platformFixture();
+  try {
+    const requestHistoryRoot = join(fixture.root, "history");
+    await mkdir(requestHistoryRoot, { mode: 0o700 });
+    const config = { ...fixture.config, requestHistoryRoot };
+    const id = fixture.lifecycleReceipt.request_id;
+    const path = join(requestHistoryRoot, createHash("sha256").update(id).digest("hex") + ".json");
+    const bundle = withDigest({ schema_version: 1, artifact_type: "platform-model-profile-request-evidence", request_id: id, lifecycle_receipt: fixture.lifecycleReceipt, merged_readback: fixture.mergedReadback });
+    await writeFile(path, JSON.stringify(bundle), { mode: 0o600 });
+    await writeFile(config.sourceProjectionPath, "current registry unavailable", { mode: 0o600 });
+    assert.equal((await readPlatformModelOperationsArtifacts({ config, requestId: id })).lifecycleReceipt.digest, fixture.lifecycleReceipt.digest);
+    await assert.rejects(readPlatformModelOperationsArtifacts({ config, requestId: "model-profile-request:unfulfilled" }), /could not be read safely/);
+    await assert.rejects(readPlatformModelOperationsArtifacts({ config, requestId: "../../another-file" }), /identity is invalid/);
+    await writeFile(path, JSON.stringify(withDigest({ ...bundle, request_id: "model-profile-request:cross-bound" })), { mode: 0o600 });
+    await assert.rejects(readPlatformModelOperationsArtifacts({ config, requestId: id }), /another request/);
+    await writeFile(path, JSON.stringify(bundle), { mode: 0o600 });
+    await chmod(path, 0o644);
+    await assert.rejects(readPlatformModelOperationsArtifacts({ config, requestId: id }), /operator-private/);
+    await chmod(path, 0o600);
+    await chmod(requestHistoryRoot, 0o755);
+    await assert.rejects(readPlatformModelOperationsArtifacts({ config, requestId: id }), /operator-private/);
+  } finally { await rm(fixture.root, { recursive: true, force: true }); }
+});
+
+test("historical readback still rejects a forged actor or a lifecycle result digest mismatch", async () => {
+  const fixture = await platformFixture();
+  try {
+    const forged = withDigest({ ...fixture.mergedReadback, oos_fulfillment: { ...fixture.fulfillment, actor_id: "governance-operations-console" } });
+    await writeFile(fixture.config.mergedReadbackPath, JSON.stringify(forged), { mode: 0o600 });
+    await assert.rejects(readPlatformModelOperationsArtifacts({ config: fixture.config }), /incomplete or mismatched/);
+    const wrong = structuredClone(fixture.mergedReadback);
+    wrong.source_projection.source.registry_digest = `sha256:${"f".repeat(64)}`;
+    wrong.source_projection = withDigest(wrong.source_projection);
+    await writeFile(fixture.config.mergedReadbackPath, JSON.stringify(withDigest(wrong)), { mode: 0o600 });
+    await assert.rejects(readPlatformModelOperationsArtifacts({ config: fixture.config }), /lifecycle result source/);
+  } finally { await rm(fixture.root, { recursive: true, force: true }); }
 });
 
 test("private Platform artifacts project current profile truth without granting Console mutation", async () => {
@@ -59,7 +137,7 @@ test("Platform artifact digest or privacy drift is rejected", async () => {
   try {
     await writeFile(fixture.config.sourceProjectionPath, JSON.stringify({ broken: true }), { mode: 0o600 });
     await assert.rejects(
-      readPlatformModelOperationsArtifacts({ config: fixture.config }),
+      readPlatformModelRegistryArtifacts({ config: fixture.config }),
       /unknown or missing|malformed/i,
     );
   } finally {
@@ -72,7 +150,7 @@ test("Platform artifact files that are not operator-private are rejected", async
   try {
     await chmod(fixture.config.sourceProjectionPath, 0o644);
     await assert.rejects(
-      readPlatformModelOperationsArtifacts({ config: fixture.config }),
+      readPlatformModelRegistryArtifacts({ config: fixture.config }),
       /operator-private/i,
     );
   } finally {
@@ -196,6 +274,7 @@ test("operating projection binds exact applied OOS and Platform evidence", async
       platform_source_ref: {
         lifecycle_receipt_digest: fixture.lifecycleReceipt.digest,
         merged_readback_digest: fixture.mergedReadback.digest,
+        source_version: revision,
       },
     });
   } finally {
@@ -462,7 +541,8 @@ function sourceEnvelope(projection) {
 }
 
 function withDigest(value) {
-  return { ...value, digest: canonicalDigest(value) };
+  const { digest: _previous, ...content } = value;
+  return { ...content, digest: canonicalDigest(content) };
 }
 
 function canonicalDigest(value) {
@@ -503,3 +583,102 @@ test("Purpose profile samples require a wholly disconnected Console, never missi
 function baseConfigEnv() {
   return { OOS_BASE_URL: "http://owner.test", OOS_CALLER_SECRET: "test-only-secret", GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:synthetic" };
 }
+
+function reviewDraft(action = "start-review") {
+  return { action, commandId: "model-profile-command:console-review-test", expectedRevision: 2,
+    issuedAt: "2026-10-08T17:01:00.000Z", reason: null, decisionRef: null, requirements: [], revisedIntentDraft: null };
+}
+
+test("explicit review uses the bound operator and retains byte-identical retry identity and time", async () => {
+  const draft = reviewDraft();
+  const result = requestProjection({ requestId: "model-profile-request:operator-review-positive", revision: 3, reviewState: "under-review" });
+  result.history[0].command_id = draft.commandId;
+  const bodies = [];
+  const options = { config: baseConfig(), fetchImpl: async (url, init) => {
+    assert.ok(String(url).endsWith(`/v1/model-profile-requests/${encodeURIComponent(result.request_id)}/commands`));
+    bodies.push(JSON.parse(init.body)); return Response.json(result);
+  } };
+  assert.equal((await commandModelProfileRequest(result.request_id, draft, options)).review_state, "under-review");
+  await commandModelProfileRequest(result.request_id, draft, { ...options, now: () => new Date("2026-10-09T17:00:00Z") });
+  assert.deepEqual(bodies[0], bodies[1]);
+  assert.equal(bodies[0].operator_id, options.config.operatorId);
+  assert.equal(bodies[0].expected_revision, 2);
+  assert.equal(bodies[0].issued_at, draft.issuedAt);
+  assert.equal(bodies[0].revised_profile_intent, null);
+  assert.equal(bodies[0].decision_ref, null);
+});
+
+test("review cannot smuggle operator, fulfillment, activation or unreviewed decision authority", async () => {
+  const id = "model-profile-request:operator-review-negative";
+  let dispatched = 0;
+  const options = { config: baseConfig(), fetchImpl: async () => { ++dispatched; throw new Error("must not dispatch"); } };
+  for (const draft of [
+    { ...reviewDraft(), operator_id: "operator:another" },
+    { ...reviewDraft(), action: "fulfill" },
+    { ...reviewDraft(), action: "activate" },
+    { ...reviewDraft("approve"), reason: "Approved without decision evidence" },
+    { ...reviewDraft("request-changes"), reason: "Requires changes", requirements: [] },
+    { ...reviewDraft(), expectedRevision: 0 },
+    { ...reviewDraft(), issuedAt: "2099-01-01T00:00:00Z" },
+  ]) await assert.rejects(commandModelProfileRequest(id, draft, options), error => error.status === 400);
+  assert.equal(dispatched, 0);
+  assert.throws(() => assertModelProfileReviewCommandDraft({ ...reviewDraft("revise"), reason: "Review revised original", revisedIntentDraft: { ...requestDraft(), requestId: "model-profile-request:other" } }, id), /original request identity/);
+});
+
+test("review decisions and requested changes retain explicit evidence and native typed requirements", async () => {
+  const decision = { ...reviewDraft("approve"), reason: "Operator explicitly accepts the reviewed intent", decisionRef: { uri: "openproject://work_packages/1342", digest: zeroDigest } };
+  assert.equal(assertModelProfileReviewCommandDraft(decision, requestDraft().requestId).action, "approve");
+  assert.equal(assertModelProfileReviewCommandDraft({ ...decision, action: "reject" }, requestDraft().requestId).action, "reject");
+  const requirement = { requirement_id: "requirement:caller-scope", summary: "Narrow the caller scope", owner_repo: "platform-engineering", next_action: "Revise the original request" };
+  assert.equal(assertModelProfileReviewCommandDraft({ ...reviewDraft("request-changes"), reason: "Caller scope needs correction", requirements: [requirement] }, requestDraft().requestId).requirements.length, 1);
+  assert.throws(() => assertModelProfileReviewCommandDraft({ ...reviewDraft("request-changes"), reason: "Correct owner", requirements: [{ ...requirement, owner_repo: "../unknown" }] }, requestDraft().requestId), /requested change/);
+});
+
+test("revision keeps original request, profile and source binding and cannot silently truncate an existing environment set", async () => {
+  const original = requestProjection({ requestId: "model-profile-request:operator-revise-positive", revision: 4, reviewState: "changes-required" });
+  original.request.intent = "amend";
+  original.request.profile_intent.profile_id = "existing-profile-v1";
+  original.request.profile_intent.source = { source_version: revision, registry_ref: { uri: "owner://registry", digest: zeroDigest } };
+  original.request.profile_intent.requested_environments = ["dev-integration", "stage"];
+  const revised = { ...modelProfileDraftFromRequest(original), purpose: "Explicitly revised purpose" };
+  const draft = { ...reviewDraft("revise"), expectedRevision: 4, reason: "Correct the requested purpose", revisedIntentDraft: revised };
+  const result = structuredClone(original); result.revision = 5; result.latest_receipt.request_revision = 5; result.review_state = "draft"; result.history[0].command_id = draft.commandId;
+  let submitted;
+  const options = { config: baseConfig(), fetchImpl: async (_url, init) => {
+    if (init.method === "GET") return Response.json(sourceEnvelope(original));
+    submitted = JSON.parse(init.body); return Response.json(result);
+  } };
+  await commandModelProfileRequest(original.request_id, draft, options);
+  assert.equal(submitted.request_id, original.request_id);
+  assert.equal(submitted.revised_profile_intent.profile_id, "existing-profile-v1");
+  assert.deepEqual(submitted.revised_profile_intent.source, original.request.profile_intent.source);
+  assert.deepEqual(submitted.revised_profile_intent.requested_environments, ["dev-integration", "stage"]);
+  assert.equal(submitted.revised_profile_intent.intended_purpose, revised.purpose);
+});
+
+test("native revision rejection and wrong-command acknowledgement cannot become local review success", async () => {
+  const draft = reviewDraft(); const id = "model-profile-request:review-conflict";
+  await assert.rejects(submitModelProfileReviewCommand(id, draft, { fetchImpl: async () => Response.json({ error: "Original request revision changed" }, { status: 409 }) }), error => error.status === 409);
+  const wrong = requestProjection({ requestId: id, revision: 3, reviewState: "under-review" });
+  await assert.rejects(submitModelProfileReviewCommand(id, draft, { fetchImpl: async () => Response.json(wrong) }), /original reviewed action/);
+  await assert.rejects(commandModelProfileRequest(id, draft, { config: baseConfig(), fetchImpl: async () => Response.json(wrong) }), /original request review command/);
+});
+
+test("request review actions follow the current owner lifecycle and never offer Platform fulfillment", () => {
+  for (const [state, expected] of Object.entries({ draft: ["revise", "submit", "withdraw"], submitted: ["start-review", "withdraw"], "under-review": ["approve", "request-changes", "reject", "withdraw"], "changes-required": ["revise", "withdraw"], approved: [], rejected: [], withdrawn: [] })) {
+    const actual = modelProfileReviewActions(requestProjection({ revision: 2, reviewState: state }));
+    assert.deepEqual(actual, expected); assert.equal(actual.includes("fulfill"), false);
+  }
+});
+
+test("fulfillment view accepts only the selected original request, revision and historical merged source", async () => {
+  const id = "model-profile-request:historical-complete";
+  const evidence = { workflow_id: "model-operations-live-projection", projection_state: "current", next_action: "complete", console_mutation_authority: false,
+    oos_request_ref: { request_id: id, revision: 6, receipt_digest: zeroDigest },
+    platform_source_ref: { lifecycle_receipt_digest: zeroDigest, merged_readback_digest: zeroDigest, source_version: revision } };
+  const get = value => ({ fetchImpl: async () => Response.json(value) });
+  assert.equal((await fetchModelProfileFulfillment(id, 6, get(evidence))).platform_source_ref.source_version, revision);
+  await assert.rejects(fetchModelProfileFulfillment(id, 7, get(evidence)), /matching verified fulfillment/);
+  await assert.rejects(fetchModelProfileFulfillment("model-profile-request:other", 6, get(evidence)), /matching verified fulfillment/);
+  await assert.rejects(fetchModelProfileFulfillment(id, 6, get({ ...evidence, console_mutation_authority: true })), /matching verified fulfillment/);
+});

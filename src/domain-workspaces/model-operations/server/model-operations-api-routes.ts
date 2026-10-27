@@ -9,10 +9,12 @@ import {
   ModelOperationsOosError,
   readModelProfileRequest,
   submitCreateModelProfileRequest,
+  commandModelProfileRequest,
 } from "./model-operations-oos-client.ts";
 import {
   ModelOperationsPlatformError,
   readPlatformModelOperationsArtifacts,
+  readPlatformModelRegistryArtifacts,
 } from "./model-operations-platform-adapter.ts";
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
@@ -42,7 +44,7 @@ export async function listModelOperationsRoute() {
   }
   try {
     const [artifacts, requests] = await Promise.all([
-      readPlatformModelOperationsArtifacts(),
+      readPlatformModelRegistryArtifacts(),
       listModelProfileRequests(),
     ]);
     return NextResponse.json(
@@ -74,11 +76,25 @@ export async function submitModelProfileRequestRoute(request: NextRequest) {
   }
 }
 
+export async function readModelProfileRequestRoute(requestId: string) {
+  try {
+    requireLiveMode();
+    return NextResponse.json(await readModelProfileRequest(requestId), { headers: noStoreHeaders });
+  } catch (error) { return errorResponse(error); }
+}
+
+export async function commandModelProfileRequestRoute(request: NextRequest, requestId: string) {
+  try {
+    requireLiveMode();
+    return NextResponse.json(await commandModelProfileRequest(requestId, await request.json().catch(() => null)), { headers: noStoreHeaders });
+  } catch (error) { return errorResponse(error); }
+}
+
 export async function modelOperationsOperatingProjectionRoute(requestId: string) {
   try {
     requireLiveMode();
     const [artifacts, request] = await Promise.all([
-      readPlatformModelOperationsArtifacts(),
+      readPlatformModelOperationsArtifacts({ requestId }),
       readModelProfileRequest(requestId),
     ]);
     const projection = projectModelOperationsOperatingEvidence(request, artifacts);
@@ -88,11 +104,11 @@ export async function modelOperationsOperatingProjectionRoute(requestId: string)
   }
 }
 
-function sourceSummary(artifacts: Awaited<ReturnType<typeof readPlatformModelOperationsArtifacts>>) {
+function sourceSummary(artifacts: Awaited<ReturnType<typeof readPlatformModelRegistryArtifacts>>) {
   const source = record(artifacts.sourceProjection.source);
   return {
-    lifecycleReceiptDigest: text(artifacts.lifecycleReceipt.digest),
-    mergedReadbackDigest: text(artifacts.mergedReadback.digest),
+    lifecycleReceiptDigest: null,
+    mergedReadbackDigest: null,
     projectionDigest: text(artifacts.sourceProjection.digest),
     sourceVersion: text(source.source_version),
   };

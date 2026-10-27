@@ -109,6 +109,24 @@ export type ModelProfileRequestDraft = Readonly<{
   requestId: string;
 }>;
 
+export type ModelProfileReviewAction = "start-review" | "approve" | "reject" | "request-changes" | "withdraw" | "revise" | "submit";
+
+export type ModelProfileReviewCommandDraft = Readonly<{
+  action: ModelProfileReviewAction;
+  commandId: string;
+  expectedRevision: number;
+  issuedAt: string;
+  reason: string | null;
+  decisionRef: ModelProfileArtifactRef | null;
+  requirements: ReadonlyArray<Readonly<{
+    requirement_id: string;
+    summary: string;
+    owner_repo: string;
+    next_action: string;
+  }>>;
+  revisedIntentDraft: ModelProfileRequestDraft | null;
+}>;
+
 export type ModelOperationsLiveSnapshot = Readonly<{
   error: string | null;
   mode: "disconnected-preview" | "live";
@@ -116,8 +134,8 @@ export type ModelOperationsLiveSnapshot = Readonly<{
   readModel: ModelOperationsReadModel | null;
   requests: ModelProfileRequestProjection[];
   source: null | Readonly<{
-    lifecycleReceiptDigest: string;
-    mergedReadbackDigest: string;
+    lifecycleReceiptDigest: string | null;
+    mergedReadbackDigest: string | null;
     projectionDigest: string;
     sourceVersion: string;
   }>;
@@ -142,6 +160,7 @@ export type ModelOperationsOperatingProjection = Readonly<{
   platform_source_ref: Readonly<{
     lifecycle_receipt_digest: string;
     merged_readback_digest: string;
+    source_version: string;
   }>;
   projection_state: "current";
   workflow_id: "model-operations-live-projection";

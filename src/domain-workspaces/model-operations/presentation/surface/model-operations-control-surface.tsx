@@ -24,6 +24,7 @@ import { ModelProfileDashboard } from "../dashboards/model-profile/model-profile
 import { LocalExceptionRuntimeDialog } from "../dialogs/local-runtime/local-exception-runtime-dialog.tsx";
 import { ModelProfileRequestSupportDialog } from "../dialogs/request-support/model-profile-request-support-dialog.tsx";
 import { ModelProfileRequestModal } from "../workflows/profile-request/model-profile-request-modal.tsx";
+import { ModelProfileRequestHistoryDialog } from "../dialogs/request-history/model-profile-request-history-dialog.tsx";
 import {
   localExceptionRuntimeSummaryMetadata,
   localExceptionRuntimeTone,
@@ -62,6 +63,9 @@ export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange
 
 function ModelProfileControlSurface() {
   const controller = useModelOperationsControlController();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<string | null>(null);
+  const openHistory = (requestId: string | null = controller.request.latest?.request_id ?? null) => { setHistoryTarget(requestId); setHistoryOpen(true); };
   const selectedProfile = controller.selectedProfile;
 
   const availability = selectedProfile
@@ -80,6 +84,8 @@ function ModelProfileControlSurface() {
         overview={
           <ModelOperationsControlOverviewPanel
             latestRequest={controller.request.latest}
+            onOpenHistory={() => openHistory()}
+            historyAvailable={controller.request.historyAvailable}
             onOpenRequest={controller.request.show}
             onOpenRequestSupport={controller.requestSupport.show}
             requestAvailable={controller.request.available}
@@ -243,12 +249,14 @@ function ModelProfileControlSurface() {
         onClose={controller.request.close}
         onStepChange={controller.request.onStepChange}
         onSubmit={controller.request.submit}
+        onRecover={() => { controller.request.close(); openHistory(controller.request.draft.requestId); }}
         onUpdateDraft={controller.request.updateDraft}
         open={controller.request.open}
         pending={controller.request.pending}
         result={controller.request.result}
         step={controller.request.step}
       />
+      <ModelProfileRequestHistoryDialog open={historyOpen} initialRequestId={historyTarget} requests={controller.request.all} onClose={() => setHistoryOpen(false)} onChanged={controller.request.refresh} />
       <LocalExceptionRuntimeDialog
         onClose={controller.localRuntime.close}
         open={controller.localRuntime.open}

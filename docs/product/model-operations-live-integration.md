@@ -13,9 +13,11 @@ for purpose and permission changes. OOS coordinates both workflows; Platform
 owns configuration, verification, profile source and provider credentials.
 Security acceptance and runtime activation remain with their existing owners.
 
-The runtime configuration extension is source-staged under Epic 1313.
-Live availability requires the subsequent exact-source Security acceptance
-and Platform commissioning. Merged Console source alone is not activation.
+Models & routing retains its existing accepted runtime binding. The Purpose
+registry, request-history and explicit operator-review extension is staged
+under Epic 1332. Its live qualification requires exact composed Security
+acceptance and Platform commissioning; merged Console source alone is not
+activation.
 
 ## Models & Routing Procedure
 
@@ -81,18 +83,30 @@ Configure the existing OOS connection and operator/session boundary:
 - `GOVERNANCE_CONSOLE_OPERATOR_ID`
 - `GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH`
 
-For **Purpose profiles**, also mount the exact Platform artifacts as
-operator-private regular files and set:
+For **Purpose profiles**, mount the accepted current Platform registry projection
+as an operator-private regular file and set:
 
 - `GOVERNANCE_CONSOLE_MODEL_PROFILE_SOURCE_PROJECTION_PATH`
-- `GOVERNANCE_CONSOLE_MODEL_PROFILE_LIFECYCLE_RECEIPT_PATH`
-- `GOVERNANCE_CONSOLE_MODEL_PROFILE_MERGED_READBACK_PATH`
 
-The three files must be owned by the Console process, mode `0600`, bounded in
-size, internally digest-valid, and mutually bound to the same lifecycle result
-and merged Platform revision. Selecting any part of the live configuration
-selects live mode. Partial or invalid configuration fails closed and never
-falls back to fixture success.
+First use requires no previous receipt or completed request. Registry and
+request-path status never assert historical transaction completion. For
+fulfillment verification, set `GOVERNANCE_CONSOLE_MODEL_PROFILE_REQUEST_HISTORY_ROOT`
+to the Platform-published directory owned by the Console process, mode `0700`.
+Each immutable `0600` regular file is named by the SHA-256 hex digest of the
+UTF-8 request id plus `.json`. Its version-1
+`platform-model-profile-request-evidence` bundle contains exactly
+`schema_version`, `artifact_type`, `request_id`, `lifecycle_receipt`,
+`merged_readback` and canonical `digest`. Nested artifacts retain their own
+digests and original source snapshot. Missing selected history never falls
+back to another request's evidence.
+
+The older `GOVERNANCE_CONSOLE_MODEL_PROFILE_LIFECYCLE_RECEIPT_PATH` and
+`GOVERNANCE_CONSOLE_MODEL_PROFILE_MERGED_READBACK_PATH` pair remains a bounded
+compatibility input when no history root is selected. It proves only the exact
+matching request and is unnecessary for registry loading. Reads retain the
+512 KiB, ownership, privacy, no-symlink, digest, Platform actor and request /
+revision / source-binding checks. Receipt URIs and browser input are never
+followed as local paths. Partial live configuration never falls back to fixtures.
 
 ## Purpose Profile Console Path
 
@@ -107,11 +121,32 @@ falls back to fixture success.
 6. Record the operator justification and submit.
 7. Inspect the OOS receipt. `submitted` means the request entered review; it
    does not mean Platform fulfillment, Security acceptance, or activation.
+8. Open **Request History** and select the original request, or enter its
+   reference and choose **Read original request**. Inspect its complete intent,
+   requirements, owner next move and receipt history. Register polling cannot
+   replace the selected scope.
+9. Choose the review action offered by current OOS state. Explicit approval
+   and rejection require a reason and decision reference/digest. Requested
+   changes have typed requirements with owners and next moves. **Revise intent**
+   reuses the original typed form and identity; saving is separate from
+   resubmitting. Existing multiple-environment scope is displayed and retained.
+   The same bound operator may submit and explicitly review its caller-owned
+   request; Platform fulfillment uses a distinct caller.
+10. Approval waits for the existing Platform fulfillment and Gary source-authoring
+    path. It does not edit the registry, select a model, grant credentials,
+    accept Security risk or activate runtime access. Refresh the original
+    record to read its actual owner outcome.
+11. After approved/applied, choose **Verify request fulfillment**. Completion
+    requires this request's original lifecycle receipt, merged readback and
+    current OOS record. Its historical merged source is shown separately from
+    today's registry; later changes cannot invalidate an earlier completed request.
 
 The browser calls only the same-origin routes:
 
 - `GET /api/model-operations`
 - `POST /api/model-operations`
+- `GET /api/model-operations/requests/{requestId}`
+- `POST /api/model-operations/requests/{requestId}` (bounded operator review)
 - `GET /api/model-operations/operating-projection/{requestId}`
 
 The server holds OOS credentials, adds the verified operator identity, rereads
@@ -126,7 +161,8 @@ The operating projection returns `complete` only when all of these agree:
 - the OOS item read is current, ordered, caller-owned, and receipt-bound;
 - the Platform lifecycle receipt names the request and pre-apply revision;
 - the merged readback binds that lifecycle receipt and merged source revision;
-- the Platform source projection is byte-equivalent to the readback projection;
+- the historical source snapshot is byte-equivalent to its readback projection
+  and policy digests match the lifecycle receipt's result source;
 - the OOS fulfillment result version and receipt reference match Platform;
 - `profile_lifecycle_changed` remains false in OOS;
 - `console_mutation_authority` remains false.
@@ -145,6 +181,16 @@ The operating projection returns `complete` only when all of these agree:
   an evidence file in place.
 - partial create/submit: reuse the same request and idempotency identities; OOS
   returns the existing request or rejects conflicting input.
+- lost create/submit acknowledgement: choose **Recover original request** or
+  open its reference in Request History. Submit a retained draft there; read
+  an already submitted or fulfilled record as it is. Do not replace it.
+- unknown review acknowledgement: retain the frozen command identity, time,
+  expected revision and reviewed body. Read the original record or retry that
+  exact action. A known rejection permits fresh review after canonical refresh;
+  lost acknowledgement never silently changes the command or revision.
+- unavailable current registry: disable new requests without inferring profile
+  state. Request History can still read an original record independently.
+  Historical verification never uses today's registry as old completion evidence.
 
 ## Validation
 
@@ -163,12 +209,11 @@ fail-closed malformed or incomplete evidence.
 
 ## Purpose Profile Source Availability
 
-Purpose profiles uses the accepted Platform source projection, lifecycle
-receipt and merged readback already required by this workflow. In a Console
-with live or partially configured owner integrations, absence of that evidence
-shows Unavailable and disables profile requests. No suspended, active or
-pending-selection profile is inferred from the historical sample. Models &
-routing continues to report its independently admitted live configuration.
+Purpose profiles uses accepted current Platform source and the live OOS request
+path. Missing history affects only verification of its selected request.
+Missing current source disables new requests and never infers lifecycle or
+pending-selection facts from a sample or old transaction. Models & routing
+retains its independently admitted live configuration.
 
 Sample purpose profiles remain available only in the explicit wholly
 disconnected design preview, which is labelled as sample data rather than
