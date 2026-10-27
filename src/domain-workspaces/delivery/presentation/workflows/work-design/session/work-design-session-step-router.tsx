@@ -226,6 +226,7 @@ export function WorkDesignSessionStepRouter({
         />
       ) : activeStep === "context" ? (
         <WorkDesignContextStep
+          contextAdvisorControls={contextActions.contextAdvisorControls}
           applyCompleted={applyCompleted}
           board={contextBoard}
           contextAdvisorPrompt={contextAdvisorPrompt}
@@ -248,6 +249,7 @@ export function WorkDesignSessionStepRouter({
         />
       ) : activeStep === "build" ? (
         <WorkDesignBuildTreeStep
+          treeAdvisorControls={buildTree.treeAdvisorControls}
           addFeature={addFeature}
           addRiskBranch={addRiskBranch}
           addStory={addStory}

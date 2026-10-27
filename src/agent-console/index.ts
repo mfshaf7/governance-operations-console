@@ -1,5 +1,9 @@
 import type { ConsoleBoundary } from "../console-architecture";
 
+export { useDraftAdvisor } from "./state/use-draft-advisor";
+export { DraftAdvisorScopeProvider } from "./state/draft-advisor-scope-provider";
+export type { AdvisorScope, AdvisorField, AdvisorEdit, AdvisorReply, GovernedAdvisorReply } from "./model/advisor-drafts";
+
 export { ModelInteractionDock } from "./presentation/model-interaction-dock";
 export { openGovernedAgentConsole } from "./model/open-agent-console";
 export { AgentRobotIcon } from "./presentation/agent-robot-icon";
@@ -95,6 +99,7 @@ export const agentConsoleBoundary: ConsoleBoundary = {
     "active runtime presence and heartbeat projection",
     "model profile reference display",
     "receipt-bound read-only guidance",
+    "role-scoped inert draft proposals validated and applied by the owning surface",
   ],
   status: "active-contract",
 };

@@ -55,6 +55,7 @@ type WorkDesignContextDecisionCopy = {
 };
 
 type WorkDesignBuildTreeViewProps = {
+  treeAdvisorControls?: import("react").ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
   addFeature: (parentId?: string) => void;
   addRiskBranch: (parentId?: string) => void;
   addStory: (parentId: string) => void;
@@ -95,6 +96,7 @@ type WorkDesignBuildTreeViewProps = {
 };
 
 export function WorkDesignBuildTreeView({
+  treeAdvisorControls,
   addFeature,
   addRiskBranch,
   addStory,
@@ -385,6 +387,7 @@ export function WorkDesignBuildTreeView({
             ? renderSelectedDraftItemPanel()
             : null}
           <TerasAdvisorPanel
+            draftControls={treeAdvisorControls}
             collapsed={buildAdvisorCollapsed}
             fill
             onToggleCollapsed={
@@ -401,8 +404,8 @@ export function WorkDesignBuildTreeView({
               rows: 2,
               value: buildAdvisorPrompt,
             }}
-            statusLabel="tool-profile pending"
-            statusTitle="Tool-enabled authority is separate from suggestion-only advice. This panel does not establish tool-profile activation or grant tree mutation authority."
+            statusLabel="draft assistance"
+            statusTitle="An explicit chat request can draft or revise this local tree. Review and Apply remain operator actions."
             statusTone="warn"
             transcript={buildAdvisorTranscript}
           />

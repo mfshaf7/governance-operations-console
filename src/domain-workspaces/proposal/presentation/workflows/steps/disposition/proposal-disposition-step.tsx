@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
+import { useDraftAdvisor } from "@/agent-console";
 
 import {
   TerasAdvisorPanel,
@@ -29,7 +30,6 @@ import { ProposalDispositionDecisionPanel } from "./proposal-disposition-decisio
 import { ProposalDispositionRoutePanel } from "./proposal-disposition-route-panel.tsx";
 import {
   proposalAcceptedRouteTarget,
-  proposalDispositionAdvisorDraft,
   proposalDispositionStepProjection,
   proposalRegisteredRepoOptions,
 } from "./proposal-disposition-step-view-model.ts";
@@ -57,6 +57,10 @@ export function ProposalDispositionStep({
   readOnly?: boolean;
   routeSelectionDraft: ProposalRouteSelectionDraft;
 }) {
+  const decisionDraftRef = useRef(decisionDraft);
+  const routeDraftRef = useRef(routeSelectionDraft);
+  decisionDraftRef.current = decisionDraft;
+  routeDraftRef.current = routeSelectionDraft;
   const {
     accepting,
     actionLabel,
@@ -91,10 +95,9 @@ export function ProposalDispositionStep({
       return;
     }
 
-    onChangeDecisionDraft({
-      ...decisionDraft,
-      ...patch,
-    });
+    const next = { ...decisionDraftRef.current, ...patch };
+    decisionDraftRef.current = next;
+    onChangeDecisionDraft(next);
   }
 
   function updateRouteSelectionDraft(
@@ -104,10 +107,9 @@ export function ProposalDispositionStep({
       return;
     }
 
-    onChangeRouteSelectionDraft({
-      ...routeSelectionDraft,
-      ...patch,
-    });
+    const next = { ...routeDraftRef.current, ...patch };
+    routeDraftRef.current = next;
+    onChangeRouteSelectionDraft(next);
   }
 
   function selectOutcome(outcome: ProposalDecisionOutcome) {
@@ -217,7 +219,25 @@ export function ProposalDispositionStep({
     });
   }
 
-  function runAdvisor(event: FormEvent<HTMLFormElement>) {
+  const advisor = useDraftAdvisor({
+    disabled: dispositionCompleted,
+    getScope: () => ({ role: "proposal-disposition", ref: proposal.id, sourceRef: proposal.backendRecordId,
+      sourceRevision: proposal.recordVersion,
+      context: JSON.stringify({ title: proposal.title, body: proposal.bodyPreview, status: proposal.status,
+        selectedOutcome: decisionDraft.outcome, selectedRoute: routeSelectionDraft.routeTarget,
+        boundary: "Outcome and route are operator decisions; only their explanatory drafts are editable." }),
+      fields: [{ key: "notes", label: "Decision notes", value: decisionDraft.notes, maxLength: 8000 },
+        ...(accepting ? [{ key: "rationale", label: "Route rationale", value: routeSelectionDraft.rationale, maxLength: 8000 }] : [])] }),
+    apply: (edits) => {
+      const notes = edits.find((edit) => edit.field === "notes");
+      const rationale = edits.find((edit) => edit.field === "rationale");
+      if (notes) updateDecisionDraft({ notes: String(notes.value) });
+      if (rationale) updateRouteSelectionDraft({ rationale: String(rationale.value) });
+      return edits;
+    },
+  });
+
+  async function runAdvisor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (dispositionCompleted) {
@@ -230,17 +250,9 @@ export function ProposalDispositionStep({
       return;
     }
 
-    updateDecisionDraft({
-      advisorDraft: proposalDispositionAdvisorDraft({
-        accepting,
-        decisionDraft,
-        proposal,
-        prompt,
-        routeHasRepositoryGate,
-        routeSelectionDraft,
-      }),
-      advisorPrompt: "",
-    });
+    updateDecisionDraft({ advisorPrompt: "" });
+    try { const reply = await advisor.run(prompt); updateDecisionDraft({ advisorDraft: reply.message }); }
+    catch (error) { updateDecisionDraft({ advisorDraft: error instanceof Error ? error.message : "Governed advisor unavailable." }); }
   }
 
   return (
@@ -309,6 +321,7 @@ export function ProposalDispositionStep({
               fill
               onToggleCollapsed={toggleAdvisorCollapsed}
               profileLabel="Proposal Disposition Advisor"
+              draftControls={advisor.panelControls}
               prompt={{
                 ariaLabel: "Proposal disposition advisor prompt",
                 disabled: dispositionCompleted,

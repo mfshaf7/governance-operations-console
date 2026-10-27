@@ -2,6 +2,8 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { useDraftAdvisor } from "@/agent-console";
+import { candidateAdvisorFields, applyCandidateAdvisorEdits } from "../shared/prototype-advisor-fields.ts";
 
 import {
   TerasDraftCloseGuardDialog,
@@ -29,7 +31,6 @@ import {
   type PrototypeCandidatePromotionInput,
 } from "../../../work-model/workflows/candidate-promotion/prototype-candidate-promotion-model.ts";
 import {
-  candidatePromotionAdvisorDraft,
   candidatePromotionBoundaryDetail,
   candidatePromotionBoundaryReady,
   candidatePromotionDecisionActionLabel,
@@ -73,6 +74,20 @@ export function PrototypeCandidatePromotionModal({
   );
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const advisor = useDraftAdvisor({
+    active: Boolean(record),
+    disabled: !record || submitting || ownerProgress?.pending === true ||
+      prototypeMaturityRequestPending(ownerProgress) || Boolean(record && getPrototypeCommandView(record, "record-candidate-promotion").disabledReason),
+    getScope: () => {
+      if (!record) throw Error("Select a Prototype record first.");
+      return { role: "prototype-candidate", ref: record.id, sourceRef: record.sourceRef,
+        sourceRevision: record.projectionVersion,
+        context: JSON.stringify({ name: record.name, summary: record.summary, candidate: record.candidate, decision: draft.decision }),
+        fields: candidateAdvisorFields(draft) };
+    },
+    apply: (edits) => { const next = applyCandidateAdvisorEdits(draft, edits); setDraft(next);
+      return edits.map((edit) => ({ field: edit.field, value: candidateAdvisorFields(next).find((field) => field.key === edit.field)!.value })); },
+  });
 
   useEffect(() => {
     if (record) {
@@ -169,7 +184,7 @@ export function PrototypeCandidatePromotionModal({
     }
   }
 
-  function runAdvisor(event: FormEvent<HTMLFormElement>) {
+  async function runAdvisor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!draftMutable) {
@@ -182,10 +197,9 @@ export function PrototypeCandidatePromotionModal({
       return;
     }
 
-    updateDraft({
-      advisorDraft: candidatePromotionAdvisorDraft(activeRecord, draft, prompt),
-      advisorPrompt: "",
-    });
+    setDraft((current) => ({ ...current, advisorPrompt: "" }));
+    try { const reply = await advisor.run(prompt); setDraft((current) => ({ ...current, advisorDraft: reply.message })); }
+    catch (error) { setDraft((current) => ({ ...current, advisorDraft: error instanceof Error ? error.message : "Governed advisor unavailable." })); }
   }
 
   async function recordCandidateDecision() {
@@ -280,6 +294,7 @@ export function PrototypeCandidatePromotionModal({
             issueTone={issueTone}
             onDraftChange={updateDraft}
             onRunAdvisor={runAdvisor}
+            advisorControls={advisor.panelControls}
             record={record}
             reviewReady={reviewReady}
             reviewTone={reviewTone}

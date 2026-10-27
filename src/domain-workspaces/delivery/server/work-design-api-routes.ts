@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { advisorDraftInstructions, assertAdvisorScope } from "../../../agent-console/model/advisor-drafts.ts";
+import { hasSecretLikeMaterial } from "../../../agent-console/model/agent-input-policy.ts";
 
 import {
   assertWorkDesignAcceptanceId,
@@ -63,6 +65,18 @@ export async function requestWorkDesignAdviceRoute(
     const taskKind = body.taskKind;
     const sourceRevision = assertWorkDesignSourceRevision(body.sourceRevision);
     const operatorPrompt = requiredText(body.operatorPrompt, "operator prompt");
+    let draftScope: unknown;
+    if (body.draftScope !== undefined) {
+      const envelope = record(body.draftScope);
+      const scope = assertAdvisorScope(envelope.scope);
+      const conversation = envelope.conversation ?? [];
+      if (!Array.isArray(conversation) || conversation.length > 8 || conversation.some((turn) =>
+        !turn || typeof turn !== "object" || !["operator", "advisor"].includes(turn.role) || typeof turn.text !== "string" || turn.text.length > 2000)) invalid("Advisor conversation is invalid.");
+      const expectedRole = taskKind === "context_advice" ? "work-design-context" : "work-design-tree";
+      if (scope.role !== expectedRole || scope.packageRef !== packageRef || scope.sourceRevision !== sourceRevision) invalid("Advisor draft binding is invalid.");
+      if (hasSecretLikeMaterial(JSON.stringify({ scope, conversation, operatorPrompt }))) invalid("Secret-like material cannot enter draft advice.");
+      draftScope = { scope, conversation, response_format: advisorDraftInstructions };
+    }
     const result =
       taskKind === "context_advice"
         ? await requestWorkDesignContextAdvice(packageRef, {
@@ -74,6 +88,7 @@ export async function requestWorkDesignAdviceRoute(
             contextNote: text(body.contextNote, "context note"),
             operatorPrompt,
             sourceRevision,
+            draftScope,
           } satisfies WorkDesignContextAssistCommand)
         : taskKind === "tree_advice"
           ? await requestWorkDesignTreeAdvice(packageRef, {
@@ -83,6 +98,7 @@ export async function requestWorkDesignAdviceRoute(
                   ? null
                   : requiredText(body.selectedNodeId, "selected node identity"),
               sourceRevision,
+              draftScope,
               tree: assertWorkDesignNode(body.tree),
             } satisfies WorkDesignTreeAssistCommand)
           : invalid("Work Design assist task is invalid.");

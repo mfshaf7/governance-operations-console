@@ -111,10 +111,12 @@ export function assertRefinementOosAssistResult(
   for (const key of ["request_id", "correlation_id", "response_id"]) stableId(result[key], `assist ${key}`);
   exact(result.status, "ready", "assist status");
   oneOf(result.confidence, ["low", "medium", "high"], "assist confidence");
-  oneOf(result.required_operator_action, ["review", "no_change"], "assist action");
+  oneOf(result.required_operator_action, ["review", "none"], "assist action");
   const suggestion = record(result.suggestion, "Refinement suggestion");
   stableId(suggestion.field_key, "suggestion field key");
-  for (const key of ["value", "summary", "rationale"]) string(suggestion[key], `suggestion ${key}`);
+  for (const key of ["summary", "rationale"]) string(suggestion[key], `suggestion ${key}`);
+  if (result.required_operator_action === "none") exact(suggestion.value, null, "answer-only suggestion value");
+  else string(suggestion.value, "suggestion value");
   exact(suggestion.resolution, "ai_drafted", "suggestion resolution");
   const evidence = record(result.evidence, "Refinement assist evidence");
   if (Object.hasOwn(evidence, "effective_selection")) assertEffectiveModelSelection(evidence.effective_selection, "delivery-refinement-advisor-v1/metadata_advice");

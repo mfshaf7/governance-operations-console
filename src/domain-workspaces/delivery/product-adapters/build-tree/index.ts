@@ -46,3 +46,4 @@ export {
   workDesignStructuredStoryGroupNodeIds,
 } from "./work-design-tree-model.ts";
 export type { WorkDesignGeneratedSeedMetrics } from "./work-design-tree-model.ts";
+export { applyWorkDesignAdvisorPatch } from "./work-design-advisor-patch.ts";

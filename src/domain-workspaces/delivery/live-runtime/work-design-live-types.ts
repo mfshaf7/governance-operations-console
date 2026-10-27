@@ -85,6 +85,7 @@ export type WorkDesignProjectionSnapshot = {
 };
 
 export type WorkDesignContextAssistCommand = {
+  draftScope?: unknown;
   contextDecision: WorkDesignContextDecision;
   contextNote: string;
   operatorPrompt: string;
@@ -92,6 +93,7 @@ export type WorkDesignContextAssistCommand = {
 };
 
 export type WorkDesignTreeAssistCommand = {
+  draftScope?: unknown;
   operatorPrompt: string;
   selectedNodeId: string | null;
   sourceRevision: string;

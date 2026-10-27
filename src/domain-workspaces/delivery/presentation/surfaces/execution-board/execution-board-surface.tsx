@@ -675,6 +675,10 @@ export function DeliveryExecutionBoard({
   const selectedContent =
     selectedPackage && treeEditActive && selectedTreeEditNode ? (
       <ExecutionTreeEditSupportPanel
+        disabled={treeChangeSubmitting || treeChangeReviewOpen}
+        onUpdateText={(values) => handleTreeDraftChange(updateExecutionTreeNode(
+          treeEditActive, selectedTreeEditNode.id, (node) => ({ ...node, ...values }),
+        ))}
         onUpdatePlanningInputs={(values) => {
           if (selectedTreeEditNode.legacyWorkPackageId !== null) return;
           handleTreeDraftChange(updateExecutionTreeNode(

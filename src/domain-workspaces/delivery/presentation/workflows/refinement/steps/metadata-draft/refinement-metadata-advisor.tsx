@@ -2,10 +2,11 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { useDraftAdvisor } from "@/agent-console";
+import { effectiveModelLabel } from "@/console-integration/governed-ai/model-selection";
 
 import { TerasAdvisorPanel } from "@/teras";
 
-import { refinementAdvisorDraft } from "../../view-model/refinement-advisor-draft.ts";
 import type {
   RefinementMetadataTarget,
   RefinementSharedMetadataTargetGroup,
@@ -14,6 +15,7 @@ import type { DeliveryRefinementModalStep } from "../../model/refinement-model.t
 import type {
   RefinementAssistCommand,
   RefinementLiveMode,
+  RefinementOosAssistResult,
 } from "../../../../../live-runtime/refinement-live-types.ts";
 
 type RefinementAdvisorLine = {
@@ -23,6 +25,7 @@ type RefinementAdvisorLine = {
 };
 
 export function RefinementMetadataAdvisor({
+  sourceRef, sourceRevision, metadataDraftValues,
   activeStep,
   advisorTranscript,
   collapsed,
@@ -39,6 +42,9 @@ export function RefinementMetadataAdvisor({
   updateMetadataDraftValue,
   updateMetadataDraftValues,
 }: {
+  sourceRef: string;
+  sourceRevision: string;
+  metadataDraftValues: Record<string, string>;
   activeStep: DeliveryRefinementModalStep;
   advisorTranscript: RefinementAdvisorLine[];
   collapsed: boolean;
@@ -57,9 +63,7 @@ export function RefinementMetadataAdvisor({
     command: RefinementAssistCommand,
   ) => Promise<{
     mode: RefinementLiveMode;
-    result: {
-      suggestion: { rationale: string; summary: string; value: string };
-    } | null;
+    result: RefinementOosAssistResult | null;
   }>;
   runtimeMode: RefinementLiveMode;
   runtimeStatus: "current" | "offline";
@@ -73,6 +77,34 @@ export function RefinementMetadataAdvisor({
     RefinementAdvisorLine[]
   >([]);
   const advisorLines = [...advisorTranscript, ...advisorExchange];
+  const targets = selectedSharedMetadataGroup?.targets ?? (selectedTarget ? [selectedTarget] : []);
+  const advisor = useDraftAdvisor({
+    disabled: activeStep !== "metadata_draft" || runtimeStatus !== "current" || runtimeMode !== "live",
+    getScope: () => ({ role: "refinement-metadata", ref: `${sourceRef}:${targets.map((target) => target.key).join(",")}`,
+      sourceRef, sourceRevision,
+      context: JSON.stringify({ package: deliveryPackageName, targets: targets.map((target) => ({ key: target.key, sourceValue: target.sourceValue, field: target.field })) }),
+      fields: targets.map((target) => ({ key: target.key, label: target.field.label,
+        value: metadataDraftValues[target.key] ?? target.sourceValue, allowedValues: target.field.allowed_values ?? [] })),
+    }),
+    apply: (edits) => { for (const edit of edits) { updateMetadataDraftValue(edit.field, String(edit.value)); markMetadataFieldResolution(edit.field, "ai_drafted"); } return edits; },
+    restore: (edits) => { for (const edit of edits) updateMetadataDraftValue(edit.field, String(edit.value)); },
+    transport: async (scope, prompt) => {
+      const target = targets[0];
+      if (!target) throw Error("Select a metadata field first.");
+      const live = await requestMetadataAdvice({ allowedValues: target.field.allowed_values ?? [],
+        draftValue: String(scope.fields[0].value), fieldKey: target.field.field_key ?? target.field.backend_field,
+        fieldKind: target.field.field_kind, fieldLabel: target.field.label, operatorPrompt: prompt,
+        required: target.field.required, selectedNodeIds: targets.map((item) => item.node.id), sourceValue: target.sourceValue });
+      if (!live.result) throw Error("A live governed advisor is required. Manual drafting remains available.");
+      const result = live.result;
+      const edits = result.required_operator_action === "review" && result.suggestion.value !== null
+        ? scope.fields.map((field) => ({ field: field.key, value: result.suggestion.value })) : [];
+      return { intent: edits.length ? "draft" : "answer", message: `${result.suggestion.summary}\n${result.suggestion.rationale}`,
+        edits, evidence: { profileId: result.evidence.model_profile_id, auditRef: result.evidence.gateway_audit_ref,
+          contextRef: result.evidence.cgg_packet_ref,
+          ...(result.evidence.effective_selection ? { effectiveModel: effectiveModelLabel(result.evidence.effective_selection) } : {}) } };
+    },
+  });
 
   async function submitAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,50 +131,14 @@ export function RefinementMetadataAdvisor({
     setAdvisorPrompt("");
 
     try {
-      const live = await requestMetadataAdvice({
-        allowedValues: activeTarget.field.allowed_values ?? [],
-        draftValue,
-        fieldKey:
-          activeTarget.field.field_key ?? activeTarget.field.backend_field,
-        fieldKind: activeTarget.field.field_kind,
-        fieldLabel: activeTarget.field.label,
-        operatorPrompt: prompt,
-        required: activeTarget.field.required,
-        selectedNodeIds: selectedSharedMetadataGroup
-          ? selectedSharedMetadataGroup.targets.map((target) => target.node.id)
-          : [activeTarget.node.id],
-        sourceValue: activeTarget.sourceValue,
-      });
-      const advisorDraft = live.result
-        ? {
-            reply: `${live.result.suggestion.summary} ${live.result.suggestion.rationale}`.trim(),
-            value: live.result.suggestion.value,
-          }
-        : refinementAdvisorDraft({
-            deliveryPackageName,
-            draftValue,
-            selectedTarget: activeTarget,
-            sharedTargetCount: selectedSharedMetadataGroup?.targets.length,
-          });
-
-      if (selectedSharedMetadataGroup && advisorDraft.value !== null) {
-        const fieldKeys = selectedSharedMetadataGroup.targets.map(
-          (target) => target.key,
-        );
-
-        updateMetadataDraftValues(fieldKeys, advisorDraft.value);
-        markMetadataFieldResolutions(fieldKeys, "ai_drafted");
-      } else if (advisorDraft.value !== null) {
-        updateMetadataDraftValue(activeTarget.key, advisorDraft.value);
-        markMetadataFieldResolution(activeTarget.key, "ai_drafted");
-      }
+      const reply = await advisor.run(prompt);
 
       setAdvisorExchange((current) => [
         ...current,
         {
           id: `refinement-advisor-${timestamp}`,
           role: "advisor",
-          text: advisorDraft.reply,
+          text: reply.message,
         },
       ]);
     } catch (error) {
@@ -162,6 +158,7 @@ export function RefinementMetadataAdvisor({
 
   return (
     <TerasAdvisorPanel
+      draftControls={advisor.panelControls}
       collapsed={activeStep === "metadata_draft" ? collapsed : false}
       density={activeStep === "metadata_draft" ? "compact" : "standard"}
       fill={activeStep === "metadata_draft"}
@@ -194,7 +191,7 @@ export function RefinementMetadataAdvisor({
       }
       statusTitle={
         runtimeMode === "disconnected-preview"
-          ? "Disconnected preview uses local advisor fixtures and cannot mutate backend truth."
+          ? "Disconnected preview supports manual drafting. A live governed model is required for advice."
           : runtimeStatus === "current"
             ? "Advice is admitted and routed through the OOS Refinement contract."
             : "Canonical Refinement advice is unavailable and does not fall back locally."

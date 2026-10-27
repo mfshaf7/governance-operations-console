@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useDraftAdvisor } from "@/agent-console";
 
 import type { DeliveryPackageSummary } from "../../../read-model/index.ts";
 
@@ -31,13 +32,26 @@ export function ExecutionTreeEditSupportPanel({
   packageSummary,
   selectedNode,
   onUpdatePlanningInputs,
+  onUpdateText,
+  disabled = false,
 }: {
   packageSummary: DeliveryPackageSummary;
   selectedNode: ExecutionTreeDraftNode;
   onUpdatePlanningInputs?: (values: { targetPi?: string; iteration?: string }) => void;
+  onUpdateText?: (values: { title?: string; draftBody?: string; remark?: string }) => void;
+  disabled?: boolean;
 }) {
   const [advisorPrompt, setAdvisorPrompt] = useState("");
   const [advisorTurns, setAdvisorTurns] = useState<AdvisorLine[]>([]);
+  const advisor = useDraftAdvisor({
+    disabled: disabled || !onUpdateText,
+    getScope: () => ({ role: "execution-tree", ref: `${packageSummary.delivery_package_id}:${selectedNode.id}`,
+      sourceRef: packageSummary.source_ref, sourceRevision: "local-execution-tree-draft",
+      context: JSON.stringify({ package: packageSummary.display_name, selectedNode, boundary: "Local selected node narrative only; no backend status or workflow action." }),
+      fields: ["title", "draftBody", "remark"].map((key) => ({ key, label: key, value: selectedNode[key as "title" | "draftBody" | "remark"] ?? "" })),
+    }),
+    apply: (edits) => { onUpdateText?.(Object.fromEntries(edits.map((edit) => [edit.field, edit.value]))); return edits; },
+  });
   const selectedNodeTitle = executionTreeNodeDisplayTitle(selectedNode);
   const advisorTranscript: AdvisorLine[] = [
     {
@@ -52,7 +66,7 @@ export function ExecutionTreeEditSupportPanel({
     ...advisorTurns,
   ];
 
-  function submitAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
+  async function submitAdvisorPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const prompt = advisorPrompt.trim();
@@ -62,6 +76,10 @@ export function ExecutionTreeEditSupportPanel({
     }
 
     const turnId = Date.now();
+    setAdvisorPrompt("");
+    let reply: string;
+    try { reply = (await advisor.run(prompt)).message; }
+    catch (error) { reply = error instanceof Error ? error.message : "Governed advisor unavailable."; }
 
     setAdvisorTurns((current) => [
       ...current,
@@ -73,12 +91,7 @@ export function ExecutionTreeEditSupportPanel({
       {
         id: `execution-tree-advisor-${turnId}`,
         role: "advisor",
-        text: executionTreeAdvisorReply({
-          packageSummary,
-          prompt,
-          selectedNode,
-          selectedNodeTitle,
-        }),
+        text: reply,
       },
     ]);
     setAdvisorPrompt("");
@@ -162,6 +175,7 @@ export function ExecutionTreeEditSupportPanel({
       </TerasPanel>
 
       <TerasAdvisorPanel
+        draftControls={advisor.panelControls}
         density="compact"
         fill
         profileLabel="Execution Tree Advisor"
@@ -173,9 +187,9 @@ export function ExecutionTreeEditSupportPanel({
           rows: 2,
           value: advisorPrompt,
         }}
-        statusLabel="mock only"
-        statusTitle="Local prototype advisor. Future live support must use admitted AI tooling and OOS-owned Delivery context."
-        statusTone="warn"
+        statusLabel="draft assistance"
+        statusTitle="Explicit requests can edit the selected local node text. Review and Apply remain operator actions."
+        statusTone="info"
         transcript={advisorTranscript}
       />
     </TerasPanelStack>
@@ -194,7 +208,7 @@ function executionTreeAdvisorOpening({
   return [
     `Editing ${selectedNodeTitle} inside ${packageSummary.source_ref}.`,
     `I can help challenge whether this should stay as ${executionTreeNodeKindLabel(selectedNode.kind)}, suggest missing child work, or tighten the draft note.`,
-    "I will not change the tree automatically.",
+    "Ask explicitly to revise this node's title, draft text, or remark. Review and Apply remain yours.",
   ].join("\n");
 }
 

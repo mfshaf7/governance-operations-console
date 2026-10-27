@@ -9,6 +9,7 @@ import {
 import { consoleMutationAttributionHeaders } from "../../console-integration/identity/server/console-session-authorization.ts";
 import { projectAgentContextCandidate } from "../model/agent-context-policy.ts";
 import type { GovernedAgentRequest } from "./agent-request-policy.ts";
+import { advisorDraftInstructions, assertAdvisorScope, type AdvisorScope } from "../model/advisor-drafts.ts";
 
 const maxResponseBytes = 1_048_576;
 const timeoutMs = 180_000;
@@ -35,6 +36,7 @@ type Options = Readonly<{
   fetchImpl?: typeof fetch;
   now?: () => Date;
   signal?: AbortSignal;
+  draftContext?: { scope: AdvisorScope; conversation: Array<{ role: string; text: string }> };
 }>;
 
 export type GovernedAgentInvocationResult = Readonly<{
@@ -90,7 +92,12 @@ export async function invokeGovernedAgent(
   );
   if (created.state !== "active") throw projectionError("OOS returned a closed Agent Console session.");
 
-  const content = JSON.stringify(projectAgentContextCandidate(input.candidate));
+  const content = JSON.stringify(options.draftContext ? {
+    candidate: projectAgentContextCandidate(input.candidate),
+    operator_draft: assertAdvisorScope(options.draftContext.scope),
+    conversation: options.draftContext.conversation,
+    requested_response_format: advisorDraftInstructions,
+  } : projectAgentContextCandidate(input.candidate));
   const invoked = assertSessionProjection(
     await request(`/v1/agent-console/sessions/${encodeURIComponent(ids.sessionId)}/invocations`, {
       body: JSON.stringify({
@@ -111,7 +118,7 @@ export async function invokeGovernedAgent(
           content,
           content_digest: digest(content),
         },
-        budget_tokens: 1024,
+        budget_tokens: options.draftContext ? 8000 : 1024,
       }),
       method: "POST",
     }, { ...options, config }),

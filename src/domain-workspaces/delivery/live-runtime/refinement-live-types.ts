@@ -153,7 +153,7 @@ export type RefinementOosAssistResult = {
     task_contract_ref: "oos.delivery-refinement.v1";
   };
   request_id: string;
-  required_operator_action: "no_change" | "review";
+  required_operator_action: "none" | "review";
   response_id: string;
   schema_version: 1;
   status: "ready";
@@ -162,7 +162,7 @@ export type RefinementOosAssistResult = {
     rationale: string;
     resolution: "ai_drafted";
     summary: string;
-    value: string;
+    value: string | null;
   };
 };
 

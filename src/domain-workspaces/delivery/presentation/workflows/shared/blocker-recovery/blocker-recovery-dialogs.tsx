@@ -15,6 +15,7 @@ import { deliveryBlockerRecoveryDialogShellCopy } from "./blocker-recovery-model
 import { DeliveryBlockerRecoveryResultPanel } from "./blocker-recovery-result-panel.tsx";
 
 export function DeliveryBlockerRecoveryDialog({
+  blockerAdvisorControls,
   activeBlockerIssue,
   blockerAdvisorPrompt,
   blockerAdvisorTranscript,
@@ -139,6 +140,7 @@ export function DeliveryBlockerRecoveryDialog({
             }
           />
           <DeliveryBlockerRecoveryAdvisorPanel
+            blockerAdvisorControls={blockerAdvisorControls}
             blockerAdvisorPrompt={blockerAdvisorPrompt}
             blockerAdvisorTranscript={blockerAdvisorTranscript}
             copy={copy}

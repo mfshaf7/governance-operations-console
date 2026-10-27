@@ -289,6 +289,7 @@ live-runtime/use-refinement-live-runtime.ts
 live-runtime/use-work-design-live-runtime.ts
 live-runtime/work-design-live-contract.ts
 live-runtime/work-design-live-types.ts
+live-runtime/work-design-draft-advisor.ts
 presentation/package-register/index.ts
 presentation/package-register/package-register-data.ts
 presentation/package-register/package-register-selected-panel.tsx
@@ -390,6 +391,7 @@ presentation/workflows/shared/blocker-recovery/blocker-recovery-advisor-panel.ts
 presentation/workflows/shared/blocker-recovery/blocker-recovery-dialog-types.ts
 presentation/workflows/shared/blocker-recovery/blocker-recovery-dialogs.tsx
 presentation/workflows/shared/blocker-recovery/blocker-recovery-model.ts
+presentation/workflows/shared/blocker-recovery/use-blocker-draft-advisor.ts
 presentation/workflows/shared/blocker-recovery/blocker-recovery-result-panel.tsx
 presentation/workflows/shared/blocker-recovery/index.ts
 presentation/workflows/shared/package-actions/package-action-routing.ts
@@ -484,6 +486,7 @@ presentation/workspace/workspace-types.ts
 presentation/workspace/workspace-view-model.ts
 presentation/workspace/workspace.tsx
 product-adapters/build-tree/index.ts
+product-adapters/build-tree/work-design-advisor-patch.ts
 product-adapters/build-tree/work-design-build-tree-advisor.ts
 product-adapters/build-tree/work-design-build-tree-scaffold.ts
 product-adapters/build-tree/work-design-tree-model.ts

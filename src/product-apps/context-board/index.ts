@@ -46,6 +46,7 @@ export type {
 } from "./context-board-model";
 
 export * from "./context-board-core";
+export { applyContextBoardAdvisorPatch } from "./context-board-advisor-patch";
 export * from "./context-board-rendering";
 export * from "./context-board-snapshot-capture-surface";
 export * from "./context-board-starter-helpers";
