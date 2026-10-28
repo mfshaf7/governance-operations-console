@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   DeliveryRefinementApplyReceipt,
@@ -69,6 +69,7 @@ export function useRefinementSessionState(
     initialSelectedMetadataFieldKey(packet),
   );
   const [persistenceLoaded, setPersistenceLoaded] = useState(false);
+  const hydratedPackage = useRef(packageId);
   const activeReceipt = localReceipt ?? packet?.receipt ?? null;
   const hasUnappliedSessionChanges = refinementSessionHasUnappliedChanges({
     draftValues: metadataDraftValues,
@@ -91,7 +92,10 @@ export function useRefinementSessionState(
         ? persistedSession
         : null;
 
-    setActiveStep("hub");
+    // A late packet read must not send an inspector back to the hub after
+    // they have already opened History or another read-only section.
+    if (!readOnly || hydratedPackage.current !== packageId) setActiveStep("hub");
+    hydratedPackage.current = packageId;
     setLocalReceipt(matchingSession?.apply.receipt ?? null);
     setMetadataDraftValues({
       ...nextDraftValues,
@@ -110,7 +114,7 @@ export function useRefinementSessionState(
       matchingSession?.metadata.selectedFieldKey || nextSelectedFieldKey,
     );
     setPersistenceLoaded(true);
-  }, [packageId, packet?.packet_id, packet?.packet_revision]);
+  }, [packageId, packet?.packet_id, packet?.packet_revision, readOnly]);
 
   useEffect(() => {
     if (readOnly || !persistenceLoaded || !packet || !packageId) {
