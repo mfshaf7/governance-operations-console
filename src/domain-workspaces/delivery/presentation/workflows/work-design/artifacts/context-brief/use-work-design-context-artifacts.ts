@@ -21,6 +21,7 @@ import { workDesignContextHandoffProjection } from "./work-design-context-handof
 import { workDesignContextSnapshotEvidenceProjection } from "./work-design-context-snapshot-evidence.ts";
 
 export function useWorkDesignContextArtifacts({
+  readOnly = false,
   activeBriefVersionId,
   briefVersions,
   contextCanvasScreenshotAttachment,
@@ -42,6 +43,7 @@ export function useWorkDesignContextArtifacts({
   deliveryPackage,
   initialContextSession,
 }: {
+  readOnly?: boolean;
   activeBriefVersionId: string | null;
   briefVersions: WorkDesignBriefVersion[];
   contextCanvasScreenshotAttachment: WorkDesignSnapshotAttachment | null;
@@ -64,6 +66,7 @@ export function useWorkDesignContextArtifacts({
   initialContextSession: WorkDesignInitialContextSession;
 }) {
   const contextBriefState = workDesignContextBriefStateProjection({
+    readOnly,
     activeBriefVersionId,
     briefVersions,
     contextBriefFingerprint,
@@ -77,6 +80,7 @@ export function useWorkDesignContextArtifacts({
     contextSavedSessions,
   });
   const finalizedBrief = workDesignContextFinalizedBriefProjection({
+    readOnly,
     activeBriefVersion: contextBriefState.activeBriefVersion,
     contextBriefReady,
     contextCurrentSavedSession: contextBriefState.contextCurrentSavedSession,
@@ -88,6 +92,9 @@ export function useWorkDesignContextArtifacts({
   const snapshotEvidence = useMemo(
     () =>
       workDesignContextSnapshotEvidenceProjection({
+        readOnly,
+        retainedSnapshot: contextBriefState.activeBriefVersion?.snapshot,
+        retainedCoreNodes: contextBriefState.activeBriefVersion?.coreNodes,
         contextBriefReady,
         contextCanvasScreenshotAttachment,
         contextCurrentSavedSession:
@@ -101,6 +108,9 @@ export function useWorkDesignContextArtifacts({
         initialContextSession,
       }),
     [
+      readOnly,
+      contextBriefState.activeBriefVersion?.snapshot,
+      contextBriefState.activeBriefVersion?.coreNodes,
       contextBriefReady,
       contextBriefState.contextCurrentSavedSession,
       contextBriefState.contextFinalizedFingerprint,

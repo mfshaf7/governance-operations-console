@@ -18,6 +18,10 @@ Handlers enforce the same lock. Navigation, selection, expansion, tree modes,
 detail inspection and evidence export remain available. Browsing does not
 autosave local sessions, rewrite metadata decisions or capture new snapshots.
 
+Opening a hub, review plan, finalized-brief inspection or History is navigation;
+it does not accept a review or run Apply. The original snapshot viewer supports
+zoom, fit, scrolling and fullscreen without modifying an artifact or saved session.
+
 An existing saved local session is read without modifying it, preserving its
 canvas, brief and tree when available. Without a saved draft, the existing owner
 GET supplies current ART design branches to the normal Work Design editor.
@@ -28,12 +32,35 @@ No starter branches or invented historical decisions substitute for absent
 records. Refinement uses its current owner packet and matching saved session,
 with original receipts retaining their own evidence identity.
 
+The selected finalized version, rather than a newer autosave, supplies the locked
+canvas and Review Draft preview. Its board, decision, note, references and time
+stay bound to that version when current package metadata changes. New local
+finalizations retain the complete brief view and core-card labels in the existing
+version record. Older versions disclose missing text/checks/core labels; current
+metadata does not fill those historical fields. A rendered retained-board preview
+is not an original PNG upload. If no board exists, Review Draft shows absence,
+not a generated starter thumbnail. Every brief entry uses the same availability.
+
+Refinement retains its normal hub, steps and History when no current authoring
+packet can be built. Packet-dependent sections explain missing data; History
+still reads original runs, receipts and item activity. Inspection never prepares
+a new handoff or replays work.
+
 Use the existing History and detail actions to inspect receipts. Execution's
 **Original Owner Evidence** opens native Intake consumption, Work Design
 applications, Refinement runs and closeout outcomes. IDs, actors, times, digests
 and evidence references remain original. Unavailable owner reads stay explicit;
 refresh never replays work. Current package posture does not prove every stage
 ran. Catalog remains the independent live metadata register.
+
+Work Design, Refinement and Execution history share the exact-item owner read.
+Trails combine actual OpenProject creation/edits/comments with original workflow
+receipts. Item activity has previous/next page controls and explicit totals and
+coverage; receipt excerpts keep their own bounds. A legacy item may have backend
+activity but no Console stage receipts. Partial owner evidence stays visible,
+with observation time and refresh. Execution's loaded-history summary does not
+claim to be a complete global log. Home retains declared Intake-activity coverage
+without scanning every archive. Catalog remains independently live metadata.
 
 This owner maintenance removes the separate inspection interface introduced in
 PR142. It extends lock properties and handlers in existing components and adds

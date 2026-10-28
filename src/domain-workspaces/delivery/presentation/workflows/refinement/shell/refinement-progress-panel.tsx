@@ -35,7 +35,7 @@ export function RefinementProgressPanel({
     tone: DeliveryTone;
   };
   onSelectStep: (step: DeliveryRefinementModalStep) => void;
-  packet: DeliveryRefinementPacket;
+  packet: DeliveryRefinementPacket | null;
   progressActiveStep: DeliveryRefinementStepId;
   refinementBlocked: boolean;
 }) {
@@ -70,7 +70,7 @@ export function RefinementProgressPanel({
               ? "muted"
               : step.archive
                 ? "info"
-                : refinementStepTone({
+                : !packet ? "muted" : refinementStepTone({
                     applyRecorded: Boolean(activeReceipt),
                     activeStep: progressActiveStep,
                     candidateStep: step.id,
@@ -88,7 +88,7 @@ export function RefinementProgressPanel({
                 ? "Locked"
                 : step.archive
                   ? "Archive"
-                  : refinementStepStateLabel({
+                  : !packet ? "Unavailable" : refinementStepStateLabel({
                       applyRecorded: Boolean(activeReceipt),
                       activeStep: progressActiveStep,
                       candidateStep: step.id,

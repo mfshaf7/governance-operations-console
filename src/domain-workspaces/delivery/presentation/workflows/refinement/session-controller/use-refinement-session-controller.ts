@@ -282,6 +282,7 @@ export function useRefinementSessionController({
     fallbackJustification: string;
     justification: string;
   }) {
+    if (readOnly) throw new Error("Completed work is read-only.");
     return createLocalDeliveryBlockerDispositionReceipt({
       action,
       activeBlockerIssue,
@@ -306,7 +307,7 @@ export function useRefinementSessionController({
   }
 
   function runHubAction() {
-    if (readOnly) return;
+    if (readOnly && hubAction?.route === "blocker") return;
     if (!hubAction) {
       return;
     }

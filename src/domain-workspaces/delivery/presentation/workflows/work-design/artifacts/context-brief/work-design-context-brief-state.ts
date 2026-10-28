@@ -32,6 +32,7 @@ export function workDesignContextFinalizedFingerprint({
 }
 
 export function workDesignContextBriefStateProjection({
+  readOnly = false,
   activeBriefVersionId,
   briefVersions,
   contextBriefFingerprint,
@@ -44,6 +45,7 @@ export function workDesignContextBriefStateProjection({
   contextLoadedSessionId,
   contextSavedSessions,
 }: {
+  readOnly?: boolean;
   activeBriefVersionId: string | null;
   briefVersions: WorkDesignBriefVersion[];
   contextBriefFingerprint: string;
@@ -68,7 +70,7 @@ export function workDesignContextBriefStateProjection({
       (session) => session.id === contextLoadedSessionId,
     ) ?? null;
   const contextCurrentSavedSession =
-    contextLoadedSavedSession?.fingerprint === contextBriefFingerprint
+    (readOnly || contextLoadedSavedSession?.fingerprint === contextBriefFingerprint)
       ? contextLoadedSavedSession
       : (contextSavedSessions.find(
           (session) => session.fingerprint === contextBriefFingerprint,
@@ -78,7 +80,7 @@ export function workDesignContextBriefStateProjection({
     Boolean(contextBriefLockedFingerprint) &&
     Boolean(contextBriefMetadataFingerprint) &&
     Boolean(contextBriefSnapshotFingerprint);
-  const contextBriefState: WorkDesignContextBriefState = contextBriefReady
+  const contextBriefState: WorkDesignContextBriefState = contextBriefReady || (readOnly && briefVersions.some(version => version.briefVersionId === activeBriefVersionId))
     ? "finalized"
     : contextBriefPrepared
       ? "stale"

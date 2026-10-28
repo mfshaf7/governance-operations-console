@@ -39,6 +39,7 @@ export function ExecutionSelectedPackagePanel({
   onInspectCloseout,
   onInspectHistory,
   readOnly = false,
+  historyDetail,
 }: {
   auditEvents: ReturnType<typeof getPackageAuditEvents>;
   details: ReturnType<typeof getPackageDetailsById>;
@@ -51,6 +52,7 @@ export function ExecutionSelectedPackagePanel({
   onInspectCloseout?: () => void;
   onInspectHistory?: () => void;
   readOnly?: boolean;
+  historyDetail?: string;
 }) {
   const effectiveProjection =
     getDeliveryEffectivePackageProjection(packageSummary);
@@ -167,7 +169,8 @@ export function ExecutionSelectedPackagePanel({
         </TerasList>
       </TerasInspectionSection>
 
-      <TerasInspectionSection title="Latest History">
+      <TerasInspectionSection title="Loaded History">
+        {historyDetail ? <TerasPanelHeader kicker="Coverage" title="Selected-item evidence" description={historyDetail}/> : null}
         {latestEvent ? (
           <TerasList frame="contained">
             <TerasSignalItem

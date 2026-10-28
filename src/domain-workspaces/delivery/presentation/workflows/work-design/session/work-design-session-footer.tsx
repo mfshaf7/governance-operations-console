@@ -101,7 +101,7 @@ export function WorkDesignSessionFooter({
       {footerProjection.primaryAction ? (
         <TerasActionButton
           data-work-design-action={footerProjection.primaryAction.dataAction}
-          disabled={footerProjection.primaryAction.disabled || (readOnly && ["accept-context-brief", "open-apply-draft", "open-review-draft", "run-apply-draft"].includes(footerProjection.primaryAction.kind))}
+          disabled={readOnly ? ["accept-context-brief", "run-apply-draft"].includes(footerProjection.primaryAction.kind) : footerProjection.primaryAction.disabled}
           onClick={() =>
             handleFooterAction(footerProjection.primaryAction!.kind)
           }

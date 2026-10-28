@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
-import { TerasContentFrame } from "@/teras";
+import { TerasContentFrame,TerasPanel,TerasPanelHeader } from "@/teras";
 import { DeliveryWorkDesignHandoffEvidenceDialog } from "../../shared/package-actions/package-handoff-evidence.tsx";
+import {DeliveryHistoryDialog} from "../../shared/history/delivery-history-dialog.tsx";
 
 import { refinementCurrentMove } from "../view-model/refinement-current-move.ts";
 import { RefinementProgressPanel } from "../shell/refinement-progress-panel.tsx";
@@ -39,7 +40,7 @@ export function RefinementStepRouter({
 }: RefinementStepRouterProps) {
   const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
 
-  if (!packet || !metadataWorkbenchSummary) {
+  if ((!packet || !metadataWorkbenchSummary) && !readOnly) {
     return null;
   }
 
@@ -62,13 +63,13 @@ export function RefinementStepRouter({
     updateMetadataDraftValues,
     updateMetadataDraftValue,
   } = sessionState;
-  const currentMove = refinementCurrentMove({
+  const currentMove = metadataWorkbenchSummary ? refinementCurrentMove({
     activeReceipt,
     activeStep,
     hubAction,
     metadataWorkbenchSummary,
     refinementBlocked,
-  });
+  }) : {title:"Retained Refinement inspection",description:"The current authoring packet is unavailable. Original history is readable independently; no handoff or completion is inferred.",tone:"warn" as const};
   const openHandoffDialog = () => setHandoffDialogOpen(true);
 
   return (
@@ -98,7 +99,9 @@ export function RefinementStepRouter({
             packet={packet}
             progressActiveStep={progressActiveStep}
           />
-        ) : activeStep === "metadata_draft" ? (
+        ) : (!packet || !metadataWorkbenchSummary) && activeStep !== "receipt" ? (
+          <TerasPanel frame="padded" treatment="state" tone="warn"><TerasPanelHeader kicker="Current packet" title="No current Refinement packet" description="This section requires the original packet data. Use History to inspect retained runs and item activity; this absence does not mean the item has no history." statusLabel="unavailable" statusTone="warn"/></TerasPanel>
+        ) : activeStep === "metadata_draft" && packet ? (
           <RefinementMetadataDraftStep
             readOnly={readOnly}
             activeStep={activeStep}
@@ -125,7 +128,7 @@ export function RefinementStepRouter({
             updateMetadataDraftValue={updateMetadataDraftValue}
             updateMetadataDraftValues={updateMetadataDraftValues}
           />
-        ) : activeStep === "readiness_review" ? (
+        ) : activeStep === "readiness_review" && packet && metadataWorkbenchSummary ? (
           <RefinementReadinessReviewView
             canApply={canApply}
             deliveryPackage={deliveryPackage}
@@ -136,7 +139,7 @@ export function RefinementStepRouter({
             onOpenHandoff={openHandoffDialog}
             packet={packet}
           />
-        ) : activeStep === "apply_refinement" ? (
+        ) : activeStep === "apply_refinement" && packet ? (
           <RefinementApplyView
             activeReceipt={activeReceipt}
             canApply={canApply}
@@ -148,6 +151,7 @@ export function RefinementStepRouter({
           />
         ) : (
           <RefinementHistoryView
+            liveHistory={advisorMode === "live"}
             activeReceipt={activeReceipt}
             deliveryPackage={deliveryPackage}
             onOpenHandoff={openHandoffDialog}
@@ -156,12 +160,12 @@ export function RefinementStepRouter({
         )}
       </TerasContentFrame>
 
-      <DeliveryWorkDesignHandoffEvidenceDialog
+      {packet ? <DeliveryWorkDesignHandoffEvidenceDialog
         deliveryPackage={sourceWorkDesignPackage ?? deliveryPackage}
         handoffReceiptId={packet.handoff.source_work_design_receipt_id}
         open={handoffDialogOpen}
         onClose={() => setHandoffDialogOpen(false)}
-      />
+      /> : <DeliveryHistoryDialog deliveryId={handoffDialogOpen ? deliveryPackage.delivery_package_id : null} focus="work_design" onClose={()=>setHandoffDialogOpen(false)}/>}
     </>
   );
 }

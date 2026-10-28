@@ -22,6 +22,9 @@ import type { WorkDesignInitialContextSession } from "./work-design-context-arti
 import type { WorkDesignContextSavedSession } from "../../model/work-design-model.ts";
 
 export function workDesignContextSnapshotEvidenceProjection({
+  readOnly = false,
+  retainedSnapshot,
+  retainedCoreNodes,
   contextBriefReady,
   contextCanvasScreenshotAttachment,
   contextCurrentSavedSession,
@@ -32,6 +35,9 @@ export function workDesignContextSnapshotEvidenceProjection({
   deliveryPackage,
   initialContextSession,
 }: {
+  readOnly?: boolean;
+  retainedSnapshot?: import("../../model/work-design-model.ts").WorkDesignBoardSnapshot;
+  retainedCoreNodes?: import("@/product-apps/context-board").ContextBoardCoreNode[];
   contextBriefReady: boolean;
   contextCanvasScreenshotAttachment: WorkDesignSnapshotAttachment | null;
   contextCurrentSavedSession: WorkDesignContextSavedSession | null;
@@ -43,14 +49,15 @@ export function workDesignContextSnapshotEvidenceProjection({
   initialContextSession: WorkDesignInitialContextSession;
 }) {
   const contextFinalizedBoardSnapshot =
-    contextCurrentSavedSession?.snapshot ??
-    workDesignFinalizedContextBoardSnapshot({
+    retainedSnapshot ?? contextCurrentSavedSession?.snapshot ??
+    (readOnly && !initialContextSession ? {connections:[],customItems:[],positions:{},removedCoreIds:[],sketchStrokes:[],style:"plain" as const,templateTrays:[]} : workDesignFinalizedContextBoardSnapshot({
       deliveryPackage,
-    });
-  const contextSnapshotCoreNodes = workDesignContextBoardCoreNodes(
+    }));
+  const currentCoreNodes = workDesignContextBoardCoreNodes(
     deliveryPackage,
     contextFinalizedBrief.decision,
   );
+  const contextSnapshotCoreNodes = !readOnly ? currentCoreNodes : retainedCoreNodes ?? (retainedSnapshot ? currentCoreNodes.map(node=>({...node,label:"Original core-card text not retained",detail:"Current metadata is not substituted for historical content.",tone:"neutral" as const})) : []);
   const contextBoardInventory = workDesignBoardInventory(
     contextFinalizedBoardSnapshot,
     contextSnapshotCoreNodes,

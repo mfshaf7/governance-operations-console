@@ -111,9 +111,8 @@ export function WorkDesignHubView({
             }
             action={
               <TerasActionButton
-                disabled={readOnly}
                 onClick={() => {
-                  if (workDesignBlocked) {
+                  if (workDesignBlocked && !readOnly) {
                     onOpenBlockerRecovery();
                     return;
                   }

@@ -65,10 +65,11 @@ export async function readCanonicalDeliveryWorkspace(options: ReadOptions = {}) 
   }
 }
 
-export async function readCanonicalDeliveryHistory(deliveryId: string, {env=process.env,fetchImpl=fetch}: {env?:NodeJS.ProcessEnv;fetchImpl?:typeof fetch}={}) {
+export async function readCanonicalDeliveryHistory(deliveryId: string, {env=process.env,fetchImpl=fetch,activityPage=1}: {env?:NodeJS.ProcessEnv;fetchImpl?:typeof fetch;activityPage?:number}={}) {
   deliveryHistoryId(deliveryId);
+  if (!Number.isSafeInteger(activityPage) || activityPage<1 || activityPage>100000) throw new Error("Activity page is invalid.");
   const recordRef=`openproject://work_packages/${deliveryId.slice(9)}`;
   return assertDeliveryHistoryProjection(await deliveryOosRequest(resolveDeliveryOosConfig(env),
-    `/v1/delivery-initiatives/${deliveryId}/history`,{method:"GET"},fetchImpl,75000,
+    `/v1/delivery-initiatives/${deliveryId}/history${activityPage===1?"":`?activity_page=${activityPage}`}`,{method:"GET"},fetchImpl,75000,
     {authority:"operator-orchestration-service",sourceOwner:"workspace-delivery-art",recordRef}),deliveryId);
 }

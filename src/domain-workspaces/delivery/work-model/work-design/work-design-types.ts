@@ -116,6 +116,8 @@ export type WorkDesignContextSavedSession = {
 };
 
 export type WorkDesignBriefVersion = {
+  finalizedBrief?: import("./work-design-artifact-types.ts").WorkDesignFinalizedBrief;
+  coreNodes?: import("../../../../product-apps/context-board/index.ts").ContextBoardCoreNode[];
   boardSnapshotRef: string;
   briefVersionId: string;
   decision: WorkDesignContextDecision;

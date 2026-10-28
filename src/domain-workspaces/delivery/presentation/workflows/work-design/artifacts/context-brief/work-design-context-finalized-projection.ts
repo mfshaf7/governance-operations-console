@@ -1,4 +1,5 @@
 import type { DeliveryPackageSummary } from "../../../../../read-model/index.ts";
+import {workDesignRetainedBrief} from "../../../../../local-runtime/index.ts";
 import type {
   WorkDesignBriefVersion,
   WorkDesignContextDecision,
@@ -9,6 +10,7 @@ import { workDesignFinalizedBriefView } from "./work-design-context-brief-model.
 import type { WorkDesignInitialContextSession } from "./work-design-context-artifact-types.ts";
 
 export function workDesignContextFinalizedBriefProjection({
+  readOnly = false,
   activeBriefVersion,
   contextBriefReady,
   contextCurrentSavedSession,
@@ -17,6 +19,7 @@ export function workDesignContextFinalizedBriefProjection({
   deliveryPackage,
   initialContextSession,
 }: {
+  readOnly?: boolean;
   activeBriefVersion: WorkDesignBriefVersion | null;
   contextBriefReady: boolean;
   contextCurrentSavedSession: WorkDesignContextSavedSession | null;
@@ -35,7 +38,8 @@ export function workDesignContextFinalizedBriefProjection({
     savedSession: contextCurrentSavedSession,
     session: initialContextSession,
   });
-  const contextFinalizedBrief = activeBriefVersion
+  const legacyRetainedBrief = readOnly && activeBriefVersion ? workDesignRetainedBrief(activeBriefVersion,contextCurrentSavedSession) : null;
+  const contextFinalizedBrief = activeBriefVersion?.finalizedBrief ?? legacyRetainedBrief ?? (activeBriefVersion
     ? {
         ...contextFinalizedBriefBase,
         boardSnapshotRef: activeBriefVersion.boardSnapshotRef,
@@ -45,11 +49,11 @@ export function workDesignContextFinalizedBriefProjection({
         name: activeBriefVersion.name,
         version: activeBriefVersion.versionLabel,
       }
-    : contextFinalizedBriefBase;
+    : contextFinalizedBriefBase);
 
   return {
     contextFinalizedBrief,
     contextFinalizedBriefAvailable:
-      contextBriefReady || Boolean(initialContextSession?.accepted),
+      Boolean(activeBriefVersion) || contextBriefReady || Boolean(initialContextSession?.accepted),
   };
 }

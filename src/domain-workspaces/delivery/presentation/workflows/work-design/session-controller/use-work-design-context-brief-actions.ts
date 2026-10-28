@@ -122,6 +122,8 @@ export function useWorkDesignContextBriefActions({
     const briefVersion: WorkDesignBriefVersion = {
       ...workDesignBriefVersionFromContextSession({
         deliveryPackage,
+        finalizedAt,
+        versionLabel: `local v${briefVersions.length + 1} locked`,
         fingerprint: contextBriefFingerprint,
         savedSession: contextCurrentSavedSession,
         session: null,
