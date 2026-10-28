@@ -29,7 +29,7 @@ export function getDeliveryPackageRegisterPackages({
       projectDeliveryPackageRegisterPackage(
         surface,
         deliveryPackage,
-        workDesignSessionForPackage(deliveryPackage.delivery_package_id),
+        model.history_scope === "history" ? null : workDesignSessionForPackage(deliveryPackage.delivery_package_id),
       ),
   );
 }

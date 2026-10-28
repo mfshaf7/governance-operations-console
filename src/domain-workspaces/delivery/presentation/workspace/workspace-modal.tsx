@@ -52,7 +52,6 @@ import {
   deliveryWorkspaceSummaryStats,
   deliveryWorkspaceSummaryTitle,
 } from "./workspace-view-model.ts";
-import { DeliveryHistoryRegister } from "../workflows/shared/history/delivery-history-register.tsx";
 import { DeliveryPackageWorkflowRouter } from "../package-register/index.ts";
 
 export function DeliveryWorkspaceModal({
@@ -438,9 +437,6 @@ function DeliveryWorkspaceSurfaceContent({
     );
   }
 
-  if(model.history_scope === "history" && ["work-design","refinement","execution-board"].includes(activeSurfaceId)) {
-    return <DeliveryHistoryRegister model={model} focusPackageId={activeSurfaceId === "execution-board" ? executionFocusPackageId : packageRegisterFocus?.surfaceId === activeSurfaceId ? packageRegisterFocus.packageId : null} section={activeSurfaceId==="work-design"?"work_design":activeSurfaceId==="refinement"?"refinement":"closeout"}/>;
-  }
   if (activeSurfaceId === "catalog") {
     return (
       <DeliveryCatalogSurface

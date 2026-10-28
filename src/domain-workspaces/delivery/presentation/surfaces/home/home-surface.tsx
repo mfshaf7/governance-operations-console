@@ -2,14 +2,13 @@
 
 import type { DeliveryReadModel } from "../../../read-model/index.ts";
 
-import { TerasPrimarySideLayout } from "@/teras";
+import { TerasPrimarySideLayout, TerasEmptyState } from "@/teras";
 
 import type { DeliveryWorkspaceSurfaceId } from "../../workspace/workspace-types.ts";
 import {
   getDeliveryHomeViewModel,
   type DeliveryHomeTarget,
 } from "./home-view-model.ts";
-import { DeliveryHistoryRegister } from "../../workflows/shared/history/delivery-history-register.tsx";
 import { DeliveryHomeAgentConsole } from "./home-agent-console.tsx";
 import { DeliveryHomeAttentionQueuePanel } from "./home-attention-queue-panel.tsx";
 import { DeliveryHomeRecentActivityPanel } from "./home-recent-activity-panel.tsx";
@@ -53,7 +52,7 @@ export function DeliveryHomeSurface({
         />
       }
       primaryMain={
-        model.history_scope === "history" ? <DeliveryHistoryRegister model={model} section="closeout"/> : <DeliveryHomeAttentionQueuePanel
+        <DeliveryHomeAttentionQueuePanel
           attentionQueue={viewModel.attentionQueue}
           onRouteToTarget={routeToTarget}
         />
@@ -64,7 +63,7 @@ export function DeliveryHomeSurface({
           sourceDetail={model.evidence_coverage?.activity.detail}
         />
       }
-      sideFill={<DeliveryHomeAgentConsole viewModel={viewModel} />}
+      sideFill={model.history_scope === "history" ? <TerasEmptyState>History is read-only. Inspect retained packages in Work Design, Refinement or Execution. Switch to Current to ask the Delivery advisor.</TerasEmptyState> : <DeliveryHomeAgentConsole viewModel={viewModel} />}
       sideFillProps={{ "data-delivery-home-agent-console": "true" }}
     />
   );

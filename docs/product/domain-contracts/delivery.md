@@ -885,16 +885,27 @@ Delivery must not:
 
 ## Current and retained owner history
 
-`presentation/workflows/shared/history/` owns the cross-stage read-only history
-register and dialog. `live-runtime/` owns their owner-bound read contracts and
+`presentation/workflows/shared/history/` owns the locked workflow inspection
+sessions and supplemental owner evidence dialog. `live-runtime/` owns their owner-bound read contracts and
 projection; `server/` owns authenticated canonical reads.
 
 In configured live mode, the primary collection includes completed and inactive
 packages. **Current** keeps active packages in their current-stage workflows.
 **History** keeps all retained packages discoverable, including completed and
-parked work. Work Design, Refinement and Delivery history registers open the
-same read-only original owner evidence view. Its badges describe the current
-package posture; they do not claim that a stage ran successfully.
+parked work. Work Design and Refinement retain the normal register, filters,
+selection, hub and section navigation. Execution retains its Control Board,
+Family Map, ART hierarchy and package details. These History paths cannot
+mount authoring, advisor, preparation, apply or work-start controllers. Their
+badges describe current package posture; they do not claim stage success.
+Browser-local draft projection is excluded from the History registers.
+
+The full current canonical ART tree remains inspectable and explicitly labelled
+as current. Original canvas, finalized brief and accepted draft snapshots not
+retained by the owner remain explicitly absent. They are never reconstructed
+from starter content, local drafts, receipt digests or the current tree.
+Refinement metadata, gates and routes come from its current owner packet,
+labelled separately from original runs and operator decisions. See
+[Delivery history inspection](../delivery-history-inspection.md).
 
 To inspect an earlier delivery, open Delivery, choose History, then select the
 package in Intake, Work Design, Refinement or Execution and open its history.

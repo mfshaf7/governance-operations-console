@@ -230,9 +230,10 @@ work-model/work-design
 [files]
 live-runtime/delivery-history-live-contract.ts
 live-runtime/delivery-history-projection.ts
+live-runtime/delivery-history-tree.ts
 live-runtime/delivery-overview-live-projection.ts
 presentation/workflows/shared/history/delivery-history-dialog.tsx
-presentation/workflows/shared/history/delivery-history-register.tsx
+presentation/workflows/shared/history/delivery-readonly-workflow-session.tsx
 domain/delivery-audit.ts
 domain/delivery-catalog.ts
 domain/delivery-common.ts

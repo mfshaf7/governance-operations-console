@@ -68,6 +68,8 @@ import {
 } from "./work-session/execution-work-session-target.ts";
 import { useDeliveryChangeLiveRuntime } from "../../../live-runtime/use-delivery-change-live-runtime.ts";
 import { useDeliveryCloseoutLiveRuntime } from "../../../live-runtime/use-delivery-closeout-live-runtime.ts";
+import { DeliveryHistoryDialog } from "../../workflows/shared/history/delivery-history-dialog.tsx";
+import { deliveryHistoryInspectionTree } from "../../../live-runtime/delivery-history-tree.ts";
 import {
   buildExecutionTreeChangePlan,
   createdWorkItemId,
@@ -101,6 +103,8 @@ export function DeliveryExecutionBoard({
   onTreeEditStateChange?: (state: ExecutionTreeEditState) => void;
   showIntro?: boolean;
 }) {
+  const readOnly = model.history_scope === "history";
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [activeView, setActiveView] =
     useState<ControlBoardViewMode>("control-board");
   const [selectedPackageId, setSelectedPackageId] = useState(
@@ -179,10 +183,11 @@ export function DeliveryExecutionBoard({
     selectedPackage?.legacy_epic_id ?? null,
   );
   const deliveryCloseoutRuntime = useDeliveryCloseoutLiveRuntime(
-    closeoutOpen ? (selectedPackage?.legacy_epic_id ?? null) : null,
+    !readOnly && closeoutOpen ? (selectedPackage?.legacy_epic_id ?? null) : null,
   );
   const submitLiveExecutionAction = useCallback(
     async (submission: ExecutionActionSubmission) => {
+      if (readOnly) throw new Error("Delivery History is read-only.");
       if (deliveryChangeRuntime.mode === "disconnected-preview") return null;
       if (deliveryChangeRuntime.mode !== "live") {
         throw new Error("Canonical Delivery change truth is unavailable.");
@@ -212,12 +217,17 @@ export function DeliveryExecutionBoard({
         result,
       });
     },
-    [deliveryChangeRuntime.apply, deliveryChangeRuntime.mode],
+    [deliveryChangeRuntime.apply, deliveryChangeRuntime.mode, readOnly],
   );
   const actionSession = useExecutionActionSession({
     submitLive: submitLiveExecutionAction,
   });
-  const selectedBoardTree = selectedPackage
+  const historyTreeRead = useMemo(() => {
+    if (!readOnly || !selectedPackage) return {tree:null,error:null};
+    try { return {tree:deliveryHistoryInspectionTree(deliveryChangeRuntime.projection,selectedPackage.delivery_package_id),error:null}; }
+    catch { return {tree:null,error:"The selected package tree could not be verified."}; }
+  }, [readOnly,selectedPackage,deliveryChangeRuntime.projection]);
+  const selectedBoardTree = readOnly ? historyTreeRead.tree : selectedPackage
     ? (boardPackageTreeById[selectedPackage.delivery_package_id] ?? null)
     : null;
   const selectedTreeDraftActive =
@@ -291,7 +301,7 @@ export function DeliveryExecutionBoard({
     : null;
   const selectedWorkItemId = selectedStartIntent?.target_work_item_id ?? null;
   const workSessionRuntime =
-    useDeliveryWorkSessionLiveRuntime(workSessionTarget?.workItemId ?? null);
+    useDeliveryWorkSessionLiveRuntime(readOnly ? null : workSessionTarget?.workItemId ?? null);
 
   useEffect(() => {
     if (
@@ -344,14 +354,14 @@ export function DeliveryExecutionBoard({
   const boardHeaderActions = (
     <TerasActionRow spacing="tight">
       <TerasActionButton
-        disabled={Boolean(treeEditActive)}
+        disabled={readOnly || Boolean(treeEditActive)}
         emphasis="secondary"
         onClick={() => setArchitecturePacketOpen(true)}
       >
         Architecture Packet
       </TerasActionButton>
       <TerasActionButton
-        disabled={Boolean(treeEditActive)}
+        disabled={readOnly || Boolean(treeEditActive)}
         emphasis="secondary"
         onClick={() => setWorkSessionTargetDialogOpen(true)}
       >
@@ -467,6 +477,7 @@ export function DeliveryExecutionBoard({
   }
 
   async function handleActionSelect(action: DeliveryAvailableAction) {
+    if (readOnly) return;
     if (action.action_type === "sync-owner-repo") {
       if (onOpenCatalog) {
         onOpenCatalog(
@@ -667,7 +678,7 @@ export function DeliveryExecutionBoard({
             tree={treeEditActive}
           />
         ) : (
-          <ControlBoardArtTreeView tree={selectedBoardTreeWithDraft} />
+          readOnly && !selectedBoardTreeWithDraft ? <TerasEmptyState>{historyTreeRead.error ?? deliveryChangeRuntime.projectionError ?? "Reading the selected package's complete ART tree…"}</TerasEmptyState> : <ControlBoardArtTreeView tree={selectedBoardTreeWithDraft} />
         )
       ) : null}
     </>
@@ -690,10 +701,12 @@ export function DeliveryExecutionBoard({
       />
     ) : selectedPackage ? (
       <ExecutionSelectedPackagePanel
-        onInspectCloseout={model.source_truth === "OpenProject-backed OOS"
+        readOnly={readOnly}
+        onInspectHistory={readOnly ? () => setHistoryOpen(true) : undefined}
+        onInspectCloseout={!readOnly && model.source_truth === "OpenProject-backed OOS"
           ? () => setCloseoutOpen(true) : undefined}
         onEditCanonicalTree={
-          deliveryChangeRuntime.mode === "live" ? () => {
+          !readOnly && deliveryChangeRuntime.mode === "live" ? () => {
             void enterTreeEdit().catch((error) => setTreeEditEntryError(
               error instanceof Error ? error.message : "Canonical tree inspection is unavailable.",
             ));
@@ -708,7 +721,7 @@ export function DeliveryExecutionBoard({
         onActionSelect={handleActionSelect}
         packageSummary={selectedPackage}
         packageTree={selectedTree}
-        selectedActions={selectedActions}
+        selectedActions={readOnly ? [] : selectedActions}
       />
     ) : (
       <TerasEmptyState fill>
@@ -722,6 +735,7 @@ export function DeliveryExecutionBoard({
 
   return (
     <>
+      <DeliveryHistoryDialog deliveryId={historyOpen ? selectedPackage?.delivery_package_id ?? null : null} focus="closeout" onClose={() => setHistoryOpen(false)} />
       <ControlBoardWorkspaceFrame
         board={boardContent}
         boardVariant={activeView === "art-tree" ? "dark" : "light"}
@@ -733,7 +747,7 @@ export function DeliveryExecutionBoard({
           treeEditActive ? "warn" : (selectedPackageProjection?.tone ?? "info")
         }
       />
-      {selectedPackage && actionSession.activeAction ? (
+      {!readOnly && selectedPackage && actionSession.activeAction ? (
         <ExecutionActionModal
           action={actionSession.activeAction}
           actionStep={actionSession.actionStep}
@@ -762,7 +776,7 @@ export function DeliveryExecutionBoard({
           submitting={actionSession.applying}
         />
       ) : null}
-      {workSessionTarget && workSessionOpen ? (
+      {!readOnly && workSessionTarget && workSessionOpen ? (
         <ExecutionWorkSessionModal
           onClose={() => {
             setWorkSessionOpen(false);
@@ -772,7 +786,7 @@ export function DeliveryExecutionBoard({
           target={workSessionTarget}
         />
       ) : null}
-      {architecturePacketOpen ? (
+      {!readOnly && architecturePacketOpen ? (
         <ArchitecturePacketAuthoringModal
           defaultDeliveryId={
             selectedPackage?.legacy_epic_id
@@ -802,8 +816,8 @@ export function DeliveryExecutionBoard({
         }}
         open={workSessionTargetDialogOpen}
       />
-      {completionTarget !== null ? <ExecutionItemCompletionModal workItemId={completionTarget} onClose={() => setCompletionTarget(null)} /> : null}
-      {selectedPackage && closeoutOpen ? (
+      {!readOnly && completionTarget !== null ? <ExecutionItemCompletionModal workItemId={completionTarget} onClose={() => setCompletionTarget(null)} /> : null}
+      {!readOnly && selectedPackage && closeoutOpen ? (
         <ExecutionCloseoutModal
           onClose={() => setCloseoutOpen(false)}
           packageSummary={selectedPackage}

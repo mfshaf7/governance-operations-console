@@ -140,7 +140,7 @@ export function DeliveryIntakeSurface({
     setConsumedSummarySourceId(null);
     setReturnToFocusedSourceAfterConsumedSummary(false);
     setReturnToFocusedSourceAfterConsume(true);
-    setConsumeSourceId(focusedSource.accepted_source_id);
+    if (model.history_scope !== "history") setConsumeSourceId(focusedSource.accepted_source_id);
   }, [focusSourceId, focusToken, sources]);
 
   function openSourceAction(source: DeliveryIntakeSource) {
@@ -154,7 +154,7 @@ export function DeliveryIntakeSurface({
       return;
     }
 
-    setConsumeSourceId(source.accepted_source_id);
+    if (model.history_scope !== "history") setConsumeSourceId(source.accepted_source_id);
   }
 
   function closeConsumeModal() {
@@ -243,7 +243,7 @@ export function DeliveryIntakeSurface({
         }
       />
 
-      {consumeSource ? (
+      {consumeSource && model.history_scope !== "history" ? (
         <DeliveryIntakeConsumeModal
           onClose={closeConsumeModal}
           onConsume={() => {
