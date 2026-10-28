@@ -31,6 +31,7 @@ import {
 import type { DeliveryRefinementModalStep } from "../model/refinement-model.ts";
 
 export function RefinementHubView({
+  readOnly = false,
   activeReceipt,
   deliveryPackage,
   hubAction,
@@ -40,6 +41,7 @@ export function RefinementHubView({
   packet,
   progressActiveStep,
 }: {
+  readOnly?: boolean;
   activeReceipt: DeliveryRefinementApplyReceipt | null;
   deliveryPackage: DeliveryPackageSummary;
   hubAction: RefinementHubAction | null;
@@ -90,7 +92,7 @@ export function RefinementHubView({
               />
             }
             action={
-              <TerasActionButton onClick={onRunHubAction} emphasis="primary">
+              <TerasActionButton disabled={readOnly} onClick={onRunHubAction} emphasis="primary">
                 {hubProjection.actionButtonLabel}
               </TerasActionButton>
             }
@@ -119,7 +121,7 @@ export function RefinementHubView({
           <TerasHubStepList ariaLabel="Refinement steps">
             {refinementSteps.map((step, index) => (
               <TerasProgressStepSelector
-                available={!hubProjection.refinementBlocked}
+                available={readOnly || !hubProjection.refinementBlocked}
                 current={
                   !hubProjection.refinementBlocked &&
                   progressActiveStep === step.id

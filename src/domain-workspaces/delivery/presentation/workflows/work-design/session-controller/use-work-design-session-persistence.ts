@@ -34,6 +34,7 @@ type InitialWorkDesignContextSession = NonNullable<
 >;
 
 type UseWorkDesignSessionPersistenceParams = {
+  readOnly?: boolean;
   activeBriefVersionId: string | null;
   applyReceiptId: string | null;
   applyReceiptRecorded: boolean;
@@ -108,6 +109,7 @@ type UseWorkDesignSessionPersistenceParams = {
 };
 
 export function useWorkDesignSessionPersistence({
+  readOnly = false,
   activeBriefVersionId,
   applyReceiptId,
   applyReceiptRecorded,
@@ -372,7 +374,7 @@ export function useWorkDesignSessionPersistence({
   }, [deliveryPackageId]);
 
   useEffect(() => {
-    if (!contextPersistenceLoaded) {
+    if (readOnly || !contextPersistenceLoaded) {
       return;
     }
 
@@ -443,6 +445,7 @@ export function useWorkDesignSessionPersistence({
 
     saveWorkDesignSessionDraft(deliveryPackageId, persistedSession);
   }, [
+    readOnly,
     activeBriefVersionId,
     applyReceiptId,
     applyReceiptRecorded,

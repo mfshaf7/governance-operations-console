@@ -112,6 +112,7 @@ export function useWorkDesignContextBriefActions({
   const deliveryPackageId = deliveryPackage.delivery_package_id;
 
   async function finalizeContextBrief() {
+    if (applyCompleted) return;
     if (!contextCurrentSavedSession) {
       setContextFinalizeDialogOpen(true);
       return;

@@ -134,7 +134,7 @@ export function WorkDesignContextBoardRail({
             </button>
             <button
               className={styles.contextBoardContextBriefPrimaryAction}
-              disabled={!contextBriefReadOnly && contextOperatorNote.length > WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH}
+              disabled={(contextBriefReadOnly && !contextBriefReady) || (!contextBriefReadOnly && contextOperatorNote.length > WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH)}
               onClick={() => setContextFinalizeDialogOpen(true)}
               type="button"
             >

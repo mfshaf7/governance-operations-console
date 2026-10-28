@@ -46,6 +46,7 @@ function initialSelectedMetadataFieldKey(
 export function useRefinementSessionState(
   packageId: string,
   packet: DeliveryRefinementPacket | null,
+  readOnly = false,
 ) {
   const initialDraftValues = useMemo(
     () => initialMetadataDraftValues(packet),
@@ -112,7 +113,7 @@ export function useRefinementSessionState(
   }, [packageId, packet?.packet_id, packet?.packet_revision]);
 
   useEffect(() => {
-    if (!persistenceLoaded || !packet || !packageId) {
+    if (readOnly || !persistenceLoaded || !packet || !packageId) {
       return;
     }
 
@@ -139,6 +140,7 @@ export function useRefinementSessionState(
 
     saveRefinementSessionDraft(packageId, persistedSession);
   }, [
+    readOnly,
     activeReceipt,
     activeStep,
     metadataDraftValues,
@@ -155,6 +157,7 @@ export function useRefinementSessionState(
     fieldKey: string,
     resolution: RefinementMetadataFieldResolution,
   ) {
+    if (readOnly) return;
     setMetadataFieldResolutions((current) => ({
       ...current,
       [fieldKey]: resolution,
@@ -162,6 +165,7 @@ export function useRefinementSessionState(
   }
 
   function resetMetadataDraftValue(fieldKey: string, value: string) {
+    if (readOnly) return;
     setMetadataDraftValues((current) => ({
       ...current,
       [fieldKey]: value,
@@ -174,6 +178,7 @@ export function useRefinementSessionState(
   }
 
   function updateMetadataDraftValue(fieldKey: string, value: string) {
+    if (readOnly) return;
     setMetadataDraftValues((current) => ({
       ...current,
       [fieldKey]: value,
@@ -186,6 +191,7 @@ export function useRefinementSessionState(
   }
 
   function updateMetadataDraftValues(fieldKeys: string[], value: string) {
+    if (readOnly) return;
     setMetadataDraftValues((current) => ({
       ...current,
       ...Object.fromEntries(fieldKeys.map((fieldKey) => [fieldKey, value])),
@@ -203,6 +209,7 @@ export function useRefinementSessionState(
     fieldKeys: string[],
     resolution: RefinementMetadataFieldResolution,
   ) {
+    if (readOnly) return;
     setMetadataFieldResolutions((current) => ({
       ...current,
       ...Object.fromEntries(
@@ -212,6 +219,7 @@ export function useRefinementSessionState(
   }
 
   function resetMetadataDraftValues(values: Record<string, string>) {
+    if (readOnly) return;
     const fieldKeys = Object.keys(values);
 
     setMetadataDraftValues((current) => ({

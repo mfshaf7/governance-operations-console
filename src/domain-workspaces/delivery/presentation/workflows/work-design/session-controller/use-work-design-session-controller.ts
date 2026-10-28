@@ -42,18 +42,22 @@ import { normalizeWorkDesignDraftAdvice } from "../../../../live-runtime/work-de
 import type { AdvisorTransport } from "@/agent-console/model/advisor-drafts";
 
 type UseWorkDesignSessionControllerParams = {
+  readOnly?: boolean;
+  retainedTree?: import("../model/work-design-model.ts").WorkDesignNode;
   deliveryPackage: DeliveryPackageSummary;
   onApplied?: (record: WorkDesignApplyReceipt) => void;
   onClose: () => void;
 };
 
 export function useWorkDesignSessionController({
+  readOnly = false,
+  retainedTree,
   deliveryPackage,
   onApplied,
   onClose,
 }: UseWorkDesignSessionControllerParams) {
-  const modalState = useWorkDesignSessionState(deliveryPackage);
-  const liveRuntime = useWorkDesignLiveRuntime(deliveryPackage);
+  const modalState = useWorkDesignSessionState(deliveryPackage, retainedTree, readOnly);
+  const liveRuntime = useWorkDesignLiveRuntime(deliveryPackage, readOnly);
   const [hasCurrentSessionEdits, setHasCurrentSessionEdits] = useState(false);
   const applyInFlightRef = useRef(false);
   const pendingAcceptanceRef = useRef<{
@@ -194,6 +198,7 @@ export function useWorkDesignSessionController({
     [contextDecision, contextOperatorNote, contextSources],
   );
   const contextBoard = useWorkDesignContextBoard({
+    readOnly,
     active: activeStep === "context",
     closeGuardOpen,
     contextBoardCoreNodes,
@@ -264,7 +269,7 @@ export function useWorkDesignSessionController({
     sourceWorkDesignComplete || sourceWorkDesignRetired;
   const sourceApplyComplete =
     sourceWorkDesignComplete && contextDecision === "proceed";
-  const applyCompleted = applyReceiptRecorded || sourceWorkDesignClosed;
+  const applyCompleted = readOnly || applyReceiptRecorded || sourceWorkDesignClosed;
   const requestTreeAdvice = useCallback<AdvisorTransport>(
     async (scope, operatorPrompt, _signal, conversation) => {
       const context = JSON.parse(scope.context);
@@ -359,6 +364,7 @@ export function useWorkDesignSessionController({
     draftReviewAccepted,
   });
   const applyActionReady =
+    !readOnly &&
     applyReady &&
     (liveRuntime.mode === "disconnected-preview" ||
       liveRuntime.projectionStatus === "current");
@@ -454,6 +460,7 @@ export function useWorkDesignSessionController({
     validateReady,
   });
   const sessionLifecycle = useWorkDesignSessionLifecycle({
+    readOnly,
     activeBriefVersionId,
     applyReceiptId,
     applyReceiptRecorded,
@@ -527,6 +534,7 @@ export function useWorkDesignSessionController({
   }
 
   async function runApplyDraft() {
+    if (readOnly) return;
     if (
       !applyActionReady ||
       workDesignBlocked ||
@@ -598,6 +606,7 @@ export function useWorkDesignSessionController({
       sessionLifecycle,
     },
     footerProps: {
+      readOnly,
       activeStep,
       applyReceiptRecorded,
       applyReady: applyActionReady,
@@ -617,6 +626,7 @@ export function useWorkDesignSessionController({
     requestClose,
     shellWidth,
     stepContentProps: {
+      readOnly,
       applyCompleted,
       applyReady,
       applyWorkflow,

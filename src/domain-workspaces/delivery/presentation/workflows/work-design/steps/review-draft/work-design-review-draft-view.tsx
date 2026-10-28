@@ -50,6 +50,7 @@ type WorkDesignReviewMetrics = {
 };
 
 type WorkDesignReviewDraftViewProps = {
+  briefUnavailable?: boolean;
   applyCompleted: boolean;
   contextFinalizedBrief: WorkDesignFinalizedBrief;
   contextSnapshotAttachment: WorkDesignSnapshotAttachment;
@@ -73,6 +74,7 @@ type WorkDesignReviewDraftViewProps = {
 };
 
 export function WorkDesignReviewDraftView({
+  briefUnavailable = false,
   applyCompleted,
   contextFinalizedBrief,
   contextSnapshotAttachment,
@@ -103,6 +105,7 @@ export function WorkDesignReviewDraftView({
     <TerasZoneLayout variant="main-aside">
       <TerasZone fit="fill">
         <TerasSubjectHero
+          actionDisabled={briefUnavailable}
           actionDetail="Snapshot and finalization checks"
           actionLabel="View Finalized Brief"
           onAction={onOpenFinalizedBrief}
@@ -129,23 +132,26 @@ export function WorkDesignReviewDraftView({
           <TerasDetailGrid variant="media">
             <TerasMediaSnapshot
               density="compact"
-              facts={workDesignReviewSnapshotFacts(contextSnapshotAttachment)}
+              facts={briefUnavailable ? [{label:"Original snapshot",value:"Not retained"},{label:"Preview",value:"Current local board preview"}] : workDesignReviewSnapshotFacts(contextSnapshotAttachment)}
               imageAlt={`${contextSnapshotAttachment.title} snapshot preview`}
               imageSrc={contextSnapshotAttachment.dataUrl}
               kicker="Context Snapshot"
               onPreview={onOpenSnapshot}
+              previewDisabled={briefUnavailable}
               previewAriaLabel="View finalized context snapshot"
-              title={contextSnapshotAttachment.title}
+              title={briefUnavailable ? "Original snapshot not retained" : contextSnapshotAttachment.title}
               actions={[
                 {
                   icon: <Maximize2 aria-hidden="true" size={14} />,
                   label: "View Snapshot",
+                  disabled: briefUnavailable,
                   onClick: onOpenSnapshot,
                   tone: "warn",
                 },
                 {
                   icon: <Download aria-hidden="true" size={14} />,
                   label: contextSnapshotAttachmentExportLabel,
+                  disabled: briefUnavailable,
                   onClick: onExportSnapshot,
                   tone: "warn",
                 },
@@ -158,7 +164,7 @@ export function WorkDesignReviewDraftView({
                   element="article"
                   label="Context Brief"
                   variant="plain"
-                  value={contextFinalizedBrief.name}
+                  value={briefUnavailable ? "Not retained" : contextFinalizedBrief.name}
                 />
                 <TerasStatItem
                   detail={
@@ -225,7 +231,7 @@ export function WorkDesignReviewDraftView({
         />
         <TerasActionRow>
           <TerasActionButton
-            disabled={!reviewReady || draftReviewAccepted}
+            disabled={applyCompleted || !reviewReady || draftReviewAccepted}
             onClick={onMarkReviewed}
             tone={
               reviewGateProjection.actionTone === "danger" ? "danger" : "accent"

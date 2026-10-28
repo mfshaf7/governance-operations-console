@@ -15,16 +15,19 @@ import { useRefinementSessionController } from "../session-controller/use-refine
 import type { DeliveryRefinementWorkflow } from "../model/refinement-model.ts";
 
 export function DeliveryRefinementWorkflowModal({
+  readOnly = false,
   onClose,
   sourceWorkDesignPackage,
   workflow,
 }: {
+  readOnly?: boolean;
   onClose: () => void;
   sourceWorkDesignPackage?:
     DeliveryRefinementWorkflow["deliveryPackage"] | null;
   workflow: DeliveryRefinementWorkflow;
 }) {
   const controller = useRefinementSessionController({
+    readOnly,
     deliveryPackage: workflow.deliveryPackage,
     onClose,
     sourceWorkDesignPackage: sourceWorkDesignPackage ?? null,
@@ -70,6 +73,7 @@ export function DeliveryRefinementWorkflowModal({
         description={controller.shellCopy.description}
         footer={
           <RefinementSessionFooter
+            readOnly={readOnly}
             activeStep={sessionState.activeStep}
             blocked={controller.refinementBlocked}
             canApply={controller.canApply}
@@ -79,9 +83,10 @@ export function DeliveryRefinementWorkflowModal({
             onSelectStep={sessionState.setActiveStep}
           />
         }
-        kicker={controller.shellCopy.kicker}
+        kicker={readOnly ? `${controller.shellCopy.kicker} · Read-only` : controller.shellCopy.kicker}
         bodyLayout="fill"
         modalAttributes={{
+          "data-delivery-workflow-readonly": readOnly ? "true" : "false",
           "data-teras-active-step": controller.progressActiveStep,
         }}
         onClose={controller.requestClose}

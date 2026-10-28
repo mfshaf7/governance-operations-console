@@ -31,6 +31,7 @@ import {
 import { RefinementMetadataEditorPanel } from "./refinement-metadata-editor-panel.tsx";
 
 export function SelectedMetadataEditor({
+  readOnly = false,
   advisor,
   draftValue,
   editorCollapsed,
@@ -45,6 +46,7 @@ export function SelectedMetadataEditor({
   selectedNodeTargets,
   selectedTarget,
 }: {
+  readOnly?: boolean;
   advisor: ReactNode;
   draftValue: string;
   editorCollapsed: boolean;
@@ -130,7 +132,7 @@ export function SelectedMetadataEditor({
               />
 
               <MetadataValueControl
-                blocked={blocked}
+                blocked={readOnly || blocked}
                 draftValue={draftValue}
                 field={field}
                 onUpdateMetadataDraftValue={(value) =>
@@ -182,6 +184,7 @@ export function SelectedMetadataEditor({
               <TerasActionRow spacing="none">
                 {blocked ? (
                   <TerasActionButton
+                    disabled={readOnly}
                     onClick={onReviewReadiness}
                     emphasis="secondary"
                   >
@@ -191,6 +194,7 @@ export function SelectedMetadataEditor({
                   <>
                     {canResetWorkbenchValue ? (
                       <TerasActionButton
+                        disabled={readOnly}
                         onClick={() =>
                           onResetMetadataDraftValue(key, sourceValue)
                         }
@@ -200,7 +204,7 @@ export function SelectedMetadataEditor({
                       </TerasActionButton>
                     ) : null}
                     <TerasActionButton
-                      disabled={!workbenchValueCanConfirm}
+                      disabled={readOnly || !workbenchValueCanConfirm}
                       onClick={() =>
                         onMarkMetadataFieldResolution(key, confirmResolution)
                       }

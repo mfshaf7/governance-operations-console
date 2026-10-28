@@ -13,6 +13,7 @@ import {
 import { TerasActionButton } from "@/teras";
 
 type WorkDesignSessionFooterProps = {
+  readOnly?: boolean;
   activeStep: WorkDesignStep;
   applyReceiptRecorded: boolean;
   applyReady: boolean;
@@ -30,6 +31,7 @@ type WorkDesignSessionFooterProps = {
 };
 
 export function WorkDesignSessionFooter({
+  readOnly = false,
   activeStep,
   applyReceiptRecorded,
   applyReady,
@@ -99,7 +101,7 @@ export function WorkDesignSessionFooter({
       {footerProjection.primaryAction ? (
         <TerasActionButton
           data-work-design-action={footerProjection.primaryAction.dataAction}
-          disabled={footerProjection.primaryAction.disabled}
+          disabled={footerProjection.primaryAction.disabled || (readOnly && ["accept-context-brief", "open-apply-draft", "open-review-draft", "run-apply-draft"].includes(footerProjection.primaryAction.kind))}
           onClick={() =>
             handleFooterAction(footerProjection.primaryAction!.kind)
           }

@@ -33,12 +33,14 @@ import { refinementSessionShellCopy } from "../view-model/refinement-shell-view-
 import { useRefinementSessionState } from "./use-refinement-session-state.ts";
 
 type UseRefinementSessionControllerParams = {
+  readOnly?: boolean;
   deliveryPackage: DeliveryPackageSummary;
   onClose: () => void;
   sourceWorkDesignPackage: DeliveryPackageSummary | null;
 };
 
 export function useRefinementSessionController({
+  readOnly = false,
   deliveryPackage,
   onClose,
   sourceWorkDesignPackage,
@@ -53,7 +55,7 @@ export function useRefinementSessionController({
     draftKey: string;
   } | null>(null);
   const fixturePacket = refinementPacketForPackage(deliveryPackage);
-  const liveRuntime = useRefinementLiveRuntime(deliveryPackage);
+  const liveRuntime = useRefinementLiveRuntime(deliveryPackage, readOnly);
   const packet = liveRuntime.loading
     ? fixturePacket
     : liveRuntime.mode === "disconnected-preview"
@@ -64,6 +66,7 @@ export function useRefinementSessionController({
   const sessionState = useRefinementSessionState(
     deliveryPackage.delivery_package_id,
     packet,
+    readOnly,
   );
   const {
     activeStep,
@@ -91,7 +94,7 @@ export function useRefinementSessionController({
         refinementReceipt: activeReceipt,
       })
     : false;
-  const canApply = packet
+  const canApply = !readOnly && packet
     ? refinementCanApplyWithMetadataReview({
         metadataReady: metadataWorkbenchSummary?.ready ?? false,
         packet,
@@ -212,6 +215,7 @@ export function useRefinementSessionController({
   );
 
   async function applyRefinement() {
+    if (readOnly) return;
     if (!packet || !canApply || applyInFlight) return;
 
     setApplyInFlight(true);
@@ -288,6 +292,7 @@ export function useRefinementSessionController({
   }
 
   function requestClose() {
+    if (readOnly) { onClose(); return; }
     if (hasUnappliedSessionChanges && !activeReceipt) {
       setCloseGuardOpen(true);
       return;
@@ -301,6 +306,7 @@ export function useRefinementSessionController({
   }
 
   function runHubAction() {
+    if (readOnly) return;
     if (!hubAction) {
       return;
     }
@@ -316,6 +322,7 @@ export function useRefinementSessionController({
   }
 
   return {
+    readOnly,
     advisorTranscript,
     advisorMode: liveRuntime.mode,
     advisorStatus: liveRuntime.projectionStatus,

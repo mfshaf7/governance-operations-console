@@ -30,6 +30,7 @@ export class WorkDesignLiveRuntimeError extends Error {
 
 export function useWorkDesignLiveRuntime(
   deliveryPackage: Pick<DeliveryPackageSummary, "legacy_epic_id">,
+  readOnly = false,
 ) {
   const packageRef = workDesignLivePackageRef(deliveryPackage);
   const [snapshot, setSnapshot] = useState<WorkDesignProjectionSnapshot | null>(
@@ -83,6 +84,7 @@ export function useWorkDesignLiveRuntime(
 
   const contextAdvice = useCallback(
     async (command: Omit<WorkDesignContextAssistCommand, "sourceRevision">) => {
+      if (readOnly) throw new Error("Completed work is read-only.");
       const current = await currentSnapshot(snapshotRef.current, refresh);
       if (current.mode === "disconnected-preview") {
         return { mode: current.mode, result: null } as const;
@@ -101,11 +103,12 @@ export function useWorkDesignLiveRuntime(
       rememberAdvisorEvidence(result, setAdvisorEvidence);
       return { mode: current.mode, result } as const;
     },
-    [packageRef, refresh],
+    [packageRef, refresh, readOnly],
   );
 
   const treeAdvice = useCallback(
     async (command: Omit<WorkDesignTreeAssistCommand, "sourceRevision">) => {
+      if (readOnly) throw new Error("Completed work is read-only.");
       const current = await currentSnapshot(snapshotRef.current, refresh);
       if (current.mode === "disconnected-preview") {
         return { mode: current.mode, result: null } as const;
@@ -124,11 +127,12 @@ export function useWorkDesignLiveRuntime(
       rememberAdvisorEvidence(result, setAdvisorEvidence);
       return { mode: current.mode, result } as const;
     },
-    [packageRef, refresh],
+    [packageRef, refresh, readOnly],
   );
 
   const apply = useCallback(
     async (command: Omit<WorkDesignApplyCommand, "advisorEvidence" | "sourceRevision">) => {
+      if (readOnly) throw new Error("Completed work is read-only.");
       const current = await currentSnapshot(snapshotRef.current, refresh);
       if (current.mode === "disconnected-preview") {
         return { mode: current.mode, result: null } as const;
@@ -166,7 +170,7 @@ export function useWorkDesignLiveRuntime(
       await refresh().catch(() => undefined);
       return { mode: current.mode, result } as const;
     },
-    [advisorEvidence, packageRef, refresh],
+    [advisorEvidence, packageRef, refresh, readOnly],
   );
 
   return {

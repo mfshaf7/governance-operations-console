@@ -30,6 +30,7 @@ type InitialWorkDesignContextSession = NonNullable<
 >;
 
 type WorkDesignSessionLifecycleParams = {
+  readOnly?: boolean;
   activeBriefVersionId: string | null;
   applyReceiptId: string | null;
   applyCompleted: boolean;
@@ -94,6 +95,7 @@ type WorkDesignSessionLifecycleParams = {
 };
 
 export function useWorkDesignSessionLifecycle({
+  readOnly = false,
   activeBriefVersionId,
   applyReceiptId,
   applyReceiptRecorded,
@@ -230,6 +232,7 @@ export function useWorkDesignSessionLifecycle({
   });
 
   useWorkDesignSessionPersistence({
+    readOnly,
     activeBriefVersionId,
     applyReceiptId,
     applyReceiptRecorded,
@@ -390,7 +393,7 @@ export function useWorkDesignSessionLifecycle({
   });
 
   useEffect(() => {
-    if (!contextNeedsSnapshotCapture || !contextFinalizedFingerprint) {
+    if (readOnly || !contextNeedsSnapshotCapture || !contextFinalizedFingerprint) {
       return;
     }
 
@@ -414,6 +417,7 @@ export function useWorkDesignSessionLifecycle({
       cancelled = true;
     };
   }, [
+    readOnly,
     contextFinalizedBoardSnapshot,
     contextFinalizedFingerprint,
     contextNeedsSnapshotCapture,

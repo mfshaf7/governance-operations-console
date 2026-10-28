@@ -120,6 +120,7 @@ type ContextBoardZoomAnchor = {
 };
 
 type UseContextBoardControllerOptions = {
+  readOnly?: boolean;
   active: boolean;
   closeGuardOpen: boolean;
   contextBoardCoreNodes: ContextBoardCoreNode[];
@@ -147,6 +148,7 @@ type UseContextBoardControllerOptions = {
 };
 
 export function useContextBoardController({
+  readOnly = false,
   active,
   closeGuardOpen,
   contextBoardCoreNodes: contextBoardCoreNodeInputs,
@@ -294,7 +296,7 @@ export function useContextBoardController({
     contextBriefLocked &&
     contextBriefMetadataReady &&
     contextBriefSnapshotReady;
-  const contextBriefReadOnly = contextBriefAccepted && contextBriefReady;
+  const contextBriefReadOnly = readOnly || (contextBriefAccepted && contextBriefReady);
   const canUndoContextBoard = contextBoardUndoStack.length > 0;
   const canRedoContextBoard = contextBoardRedoStack.length > 0;
   const contextBoardComponentKinds = contextBoardDiagramComponentKinds(

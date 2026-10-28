@@ -18,6 +18,8 @@ import type {
 } from "./work-design-context-board-types.ts";
 
 type WorkDesignContextBoardViewProps = {
+  retainedBriefAvailable?: boolean;
+  readOnly?: boolean;
   contextAdvisorControls?: ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
   applyCompleted: boolean;
   board: ContextBoardController;
@@ -44,6 +46,8 @@ type WorkDesignContextBoardViewProps = {
 };
 
 export function WorkDesignContextBoardView({
+  retainedBriefAvailable,
+  readOnly = false,
   contextAdvisorControls,
   applyCompleted,
   board,
@@ -69,22 +73,22 @@ export function WorkDesignContextBoardView({
   updateContextDecision,
 }: WorkDesignContextBoardViewProps) {
   const { contextBriefReadOnly, contextBriefReady } = board;
+  const hasRetainedBrief = retainedBriefAvailable ?? contextBriefReady;
 
   return (
     <ContextBoardWorkbenchView
       board={board}
       copy={{
-        emptyDetail: "Start with advisor output, a template, or manual cards.",
+        emptyDetail: readOnly ? "No saved diagram content is available in this session." : "Start with advisor output, a template, or manual cards.",
         emptyLabel: "empty canvas",
         emptyTitle: "No diagram cards yet",
-        lockDetail: applyCompleted
+        lockDetail: readOnly && !hasRetainedBrief ? "No original finalized board snapshot was retained in this session." : applyCompleted
           ? "Apply Draft completed; the finalized brief and receipt are immutable in this pass."
           : "Use Reopen Brief in the finalized brief modal before changing the board, decision, or advisor note.",
-        lockLabel: "Finalized Brief Locked",
+        lockLabel: readOnly && !hasRetainedBrief ? "Completed work locked" : "Finalized Brief Locked",
         lockTitle: "Canvas Snapshot Is Read-Only",
-        readonlySummaryDetail:
-          "This locked board is the finalized brief carried into Build Tree.",
-        readonlySummaryTitle: "Finalized Context Snapshot",
+        readonlySummaryDetail: readOnly && !hasRetainedBrief ? "No finalized board snapshot was retained in this session. Current source context is shown in the locked canvas." : "This locked board is the finalized brief carried into Build Tree.",
+        readonlySummaryTitle: readOnly && !hasRetainedBrief ? "Current Source Context" : "Finalized Context Snapshot",
         stageAriaLabel: "Work design discussion board",
         summaryDetail:
           "Inspect source context, sketch options, and shape draft direction.",

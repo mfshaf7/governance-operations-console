@@ -34,6 +34,7 @@ type WorkDesignHubStepItem = {
 };
 
 type WorkDesignHubViewProps = {
+  readOnly?: boolean;
   applyReceiptRecorded: boolean;
   contextBriefAccepted: boolean;
   contextDecision: WorkDesignContextDecision;
@@ -51,6 +52,7 @@ type WorkDesignHubViewProps = {
 };
 
 export function WorkDesignHubView({
+  readOnly = false,
   applyReceiptRecorded,
   contextBriefAccepted,
   contextDecision,
@@ -109,6 +111,7 @@ export function WorkDesignHubView({
             }
             action={
               <TerasActionButton
+                disabled={readOnly}
                 onClick={() => {
                   if (workDesignBlocked) {
                     onOpenBlockerRecovery();
@@ -170,7 +173,7 @@ export function WorkDesignHubView({
               const current =
                 !workDesignClosed &&
                 item.id === designHubProjection.nextSessionAction.step;
-              const available = !workDesignBlocked;
+              const available = readOnly || !workDesignBlocked;
               const stepTone = workDesignStepTone(item.id, {
                 applyReceiptRecorded,
                 contextBriefAccepted,

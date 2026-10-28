@@ -54,6 +54,7 @@ function TerasMediaSnapshotActionButton({
 }
 
 export function TerasMediaSnapshot({
+  previewDisabled = false,
   actions,
   className,
   density = "normal",
@@ -65,6 +66,7 @@ export function TerasMediaSnapshot({
   previewAriaLabel = "View media snapshot",
   title,
 }: {
+  previewDisabled?: boolean;
   actions?: TerasMediaSnapshotAction[];
   className?: string;
   density?: "compact" | "normal";
@@ -81,6 +83,7 @@ export function TerasMediaSnapshot({
       aria-label={previewAriaLabel}
       className={styles.terasMediaSnapshotPreviewButton}
       onClick={onPreview}
+      disabled={previewDisabled}
       type="button"
     >
       <img alt={imageAlt} src={imageSrc} />
