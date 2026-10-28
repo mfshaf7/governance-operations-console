@@ -29,7 +29,7 @@ export function DeliveryHistoryDialog({deliveryId,onClose,focus="intake"}:{deliv
 }
 export function DeliveryOwnerHistoryContent({projection,error,sections,loading=false,onPage}:{projection:DeliveryHistoryProjection|null;error:string|null;sections:Array<keyof typeof labels>;loading?:boolean;onPage?:(page:number)=>void}){
   return (
-    <TerasFieldStack>
+    <TerasFieldStack overflow="auto">
       {error?<TerasEmptyState>{error}</TerasEmptyState>:null}
       {!projection?(!error?<TerasEmptyState>Reading original owner history…</TerasEmptyState>:null):<>
         <TerasMetadataList items={[{label:"Delivery",value:projection.record_ref},{label:"Current package status",value:projection.package.status},{label:"Current owner",value:projection.package.owner_repo??"Not projected"},{label:"History coverage",value:projection.history_state},{label:"Observed",value:projection.projected_at}]} />
