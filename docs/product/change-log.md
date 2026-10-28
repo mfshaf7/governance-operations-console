@@ -8,6 +8,17 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-28
 
+### Delivery History interface restoration
+
+- Restored normal Work Design and Refinement package registers and locked
+  workflow inspection, plus Execution Control Board, Family Map, ART tree and
+  package details, instead of replacing all three with a receipt overview.
+- History uses canonical ART and on-demand original owner evidence; local
+  drafts, automatic preparation and mutable session controllers are excluded.
+- Current data is labelled separately from original snapshots and receipts;
+  artifacts never retained by an owner remain explicitly absent.
+- Operator procedure: [Delivery history inspection](delivery-history-inspection.md).
+
 - Owner maintenance `maintenance-orchestration-run-start`, Landing Unit Decision
   `feature_single_landing_unit`, closes the missing Console origination path
   exposed by Epic1332's native operating proof. The existing admitted OOS

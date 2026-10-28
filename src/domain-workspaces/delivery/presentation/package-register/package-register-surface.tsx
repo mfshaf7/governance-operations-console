@@ -129,7 +129,14 @@ export function DeliveryPackageRegisterSurface({
     packages[0] ??
     null;
   const packageActionSummary = selectedPackage
-    ? packageActionForSurface(surface, selectedPackage)
+    ? model.history_scope === "history" ? {
+        buttonLabel: surface.id === "work-design" ? "Inspect Design Hub" : "Inspect Refinement Hub",
+        description: "Inspect retained work in the locked workflow. Current ART data and original owner receipts remain distinct.",
+        route: surface.id === "work-design" ? "work-design" as const : "refinement" as const,
+        statusLabel: selectedPackage.package_posture,
+        title: "Read-only workflow inspection",
+        tone: "info" as const,
+      } : packageActionForSurface(surface, selectedPackage)
     : null;
 
   useEffect(() => {
@@ -165,7 +172,7 @@ export function DeliveryPackageRegisterSurface({
         mode="register-selected"
         register={
           <TerasRegisterPanel
-            description="Filter projected packages, then select a row to inspect the current context."
+            description={model.history_scope === "history" ? "All retained packages. Inspect the full workflow without editing, applying or restarting work." : "Filter projected packages, then select a row to inspect the current context."}
             filterBar={
               <TerasFilterBar
                 search={{
