@@ -1,5 +1,12 @@
 # Governance Operations Console Change Log
 
+## Delivery archive fidelity and inspection controls
+
+Reuse original Work Design, Refinement and Execution interfaces with independent
+owner-history reads, paged real item activity, immutable retained brief/board
+selection, usable navigation and snapshot zoom. Missing older artifacts and
+partial evidence stay explicit; inspection does not mutate completed work.
+
 Status: current product change log.
 
 Historical entries describe the architecture that existed when each change was

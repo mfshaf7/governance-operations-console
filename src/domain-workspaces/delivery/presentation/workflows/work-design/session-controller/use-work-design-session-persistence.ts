@@ -15,6 +15,7 @@ import {
   loadWorkDesignSessionDraft,
   saveWorkDesignSessionDraft,
   workDesignResumeContextSession,
+  workDesignArchivedContextSession,
 } from "../../../../local-runtime/index.ts";
 import { findWorkDesignNode } from "../../../../product-adapters/build-tree/index.ts";
 import type {
@@ -239,7 +240,7 @@ export function useWorkDesignSessionPersistence({
       const persistedLoadedSessionId =
         persistedContext?.loadedSessionId ?? null;
       const persistedCurrentSession = persistedContext?.current ?? null;
-      const resumeSession = workDesignResumeContextSession({
+      let resumeSession = workDesignResumeContextSession({
         seededSession: seededContextSession,
         currentSession: persistedCurrentSession,
         loadedSessionId: persistedLoadedSessionId,
@@ -256,23 +257,29 @@ export function useWorkDesignSessionPersistence({
           ]
         : persistedBriefVersions;
       const nextActiveBriefVersionId =
-        seededBriefVersion?.briefVersionId ??
+        (readOnly ? persistedSession?.activeBriefVersionId : null) ?? seededBriefVersion?.briefVersionId ??
         persistedSession?.activeBriefVersionId ??
         null;
-      const finalizedFingerprint =
+      const archivedVersion = readOnly ? nextBriefVersions.find(version => version.briefVersionId === nextActiveBriefVersionId) ?? nextBriefVersions[0] : null;
+      if (archivedVersion) {
+        resumeSession = workDesignArchivedContextSession(archivedVersion,persistedSessions);
+        const loadedIndex=mergedSessions.findIndex(session=>session.id===resumeSession!.id);
+        if(loadedIndex<0)mergedSessions.push(resumeSession);else mergedSessions[loadedIndex]=resumeSession;
+      }
+      const finalizedFingerprint = archivedVersion?.finalizedFingerprint ?? (
         seededContextSession && initialContextSession?.accepted
           ? seededContextSession.fingerprint
-          : (persistedContext?.finalizedFingerprint ?? null);
+          : (persistedContext?.finalizedFingerprint ?? null));
 
       setContextSavedSessions(mergedSessions);
       setContextLoadedSessionId(
-        seededContextSession?.id ??
+        (archivedVersion ? resumeSession?.id : null) ?? seededContextSession?.id ??
           persistedLoadedSessionId ??
           resumeSession?.id ??
           null,
       );
       setBriefVersions(nextBriefVersions);
-      setActiveBriefVersionId(nextActiveBriefVersionId);
+      setActiveBriefVersionId(archivedVersion?.briefVersionId ?? nextActiveBriefVersionId);
 
       if (resumeSession) {
         restoreContextBoardSnapshot(resumeSession.snapshot);

@@ -1,4 +1,5 @@
 import type { TerasMetadataItem } from "@/teras";
+import {workDesignContextBoardCoreNodes} from "../../../../../product-adapters/context-board/index.ts";
 import type {
   DeliveryPackageSummary,
   DeliveryTone,
@@ -215,11 +216,15 @@ export function workDesignBriefVersionIdFromSession(
 
 export function workDesignBriefVersionFromContextSession({
   deliveryPackage,
+  finalizedAt,
+  versionLabel,
   fingerprint,
   savedSession,
   session,
 }: {
   deliveryPackage: DeliveryPackageSummary;
+  finalizedAt?: string;
+  versionLabel?: string;
   fingerprint: string;
   savedSession: WorkDesignContextSavedSession;
   session: DeliveryPackageSummary["work_design_context_session"] | null;
@@ -233,6 +238,8 @@ export function workDesignBriefVersionFromContextSession({
   });
 
   return {
+    finalizedBrief: {...brief,finalizedAt:finalizedAt ?? brief.finalizedAt ?? savedSession.savedAt,version:versionLabel ?? brief.version},
+    coreNodes: workDesignContextBoardCoreNodes(deliveryPackage,brief.decision),
     boardSnapshotRef: brief.boardSnapshotRef,
     briefVersionId: session
       ? workDesignBriefVersionIdFromSession(
@@ -241,13 +248,13 @@ export function workDesignBriefVersionFromContextSession({
         )
       : `${deliveryPackage.delivery_package_id}:${workDesignFileSlug(savedSession.id)}`,
     decision: brief.decision,
-    finalizedAt: brief.finalizedAt ?? savedSession.savedAt,
+    finalizedAt: finalizedAt ?? brief.finalizedAt ?? savedSession.savedAt,
     finalizedFingerprint: fingerprint,
     metadataPacketRef: brief.metadataPacketRef,
     name: brief.name,
     savedSessionId: savedSession.id,
     snapshot: savedSession.snapshot,
-    versionLabel: brief.version,
+    versionLabel: versionLabel ?? brief.version,
   };
 }
 

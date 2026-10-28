@@ -12,6 +12,7 @@ import {
   TerasList,
   TerasHighlightPanel,
   TerasDialog,
+  TerasEmptyState,
   TerasContentTray,
   TerasMediaSnapshot,
   TerasMetadataList,
@@ -51,6 +52,7 @@ type WorkDesignFinalizeRequirementRow = {
 };
 
 type WorkDesignFinalizedBriefDialogProps = {
+  artifactAvailable?: boolean;
   applyCompleted: boolean;
   contextBoardInventory: WorkDesignBoardInventorySummary;
   contextBriefReady: boolean;
@@ -89,7 +91,7 @@ export function WorkDesignFinalizedBriefDialog(
     evidenceOnly = false,
   } = props;
   const finalizedView =
-    evidenceOnly || (contextBriefReady && !contextFinalizeRunning);
+    props.artifactAvailable === false || evidenceOnly || (contextBriefReady && !contextFinalizeRunning);
 
   return finalizedView ? (
     <WorkDesignFinalizedBriefArtifactDialog
@@ -163,6 +165,7 @@ function WorkDesignFinalizeBriefPreparationDialog({
 }
 
 function WorkDesignFinalizedBriefArtifactDialog({
+  artifactAvailable = true,
   applyCompleted,
   contextBoardInventory,
   contextFinalizedBrief,
@@ -215,9 +218,9 @@ function WorkDesignFinalizedBriefArtifactDialog({
       }
       onClose={onClose}
       open={open}
-      title={contextFinalizedBrief.name}
+      title={artifactAvailable ? contextFinalizedBrief.name : "Finalized Brief"}
     >
-      <TerasZoneLayout variant="main-aside">
+      {artifactAvailable ? <TerasZoneLayout variant="main-aside">
         <TerasZone fit="fill">
           <TerasMetadataList
             accent="rail"
@@ -230,7 +233,7 @@ function WorkDesignFinalizedBriefArtifactDialog({
             <TerasHighlightPanel>
               <TerasTrayStack spacing="comfortable">
                 <TerasPanelHeader
-                  description="Delivery package identity for the finalized brief artifact."
+                  description="Current package identity. The retained brief content has its own original version and observation."
                   kicker="Delivery Package"
                   statusLabel="Brief Finalized"
                   statusTone="ok"
@@ -339,7 +342,7 @@ function WorkDesignFinalizedBriefArtifactDialog({
             </TerasActionRow>
           </TerasPanel>
         </TerasZone>
-      </TerasZoneLayout>
+      </TerasZoneLayout> : <TerasEmptyState>The original finalized brief was not retained in this browser session. Current package metadata is not substituted. Canonical application receipts remain available through History.</TerasEmptyState>}
     </TerasDialog>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import styles from "./teras-patterns.module.css";
 import {
@@ -158,6 +158,7 @@ export function TerasMediaSnapshotViewerDialog({
   toolbarTitle: ReactNode;
 }) {
   const snapshotViewerFullscreenRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
 
   function openFullscreenViewer() {
     void snapshotViewerFullscreenRef.current?.requestFullscreen?.();
@@ -184,19 +185,20 @@ export function TerasMediaSnapshotViewerDialog({
         <TerasContentTray className={styles.terasMediaSnapshotViewerToolbarTray}>
           <div className={styles.terasMediaSnapshotViewerToolbarContent}>
             <TerasSectionTitle kicker={kicker} title={toolbarTitle} />
-            {exportAction ? (
-              <TerasActionRow spacing="none">
-                <TerasMediaSnapshotActionButton action={exportAction} />
-              </TerasActionRow>
-            ) : null}
+            <TerasActionRow spacing="none">
+              <TerasActionButton aria-label="Zoom out snapshot" disabled={zoom <= 0.25} onClick={() => setZoom(value => Math.max(0.25, value - 0.25))}>−</TerasActionButton>
+              <TerasActionButton aria-label="Fit snapshot" onClick={() => setZoom(1)}>{Math.round(zoom * 100)}% · Fit</TerasActionButton>
+              <TerasActionButton aria-label="Zoom in snapshot" disabled={zoom >= 4} onClick={() => setZoom(value => Math.min(4, value + 0.25))}>+</TerasActionButton>
+              {exportAction ? <TerasMediaSnapshotActionButton action={exportAction} /> : null}
+            </TerasActionRow>
           </div>
         </TerasContentTray>
         <div
           className={styles.terasMediaSnapshotFullscreenCanvas}
           ref={snapshotViewerFullscreenRef}
         >
-          <div className={styles.terasMediaSnapshotViewerCanvas}>
-            <img alt={imageAlt} src={imageSrc} />
+          <div className={styles.terasMediaSnapshotViewerCanvas} style={{overflow:"auto",display:"block"}}>
+            <img alt={imageAlt} src={imageSrc} style={{width:`${zoom * 100}%`,maxWidth:"none",maxHeight:"none",height:"auto"}} />
           </div>
         </div>
       </div>

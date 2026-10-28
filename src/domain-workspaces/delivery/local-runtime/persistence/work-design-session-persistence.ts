@@ -175,6 +175,8 @@ export function normalizeWorkDesignBriefVersion(
 
   return {
     boardSnapshotRef: candidate.boardSnapshotRef,
+    ...(validRetainedBrief(candidate.finalizedBrief) ? {finalizedBrief:candidate.finalizedBrief} : {}),
+    ...(Array.isArray(candidate.coreNodes) && candidate.coreNodes.every(node=>node&&["id","kicker","label","detail","tone"].every(key=>typeof (node as unknown as Record<string,unknown>)[key]==="string")) ? {coreNodes:candidate.coreNodes} : {}),
     briefVersionId: candidate.briefVersionId,
     decision: snapshotSession.decision,
     finalizedAt: candidate.finalizedAt,
@@ -188,6 +190,22 @@ export function normalizeWorkDesignBriefVersion(
     snapshot: snapshotSession.snapshot,
     versionLabel: candidate.versionLabel,
   };
+}
+
+function validRetainedBrief(value: unknown): value is import("../../work-model/work-design/work-design-artifact-types.ts").WorkDesignFinalizedBrief {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string,unknown>;
+  if (!["boardSnapshotRef","diagramSummary","diagramTitle","finalizedBy","metadataPacketRef","name","note","version"].every(key => typeof v[key] === "string") ||
+      !["attach","proceed","retire"].includes(String(v.decision)) || (v.finalizedAt !== null && typeof v.finalizedAt !== "string")) return false;
+  const tones = ["danger","info","muted","ok","stale","warn"];
+  for (const [key,fields] of [["carriedMetadata",["label","value"]],["diagramNodes",["label","summary","title"]],["systemChecks",["detail","label","status"]]] as const) {
+    const rows=v[key];if (!Array.isArray(rows) || rows.some(row => !row || typeof row!=="object" || !tones.includes(row.tone) || fields.some(field => typeof row[field]!=="string"))) return false;
+  }
+  if (v.snapshotArtifact !== null) {
+    const a=v.snapshotArtifact as Record<string,unknown> | undefined;
+    if (!a || typeof a!=="object" || !["artifact_id","attachment_status","board_snapshot_ref","description","file_name","rendered_content_base64_ref","target_record_ref"].every(key => typeof a[key]==="string") || !["image/png","image/svg+xml"].includes(String(a.content_type))) return false;
+  }
+  return true;
 }
 
 export function normalizeWorkDesignTreeDraftSnapshot(

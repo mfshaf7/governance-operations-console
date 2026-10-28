@@ -71,7 +71,7 @@ export function refinementProgressPanelProjection({
     title: string;
     tone: DeliveryTone;
   };
-  packet: DeliveryRefinementPacket;
+  packet: DeliveryRefinementPacket | null;
   progressActiveStep: DeliveryRefinementStepId;
   refinementBlocked: boolean;
 }) {
@@ -82,12 +82,12 @@ export function refinementProgressPanelProjection({
       ? "blocked"
       : activeReceipt
         ? "receipt"
-        : refinementPacketStatusLabel(packet),
+        : packet ? refinementPacketStatusLabel(packet) : "packet unavailable",
     statusTone: refinementBlocked
       ? ("danger" as DeliveryTone)
       : activeReceipt
         ? ("ok" as DeliveryTone)
-        : refinementPacketStatusTone(packet),
+        : packet ? refinementPacketStatusTone(packet) : ("warn" as DeliveryTone),
     title: currentMove.title,
     tone: refinementBlocked
       ? ("danger" as DeliveryTone)

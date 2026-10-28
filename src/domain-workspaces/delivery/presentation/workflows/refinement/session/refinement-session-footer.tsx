@@ -46,7 +46,7 @@ export function RefinementSessionFooter({
       {activeStep === "hub" ? null : activeStep === "metadata_draft" ? (
         <TerasActionButton
           data-refinement-action="review-readiness"
-          disabled={readOnly || blocked}
+          disabled={!readOnly && blocked}
           onClick={() => onSelectStep("readiness_review")}
         >
           Review Readiness
@@ -54,7 +54,7 @@ export function RefinementSessionFooter({
       ) : showReviewApplyPlanFooterAction ? (
         <TerasActionButton
           data-refinement-action="review-apply-plan"
-          disabled={readOnly || blocked || !canApply}
+          disabled={!readOnly && (blocked || !canApply)}
           onClick={() => onSelectStep("apply_refinement")}
         >
           Review Apply Plan

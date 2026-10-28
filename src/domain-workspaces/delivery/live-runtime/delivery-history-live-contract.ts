@@ -13,11 +13,13 @@ export type DeliveryIntakeRecord = {
   actor: string | null; evidence_refs: string[];
 };
 export type DeliveryHistorySection = {
-  state: "current" | "unavailable" | "not-recorded"; detail: string;
+  state: "current" | "partial" | "unavailable" | "not-recorded"; detail: string;
   data: DeliveryIntakeRecord | { state: string; source_ref: string; records: DeliveryHistoryRecord[];
     total_records: number; truncated: boolean } | null;
 };
 export type DeliveryHistoryProjection = {
+  activity?: {state:"current"|"unavailable";detail:string;page:number;limit:number;total:number;has_more:boolean;
+    items:Array<{event_id:string;title:string;occurred_at:string;actor:string;detail:string;receipt_ref:null;evidence_refs:string[];tone:"info"}>};
   schema_version: 1; workflow_id: "delivery-package-history"; delivery_id: string; record_ref: string;
   package: { title: string; status: string; owner_repo: string | null };
   sections: Record<"intake" | "work_design" | "refinement" | "closeout", DeliveryHistorySection>;
@@ -83,11 +85,18 @@ export function assertDeliveryHistoryProjection(value: unknown, expectedId: stri
   if(v.schema_version!==1 || v.workflow_id!=="delivery-package-history" || v.delivery_id!==expectedId || v.record_ref!==ref ||
     v.mutation_authority!=="none" || !["current","partial"].includes(String(v.history_state)) || !Array.isArray(v.events) || v.events.length>200) fail();
   const pkg=object(v.package);text(pkg.title);text(pkg.status);nullableText(pkg.owner_repo);timestamp(v.projected_at);
+  if (v.activity !== undefined) {
+    const a=object(v.activity);
+    if (!["current","unavailable"].includes(String(a.state)) || !Number.isSafeInteger(a.page) || Number(a.page)<1 || !Number.isSafeInteger(a.limit) || Number(a.limit)<1 || Number(a.limit)>50 || !Number.isSafeInteger(a.total) || Number(a.total)<0 || typeof a.has_more!=="boolean" || !Array.isArray(a.items) || a.items.length>Number(a.limit) || Number(a.total)<a.items.length || (a.state==="unavailable" && a.items.length>0)) fail();
+    text(a.detail);
+    const ids=new Set<string>();
+    for(const row of a.items) {const e=object(row),id=text(e.event_id);if(!id.startsWith(`${ref}/activities/`) || ids.has(id) || e.receipt_ref!==null || e.tone!=="info") fail();ids.add(id);text(e.title);text(e.actor);text(e.detail);timestamp(e.occurred_at);strings(e.evidence_refs);}
+  }
   if(!Number.isSafeInteger(v.event_count) || Number(v.event_count)<v.events.length)fail();
   const sections=object(v.sections);
   for(const key of ["intake","work_design","refinement","closeout"]){
-    const section=object(sections[key]);if(!["current","unavailable","not-recorded"].includes(String(section.state)))fail();text(section.detail);
-    if(section.state!=="current"){if(section.data!==null)fail();continue;}
+    const section=object(sections[key]);if(!["current","partial","unavailable","not-recorded"].includes(String(section.state)))fail();text(section.detail);
+    if(section.state!=="current"&&section.state!=="partial"){if(section.data!==null)fail();continue;}
     if(key==="intake"){const entry=assertDeliveryIntakeRecord(section.data);if(entry.target_ref!==ref)fail();continue;}
     const data=object(section.data);if(data.source_ref!==ref || !Array.isArray(data.records) || data.records.length>200 || !Number.isSafeInteger(data.total_records) || typeof data.truncated!=="boolean" || Number(data.total_records)<data.records.length || data.truncated!==(Number(data.total_records)>data.records.length))fail();text(data.state);
     if(new Set(data.records.map(item=>text(object(item).id))).size!==data.records.length)fail();

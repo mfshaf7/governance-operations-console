@@ -358,6 +358,7 @@ export function WorkDesignSessionStepRouter({
         />
       ) : (
         <WorkDesignHistoryView
+          liveHistory={applyWorkflow.runtimeMode === "live"}
           applyReceiptId={applyReceiptId}
           applyReceiptRecorded={applyReceiptRecorded}
           deliveryPackage={deliveryPackage}

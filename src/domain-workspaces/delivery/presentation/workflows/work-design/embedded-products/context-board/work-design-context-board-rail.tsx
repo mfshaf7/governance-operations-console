@@ -117,7 +117,6 @@ export function WorkDesignContextBoardRail({
             </div>
             <button
               className={styles.contextBoardCheckpointEntryButton}
-              disabled={contextBriefReadOnly}
               onClick={() => setContextSavedSessionsModalOpen(true)}
               type="button"
             >
@@ -134,12 +133,12 @@ export function WorkDesignContextBoardRail({
             </button>
             <button
               className={styles.contextBoardContextBriefPrimaryAction}
-              disabled={(contextBriefReadOnly && !contextBriefReady) || (!contextBriefReadOnly && contextOperatorNote.length > WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH)}
+              disabled={!contextBriefReadOnly && contextOperatorNote.length > WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH}
               onClick={() => setContextFinalizeDialogOpen(true)}
               type="button"
             >
               <span>
-                {contextBriefReady ? "View Finalized Brief" : "Finalize Brief"}
+                {contextBriefReadOnly || contextBriefReady ? "View Finalized Brief" : "Finalize Brief"}
               </span>
             </button>
           </div>

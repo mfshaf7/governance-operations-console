@@ -236,7 +236,6 @@ export function WorkDesignBuildTreeView({
             />
             <TerasActionRow spacing="tight">
               <TerasActionButton
-                disabled={readOnly && !contextFinalizedBriefAvailable}
                 onClick={() => setContextFinalizeDialogOpen(true)}
                 emphasis="secondary"
               >

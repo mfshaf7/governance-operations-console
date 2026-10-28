@@ -184,8 +184,12 @@ export function useWorkDesignSessionController({
     setHasUnsavedSessionChanges: setHasUnsavedSessionChangesFromUser,
   };
   const contextBoardCoreNodes = useMemo(
-    () => workDesignContextBoardCoreNodes(deliveryPackage, contextDecision),
-    [deliveryPackage, contextDecision],
+    () => {
+      const original = briefVersions.find(version=>version.briefVersionId===activeBriefVersionId);
+      const current = workDesignContextBoardCoreNodes(deliveryPackage, contextDecision);
+      return !readOnly ? current : original?.coreNodes ?? current.map(node=>({...node,label:"Original core-card text not retained",detail:"Current metadata is not substituted for historical content.",tone:"neutral" as const}));
+    },
+    [deliveryPackage, contextDecision,readOnly,briefVersions,activeBriefVersionId],
   );
   const createContextBoardFingerprint = useCallback(
     (snapshot: WorkDesignBoardSnapshot) =>
@@ -231,6 +235,7 @@ export function useWorkDesignSessionController({
     contextBriefSnapshotReady,
   } = contextBoard;
   const contextArtifacts = useWorkDesignContextArtifacts({
+    readOnly,
     activeBriefVersionId,
     briefVersions,
     contextCanvasScreenshotAttachment,

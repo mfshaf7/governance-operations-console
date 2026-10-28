@@ -8,6 +8,7 @@ import type {
 import { formatWorkDesignDateTime } from "../../view-model/work-design-display-formatters.ts";
 import { workDesignHistoryViewProjection } from "../../view-model/work-design-history-model.ts";
 import { deliveryPackageSourceMetadata } from "../../../../shared/delivery-package-metadata.ts";
+import {useDeliveryOwnerHistory,DeliveryOwnerHistoryContent} from "../../../shared/history/delivery-history-dialog.tsx";
 import {
   TerasSubjectHero,
   TerasUtilityButton,
@@ -38,6 +39,7 @@ type WorkDesignHistoryReceiptRow = {
 };
 
 type WorkDesignHistoryViewProps = {
+  liveHistory?: boolean;
   applyReceiptId: string | null;
   applyReceiptRecorded: boolean;
   deliveryPackage: DeliveryPackageSummary;
@@ -54,6 +56,7 @@ type WorkDesignHistoryViewProps = {
 };
 
 export function WorkDesignHistoryView({
+  liveHistory = false,
   applyReceiptId,
   applyReceiptRecorded,
   deliveryPackage,
@@ -68,6 +71,7 @@ export function WorkDesignHistoryView({
   sourceTerminalDecision,
   sourceApplyComplete,
 }: WorkDesignHistoryViewProps) {
+  const archive=useDeliveryOwnerHistory(liveHistory?deliveryPackage.delivery_package_id:null);
   const historyProjection = workDesignHistoryViewProjection({
     applyReceiptId,
     applyReceiptRecorded,
@@ -98,7 +102,7 @@ export function WorkDesignHistoryView({
             title={historyProjection.timelineTitle}
             description={historyProjection.timelineDescription}
           />
-          <TerasTimeline>
+          {liveHistory?<DeliveryOwnerHistoryContent projection={archive.projection} error={archive.error} loading={archive.loading} onPage={archive.setPage} sections={["work_design"]}/>:<TerasTimeline>
             {historyTimelineRows.map((line) => (
               <TerasTimelineItem
                 detail={line.detail}
@@ -110,7 +114,7 @@ export function WorkDesignHistoryView({
                 tone={line.tone}
               />
             ))}
-          </TerasTimeline>
+          </TerasTimeline>}
         </TerasPanel>
       </TerasZone>
       <TerasZone fit="fill">

@@ -68,7 +68,7 @@ import {
 } from "./work-session/execution-work-session-target.ts";
 import { useDeliveryChangeLiveRuntime } from "../../../live-runtime/use-delivery-change-live-runtime.ts";
 import { useDeliveryCloseoutLiveRuntime } from "../../../live-runtime/use-delivery-closeout-live-runtime.ts";
-import { DeliveryHistoryDialog } from "../../workflows/shared/history/delivery-history-dialog.tsx";
+import { DeliveryHistoryDialog,useDeliveryOwnerHistory } from "../../workflows/shared/history/delivery-history-dialog.tsx";
 import { deliveryHistoryInspectionTree } from "../../../live-runtime/delivery-history-tree.ts";
 import {
   buildExecutionTreeChangePlan,
@@ -348,7 +348,11 @@ export function DeliveryExecutionBoard({
     deliveryCloseoutRuntime.mode,
     selectedActions,
   ]);
-  const selectedAuditEvents = selectedPackage
+  const ownerHistory=useDeliveryOwnerHistory(model.source_truth === "OpenProject-backed OOS" ? selectedPackage?.delivery_package_id??null : null);
+  const selectedAuditEvents = selectedPackage && ownerHistory.projection
+    ? [...ownerHistory.projection.events,...(ownerHistory.projection.activity?.items??[])].map(event=>({actor:event.actor,category:event.receipt_ref?"receipt" as const:"action" as const,delivery_package_id:selectedPackage.delivery_package_id,
+      detail:"detail" in event&&typeof event.detail==="string"?event.detail:event.evidence_refs.join(" · "),event_id:event.event_id,occurred_at:event.occurred_at,receipt_id:event.receipt_ref,title:event.title,tone:event.tone})).sort((a,b)=>Date.parse(b.occurred_at)-Date.parse(a.occurred_at))
+    : selectedPackage
     ? getPackageAuditEvents(selectedPackage.delivery_package_id, model)
     : [];
   const boardHeaderActions = (
@@ -702,7 +706,8 @@ export function DeliveryExecutionBoard({
     ) : selectedPackage ? (
       <ExecutionSelectedPackagePanel
         readOnly={readOnly}
-        onInspectHistory={readOnly ? () => setHistoryOpen(true) : undefined}
+        onInspectHistory={model.source_truth === "OpenProject-backed OOS" ? () => setHistoryOpen(true) : undefined}
+        historyDetail={ownerHistory.loading?"Reading selected-item history…":ownerHistory.error??ownerHistory.projection?.activity?.detail??"Only the currently loaded evidence is shown. Open Original Owner Evidence for item activity and coverage."}
         onInspectCloseout={!readOnly && model.source_truth === "OpenProject-backed OOS"
           ? () => setCloseoutOpen(true) : undefined}
         onEditCanonicalTree={

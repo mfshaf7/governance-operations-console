@@ -33,6 +33,7 @@ import {
   TerasStatItem,
   TerasTrayStack,
   TerasDetailGrid,
+  TerasEmptyState,
   TerasZoneLayout,
   TerasZone,
 } from "@/teras";
@@ -105,7 +106,6 @@ export function WorkDesignReviewDraftView({
     <TerasZoneLayout variant="main-aside">
       <TerasZone fit="fill">
         <TerasSubjectHero
-          actionDisabled={briefUnavailable}
           actionDetail="Snapshot and finalization checks"
           actionLabel="View Finalized Brief"
           onAction={onOpenFinalizedBrief}
@@ -130,7 +130,7 @@ export function WorkDesignReviewDraftView({
             description="Review the context handoff and tree shape before accepting this draft for Apply Draft."
           />
           <TerasDetailGrid variant="media">
-            <TerasMediaSnapshot
+            {briefUnavailable ? <TerasEmptyState>No retained finalized snapshot is available. Current package metadata is not an original diagram.</TerasEmptyState> : <TerasMediaSnapshot
               density="compact"
               facts={briefUnavailable ? [{label:"Original snapshot",value:"Not retained"},{label:"Preview",value:"Current local board preview"}] : workDesignReviewSnapshotFacts(contextSnapshotAttachment)}
               imageAlt={`${contextSnapshotAttachment.title} snapshot preview`}
@@ -156,11 +156,11 @@ export function WorkDesignReviewDraftView({
                   tone: "warn",
                 },
               ]}
-            />
+            />}
             <TerasTrayStack spacing="compact">
               <TerasStatGroup offset="none">
                 <TerasStatItem
-                  detail={`${reviewSystemCheckPassCount}/${contextFinalizedBrief.systemChecks.length} finalization checks accepted`}
+                  detail={!briefUnavailable && contextFinalizedBrief.systemChecks.length ? `${reviewSystemCheckPassCount}/${contextFinalizedBrief.systemChecks.length} finalization checks accepted` : "Original finalization checks were not retained."}
                   element="article"
                   label="Context Brief"
                   variant="plain"

@@ -45,19 +45,22 @@ export function RefinementHubView({
   activeReceipt: DeliveryRefinementApplyReceipt | null;
   deliveryPackage: DeliveryPackageSummary;
   hubAction: RefinementHubAction | null;
-  metadataWorkbenchSummary: RefinementMetadataWorkbenchSummary;
+  metadataWorkbenchSummary: RefinementMetadataWorkbenchSummary | null;
   onRunHubAction: () => void;
   onSelectStep: (step: DeliveryRefinementModalStep) => void;
-  packet: DeliveryRefinementPacket;
+  packet: DeliveryRefinementPacket | null;
   progressActiveStep: DeliveryRefinementStepId;
 }) {
-  const hubProjection = refinementHubViewProjection({
+  const hubProjection = packet && metadataWorkbenchSummary ? refinementHubViewProjection({
     activeReceipt,
     deliveryPackage,
     hubAction,
     metadataReady: metadataWorkbenchSummary.ready,
     packet,
-  });
+  }) : {actionButtonLabel:"View History",actionDescription:"Inspect original runs and item activity independently of current packet eligibility.",actionTitle:"Inspect Retained Evidence",actionTone:"info" as const,
+    hubTone:"info" as const,packageStatusLabel:deliveryPackage.package_posture,packageStatusTone:deliveryPackage.tone,packageSummary:deliveryPackage.summary,
+    progressDescription:"Inspection navigation stays available. Sections requiring a missing packet explain that absence without blocking History.",progressTone:"info" as const,refinementBlocked:false,
+    statusDescription:"No current authoring packet is available. This does not establish whether historical work ran.",statusFacts:[{label:"Current packet",value:"Unavailable"}],statusLabel:"packet unavailable",statusTitle:"Archive remains readable"};
 
   return (
     <TerasHubFrame
@@ -71,10 +74,10 @@ export function RefinementHubView({
             description={hubProjection.packageSummary}
           />
           <TerasMetadataList
-            items={refinementHubSelectedMetadata({
+            items={packet ? refinementHubSelectedMetadata({
               deliveryPackage,
               packet,
-            })}
+            }) : [{label:"Source",value:deliveryPackage.source_ref}]}
             shape="line"
             treatment="chip"
             wrap
@@ -92,7 +95,7 @@ export function RefinementHubView({
               />
             }
             action={
-              <TerasActionButton disabled={readOnly} onClick={onRunHubAction} emphasis="primary">
+              <TerasActionButton disabled={readOnly && hubAction?.route === "blocker"} onClick={packet ? onRunHubAction : () => onSelectStep("receipt")} emphasis="primary">
                 {hubProjection.actionButtonLabel}
               </TerasActionButton>
             }
@@ -135,7 +138,7 @@ export function RefinementHubView({
                 stateLabel={
                   hubProjection.refinementBlocked
                     ? "Locked"
-                    : refinementStepStateLabel({
+                    : !packet ? "Unavailable" : refinementStepStateLabel({
                         applyRecorded: Boolean(activeReceipt),
                         activeStep: progressActiveStep,
                         candidateStep: step.id,
@@ -145,7 +148,7 @@ export function RefinementHubView({
                 tone={
                   hubProjection.refinementBlocked
                     ? "muted"
-                    : refinementStepTone({
+                    : !packet ? "muted" : refinementStepTone({
                         applyRecorded: Boolean(activeReceipt),
                         activeStep: progressActiveStep,
                         candidateStep: step.id,

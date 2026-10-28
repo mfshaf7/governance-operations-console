@@ -251,6 +251,8 @@ export function WorkDesignSessionDialogs({
       }}
       finalizedBriefDialog={{
         applyCompleted,
+        artifactAvailable: applyCompleted ? contextArtifacts.contextFinalizedBriefAvailable : undefined,
+        evidenceOnly: applyCompleted,
         contextBoardInventory,
         contextBriefReady,
         contextDecision: modalState.contextDecision,

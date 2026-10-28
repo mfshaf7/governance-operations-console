@@ -7,7 +7,7 @@ export {
   normalizeWorkDesignPersistedSession,
   saveWorkDesignSessionDraft,
 } from "./persistence/work-design-session-persistence.ts";
-export { workDesignResumeContextSession } from "./persistence/work-design-context-resume.ts";
+export { workDesignResumeContextSession,workDesignArchivedContextSession,workDesignRetainedBrief } from "./persistence/work-design-context-resume.ts";
 export {
   loadRefinementSessionDraft,
   refinementSessionHasUnappliedChanges,

@@ -34,7 +34,7 @@ export function DeliveryRefinementWorkflowModal({
   });
   const { packet, sessionState } = controller;
 
-  if (!packet) {
+  if (!packet && !readOnly) {
     return (
       <TerasModalShell
         height="content"
