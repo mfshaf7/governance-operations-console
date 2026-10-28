@@ -1,5 +1,6 @@
 import type { ControlBoardTreeNode } from "../../../product-apps/control-board/control-board-model.ts";
 import type { DeliveryChangeProjection } from "./delivery-change-live-types.ts";
+import type { WorkDesignNode } from "../work-model/work-design/work-design-types.ts";
 
 // Selected-package read, not an inventory expansion. Never bind another
 // initiative's tree or substitute an empty tree for unavailable owner data.
@@ -20,4 +21,18 @@ export function deliveryHistoryInspectionTree(projection: DeliveryChangeProjecti
       totalChildCount: children.reduce((count, child) => count + child.totalChildCount + 1, 0) };
   }
   return node(projection.package.execution_tree);
+}
+
+// The native Work Design editor owns design branches, not PI Objectives,
+// milestones or execution-only records. The full ART tree remains in Execution.
+export function deliveryHistoryDesignTree(projection: DeliveryChangeProjection | null, deliveryId: string): WorkDesignNode | null {
+  const tree = deliveryHistoryInspectionTree(projection, deliveryId);
+  if (!tree) return null;
+  function design(node: ControlBoardTreeNode): WorkDesignNode | null {
+    if (!["Epic", "Feature", "User story", "Risk"].includes(node.componentType)) return null;
+    return {id:node.id,kind:node.componentType as WorkDesignNode["kind"],title:node.title,
+      description:node.description,draftBody:node.description,remark:"",tone:"info",
+      children:node.children.map(design).filter((child):child is WorkDesignNode=>child!==null)};
+  }
+  return design(tree);
 }

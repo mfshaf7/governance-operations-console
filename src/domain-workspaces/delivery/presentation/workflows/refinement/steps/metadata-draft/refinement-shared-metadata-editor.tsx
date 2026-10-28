@@ -45,6 +45,7 @@ import { SharedMetadataEmptyState } from "./refinement-shared-metadata-state.tsx
 import { RefinementMetadataEditorPanel } from "./refinement-metadata-editor-panel.tsx";
 
 export function SharedMetadataEditor({
+  readOnly = false,
   advisor,
   editorCollapsed,
   metadataDraftValues,
@@ -59,6 +60,7 @@ export function SharedMetadataEditor({
   selectedMetadataFieldKey,
   targets,
 }: {
+  readOnly?: boolean;
   advisor: ReactNode;
   editorCollapsed: boolean;
   metadataDraftValues: Record<string, string>;
@@ -230,7 +232,7 @@ export function SharedMetadataEditor({
                 />
 
                 <MetadataValueControl
-                  blocked={blocked}
+                  blocked={readOnly || blocked}
                   draftValue={sharedDraftValue}
                   field={selectedGroup.field}
                   onUpdateMetadataDraftValue={(value) =>
@@ -273,6 +275,7 @@ export function SharedMetadataEditor({
                 <TerasActionRow spacing="none">
                   {blocked ? (
                     <TerasActionButton
+                      disabled={readOnly}
                       onClick={onReviewReadiness}
                       emphasis="secondary"
                     >
@@ -282,6 +285,7 @@ export function SharedMetadataEditor({
                     <>
                       {canResetSharedValue ? (
                         <TerasActionButton
+                          disabled={readOnly}
                           onClick={() =>
                             onResetMetadataDraftValues(
                               Object.fromEntries(
@@ -298,7 +302,7 @@ export function SharedMetadataEditor({
                         </TerasActionButton>
                       ) : null}
                       <TerasActionButton
-                        disabled={!sharedValueCanConfirm}
+                        disabled={readOnly || !sharedValueCanConfirm}
                         onClick={() =>
                           onMarkMetadataFieldResolutions(
                             selectedFieldKeys,

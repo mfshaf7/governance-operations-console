@@ -27,6 +27,7 @@ import {
 } from "../view-model/work-design-step-model.ts";
 
 type WorkDesignSessionStepRouterProps = {
+  readOnly?: boolean;
   applyCompleted: boolean;
   applyReady: boolean;
   applyWorkflow: ReturnType<typeof useWorkDesignApplyWorkflow>;
@@ -53,6 +54,7 @@ type WorkDesignSessionStepRouterProps = {
 };
 
 export function WorkDesignSessionStepRouter({
+  readOnly = false,
   applyCompleted,
   applyReady,
   applyWorkflow,
@@ -189,6 +191,7 @@ export function WorkDesignSessionStepRouter({
     >
       {activeStep !== "context" && activeStep !== "hub" ? (
         <WorkDesignProgressPanel
+          readOnly={readOnly}
           runtimeMode={applyWorkflow.runtimeMode}
           activeStep={activeStep}
           applyReceiptRecorded={applyReceiptRecorded}
@@ -209,6 +212,7 @@ export function WorkDesignSessionStepRouter({
 
       {activeStep === "hub" ? (
         <WorkDesignHubView
+          readOnly={readOnly}
           runtimeMode={applyWorkflow.runtimeMode}
           applyReceiptRecorded={applyReceiptRecorded}
           contextBriefAccepted={contextBriefAccepted}
@@ -226,6 +230,8 @@ export function WorkDesignSessionStepRouter({
         />
       ) : activeStep === "context" ? (
         <WorkDesignContextStep
+          retainedBriefAvailable={contextArtifacts.contextFinalizedBriefAvailable}
+          readOnly={readOnly}
           contextOperatorNote={contextOperatorNote}
           updateContextOperatorNote={contextActions.updateContextOperatorNote}
           contextAdvisorControls={contextActions.contextAdvisorControls}
@@ -251,6 +257,8 @@ export function WorkDesignSessionStepRouter({
         />
       ) : activeStep === "build" ? (
         <WorkDesignBuildTreeStep
+          contextFinalizedBriefAvailable={contextArtifacts.contextFinalizedBriefAvailable}
+          readOnly={readOnly}
           treeAdvisorControls={buildTree.treeAdvisorControls}
           addFeature={addFeature}
           addRiskBranch={addRiskBranch}
@@ -291,6 +299,7 @@ export function WorkDesignSessionStepRouter({
         />
       ) : activeStep === "review" ? (
         <WorkDesignReviewDraftView
+          briefUnavailable={readOnly && !contextArtifacts.contextFinalizedBriefAvailable}
           applyCompleted={applyCompleted}
           contextFinalizedBrief={contextFinalizedBrief}
           contextSnapshotAttachment={contextSnapshotAttachment}
@@ -311,6 +320,7 @@ export function WorkDesignSessionStepRouter({
           }}
           onExportSnapshot={exportContextSnapshotAttachment}
           onMarkReviewed={() => {
+            if (readOnly) return;
             setDraftReviewAccepted(true);
             setDraftValidationAccepted(false);
             setHasUnsavedSessionChanges(false);

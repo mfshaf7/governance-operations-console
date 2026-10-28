@@ -87,11 +87,13 @@ export function TerasSubjectCard({
 }
 
 export function TerasSubjectHero({
+  actionDisabled = false,
   actionDetail,
   actionLabel,
   onAction,
   subject,
 }: {
+  actionDisabled?: boolean;
   actionDetail: ReactNode;
   actionLabel: ReactNode;
   onAction: () => void;
@@ -117,6 +119,7 @@ export function TerasSubjectHero({
       </div>
       <button
         className={styles.terasSubjectHeroAction}
+        disabled={actionDisabled}
         onClick={onAction}
         type="button"
       >

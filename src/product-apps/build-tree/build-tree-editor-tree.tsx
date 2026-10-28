@@ -36,6 +36,7 @@ export type BuildTreeEditorTreeCopy = {
 export type BuildTreeEditorTreeProps<
   TNode extends BuildTreeNodeLike<TNode>,
 > = {
+  readOnly?: boolean;
   addMenuNodeId: string | null;
   canDeleteNode?: (node: TNode) => boolean;
   copy?: BuildTreeEditorTreeCopy;
@@ -94,6 +95,7 @@ const defaultEditorTreeCopy = {
 export function BuildTreeEditorTree<
   TNode extends BuildTreeNodeLike<TNode>,
 >({
+  readOnly = false,
   addMenuNodeId,
   canDeleteNode,
   copy,
@@ -148,6 +150,7 @@ export function BuildTreeEditorTree<
           aria-label={`${addActions[0].label} under ${displayTitle}`}
           className={editorStyles.buildTreeEditorIconButton}
           onClick={() => addActions[0].onSelect(node)}
+          disabled={readOnly}
           type="button"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -163,6 +166,7 @@ export function BuildTreeEditorTree<
           aria-label={`Add child under ${displayTitle}`}
           className={editorStyles.buildTreeEditorIconButton}
           onClick={() => onToggleAddMenu(node)}
+          disabled={readOnly}
           type="button"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -173,6 +177,7 @@ export function BuildTreeEditorTree<
               <button
                 key={action.label}
                 onClick={() => action.onSelect(node)}
+                disabled={readOnly}
                 role="menuitem"
                 type="button"
               >
@@ -227,6 +232,7 @@ export function BuildTreeEditorTree<
                     aria-label={`${getKindLabel(node.kind, node)} draft title`}
                     className={editorStyles.buildTreeEditorTreeTitleInput}
                     onChange={(event) => onUpdateTitle(node, event.target.value)}
+                    disabled={readOnly}
                     onClick={(event) => event.stopPropagation()}
                     onFocus={() => onFocusInlineTitle(node)}
                     placeholder={getEditableTitlePlaceholder(node)}
@@ -267,6 +273,7 @@ export function BuildTreeEditorTree<
                   aria-label={`Delete ${displayTitle}`}
                   className={editorStyles.buildTreeEditorDeleteButton}
                   onClick={() => onDeleteNode(node)}
+                  disabled={readOnly}
                   type="button"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -281,6 +288,7 @@ export function BuildTreeEditorTree<
                 className={editorStyles.buildTreeEditorTreeNoteField}
                 label={resolvedCopy.detailDraftLabel}
                 onValueChange={(value) => onUpdateDraftBody(node, value)}
+                disabled={readOnly}
                 placeholder={getDraftPlaceholder(node)}
                 value={node.draftBody}
               />
@@ -292,6 +300,7 @@ export function BuildTreeEditorTree<
                   {...buildTreeEditorFieldProps}
                   aria-label={`${getKindLabel(node.kind, node)} operator remark`}
                   onChange={(event) => onUpdateRemark(node, event.target.value)}
+                  disabled={readOnly}
                   placeholder={resolvedCopy.detailRemarkPlaceholder}
                   value={node.remark}
                 />
@@ -300,6 +309,7 @@ export function BuildTreeEditorTree<
                 <div className={editorStyles.buildTreeEditorTreeDetailActions}>
                   <TerasActionButton
                     onClick={() => onOpenScaffold(node)}
+                    disabled={readOnly}
 
                     emphasis="secondary"
                   >

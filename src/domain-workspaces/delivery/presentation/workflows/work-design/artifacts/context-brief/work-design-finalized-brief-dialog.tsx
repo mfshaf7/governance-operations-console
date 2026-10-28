@@ -102,6 +102,7 @@ export function WorkDesignFinalizedBriefDialog(
 }
 
 function WorkDesignFinalizeBriefPreparationDialog({
+  applyCompleted,
   contextDecision,
   contextFinalizeCanRun,
   contextFinalizeRequirementRows,
@@ -117,7 +118,7 @@ function WorkDesignFinalizeBriefPreparationDialog({
       width="standard"
       actions={
         <TerasActionButton
-          disabled={!contextFinalizeCanRun || contextFinalizeRunning}
+          disabled={applyCompleted || !contextFinalizeCanRun || contextFinalizeRunning}
           onClick={finalizeContextBrief}
           tone={
             workDesignFinalizeActionTone(contextFinalizeCanRun) === "danger"

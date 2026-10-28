@@ -1483,7 +1483,7 @@ export function ContextBoardWorkbenchView({
                     </div>
                   </div>
 
-                  <div
+                  {!contextBriefReadOnly ? <div
                     className={`${styles.contextBoardFloatingTray} ${styles.contextBoardFloatingVisual}`}
                     data-has-content={contextBoardHasContent ? "true" : "false"}
                   >
@@ -1498,7 +1498,7 @@ export function ContextBoardWorkbenchView({
                         ? copy.readonlySummaryDetail
                         : copy.summaryDetail}
                     </small>
-                  </div>
+                  </div> : null}
 
                   <div className={styles.contextBoardZoomFloat} aria-label="Canvas zoom tool">
                     <button

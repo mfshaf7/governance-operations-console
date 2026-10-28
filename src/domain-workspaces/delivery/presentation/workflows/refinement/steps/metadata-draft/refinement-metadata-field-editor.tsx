@@ -20,6 +20,7 @@ import { RefinementMetadataEditorPanel } from "./refinement-metadata-editor-pane
 import { MetadataEditorHeaderActions } from "./refinement-metadata-editor-controls.tsx";
 
 export function RefinementSelectedMetadataFieldEditor({
+  readOnly = false,
   advisor,
   draftValue,
   editorCollapsed,
@@ -40,6 +41,7 @@ export function RefinementSelectedMetadataFieldEditor({
   selectedMetadataFieldKey,
   selectedTarget,
 }: {
+  readOnly?: boolean;
   advisor: ReactNode;
   draftValue: string;
   editorCollapsed: boolean;
@@ -71,6 +73,7 @@ export function RefinementSelectedMetadataFieldEditor({
   if (metadataSelectionMode === "shared") {
     return (
       <SharedMetadataEditor
+        readOnly={readOnly}
         advisor={advisor}
         editorCollapsed={editorCollapsed}
         metadataDraftValues={metadataDraftValues}
@@ -104,6 +107,7 @@ export function RefinementSelectedMetadataFieldEditor({
 
   return (
     <SelectedMetadataEditor
+        readOnly={readOnly}
       advisor={advisor}
       draftValue={draftValue}
       editorCollapsed={editorCollapsed}

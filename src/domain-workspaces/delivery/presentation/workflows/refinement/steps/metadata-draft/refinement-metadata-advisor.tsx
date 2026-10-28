@@ -25,6 +25,7 @@ type RefinementAdvisorLine = {
 };
 
 export function RefinementMetadataAdvisor({
+  readOnly = false,
   sourceRef, sourceRevision, metadataDraftValues,
   activeStep,
   advisorTranscript,
@@ -42,6 +43,7 @@ export function RefinementMetadataAdvisor({
   updateMetadataDraftValue,
   updateMetadataDraftValues,
 }: {
+  readOnly?: boolean;
   sourceRef: string;
   sourceRevision: string;
   metadataDraftValues: Record<string, string>;
@@ -79,7 +81,7 @@ export function RefinementMetadataAdvisor({
   const advisorLines = [...advisorTranscript, ...advisorExchange];
   const targets = selectedSharedMetadataGroup?.targets ?? (selectedTarget ? [selectedTarget] : []);
   const advisor = useDraftAdvisor({
-    disabled: activeStep !== "metadata_draft" || runtimeStatus !== "current" || runtimeMode !== "live",
+    disabled: readOnly || activeStep !== "metadata_draft" || runtimeStatus !== "current" || runtimeMode !== "live",
     getScope: () => ({ role: "refinement-metadata", ref: `${sourceRef}:${targets.map((target) => target.key).join(",")}`,
       sourceRef, sourceRevision,
       context: JSON.stringify({ package: deliveryPackageName, targets: targets.map((target) => ({ key: target.key, sourceValue: target.sourceValue, field: target.field })) }),
@@ -170,6 +172,7 @@ export function RefinementMetadataAdvisor({
         activeStep === "metadata_draft"
           ? {
               ariaLabel: "Refinement metadata advisor prompt",
+              disabled: readOnly, readOnly,
               onChange: setAdvisorPrompt,
               onSubmit: submitAdvisorPrompt,
               placeholder: selectedSharedMetadataGroup

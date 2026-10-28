@@ -8,6 +8,15 @@ lives in `surface-contracts/lifecycle-transitions.md`.
 
 ## 2026-10-28
 
+### Native completed-work locks
+
+- Removed the separate History inspection interface introduced by PR142.
+- History now renders the original Work Design and Refinement workflow modals,
+  canvas, editors, workbench, panels and detail dialogs used for active work.
+- Completed-work mutation and progression controls are disabled in those same
+  components; inspection remains available and local sessions are not rewritten.
+- Procedure: [Delivery history inspection](delivery-history-inspection.md).
+
 ### Delivery History interface restoration
 
 - Restored normal Work Design and Refinement package registers and locked

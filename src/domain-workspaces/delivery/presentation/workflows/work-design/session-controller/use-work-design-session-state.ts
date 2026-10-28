@@ -21,6 +21,8 @@ import type { WorkDesignAdvisorTranscriptLine } from "../view-model/work-design-
 
 export function useWorkDesignSessionState(
   deliveryPackage: DeliveryPackageSummary,
+  retainedTree?: import("../model/work-design-model.ts").WorkDesignNode,
+  readOnly = false,
 ) {
   const deliveryPackageId = deliveryPackage.delivery_package_id;
   const initialApplyReceiptId =
@@ -30,7 +32,7 @@ export function useWorkDesignSessionState(
       ? deliveryPackage.local_workflow_projection.receipt_id
       : null;
   const initialTree = useMemo(
-    () => initialWorkDesignTree(deliveryPackage),
+    () => retainedTree ?? initialWorkDesignTree(deliveryPackage),
     [deliveryPackageId],
   );
   const initialContextSession =
@@ -112,7 +114,7 @@ export function useWorkDesignSessionState(
   >([]);
   const [contextOperatorNote, setContextOperatorNote] = useState(
     initialContextSession?.note ??
-      "Inspect ART context for duplicate scope, existing package overlap, and the right draft boundary before building the tree.",
+      (readOnly ? "" : "Inspect ART context for duplicate scope, existing package overlap, and the right draft boundary before building the tree."),
   );
   const [reviewHandoffNote, setReviewHandoffNote] = useState(() => {
     if (initialContextSession?.initial_step === "build") {
@@ -121,7 +123,7 @@ export function useWorkDesignSessionState(
 
     return (
       initialContextSession?.note ??
-      `Shape ${deliveryPackage.display_name} into a draft Epic tree before refinement.`
+      (readOnly ? "" : `Shape ${deliveryPackage.display_name} into a draft Epic tree before refinement.`)
     );
   });
   const [draftReviewAccepted, setDraftReviewAccepted] = useState(false);

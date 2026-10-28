@@ -1,8 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {deliveryHistoryInspectionTree} from '../../src/domain-workspaces/delivery/live-runtime/delivery-history-tree.ts';
+import {deliveryHistoryInspectionTree,deliveryHistoryDesignTree} from '../../src/domain-workspaces/delivery/live-runtime/delivery-history-tree.ts';
 
 const node=(id,type,children=[])=>({id,type,subject:`Retained ${id}`,description:`Original current owner narrative ${id}`,record_ref:`openproject://work_packages/${id}`,status:'done',children});
+test('native Work Design receives real design branches without inventing or relabelling execution-only records',()=>{
+ const result=deliveryHistoryDesignTree(projection(),'delivery-71');
+ assert.equal(result.kind,'Epic');assert.equal(result.children.length,1);
+ assert.equal(result.children[0].kind,'Feature');assert.equal(result.children[0].children[0].draftBody,'Original current owner narrative 73');
+ assert.equal(deliveryHistoryDesignTree(null,'delivery-71'),null);
+ assert.throws(()=>deliveryHistoryDesignTree(projection(),'delivery-99'));
+});
 function projection(){return {delivery_id:'delivery-71',record_ref:'openproject://work_packages/71',package:{execution_tree:node(71,'Epic',[node(72,'Feature',[node(73,'User story')]),node(74,'PI Objective')])}};}
 test('selected retained owner tree preserves complete hierarchy, narratives and actual counts without inventing missing data',()=>{
  const tree=deliveryHistoryInspectionTree(projection(),'delivery-71');

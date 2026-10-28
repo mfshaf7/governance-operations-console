@@ -55,6 +55,8 @@ type WorkDesignContextDecisionCopy = {
 };
 
 type WorkDesignBuildTreeViewProps = {
+  contextFinalizedBriefAvailable?: boolean;
+  readOnly?: boolean;
   treeAdvisorControls?: import("react").ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
   addFeature: (parentId?: string) => void;
   addRiskBranch: (parentId?: string) => void;
@@ -96,6 +98,8 @@ type WorkDesignBuildTreeViewProps = {
 };
 
 export function WorkDesignBuildTreeView({
+  contextFinalizedBriefAvailable = true,
+  readOnly = false,
   treeAdvisorControls,
   addFeature,
   addRiskBranch,
@@ -215,15 +219,15 @@ export function WorkDesignBuildTreeView({
           }
           statusTone={contextDecisionCopy.tone}
           description={
-            contextPanelExpanded ? "Accepted handoff for this tree." : undefined
+            contextPanelExpanded ? readOnly && !contextFinalizedBriefAvailable ? "No original finalized brief is retained in this session." : "Accepted handoff for this tree." : undefined
           }
-          title="Accepted Brief"
+          title={readOnly && !contextFinalizedBriefAvailable ? "Finalized brief unavailable" : "Accepted Brief"}
           titleOverflow="tooltip"
         />
         {contextPanelExpanded ? (
           <>
             <TerasMetadataList
-              items={workDesignBuildTreeContextHandoffMetadata({
+              items={readOnly && !contextFinalizedBriefAvailable ? [{label:"Brief",value:"Not retained"},{label:"Snapshot",value:"Not retained"},{label:"Decision",value:"Not recorded"},{label:"Draft Tree",value:`${treeMetrics.features} Features / ${treeMetrics.stories} Stories / ${treeMetrics.risks} Risks`}] : workDesignBuildTreeContextHandoffMetadata({
                 contextDecisionLabel: contextDecisionCopy.label,
                 contextFinalizedBrief,
                 contextSnapshotAttachmentStatusLabel,
@@ -232,6 +236,7 @@ export function WorkDesignBuildTreeView({
             />
             <TerasActionRow spacing="tight">
               <TerasActionButton
+                disabled={readOnly && !contextFinalizedBriefAvailable}
                 onClick={() => setContextFinalizeDialogOpen(true)}
                 emphasis="secondary"
               >
@@ -264,7 +269,7 @@ export function WorkDesignBuildTreeView({
             <TerasPanelCollapseActions
               collapsed={!selectedDraftEditorOpen}
               collapseLabel="Collapse"
-              expandLabel="Edit Draft"
+              expandLabel={readOnly ? "View Draft" : "Edit Draft"}
               onToggle={toggleSelectedDraftEditor}
               statusAccentRgb={workDesignNodeAccentRgb(node.kind)}
               statusLabel={workDesignNodeKindLabel(node.kind)}
@@ -280,6 +285,7 @@ export function WorkDesignBuildTreeView({
           <>
             <TerasFieldStack fill="middle" spacing="comfortable">
               <TerasTextField
+                disabled={readOnly}
                 {...buildTreeEditorFieldProps}
                 accentRgb={workDesignNodeAccentRgb(node.kind)}
                 aria-label={`${workDesignNodeKindLabel(node.kind)} title`}
@@ -295,6 +301,7 @@ export function WorkDesignBuildTreeView({
                 value={titleParts.editable}
               />
               <TerasNoteField
+                disabled={readOnly}
                 {...buildTreeEditorFieldProps}
                 accentRgb={workDesignNodeAccentRgb(node.kind)}
                 density="compact"
@@ -305,6 +312,7 @@ export function WorkDesignBuildTreeView({
                 value={node.draftBody}
               />
               <TerasTextField
+                disabled={readOnly}
                 {...buildTreeEditorFieldProps}
                 accentRgb={workDesignNodeAccentRgb(node.kind)}
                 aria-label={`${workDesignNodeKindLabel(node.kind)} operator remark`}
@@ -319,6 +327,7 @@ export function WorkDesignBuildTreeView({
               end={
                 <>
                   <TerasActionButton
+                    disabled={readOnly}
                     accentRgb={workDesignNodeAccentRgb(node.kind)}
                     onClick={() => openScaffold(node)}
                     emphasis="secondary"
@@ -327,6 +336,7 @@ export function WorkDesignBuildTreeView({
                   </TerasActionButton>
                   {node.kind !== "Epic" ? (
                     <TerasActionButton
+                      disabled={readOnly}
                       onClick={() => requestDelete(node)}
                       tone="danger"
                     >
@@ -341,12 +351,14 @@ export function WorkDesignBuildTreeView({
               {node.kind === "Epic" ? (
                 <>
                   <TerasActionButton
+                    disabled={readOnly}
                     onClick={() => addFeature(node.id)}
                     emphasis="secondary"
                   >
                     Add Feature
                   </TerasActionButton>
                   <TerasActionButton
+                    disabled={readOnly}
                     onClick={() => addRiskBranch(node.id)}
                     emphasis="secondary"
                   >
@@ -356,6 +368,7 @@ export function WorkDesignBuildTreeView({
               ) : null}
               {node.kind === "Feature" ? (
                 <TerasActionButton
+                  disabled={readOnly}
                   onClick={() => addStory(node.id)}
                   emphasis="secondary"
                 >
@@ -372,8 +385,7 @@ export function WorkDesignBuildTreeView({
   return (
     <BuildTreeEditor
       copy={{
-        treeDescription:
-          "Tree nodes are draft-only until review and Apply Draft.",
+        treeDescription: readOnly ? "Locked saved local design, when retained; otherwise current ART design branches. Original draft content is not reconstructed." : "Tree nodes are draft-only until review and Apply Draft.",
         treeKicker: "Work Design Tree",
         treeTitle: "Package Tree Draft",
       }}
@@ -397,6 +409,8 @@ export function WorkDesignBuildTreeView({
             }
             profileLabel="Work Design Advisor"
             prompt={{
+              disabled: readOnly,
+              readOnly,
               ariaLabel: "Work Design tree advisor prompt",
               onChange: setBuildAdvisorPrompt,
               onSubmit: submitBuildAdvisorPrompt,
@@ -414,6 +428,7 @@ export function WorkDesignBuildTreeView({
       sideFill={buildTreePanelStackFill}
       treeContent={
         <BuildTreeEditorTree
+          readOnly={readOnly}
           addMenuNodeId={treeAddMenuNodeId}
           copy={{
             groupedLeafCollapsedDescription:

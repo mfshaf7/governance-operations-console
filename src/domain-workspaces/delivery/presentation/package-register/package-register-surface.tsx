@@ -129,14 +129,7 @@ export function DeliveryPackageRegisterSurface({
     packages[0] ??
     null;
   const packageActionSummary = selectedPackage
-    ? model.history_scope === "history" ? {
-        buttonLabel: surface.id === "work-design" ? "Inspect Design Hub" : "Inspect Refinement Hub",
-        description: "Inspect retained work in the locked workflow. Current ART data and original owner receipts remain distinct.",
-        route: surface.id === "work-design" ? "work-design" as const : "refinement" as const,
-        statusLabel: selectedPackage.package_posture,
-        title: "Read-only workflow inspection",
-        tone: "info" as const,
-      } : packageActionForSurface(surface, selectedPackage)
+    ? packageActionForSurface(surface, selectedPackage)
     : null;
 
   useEffect(() => {

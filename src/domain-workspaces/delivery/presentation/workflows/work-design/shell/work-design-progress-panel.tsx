@@ -21,6 +21,7 @@ type WorkDesignProgressStepItem = {
 };
 
 type WorkDesignProgressPanelProps = {
+  readOnly?: boolean;
   activeStep: WorkDesignStep;
   applyReceiptRecorded: boolean;
   contextBriefAccepted: boolean;
@@ -39,6 +40,7 @@ type WorkDesignProgressPanelProps = {
 };
 
 export function WorkDesignProgressPanel({
+  readOnly = false,
   activeStep,
   applyReceiptRecorded,
   contextBriefAccepted,
@@ -81,7 +83,7 @@ export function WorkDesignProgressPanel({
         steps={workDesignSteps.map((item, index) => {
           const nextStep = workDesignSteps[index + 1];
           const archiveStep = item.id === "history";
-          const available = archiveStep || !workDesignBlocked;
+          const available = readOnly || archiveStep || !workDesignBlocked;
           const stepTone =
             workDesignBlocked && !archiveStep
               ? "muted"

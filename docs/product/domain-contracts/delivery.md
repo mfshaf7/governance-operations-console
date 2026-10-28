@@ -885,8 +885,11 @@ Delivery must not:
 
 ## Current and retained owner history
 
-`presentation/workflows/shared/history/` owns the locked workflow inspection
-sessions and supplemental owner evidence dialog. `live-runtime/` owns their owner-bound read contracts and
+Work Design and Refinement History use their original workflow modals,
+controllers and step views with an explicit read-only lock. They retain exactly
+the active-work component tree, layout, canvas and editors. The supplemental
+owner evidence dialog remains in `presentation/workflows/shared/history/`.
+`live-runtime/` owns owner-bound read contracts and
 projection; `server/` owns authenticated canonical reads.
 
 In configured live mode, the primary collection includes completed and inactive
@@ -895,14 +898,19 @@ packages. **Current** keeps active packages in their current-stage workflows.
 parked work. Work Design and Refinement retain the normal register, filters,
 selection, hub and section navigation. Execution retains its Control Board,
 Family Map, ART hierarchy and package details. These History paths cannot
-mount authoring, advisor, preparation, apply or work-start controllers. Their
+perform authoring, advisor invocation, preparation, apply or work start. The
+original controllers enforce the lock and skip local autosave and automatic
+snapshot capture. Their
 badges describe current package posture; they do not claim stage success.
-Browser-local draft projection is excluded from the History registers.
+Browser-local draft projection is excluded from the History registers. The
+original workflow may read an existing saved local session for inspection,
+without rewriting it or treating it as canonical owner evidence.
 
 The full current canonical ART tree remains inspectable and explicitly labelled
 as current. Original canvas, finalized brief and accepted draft snapshots not
-retained by the owner remain explicitly absent. They are never reconstructed
-from starter content, local drafts, receipt digests or the current tree.
+retained remain explicitly absent; the normal canvas and editors stay present
+and locked. Saved local session data retains its local provenance. Starter
+content and receipt digests never reconstruct absent historical artifacts.
 Refinement metadata, gates and routes come from its current owner packet,
 labelled separately from original runs and operator decisions. See
 [Delivery history inspection](../delivery-history-inspection.md).

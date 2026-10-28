@@ -1,50 +1,42 @@
 # Inspecting completed Delivery work
 
-Open **Delivery → History**, then choose a package in the normal Work Design,
-Refinement or Execution interface. History includes all retained packages;
-badges describe their current ART posture, not proof that each stage ran.
+Open **Delivery → History**, choose a retained package, then open its normal
+Design Hub, Refinement Hub or Execution view.
 
-Work Design and Refinement retain their package register, filters, selected
-details, workflow hub and section navigation. Execution retains its Control
-Board, Family Map, full ART tree and package details. Expand the tree to read
-the complete retained hierarchy and descriptions. These inspection paths are
-read-only, including when the selected package is still active.
+History uses exactly the same workflow components and layout as active work.
+Work Design retains its hub, full Context Board canvas, inline/structured Build
+Tree editor, selected-item fields, Review Draft, Apply Draft, History and detail
+dialogs. Refinement retains its hub, Metadata Workbench, field selection and
+editor, advisor panel, Readiness Review, Apply Refinement and receipt views.
+Execution retains its Control Board, Family Map, ART tree and selected details.
+There is no separate historical inspection interface.
 
-Work Design's Context Session, Build Tree, Review Draft, Apply Draft and History
-remain individually inspectable. The original history owner retained
-application receipts and accepted-draft digests, not the original canvas,
-finalized brief body or accepted draft tree. Missing snapshots are stated
-explicitly. The complete current canonical ART tree is labelled as current;
-it is not represented as the earlier accepted draft. Browser-local drafts and
-starter content are never substituted for historical records.
+Completed and retired packages are locked. History also locks browsing of an
+active package. Editing, diagram changes, AI requests, finalization, review
+acceptance, apply and progression actions are disabled in the original controls.
+Handlers enforce the same lock. Navigation, selection, expansion, tree modes,
+detail inspection and evidence export remain available. Browsing does not
+autosave local sessions, rewrite metadata decisions or capture new snapshots.
 
-Refinement's Metadata Workbench, Readiness Review and Apply Refinement inspect
-the current owner packet with its source revision, field values, item-scoped
-values, gates, targets and routes. The packet is labelled as current, separately
-from original run history and receipts. It does not claim to reproduce past
-operator decisions. An unavailable current packet does not hide original
-history, and an unavailable history owner does not erase the ART tree.
+An existing saved local session is read without modifying it, preserving its
+canvas, brief and tree when available. Without a saved draft, the existing owner
+GET supplies current ART design branches to the normal Work Design editor.
+Work Design supports Epic, Feature, User story and Risk branches; the complete
+ART tree, including other record types, remains in Execution. Current source
+context is distinguished from an original finalized board that was not retained.
+No starter branches or invented historical decisions substitute for absent
+records. Refinement uses its current owner packet and matching saved session,
+with original receipts retaining their own evidence identity.
 
-Use **View History** in a hub or **Original Owner Evidence** in Execution to
-inspect native Intake consumption, Work Design applications, Refinement runs
-and closeout receipts. Each retains its original identity, actor, time,
-digest and evidence references. **Refresh owner history** retries the read;
-it does not replay work. Owner failures, absent records and bounded coverage
-remain explicit and independent.
+Use the existing History and detail actions to inspect receipts. Execution's
+**Original Owner Evidence** opens native Intake consumption, Work Design
+applications, Refinement runs and closeout outcomes. IDs, actors, times, digests
+and evidence references remain original. Unavailable owner reads stay explicit;
+refresh never replays work. Current package posture does not prove every stage
+ran. Catalog remains the independent live metadata register.
 
-History never mounts authoring, advisor, apply, work-start or architecture
-preparation controllers. Switch to **Current** to perform active work using
-the existing owner-authorized workflows. Catalog remains the independent live
-metadata register; the package-history selector does not archive Catalog.
-
-Completed inventory rows are summaries. The full tree comes from the existing
-package-specific owner GET only when inspecting Build Tree or selecting an
-Execution package. Its package, root and child references must match before
-display. Owner failure stays explicit; a summary row never becomes an empty
-historical hierarchy. No global tree scan or per-package background preparation
-is introduced.
-
-This maintenance extends existing Console readers and UI products. It adds no
-ART item, backend mutation route, historical snapshot store or completion
-authority. Its rollback is the Console source revert and corresponding exact
-source acceptance through the existing commissioning procedure.
+This owner maintenance removes the separate inspection interface introduced in
+PR142. It extends lock properties and handlers in existing components and adds
+no workflow engine, snapshot store, ART scope or backend mutation authority.
+Rollback reverts this Console correction and its exact composed source
+acceptance through the existing commissioning procedure.

@@ -31,6 +31,7 @@ export class RefinementLiveRuntimeError extends Error {
 
 export function useRefinementLiveRuntime(
   deliveryPackage: Pick<DeliveryPackageSummary, "legacy_epic_id">,
+  readOnly = false,
 ) {
   const packageRef = deliveryLivePackageRef(deliveryPackage);
   const [snapshot, setSnapshot] = useState<RefinementProjectionSnapshot | null>(null);
@@ -85,6 +86,7 @@ export function useRefinementLiveRuntime(
 
   const advise = useCallback(
     async (command: RefinementAssistCommand) => {
+      if (readOnly) throw new Error("Completed work is read-only.");
       const current = await currentSnapshot(snapshotRef.current, refresh);
       if (current.mode === "disconnected-preview") {
         return { mode: current.mode, result: null } as const;
@@ -106,11 +108,12 @@ export function useRefinementLiveRuntime(
       rememberAdvisorEvidence(result, setAdvisorEvidence);
       return { mode: current.mode, result } as const;
     },
-    [packageRef, refresh],
+    [packageRef, refresh, readOnly],
   );
 
   const apply = useCallback(
     async (command: RefinementApplyCommand) => {
+      if (readOnly) throw new Error("Completed work is read-only.");
       const current = await currentSnapshot(snapshotRef.current, refresh);
       if (current.mode === "disconnected-preview") {
         return { mode: current.mode, run: null } as const;
@@ -147,7 +150,7 @@ export function useRefinementLiveRuntime(
       }
       return { mode: current.mode, run: projectedRun } as const;
     },
-    [packageRef, refresh],
+    [packageRef, refresh, readOnly],
   );
 
   return {

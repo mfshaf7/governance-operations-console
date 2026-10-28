@@ -17,6 +17,7 @@ import { refinementProgressPanelProjection } from "../view-model/refinement-shel
 import type { DeliveryRefinementModalStep } from "../model/refinement-model.ts";
 
 export function RefinementProgressPanel({
+  readOnly = false,
   activeReceipt,
   activeStep,
   currentMove,
@@ -25,6 +26,7 @@ export function RefinementProgressPanel({
   progressActiveStep,
   refinementBlocked,
 }: {
+  readOnly?: boolean;
   activeReceipt: DeliveryRefinementApplyReceipt | null;
   activeStep: DeliveryRefinementModalStep;
   currentMove: {
@@ -61,7 +63,7 @@ export function RefinementProgressPanel({
         offset="normal"
         onSelectStep={onSelectStep}
         steps={refinementProgressRoutes.map((step, index) => {
-          const available = step.archive || !refinementBlocked;
+          const available = readOnly || step.archive || !refinementBlocked;
           const nextStep = refinementProgressRoutes[index + 1];
           const tone =
             refinementBlocked && !step.archive

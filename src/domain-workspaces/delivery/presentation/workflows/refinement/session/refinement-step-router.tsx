@@ -19,6 +19,7 @@ type RefinementStepRouterProps = ReturnType<
 >;
 
 export function RefinementStepRouter({
+  readOnly = false,
   advisorTranscript,
   advisorMode,
   advisorStatus,
@@ -75,6 +76,7 @@ export function RefinementStepRouter({
       <TerasContentFrame fill variant="standard">
         {activeStep !== "hub" ? (
           <RefinementProgressPanel
+            readOnly={readOnly}
             activeReceipt={activeReceipt}
             activeStep={activeStep}
             currentMove={currentMove}
@@ -86,6 +88,7 @@ export function RefinementStepRouter({
         ) : null}
         {activeStep === "hub" ? (
           <RefinementHubView
+            readOnly={readOnly}
             activeReceipt={activeReceipt}
             deliveryPackage={deliveryPackage}
             hubAction={hubAction}
@@ -97,6 +100,7 @@ export function RefinementStepRouter({
           />
         ) : activeStep === "metadata_draft" ? (
           <RefinementMetadataDraftStep
+            readOnly={readOnly}
             activeStep={activeStep}
             advisorTranscript={advisorTranscript}
             deliveryPackage={deliveryPackage}

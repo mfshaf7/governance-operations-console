@@ -16,7 +16,6 @@ import {
   refinementSourceWorkDesignPackageId,
 } from "../workflows/refinement/index.ts";
 import { DeliveryWorkDesignSessionModal } from "../workflows/work-design/index.ts";
-import { DeliveryReadonlyWorkflowSession } from "../workflows/shared/history/delivery-readonly-workflow-session.tsx";
 
 export function DeliveryPackageWorkflowRouter({
   model,
@@ -49,19 +48,10 @@ export function DeliveryPackageWorkflowRouter({
     return null;
   }
 
-  if (model.history_scope === "history") {
-    return <DeliveryReadonlyWorkflowSession
-      key={`${packageAction.route}:${packageAction.deliveryPackage.delivery_package_id}`}
-      deliveryPackage={packageAction.deliveryPackage}
-      model={model}
-      onClose={packageAction.route === "work-design" ? onCloseWorkDesign : onCloseRefinement}
-      stage={packageAction.route === "work-design" ? "work-design" : "refinement"}
-    />;
-  }
-
   if (packageAction.route === "work-design") {
     return (
       <DeliveryWorkDesignSessionModal
+        readOnly={model.history_scope === "history" || ["done", "retired"].includes(packageAction.deliveryPackage.backend_status)}
         key={packageAction.deliveryPackage.delivery_package_id}
         onApplied={(record) => {
           setPendingRefinementPackageId(
@@ -92,6 +82,7 @@ export function DeliveryPackageWorkflowRouter({
   if (packageAction.route === "refinement") {
     return (
       <DeliveryRefinementWorkflowModal
+        readOnly={model.history_scope === "history" || ["done", "retired"].includes(packageAction.deliveryPackage.backend_status)}
         key={packageAction.deliveryPackage.delivery_package_id}
         onClose={onCloseRefinement}
         sourceWorkDesignPackage={sourceWorkDesignPackageForRefinement(

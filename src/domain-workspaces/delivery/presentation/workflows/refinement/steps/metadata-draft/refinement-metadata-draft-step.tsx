@@ -34,6 +34,7 @@ type RefinementAdvisorLine = {
 };
 
 export function RefinementMetadataDraftStep({
+  readOnly = false,
   activeStep,
   advisorTranscript,
   deliveryPackage,
@@ -58,6 +59,7 @@ export function RefinementMetadataDraftStep({
   updateMetadataDraftValue,
   updateMetadataDraftValues,
 }: {
+  readOnly?: boolean;
   activeStep: DeliveryRefinementModalStep;
   advisorTranscript: RefinementAdvisorLine[];
   deliveryPackage: DeliveryPackageSummary;
@@ -134,8 +136,10 @@ export function RefinementMetadataDraftStep({
         selectedMetadataFieldKey={selectedMetadataFieldKey}
       />
       <RefinementSelectedMetadataFieldEditor
+            readOnly={readOnly}
         advisor={
           <RefinementMetadataAdvisor
+            readOnly={readOnly}
             sourceRef={deliveryPackage.source_ref}
             sourceRevision={packet.packet_revision ?? packet.last_saved_at}
             metadataDraftValues={metadataDraftValues}
