@@ -18,6 +18,7 @@ export type TerasFieldGridProps = HTMLAttributes<HTMLDivElement> & {
 export type TerasFieldStackProps = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
   fill?: TerasFieldStackFill;
+  overflow?: "auto";
   spacing?: TerasLayoutSpacing;
 };
 
@@ -47,6 +48,7 @@ export function TerasFieldStack({
   children,
   className,
   fill,
+  overflow,
   spacing = "normal",
   ...props
 }: TerasFieldStackProps) {
@@ -55,6 +57,7 @@ export function TerasFieldStack({
       {...props}
       className={cx(styles.terasFieldStack, className)}
       data-fill={fill ?? "none"}
+      data-overflow={overflow}
       data-spacing={spacing}
       data-teras-field-stack="true"
     >

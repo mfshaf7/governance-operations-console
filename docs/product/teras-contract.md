@@ -188,6 +188,8 @@ surface and needs stronger touch and scan affordance.
 Every `TerasModalShell` caller declares `width`, `height`, and `bodyLayout`.
 Every `TerasDialog` caller declares `width`, `height`, and
 `contentOverflow`. Geometry has no implicit caller defaults.
+`bodyLayout="scroll"` keeps the modal body scrollable at desktop fill height;
+fill height must not silently replace the caller's scroll ownership.
 
 First-class dashboards, active workflow sessions, control surfaces, and
 workspaces use stable shell height. Their header and footer stay fixed while
@@ -409,6 +411,10 @@ Use `TerasFieldGrid` for horizontal field grouping and `TerasFieldStack` for
 vertical field grouping. Use `TerasFieldStack layout="auto-fill-auto"` when a
 form has fixed-height fields above and below a flexible editor or note field.
 Do not recreate that fixed/fill/fixed field-stack behavior in domain CSS.
+Use `TerasFieldStack overflow="auto"` when a bounded read-only content region
+must retain natural panel heights and own its scrolling. Its rows do not shrink
+to hide event or receipt content. Existing unconfigured field stacks retain
+their normal field-grouping behavior.
 
 ## Choice And Rail Rules
 

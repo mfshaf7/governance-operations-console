@@ -1353,6 +1353,11 @@
   overflow: hidden;
 }
 
+.modal[data-height="fill"][data-body-layout="scroll"] .modalBody {
+  display: block;
+  overflow: auto;
+}
+
 @media (max-width: 1180px) {
   .modal[data-height="fill"] .modalBody {
     display: block;
@@ -4785,6 +4790,12 @@
   min-width: 0;
   min-height: 0;
   gap: 0.58rem;
+}
+
+.terasFieldStack[data-overflow="auto"] {
+  overflow: auto;
+  grid-auto-rows: max-content;
+  align-content: start;
 }
 
 .terasFieldStack[data-fill="last"],

@@ -22,6 +22,12 @@ Opening a hub, review plan, finalized-brief inspection or History is navigation;
 it does not accept a review or run Apply. The original snapshot viewer supports
 zoom, fit, scrolling and fullscreen without modifying an artifact or saved session.
 
+History content keeps its natural panel height. Full-height scroll dialogs honor
+their declared scroll body on desktop, and the same history content scrolls inside
+bounded Work Design and Refinement panels. Mouse wheel and keyboard scrolling must
+reach the actual events and page controls; a programmatically clickable control
+does not prove that clipped evidence is usable.
+
 An existing saved local session is read without modifying it, preserving its
 canvas, brief and tree when available. Without a saved draft, the existing owner
 GET supplies current ART design branches to the normal Work Design editor.
