@@ -2327,6 +2327,27 @@ select {
     0 0 14px rgba(83, 255, 122, 0.16);
 }
 
+.component-focus-section,
+.component-focus-fact,
+.component-focus-row > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.component-focus-section > .flex {
+  flex-wrap: wrap;
+}
+
+.component-focus-fact p:last-child {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+.component-focus-row > .status-dot {
+  flex: 0 0 auto;
+}
+
 .component-focus-fact {
   border: 1px solid color-mix(in srgb, var(--component-line) 74%, transparent);
   background: linear-gradient(180deg, rgba(255, 250, 238, 0.62), rgba(255, 246, 228, 0.38));
@@ -2667,8 +2688,9 @@ and focus content tray must share the same fill.
 }
 
 /* The existing cockpit panels follow their usable stage, not the full screen
-   hidden behind the fixed dock lanes. */
-@container console-stage (max-width: 900px) {
+   hidden behind the fixed dock lanes. The 320px and 360px side columns plus
+   gaps leave the existing detail panel insufficient room below a 1200px stage. */
+@container console-stage (max-width: 1200px) {
   .command-main-grid { grid-template-columns: minmax(0, 1fr); }
   .command-main-grid > * { grid-column: 1 / -1; min-width: 0; }
   .console-stage-system-mood-open .focus-panel-system-mood { position: relative; inset: auto; }
