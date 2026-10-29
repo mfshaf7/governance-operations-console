@@ -14,13 +14,14 @@ export function useConsoleActivityController(snapshot: GovernanceActivitySnapsho
     const currentPage = historyPage ?? snapshot;
     const visibleHead = useMemo(() => snapshot.events.filter(event => includeRoutine || !isRoutineActivityRead(event)), [snapshot.events, includeRoutine]);
     const recentEvents = visibleHead.slice(0, 8);
-    const selectedEvent = visibleHead.find(event => event.eventId === selectedEventId) ?? visibleHead[0] ?? null;
+    const retainedSelection = historyPage?.events.find(event => event.eventId === selectedEventId && (includeRoutine || !isRoutineActivityRead(event)));
+    const selectedEvent = visibleHead.find(event => event.eventId === selectedEventId) ?? retainedSelection ?? visibleHead[0] ?? null;
     const filteredEvents = useMemo(() => filterConsoleActivity(currentPage.events.filter(event => includeRoutine || !isRoutineActivityRead(event)), { outcome, query, source }), [currentPage.events, includeRoutine, outcome, query, source]);
     const dialogSelectedEvent = filteredEvents.find(event => event.eventId === selectedEventId) ?? filteredEvents[0] ?? null;
     const sourceOptions = useMemo(() => [{ label: "All sources", value: "all" }, ...[...new Map(currentPage.events.map(event => [event.source.owner, event.source.label])).entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([value, label]) => ({ value, label }))], [currentPage.events]);
     const outcomeOptions = useMemo(() => [{ label: "All outcomes", value: "all" }, ...Object.entries(consoleActivityOutcomeLabels).filter(([value]) => currentPage.events.some(event => event.outcome === value)).map(([value, label]) => ({ value, label }))], [currentPage.events]);
     function openFullActivity() { setSelectedEventId(selectedEvent?.eventId ?? null); setDialogOpen(true); }
-    function closeHistory() { activeRead.current?.abort(); activeRead.current = null; setLoading(false); setDialogOpen(false); }
+    function closeHistory() { setSelectedEventId(dialogSelectedEvent?.eventId ?? null); activeRead.current?.abort(); activeRead.current = null; setLoading(false); setDialogOpen(false); }
     async function loadOlder() {
         if (activeRead.current)
             return;
