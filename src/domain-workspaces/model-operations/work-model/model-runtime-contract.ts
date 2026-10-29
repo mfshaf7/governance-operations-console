@@ -1,3 +1,4 @@
+import { readProviderHealth, type ProviderHealth } from "./model-provider-health.ts";
 import type { NativeModelEffort } from "../../../console-integration/governed-ai/model-selection.ts";
 
 export type ModelChoice = { model_id: string; effort: NativeModelEffort };
@@ -21,7 +22,7 @@ export type ModelBackend = {
   account_login_supported: boolean; availability: "not-probed";
 };
 export type ModelRegistry = {
-  schema_version: 1; tasks: string[]; backends: ModelBackend[]; configuration: ConfigurationSnapshot;
+  schema_version: 1; tasks: string[]; backends: ModelBackend[]; configuration: ConfigurationSnapshot; health?: ProviderHealth | null;
 };
 export type ModelCatalogue = {
   backend_id: string;
@@ -117,7 +118,7 @@ export function assertModelConfiguration(value: unknown): ConfigurationSnapshot 
   return value as ConfigurationSnapshot;
 }
 export function assertModelRegistry(value: unknown): ModelRegistry {
-  const row = modelExact(value, ["schema_version", "tasks", "backends", "configuration"]);
+  const row = modelExact(value, ["schema_version", "tasks", "backends", "configuration", ...(Object.hasOwn(modelRecord(value), "health") ? ["health"] : [])]);
   requireModel(row.schema_version === 1 && Array.isArray(row.tasks) && row.tasks.every(task => modelText(task, 300)) && Array.isArray(row.backends));
   const snapshot = assertModelConfiguration(row.configuration);
   requireModel(snapshot.revision === snapshot.current_revision);
@@ -127,7 +128,7 @@ export function assertModelRegistry(value: unknown): ModelRegistry {
       backend.allowed_tasks.every(task => (row.tasks as string[]).includes(task)) && typeof backend.registered === "boolean" &&
       typeof backend.account_login_supported === "boolean" && backend.availability === "not-probed");
   }
-  return value as ModelRegistry;
+  return { ...value as ModelRegistry, health: readProviderHealth(row.health, snapshot) };
 }
 export function assertModelCatalogue(value: unknown, backendId: string): ModelCatalogue {
   const row = modelExact(value, ["backend_id", "models"]);

@@ -17,7 +17,7 @@ import {
   choiceLabel, defaultModelScope, effectiveRouteLabel, eligibleModelIds,
   readRoutingDraft, routingDraftIssue, routingInput, workflowTaskLabel, type RoutingMode,
 } from "../../work-model/model-runtime-routing.ts";
-import { modelBackendMetadata, modelOperationMetadata, modelOwnerErrorMetadata, modelRoutingConflictMetadata, modelRoutingMetadata } from "./model-runtime-control-view-model.ts";
+import { modelProviderMetadata, modelRouteHealthLabel, modelOperationMetadata, modelOwnerErrorMetadata, modelRoutingConflictMetadata, modelRoutingMetadata } from "./model-runtime-control-view-model.ts";
 
 type Runtime = ReturnType<typeof useModelRuntime>;
 type Props = { onDirtyChange?: (dirty: boolean) => void };
@@ -42,6 +42,9 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
   const [nextScope, setNextScope] = useState<string | null>(null), [reloadGuard, setReloadGuard] = useState(false);
   const [restoreRevision, setRestoreRevision] = useState(""), [restore, setRestore] = useState<{ revision: number; expected: number } | null>(null);
   const backend = registry?.backends.find(item => item.backend_id === backendId) ?? registry?.backends[0] ?? null;
+  const selectedRegisteredModel = Object.values(config?.models ?? {}).some(row => row.backend_id === backend?.backend_id && row.model === catalogueModel);
+  const modelNames = [...new Set([...Object.values(config?.models ?? {}).filter(row => row.backend_id === backend?.backend_id).map(row => row.model),
+    ...(runtime.catalogue && runtime.catalogue.backend_id === backend?.backend_id ? runtime.catalogue.models.map(row => row.model) : [])])];
   const operation = runtime.operation;
   const outstanding = Boolean(runtime.selectedId && (!operation || !terminalModelStates.has(operation.state)));
   const busy = runtime.pending || outstanding;
@@ -82,6 +85,7 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
   const columns: Array<TerasRecordTableColumn<string>> = [
     { key: "workflow", header: "Workflow", intent: "primary", render: task => <TerasRecordCellText title={task === defaultModelScope ? "System default" : workflowTaskLabel(task)} /> },
     { key: "selection", header: "Current selection", intent: "secondary", render: task => <TerasRecordCellText title={config ? effectiveRouteLabel(config, task) : "Unavailable"} /> },
+    { key: "health", header: "Primary health", intent: "secondary", render: task => <TerasRecordCellText title={registry ? modelRouteHealthLabel(registry, task) : "Health unknown"} /> },
     { key: "mode", header: "Setting", intent: "status", render: task => <TerasStatusPill tone="info">{task === defaultModelScope ? "Default" : config && Object.hasOwn(config.overrides, task) ? "Override" : "Inherits"}</TerasStatusPill> },
   ];
   if (!registry || !config) return <TerasPanel frame="padded" treatment="neutral" fit="fill">
@@ -97,8 +101,8 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
           <TerasSelectField label="Admitted backend" disabled={busy || dirty || !runtime.fresh}
             value={backend?.backend_id ?? ""} options={registry.backends.map(item => ({ value: item.backend_id, label: item.backend_id + " · " + item.provider }))}
             onValueChange={value => { setBackendId(value); setCatalogueModel(""); runtime.clearCatalogue(); }} />
-          <TerasSelectField label="Discovered model" disabled={busy || dirty || !runtime.fresh}
-            value={catalogueModel} options={[{ value: "", label: "Discover models, then select" }, ...(runtime.catalogue && runtime.catalogue.backend_id === backend?.backend_id ? runtime.catalogue.models.map(item => ({ value: item.model, label: item.model })) : [])]}
+          <TerasSelectField label="Model" disabled={busy || dirty || !runtime.fresh}
+            value={catalogueModel} options={[{ value: "", label: "Select a registered model or discover" }, ...modelNames.map(name => ({ value: name, label: name }))]}
             onValueChange={setCatalogueModel} />
         </TerasFieldGrid>
         <TerasActionRow>
@@ -106,9 +110,9 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
             {backend?.registered ? "Remove backend" : "Register backend"}</TerasActionButton>
           {backend?.account_login_supported ? <TerasActionButton disabled={blocked || dirty || !backend.registered} emphasis="secondary" onClick={() => void send("account.login.start", { backend_id: backend.backend_id })}>Connect account</TerasActionButton> : null}
           <TerasActionButton disabled={blocked || dirty || !backend?.registered} emphasis="secondary" onClick={() => backend && void runtime.discover(backend.backend_id)}>Discover models</TerasActionButton>
-          <TerasActionButton disabled={blocked || dirty || !backend?.registered || !catalogueModel} onClick={() => backend && void send("model.register", { backend_id: backend.backend_id, model: catalogueModel })}>Verify & register model</TerasActionButton>
+          <TerasActionButton disabled={blocked || dirty || !backend?.registered || !catalogueModel} onClick={() => backend && void send("model.register", { backend_id: backend.backend_id, model: catalogueModel })}>{selectedRegisteredModel ? "Verify & update registration" : "Verify & register model"}</TerasActionButton>
         </TerasActionRow>
-        <TerasMetadataList shape="line" items={modelBackendMetadata(registry, backend)} />
+        <TerasMetadataList shape="line" items={modelProviderMetadata(registry, backend, catalogueModel)} />
       </TerasPanel>}
       register={<TerasRegisterPanel density="compact-control" kicker="Workflow routing" title="Choose models by workflow"
         description="Each workflow keeps its permission and output rules. Overrides replace the system default."

@@ -81,6 +81,17 @@ export function useModelRuntime() {
     return () => { alive.current = false; sequence.current++; backendSequence.current++; };
   }, [refresh, selectOperation]);
   useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      const current = ++sequence.current;
+      void request("/registry").then(raw => {
+        const next = assertModelRegistry(raw);
+        if (alive.current && current === sequence.current) { setRegistry(next); setFresh(true); setError(null); }
+      }).catch(showError);
+    }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [showError]);
+  useEffect(() => {
     if (!operation || !["queued", "running", "awaiting-account"].includes(operation.state)) return;
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") void loadOperation(operation.request_id).catch(showError);

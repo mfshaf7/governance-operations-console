@@ -129,7 +129,7 @@ export function createModelRuntimeClient(options: ModelRuntimeClientOptions = {}
   }
   return {
     registry: () => checked(async () => {
-      const value = assertModelRegistry(await request("/registry")); verifyConfiguration(value.configuration);
+      const value = assertModelRegistry(await request("/registry?include_health=true")); verifyConfiguration(value.configuration);
       for (const backend of value.backends) integrity(backend.registered === Object.hasOwn(value.configuration.configuration.backends, backend.backend_id));
       for (const id of Object.keys(value.configuration.configuration.backends)) integrity(value.backends.some(backend => backend.backend_id === id));
       return value;

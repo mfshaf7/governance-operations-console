@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
 import {
-  assertModelConfiguration, assertModelRuntimeRequest, sameModelRuntimeRequest,
+  assertModelRegistry, assertModelConfiguration, assertModelRuntimeRequest, sameModelRuntimeRequest,
 } from "../../src/domain-workspaces/model-operations/work-model/model-runtime-contract.ts";
 import {
   defaultModelScope, eligibleModelIds, readRoutingDraft, routingDraftIssue, routingInput,
 } from "../../src/domain-workspaces/model-operations/work-model/model-runtime-routing.ts";
+import { readProviderHealth, providerHealthLabel } from "../../src/domain-workspaces/model-operations/work-model/model-provider-health.ts";
 import { createModelRuntimeClient, modelRuntimeDigest } from "../../src/domain-workspaces/model-operations/server/model-runtime-oos-client.ts";
 import { assertEffectiveModelSelection, modelEffortLabel } from "../../src/console-integration/governed-ai/model-selection.ts";
 
@@ -54,7 +55,7 @@ test("cold registry works with no prior request, lifecycle receipt or registered
   const value = registry({ backends: {}, models: {}, default: null, overrides: {} });
   const calls = []; const actual = await client(value, calls).registry();
   assert.deepEqual(actual.configuration.configuration.models, {}); assert.equal(actual.configuration.revision, 1);
-  assert.equal(calls[0].url, config.baseUrl + "/v1/model-operations/registry");
+  assert.equal(calls[0].url, config.baseUrl + "/v1/model-operations/registry?include_health=true");
   assert.equal(calls[0].options.headers["x-oos-operator-id"], config.operatorId);
   assert.equal(JSON.stringify(actual).includes(config.callerSecret), false);
 });
@@ -153,4 +154,19 @@ test("effective choice evidence preserves task outputs and only permits pre-subm
   assert.throws(() => assertEffectiveModelSelection({ ...evidence, token: "synthetic" }, "profile/task"));
   const unknown = structuredClone(evidence); unknown.attempts[0].outcome = "provider-completion-unknown";
   assert.throws(() => assertEffectiveModelSelection(unknown, "profile/task"));
+});
+
+test("provider observations expire, bind current configuration, and never remove configuration controls", () => {
+  const value = registry(), now = Date.now();
+  const health = { configuration_revision: value.configuration.revision, configuration_digest: value.configuration.digest,
+    checked_at: new Date(now - 1000).toISOString(), expires_at: new Date(now + 119000).toISOString(),
+    backends: [{ backend_id: "local", state: "available", code: "metadata-available" }],
+    models: [{ model_id: localId, state: "verification-needed", code: "registration-changed", observed_runtime_version: "new-version", observed_model_digest: "synthetic-digest" }] };
+  assert.deepEqual(assertModelRegistry({ ...value, health }).health, health);
+  assert.equal(providerHealthLabel(health.models[0]), "Verification needed");
+  assert.equal(readProviderHealth(health, value.configuration, now + 120000), null);
+  assert.equal(assertModelRegistry({ ...value, health: { ...health, configuration_revision: 90 } }).health, null);
+  assert.equal(assertModelRegistry({ ...value, health: { ...health, token: "private" } }).health, null);
+  assert.deepEqual(assertModelRegistry({ ...value, health: null }).configuration, value.configuration);
+  assert.equal(assertModelRegistry(value).health, null);
 });
