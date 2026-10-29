@@ -33,3 +33,9 @@ truth in live mode.
 No Console business database, aggregate mutation API, direct WGCF credential,
 or background authority is introduced. The accepted Command Center and Pulse
 layout remains unchanged.
+
+Initial owner reads use a distinct loading posture, not an unavailable-source
+claim. Counts stay partial until reads complete, and loading carries no action
+route. Retained failed operations remain owner facts; their last-change time
+and scope are visible. Workspace blocked-work posture is not a whole-system
+outage claim. Priority detail selection follows the current filtered queue.

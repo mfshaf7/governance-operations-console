@@ -878,3 +878,18 @@ body:has([data-teras-modal]) .model-dock-floating.model-dock-expanded:not(.model
 
 /* Hidden during a nested authority/review dialog; display:flex must not override it. */
 .model-dock[hidden] { display: none; }
+
+/* Existing agent chrome enters the native modal layer; session/controller state
+   stays outside the presentation portal. */
+.model-dock-native {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  max-width: none;
+  max-height: none;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+.model-dock-native::backdrop { background: rgba(0, 0, 0, 0.65); }

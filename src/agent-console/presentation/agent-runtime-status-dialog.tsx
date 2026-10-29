@@ -46,9 +46,9 @@ export function AgentRuntimeStatusDialog({
   const readiness = deriveAgentProviderReadinessState(providerStatus);
   const statusLabel =
     readiness === "online"
-      ? "Online"
+      ? "OOS reachable"
       : readiness === "offline"
-        ? "Offline"
+        ? "OOS unreachable"
         : providerStatus
           ? providerStatus.observedAt
             ? "Stale"
@@ -67,7 +67,7 @@ export function AgentRuntimeStatusDialog({
     <TerasDialog
       contentOverflow="auto"
       height="content"
-      description="Aggregate governed path connectivity and live presence for Console agent runtimes. Model profile approval remains owned by Model Operations."
+      description="Connection checks and open agent panels in this browser. An OOS connection does not prove that the configured model can generate a response. Model Operations owns profile approval."
       kicker="Agent Runtime"
       onClose={onClose}
       open={open}
@@ -75,12 +75,13 @@ export function AgentRuntimeStatusDialog({
       title="Agent Runtime Status"
     >
       <TerasMetadataList
+        wrap
         items={[
           { label: "Status", tone: statusTone, value: statusLabel },
           { label: "Provider Path", value: "Governed AI Gateway" },
           { label: "Configured profile", value: providerStatus?.model ?? "not resolved" },
           { label: "Probe coverage", value: "OOS reachability only; provider, profile entitlement and model generation are not probed" },
-          { label: "Active Runtimes", value: String(activeRuntimeCount) },
+          { label: "Open agent panels", value: String(activeRuntimeCount) },
           {
             label: "Request Boundary",
             value:

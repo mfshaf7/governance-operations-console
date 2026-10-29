@@ -90,7 +90,8 @@ export function buildAgentWorkspaceContext(snapshots: AgentOwnerSnapshots, now =
   let current = 0;
   const sourceSignals = sources.map(source => {
     const snapshot = snapshots[source]; const age = snapshot ? Date.parse(now) - Date.parse(snapshot.capturedAt) : Infinity;
-    if (!snapshot || snapshot.state !== "current" || !Number.isFinite(age) || age < 0 || age > 120_000) return `${source}: ${snapshot?.state === "preview" ? "preview only" : "unavailable or expired"}; no live facts attached`;
+    if (!snapshot) return `${source}: loading; no live facts attached`;
+    if (snapshot.state !== "current" || !Number.isFinite(age) || age < 0 || age > 120_000) return `${source}: ${snapshot?.state === "preview" ? "preview only" : "unavailable or expired"}; no live facts attached`;
     current += 1;
     return `${source}: ${snapshot.detail}; ${snapshot.revision ? `revision ${snapshot.revision.slice(0, 19)}` : `read ${snapshot.capturedAt}`}`.slice(0, 225);
   });

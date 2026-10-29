@@ -968,9 +968,9 @@ export function useAgentConsoleController({
   const providerOnline = providerState === "online";
   const providerStateLabel =
     providerState === "online"
-      ? "Online"
+      ? "OOS reachable"
       : providerState === "offline"
-        ? "Offline"
+        ? "OOS unreachable"
         : providerStatus
           ? providerStatus.observedAt
             ? "Stale"
@@ -1007,7 +1007,7 @@ export function useAgentConsoleController({
   const contextPill =
     contextMode === "focused" || contextMode === "workspace"
       ? contextDecision.code === "cgg-required"
-        ? "CGG guarded"
+        ? "CGG check on send"
         : "Unavailable"
         : "Detached";
   const contextPillTone =

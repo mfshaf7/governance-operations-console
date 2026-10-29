@@ -178,3 +178,14 @@ Agent Console must not:
 
 - `../system-design.md`
 - `../operation-workbench-contract.md`
+
+## Expanded presentation
+
+Primary expanded agents use the existing native Teras modal foundation for top
+layer, background containment, Escape and focus. Compact presentation and the
+controller/session remain independent. The floating agent inside an existing
+workspace retains its current native-dialog portal; a nested authority dialog
+still hides it. Closing expansion returns focus to its own expand control.
+Visible context copy explains CGG checks on send without claiming that a
+candidate has already been admitted. Runtime presence counts browser panels,
+not backend model-generation jobs.

@@ -18,7 +18,7 @@ test("unavailable, expired, future and malformed owner input cannot issue live a
   const now = Date.now(), registration = { disposition: "admitted", id: "sample", label: "Sample", reason: "Synthetic test" };
   for (const read of [undefined, { state: "unavailable", payload: {}, capturedAt: new Date(now).toISOString() }, { state: "current", payload: {}, capturedAt: new Date(now - 120001).toISOString() }, { state: "current", payload: {}, capturedAt: new Date(now + 1).toISOString() }]) {
     const result = ownerAttentionSnapshot(registration, read, "sample-owner", () => { throw new Error("must not use missing facts"); }, now);
-    assert.equal(result.source.freshness, "unavailable"); assert.deepEqual(result.candidates, []);
+    assert.equal(result.source.freshness, read === undefined ? "loading" : "unavailable"); assert.deepEqual(result.candidates, []);
   }
 });
 

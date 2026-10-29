@@ -56,9 +56,10 @@ implementation.
   source/approval review, and routes only currently available controls;
   disconnected preview remains explicitly local and is not durable evidence.
 - Lifecycle Transitions now uses its accepted dedicated full-viewport Teras
-  workspace. Runtime Readiness and Agent Console have completed capability
-  ownership and current-shape content and visual passes, but remain local
-  prototype surfaces rather than baseline-approved or live-wired controls.
+  workspace. Runtime Readiness consumes separately admitted Platform observations and local
+  host telemetry. Agent Console uses the separately admitted OOS/CGG request
+  path. Their reviewed local integrations do not establish remote/team access,
+  model entitlement or stage/production qualification.
   Authority decisions stay in the originating domain and the named authority;
   they do not add another Workbench visual profile.
 

@@ -28,7 +28,7 @@ export function OperatorAccountAccessView({
     <ConsoleSurfaceTwoZone
       primary={
         <ConsoleSurfacePanel
-          description="Roles and named authority projected by the current identity source."
+          description="Roles and decision authority from your verified session. Display preferences cannot change these permissions."
           kicker="Assigned access"
           title="Current access context"
         >

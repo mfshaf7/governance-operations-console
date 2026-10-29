@@ -143,7 +143,9 @@ function AlertsView({
                 No asserted runtime alerts
               </p>
               <p className="alert-row-detail mt-1 text-xs leading-5">
-                Component observation is not connected; only the local host telemetry adapter is alert-eligible.
+                {components.some(component => component.alertEligible)
+                  ? "No current component or host-resource observation crosses an alert threshold. This covers the listed observations only."
+                  : "No alert-eligible component observations are connected; host telemetry has no asserted alert."}
               </p>
             </div>
           </div>
@@ -259,7 +261,7 @@ export function WslResourceUsage({
   const chartLegend = [
     { className: "wsl-legend-cpu", label: "CPU" },
     { className: "wsl-legend-memory", label: "RAM" },
-    { className: "wsl-legend-vmem", label: "VMEM" },
+    { className: "wsl-legend-vmem", label: "VMEM (commit)" },
     { className: "wsl-legend-disk", label: "DISK" },
     { className: "wsl-legend-network", label: "NET" },
   ];
@@ -366,7 +368,22 @@ export function WslResourceUsage({
         ].map((tab) => (
           <button
             key={tab.id}
-            aria-pressed={activeResourceTab === tab.id}
+            aria-selected={activeResourceTab === tab.id}
+            aria-controls={`capacity-panel-${tab.id}`}
+            id={`capacity-tab-${tab.id}`}
+            role="tab"
+            tabIndex={activeResourceTab === tab.id ? 0 : -1}
+            onKeyDown={(event) => {
+              const ids = ["resources", "components", "alerts"] as const;
+              const position = ids.indexOf(tab.id);
+              const next = event.key === "ArrowRight" ? (position + 1) % ids.length
+                : event.key === "ArrowLeft" ? (position + ids.length - 1) % ids.length
+                : event.key === "Home" ? 0 : event.key === "End" ? ids.length - 1 : null;
+              if (next === null) return;
+              event.preventDefault();
+              document.getElementById(`capacity-tab-${ids[next]}`)?.click();
+              document.getElementById(`capacity-tab-${ids[next]}`)?.focus();
+            }}
             className={`resource-panel-tab px-3 py-2 text-center ${
               activeResourceTab === tab.id ? "resource-panel-tab-active" : ""
             }`}
@@ -393,11 +410,15 @@ export function WslResourceUsage({
 
       <div
         className="resource-tab-body rounded-b-[26px] p-4"
+        role="tabpanel"
+        id={`capacity-panel-${activeResourceTab}`}
+        aria-labelledby={`capacity-tab-${activeResourceTab}`}
+        tabIndex={0}
       >
         {activeResourceTab === "components" ? (
           <>
             <div className="flex items-start justify-between gap-4">
-              <SectionTitle kicker="Component Status" title="Operator Surfaces" />
+              <SectionTitle kicker="Component Status" title="Connected components" />
               <span className="component-status-count mono rounded-full px-2.5 py-1 text-[9px] uppercase tracking-[0.16em]">
                 {activeComponentScenario.mode === "synthetic"
                   ? "synthetic"
@@ -527,7 +548,7 @@ export function WslResourceUsage({
                     <span className="resource-side-bridge" aria-hidden="true" />
                   ) : null}
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium">{metric.label}</p>
+                    <p className="text-sm font-medium">{metric.label === "VMEM" ? "VMEM (commit accounting)" : metric.label}</p>
                     <strong className="wsl-resource-value mono">{metric.value}</strong>
                   </div>
                   <p className="mt-1 text-xs text-[var(--subtle)]">{metric.detail}</p>

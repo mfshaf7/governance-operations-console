@@ -3,6 +3,8 @@ import type {
   ConsoleActivityOutcome,
 } from "../../console-integration/activity-contract";
 
+import { activityPresentation } from "./console-activity-view-model.ts";
+
 export type {
   ConsoleActivityActorKind,
   ConsoleActivityCategory,
@@ -64,7 +66,10 @@ export function filterConsoleActivity(
       filters.outcome === "all" || event.outcome === filters.outcome;
     const matchesSource =
       filters.source === "all" || event.source.owner === filters.source;
+    const display = activityPresentation(event);
     const searchable = [
+      display.title,
+      display.summary,
       event.action.id,
       event.action.label,
       event.actor.ref,

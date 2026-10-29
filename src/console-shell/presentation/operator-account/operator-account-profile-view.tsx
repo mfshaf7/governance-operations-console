@@ -125,7 +125,7 @@ export function OperatorAccountProfileView({
         <ConsoleSurfacePanel
           description="Profile changes affect presentation only and never alter identity claims."
           kicker="Change scope"
-          title="Prototype-local profile"
+          title="Browser display preferences"
           tone={profileDirty ? "warn" : "info"}
         >
           <ConsoleSurfaceChecklist

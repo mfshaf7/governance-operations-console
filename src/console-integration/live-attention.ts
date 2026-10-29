@@ -18,6 +18,7 @@ export function ownerAttentionSnapshot(
 ): ConsoleAttentionSourceSnapshot {
   const observedAt = new Date(now).toISOString();
   const source = { authority, freshness: "unavailable" as const, mode: "live" as const, observedAt: null, projectedAt: observedAt, ref: `console://attention/${registration.id}`, version: "unavailable" };
+  if (!read) return { schemaVersion: 1, registration, candidates: [], source: { ...source, freshness: "loading", version: "loading" } };
   if (!currentOwnerRead(read, now)) return { schemaVersion: 1, registration, candidates: [], source };
   try {
     const candidates = project(read!.payload, read!.capturedAt).map(candidate => ({
@@ -42,14 +43,14 @@ export function attentionRows(value: unknown): unknown[] {
 export function ownerActionCandidate(input: Readonly<{
   id: string; title: string; subjectRef: string; move: string; reason: string;
   owner: string; observedAt: string; target: ConsoleNavigationTarget;
-  recovery?: boolean; evidenceRefs?: readonly string[];
+  recovery?: boolean; evidenceRefs?: readonly string[]; updatedAt?: string;
 }>): ConsoleAttentionCandidate {
   return {
     schemaVersion: 1, candidateId: input.id, dedupeKey: input.id,
     attentionClass: input.recovery ? "recovery" : "required-action", urgency: input.recovery ? "high" : "normal", ownerRank: input.recovery ? 10 : 40,
     owner: { label: input.owner, ref: input.owner }, reason: input.reason,
     requiredMove: { id: input.id, label: input.move },
-    subject: { kind: "owner-record", ref: input.subjectRef, title: input.title },
+    subject: { kind: "owner-record", ref: input.subjectRef, title: input.title, ...(input.updatedAt ? { updatedAt: input.updatedAt } : {}) },
     source: { authority: input.owner, freshness: "current", mode: "live", observedAt: input.observedAt, projectedAt: input.observedAt, ref: input.subjectRef, version: input.observedAt },
     route: { availability: "available", label: `Open ${input.target.kind === "workspace" ? "Environment" : "owner"}`, entryIntent: { target: input.target, mode: input.recovery ? "resolve" : "review", subjectRef: input.subjectRef, requiredMoveRef: input.id }, externalHref: null, unavailableReason: null },
     dueAt: null, reviewAt: null, correlationRef: null, receiptRefs: [], evidenceRefs: input.evidenceRefs ?? [],

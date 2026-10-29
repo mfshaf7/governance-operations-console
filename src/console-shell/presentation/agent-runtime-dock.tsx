@@ -85,7 +85,7 @@ export function AgentRuntimeDock({
     : "waiting";
   const runtimeDetail = providerStatus
     ? providerOnline
-      ? `${activeRuntimes.length} active runtime${
+      ? `${activeRuntimes.length} open agent panel${
           activeRuntimes.length === 1 ? "" : "s"
         } / OOS reachable; model readiness is not probed`
       : providerStatus.error ??
@@ -96,7 +96,7 @@ export function AgentRuntimeDock({
 
   return (
     <>
-      <aside aria-label="Agent runtime" className={styles.dock}>
+      <aside aria-label="Agent runtime" className={styles.dock} tabIndex={0}>
         <button
           aria-label="Open Agent Runtime status"
           className={consoleStatusCardClass(
@@ -133,11 +133,11 @@ export function AgentRuntimeDock({
         </button>
 
         <section
-          aria-label="Active agent runtimes"
+          aria-label="Open agent panels"
           className={styles.roster}
         >
           <div className={styles.rosterHeader}>
-            <p>Active agent runtimes</p>
+            <p>Open agent panels</p>
             <span>{activeRuntimes.length}</span>
           </div>
           <div className={styles.runtimeList}>

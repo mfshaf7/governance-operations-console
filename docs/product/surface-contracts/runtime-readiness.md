@@ -115,3 +115,12 @@ Runtime Readiness must not:
 
 - `../system-design.md`
 - `../../../devint-prototype-preview.md`
+
+## Primary monitor interaction
+
+Resources, Components and Alerts use tab/tabpanel relationships, roving focus
+and ArrowLeft/ArrowRight/Home/End activation. The no-alert explanation reflects
+actual component observation coverage; it cannot label connected observations
+as disconnected. Fixed Console docks reserve their own lanes, and the same
+monitor reflows within the remaining desktop stage. VMEM remains explicitly
+commit accounting, not a RAM-pressure assertion.

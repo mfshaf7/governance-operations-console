@@ -179,9 +179,11 @@ export const guard = {
       "Governance Activity",
       "Activity History",
       "Export JSON",
-      "downloadConsoleBlob",
+      "useConsoleActivityController",
     ]);
+    assertIncludes(failures, "src/console-shell/activity/use-console-activity-controller.ts", ["downloadConsoleBlob", "readOlderActivityPage"]);
     assertOmits(failures, shellActivityPanel, [
+      "fetch(",
       "URL.createObjectURL",
       'document.createElement("a")',
     ]);

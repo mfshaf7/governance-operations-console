@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { Download, History } from "lucide-react";
 
 import {
@@ -8,13 +7,10 @@ import {
   TerasFilterBar,
   TerasUtilityButton,
 } from "@/teras";
-import { downloadConsoleBlob } from "@/console-integration/browser-download";
 import type { GovernanceActivitySnapshot } from "@/governance-activity/governance-activity-types";
 
 import {
   consoleActivityOutcomeLabels,
-  consoleActivityTitle,
-  filterConsoleActivity,
   type ConsoleActivityEvent,
   type ConsoleActivityOutcome,
 } from "../activity/console-activity-model";
@@ -22,6 +18,8 @@ import {
   ConsoleShellPanel,
   ConsoleShellSectionTitle,
 } from "../console-shell-panel";
+import {activityPresentation} from "../activity/console-activity-view-model.ts";
+import {useConsoleActivityController} from "../activity/use-console-activity-controller.ts";
 import styles from "./console-activity-panel.module.css";
 
 const recentActivityLimit = 8;
@@ -51,95 +49,12 @@ export function ConsoleActivityPanel({
 }: {
   snapshot: GovernanceActivitySnapshot;
 }) {
-  const { events } = snapshot;
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [outcome, setOutcome] = useState<ConsoleActivityOutcome | "all">("all");
-  const [query, setQuery] = useState("");
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(
-    events[0]?.eventId ?? null,
-  );
-  const [source, setSource] = useState("all");
-  const recentEvents = events.slice(0, recentActivityLimit);
-  const selectedEvent =
-    events.find((event) => event.eventId === selectedEventId) ??
-    events[0] ??
-    null;
-  const filteredEvents = useMemo(
-    () =>
-      filterConsoleActivity(events, {
-        outcome,
-        query,
-        source,
-      }),
-    [events, outcome, query, source],
-  );
-  const dialogSelectedEvent =
-    filteredEvents.find((event) => event.eventId === selectedEventId) ??
-    filteredEvents[0] ??
-    null;
-  const sourceOptions = useMemo(() => {
-    const labelsByOwner = new Map<string, string>();
-
-    for (const event of events) {
-      labelsByOwner.set(event.source.owner, event.source.label);
-    }
-
-    return [
-      { label: "All sources", value: "all" },
-      ...[...labelsByOwner.entries()]
-        .sort((left, right) => left[1].localeCompare(right[1]))
-        .map(([value, label]) => ({ label, value })),
-    ];
-  }, [events]);
-  const outcomeOptions = useMemo(() => {
-    const availableOutcomes = new Set(events.map((event) => event.outcome));
-
-    return [
-      { label: "All outcomes", value: "all" as const },
-      ...Object.entries(consoleActivityOutcomeLabels)
-        .filter(([value]) =>
-          availableOutcomes.has(value as ConsoleActivityOutcome),
-        )
-        .map(([value, label]) => ({
-          label,
-          value: value as ConsoleActivityOutcome,
-        })),
-    ];
-  }, [events]);
-
-  function openFullActivity() {
-    setSelectedEventId(selectedEvent?.eventId ?? events[0]?.eventId ?? null);
-    setDialogOpen(true);
-  }
-
-  function exportActivity() {
-    const exportedAt = new Date().toISOString();
-    const payload = {
-      eventCount: filteredEvents.length,
-      events: filteredEvents,
-      exportedAt,
-      filters: {
-        outcome,
-        query: query.trim(),
-        source,
-      },
-      observedAt: snapshot.observedAt,
-      projectionMode: snapshot.mode,
-      projectionStatus: snapshot.status,
-      schemaVersion: 2,
-      scope: "governance-activity",
-      source: "governance-operations-console",
-      sources: snapshot.sources,
-      truncated: snapshot.truncated,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    });
-    downloadConsoleBlob(
-      blob,
-      `governance-activity-${exportedAt.slice(0, 10)}.json`,
-    );
-  }
+  const {
+    dialogOpen,outcome,setOutcome,query,setQuery,source,setSource,includeRoutine,setIncludeRoutine,
+    recentEvents,visibleHead,hiddenRoutineCount,selectedEvent,filteredEvents,dialogSelectedEvent,
+    sourceOptions,outcomeOptions,setSelectedEventId,openFullActivity,closeHistory,currentPage,
+    pageNumber,loading,error,loadOlder,latest,exportActivity,
+  }=useConsoleActivityController(snapshot);
 
   return (
     <>
@@ -152,6 +67,10 @@ export function ConsoleActivityPanel({
             />
             <p className={styles.description}>
               {activityDescription(snapshot)}
+            </p>
+            <p className={styles.description}>
+              {hiddenRoutineCount > 0 ? `${hiddenRoutineCount} routine evidence reads are hidden from this loaded page. ` : ""}
+              <TerasUtilityButton onClick={() => setIncludeRoutine(!includeRoutine)}>{includeRoutine ? "Show operator activity" : "Show all events"}</TerasUtilityButton>
             </p>
           </div>
           <button
@@ -173,10 +92,11 @@ export function ConsoleActivityPanel({
               <span>Recent activity</span>
               <span>
                 {Math.min(recentEvents.length, recentActivityLimit)} of{" "}
-                {events.length}
+                {visibleHead.length}
               </span>
             </div>
             <ActivityList
+              emptyLabel="No operator activity in this loaded page. Show all events or open history to inspect older pages."
               events={recentEvents}
               onSelect={setSelectedEventId}
               selectedEventId={selectedEvent?.eventId ?? null}
@@ -189,15 +109,32 @@ export function ConsoleActivityPanel({
 
       <TerasDialog
         contentOverflow="hidden"
-        description="Material activity projected from console domain receipts, state transitions, and runtime records."
+        description="OOS workflow activity and WGCF governance history. This window does not claim to include every Console action."
         height="fill"
         kicker="Governance Activity"
-        onClose={() => setDialogOpen(false)}
+        onClose={closeHistory}
         open={dialogOpen}
         title="Activity History"
         width="wide"
       >
         <div className={styles.dialogLayout}>
+          <div>
+            <p className={styles.description} role="status">
+              Loaded history page {pageNumber + 1}. Search and filters apply to this page only. Outcomes describe individual events, not overall project completion.
+              {currentPage.truncated ? " Owner history is partial; this is not the complete audit history." : " No additional truncation reported for this page."}
+              {!includeRoutine ? " Routine evidence reads are hidden; choose All events to inspect them." : " All event types in this page are shown."}
+            </p>
+            <details className={styles.references}>
+              <summary>Source coverage and limits</summary>
+              <dl>{currentPage.sources.map(source => <div key={source.sourceId}>
+                <dt>{source.label}</dt>
+                <dd>{source.state}; {source.truncated ? "additional records exist outside this source window" : "no source truncation reported"}. Owner: {source.authority}. Source: {source.sourceId}.</dd>
+              </div>)}</dl>
+            </details>
+            {error ? <p role="alert" className={styles.description}>{error}</p> : null}
+            <TerasUtilityButton disabled={loading || !currentPage.continuations?.length} onClick={() => void loadOlder()}>{loading ? "Loading older events" : "Older events"}</TerasUtilityButton>
+            <TerasUtilityButton disabled={loading || pageNumber === 0} onClick={latest}>Back to latest</TerasUtilityButton>
+          </div>
           <TerasFilterBar
             action={
               <TerasUtilityButton onClick={exportActivity}>
@@ -206,6 +143,7 @@ export function ConsoleActivityPanel({
               </TerasUtilityButton>
             }
             filters={[
+              { label: "Events", onValueChange: value => setIncludeRoutine(value === "all"), options: [{label: "Operator activity", value: "operator"}, {label: "All events", value: "all"}], value: includeRoutine ? "all" : "operator" },
               {
                 label: "Source",
                 onValueChange: setSource,
@@ -214,7 +152,7 @@ export function ConsoleActivityPanel({
               },
               {
                 label: "Outcome",
-                onValueChange: setOutcome,
+                onValueChange: value => setOutcome(value as ConsoleActivityOutcome | "all"),
                 options: outcomeOptions,
                 value: outcome,
               },
@@ -291,8 +229,8 @@ function ActivityList({
             <span title={event.source.label}>{event.source.label}</span>
           </span>
           <span className={styles.rowContent}>
-            <strong>{consoleActivityTitle(event)}</strong>
-            <span>{event.summary}</span>
+            <strong>{activityPresentation(event).title}</strong>
+            <span>{activityPresentation(event).summary}</span>
           </span>
           <OutcomePill outcome={event.outcome} />
         </button>
@@ -316,7 +254,13 @@ function ActivityDetail({
     );
   }
 
+  const display = activityPresentation(event);
   const references = [
+    { label: "Original subject", value: event.subject.ref },
+    { label: "Original action", value: event.action.label },
+    { label: "Projected category", value: event.category },
+    { label: "Original summary", value: event.summary },
+    { label: "Source record", value: event.source.ref },
     event.receiptRef
       ? { label: "Receipt", value: event.receiptRef }
       : null,
@@ -339,18 +283,17 @@ function ActivityDetail({
       <div className={styles.detailHeader}>
         <div>
           <span className={styles.detailKicker}>Selected event</span>
-          <h3>{event.action.label}</h3>
+          <h3>{display.action}</h3>
         </div>
         <OutcomePill outcome={event.outcome} />
       </div>
 
       <div className={styles.subjectBlock}>
         <span>Subject</span>
-        <strong>{event.subject.label}</strong>
-        <p>{event.subject.ref}</p>
+        <strong>{display.subject}</strong>
       </div>
 
-      <p className={styles.eventSummary}>{event.summary}</p>
+      <p className={styles.eventSummary}>{display.summary}</p>
 
       <dl className={styles.detailFacts}>
         <div>
@@ -359,22 +302,22 @@ function ActivityDetail({
         </div>
         <div>
           <dt>Category</dt>
-          <dd>{humanize(event.category)}</dd>
+          <dd>{display.category}</dd>
         </div>
         <div>
           <dt>Actor</dt>
           <dd>{event.actor.ref}</dd>
         </div>
         <div>
-          <dt>Durability</dt>
-          <dd>{humanize(event.durability)}</dd>
+          <dt>Evidence origin</dt>
+          <dd>{event.durability === "source-projected" ? "Owner projection (source-projected)" : humanize(event.durability)}</dd>
         </div>
       </dl>
 
       <div className={styles.sourceBlock}>
         <span>Source authority</span>
         <strong>{event.source.authority}</strong>
-        <p title={event.source.ref}>{event.source.ref}</p>
+
       </div>
 
       {event.nextActions && event.nextActions.length > 0 ? (
@@ -386,8 +329,8 @@ function ActivityDetail({
       ) : null}
 
       {references.length > 0 ? (
-        <div className={styles.references}>
-          <span>References</span>
+        <details className={styles.references}>
+          <summary>Technical evidence and original record</summary>
           <dl>
             {references.map((reference) => (
               <div key={`${reference.label}:${reference.value}`}>
@@ -396,7 +339,7 @@ function ActivityDetail({
               </div>
             ))}
           </dl>
-        </div>
+        </details>
       ) : null}
     </aside>
   );
@@ -404,7 +347,7 @@ function ActivityDetail({
 
 function OutcomePill({ outcome }: { outcome: ConsoleActivityOutcome }) {
   return (
-    <span className={styles.outcomePill} data-outcome={outcome}>
+    <span className={styles.outcomePill} data-outcome={outcome} title="Outcome of this event; this does not establish overall workflow or project completion.">
       {consoleActivityOutcomeLabels[outcome]}
     </span>
   );
@@ -415,11 +358,12 @@ function humanize(value: string) {
 }
 
 function activityDescription(snapshot: GovernanceActivitySnapshot) {
+  if (snapshot.observedAt === new Date(0).toISOString()) return "Loading activity from workflow and governance owners.";
   if (snapshot.mode === "disconnected-preview") {
     return "Disconnected preview of commands, receipts, state changes, blockers, and runtime changes.";
   }
   if (snapshot.status === "offline") {
-    return "Owner activity projections are unavailable. No preview events are substituted.";
+    return "Owner activity could not be refreshed. Any retained events are from the last received page, not a current observation.";
   }
   if (snapshot.status === "partial") {
     const unavailable = snapshot.sources

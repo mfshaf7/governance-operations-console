@@ -24,7 +24,7 @@ export function OperatorAccountSecurityView({
     <ConsoleSurfaceTwoZone
       primary={
         <ConsoleSurfacePanel
-          description="Authentication commands remain unavailable until a federated adapter exists."
+          description="This installation uses the Platform-issued local session below. Authentication management and account switching are not available in this mode."
           footer={
             <>
               <ConsoleSurfaceButton

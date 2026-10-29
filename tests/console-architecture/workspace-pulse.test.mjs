@@ -48,7 +48,8 @@ test("Workspace Pulse posture is derived from source trust and operational recor
     "required-decisions": "clear",
   });
 
-  assert.equal(blocked.posture.label, "HARD STOP");
+  assert.equal(blocked.posture.label, "BLOCKED WORK");
+  assert.match(blocked.posture.detail, /not a Console-wide availability assessment/);
   assert.equal(stale.posture.label, "STALE SIGNALS");
   assert.equal(unavailable.posture.label, "SIGNAL LOST");
   assert.equal(clear.posture.label, "CALM / NO FIRE");

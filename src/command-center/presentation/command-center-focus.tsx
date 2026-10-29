@@ -30,6 +30,7 @@ import type {
 } from "../read-model/command-center-attention";
 import { CommandCenterStatusDot } from "./command-center-presentation-support";
 import styles from "./command-center-focus.module.css";
+import {priorityTitle, priorityMove, priorityExplanation} from "./priority-view-model.ts";
 
 function attentionTone(
   candidate: CommandCenterAttentionCandidate,
@@ -58,6 +59,7 @@ function attentionTone(
 function projectionTone(
   snapshot: CommandCenterAttentionSnapshot,
 ): ConsoleTone {
+  if (snapshot.sources.some(source => source.source.freshness === "loading") && !snapshot.sources.some(source => source.source.freshness === "unavailable")) return "info";
   if (
     snapshot.sources.some(
       (source) => source.source.freshness === "unavailable",
@@ -175,11 +177,11 @@ function AttentionQueueRow({
           </span>
           <span>{formatToken(candidate.attentionClass)}</span>
         </span>
-        <strong title={candidate.subject.title}>
-          {candidate.subject.title}
+        <strong title={priorityTitle(candidate)}>
+          {priorityTitle(candidate)}
         </strong>
-        <small title={candidate.requiredMove.label}>
-          {candidate.requiredMove.label}
+        <small title={priorityMove(candidate)}>
+          {priorityMove(candidate)}
         </small>
       </span>
       <span className={styles.queueSide}>
@@ -214,6 +216,7 @@ function SourceDetailsDialog({
                 label: "Authority",
                 value: candidate.source.authority,
               },
+              { label: "Owner explanation", value: candidate.reason },
               {
                 label: "Source mode",
                 value: formatToken(candidate.source.mode),
@@ -235,6 +238,7 @@ function SourceDetailsDialog({
                 label: "Projected",
                 value: formatTimestamp(candidate.source.projectedAt),
               },
+              { label: "Record last changed", value: candidate.subject.updatedAt ? formatTimestamp(candidate.subject.updatedAt) : "Not provided by owner" },
               {
                 label: "Subject ref",
                 value: candidate.subject.ref,
@@ -298,14 +302,14 @@ function PriorityDetail({
               <span>{formatToken(candidate.attentionClass)}</span>
               <span>{formatToken(candidate.urgency)}</span>
             </div>
-            <h3>{candidate.subject.title}</h3>
-            <p>{candidate.reason}</p>
+            <h3>{priorityTitle(candidate)}</h3>
+            <p>{priorityExplanation(candidate)}</p>
           </header>
 
           <div className={styles.requiredMove}>
             <div>
               <span>Required move</span>
-              <strong>{candidate.requiredMove.label}</strong>
+              <strong>{priorityMove(candidate)}</strong>
             </div>
             <span className={styles.timing}>
               <Clock3 aria-hidden="true" size={14} />
@@ -329,6 +333,7 @@ function PriorityDetail({
                 tone: attentionTone(candidate),
                 value: sourcePostureLabel(candidate.source.freshness),
               },
+              { label: "Record last changed", value: candidate.subject.updatedAt ? formatTimestamp(candidate.subject.updatedAt) : "Not provided by owner" },
               {
                 label: "Subject ref",
                 value: candidate.subject.ref,
@@ -394,11 +399,14 @@ export function CommandCenterFocus({
   const degradedSourceCount = snapshot.sources.filter(
     (source) => source.source.freshness !== "current",
   ).length;
+  const loadingSourceCount = snapshot.sources.filter(source => source.source.freshness === "loading").length;
   const projectionPostureLabel =
     snapshot.issues.length > 0
       ? `${snapshot.issues.length} projection ${
           snapshot.issues.length === 1 ? "issue" : "issues"
         }`
+      : loadingSourceCount > 0
+        ? `${loadingSourceCount} sources loading`
       : degradedSourceCount > 0
         ? `${degradedSourceCount} sources need review`
         : `${snapshot.sources.length} sources current`;
@@ -431,7 +439,7 @@ export function CommandCenterFocus({
         <div className={styles.headerCopy}>
           <p>Command Center Focus</p>
           <h2>Operator priority</h2>
-          <span>Ranked moves from admitted owner projections.</span>
+          <span>Prioritized actions from connected workflow owners. Source details retain the original owner facts.</span>
         </div>
         <div className={styles.projectionPosture} data-tone={sourceTone}>
           <span className={styles.toneDot} data-tone={sourceTone}>
@@ -467,7 +475,7 @@ export function CommandCenterFocus({
               <p>Needs attention</p>
               <h3>{filteredCandidates.length} matching priorities</h3>
               <span>
-                Ranked by urgency, source freshness, and ownership.
+                Ordered by urgency, observation freshness and responsible owner.
               </span>
             </div>
             <span className={styles.visibleCount}>
@@ -500,7 +508,7 @@ export function CommandCenterFocus({
         </section>
 
         <PriorityDetail
-          candidate={selectedCandidate}
+          candidate={filteredCandidates.find(candidate => candidate.candidateId === selectedCandidate?.candidateId) ?? filteredCandidates[0] ?? null}
           onOpen={onOpenCandidate}
           onOpenSource={setSourceDialogCandidate}
         />

@@ -31,6 +31,7 @@ export type WgcfGovernanceActivityProjection = Readonly<{
   sources: readonly GovernanceActivitySource[];
   status: "current" | "partial";
   truncated: boolean;
+  nextCursor: string | null;
 }>;
 
 export function governanceActivityWgcfConfigured(
@@ -43,19 +44,23 @@ export async function listWgcfGovernanceActivity({
   env = process.env,
   fetchImpl = fetch,
   now = new Date(),
+  cursor: initialCursor = null,
+  maxPages = pageLimit,
 }: {
   env?: NodeJS.ProcessEnv;
   fetchImpl?: typeof fetch;
   now?: Date;
+  cursor?: string | null;
+  maxPages?: number;
 } = {}): Promise<WgcfGovernanceActivityProjection> {
   const config = resolveConsoleWgcfConnection(env);
   const events = new Map<string, ConsoleActivityEvent>();
   const sources = new Map<string, GovernanceActivitySource>();
   const observedAt = now.toISOString();
-  let cursor: string | null = null;
+  let cursor: string | null = initialCursor;
   let status: "current" | "partial" = "current";
 
-  for (let pageIndex = 0; pageIndex < pageLimit; pageIndex += 1) {
+  for (let pageIndex = 0; pageIndex < Math.min(pageLimit, maxPages); pageIndex += 1) {
     const query = new URLSearchParams({ limit: String(pageSize) });
     if (cursor) query.set("cursor", cursor);
     const payload = await wgcfRequest(
@@ -98,6 +103,7 @@ export async function listWgcfGovernanceActivity({
         sources: sortSources([...sources.values()]),
         status,
         truncated: [...sources.values()].some((source) => source.truncated),
+        nextCursor: null,
       };
     }
   }
@@ -108,6 +114,7 @@ export async function listWgcfGovernanceActivity({
     sources: sortSources([...sources.values()]),
     status: "partial",
     truncated: true,
+    nextCursor: cursor,
   };
 }
 

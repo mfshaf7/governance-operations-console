@@ -8,7 +8,7 @@ export function useAgentDockPortal(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     const update = () => {
-      const dialogs = [...document.querySelectorAll<HTMLDialogElement>("dialog[open]")];
+      const dialogs = [...document.querySelectorAll<HTMLDialogElement>("dialog[open]:not(.model-dock-native)")];
       const top = dialogs.at(-1);
       const host = top?.querySelector<HTMLElement>(":scope > [data-agent-console-host]") ?? null;
       setSurface(current => {
