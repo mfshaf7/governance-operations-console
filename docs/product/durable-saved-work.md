@@ -34,6 +34,8 @@ Failed/uncertain saves retain local edits and retry the same save identity.
 History uses the existing Work Design screen read-only, including server-backed
 briefs and diagrams; restoration is disabled there and reads do not replay apply.
 The canonical handoff receipt links to this screen while remaining separate proof.
+Historical originals awaiting migration are explicitly labelled browser-only or
+unavailable; opening read-only history never starts a background server save.
 
 ## Boundaries and validation
 

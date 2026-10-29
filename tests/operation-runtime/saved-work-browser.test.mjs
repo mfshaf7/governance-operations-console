@@ -65,6 +65,13 @@ test("read-only history performs no owner writes and reads the saved original", 
   const count = backend.calls.length; const history = session(storage({ [key]: payload }), backend); await history.initialize(true);
   history.write({ modified: true }); assert.equal(history.read(), payload); assert.ok(backend.calls.slice(count).every(call => call.method === "GET"));
 });
+
+test("historical browser-only content stays visibly local and does not start a server save", async () => {
+  const backend = owner(); const local = storage({ [key]: payload }); const history = session(local, backend);
+  await history.initialize(true); history.write({ changed: true }); await history.retry();
+  assert.equal(history.getSnapshot().status, "local"); assert.equal(history.read(), payload); assert.equal(backend.record, null);
+  assert.ok(backend.calls.every(call => call.method === "GET")); assert.equal(local.getItem(key), payload);
+});
 test("a changed server payload cannot masquerade as a saved acknowledgement", async () => {
   const backend = owner(); backend.record = { revision: 1, payload_json: payload, content_digest: digest("different"), acknowledgement_id: "ack" };
   const current = session(storage(), backend); await current.initialize(); assert.equal(current.getSnapshot().hydrated, false); assert.equal(current.getSnapshot().status, "error");

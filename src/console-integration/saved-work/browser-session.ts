@@ -130,7 +130,9 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
           }
         }
         if (raw !== null) writeLocal(key, raw);
-        update({ hydrated: true, status: snapshot.record ? "saved" : "ready", message: snapshot.record ? "Saved to server" : local !== null ? "Browser copy preserved · preparing server save" : "No saved draft yet", recoveries: snapshot.recoveries });
+        update({ hydrated: true, status: snapshot.record ? "saved" : readOnly ? "local" : "ready",
+          message: snapshot.record ? "Saved to server" : readOnly ? raw !== null ? "Browser-only historical copy · not saved to server" : "No server-saved original is available"
+            : local !== null ? "Browser copy preserved · preparing server save" : "No saved draft yet", recoveries: snapshot.recoveries });
       } catch (error) {
         // Do not mount autosaving controllers before originals and owner read
         // are safe. Retry remains explicit; no false disconnected-mode fallback.
