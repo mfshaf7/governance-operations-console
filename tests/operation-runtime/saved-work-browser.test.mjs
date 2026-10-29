@@ -83,3 +83,10 @@ test("choosing server content refreshes the editor without discarding preserved 
   assert.equal(current.getSnapshot().status, "conflict"); await current.useServerCopy();
   assert.equal(current.read(), payload); assert.equal(current.getSnapshot().generation, 1); assert.ok(backend.originals.some(original => original.raw_value === browser));
 });
+
+test("server-copy conflict choice preserves edits made after the original browser import", async () => {
+  const backend = owner(); const current = session(storage({ [key]: payload }), backend); await current.initialize(); current.write(JSON.parse(payload)); await current.retry();
+  backend.record = { ...backend.record, revision: 2, payload_json: payload.replace("diagram", "other tab"), content_digest: digest(payload.replace("diagram", "other tab")) };
+  const edits = payload.replace("diagram", "later local edits"); current.write(JSON.parse(edits)); await current.retry(); assert.equal(current.getSnapshot().status, "conflict");
+  await current.useServerCopy(); assert.ok(backend.originals.some(original => original.raw_value === edits)); assert.equal(current.read(), backend.record.payload_json);
+});

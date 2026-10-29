@@ -155,7 +155,10 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
     },
     async retry() { if (!state.hydrated || mode === null) await initialize(readOnly, normalize); else await flush(); },
     async useServerCopy() {
-      const result = await request(); acknowledge(result.snapshot.record); pending = null; raw = confirmed;
+      const result = await request();
+      if (!readOnly && raw !== null && raw !== result.snapshot.record?.payload_json)
+        await request("?action=preserve", { storage_key: key, raw_value: raw });
+      acknowledge(result.snapshot.record); pending = null; raw = confirmed;
       if (raw !== null) writeLocal(key, raw);
       update({ generation: state.generation + 1, status: raw !== null ? "saved" : "ready", message: raw !== null ? "Saved to server" : "No saved draft yet" });
     },
