@@ -8,9 +8,8 @@ export function modelBackendMetadata(registry: ModelRegistry, backend: ModelBack
   const observation = health?.backends.find(row => row.backend_id === backend?.backend_id);
   return [
     { label: "Registered models", value: Object.keys(registry.configuration.configuration.models).length },
-    { label: "Backend", value: backend?.registered ? providerHealthLabel(observation) : "Not registered" },
-    { label: "Checks", value: health ? "Metadata checked " + new Date(health.checked_at).toLocaleTimeString() : "Awaiting a current post-start check" },
-    { label: "Control", value: "Provider checks do not change registrations or routing." },
+    { label: "Backend", value: backend?.registered ? providerHealthLabel(observation) : "Not registered",
+      detail: health ? "Checked " + new Date(health.checked_at).toLocaleTimeString() : "Awaiting a post-start check" },
   ];
 }
 export function modelRoutingMetadata(issue: string | null): TerasMetadataItem[] {
@@ -41,10 +40,11 @@ export function modelVerificationMetadata(registry: ModelRegistry, backendId: st
   return [
     { label: "Registration", value: providerHealthLabel(observation) },
     { label: "Registered runtime", value: selected[1].runtime_version },
-    ...(observation?.observed_runtime_version ? [{ label: "Observed runtime", value: observation.observed_runtime_version }] : []),
-    { label: "Registered model digest", value: selected[1].model_digest ?? "Not advertised" },
-    ...(observation?.observed_model_digest ? [{ label: "Observed model digest", value: observation.observed_model_digest }] : []),
-    { label: "Verify & update", value: "Tests the current advertised model. Success updates this registration and retains its routes; failure retains current settings." },
+    { label: "Observed runtime", value: observation?.observed_runtime_version ?? "Not observed" },
+    { label: "Model content", value: observation?.observed_model_digest
+      ? observation.observed_model_digest === selected[1].model_digest ? "Unchanged" : "Changed"
+      : "Not observed",
+      title: "Registered digest: " + (selected[1].model_digest ?? "Not advertised") + "\nObserved digest: " + (observation?.observed_model_digest ?? "Not observed") },
   ];
 }
 export function modelRouteHealthLabel(registry: ModelRegistry, task: string) {

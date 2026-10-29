@@ -96,7 +96,7 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
   return <>
     <TerasRecordControlLayout composition="compact-control" mode="overview-register-selected" data-model-runtime-control="true"
       overview={<TerasPanel frame="padded" treatment="neutral" spacing="compact">
-        <TerasPanelHeader kicker="Model registration" title="Backends & models" statusLabel={runtime.fresh ? "Revision " + registry.configuration.revision : "Owner unavailable"} statusTone={runtime.fresh ? "info" : "warn"} />
+        <TerasPanelHeader kicker="Model registration" title="Backends & models" description="Checks leave settings unchanged. Verify explicitly updates the registration and keeps its routes." statusLabel={runtime.fresh ? "Revision " + registry.configuration.revision : "Owner unavailable"} statusTone={runtime.fresh ? "info" : "warn"} />
         <TerasFieldGrid columns={2}>
           <TerasSelectField label="Admitted backend" disabled={busy || dirty || !runtime.fresh}
             value={backend?.backend_id ?? ""} options={registry.backends.map(item => ({ value: item.backend_id, label: item.backend_id + " · " + item.provider }))}
@@ -112,7 +112,7 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
           <TerasActionButton disabled={blocked || dirty || !backend?.registered} emphasis="secondary" onClick={() => backend && void runtime.discover(backend.backend_id)}>Discover models</TerasActionButton>
           <TerasActionButton disabled={blocked || dirty || !backend?.registered || !catalogueModel} onClick={() => backend && void send("model.register", { backend_id: backend.backend_id, model: catalogueModel })}>{selectedRegisteredModel ? "Verify & update registration" : "Verify & register model"}</TerasActionButton>
         </TerasActionRow>
-        <TerasMetadataList shape="line" items={modelProviderMetadata(registry, backend, catalogueModel)} />
+        <TerasMetadataList shape="line" wrap items={modelProviderMetadata(registry, backend, catalogueModel)} />
       </TerasPanel>}
       register={<TerasRegisterPanel density="compact-control" kicker="Workflow routing" title="Choose models by workflow"
         description="Each workflow keeps its permission and output rules. Overrides replace the system default."
@@ -124,7 +124,7 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
       selected={<TerasPanelStack fill="first">
         <TerasPanel frame="padded" treatment="neutral" fit="fill" overflow="auto" spacing="compact">
           <TerasPanelHeader kicker="Selected routing" title={scope === defaultModelScope ? "System default" : workflowTaskLabel(scope)} statusLabel={dirty ? "Unsaved" : "Owner configuration"} statusTone={dirty ? "warn" : "info"} />
-          <TerasFieldStack>
+          <TerasFieldStack overflow="auto">
             <TerasSelectField label="Selection mode" disabled={blocked} value={mode}
               options={[...(scope !== defaultModelScope ? [{ value: "inherit" as const, label: "Inherit system default" }] : []), { value: "source" as const, label: "Use existing profile binding" }, { value: "configured" as const, label: "Choose registered models" }]}
               onValueChange={value => { setMode(value); setDirty(true); }} />
