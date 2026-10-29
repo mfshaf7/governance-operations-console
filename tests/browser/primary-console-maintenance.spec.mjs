@@ -22,3 +22,22 @@ test("history retries the same failed cursor, replaces its bounded window and re
  await page.route("**/api/governance-activity*",r=>{const q=new URL(r.request().url()).searchParams;if(!q.has("cursor"))return r.fulfill({json:snapshot("synthetic:head","synthetic_cursor")});cursors.push(q.get("cursor"));if(first){first=false;return r.fulfill({status:503,json:{error:"Synthetic owner interruption"}})}return r.fulfill({json:snapshot("synthetic:older",null)})});
  await ready(page);await page.getByRole("button",{name:"Show all events",exact:true}).click();await page.getByRole("button",{name:"View all activity",exact:true}).click();const history=page.getByRole("dialog",{name:"Activity History",exact:true});await history.getByRole("button",{name:"Older events",exact:true}).click();await expect(history.getByRole("alert")).toContainText("current page is retained");await expect(history.locator('[aria-label="Governance activity history"] button')).toHaveCount(1);await history.getByRole("button",{name:"Older events",exact:true}).click();await expect(history.getByRole("status")).toContainText("page 2");expect(cursors).toEqual(["synthetic_cursor","synthetic_cursor"]);await expect(history.getByRole("button",{name:"Older events",exact:true})).toBeDisabled();await history.locator('[aria-label="Governance activity history"] button').first().click();await page.keyboard.press("Escape");await expect(page.locator("aside").filter({has:page.getByRole("heading",{name:"Evidence registry read",exact:true})})).toContainText("sha256:bbbbbbbbbbbb");await page.getByRole("button",{name:"View all activity",exact:true}).click();await expect(page.getByRole("dialog",{name:"Activity History",exact:true}).getByRole("status")).toContainText("page 2");await history.getByRole("button",{name:"Back to latest",exact:true}).click();await expect(history.getByRole("status")).toContainText("page 1");await expect(history.getByRole("button",{name:"Older events",exact:true})).toBeEnabled();
 });
+
+test("selected component details never cover monitor controls at supported widths",async({page})=>{
+ await page.route("**/api/governance-activity*",r=>r.fulfill({json:snapshot("synthetic:head",null)}));
+ const observedAt=new Date().toISOString();
+ const components=[0,1].map(index=>({alertEligible:true,environment:"dev-integration",freshness:"current",href:null,id:`synthetic-component-${index}`,label:`Synthetic Component ${index}`,observedAt,sourceAuthority:"platform-engineering",sourceMode:"source-projected",sourceRef:`synthetic://observation/${index}/`+"a".repeat(128),status:"available",surface:"Synthetic observed surface",tone:"ok"}));
+ await page.route("**/api/runtime-observations",r=>r.fulfill({json:{artifactType:"console-runtime-component-projection",components,mode:"live",reasonCode:null,schemaVersion:1,source:{authority:"platform-engineering",freshness:"current",observedAt,reference:"synthetic://platform-observation"}}}));
+ await ready(page);await page.getByRole("tab",{name:"COMPONENTS",exact:true}).click();const rows=page.locator(".component-status-row");await expect(rows).toHaveCount(2);
+ for(const width of [1200,1440,1700,1920]){
+  await page.setViewportSize({width,height:1000});
+  await rows.first().click();await expect(rows.first()).toHaveClass(/component-status-row-active/);
+  const detail=page.locator(".component-focus-content");const bounds=await detail.evaluate(n=>({client:n.clientWidth,scroll:n.scrollWidth}));expect(bounds.scroll).toBeLessThanOrEqual(bounds.client+2);await expect(detail.getByText(components[0].sourceRef,{exact:true})).toBeVisible();
+  await rows.nth(1).click();await expect(rows.nth(1)).toHaveClass(/component-status-row-active/);await expect(rows.first()).not.toHaveClass(/component-status-row-active/);
+  await rows.nth(1).click();await expect(rows.nth(1)).not.toHaveClass(/component-status-row-active/);
+  await rows.first().click();await page.getByRole("tab",{name:"ALERTS",exact:true}).click();await expect(page.getByRole("tab",{name:"ALERTS",exact:true})).toHaveAttribute("aria-selected","true");
+  await page.getByRole("tab",{name:"COMPONENTS",exact:true}).click();await expect(page.getByRole("tab",{name:"COMPONENTS",exact:true})).toHaveAttribute("aria-selected","true");
+  // Tab transitions may close details; do not impose a new persistence contract.
+  if((await rows.first().getAttribute("class"))?.includes("component-status-row-active"))await rows.first().click();
+ }
+});

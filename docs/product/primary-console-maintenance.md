@@ -41,7 +41,10 @@ The Console remains a projection, not a second ledger or owner authority.
 ## Layout and interaction
 
 Reserve the fixed dock lanes at every supported desktop width. Existing panels
-reflow when the remaining stage cannot hold three columns. Long identifiers
+reflow below a 1200px usable stage: the existing side columns and selected
+detail must fit together without covering monitor tabs or list rows. Verify
+selection, switching and deselection as well as the unselected panel. Runtime
+detail facts and source references wrap without truncating original values. Long identifiers
 must wrap inside their content containers in both inline and history views.
 Expanded agents reuse the existing native modal foundation while preserving
 session/controller state and the existing compact appearance. Workspace-hosted
