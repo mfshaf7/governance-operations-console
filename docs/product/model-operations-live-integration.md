@@ -219,3 +219,24 @@ Sample purpose profiles remain available only in the explicit wholly
 disconnected design preview, which is labelled as sample data rather than
 current Platform state. Partial, stale or invalid profile artifacts continue
 to fail closed under the existing verification path.
+
+## Provider health and registration updates
+
+Core Console availability is independent of AI provider availability. After core
+startup, Platform checks registered connections on its existing observation
+timer; Models & routing reads cached, expiring evidence. A current local metadata
+check is not a successful inference. Account presence is explicitly labelled
+connection unprobed; routine checks never start Codex or send project context.
+The primary health column follows the actual configured workflow route.
+
+Select a registered model to inspect its accepted and observed runtime/digest.
+Choose **Verify & update registration** to test the current advertised model and
+accept a new registration revision only on success. This retains the model's
+stable identity, routes and earlier evidence. Automatic checks never adopt drift,
+choose defaults or change fallbacks. A failed/unknown check leaves configuration
+controls available. Missing, invalid, expired or mismatched evidence is unknown.
+Unknown command completion still reconciles its original owner operation.
+
+This maintenance reuses the existing Compact Control, Teras table, metadata and
+actions. Its [Security delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-10-30-provider-lifecycle.md) and normal Platform
+acceptance remain required before runtime qualification.
