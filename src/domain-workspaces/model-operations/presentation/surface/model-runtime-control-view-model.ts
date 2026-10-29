@@ -37,6 +37,8 @@ export function modelVerificationMetadata(registry: ModelRegistry, backendId: st
   const selected = Object.entries(registry.configuration.configuration.models).find(([, row]) => row.backend_id === backendId && row.model === name);
   if (!selected) return [];
   const observation = currentProviderHealth(registry)?.models.find(row => row.model_id === selected[0]);
+  const success = observation?.last_success;
+  const recent = success && Date.now() - Date.parse(success.at) <= 900_000;
   return [
     { label: "Registration", value: providerHealthLabel(observation) },
     { label: "Registered runtime", value: selected[1].runtime_version },
@@ -45,6 +47,9 @@ export function modelVerificationMetadata(registry: ModelRegistry, backendId: st
       ? observation.observed_model_digest === selected[1].model_digest ? "Unchanged" : "Changed"
       : "Not observed",
       title: "Registered digest: " + (selected[1].model_digest ?? "Not advertised") + "\nObserved digest: " + (observation?.observed_model_digest ?? "Not observed") },
+    { label: "Last model success", value: success ? (success.kind === "verification" ? "Verification" : "Request") + (recent ? " · recent" : " · stale") : "Verification needed",
+      detail: success ? new Date(success.at).toLocaleString() : "No timestamped result for this registration and account",
+      title: success?.reference },
   ];
 }
 export function modelRouteHealthLabel(registry: ModelRegistry, task: string) {

@@ -170,3 +170,18 @@ test("provider observations expire, bind current configuration, and never remove
   assert.deepEqual(assertModelRegistry({ ...value, health: null }).configuration, value.configuration);
   assert.equal(assertModelRegistry(value).health, null);
 });
+
+test("model success keeps its original timestamp and rejects leaked or future evidence", () => {
+  const value = registry(), start = Date.now() - 1000;
+  const health = { configuration_revision: value.configuration.revision, configuration_digest: value.configuration.digest,
+    checked_at: new Date(start).toISOString(), expires_at: new Date(start + 120000).toISOString(), backends: [],
+    models: [{ model_id: cloudId, state: "verification-needed", code: "last-request-failed", observed_runtime_version: null,
+      observed_model_digest: null, last_success: { kind: "request", at: new Date(start - 1000000).toISOString(), reference: "ai-routing-selection:" + "c".repeat(64) } }] };
+  assert.deepEqual(readProviderHealth(health, value.configuration), health);
+  assert.equal(providerHealthLabel(health.models[0]), "Last attempt failed; verify again");
+  health.models[0].last_success.at = new Date(start + 1).toISOString();
+  assert.equal(readProviderHealth(health, value.configuration), null);
+  health.models[0].last_success.at = new Date(start - 1000).toISOString();
+  health.models[0].last_success.token = "private";
+  assert.equal(readProviderHealth(health, value.configuration), null);
+});
