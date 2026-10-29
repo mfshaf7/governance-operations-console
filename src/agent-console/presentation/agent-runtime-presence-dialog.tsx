@@ -83,6 +83,7 @@ export function AgentRuntimePresenceDialog({
       width="standard"
     >
       <TerasMetadataList
+        wrap
         items={[
           { label: "Runtime", value: runtime.displayName },
           { label: "Runtime ID", value: runtime.runtimeId },

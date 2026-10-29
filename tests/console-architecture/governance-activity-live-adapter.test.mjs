@@ -144,12 +144,12 @@ test("browser activity runtime cannot read owner credentials and exports bounded
   assert.doesNotMatch(browserSource, /OOS_CALLER_SECRET|WGCF_CALLER_SECRET|x-oos-caller|x-wgcf-caller/);
 
   const panelSource = readFileSync(
-    new URL("../../src/console-shell/presentation/console-activity-panel.tsx", import.meta.url),
+    new URL("../../src/console-shell/activity/use-console-activity-controller.ts", import.meta.url),
     "utf8",
   );
-  assert.match(panelSource, /projectionStatus: snapshot\.status/);
-  assert.match(panelSource, /sources: snapshot\.sources/);
-  assert.match(panelSource, /schemaVersion: 2/);
+  assert.match(panelSource, /projectionStatus:\s*currentPage\.status/);
+  assert.match(panelSource, /sources:\s*currentPage\.sources/);
+  assert.match(panelSource, /schemaVersion:\s*2/);
 });
 
 function oosPage() {
@@ -271,3 +271,18 @@ function sendJson(response, value) {
   response.writeHead(200, { "Content-Type": "application/json" });
   response.end(JSON.stringify(value));
 }
+
+test("initial composition reads one bounded owner page and exposes exact continuation without dropping older access",async()=>{
+ const requests=[];
+ const fetchImpl=async url=>{
+  requests.push(new URL(url).pathname+new URL(url).search);
+  const body=new URL(url).pathname.includes("workflow-activity")?oosPage():wgcfPage();
+  if(body.page){body.page.has_more=true;body.page.next_cursor="older_wgcf_cursor"}
+  return new Response(JSON.stringify(body));
+ };
+ const result=await composeGovernanceActivity({env:liveEnv("http://127.0.0.1:9999"),fetchImpl});
+ assert.equal(requests.length,2);assert.deepEqual(result.continuations,[{owner:"wgcf",cursor:"older_wgcf_cursor"}]);assert.equal(result.truncated,true);
+ const olderRequests=[];
+ const older=await composeGovernanceActivity({env:liveEnv("http://127.0.0.1:9999"),continuation:{owner:"wgcf",cursor:"older_wgcf_cursor"},fetchImpl:async url=>{olderRequests.push(url);return new Response(JSON.stringify(wgcfPage()))}});
+ assert.equal(olderRequests.length,1);assert.equal(new URL(olderRequests[0]).searchParams.get("cursor"),"older_wgcf_cursor");assert.equal(older.events[0].source.authority,"workspace-governance-control-fabric");assert.deepEqual(older.continuations,[]);
+});

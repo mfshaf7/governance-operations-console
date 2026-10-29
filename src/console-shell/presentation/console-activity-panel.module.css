@@ -310,7 +310,7 @@
 .eventSummary {
   margin-top: 0.72rem;
   color: rgba(247, 240, 228, 0.66);
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   line-height: 1.55;
 }
 
@@ -371,8 +371,8 @@
 .references dd {
   overflow: hidden;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 0.52rem;
-  line-height: 1.35;
+  font-size: 0.7rem;
+  line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -402,7 +402,7 @@
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 0.72rem;
   overflow: hidden;
 }
@@ -460,3 +460,19 @@
     grid-row: 2;
   }
 }
+
+/* Operator text and exact references share a finite content boundary. */
+.detailHeader > div, .subjectBlock, .sourceBlock, .eventSummary { min-width: 0; }
+.detailHeader h3, .subjectBlock strong, .sourceBlock strong, .eventSummary {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.references summary { cursor: pointer; color: rgba(255, 223, 169, 0.9); font-size: 0.7rem; }
+.references dd { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+.references dl > div { grid-template-columns: minmax(0, 1fr); }
+.detailSurface { overflow-y: auto; overflow-x: hidden; }
+@container console-stage (max-width: 800px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+.detailFacts dd { white-space: normal; overflow-wrap: anywhere; font-size: 0.72rem; }

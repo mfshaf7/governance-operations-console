@@ -17,6 +17,7 @@ export type GovernanceActivitySource = Readonly<{
 }>;
 
 export type GovernanceActivitySnapshot = Readonly<{
+  continuations?: readonly Readonly<{ owner: "oos" | "wgcf"; cursor: string }>[];
   error: string | null;
   events: readonly ConsoleActivityEvent[];
   mode: GovernanceActivityMode;

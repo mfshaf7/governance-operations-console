@@ -71,6 +71,10 @@ current and future product changes.
    - `decision-log.md`
    - `change-log.md`
 
+## Primary Console maintenance
+
+- [Primary Console operation and maintenance](primary-console-maintenance.md) documents status interpretation, readable activity, bounded history and native interaction qualification.
+
 ## Live Integration Surfaces
 
 - `source-editor-and-import.md`

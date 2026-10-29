@@ -2665,3 +2665,14 @@ and focus content tray must share the same fill.
     display: block;
   }
 }
+
+/* The existing cockpit panels follow their usable stage, not the full screen
+   hidden behind the fixed dock lanes. */
+@container console-stage (max-width: 900px) {
+  .command-main-grid { grid-template-columns: minmax(0, 1fr); }
+  .command-main-grid > * { grid-column: 1 / -1; min-width: 0; }
+  .console-stage-system-mood-open .focus-panel-system-mood { position: relative; inset: auto; }
+  .command-main-grid .system-mood-side-bridge,
+  .command-main-grid .component-side-bridge,
+  .command-main-grid .resource-side-bridge { display: none; }
+}

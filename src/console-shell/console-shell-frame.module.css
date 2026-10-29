@@ -9,16 +9,13 @@
 
 .stageSlot {
   min-width: 0;
+  container-type: inline-size;
+  container-name: console-stage;
+  padding-right: calc(var(--console-right-dock-width) + var(--console-right-dock-edge));
 }
 
 @media (min-width: 1440px) {
   .stageSlot {
     padding-left: var(--console-navigation-stage-inset);
-  }
-}
-
-@media (min-width: 1920px) {
-  .stageSlot {
-    padding-right: var(--console-navigation-stage-inset);
   }
 }

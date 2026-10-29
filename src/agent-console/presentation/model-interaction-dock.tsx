@@ -9,6 +9,8 @@ import {
   Square,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { useAgentModalPresentation } from "../state/use-agent-modal-presentation.ts";
+import { TerasModalFoundation } from "@/teras";
 import { useAgentConsoleSession } from "../state/agent-console-session-provider";
 import { useAgentDockPortal } from "../state/use-agent-dock-portal";
 import type { AgentContextCandidate } from "../../console-shell/context/agent-context-candidate";
@@ -80,6 +82,7 @@ export function ModelInteractionDock({
     placement,
     providerStatus,
   });
+  const { titleId: modalTitleId, presentationRef } = useAgentModalPresentation(modelDockExpanded);
   const modeOptions: AgentInteractionMode[] = ["focused", "workspace"];
   const workspaceModeAvailable = workspaceContextCandidate?.scope === "workspace" && workspaceContextCandidate.sourceMode !== "unavailable";
 
@@ -99,7 +102,7 @@ export function ModelInteractionDock({
         className={`model-dock rounded-3xl p-4 ${
           modelDockExpanded ? `model-dock-expanded ${floatingDockConstrainedByModal ? "" : "model-dock-modal"}` : ""
         } ${className}`.trim()}
-        role={modelDockExpanded && !floatingDockConstrainedByModal ? "dialog" : "region"}
+        role="region"
         style={dockStyle}
         hidden={portal.blocked}
         onKeyDownCapture={(event) => {
@@ -109,6 +112,7 @@ export function ModelInteractionDock({
           }
         }}
         data-agent-console-dock
+        ref={presentationRef}
       >
         <div
           className="model-dock-header mb-3 flex items-center justify-between gap-3"
@@ -123,7 +127,7 @@ export function ModelInteractionDock({
               <MessageSquareText className="h-4 w-4" />
             </span>
             <div className="model-dock-identity-copy min-w-0">
-              <p className="model-dock-title mono text-[11px] font-bold uppercase">
+              <p id={modalTitleId} className="model-dock-title mono text-[11px] font-bold uppercase">
                 {title}
               </p>
               <p className="model-dock-subtitle mt-1 truncate text-xs">
@@ -273,7 +277,7 @@ export function ModelInteractionDock({
                   <span className="terminal-speaker">
                     agent[{providerStatus?.model ?? "governed"}]
                   </span>
-                  <pre className="terminal-thinking">thinking...</pre>
+                  <pre className="terminal-thinking">Processing request...</pre>
                 </div>
               ) : null}
             </div>
@@ -292,7 +296,7 @@ export function ModelInteractionDock({
             </div>
             <div className="terminal-footer mt-2 flex items-center justify-between gap-3">
               <span className="terminal-footer-hint mono text-[10px] uppercase">
-                Enter runs / Shift+Enter adds a line
+                Enter sends / Shift+Enter adds a line
               </span>
               <button
                 aria-label={contextModeChanging ? "Changing agent mode" : agentBusy ? "Cancel agent request" : "Run agent command"}
@@ -314,5 +318,12 @@ export function ModelInteractionDock({
       </div>
     </>
   );
-  return portal.host ? createPortal(presentation, portal.host) : presentation;
+  if (portal.host) return createPortal(presentation, portal.host);
+  if (modelDockExpanded && !floatingDockConstrainedByModal) return (
+    <TerasModalFoundation ariaLabelledBy={modalTitleId} className="model-dock-native"
+      open onRequestClose={() => setModelDockExpanded(false)}>
+      {presentation}
+    </TerasModalFoundation>
+  );
+  return presentation;
 }

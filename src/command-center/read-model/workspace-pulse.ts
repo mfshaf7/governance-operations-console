@@ -28,6 +28,7 @@ export type WorkspacePulseSignalId =
 export type WorkspacePulseProjectionMode = "cached" | "live" | "synthetic";
 
 export type WorkspacePulseSourceState =
+  | "loading"
   | "current"
   | "stale"
   | "unavailable"
@@ -79,6 +80,7 @@ export type WorkspacePulseSignal = Readonly<{
 }>;
 
 export type WorkspacePostureId =
+  | "loading"
   | "attention"
   | "blocked"
   | "clear"
@@ -155,7 +157,7 @@ function projectionLabelFor(input: WorkspacePulseSnapshotInput) {
 
 function sourceSummaryFor(input: WorkspacePulseSnapshotInput) {
   const representedCount = input.sources.filter(
-    ({ state }) => state !== "unavailable",
+    ({ state }) => state !== "unavailable" && state !== "loading",
   ).length;
   const noun = input.projectionMode === "synthetic" ? "fixture sources" : "sources";
 
@@ -178,7 +180,7 @@ function operationalSignal(
   const records = recordsFor(input, signalId);
   const definition = signalDefinitions[signalId];
   const incomplete = input.sources.some((source) => source.state !== "current");
-  const coverage = incomplete ? " Other sources are unavailable or stale; this is not a workspace total." : "";
+  const coverage = incomplete ? " Source coverage is incomplete or still loading; this is not a workspace total." : "";
   const value = `${records.length}${incomplete ? "+" : ""}`;
 
   if (signalId === "required-decisions") {
@@ -248,7 +250,8 @@ function sourceCoverageSignal(
   const uncertain = input.sources.filter(
     ({ state }) => state === "stale" || state === "unverified",
   );
-  const representedCount = input.sources.length - unavailable.length;
+  const loading = input.sources.filter(({ state }) => state === "loading");
+  const representedCount = input.sources.length - unavailable.length - loading.length;
 
   if (unavailable.length > 0) {
     return {
@@ -263,6 +266,16 @@ function sourceCoverageSignal(
       stateLabel: "INCOMPLETE",
       tone: "danger",
       value: `${representedCount}/${input.sources.length}`,
+    };
+  }
+
+  if (loading.length > 0) {
+    return {
+      ...signalDefinitions["source-coverage"],
+      detail: `${loading.length} owner ${loading.length === 1 ? "read is" : "reads are"} still loading. Counts remain partial.`,
+      id: "source-coverage", projectionAuthority: input.projectionAuthority,
+      projectionLabel, projectionMode: input.projectionMode, records: [], sourceSummary,
+      stateLabel: "LOADING", tone: "info", value: `${representedCount}/${input.sources.length}`,
     };
   }
 
@@ -330,6 +343,12 @@ function postureFor(
     };
   }
 
+  if (sourceCoverage.stateLabel === "LOADING") {
+    return { detail: "Owner reads are still loading. No complete workspace state is asserted yet.",
+      id: "loading", label: "LOADING SOURCES", projectionAuthority: input.projectionAuthority,
+      projectionLabel, projectionMode: input.projectionMode, sourceSummary, tone: "info" };
+  }
+
   if (sourceCoverage.stateLabel === "STALE") {
     return {
       detail:
@@ -346,9 +365,9 @@ function postureFor(
 
   if (blockedCount > 0) {
     return {
-      detail: `${blockedCount} ${blockedCount === 1 ? "operation is" : "operations are"} blocked and cannot progress.`,
+      detail: `${blockedCount} retained ${blockedCount === 1 ? "operation needs" : "operations need"} owner attention. This is work status, not a Console-wide availability assessment.`,
       id: "blocked",
-      label: "HARD STOP",
+      label: "BLOCKED WORK",
       projectionAuthority: input.projectionAuthority,
       projectionLabel,
       projectionMode: input.projectionMode,

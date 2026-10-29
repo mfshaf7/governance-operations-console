@@ -17,10 +17,11 @@
       var(--console-right-dock-gap)
   );
   min-height: 0;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(8rem, 1fr);
   gap: 0.75rem;
   padding: 0.75rem;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid rgba(255, 193, 90, 0.34);
   border-radius: 24px;
   background:

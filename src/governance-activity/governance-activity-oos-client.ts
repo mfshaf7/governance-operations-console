@@ -31,6 +31,7 @@ export type OosGovernanceActivityProjection = Readonly<{
   sources: readonly GovernanceActivitySource[];
   status: "current" | "partial";
   truncated: boolean;
+  nextCursor: string | null;
 }>;
 
 export function governanceActivityOosConfigured(
@@ -42,18 +43,22 @@ export function governanceActivityOosConfigured(
 export async function listOosGovernanceActivity({
   env = process.env,
   fetchImpl = fetch,
+  cursor: initialCursor = null,
+  maxPages = pageLimit,
 }: {
   env?: NodeJS.ProcessEnv;
   fetchImpl?: typeof fetch;
+  cursor?: string | null;
+  maxPages?: number;
 } = {}): Promise<OosGovernanceActivityProjection> {
   const config = resolveConsoleOosConnection(env);
   const events = new Map<string, ConsoleActivityEvent>();
   const sources = new Map<string, GovernanceActivitySource>();
-  let cursor: string | null = null;
+  let cursor: string | null = initialCursor;
   let observedAt = new Date(0).toISOString();
   let status: "current" | "partial" = "current";
 
-  for (let page = 0; page < pageLimit; page += 1) {
+  for (let page = 0; page < Math.min(pageLimit, maxPages); page += 1) {
     const query = new URLSearchParams({ limit: String(pageSize) });
     if (cursor) query.set("cursor", cursor);
     const payload = await oosRequest(
@@ -102,6 +107,7 @@ export async function listOosGovernanceActivity({
         sources: sortSources([...sources.values()]),
         status,
         truncated: [...sources.values()].some((source) => source.truncated),
+        nextCursor: null,
       };
     }
   }
@@ -112,6 +118,7 @@ export async function listOosGovernanceActivity({
     sources: sortSources([...sources.values()]),
     status: "partial",
     truncated: true,
+    nextCursor: cursor,
   };
 }
 

@@ -208,3 +208,5 @@ export type {
 export { TerasZone, TerasZoneLayout } from "./teras-zone-layout";
 export { TerasCodeEditor } from "./teras-code-editor.tsx";
 export { TerasFilePicker } from "./teras-file-picker.tsx";
+
+export { TerasModalFoundation } from "./teras-modal-foundation.tsx";

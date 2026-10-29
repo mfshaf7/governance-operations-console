@@ -17,10 +17,12 @@ export async function composeGovernanceActivity({
   env = process.env,
   fetchImpl = fetch,
   now = new Date(),
+  continuation,
 }: {
   env?: NodeJS.ProcessEnv;
   fetchImpl?: typeof fetch;
   now?: Date;
+  continuation?: Readonly<{ owner: "oos" | "wgcf"; cursor: string }>;
 } = {}): Promise<GovernanceActivitySnapshot> {
   const oosConfigured = governanceActivityOosConfigured(env);
   const wgcfConfigured = governanceActivityWgcfConfigured(env);
@@ -39,11 +41,11 @@ export async function composeGovernanceActivity({
   }
 
   const [oos, wgcf] = await Promise.allSettled([
-    oosConfigured
-      ? listOosGovernanceActivity({ env, fetchImpl })
+    continuation?.owner === "wgcf" ? Promise.resolve(null) : oosConfigured
+      ? listOosGovernanceActivity({ env, fetchImpl, maxPages: 1, cursor: continuation?.cursor })
       : Promise.reject(configurationMissing("oos")),
-    wgcfConfigured
-      ? listWgcfGovernanceActivity({ env, fetchImpl, now })
+    continuation?.owner === "oos" ? Promise.resolve(null) : wgcfConfigured
+      ? listWgcfGovernanceActivity({ env, fetchImpl, now, maxPages: 1, cursor: continuation?.cursor })
       : Promise.reject(configurationMissing("wgcf")),
   ]);
   const events = new Map<string, ConsoleActivityEvent>();
@@ -52,6 +54,7 @@ export async function composeGovernanceActivity({
   let truncated = false;
   let partial = false;
   let availableOwners = 0;
+  const continuations: {owner: "oos" | "wgcf"; cursor: string}[] = [];
 
   for (const [owner, result] of [["oos", oos], ["wgcf", wgcf]] as const) {
     if (result.status === "rejected") {
@@ -59,6 +62,8 @@ export async function composeGovernanceActivity({
       sources.push(unavailableOwnerSource(owner, result.reason, observedAt));
       continue;
     }
+    if (!result.value) continue;
+    if (result.value.nextCursor) continuations.push({ owner, cursor: result.value.nextCursor });
     availableOwners += 1;
     if (result.value.status === "partial") partial = true;
     if (result.value.observedAt > latestObservedAt) latestObservedAt = result.value.observedAt;
@@ -77,6 +82,7 @@ export async function composeGovernanceActivity({
   }
 
   return {
+    continuations,
     error: partial ? "One or more owner projections are unavailable or partial." : null,
     events: [...events.values()].sort((left, right) =>
       right.occurredAt.localeCompare(left.occurredAt) || left.eventId.localeCompare(right.eventId),

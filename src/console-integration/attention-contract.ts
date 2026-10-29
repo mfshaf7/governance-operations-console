@@ -20,6 +20,7 @@ export type ConsoleAttentionSourceMode =
   | "synthetic";
 
 export type ConsoleAttentionFreshness =
+  | "loading"
   | "current"
   | "stale"
   | "unavailable"
@@ -72,6 +73,7 @@ export type ConsoleAttentionCandidate = Readonly<{
     kind: string;
     ref: string;
     title: string;
+    updatedAt?: string;
   }>;
   urgency: ConsoleAttentionUrgency;
 }>;

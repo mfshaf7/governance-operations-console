@@ -76,9 +76,8 @@ export function ConsoleCommandBar() {
               Command Center
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--muted)]">
-              Centralized workspace control for delivery state, operating
-              signals, system health, and governed operator decisions before
-              any assisted workflow is allowed to act.
+              Review delivery work, pending decisions and service observations.
+              Open the responsible workspace to inspect evidence or continue an operation.
             </p>
             <ConsoleCommandClock profile={accountController.account.profile} />
           </div>

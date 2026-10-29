@@ -29,7 +29,7 @@ activity.
 
 ## Read Behavior
 
-1. The server reads at most five pages of 100 records from each owner.
+1. The server reads one page of at most 100 records from each owner for the current window. Explicit history continuation reads one owner page using its original opaque cursor.
 2. Both owner payloads are validated against their exact version-one contracts.
 3. OOS event facts retain their owner identity, correlation, causation,
    evidence, receipt, and next actions.
@@ -42,6 +42,7 @@ activity.
    posture. A configured live source never falls back to fixture truth.
 7. Disconnected preview is available only when neither owner connection is
    configured.
+8. The operator can page backward and return to the latest window without accumulating an unbounded browser ledger. Routine successful reads are an explicit all-events choice; failed reads and required actions remain visible.
 8. JSON export contains the bounded projected events, filters, source posture,
    observation time, and truncation state. It contains no credentials, raw
    owner payloads, endpoints, or private diagnostics.

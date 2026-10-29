@@ -46,8 +46,8 @@ function contextProjection(
   if (decision.code === "cgg-required") {
     return {
       detail:
-        "OOS sends this visible candidate through governed CGG admission before model use.",
-      label: "CGG guarded",
+        "The workflow service (OOS) sends this context to the Context Governance Gateway (CGG) for admission before the model can use it.",
+      label: "CGG check on send",
       state: "available",
     };
   }
@@ -128,7 +128,7 @@ export function AgentContextPanel({
       <ConsoleShellPanel className={styles.panel}>
         <div className={styles.header}>
           <ConsoleShellSectionTitle
-            kicker="Embedded Agent"
+            kicker="Agent input context"
             title="Agent Context"
           />
           <span className={styles.state} data-state={projection.state}>
@@ -136,7 +136,7 @@ export function AgentContextPanel({
           </span>
         </div>
         <p className={styles.description}>
-          See the visible candidate and its model-projection decision.
+          Inspect what context is proposed for the agent and which checks must run before model use.
         </p>
 
         <div className={styles.source}>
@@ -200,7 +200,7 @@ export function AgentContextPanel({
       <TerasDialog
         contentOverflow="auto"
         height="content"
-        description="Structured candidate and the prototype-local decision that controls model projection."
+        description="Visible context candidate and local screening. OOS must obtain CGG admission before any model use."
         kicker="Agent Context"
         onClose={() => setDetailsOpen(false)}
         open={detailsOpen && Boolean(candidate)}
@@ -249,11 +249,11 @@ export function AgentContextPanel({
                 value: formatContextTimestamp(candidate.projectedAt),
               },
               {
-                label: "Request Context",
+                label: "Context budget",
                 value: `${decision.budgetUsedChars}/${decision.budgetLimitChars} characters`,
               },
               {
-                label: "Candidate Size",
+                label: "Proposed context size",
                 value: `${decision.candidateChars} characters`,
               },
               {
@@ -261,8 +261,8 @@ export function AgentContextPanel({
                 value: "Secret-like input is rejected before a request",
               },
               {
-                label: "CGG Receipt",
-                value: "Not available in prototype-local mode",
+                label: "CGG admission receipt",
+                value: "Recorded per admitted invocation; this candidate preview does not prove admission",
               },
               {
                 detail:
