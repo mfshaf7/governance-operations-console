@@ -55,7 +55,7 @@ test("cold registry works with no prior request, lifecycle receipt or registered
   const value = registry({ backends: {}, models: {}, default: null, overrides: {} });
   const calls = []; const actual = await client(value, calls).registry();
   assert.deepEqual(actual.configuration.configuration.models, {}); assert.equal(actual.configuration.revision, 1);
-  assert.equal(calls[0].url, config.baseUrl + "/v1/model-operations/registry");
+  assert.equal(calls[0].url, config.baseUrl + "/v1/model-operations/registry?include_health=true");
   assert.equal(calls[0].options.headers["x-oos-operator-id"], config.operatorId);
   assert.equal(JSON.stringify(actual).includes(config.callerSecret), false);
 });
