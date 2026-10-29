@@ -240,3 +240,11 @@ Unknown command completion still reconciles its original owner operation.
 This maintenance reuses the existing Compact Control, Teras table, metadata and
 actions. Its [Security delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-10-30-provider-lifecycle.md) and normal Platform
 acceptance remain required before runtime qualification.
+
+Native visual qualification keeps the existing metadata pattern readable:
+provider check time sits beneath provider status, model content is summarized as
+changed/unchanged/unknown with full accepted/observed digests in the existing
+metadata tooltip, and the original runtime values remain visible. The routing
+form uses its existing bounded Field Stack scrolling so multiple fallback fields
+retain their own space. No workflow, permission, verification or routing effect
+changes in this presentation correction.
