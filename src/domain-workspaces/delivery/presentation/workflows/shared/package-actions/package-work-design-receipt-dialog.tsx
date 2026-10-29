@@ -1,8 +1,10 @@
 "use client";
+import { useState } from "react";
 
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
 import { useWorkDesignLiveRuntime } from "../../../../live-runtime/use-work-design-live-runtime.ts";
-import { TerasContentTray, TerasDialog, TerasMetadataList } from "@/teras";
+import { TerasActionButton, TerasContentTray, TerasDialog, TerasMetadataList } from "@/teras";
+import { DeliveryWorkDesignSessionModal } from "../../work-design/session/work-design-session-modal.tsx";
 import { workDesignHandoffApplication } from "./package-work-design-receipt-model.ts";
 
 export function CanonicalWorkDesignReceiptDialog({
@@ -12,6 +14,7 @@ export function CanonicalWorkDesignReceiptDialog({
   handoffReceiptId?: string;
   onClose: () => void;
 }) {
+  const [showDesign, setShowDesign] = useState(false);
   const runtime = useWorkDesignLiveRuntime(deliveryPackage);
   let error = runtime.projectionError ?? (runtime.mode === "disconnected-preview"
     ? "The Work Design owner route reports disconnected preview; canonical handoff evidence is unavailable."
@@ -24,6 +27,7 @@ export function CanonicalWorkDesignReceiptDialog({
       error = caught instanceof Error ? caught.message : "Canonical handoff evidence is unavailable.";
     }
   }
+  if (showDesign) return <DeliveryWorkDesignSessionModal readOnly workflow={{deliveryPackage}} onClose={() => setShowDesign(false)}/>;
   return (
     <TerasDialog
       contentOverflow="auto" height="content" width="standard" open
@@ -46,10 +50,11 @@ export function CanonicalWorkDesignReceiptDialog({
             { label: "Updated Records", value: application.target.updated_refs.join(", ") || "None" },
             { label: "Reused Records", value: application.target.reused_refs.join(", ") || "None" },
           ]} />
-          <TerasContentTray kicker="Separate Local Artifacts" title="Brief and snapshot files are browser-local">
-            The durable application remains available without a local finalized brief.
-            This receipt does not prove snapshot upload or restore browser-local files.
-            Canonical ART descriptions and hierarchy are read through their owner workflows.
+          <TerasContentTray kicker="Saved Design" title="Inspect retained diagrams, sessions and brief versions">
+            Saved design content has separate OOS storage and save acknowledgements.
+            This application receipt does not prove snapshot upload or recovery of older browser files.
+            Missing historical originals remain explicitly unavailable.
+            <TerasActionButton emphasis="secondary" onClick={() => setShowDesign(true)}>Open saved Work Design</TerasActionButton>
           </TerasContentTray>
         </>
       ) : (

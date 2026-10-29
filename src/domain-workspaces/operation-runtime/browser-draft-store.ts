@@ -1,3 +1,5 @@
+import { activeSavedWorkSession } from "../../console-integration/saved-work/browser-session.ts";
+
 export type OperationDraftNormalizer<TDraft> = (
   value: unknown,
 ) => TDraft | null;
@@ -14,6 +16,10 @@ export type OperationBrowserDraftStore = {
 export function createBrowserOperationDraftStore(): OperationBrowserDraftStore {
   return {
     readJson(key, normalize) {
+      const saved = activeSavedWorkSession(key);
+      if (saved?.getSnapshot().hydrated) {
+        try { const raw = saved.read(); return raw ? normalize(JSON.parse(raw)) : null; } catch { return null; }
+      }
       const storage = browserLocalStorage();
       if (!storage) {
         return null;
@@ -35,6 +41,8 @@ export function createBrowserOperationDraftStore(): OperationBrowserDraftStore {
       storage.removeItem(key);
     },
     writeJson(key, draft) {
+      const saved = activeSavedWorkSession(key);
+      if (saved?.getSnapshot().hydrated) { saved.write(draft); return; }
       const storage = browserLocalStorage();
       if (!storage) {
         return;

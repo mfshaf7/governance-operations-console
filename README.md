@@ -17,6 +17,12 @@ and [Product Publication](docs/product/product-publication-live-integration.md).
 This repository owns the durable product source for the Governance Operations
 Console.
 
+Operator-approved saved-work maintenance:
+[Durable saved work and browser recovery](docs/product/durable-saved-work.md).
+Work Design, Refinement and Orchestration authoring keep their existing editors
+while extending saved input to OOS. Exact composed acceptance and operating
+qualification are required before claiming live recovery.
+
 ## Current Status
 
 The approved Prototype Studio baseline has graduated into this repository,

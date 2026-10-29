@@ -78,17 +78,20 @@ application is selected from owner history rather than silently replaced by a
 different latest application. Missing or mismatched owner evidence stays
 unavailable with no fixture fallback. This read does not replay apply.
 
-The browser-local finalized brief and snapshot files are separate artifacts.
-Their absence must not hide a real canonical application, and a canonical
-receipt must not be presented as restoration or upload of those local files.
-Disconnected preview retains its local finalized-brief evidence view.
+Finalized brief and snapshot content has separate saved-work custody under the
+[approved persistence design](durable-saved-work.md). The canonical receipt links
+to the original Work Design screen in read-only mode for saved versions. Missing
+historical browser originals must not hide a real canonical application, and an
+apply receipt is not proof that they were uploaded. Disconnected preview retains
+its explicitly local finalized-brief evidence view.
 
 Current Move, progress, History and Apply Run Log use the same explicit runtime
 mode. In live mode, only a validated OOS result or recovered canonical projection
 supplies the durable receipt identity and application time. Configuration alone,
 an unavailable projection, or a local receipt flag is not completion evidence.
 History keeps the durable receipt visible even after a completed projection is
-recovered. Its session draft reference and context artifacts remain local.
+recovered. Saved draft/context content uses its own OOS acknowledgement and
+retains import provenance separately from canonical application evidence.
 
 The log is a read-only summary of returned evidence, not a streamed backend log.
 The OOS application receipt proves canonical application and complete readback;

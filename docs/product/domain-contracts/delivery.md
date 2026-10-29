@@ -511,10 +511,13 @@ Source ownership facts:
   composition roots. They unpack focused hook outputs and route props into
   owned step/dialog components; they should not own independent panel
   rendering, projection families, or command authority.
-- `local-runtime/persistence/` owns prototype-local persistence. Do not
-  rework the persistence shape during visual or structure normalization. A
-  durable persistence redesign requires a separate recorded design decision
-  because future backend/OOS wiring may replace this localStorage adapter.
+- `local-runtime/persistence/` owns the existing persisted-session formats and
+  disconnected-preview browser adapter. Live Work Design and Refinement use the
+  operator-approved [durable saved-work design](../durable-saved-work.md): OOS
+  owns private server content, while the existing local adapter reads the hydrated
+  working copy. Preserve raw legacy browser records before normalization and
+  require an exact server acknowledgement for durable save status. Visual or
+  structure normalization must not independently change this storage contract.
 - Work Design work-model keeps persisted snapshot/session and
   artifact-oriented Context Board DTO aliases only. Transient Context Board
   interaction aliases used by Work Design session code come from the Context

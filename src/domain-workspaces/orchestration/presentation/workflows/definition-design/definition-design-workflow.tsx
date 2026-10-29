@@ -1,4 +1,6 @@
 "use client";
+import { SavedWorkBoundary, SavedWorkStatus } from "@/console-integration/saved-work/saved-work-boundary";
+import { normalizeOrchestrationDefinitionDraft } from "../../../local-runtime/definition-design/definition-draft-store.ts";
 
 import {
   TerasDraftCloseGuardDialog,
@@ -12,6 +14,7 @@ import {
   definitionDesignClassificationLabel,
   definitionDesignClassificationTone,
   definitionDesignSubject,
+  definitionDesignDraftId,
 } from "./definition-design-view-model.ts";
 import { DefinitionDefineStep } from "./steps/define-step.tsx";
 import { DefinitionQualifyStep } from "./steps/qualify-step.tsx";
@@ -19,7 +22,14 @@ import { DefinitionReviewRequestStep } from "./steps/review-request-step.tsx";
 import { DefinitionDesignSupport } from "./support/definition-design-support.tsx";
 import { useDefinitionDesignController } from "./use-definition-design-controller.ts";
 
-export function DefinitionDesignWorkflow({
+type DefinitionWorkflowProps = { onClose: () => void; record: OrchestrationDefinitionRecord | null };
+export function DefinitionDesignWorkflow(props: DefinitionWorkflowProps) {
+  return <SavedWorkBoundary storageKey={`orchestration-definition-design:${definitionDesignDraftId(props.record)}:v1`} onClose={props.onClose} normalize={normalizeOrchestrationDefinitionDraft}>
+    <DefinitionDesignWorkflowBody {...props}/>
+  </SavedWorkBoundary>;
+}
+
+function DefinitionDesignWorkflowBody({
   onClose,
   record,
 }: {
@@ -89,7 +99,7 @@ export function DefinitionDesignWorkflow({
       <TerasWizardModal
         activeStepId={draft.activeStage}
         description="Qualify the execution boundary, define durable behavior when justified, and record one implementation route without activating runtime source."
-        footer={footer}
+        footer={<><SavedWorkStatus/>{footer}</>}
         kicker="Orchestration Workflow"
         onClose={controller.requestClose}
         onStepSelect={(stage) =>
