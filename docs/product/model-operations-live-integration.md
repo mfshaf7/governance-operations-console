@@ -248,3 +248,16 @@ metadata tooltip, and the original runtime values remain visible. The routing
 form uses its existing bounded Field Stack scrolling so multiple fallback fields
 retain their own space. No workflow, permission, verification or routing effect
 changes in this presentation correction.
+
+## Post-start connection and model evidence
+
+Existing Models & routing distinguishes native connection metadata from actual
+model success. The selected registration shows the last successful verification
+or routed request with its original timestamp, receipt reference and recent/stale
+label (15 minutes). A newer failure or changed registration keeps verification
+required. No timestamped evidence means Verification needed, including legacy
+registrations whose original receipts had no timestamp. Core startup and Console
+reads do not dispatch inference or change model registration.
+
+Landing Unit Decision: feature_single_landing_unit, operator-approved maintenance
+`maintenance-provider-health-governance-operations-console-20261030`.
