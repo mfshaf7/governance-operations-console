@@ -73,3 +73,6 @@ what a reachability probe does and does not establish. Do not infer a project
 name or causal explanation from a digest. Technical evidence is inspectable,
 not replaced by vague reassurance. Routine successful reads can be filtered;
 failed reads or events with required next actions remain operator-visible.
+
+VMEM cards and chart legends use the compact `VMEM` label and numeric
+committed/limit values. The selected detail view retains the accounting explanation.
