@@ -308,9 +308,12 @@ operational context, secrets, credentials, private logs, or authority to
 approve, request, or apply work. Live activation requires the existing AI
 governance and security-review path.
 
-Definition drafts persist only in prototype-local continuity state. Dirty
-state is derived from draft-versus-baseline comparison, and the shared close
-guard appears only for uncommitted editor changes.
+Definition drafts retain their existing typed continuity format. The approved
+[saved-work design](../durable-saved-work.md) extends live saves to operator-bound
+OOS storage; disconnected preview remains browser-only. Saving inert input never
+records qualification or activates a definition. Dirty state is derived from
+draft-versus-baseline comparison, and the shared close guard appears only for
+uncommitted editor changes.
 
 ## Run Dashboard
 
@@ -514,8 +517,9 @@ Ownership rules:
   scenario truth.
 - `work-model/` owns definition-design drafts and bounded run-control request
   DTOs.
-- `local-runtime/` owns only prototype-local draft continuity, simulated
-  receipts, and scenario overlays.
+- `local-runtime/` owns draft continuity formats, disconnected-preview storage,
+  simulated receipts and scenario overlays. Live saved drafts use the shared
+  acknowledged OOS save bridge; local receipts never gain canonical authority.
 - `live-runtime/` validates and projects browser-safe OOS definition, run,
   control, event, and receipt truth. It must fail closed without substituting
   local scenarios when configured owner truth is unavailable.

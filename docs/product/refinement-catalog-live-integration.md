@@ -77,6 +77,11 @@ is introduced.
 
 ## Catalog
 
+Refinement's editable metadata session also follows the shared
+[durable saved-work procedure](durable-saved-work.md). Draft saving preserves
+input across profiles; native packet/source guards and reviewed Apply still own
+canonical changes. Saved input and canonical mutation receipts are distinct.
+
 1. The Console reads Catalog items and values from the OOS projection and
    derives presentation tones locally.
 2. Add, edit, and retire commands bind the exact source revision, reviewed

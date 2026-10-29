@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { SavedWorkBoundary, SavedWorkStatus } from "@/console-integration/saved-work/saved-work-boundary";
 
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
 import type { WorkDesignApplyReceipt } from "../../../../work-model/work-design/work-design-types.ts";
@@ -10,6 +11,7 @@ import { WorkDesignSessionDialogs } from "./work-design-session-dialogs.tsx";
 import { WorkDesignSessionFooter } from "./work-design-session-footer.tsx";
 import { TerasModalShell, TerasDialog, TerasEmptyState, TerasActionButton } from "@/teras";
 import { loadWorkDesignSessionDraft } from "../../../../local-runtime/index.ts";
+import { normalizeWorkDesignPersistedSession } from "../../../../local-runtime/persistence/work-design-session-persistence.ts";
 import { useDeliveryChangeLiveRuntime } from "../../../../live-runtime/use-delivery-change-live-runtime.ts";
 import { deliveryHistoryDesignTree } from "../../../../live-runtime/delivery-history-tree.ts";
 import type { WorkDesignNode } from "../model/work-design-model.ts";
@@ -27,6 +29,13 @@ type WorkDesignModalProps = {
 };
 
 export function DeliveryWorkDesignSessionModal(props: WorkDesignModalProps) {
+  return <SavedWorkBoundary storageKey={`delivery-work-design-session:${props.workflow.deliveryPackage.delivery_package_id}:v2`} onClose={props.onClose} readOnly={props.readOnly}
+    normalize={value => normalizeWorkDesignPersistedSession(value, props.workflow.deliveryPackage.delivery_package_id)}>
+    <DeliveryWorkDesignSessionBody {...props}/>
+  </SavedWorkBoundary>;
+}
+
+function DeliveryWorkDesignSessionBody(props: WorkDesignModalProps) {
   const source = useDeliveryChangeLiveRuntime(props.readOnly ? props.workflow.deliveryPackage.legacy_epic_id ?? null : null);
   const [savedTree, setSavedTree] = useState<WorkDesignNode | undefined>();
   useEffect(() => {setSavedTree(props.readOnly ? loadWorkDesignSessionDraft(props.workflow.deliveryPackage.delivery_package_id)?.treeDraft?.tree : undefined);},[props.readOnly,props.workflow.deliveryPackage.delivery_package_id]);
@@ -62,7 +71,7 @@ function WorkDesignSession({
       height={controller.footerProps.activeStep === "hub" ? "content" : "fill"}
       width={controller.shellWidth}
       description={controller.sessionShellCopy.description}
-      footer={<WorkDesignSessionFooter {...controller.footerProps} />}
+      footer={<><SavedWorkStatus/><WorkDesignSessionFooter {...controller.footerProps} /></>}
       kicker={readOnly ? "Work Design Session · Read-only" : "Work Design Session"}
       bodyLayout="fill"
       modalAttributes={{

@@ -1,4 +1,6 @@
 "use client";
+import { SavedWorkBoundary, SavedWorkStatus } from "@/console-integration/saved-work/saved-work-boundary";
+import { normalizeRefinementPersistedSession } from "../../../../local-runtime/persistence/refinement-session-persistence.ts";
 
 import {
   TerasActionButton,
@@ -14,7 +16,15 @@ import { RefinementCloseGuardDialog } from "./dialogs/refinement-close-guard-dia
 import { useRefinementSessionController } from "../session-controller/use-refinement-session-controller.ts";
 import type { DeliveryRefinementWorkflow } from "../model/refinement-model.ts";
 
-export function DeliveryRefinementWorkflowModal({
+type SavedRefinementProps = Parameters<typeof RefinementWorkflowBody>[0];
+export function DeliveryRefinementWorkflowModal(props: SavedRefinementProps) {
+  return <SavedWorkBoundary storageKey={`delivery-refinement-session:${props.workflow.deliveryPackage.delivery_package_id}:v1`} onClose={props.onClose} readOnly={props.readOnly}
+    normalize={value => normalizeRefinementPersistedSession(value, props.workflow.deliveryPackage.delivery_package_id)}>
+    <RefinementWorkflowBody {...props}/>
+  </SavedWorkBoundary>;
+}
+
+function RefinementWorkflowBody({
   readOnly = false,
   onClose,
   sourceWorkDesignPackage,
@@ -72,6 +82,7 @@ export function DeliveryRefinementWorkflowModal({
         width={controller.shellWidth}
         description={controller.shellCopy.description}
         footer={
+          <><SavedWorkStatus/>
           <RefinementSessionFooter
             readOnly={readOnly}
             activeStep={sessionState.activeStep}
@@ -82,6 +93,7 @@ export function DeliveryRefinementWorkflowModal({
             onReturnToRegister={controller.returnToRegister}
             onSelectStep={sessionState.setActiveStep}
           />
+          </>
         }
         kicker={readOnly ? `${controller.shellCopy.kicker} · Read-only` : controller.shellCopy.kicker}
         bodyLayout="fill"
