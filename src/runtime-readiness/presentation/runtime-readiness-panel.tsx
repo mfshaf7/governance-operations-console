@@ -261,7 +261,7 @@ export function WslResourceUsage({
   const chartLegend = [
     { className: "wsl-legend-cpu", label: "CPU" },
     { className: "wsl-legend-memory", label: "RAM" },
-    { className: "wsl-legend-vmem", label: "VMEM (commit)" },
+    { className: "wsl-legend-vmem", label: "VMEM" },
     { className: "wsl-legend-disk", label: "DISK" },
     { className: "wsl-legend-network", label: "NET" },
   ];
@@ -288,9 +288,9 @@ export function WslResourceUsage({
             tone: "info" as Tone,
             value: latestSample ? formatCommitPercent(latestSample.virtualMemoryPercent) : "--",
             detail: latest
-              ? `${formatBytes(latest.virtualMemory.committedBytes)} committed / ${formatBytes(
+              ? `${formatBytes(latest.virtualMemory.committedBytes)} / ${formatBytes(
                   latest.virtualMemory.commitLimitBytes,
-                )} commit reference; not RAM pressure`
+                )}`
               : "sampling",
           },
           {
@@ -548,7 +548,7 @@ export function WslResourceUsage({
                     <span className="resource-side-bridge" aria-hidden="true" />
                   ) : null}
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium">{metric.label === "VMEM" ? "VMEM (commit accounting)" : metric.label}</p>
+                    <p className="text-sm font-medium">{metric.label}</p>
                     <strong className="wsl-resource-value mono">{metric.value}</strong>
                   </div>
                   <p className="mt-1 text-xs text-[var(--subtle)]">{metric.detail}</p>
