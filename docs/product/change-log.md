@@ -10,6 +10,14 @@ recorded steps. Missing historical route or handoff detail is shown as absent,
 without inventing evidence or requesting a new route. Source records and owner
 commands remain unchanged. Local preview review precedes batch publication.
 
+The same batch consumes the existing canonical Delivery reference exposed by
+the broker and one bounded Delivery overview. Earlier consumed proposals no
+longer appear in Review. Completed Delivery with pending source closeout and
+retired Delivery are distinct; unavailable owner outcomes remain explicit.
+Retirement does not imply implementation. The broker read extension must land
+before this dependent Console composition. No historical source mutation is
+performed by this UI maintenance.
+
 ## 2026-10-30 — Experimental provider connections
 
 Epic1363 story1369, Landing Unit Decision `child_isolated_landing_unit`,

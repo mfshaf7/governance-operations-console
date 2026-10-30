@@ -1,5 +1,18 @@
 import type { ProposalWorkspaceScenario } from "../../domain/proposal-types.ts";
 
+const linkedHistorySample: ProposalWorkspaceScenario = {
+  backendRecordId: "proposal://preview/delivery-history",
+  bodyPreview: "Synthetic example of an older proposal whose existing Delivery link must not be routed again.",
+  evidence: [], handoffRule: "Inspect the existing Delivery outcome.",
+  id: "PR-PREVIEW-DELIVERED", ingress: "system", lastEvent: "Historical Delivery link retained",
+  lastProjectionUpdate: "2026-06-21T08:00:00Z", owner: "Workspace Proposals", projectionState: "current",
+  recordedAt: "2026-06-20T08:00:00Z", recordVersion: "preview-delivery-v1", sourceStatus: "accepted",
+  repoGate: {detail:"Historical custody details were not retained.", mode:"not-required",owner:null,ref:null,state:"not-required"},
+  routeTarget: "Delivery", scenarioKind: "handoff-review-current", status: "done", tone: "ok",
+  title: "Completed Delivery — source closeout pending",
+  deliveryLink: {recordRef:"openproject://work_packages/9001",status:"done",sourceState:"current",observedAt:"2026-06-21T08:00:00Z"},
+};
+
 export const proposalWorkspaceScenarios: ProposalWorkspaceScenario[] = [
   {
     bodyPreview:
@@ -375,4 +388,8 @@ export const proposalWorkspaceScenarios: ProposalWorkspaceScenario[] = [
     title: "Completed proposal — historical route unavailable",
     tone: "ok",
   },
+  linkedHistorySample,
+  {...linkedHistorySample, backendRecordId:"proposal://preview/retired-delivery",id:"PR-PREVIEW-RETIRED",
+    title:"Retired Delivery — no route needed",status:"retired",tone:"muted",
+    deliveryLink:{recordRef:"openproject://work_packages/9002",status:"retired",sourceState:"current",observedAt:"2026-06-21T08:00:00Z"}},
 ];

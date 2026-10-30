@@ -1,4 +1,5 @@
 import type { TerasTone } from "@/teras";
+import { proposalWorkflowClosed } from "../../../../domain/proposal-types.ts";
 import { repositoryOwnerRepoCatalogOptions } from "@/domain-workspaces/operation-integrations/repository-owner-repo-catalog-projection";
 
 import {
@@ -170,7 +171,7 @@ export function proposalDispositionStepProjection({
     proposal.status === "parked" && !dispositionRecorded;
   const canApply = !dispositionCompleted && routeComplete && notesComplete;
   const decisionCopy = proposalDecisionOutcomeCopy(decisionDraft.outcome);
-  const dispositionTone: TerasTone = proposal.status === "done"
+  const dispositionTone: TerasTone = proposalWorkflowClosed(proposal)
     ? proposal.tone
     : dispositionCompleted
     ? accepting
@@ -201,8 +202,8 @@ export function proposalDispositionStepProjection({
         : "Complete Required Fields";
   const advisorDraft = decisionDraft.advisorDraft ?? "";
   const advisorPrompt = decisionDraft.advisorPrompt ?? "";
-  const decisionDescription = proposal.status === "done"
-    ? "Read the recorded decision. This completed proposal cannot be changed."
+  const decisionDescription = proposalWorkflowClosed(proposal)
+    ? "Read the recorded decision. This Proposal workflow is closed."
     : sourceParkedRevisit
       ? "Choose whether to accept, reject, or keep this proposal parked. Decision notes are required."
       : "Choose the proposal outcome and record the required decision notes.";
@@ -221,7 +222,7 @@ export function proposalDispositionStepProjection({
   const progressTitle = dispositionRecorded
     ? "Disposition Recorded"
     : dispositionReadModelReadOnly
-      ? proposal.status === "done"
+      ? proposalWorkflowClosed(proposal)
         ? "Completed Disposition"
         : "Disposition Ready"
       : sourceParkedRevisit

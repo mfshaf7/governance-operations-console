@@ -27,9 +27,17 @@ export type ProposalCanonicalDrafts = {
 export function projectProposalLiveRecords(
   records: ProposalLiveRecord[],
 ): ProposalWorkspaceScenario[] {
-  return records.map(({ createdAt, projection }) =>
-    projectProposalLiveRecord(projection, createdAt),
-  );
+  return records.map(({ createdAt, deliveryLink, projection }) => {
+    const proposal = projectProposalLiveRecord(projection, createdAt);
+    if (!projection.delivery_ref) return proposal;
+    const current = projection.projection_state === "current";
+    const retired = deliveryLink?.sourceState === "current" && deliveryLink.status === "retired" && projection.status !== "implemented";
+    return {...proposal, deliveryLink: deliveryLink ?? {recordRef: projection.delivery_ref, status: null,
+      observedAt: projection.updated_at, sourceState: "unavailable" as const},
+      routeTarget: projection.route ? proposal.routeTarget : "Delivery" as const,
+      status: current ? retired ? "retired" as const : "done" as const : proposal.status,
+      tone: current ? retired ? "muted" as const : "ok" as const : proposal.tone};
+  });
 }
 
 export function projectProposalLiveRecord(
@@ -41,6 +49,7 @@ export function projectProposalLiveRecord(
   const status = proposalSurfaceStatus(projection);
 
   return {
+    sourceStatus: projection.status,
     backendRecordId: projection.record_ref,
     bodyPreview: projection.body ?? "No supporting context was recorded.",
     evidence: [

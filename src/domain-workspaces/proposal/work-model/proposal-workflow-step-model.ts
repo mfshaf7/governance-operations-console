@@ -1,4 +1,5 @@
 import type { OperationTone } from "../../operation-contracts/operation-state.ts";
+import { proposalWorkflowClosed } from "../domain/proposal-types.ts";
 
 import {
   proposalRouteSelectionComplete,
@@ -113,7 +114,7 @@ function proposalWorkflowStepBases({
     routeSelectionDraft,
     handoffDraft,
   ]);
-  if (proposal.status === "done" && !sourceReviewRequired) {
+  if (proposalWorkflowClosed(proposal) && !sourceReviewRequired) {
     const recorded = {
       triage: Boolean(triageDraft?.appliedAt),
       disposition: Boolean(decisionDraft?.appliedAt || routeSelectionDraft?.appliedAt),

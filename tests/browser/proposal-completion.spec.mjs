@@ -5,7 +5,7 @@ const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:4317";
 test.use({ viewport: { width: 1700, height: 1000 } });
 test.setTimeout(90000);
 
-async function openProposal(page, record) {
+async function openProposal(page, record, titleOverride) {
   const writes = [];
   await page.route("**/api/**", route => {
     if (["GET", "HEAD", "OPTIONS"].includes(route.request().method())) return route.continue();
@@ -22,7 +22,7 @@ async function openProposal(page, record) {
     return Boolean(key && n[key].onClick);
   }, null, {timeout: 60000});
   await page.locator('button[title="Open PROPOSAL"]').click();
-  const title = record?.projection.title ?? "Completed proposal — historical route unavailable";
+  const title = titleOverride ?? record?.projection.title ?? "Completed proposal — historical route unavailable";
   const row = page.getByRole("row").filter({hasText: title});
   await expect(row).toBeVisible({timeout:60000});
   await row.click();
@@ -84,4 +84,21 @@ test("ordinary disconnected preview includes a completed historical example", as
   await page.locator('[data-proposal-hub-primary-action="true"]').click();
   await expect(page.getByRole("dialog",{name:"Proposal History",exact:true})).toBeVisible();
   expect(writes).toEqual([]);
+});
+
+for (const status of ["done","retired"]) test(`older accepted Proposal shows linked Delivery ${status} without a new route`,async({page})=>{
+  const record={...proposalCompletionRecord({status:"accepted",delivery_ref:"openproject://work_packages/901"}),
+    deliveryLink:{recordRef:"openproject://work_packages/901",status,sourceState:"current",observedAt:"2026-06-21T08:00:00Z"}};
+  const writes=await openProposal(page,record);
+  await expect(page.getByRole("heading",{name:status==="done"?"Delivery Complete":"Delivery Retired",exact:true})).toBeVisible();
+  await expect(page.getByText("Route Needed",{exact:true})).toHaveCount(0);
+  await expect(page.getByText(status==="done"?"The linked Delivery work is done. The Proposal still says accepted; source closeout is pending. No new route is required.":"This proposal already moved to Delivery. The linked initiative was retired; retirement is not implementation evidence. No new route is required.",{exact:true})).toBeVisible();
+  await expect(page.locator('[data-proposal-hub-primary-action="true"]')).toHaveText("Open History");
+  expect(writes).toEqual([]);
+});
+
+test("retired example is available in the ordinary disconnected preview",async({page})=>{
+  await openProposal(page,undefined,"Retired Delivery — no route needed");
+  await expect(page.getByRole("heading",{name:"Delivery Retired",exact:true})).toBeVisible();
+  await expect(page.getByText("Route Needed",{exact:true})).toHaveCount(0);
 });

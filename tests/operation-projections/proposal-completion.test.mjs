@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { proposalCompletionRecord, proposalCompletionRoute } from "../support/proposal-completion-fixture.mjs";
+import { proposalWorkspaceSummaryMetrics } from "../../src/domain-workspaces/proposal/presentation/shared/proposal-display-model.ts";
 import { projectProposalCanonicalDrafts, projectProposalLiveRecords } from "../../src/domain-workspaces/proposal/live-runtime/proposal-live-projection.ts";
 import { proposalWorkflowSessionState } from "../../src/domain-workspaces/proposal/presentation/workflows/session/proposal-workflow-session-state.ts";
 
@@ -78,4 +79,32 @@ test("active accepted and parked proposals retain their route and revisit paths"
   const parked = stateFor(proposalCompletionRecord({status: "parked", decision_notes: null}));
   assert.equal(parked.hubProjection.currentMove.target, "disposition");
   assert.equal(parked.dispositionReadOnly, false);
+});
+
+test("existing Delivery links close routing while retaining done, retired and unavailable owner outcomes", () => {
+  const records = ["done", "retired", "in-progress", null].map(status => ({
+    ...proposalCompletionRecord({status:"accepted",delivery_ref:"openproject://work_packages/901"}),
+    deliveryLink:{recordRef:"openproject://work_packages/901",status,sourceState:status?"current":"unavailable",observedAt:"2026-06-21T08:00:00Z"},
+  }));
+  for(const record of records){
+    const state=stateFor(record,"disposition");
+    assert.equal(state.hubProjection.currentMove.target,"history");
+    assert.equal(state.dispositionCanApply||state.handoffCanApply,false);
+    assert.equal(record.projection.status,"accepted");
+    assert.equal(record.projection.route,null);
+    assert.equal(record.history.events.length,0);
+  }
+  const done=stateFor(records[0]);
+  assert.equal(done.hubProjection.status.title,"Delivery Complete");
+  assert.match(done.hubProjection.status.description,/source closeout is pending/);
+  const retired=stateFor(records[1]);
+  assert.equal(retired.hubProjection.status.title,"Delivery Retired");
+  assert.match(retired.hubProjection.status.description,/not implementation evidence/);
+  assert.equal(stateFor(records[3]).hubProjection.status.title,"Delivery Outcome Unavailable");
+  const metrics=proposalWorkspaceSummaryMetrics(projectProposalLiveRecords(records));
+  assert.equal(metrics.find(m=>m.id==="review").value,"0");
+  assert.equal(metrics.find(m=>m.id==="retired").value,"1");
+  const retainedRoute=projectProposalLiveRecords([{...records[0],projection:{...records[0].projection,route:proposalCompletionRoute("prototype")}}])[0];
+  assert.equal(retainedRoute.routeTarget,"Prototype");
+  assert.equal(retainedRoute.deliveryLink.recordRef,"openproject://work_packages/901");
 });

@@ -28,6 +28,7 @@ import type { ProposalWorkspaceScenario } from "../../../../read-model/proposal-
 import { ProposalWorkflowProgressPanel } from "../../session/proposal-workflow-progress-panel.tsx";
 import { proposalSubjectMetadata } from "../../../shared/proposal-display-model.ts";
 import { ProposalDispositionDecisionPanel } from "./proposal-disposition-decision-panel.tsx";
+import { proposalWorkflowClosed } from "../../../../domain/proposal-types.ts";
 import { ProposalDispositionRoutePanel } from "./proposal-disposition-route-panel.tsx";
 import {
   proposalAcceptedRouteTarget,
@@ -285,7 +286,7 @@ export function ProposalDispositionStep({
           />
           <ProposalDispositionRoutePanel
             accepting={accepting}
-            historicalRouteMissing={proposal.status === "done" && !routeSelectionDraft.appliedAt}
+            historicalRouteMissing={proposalWorkflowClosed(proposal) && !routeSelectionDraft.appliedAt}
             decisionDraft={decisionDraft}
             dispositionCompleted={dispositionCompleted}
             onRegisteredRepoSelect={selectRegisteredRepo}
@@ -301,7 +302,7 @@ export function ProposalDispositionStep({
 
         <TerasZone fit="fill">
           <TerasPanelStack fill={decisionPanelCollapsed ? "last" : "first"}>
-            {proposal.status === "done" && !decisionDraft.appliedAt ? (
+            {proposalWorkflowClosed(proposal) && !decisionDraft.appliedAt ? (
               <TerasEmptyState>
                 No decision notes were recorded for this completed proposal.
               </TerasEmptyState>

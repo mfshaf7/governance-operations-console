@@ -42,6 +42,16 @@ export function assertProposalLiveSnapshot(value: unknown): ProposalLiveSnapshot
     }
     assertProposalOosProjection(record.projection);
     assertProposalOosHistory(record.history);
+    if (record.deliveryLink !== undefined) {
+      const link = record.deliveryLink;
+      if (!isRecord(link) || !isRecord(record.projection) || link.recordRef !== record.projection.delivery_ref ||
+          !["current", "unavailable"].includes(String(link.sourceState)) || typeof link.observedAt !== "string" ||
+          !Number.isFinite(Date.parse(link.observedAt)) ||
+          (link.sourceState === "unavailable" ? link.status !== null :
+            !["new", "ready", "in-progress", "blocked", "done", "parked", "retired"].includes(String(link.status)))) {
+        throw new Error("Proposal Delivery link is missing, foreign or unavailable without an explicit state.");
+      }
+    }
   }
 
   return value as unknown as ProposalLiveSnapshot;
@@ -220,6 +230,10 @@ export function assertProposalOosProjection(
         typeof value.repository_resolution_history_pending !== "boolean") {
       throw new Error("Repository resolution does not match canonical Proposal custody.");
     }
+  }
+  if (value.delivery_ref !== undefined && value.delivery_ref !== null &&
+      (typeof value.delivery_ref !== "string" || !/^openproject:\/\/work_packages\/[1-9][0-9]*$/.test(value.delivery_ref))) {
+    throw new Error("Proposal Delivery reference is invalid.");
   }
   return value as unknown as ProposalOosProjection;
 }

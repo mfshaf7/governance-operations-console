@@ -1,4 +1,5 @@
 import type { ProposalWorkspaceScenario } from "../domain/proposal-types.ts";
+import { proposalWorkflowClosed } from "../domain/proposal-types.ts";
 
 export type ProposalWorkflowSourceSnapshot = Pick<
   ProposalWorkspaceScenario,
@@ -33,7 +34,7 @@ export function proposalWorkflowSourceReviewRequired(
   }
 
   // Unfinished local drafts cannot reopen a current completed source.
-  if (proposal.status === "done") {
+  if (proposalWorkflowClosed(proposal)) {
     return false;
   }
 

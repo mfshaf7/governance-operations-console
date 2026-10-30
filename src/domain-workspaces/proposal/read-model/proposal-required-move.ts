@@ -33,6 +33,15 @@ export function proposalRequiredMove(
         title: "Review Proposal History",
         tone: "ok",
       };
+    case "retired":
+      return {
+        buttonLabel: "Open History",
+        description: "The linked Delivery initiative was retired. Review its recorded history; no new Proposal route is required.",
+        statusTitle: "Delivery Retired",
+        target: "history",
+        title: "Review Retired Delivery",
+        tone: "muted",
+      };
     case "parked":
       return {
         buttonLabel: "Revisit Decision",

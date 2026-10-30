@@ -1,4 +1,5 @@
 import type { TerasTone } from "@/teras";
+import { proposalWorkflowClosed } from "../../../../domain/proposal-types.ts";
 
 import type { ProposalWorkflowLocalReceipt } from "../../../../local-runtime/proposal-runtime.ts";
 import {
@@ -45,7 +46,7 @@ export function proposalHistoryStepProjection({
     historyTone,
     progressStatusLabel: handoffReceipt
       ? "recorded"
-      : proposal.status === "done"
+      : proposalWorkflowClosed(proposal)
         ? "complete"
         : receiptsRecorded
           ? "in progress"
