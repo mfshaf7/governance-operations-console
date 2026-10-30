@@ -25,6 +25,7 @@ export class RepositoryCustodyClientError extends Error {
 }
 
 export function useRepositoryCustodyLiveRuntime() {
+  const [retainedResults, setRetainedResults] = useState<RepositoryCustodyWorkflowResult[]>([]);
   const [sourceStatus, setSourceStatus] = useState<"loading" | "current" | "offline">("loading");
   const [sourceError, setSourceError] = useState<string | null>(null);
   const refreshSequence = useRef(0);
@@ -63,6 +64,7 @@ export function useRepositoryCustodyLiveRuntime() {
       }
       setProvisioningResultsByRequestId(provisions);
       setResultsByRepositoryId(links);
+      setRetainedResults(records);
       setSourceStatus("current");
       setSourceError(null);
     } catch (error) {
@@ -230,6 +232,7 @@ export function useRepositoryCustodyLiveRuntime() {
   }, []);
 
   return {
+    retainedResults,
     refresh,
     sourceStatus,
     sourceError,

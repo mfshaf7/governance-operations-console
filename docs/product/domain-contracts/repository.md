@@ -17,6 +17,11 @@ actions.
 Repository is a focused control modal. It is not a Delivery fullscreen
 workspace and not a Proposal-style workflow ladder.
 
+Its main composition shares Proposal's summary/action overview, register and
+selected-record launcher. Gate-specific fields belong in the focused Repository
+gate dialog. Canonical Proposal navigation opens that dialog at the exact request;
+the existing action panel provides the general Proposal Gates entry.
+
 ## Ingress
 
 Repository ingress comes from:
@@ -216,9 +221,10 @@ receipt they reverse.
 The Review step records impact disposition when a blocking finding exists,
 requires an approval note, and requires explicit confirmation of the exact
 action. The Result step displays only validated OOS decision, execution,
-receipt, and audit truth. Repository History combines OOS lifecycle audit
-entries with retained local setup receipts without converting either source
-into the other.
+receipt, and audit truth. Repository History combines identity-bound custody
+and provisioning receipts, OOS lifecycle audit and local setup receipts with
+their original attribution. Unavailable owner reads remain explicit partial
+coverage, while previously loaded evidence stays inspectable.
 
 Disconnected preview is read-only. A configured live failure, missing initial
 OOS state, stale state, malformed result, or denied action remains explicit and

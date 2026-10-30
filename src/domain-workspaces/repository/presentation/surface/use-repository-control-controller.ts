@@ -54,6 +54,7 @@ import {
   projectRepositoryCustodyResults,
   projectRepositoryProvisioningResults,
   repositoryProvisionedRecordId,
+  repositoryCustodyHistoryForRecord,
 } from "../../live-runtime/repository-custody-live-projection.ts";
 import type { RepositoryCustodyLinkIntent } from "../../live-runtime/repository-custody-live-types.ts";
 import type {
@@ -194,9 +195,13 @@ export function useRepositoryControlController({
   const [historyRepositoryId, setHistoryRepositoryId] = useState<string | null>(
     null,
   );
+  const [canonicalGateOpen, setCanonicalGateOpen] = useState(false);
+  useEffect(() => {
+    if (entryIntent?.requiredMoveRef === "repository.resolve-proposal-gate" && entryIntent.subjectRef) setCanonicalGateOpen(true);
+  }, [entryIntent]);
   const [intakeRepositoryId, setIntakeRepositoryId] = useState<string | null>(null);
   const allCustodyResults = [...Object.values(custodyRuntime.resultsByRepositoryId),
-    ...Object.values(custodyRuntime.provisioningResultsByRequestId)];
+    ...Object.values(custodyRuntime.provisioningResultsByRequestId), ...custodyRuntime.retainedResults];
   const [requestCloseGuardOpen, setRequestCloseGuardOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [requestId, setRequestId] = useState(createRepositoryProvisionRequestId);
@@ -643,6 +648,13 @@ export function useRepositoryControlController({
   }
 
   return {
+    canonicalGate: {
+      available: consoleRuntime.projection?.mode === "live",
+      open: canonicalGateOpen,
+      openDialog: () => setCanonicalGateOpen(true),
+      close: () => setCanonicalGateOpen(false),
+      subjectRef: entryIntent?.subjectRef,
+    },
     intake: {
       canPrepare: canPrepareIntake,
       open: () => { if (canPrepareIntake && selectedRepository) setIntakeRepositoryId(selectedRepository.id); },
@@ -715,6 +727,12 @@ export function useRepositoryControlController({
       repository: repositoryGateResolutionRepository,
     },
     history: {
+      custodyResults: repositoryCustodyHistoryForRecord(historyRepository, allCustodyResults),
+      custodySourceStatus: custodyRuntime.sourceStatus,
+      custodySourceError: custodyRuntime.sourceError,
+      liveMode: consoleRuntime.projection?.mode === "live",
+      lifecycleSnapshot: historyRepository ? lifecycleRuntime.snapshotsByRepositoryId[historyRepository.id] : undefined,
+      lifecycleError: historyRepository ? lifecycleRuntime.errorsByRepositoryId[historyRepository.id]?.message : undefined,
       lifecycleAudit: historyRepository
         ? lifecycleRuntime.snapshotsByRepositoryId[historyRepository.id]?.audit ??
           lifecycleRuntime.resultsByRepositoryId[historyRepository.id]?.audit ??
@@ -768,9 +786,11 @@ export function useRepositoryControlController({
       onSelectRetained: selectRetainedProvisioningRequest,
     },
     lifecycle: {
+      executionAvailable: consoleRuntimeCapabilityExecutable(consoleRuntime, "repository-lifecycle", "mutation"),
       close: () => setLifecycleRepositoryId(null),
       custodyResult: lifecycleRepository
-        ? custodyRuntime.resultsByRepositoryId[lifecycleRepository.id]
+        ? repositoryCustodyHistoryForRecord(lifecycleRepository, allCustodyResults)
+          .filter(result => result.status === "succeeded" && result.request.requested_custody.workspace_owner_ref === lifecycleRepository.custody?.workspaceOwnerRef).at(-1)
         : undefined,
       error: lifecycleRepository
         ? lifecycleRuntime.errorsByRepositoryId[lifecycleRepository.id]

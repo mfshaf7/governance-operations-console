@@ -1,5 +1,16 @@
 # Governance Operations Console Change Log
 
+## 2026-10-31 — Repository compact layout and receipt inspection
+
+The approved local UI batch reuses the Repository gate dialog and existing
+action panel, removes the full-width integration panel from the main overview,
+and preserves exact Proposal request routing, acknowledgement recovery and
+unrecorded-draft protection. History includes identity-bound owner custody
+receipts, retains older successful linkage receipts, and distinguishes partial
+owner reads from empty history. Lifecycle inspection remains available while
+execution fails closed on unavailable capability or owner state. Live runtime
+configuration and provider/workspace records are unchanged.
+
 ## 2026-10-31 — Completed Proposal inspection
 
 Owner maintenance `maintenance-proposal-completion`, Landing Unit Decision

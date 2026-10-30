@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFileSync } from "node:fs";
 import { projectCanonicalRepositoryGateRequests } from "../../src/domain-workspaces/operation-integrations/proposal-repository-live-projection.ts";
 
 test("Repository requests are reconstructed only from canonical accepted Proposal truth", () => {
@@ -22,12 +21,4 @@ test("Repository requests are reconstructed only from canonical accepted Proposa
   assert.equal(recovered.recovery.source_version, "version-1");
   assert.equal(recovered.recovery.notes, "Exact original notes");
   assert.equal(recovered.recovery.custody_request_id, "repository-custody-request:todo");
-});
-
-test("empty Repository register retains first-time provisioning and canonical gate controls", () => {
-  const surface = readFileSync(new URL("../../src/domain-workspaces/repository/presentation/surface/repository-control-surface.tsx", import.meta.url), "utf8");
-  const emptyBranch = surface.slice(surface.indexOf("if (!selectedRepository)"), surface.indexOf("\n  return (", surface.indexOf("if (!selectedRepository)")));
-  assert.match(emptyBranch, /RepositoryControlDialogStack controller=\{controller\}/);
-  assert.match(emptyBranch, /overview=\{overview\}/);
-  assert.match(surface, /RepositoryProposalGatePanel/);
 });

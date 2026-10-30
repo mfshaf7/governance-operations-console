@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 
 import {
   TerasActionButton,
+  TerasActionRow,
   TerasRecordControlActionPanel,
   TerasRecordControlOverviewGrid,
   TerasRecordControlSummaryPanel,
@@ -18,12 +19,16 @@ import type { RepositoryWorkspaceSummaryMetric } from "../../read-model/reposito
 export function RepositoryControlOverviewPanel({
   canProvisionRepository,
   onOpenRepositoryRequestDraft,
+  onOpenProposalGates,
+  showProposalGates = false,
   requestSubmittedAt,
   summary,
   workspaceStatus,
 }: {
   canProvisionRepository: boolean;
   onOpenRepositoryRequestDraft: () => void;
+  onOpenProposalGates?: () => void;
+  showProposalGates?: boolean;
   requestSubmittedAt: string | null;
   summary: RepositoryWorkspaceSummaryMetric[];
   workspaceStatus: OperationSurfaceStatusModel;
@@ -41,6 +46,7 @@ export function RepositoryControlOverviewPanel({
 
       <TerasRecordControlActionPanel
         action={
+          <TerasActionRow>
           <TerasActionButton
             data-repository-request-action="true"
             disabled={!canProvisionRepository}
@@ -49,6 +55,10 @@ export function RepositoryControlOverviewPanel({
             <Plus aria-hidden="true" size={14} />
             Provision Repository
           </TerasActionButton>
+          {showProposalGates ? <TerasActionButton emphasis="secondary" onClick={onOpenProposalGates}>
+            Proposal Gates
+          </TerasActionButton> : null}
+          </TerasActionRow>
         }
         boundary={
           <>

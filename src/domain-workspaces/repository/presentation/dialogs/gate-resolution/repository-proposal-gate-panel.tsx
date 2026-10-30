@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TerasActionButton, TerasFieldStack, TerasMetadataList, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSelectField, TerasTrayStack } from "@/teras";
-import { useProposalRepositoryGateRuntime } from "../../../operation-integrations/use-proposal-repository-gate-runtime.ts";
-import type { RepositoryCustodyWorkflowResult } from "../../live-runtime/repository-custody-live-types.ts";
+import { useProposalRepositoryGateRuntime } from "../../../../operation-integrations/use-proposal-repository-gate-runtime.ts";
+import type { RepositoryCustodyWorkflowResult } from "../../../live-runtime/repository-custody-live-types.ts";
 
-export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custodyCurrent }: {
+export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custodyCurrent, onDirtyChange }: {
   subjectRef?: string; custodyResults: RepositoryCustodyWorkflowResult[]; custodyCurrent: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const runtime = useProposalRepositoryGateRuntime();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, { custodyId: string; notes: string }>>({});
+  const dirty = Object.entries(drafts).some(([id, draft]) => {
+    const request = runtime.requests.find(request => request.proposalId === id);
+    return Boolean((draft.custodyId || draft.notes.trim()) && !request?.resolution);
+  });
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   if (runtime.mode === "disconnected-preview") return null;
   const request = runtime.requests.find((entry) => entry.proposalId === (selectedId ?? subjectRef)) ??
     runtime.requests.find((entry) => !entry.resolution || entry.recovery) ?? runtime.requests[0];

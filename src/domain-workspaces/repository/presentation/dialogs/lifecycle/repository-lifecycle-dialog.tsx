@@ -30,6 +30,7 @@ import type { RepositoryLifecycleClientError } from "../../../live-runtime/use-r
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import {
   repositoryLifecycleActionLabels,
+  repositoryLifecycleExecutionAvailable,
   repositoryLifecycleActionOptions,
   repositoryLifecycleResultFacts,
   repositoryLifecycleResultTone,
@@ -62,6 +63,7 @@ export function RepositoryLifecycleDialog({
   repository,
   result,
   snapshot,
+  executionAvailable = false,
 }: {
   custodyResult?: RepositoryCustodyWorkflowResult;
   error?: RepositoryLifecycleClientError;
@@ -73,6 +75,7 @@ export function RepositoryLifecycleDialog({
   repository: RepositoryWorkspaceRecord | null;
   result?: RepositoryLifecycleWorkflowResult;
   snapshot?: RepositoryLifecycleLiveSnapshot;
+  executionAvailable?: boolean;
 }) {
   const state = repository
     ? repositoryLifecycleState(repository, snapshot)
@@ -121,18 +124,18 @@ export function RepositoryLifecycleDialog({
 
   const repositoryIdentity = repository.providerIdentity;
   const repositoryRecordId = repository.id;
-  const liveActionAvailable = snapshot?.mode === "live";
+  const liveActionAvailable = repositoryLifecycleExecutionAvailable(repository, snapshot, custodyResult, executionAvailable, Boolean(error));
   const steps = repositoryLifecycleSteps(activeStep, actionComplete, result);
-  const statusTone = result
+  const statusTone = error ? "danger" : result
     ? repositoryLifecycleResultTone(result)
     : snapshot?.mode === "live"
       ? "info"
       : "muted";
-  const statusLabel = result
+  const statusLabel = error ? "Unavailable" : result
     ? result.status
     : snapshot?.mode === "live"
-      ? snapshot.status
-      : "preview only";
+      ? liveActionAvailable ? "Ready for review" : "Read-only"
+      : snapshot?.mode === "disconnected-preview" ? "Preview only" : "Loading owner state";
 
   function updateDraft(patch: Partial<LifecycleDraft>) {
     if (result) {
@@ -245,7 +248,7 @@ export function RepositoryLifecycleDialog({
           title="Authoritative projection"
         >
           <TerasTrayStack spacing="loose">
-            <TerasMetadataList items={repositoryLifecycleStateFacts(state)} />
+            <TerasMetadataList items={repositoryLifecycleStateFacts(state, snapshot?.status === "current" && snapshot.mode === "live" && !error)} />
             <TerasContentTray
               description={
                 error?.message ??

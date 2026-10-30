@@ -6,6 +6,12 @@ by the existing cross-workspace entry intent. The operator provisions a real
 repository if necessary, then selects a successful retained custody request,
 reviews its provider identity and receipt, and records resolution notes.
 
+Open **Proposal Gates** from the existing Repository action panel. Proposal's
+repository-gate navigation opens the same focused gate dialog at its exact
+request. The main Repository view retains the shared summary/action, register
+and selected-record layout; it does not add a third overview panel. Closing an
+unrecorded gate draft requires an explicit discard decision.
+
 The same-origin server supplies caller/operator attribution and a deterministic
 resolution identity. OOS checks the exact source version and retained custody
 receipt, updates canonical Proposal custody without rewriting Disposition, and
