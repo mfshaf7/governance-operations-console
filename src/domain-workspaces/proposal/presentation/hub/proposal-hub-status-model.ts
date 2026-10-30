@@ -69,6 +69,17 @@ export function proposalHubStatusProjection({
     };
   }
 
+  if (proposal.status === "done") {
+    return {
+      description:
+        "The source proposal is complete. Review its recorded decisions and available handoff evidence in History.",
+      facts: baseFacts,
+      pillLabel: "Done",
+      title: "Proposal Complete",
+      tone: proposal.tone,
+    };
+  }
+
   if (handoffApplied && handoffDraft) {
     const handoffCopy = proposalHandoffResultCopy(handoffDraft.result);
 

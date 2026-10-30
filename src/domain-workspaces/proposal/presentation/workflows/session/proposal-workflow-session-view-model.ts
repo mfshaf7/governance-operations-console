@@ -65,6 +65,7 @@ export function proposalWorkflowFooterMove({
   dispositionReadOnly,
   dispositionStepAvailable,
   handoffStepAvailable,
+  proposalComplete = false,
   sourceReviewRequired,
   triageCanApply,
   triageReadOnly,
@@ -76,6 +77,7 @@ export function proposalWorkflowFooterMove({
   dispositionReadOnly: boolean;
   dispositionStepAvailable: boolean;
   handoffStepAvailable: boolean;
+  proposalComplete?: boolean;
   sourceReviewRequired: boolean;
   triageCanApply: boolean;
   triageReadOnly: boolean;
@@ -98,6 +100,14 @@ export function proposalWorkflowFooterMove({
       disabled: true,
       label: "Source Update Required",
       tone: "warn",
+    };
+  }
+
+  if (proposalComplete) {
+    return {
+      action: "view-history",
+      label: "View History",
+      tone: "info",
     };
   }
 

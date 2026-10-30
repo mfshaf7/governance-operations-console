@@ -6,6 +6,7 @@ import { useDraftAdvisor } from "@/agent-console";
 import {
   TerasAdvisorPanel,
   TerasContentFrame,
+  TerasEmptyState,
   TerasPanelStack,
   TerasSubjectHero,
   TerasZone,
@@ -284,6 +285,7 @@ export function ProposalDispositionStep({
           />
           <ProposalDispositionRoutePanel
             accepting={accepting}
+            historicalRouteMissing={proposal.status === "done" && !routeSelectionDraft.appliedAt}
             decisionDraft={decisionDraft}
             dispositionCompleted={dispositionCompleted}
             onRegisteredRepoSelect={selectRegisteredRepo}
@@ -299,7 +301,12 @@ export function ProposalDispositionStep({
 
         <TerasZone fit="fill">
           <TerasPanelStack fill={decisionPanelCollapsed ? "last" : "first"}>
-            <ProposalDispositionDecisionPanel
+            {proposal.status === "done" && !decisionDraft.appliedAt ? (
+              <TerasEmptyState>
+                No decision notes were recorded for this completed proposal.
+              </TerasEmptyState>
+            ) : (
+              <ProposalDispositionDecisionPanel
               actionLabel={actionLabel}
               canApply={canApply}
               collapsed={decisionPanelCollapsed}
@@ -313,7 +320,8 @@ export function ProposalDispositionStep({
               onSelectOutcome={selectOutcome}
               onToggleCollapsed={toggleAdvisorCollapsed}
               statusLabel={statusLabel}
-            />
+              />
+            )}
 
             <TerasAdvisorPanel
               collapsed={advisorCollapsed}

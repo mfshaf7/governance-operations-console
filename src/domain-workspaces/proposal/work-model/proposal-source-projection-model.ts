@@ -32,6 +32,11 @@ export function proposalWorkflowSourceReviewRequired(
     return true;
   }
 
+  // Unfinished local drafts cannot reopen a current completed source.
+  if (proposal.status === "done") {
+    return false;
+  }
+
   return drafts.some((draft) =>
     proposalWorkflowDraftSourceChanged(proposal, draft),
   );

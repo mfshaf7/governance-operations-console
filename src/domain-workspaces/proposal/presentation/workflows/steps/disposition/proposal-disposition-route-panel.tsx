@@ -1,6 +1,7 @@
 import {
   TerasChoiceGroup,
   TerasFieldGrid,
+  TerasEmptyState,
   TerasContentRegion,
   TerasContentTray,
   TerasNoteField,
@@ -32,6 +33,7 @@ export function ProposalDispositionRoutePanel({
   onRepoModeSelect,
   onRouteDraftPatch,
   onRouteTargetSelect,
+  historicalRouteMissing = false,
   routeHasRepositoryGate,
   routeSelectionDraft,
   routeSupportsRepository,
@@ -44,6 +46,7 @@ export function ProposalDispositionRoutePanel({
   onRepoModeSelect: (repoMode: ProposalRouteSelectionRepoMode) => void;
   onRouteDraftPatch: (patch: Partial<ProposalRouteSelectionDraft>) => void;
   onRouteTargetSelect: (routeTarget: ProposalRouteSelectionTarget) => void;
+  historicalRouteMissing?: boolean;
   routeHasRepositoryGate: boolean;
   routeSelectionDraft: ProposalRouteSelectionDraft;
   routeSupportsRepository: boolean;
@@ -61,12 +64,16 @@ export function ProposalDispositionRoutePanel({
       tone="info"
     >
       <TerasPanelHeader
-        description={routePanelProjection.description}
+        description={historicalRouteMissing ? "The completed source has no retained route details." : routePanelProjection.description}
         kicker="Disposition Route"
-        title={routePanelProjection.title}
+        title={historicalRouteMissing ? "Historical route" : routePanelProjection.title}
       />
       <TerasContentRegion gap="normal" scroll>
-        {accepting ? (
+        {historicalRouteMissing ? (
+          <TerasEmptyState>
+            No route details were recorded for this completed proposal. No new route is required.
+          </TerasEmptyState>
+        ) : accepting ? (
           <>
             <TerasFieldGrid columns={2} spacing="loose">
               <TerasChoiceGroup

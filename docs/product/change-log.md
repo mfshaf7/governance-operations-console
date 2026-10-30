@@ -1,5 +1,15 @@
 # Governance Operations Console Change Log
 
+## 2026-10-31 — Completed Proposal inspection
+
+Owner maintenance `maintenance-proposal-completion`, Landing Unit Decision
+`feature_single_landing_unit`: keep completed source proposals complete across
+the register, Hub status, required move and workflow steps. Completed records
+remain read-only, supersede unfinished local drafts, and retain inspection of
+recorded steps. Missing historical route or handoff detail is shown as absent,
+without inventing evidence or requesting a new route. Source records and owner
+commands remain unchanged. Local preview review precedes batch publication.
+
 ## 2026-10-30 — Experimental provider connections
 
 Epic1363 story1369, Landing Unit Decision `child_isolated_landing_unit`,

@@ -45,9 +45,11 @@ export function proposalHistoryStepProjection({
     historyTone,
     progressStatusLabel: handoffReceipt
       ? "recorded"
-      : receiptsRecorded
-        ? "in progress"
-        : "archive",
+      : proposal.status === "done"
+        ? "complete"
+        : receiptsRecorded
+          ? "in progress"
+          : "archive",
     receiptDescription: receiptsRecorded
       ? "Read-only receipt archive for this Proposal pass."
       : "No workflow receipt has been recorded for this Proposal pass.",

@@ -91,6 +91,9 @@ export function proposalHubProjection(
       title: "Review Source Record",
       tone: "warn",
     };
+  } else if (proposal.status === "done") {
+    progressDescription =
+      "This proposal is complete. Recorded steps remain available for read-only inspection; missing historical details do not require new work.";
   } else if (handoffDraft) {
     const handoffCopy = proposalHandoffResultCopy(handoffDraft.result);
     progressDescription =

@@ -170,7 +170,9 @@ export function proposalDispositionStepProjection({
     proposal.status === "parked" && !dispositionRecorded;
   const canApply = !dispositionCompleted && routeComplete && notesComplete;
   const decisionCopy = proposalDecisionOutcomeCopy(decisionDraft.outcome);
-  const dispositionTone: TerasTone = dispositionCompleted
+  const dispositionTone: TerasTone = proposal.status === "done"
+    ? proposal.tone
+    : dispositionCompleted
     ? accepting
       ? proposalRouteSelectionTone(routeSelectionDraft)
       : decisionCopy.tone
@@ -199,9 +201,11 @@ export function proposalDispositionStepProjection({
         : "Complete Required Fields";
   const advisorDraft = decisionDraft.advisorDraft ?? "";
   const advisorPrompt = decisionDraft.advisorPrompt ?? "";
-  const decisionDescription = sourceParkedRevisit
-    ? "Choose whether to accept, reject, or keep this proposal parked. Decision notes are required."
-    : "Choose the proposal outcome and record the required decision notes.";
+  const decisionDescription = proposal.status === "done"
+    ? "Read the recorded decision. This completed proposal cannot be changed."
+    : sourceParkedRevisit
+      ? "Choose whether to accept, reject, or keep this proposal parked. Decision notes are required."
+      : "Choose the proposal outcome and record the required decision notes.";
   const decisionTitle = dispositionRecorded
     ? "Receipt Recorded"
     : dispositionReadModelReadOnly
@@ -217,7 +221,9 @@ export function proposalDispositionStepProjection({
   const progressTitle = dispositionRecorded
     ? "Disposition Recorded"
     : dispositionReadModelReadOnly
-      ? "Disposition Ready"
+      ? proposal.status === "done"
+        ? "Completed Disposition"
+        : "Disposition Ready"
       : sourceParkedRevisit
         ? "Revisit Decision"
         : canApply

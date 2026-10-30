@@ -93,6 +93,7 @@ export function proposalWorkflowSessionState({
   ]);
   const triageReadOnly = Boolean(
     sourceReviewRequired ||
+    proposal.status === "done" ||
     activeTriageDraft.appliedAt ||
     (!triageDraft &&
       proposal.status !== "captured" &&
@@ -100,6 +101,7 @@ export function proposalWorkflowSessionState({
   );
   const dispositionReadOnly = Boolean(
     sourceReviewRequired ||
+    proposal.status === "done" ||
     (activeDecisionDraft.appliedAt &&
       (activeDecisionDraft.outcome !== "accepted" ||
         activeRouteSelectionDraft.appliedAt)) ||
@@ -109,7 +111,7 @@ export function proposalWorkflowSessionState({
         proposal.status === "waiting-on-repository")),
   );
   const handoffReadOnly = Boolean(
-    sourceReviewRequired || activeHandoffDraft.appliedAt,
+    sourceReviewRequired || proposal.status === "done" || activeHandoffDraft.appliedAt,
   );
   const handoffRepositoryGateLocked = proposalHandoffRepositoryGateLocked(
     activeRouteSelectionDraft,
@@ -134,22 +136,26 @@ export function proposalWorkflowSessionState({
     !handoffRepositoryGateLocked &&
     activeHandoffDraft.notes.trim().length > 0;
   const hasPendingDispositionDraft = Boolean(
+    proposal.status !== "done" &&
     activeWorkflowStep === "disposition" &&
     ((activeDecisionDraft.savedAt && !activeDecisionDraft.appliedAt) ||
       (activeRouteSelectionDraft.savedAt &&
         !activeRouteSelectionDraft.appliedAt)),
   );
   const hasPendingHandoffDraft = Boolean(
+    proposal.status !== "done" &&
     activeWorkflowStep === "handoff" &&
     activeHandoffDraft.savedAt &&
     !activeHandoffDraft.appliedAt,
   );
   const hasPendingTriageDraft = Boolean(
+    proposal.status !== "done" &&
     activeWorkflowStep === "triage" &&
     activeTriageDraft.savedAt &&
     !activeTriageDraft.appliedAt,
   );
   const footerMove = proposalWorkflowFooterMove({
+    proposalComplete: proposal.status === "done",
     activeDecisionDraft,
     activeRouteSelectionDraft,
     activeWorkflowStep,

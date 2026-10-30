@@ -113,6 +113,23 @@ function proposalWorkflowStepBases({
     routeSelectionDraft,
     handoffDraft,
   ]);
+  if (proposal.status === "done" && !sourceReviewRequired) {
+    const recorded = {
+      triage: Boolean(triageDraft?.appliedAt),
+      disposition: Boolean(decisionDraft?.appliedAt || routeSelectionDraft?.appliedAt),
+      handoff: Boolean(handoffDraft?.appliedAt),
+      history: true,
+    };
+    return proposalWorkflowStepOrder.map<ProposalWorkflowStepBase>((id) => ({
+      id,
+      label: { triage: "Triage", disposition: "Disposition", handoff: "Handoff", history: "History" }[id],
+      available: recorded[id],
+      stateLabel: "Archive",
+      tone: "muted",
+      hubDetail: recorded[id] ? "Read-only recorded details" : "Not recorded",
+      workflowDetail: recorded[id] ? "Read-only recorded details" : "Not recorded",
+    }));
+  }
   const triageRequired =
     proposal.status === "captured" || proposal.status === "waiting-on-source";
   const triageApplied = Boolean(triageDraft?.appliedAt);
