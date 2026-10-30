@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   TerasActionButton, TerasActionRow, TerasDialog, TerasEmptyState,
-  TerasFieldGrid, TerasFieldStack, TerasFilterBar, TerasMetadataList, TerasPanel, TerasPanelHeader,
+  TerasFieldStack, TerasFilterBar, TerasMetadataList, TerasPanel, TerasPanelHeader,
   TerasRecordCellText, TerasRecordControlLayout, TerasRecordTable, TerasRegisterPanel, TerasSelectField,
   TerasStatusPill, TerasTextField, type TerasRecordTableColumn,
 } from "@/teras";
@@ -79,7 +79,6 @@ export function ModelRegistrationsDialog({
             description="Choose the connection whose models you want to manage."
             statusLabel={runtime.preview ? "Sample · read-only" : runtime.fresh ? "Revision " + registry.configuration.revision : "Owner unavailable"}
             statusTone={runtime.fresh || runtime.preview ? "info" : "warn"} />
-          <TerasFieldGrid columns={2} align="end">
           <TerasSelectField label="Admitted backend" disabled={changesBlocked || !runtime.fresh && !runtime.preview}
             value={backend?.backend_id ?? ""}
             options={registry.backends.map(item => ({ value: item.backend_id,
@@ -87,19 +86,21 @@ export function ModelRegistrationsDialog({
             onValueChange={value => {
               setBackendId(value); setSelectedId(""); setSearch(""); setCandidate(""); setAdding(false); runtime.clearCatalogue();
             }} />
-          <TerasMetadataList shape="line" treatment="chip" wrap items={modelBackendStatusMetadata(registry, backend)} />
-          </TerasFieldGrid>
-          {backend?.experimental ? <TerasMetadataList shape="line" treatment="chip" wrap items={modelBackendQualificationMetadata(backend)} /> : null}
-          <TerasActionRow>
-            <TerasActionButton disabled={blocked || !backend} emphasis="secondary"
-              onClick={() => backend && submit(backend.registered ? "backend.remove" : "backend.register", { backend_id: backend.backend_id })}>
-              {backend?.registered ? "Remove backend" : "Register backend"}
-            </TerasActionButton>
-            {backend?.account_login_supported ? <TerasActionButton disabled={blocked || !backend.registered} emphasis="secondary"
-              onClick={() => submit("account.login.start", { backend_id: backend.backend_id })}>Connect account</TerasActionButton> : null}
-            <TerasActionButton emphasis="secondary" disabled={changesBlocked || runtime.preview}
-              onClick={onOpenConnections}>Add / manage API connections</TerasActionButton>
+          <TerasActionRow layout="split" end={
+            <TerasActionRow>
+              <TerasActionButton disabled={blocked || !backend} emphasis="secondary"
+                onClick={() => backend && submit(backend.registered ? "backend.remove" : "backend.register", { backend_id: backend.backend_id })}>
+                {backend?.registered ? "Remove backend" : "Register backend"}
+              </TerasActionButton>
+              {backend?.account_login_supported ? <TerasActionButton disabled={blocked || !backend.registered} emphasis="secondary"
+                onClick={() => submit("account.login.start", { backend_id: backend.backend_id })}>Connect account</TerasActionButton> : null}
+              <TerasActionButton emphasis="secondary" disabled={changesBlocked || runtime.preview}
+                onClick={onOpenConnections}>Add / manage API connections</TerasActionButton>
+            </TerasActionRow>
+          }>
+            <TerasMetadataList shape="line" treatment="chip" wrap items={modelBackendStatusMetadata(registry, backend)} />
           </TerasActionRow>
+          {backend?.experimental ? <TerasMetadataList shape="line" treatment="chip" wrap items={modelBackendQualificationMetadata(backend)} /> : null}
         </TerasPanel>}
         register={<TerasRegisterPanel data-model-registrations-register="true" density="compact-control"
           kicker="Model inventory" title="Registered models" description={"Models registered through " + backendLabel + "."}

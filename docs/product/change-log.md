@@ -18,7 +18,8 @@ verification/removal target the selected model; and Register model opens an
 independent discovery/manual-entry form. Global model counts remain in the main
 overview. Backend, registered-model and new-model selections no longer share one
 field value. Experimental qualification and verification cost remain visible.
-Backend registration/health use compact status chips beside the selector, and
+Backend registration/health use compact status chips below the selector,
+aligned left on the same row as the backend action buttons, and
 the register count/action use the standard spaced action row.
 
 ## 2026-10-31 — Repository compact layout and receipt inspection
