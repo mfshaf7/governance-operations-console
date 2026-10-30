@@ -64,6 +64,8 @@ one explicit scrolling content region. A selected Proposal shows a short
 overview with its next action; its complete original context remains in the
 Proposal Hub, details and owner-backed workflow inputs. Capture wording follows
 the same live/disconnected mode as the existing capture dialog.
+The Hub selected-context panel owns bounded scrolling for the complete original
+description, so its final lines and metadata remain reachable with normal input.
 
 Source review and acceptance are distinct from live qualification. Validate
 projection, loading/failure, filtering and cursor boundaries, then inspect the
