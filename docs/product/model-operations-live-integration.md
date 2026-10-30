@@ -21,6 +21,12 @@ activation.
 
 ## Models & Routing Procedure
 
+The overview uses the same compact summary/actions, register and selected-item
+layout as other controls. **Manage registrations**, **Review routing** and
+**Operation history** open focused views of the existing controls. Inspection
+remains available when edits are blocked. Disconnected preview is explicitly
+sample-only and cannot submit changes, connect accounts or create receipts.
+
 ### Experimental API connections
 
 Epic1363 extends the same Models & routing surface with a connection dialog,
@@ -42,7 +48,7 @@ testing pending**. Maturity is independent of health or a successful model probe
 No eligible provider accounts are available for this qualification. The existing
 Codex/Ollama controls, defaults, task overrides, fallbacks and history remain.
 
-Choose Add API connection, select the reviewed preset and a short name, then
+Choose **API connections**, select the reviewed preset and a short name, then
 explicitly enter its API key. Keys use a dedicated protected same-origin ingress
 to Platform/Vault; they are never autosaved, included in advisor context, kept in
 browser storage or passed through the generic model request journal. Closing or
@@ -79,14 +85,15 @@ owns durable connection state and receipts. Source alone does not activate them.
    First registration needs no prior completed request or lifecycle receipt.
    The existing OOS connection and verified operator session are sufficient
    Console-side configuration.
-2. Select and register an admitted backend. Where account sign-in is supported,
+2. Open **Manage registrations**, then select and register an admitted backend. Where account sign-in is supported,
    choose **Connect account** and complete its native device challenge.
    The code is private operator metadata. Provider tokens stay in Platform
    custody and never enter Console configuration or browser storage.
 3. Choose **Discover models**, select an advertised model, then **Verify &
    register model**. Discovery is metadata. Registration completes after the
    Platform verification and receipt readback.
-4. Select **System default** or a workflow row. Configure an explicit model
+4. Return to Models & routing, select **System default** or a workflow row and
+   open **Review routing**. Configure an explicit model
    route, use the existing profile binding, or inherit the default for that
    workflow. Native effort choices come from registered model metadata.
    Boolean thinking values remain booleans. Unsupported combinations cannot

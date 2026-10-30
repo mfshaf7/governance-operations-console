@@ -22,7 +22,7 @@ async function request(path: string, body?: unknown) {
   }
   return value;
 }
-export function useProviderConnections(onChanged: () => Promise<unknown>) {
+export function useProviderConnections(onChanged: () => Promise<unknown>, enabled = true) {
   const [snapshot, setSnapshot] = useState<ProviderConnections | null>(null), [fresh, setFresh] = useState(false);
   const [rejected, setRejected] = useState(false);
   const [error, setError] = useState<string | null>(null), [pending, setPending] = useState(false);
@@ -35,13 +35,14 @@ export function useProviderConnections(onChanged: () => Promise<unknown>) {
   }, []);
   const fail = useCallback(() => { if (alive.current) setError("Connection completion is unconfirmed. Check or reconcile the original operation; a key is never retried automatically."); }, []);
   const refresh = useCallback(async () => {
+    if (!enabled) return null;
     const current = ++version.current;
     try {
       const next = assertProviderConnections(await request(""));
       if (alive.current && version.current === current) { setSnapshot(next); setFresh(true); }
       return next;
     } catch (cause) { if (alive.current && version.current === current) setFresh(false); throw cause; }
-  }, []);
+  }, [enabled]);
   const check = useCallback(async (id: string, reconcile = false) => {
     if (!modelIdentifier(id) || inFlight.current) return;
     inFlight.current = true; setPending(true);
@@ -57,12 +58,13 @@ export function useProviderConnections(onChanged: () => Promise<unknown>) {
   }, [fail, onChanged, refresh, remember]);
   useEffect(() => {
     alive.current = true;
+    if (!enabled) return () => { alive.current = false; version.current++; };
     const safe = store.readJson(recoveryKey, value => { try { return assertSafeConnectionCommand(value); } catch { return null; } });
     if (safe) { remember(safe); void check(safe.command_id); }
     void refresh().catch(fail);
     const timer = window.setInterval(() => { if (document.visibilityState === "visible" && !inFlight.current) void refresh().catch(fail); }, 15_000);
     return () => { alive.current = false; version.current++; window.clearInterval(timer); };
-  }, [check, fail, refresh, remember]);
+  }, [check, enabled, fail, refresh, remember]);
   const dispatch = useCallback(async (safe: SafeConnectionCommand, ingress?: unknown) => {
     if (inFlight.current) return;
     inFlight.current = true; setPending(true); remember(safe); setOperation(null); setReceipt(null); setError(null); setRejected(false);

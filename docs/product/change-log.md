@@ -1,5 +1,17 @@
 # Governance Operations Console Change Log
 
+## 2026-10-31 — Model Operations compact controls
+
+The same local UI maintenance batch restores the shared summary/actions,
+workflow register and selected-route orientation. Existing registration,
+route editing and operation/configuration history use focused Teras dialogs.
+Native effort, ordered fallback, revision conflicts, original-request recovery,
+native account sign-in and API-key clearing retain their owner controls.
+Disconnected preview shows explicit read-only samples without creating owner
+requests, receipts, credentials or readiness. Configured-owner failure never
+selects those samples. Profile overview copy keeps request references in
+history and avoids repeating identical provider/resolution text.
+
 ## 2026-10-31 — Repository compact layout and receipt inspection
 
 The approved local UI batch reuses the Repository gate dialog and existing

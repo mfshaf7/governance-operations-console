@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserOperationDraftStore } from "../../operation-runtime/browser-draft-store.ts";
+import { useConsoleRuntimeCapabilities } from "../../../console-integration/configuration/use-console-runtime-capabilities.ts";
+import { modelRuntimePreviewRegistry } from "../read-model/fixtures/model-runtime.fixture.ts";
 import {
   assertModelCatalogue, assertModelRegistry, assertModelRuntimeOperation, modelIdentifier, modelRecord,
   sameModelRuntimeRequest, terminalModelStates, type ModelAction, type ModelCatalogue, type ModelRegistry,
@@ -25,6 +27,9 @@ function remember(id: string | null) {
   try { if (id) recoveryStore.writeJson(recoveryKey, id); else recoveryStore.remove(recoveryKey); } catch { /* Page-only recovery remains available. */ }
 }
 export function useModelRuntime() {
+  const capabilities = useConsoleRuntimeCapabilities();
+  const dataMode = capabilities.status === "current" ? capabilities.projection?.mode : capabilities.status === "unavailable" ? "invalid" : null;
+  const preview = dataMode === "disconnected-preview";
   const [registry, setRegistry] = useState<ModelRegistry | null>(null);
   const [catalogue, setCatalogue] = useState<ModelCatalogue | null>(null);
   const [operation, setOperation] = useState<ModelRuntimeOperation | null>(null);
@@ -40,6 +45,12 @@ export function useModelRuntime() {
   const showError = useCallback((cause: unknown) => { if (alive.current) { setFresh(false); setError(cause instanceof Error ? cause.message : "Model operation unavailable."); } }, []);
   const refresh = useCallback(async () => {
     const current = ++sequence.current;
+    if (dataMode !== "live") {
+      setRegistry(dataMode === "disconnected-preview" ? modelRuntimePreviewRegistry() : null);
+      setFresh(false);
+      setError(dataMode === "invalid" ? "Model owner configuration is unavailable." : null);
+      return null;
+    }
     try {
       const [rawRegistry, rawList] = await Promise.all([request("/registry"), request("/requests")]);
       const next = assertModelRegistry(rawRegistry), list = modelRecord(rawList);
@@ -51,7 +62,7 @@ export function useModelRuntime() {
       }
       return next;
     } catch (cause) { if (alive.current && current === sequence.current) setFresh(false); showError(cause); throw cause; }
-  }, [showError]);
+  }, [dataMode, showError]);
   const loadOperation = useCallback(async (id: string) => {
     let next: ModelRuntimeOperation;
     try {
@@ -76,11 +87,13 @@ export function useModelRuntime() {
   useEffect(() => {
     alive.current = true;
     void refresh().catch(() => undefined);
+    if (dataMode !== "live") return () => { alive.current = false; sequence.current++; };
     const id = recoveryStore.readJson(recoveryKey, value => modelIdentifier(value) ? value : null);
     if (id) void selectOperation(id);
     return () => { alive.current = false; sequence.current++; backendSequence.current++; };
-  }, [refresh, selectOperation]);
+  }, [dataMode, refresh, selectOperation]);
   useEffect(() => {
+    if (dataMode !== "live") return;
     const timer = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
       const current = ++sequence.current;
@@ -90,7 +103,7 @@ export function useModelRuntime() {
       }).catch(showError);
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [showError]);
+  }, [dataMode, showError]);
   useEffect(() => {
     if (!operation || !["queued", "running", "awaiting-account"].includes(operation.state)) return;
     const timer = window.setInterval(() => {
@@ -99,14 +112,16 @@ export function useModelRuntime() {
     return () => window.clearInterval(timer);
   }, [operation, loadOperation, showError]);
   const discover = useCallback(async (backend: string) => {
+    if (dataMode !== "live") return;
     const version = ++backendSequence.current; setPending(true); setCatalogue(null);
     try {
       const next = assertModelCatalogue(await request("/catalogue?" + new URLSearchParams({ backend_id: backend })), backend);
       if (alive.current && version === backendSequence.current) { setCatalogue(next); setError(null); }
     } catch (cause) { showError(cause); }
     finally { if (alive.current) setPending(false); }
-  }, [showError]);
+  }, [dataMode, showError]);
   const submit = useCallback(async (action: ModelAction, input: Record<string, unknown>, revision: number) => {
+    if (dataMode !== "live") throw new Error("Model changes require a current owner connection.");
     const id = "model-operation:console-" + crypto.randomUUID();
     const intent: ModelRuntimeRequest = { schema_version: 1, request_id: id, idempotency_key: id + ":submit", expected_configuration_revision: revision, action, input };
     selected.current = id; setSelectedId(id); setOperation(null); setLookupMissing(false); remember(id); setPending(true); setError(null);
@@ -125,7 +140,7 @@ export function useModelRuntime() {
         return confirmed;
       } catch { throw cause; }
     } finally { if (alive.current) setPending(false); }
-  }, [loadOperation, refresh, showError]);
+  }, [dataMode, loadOperation, refresh, showError]);
   const control = useCallback(async (action: "retry" | "reconcile" | "cancel") => {
     if (!operation) return;
     const id = operation.request_id; setPending(true);
@@ -154,7 +169,7 @@ export function useModelRuntime() {
     } catch (cause) { showError(cause); }
   }, [cursor, showError]);
   return {
-    registry, catalogue, operation, records, cursor, selectedId, pending, fresh, error, lookupMissing,
+    registry, catalogue, operation, records, cursor, selectedId, pending, fresh, error, lookupMissing, preview, dataMode,
     refresh, discover, submit, control, selectOperation, loadMore,
     checkOriginal: () => selectedId ? loadOperation(selectedId).catch(showError) : Promise.resolve(),
     clearSelection: () => { remember(null); selected.current = null; setSelectedId(null); setOperation(null); setError(null); },

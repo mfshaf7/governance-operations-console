@@ -1,6 +1,6 @@
-import { defaultModelScope } from "../../work-model/model-runtime-routing.ts";
+import { choiceLabel, defaultModelScope } from "../../work-model/model-runtime-routing.ts";
 import { currentProviderHealth, providerHealthLabel } from "../../work-model/model-provider-health.ts";
-import type { TerasMetadataItem } from "@/teras";
+import type { TerasMetadataItem, TerasSurfaceStatusModel } from "@/teras";
 import type { ModelBackend, ModelRegistry, ModelRuntimeOperation } from "../../work-model/model-runtime-contract.ts";
 
 export function modelBackendMetadata(registry: ModelRegistry, backend: ModelBackend | null): TerasMetadataItem[] {
@@ -64,4 +64,35 @@ export function modelProviderMetadata(registry: ModelRegistry, backend: ModelBac
     { label: "Qualification", value: "Experimental — real-account testing pending", tone: "warn" as const },
     { label: "Explicit verification", value: "May consume up to 4,096 output tokens and 60 seconds" },
   ] : []), ...modelBackendMetadata(registry, backend), ...modelVerificationMetadata(registry, backend?.backend_id, name)];
+}
+
+export function modelRuntimeSummaryStatus(fresh: boolean, preview: boolean, error: string | null, revision: number): TerasSurfaceStatusModel {
+  const detail = preview ? "Read-only design samples. No provider, account, request or receipt is simulated as current owner state."
+    : error ?? "Configuration was read from the model owner. Model and account health remain separate checks.";
+  const stateLabel = preview ? "Sample" : fresh ? "Current" : "Unavailable";
+  const tone = preview || fresh ? "info" as const : "warn" as const;
+  return { ariaLabel: "Model configuration status", kicker: "Model configuration", title: "Configuration source", summary: detail, statusLabel: stateLabel, tone,
+    items: [{ id: "configuration", label: "Configuration", stateLabel, detail, tone,
+      facts: [{ label: preview ? "Sample revision" : "Last read revision", value: revision }] }] };
+}
+
+export function modelSelectedRouteMetadata(registry: ModelRegistry, scope: string): TerasMetadataItem[] {
+  const config = registry.configuration.configuration;
+  const override = scope !== defaultModelScope && Object.hasOwn(config.overrides, scope);
+  const route = override ? config.overrides[scope] : config.default;
+  return [
+    { label: "Setting", value: scope === defaultModelScope ? "System default" : override ? "Workflow override" : "Inherits system default" },
+    { label: "Primary health", value: modelRouteHealthLabel(registry, scope) },
+    { label: "Fallbacks", value: route?.fallbacks.length ?? "Profile-controlled" },
+  ];
+}
+
+export function modelSavedRouteMetadata(registry: ModelRegistry, scope: string, labels: Record<string, string>): TerasMetadataItem[] {
+  const config = registry.configuration.configuration;
+  const route = scope !== defaultModelScope && Object.hasOwn(config.overrides, scope) ? config.overrides[scope] : config.default;
+  return [
+    { label: "Saved primary", value: route ? choiceLabel(config, route.primary, labels) : "Existing profile binding" },
+    ...(route?.fallbacks.map((choice, index) => ({ label: "Saved fallback " + (index + 1), value: choiceLabel(config, choice, labels) })) ?? []),
+    { label: "When all choices fail", value: "Stop and report the failure" },
+  ];
 }

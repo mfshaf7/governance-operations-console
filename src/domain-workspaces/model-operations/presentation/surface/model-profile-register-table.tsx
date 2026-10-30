@@ -70,7 +70,7 @@ export function ModelProfileRegisterTable({
       key: "resolution",
       render: (profile) => (
         <TerasRecordCellText
-          description={profile.policy.provider}
+          description={profile.policy.provider === modelProfileResolutionLabel(profile) ? undefined : profile.policy.provider}
           title={modelProfileResolutionLabel(profile)}
         />
       ),

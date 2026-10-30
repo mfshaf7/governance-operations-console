@@ -36,6 +36,16 @@ workflow through OOS. Platform remains the configuration and invocation owner.
 The Console does not add an ad hoc session-model override or invoke a provider.
 Purpose-profile policy and permissions retain their existing review workflow.
 
+Models & routing retains the shared summary/actions overview, workflow register
+and selected-route orientation. Manage registrations opens the existing backend
+and model controls; Review routing opens primary model, native effort and
+ordered fallbacks; Operation history opens original requests and configuration
+restoration. Focused editors retain draft guards and revision checks. Submitted
+operations reveal their progress and account challenge without requiring the
+operator to find a hidden panel. Explicit disconnected preview permits only
+labelled read-only samples, without owner requests or receipts; configured-owner
+failure never substitutes samples.
+
 ## Workbench Placement And Mode
 
 Model Operations is an Operation Workbench domain. It uses Compact Control
