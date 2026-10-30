@@ -1,3 +1,7 @@
+import {
+  assertProviderConnections, assertSafeConnectionCommand, safeCredentialCommand,
+  assertConnectionReceipt, assertConnectionOperation, type SafeConnectionCommand,
+} from "../work-model/provider-connections-contract.ts";
 import { createHash } from "node:crypto";
 import {
   resolveConsoleOosOperatorConfiguration,
@@ -52,7 +56,7 @@ export function createModelRuntimeClient(options: ModelRuntimeClientOptions = {}
     let response: Response;
     try {
       response = await (options.fetchImpl ?? fetch)(config.baseUrl.replace(/\/$/, "") + "/v1/model-operations" + path, {
-        method: body === undefined ? "GET" : "POST", cache: "no-store",
+        method: body === undefined ? "GET" : "POST", cache: "no-store", redirect: "error",
         headers: {
           ...(options.attribution ?? consoleMutationAttributionHeaders)(),
           "Content-Type": "application/json", Accept: "application/json",
@@ -127,7 +131,38 @@ export function createModelRuntimeClient(options: ModelRuntimeClientOptions = {}
       throw error;
     }
   }
+  function verifyConnectionReceipt(value: unknown, command?: SafeConnectionCommand) {
+    const receipt = assertConnectionReceipt(value);
+    integrity(receipt.actor === config.operatorId && receipt.receipt_digest === modelRuntimeDigest(receipt, "receipt_digest"));
+    if (command) integrity(receipt.command_id === command.command_id && receipt.action === command.action &&
+      receipt.command_digest === modelRuntimeDigest({ actor: config.operatorId, command }) && receipt.previous_revision >= command.expected_revision &&
+      receipt.connection_id === (command.action === "connection.create" ? "api-" + modelRuntimeDigest({ actor: config.operatorId, command: command.command_id }).slice(7, 39) : (command.input as { connection_id: string }).connection_id));
+    return receipt;
+  }
+  function verifyConnectionOperation(value: unknown, id: string) {
+    const op = assertConnectionOperation(value, id); integrity(op.actor === config.operatorId);
+    if (op.receipt) verifyConnectionReceipt(op.receipt);
+    return op;
+  }
   return {
+    connections: () => checked(async () => assertProviderConnections(await request("/connections"))),
+    connectionCommand: (input: unknown) => checked(async () => {
+      const command = assertSafeConnectionCommand(input); integrity(command.action !== "connection.credentials");
+      return verifyConnectionReceipt(await request("/connections/commands", command), command);
+    }),
+    connectionCredentials: (input: unknown) => checked(async () => {
+      const safe = safeCredentialCommand(input);
+      return verifyConnectionReceipt(await request("/connections/credentials", input), safe);
+    }),
+    connectionOperation: (id: string) => checked(async () => {
+      if (!modelIdentifier(id)) throw new ModelRuntimeContractError();
+      return verifyConnectionOperation(await request("/connections/operations/" + encodeURIComponent(id)), id);
+    }),
+    reconcileConnection: (input: unknown) => checked(async () => {
+      const row = modelExact(input, ["command_id"]);
+      if (!modelIdentifier(row.command_id)) throw new ModelRuntimeContractError();
+      return verifyConnectionOperation(await request("/connections/reconcile", row), row.command_id);
+    }),
     registry: () => checked(async () => {
       const value = assertModelRegistry(await request("/registry?include_health=true")); verifyConfiguration(value.configuration);
       for (const backend of value.backends) integrity(backend.registered === Object.hasOwn(value.configuration.configuration.backends, backend.backend_id));

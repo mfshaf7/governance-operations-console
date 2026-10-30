@@ -5,7 +5,7 @@ export type ModelChoice = { model_id: string; effort: NativeModelEffort };
 export type ModelRoute = { primary: ModelChoice; fallbacks: ModelChoice[]; on_exhausted: "fail-closed" };
 export type RegisteredModel = {
   backend_id: string; model: string; supported_efforts: NativeModelEffort[];
-  model_digest: string | null; runtime_version: string; verification_ref: string;
+  model_digest: string | null; runtime_version: string | null; verification_ref: string;
 };
 export type ModelConfiguration = {
   backends: Record<string, { backend_id: string }>;
@@ -20,13 +20,14 @@ export type ConfigurationSnapshot = {
 export type ModelBackend = {
   backend_id: string; provider: string; allowed_tasks: string[]; registered: boolean;
   account_login_supported: boolean; availability: "not-probed";
+  experimental?: true; qualification?: "real-account-verification-pending"; catalogue_supported?: boolean; verification_max_tokens?: 4096;
 };
 export type ModelRegistry = {
   schema_version: 1; tasks: string[]; backends: ModelBackend[]; configuration: ConfigurationSnapshot; health?: ProviderHealth | null;
 };
 export type ModelCatalogue = {
   backend_id: string;
-  models: Array<{ model: string; supported_efforts: NativeModelEffort[] | null; model_digest: string | null; runtime_version: string }>;
+  models: Array<{ model: string; supported_efforts: NativeModelEffort[] | null; model_digest: string | null; runtime_version: string | null }>;
 };
 export const modelActions = ["backend.register", "backend.remove", "model.register", "model.remove", "routing.save", "routing.rollback", "account.login.start", "account.login.cancel"] as const;
 export type ModelAction = typeof modelActions[number];
@@ -105,7 +106,7 @@ export function assertModelConfiguration(value: unknown): ConfigurationSnapshot 
   for (const [id, value] of Object.entries(modelRecord(config.backends))) requireModel(modelExact(value, ["backend_id"]).backend_id === id);
   for (const [id, value] of Object.entries(modelRecord(config.models))) {
     const model = modelExact(value, ["backend_id", "model", "supported_efforts", "model_digest", "runtime_version", "verification_ref"]);
-    requireModel(modelHash(id) && modelText(model.backend_id) && modelText(model.model) && modelText(model.runtime_version, 2048) && modelHash(model.verification_ref) &&
+    requireModel(modelHash(id) && modelText(model.backend_id) && modelText(model.model) && (model.runtime_version === null || modelText(model.runtime_version, 2048)) && modelHash(model.verification_ref) &&
       (model.model_digest === null || modelText(model.model_digest)) && Array.isArray(model.supported_efforts) && model.supported_efforts.length > 0 && model.supported_efforts.every(nativeEffort) &&
       Object.hasOwn(modelRecord(config.backends), model.backend_id));
   }
@@ -123,7 +124,9 @@ export function assertModelRegistry(value: unknown): ModelRegistry {
   const snapshot = assertModelConfiguration(row.configuration);
   requireModel(snapshot.revision === snapshot.current_revision);
   for (const value of row.backends as unknown[]) {
-    const backend = modelExact(value, ["backend_id", "provider", "allowed_tasks", "registered", "account_login_supported", "availability"]);
+    const api = ["claude-api", "deepseek-api", "glm-api"].includes(String(modelRecord(value).provider));
+    const backend = modelExact(value, ["backend_id", "provider", "allowed_tasks", "registered", "account_login_supported", "availability", ...(api ? ["experimental", "qualification", "catalogue_supported", "verification_max_tokens"] : [])]);
+    if (api) requireModel(backend.experimental === true && backend.qualification === "real-account-verification-pending" && backend.catalogue_supported === (backend.provider !== "glm-api") && backend.verification_max_tokens === 4096 && backend.account_login_supported === false);
     requireModel(modelText(backend.backend_id) && modelText(backend.provider) && Array.isArray(backend.allowed_tasks) &&
       backend.allowed_tasks.every(task => (row.tasks as string[]).includes(task)) && typeof backend.registered === "boolean" &&
       typeof backend.account_login_supported === "boolean" && backend.availability === "not-probed");
@@ -135,7 +138,7 @@ export function assertModelCatalogue(value: unknown, backendId: string): ModelCa
   requireModel(row.backend_id === backendId && Array.isArray(row.models));
   for (const value of row.models as unknown[]) {
     const model = modelExact(value, ["model", "supported_efforts", "model_digest", "runtime_version"]);
-    requireModel(modelText(model.model) && modelText(model.runtime_version, 2048) && (model.model_digest === null || modelText(model.model_digest)) &&
+    requireModel(modelText(model.model) && (model.runtime_version === null || modelText(model.runtime_version, 2048)) && (model.model_digest === null || modelText(model.model_digest)) &&
       (model.supported_efforts === null || Array.isArray(model.supported_efforts) && model.supported_efforts.length > 0 && model.supported_efforts.every(nativeEffort)));
   }
   return value as ModelCatalogue;

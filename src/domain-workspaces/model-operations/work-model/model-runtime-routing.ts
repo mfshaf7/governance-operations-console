@@ -41,15 +41,15 @@ export function routingDraftIssue(registry: ModelRegistry, scope: string, mode: 
   }
   return null;
 }
-export function choiceLabel(config: ModelConfiguration, choice: ModelChoice) {
+export function choiceLabel(config: ModelConfiguration, choice: ModelChoice, backendLabels?: Record<string, string>) {
   const model = config.models[choice.model_id];
-  return model ? model.model + " · " + modelEffortLabel(choice.effort) : "Unavailable registered model";
+  return model ? model.model + (backendLabels?.[model.backend_id] ? " · " + backendLabels[model.backend_id] : "") + " · " + modelEffortLabel(choice.effort) : "Unavailable registered model";
 }
-export function effectiveRouteLabel(config: ModelConfiguration, scope: string) {
+export function effectiveRouteLabel(config: ModelConfiguration, scope: string, backendLabels?: Record<string, string>) {
   const override = scope !== defaultModelScope && Object.hasOwn(config.overrides, scope);
   const route = override ? config.overrides[scope] : config.default;
   if (route === null) return "Existing profile binding";
-  return choiceLabel(config, route.primary) + (route.fallbacks.length ? " · " + route.fallbacks.length + " fallback(s)" : "");
+  return choiceLabel(config, route.primary, backendLabels) + (route.fallbacks.length ? " · " + route.fallbacks.length + " fallback(s)" : "");
 }
 export function workflowTaskLabel(task: string) {
   const [profile, kind] = task.split("/");

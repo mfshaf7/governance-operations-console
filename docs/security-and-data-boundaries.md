@@ -49,8 +49,10 @@ owner` named authority, and an exact configured-operator match before an OOS
 adapter can run. Accepted requests carry only non-secret attribution and a
 server-generated correlation identifier. Missing, malformed, non-private,
 stale, expired, unavailable, or conflicting identity fails closed. The browser
-cannot submit credentials, identity claims, roles, named authority, source
-references, or trusted correlation headers. This source implementation does
+cannot submit Console/OOS authority credentials, identity claims, roles, named
+authority, source references, or trusted correlation headers. The separately
+bounded API-provider key entry below is explicit transient ingress, never
+Console authentication or caller authority. This source implementation does
 not grant normal activation; Security Architecture review under ART #1181
 remains required.
 
@@ -454,3 +456,27 @@ nested authority dialogs retain their focus and approval boundary. This grants
 no new tool, source-authoring or mutation permission. Exact-source acceptance
 continues through the existing configurable-AI-routing Security decision and
 complete-runtime commissioning path.
+
+## Experimental API-provider key entry
+
+Epic1363 extends the existing authenticated Models & routing path, without a new
+caller, secret store or authority. The browser submits a user-entered provider
+key only through the dedicated same-origin connection-credentials route. Its
+server adapter rejects redirects, limits input and response size, uses the
+configured operator and verifies the secret-free command and receipt hashes.
+OOS forwards this ingress once to Platform/Vault; the generic queued model
+request journal, advisors and saved-work data never receive the key. Inputs
+clear on submission, close, selection change and page exit.
+
+Recovery stores only the original closed metadata command, excluding key
+material. Pending owner references also survive loss of browser state. Check
+and reconcile read the original owner effect. Explicit disconnect clears the
+stored key and fences uncertain prior writes; it does not revoke the vendor
+account's key. Removal is blocked while registered models still refer to the
+connection. Settings history never restores credentials or retired identities.
+
+Claude, DeepSeek and GLM/Z.AI Standard API retain Experimental qualification
+independently of health, authentication or one successful verification. No
+eligible real accounts were available for this qualification. Controlled
+protocol/UI tests do not establish vendor entitlement or real-account readiness.
+Security1371 must accept exact composed source before Platform1381 activation.
