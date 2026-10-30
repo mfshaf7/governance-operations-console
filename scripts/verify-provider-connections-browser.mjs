@@ -152,12 +152,14 @@ try {
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page.getByRole("button", { name: "Manage registrations", exact: true }).click();
   await choose("Admitted backend", "Test glm-api · GLM · Z.AI Standard API · Experimental");
+  await page.getByRole("button", { name: "Register model", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Exact model ID", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Discover models", exact: true })).toBeDisabled();
-  await expect(page.getByRole("dialog", { name: "Model registrations", exact: true })).toContainText("Experimental — real-account testing pending");
+  await expect(page.getByRole("button", { name: "Discover models", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Register model", exact: true })).toContainText("Experimental — real-account testing pending");
   await noSecretStored(); assert.equal(keyWrites, 1); assert.deepEqual(errors, []);
   if (process.env.CONSOLE_MODEL_TEST_SCREENSHOT) {
     await page.screenshot({ path: process.env.CONSOLE_MODEL_TEST_SCREENSHOT });
+    await page.getByRole("button", { name: "Back to registrations", exact: true }).click();
     await page.getByRole("button", { name: "Back to Models & routing", exact: true }).click();
     await dialog(); await choose("Named connection", "Test glm-api · active");
     await page.getByRole("dialog", { name: "API connections", exact: true }).screenshot({ path: process.env.CONSOLE_MODEL_TEST_SCREENSHOT.replace(/\.png$/, "-connections.png") });

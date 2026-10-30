@@ -46,6 +46,12 @@ operator to find a hidden panel. Explicit disconnected preview permits only
 labelled read-only samples, without owner requests or receipts; configured-owner
 failure never substitutes samples.
 
+The registration dialog keeps selected-backend registration and health beside
+the backend selector. Registered models, their search/count, and selected-model
+inspection are scoped to that exact backend. Register model is an independent
+discovery/manual-entry form; it does not share selection with model update or
+removal. The overall registered-model count belongs in the main overview.
+
 ## Workbench Placement And Mode
 
 Model Operations is an Operation Workbench domain. It uses Compact Control

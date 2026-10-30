@@ -70,7 +70,7 @@ test("focused sample inspectors preserve saved effort and fallback without creat
   const registrations = page.getByRole("dialog", { name: "Model registrations", exact: true });
   await expect(registrations.getByText("Sample · read-only", { exact: true })).toBeVisible();
   await expect(registrations.getByRole("button", { name: "Connect account", exact: true })).toBeDisabled();
-  await expect(registrations.getByRole("button", { name: "Verify & register model", exact: true })).toBeDisabled();
+  await expect(registrations.getByRole("button", { name: "Verify & update registration", exact: true })).toBeDisabled();
   await expect(registrations.getByRole("button", { name: "Remove selected registration", exact: true })).toBeDisabled();
   await registrations.getByRole("button", { name: "Back to Models & routing", exact: true }).click();
   await control.getByRole("button", { name: "Operation history", exact: true }).click();
@@ -111,5 +111,48 @@ test("configured-owner failure shows unavailable state without substituting prev
   await expect(control.getByText("Synthetic owner unavailable", { exact: true })).toBeVisible();
   await expect(control.getByText(/Sample reasoning model/)).toHaveCount(0);
   await expect(control.getByRole("button", { name: "Manage registrations", exact: true })).toHaveCount(0);
+  expect(writes).toEqual([]);
+});
+
+test("registration keeps backend status, scoped model inventory and new-model form distinct", async ({ page }) => {
+  const { control, writes } = await open(page);
+  await control.getByRole("button", { name: "Manage registrations", exact: true }).click();
+  const registrations = page.getByRole("dialog", { name: "Model registrations", exact: true });
+  const backend = registrations.locator('[data-model-backend-context="true"]');
+  const inventory = registrations.locator('[data-model-registrations-register="true"]');
+  const selected = registrations.locator('[data-model-registration-selection="true"]');
+  await expect(backend.getByText("Backend health", { exact: true })).toBeVisible();
+  await expect(backend.getByText("Registered models", { exact: true })).toHaveCount(0);
+  await expect(inventory.locator("tbody tr")).toHaveCount(1);
+  await expect(inventory).toContainText("Sample reasoning model");
+  await expect(inventory).not.toContainText("Sample local model");
+  await expect(inventory.getByText("1/1 shown", { exact: true })).toBeVisible();
+  await expect(selected.getByRole("heading", { name: "Sample reasoning model", exact: true })).toBeVisible();
+  await registrations.getByRole("button", { name: "Admitted backend", exact: true }).click();
+  await page.getByRole("option", { name: "sample-local · ollama", exact: true }).click();
+  await expect(inventory.locator("tbody tr")).toHaveCount(1);
+  await expect(inventory).toContainText("Sample local model");
+  await expect(inventory).not.toContainText("Sample reasoning model");
+  await expect(selected.getByRole("heading", { name: "Sample local model", exact: true })).toBeVisible();
+  await expect(backend.getByRole("button", { name: "Connect account", exact: true })).toHaveCount(0);
+  await registrations.getByRole("searchbox", { name: "Search registered models", exact: true }).fill("absent");
+  await expect(inventory.getByText("No models match this search on the selected backend.", { exact: true })).toBeVisible();
+  await expect(selected).toHaveCount(0);
+  await registrations.getByRole("searchbox", { name: "Search registered models", exact: true }).fill("");
+  for (const width of [1200, 1440, 1700, 1920]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await registrations.evaluate(n => n.scrollWidth - n.clientWidth)).toBeLessThanOrEqual(1);
+    await expect(selected.getByRole("button", { name: "Remove selected registration", exact: true })).toBeDisabled();
+  }
+  await page.setViewportSize({ width: 1700, height: 1000 });
+  await registrations.screenshot({ path: test.info().outputPath("backend-model-register.png") });
+  await registrations.getByRole("button", { name: "Register model", exact: true }).click();
+  const form = page.getByRole("dialog", { name: "Register model", exact: true });
+  await expect(form).toContainText("Add a model through sample-local");
+  await expect(form.getByText("Read-only sample preview. Discovery and registration are disabled.", { exact: true })).toBeVisible();
+  await expect(form.getByRole("button", { name: "Verify & register model", exact: true })).toBeDisabled();
+  await form.screenshot({ path: test.info().outputPath("register-model-form.png") });
+  await form.getByRole("button", { name: "Back to registrations", exact: true }).click();
+  await expect(selected.getByRole("heading", { name: "Sample local model", exact: true })).toBeVisible();
   expect(writes).toEqual([]);
 });

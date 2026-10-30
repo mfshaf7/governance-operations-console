@@ -6,7 +6,7 @@ import {
   TerasFieldGrid, TerasFieldStack, TerasFilterBar, TerasMetadataList, TerasPanel, TerasPanelHeader, TerasPanelStack,
   TerasRecordControlOverviewGrid, TerasRecordControlSummaryPanel, TerasRecordControlActionPanel,
   TerasSelectedPanel, TerasRecordCellText, TerasRecordControlLayout, TerasRecordTable,
-  TerasRegisterPanel, TerasSelectField, TerasStatusPill, TerasTextField, type TerasRecordTableColumn,
+  TerasRegisterPanel, TerasSelectField, TerasStatusPill, type TerasRecordTableColumn,
 } from "@/teras";
 import { modelEffortLabel } from "../../../../console-integration/governed-ai/model-selection.ts";
 import { useModelRuntime } from "../../live-runtime/use-model-runtime.ts";
@@ -18,9 +18,10 @@ import {
   defaultModelScope, effectiveRouteLabel, eligibleModelIds,
   readRoutingDraft, routingDraftIssue, routingInput, workflowTaskLabel, type RoutingMode,
 } from "../../work-model/model-runtime-routing.ts";
-import { modelProviderMetadata, modelRouteHealthLabel, modelOperationMetadata, modelOwnerErrorMetadata, modelRoutingConflictMetadata, modelRoutingMetadata, modelRuntimeSummaryStatus, modelSelectedRouteMetadata, modelSavedRouteMetadata } from "./model-runtime-control-view-model.ts";
+import { modelRouteHealthLabel, modelOperationMetadata, modelOwnerErrorMetadata, modelRoutingConflictMetadata, modelRoutingMetadata, modelRuntimeSummaryStatus, modelSelectedRouteMetadata, modelSavedRouteMetadata } from "./model-runtime-control-view-model.ts";
 
 import { useProviderConnections } from "../../live-runtime/use-provider-connections.ts";
+import { ModelRegistrationsDialog } from "../dialogs/registrations/model-registrations-dialog.tsx";
 import { ProviderConnectionsDialog } from "../dialogs/provider-connections/provider-connections-dialog.tsx";
 import { providerPresets } from "../../work-model/provider-connections-contract.ts";
 
@@ -48,19 +49,12 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
     const label = connection ? connection.name + " · " + providerPresets[connection.provider].label : item.backend_id;
     return [item.backend_id, label + (item.experimental ? " · Experimental" : "")];
   }));
-  const [backendId, setBackendId] = useState(""), [catalogueModel, setCatalogueModel] = useState("");
   const [taskSearch, setTaskSearch] = useState("");
   const [scope, setScope] = useState(defaultModelScope), [mode, setMode] = useState<RoutingMode>("source");
   const [route, setRoute] = useState<ModelRoute>({ primary: { model_id: "", effort: null }, fallbacks: [], on_exhausted: "fail-closed" });
   const [editRevision, setEditRevision] = useState<number | null>(null), [dirty, setDirty] = useState(false);
   const [nextScope, setNextScope] = useState<string | null>(null), [reloadGuard, setReloadGuard] = useState(false);
   const [restoreRevision, setRestoreRevision] = useState(""), [restore, setRestore] = useState<{ revision: number; expected: number } | null>(null);
-  const backend = registry?.backends.find(item => item.backend_id === backendId) ?? (!backendId ? registry?.backends[0] ?? null : null);
-  const selectedConnection = connections.snapshot?.connections.find(item => item.connection_id === backend?.backend_id);
-  const canProbe = !backend?.experimental || Boolean(connections.fresh && selectedConnection?.state === "active" && selectedConnection.credential_present && !selectedConnection.pending_operation);
-  const selectedRegisteredModel = Object.values(config?.models ?? {}).some(row => row.backend_id === backend?.backend_id && row.model === catalogueModel);
-  const modelNames = [...new Set([...Object.values(config?.models ?? {}).filter(row => row.backend_id === backend?.backend_id).map(row => row.model),
-    ...(runtime.catalogue && runtime.catalogue.backend_id === backend?.backend_id ? runtime.catalogue.models.map(row => row.model) : [])])];
   const operation = runtime.operation;
   const outstanding = Boolean(runtime.selectedId && (!operation || !terminalModelStates.has(operation.state)));
   const busy = runtime.pending || outstanding || connections.pending;
@@ -78,11 +72,6 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
     if (!config || dirty) return;
     const next = readRoutingDraft(config, scope); setMode(next.mode); setRoute(next.route); setEditRevision(registry!.configuration.revision);
   }, [config, registry, scope, dirty]);
-  useEffect(() => {
-    if (backendId && registry && !registry.backends.some(value => value.backend_id === backendId)) {
-      setBackendId(""); setCatalogueModel(""); runtime.clearCatalogue();
-    }
-  }, [registry, backendId, runtime.clearCatalogue]);
   const send = async (action: ModelAction, input: Record<string, unknown>, revision = registry?.configuration.revision) => {
     if (revision === undefined || runtime.preview) return;
     setDialog("activity");
@@ -151,41 +140,9 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
         action={{ kicker: "Routing settings", title: dirty ? "Continue routing draft" : "Review model choices",
           description: "Inspect primary model, native effort and ordered fallbacks for this workflow.",
           node: <TerasActionButton onClick={() => setDialog("routing")}>Review routing</TerasActionButton> }} />} />
-    <TerasDialog open={dialog === "registration"} onClose={() => setDialog(null)} title="Model registrations"
-      kicker="Models & routing" width="wide" height="fill" contentOverflow="hidden"
-      actions={<TerasActionButton emphasis="secondary" onClick={() => setDialog(null)}>Back to Models & routing</TerasActionButton>}>
-      <TerasFieldStack overflow="auto">
-      <TerasPanel frame="padded" treatment="neutral" spacing="compact">
-        <TerasPanelHeader kicker="Model registration" title="Backends & models" description="Checks leave settings unchanged. Verify explicitly updates the registration and keeps its routes." statusLabel={runtime.preview ? "Sample · read-only" : runtime.fresh ? "Revision " + registry.configuration.revision : "Owner unavailable"} statusTone={runtime.fresh || runtime.preview ? "info" : "warn"} />
-        <TerasFieldGrid columns={2}>
-          <TerasSelectField label="Admitted backend" disabled={busy || dirty || !runtime.fresh}
-            value={backend?.backend_id ?? ""} options={registry.backends.map(item => ({ value: item.backend_id, label: item.experimental ? backendLabels[item.backend_id] : item.backend_id + " · " + item.provider }))}
-            onValueChange={value => { setBackendId(value); setCatalogueModel(""); runtime.clearCatalogue(); }} />
-          {backend?.catalogue_supported === false ? <TerasTextField label="Exact model ID" value={catalogueModel} onValueChange={setCatalogueModel}
-            disabled={busy || dirty || !runtime.fresh} maxLength={200} autoComplete="off" spellCheck={false} /> : <TerasSelectField label="Model" disabled={busy || dirty || !runtime.fresh}
-            value={catalogueModel} options={[{ value: "", label: "Select a registered model or discover" }, ...modelNames.map(name => ({ value: name, label: name + (backend?.experimental ? " · Experimental" : "") }))]}
-            onValueChange={setCatalogueModel} />}
-        </TerasFieldGrid>
-        <TerasActionRow>
-          <TerasActionButton disabled={blocked || dirty || !backend} emphasis="secondary" onClick={() => backend && void send(backend.registered ? "backend.remove" : "backend.register", { backend_id: backend.backend_id })}>
-            {backend?.registered ? "Remove backend" : "Register backend"}</TerasActionButton>
-          {backend?.account_login_supported ? <TerasActionButton disabled={blocked || dirty || !backend.registered} emphasis="secondary" onClick={() => void send("account.login.start", { backend_id: backend.backend_id })}>Connect account</TerasActionButton> : null}
-          <TerasActionButton disabled={blocked || dirty || !backend?.registered || backend.catalogue_supported === false || !canProbe} emphasis="secondary" onClick={() => backend && void runtime.discover(backend.backend_id)}>Discover models</TerasActionButton>
-          <TerasActionButton disabled={blocked || dirty || !backend?.registered || !catalogueModel || !canProbe} onClick={() => backend && void send("model.register", { backend_id: backend.backend_id, model: catalogueModel })}>{selectedRegisteredModel ? "Verify & update registration" : "Verify & register model"}</TerasActionButton>
-        </TerasActionRow>
-        <TerasActionRow><TerasActionButton emphasis="secondary" disabled={busy || dirty || runtime.preview} onClick={() => setConnectionsOpen(true)}>Add / manage API connections</TerasActionButton></TerasActionRow>
-        <TerasMetadataList shape="line" wrap items={modelProviderMetadata(registry, backend, catalogueModel)} />
-      </TerasPanel>
-      <TerasPanel frame="padded" treatment="neutral" spacing="compact">
-        <TerasPanelHeader kicker="Registered models" title="Remove a registration" description="The owner checks existing route references before removing a model." />
-            <TerasSelectField label="Registered model" value={catalogueModel && registeredIds.find(id => config?.models[id].backend_id === backend?.backend_id && config.models[id].model === catalogueModel) || ""}
-              disabled={blocked || dirty} options={[{ value: "", label: "Select a registration to remove" }, ...registeredIds.map(id => ({ value: id, label: config!.models[id].model + " · " + backendLabels[config!.models[id].backend_id] }))]}
-              onValueChange={id => { if (id && config) { setBackendId(config.models[id].backend_id); setCatalogueModel(config.models[id].model); } else setCatalogueModel(""); }} />
-            <TerasActionRow><TerasActionButton emphasis="secondary" disabled={blocked || dirty || !registeredIds.some(id => config?.models[id].backend_id === backend?.backend_id && config.models[id].model === catalogueModel)}
-              onClick={() => { const id = registeredIds.find(id => config?.models[id].backend_id === backend?.backend_id && config.models[id].model === catalogueModel); if (id) void send("model.remove", { model_id: id }); }}>Remove selected registration</TerasActionButton></TerasActionRow>
-      </TerasPanel>
-          </TerasFieldStack>
-    </TerasDialog>
+    <ModelRegistrationsDialog open={dialog === "registration"} onClose={() => setDialog(null)}
+      runtime={runtime} registry={registry} connections={connections} backendLabels={backendLabels}
+      changesBlocked={dirty || busy} onSubmit={send} onOpenConnections={() => setConnectionsOpen(true)} />
     <TerasDialog open={dialog === "routing"} onClose={() => dirty ? setCloseRouting(true) : setDialog(null)} title="Workflow routing"
       description={scope === defaultModelScope ? "System default" : workflowTaskLabel(scope)} kicker="Models & routing"
       width="wide" height="fill" contentOverflow="hidden"

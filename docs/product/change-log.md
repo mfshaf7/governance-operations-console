@@ -12,6 +12,13 @@ requests, receipts, credentials or readiness. Configured-owner failure never
 selects those samples. Profile overview copy keeps request references in
 history and avoids repeating identical provider/resolution text.
 
+Registration review refines that same dialog: selected backend registration and
+health stay together; its model inventory is filtered by exact backend identity;
+verification/removal target the selected model; and Register model opens an
+independent discovery/manual-entry form. Global model counts remain in the main
+overview. Backend, registered-model and new-model selections no longer share one
+field value. Experimental qualification and verification cost remain visible.
+
 ## 2026-10-31 — Repository compact layout and receipt inspection
 
 The approved local UI batch reuses the Repository gate dialog and existing

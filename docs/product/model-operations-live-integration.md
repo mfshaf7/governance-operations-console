@@ -89,9 +89,14 @@ owns durable connection state and receipts. Source alone does not activate them.
    choose **Connect account** and complete its native device challenge.
    The code is private operator metadata. Provider tokens stay in Platform
    custody and never enter Console configuration or browser storage.
-3. Choose **Discover models**, select an advertised model, then **Verify &
+3. The registered-model list shows only models on the selected backend, with
+   its own search and count. Select a row to verify/update that registration or
+   remove it; the owner checks route references before removal. To add a model,
+   choose **Register model**, then **Discover models**, select an unregistered
+   advertised model, then **Verify &
    register model**. Discovery is metadata. Registration completes after the
-   Platform verification and receipt readback.
+   Platform verification and receipt readback. GLM uses exact manual model entry
+   in the same form. Adding a model does not change the selected registration.
 4. Return to Models & routing, select **System default** or a workflow row and
    open **Review routing**. Configure an explicit model
    route, use the existing profile binding, or inherit the default for that

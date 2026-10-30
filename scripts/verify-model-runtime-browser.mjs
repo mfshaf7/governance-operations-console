@@ -69,6 +69,7 @@ try {
   await registrations();
   await choose("Admitted backend", backend + " · " + (backend === "cloud" ? "codex-app-server" : "ollama"));
   await page.getByRole("button", { name: "Register backend", exact: true }).click(); await clear(); await registrations();
+  await page.getByRole("button", { name: "Register model", exact: true }).click();
   await page.getByRole("button", { name: "Discover models", exact: true }).click();
   await choose("Model", "synthetic-model");
   await page.getByRole("button", { name: "Verify & register model", exact: true }).click(); await clear();
@@ -88,6 +89,11 @@ try {
  assert.equal(writes.length, prior + 1); const original = records[0].request_id;
  assert.equal(records[0].request.input.default.primary.effort, "high"); assert.equal(records[0].request.input.default.fallbacks[0].effort, false);
  await open(); await page.getByText(original, { exact: true }).waitFor(); await clear(); assert.equal(writes.length, prior + 1, "Cold recovery reads the same ID and never resubmits");
+ const savedRoute = structuredClone(config.default);
+ await registrations(); await choose("Admitted backend", "cloud · codex-app-server");
+ await page.getByRole("button", { name: "Verify & update registration", exact: true }).click(); await clear();
+ assert.deepEqual(writes.at(-1).input, { backend_id: "cloud", model: "cloud-model" });
+ assert.deepEqual(config.default, savedRoute, "Verifying the selected registration preserves its route references");
  await page.getByText("Synthetic advisor · planning", { exact: true }).click(); await routing();
  await choose("Selection mode", "Use existing profile binding");
  await page.getByRole("button", { name: "Save routing", exact: true }).click(); await clear();
