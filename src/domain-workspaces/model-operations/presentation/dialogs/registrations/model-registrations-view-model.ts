@@ -8,18 +8,25 @@ export function registeredModelsForBackend(registry: ModelRegistry, backendId: s
     .map(([id, model]) => ({ id, ...model }));
 }
 
-export function modelBackendMetadata(registry: ModelRegistry, backend: ModelBackend | null): TerasMetadataItem[] {
+export function modelBackendStatusMetadata(registry: ModelRegistry, backend: ModelBackend | null): TerasMetadataItem[] {
   const health = currentProviderHealth(registry);
   const observation = health?.backends.find(row => row.backend_id === backend?.backend_id);
   return [
     { label: "Registration", value: backend?.registered ? "Registered" : "Not registered" },
     { label: "Backend health", value: backend?.registered ? providerHealthLabel(observation) : "Not checked",
       detail: health ? "Checked " + new Date(health.checked_at).toLocaleTimeString() : "No current owner health observation" },
-    ...(backend?.experimental ? [
-      { label: "Qualification", value: "Experimental — real-account testing pending", tone: "warn" as const },
-      { label: "Explicit verification", value: "May consume up to 4,096 output tokens and 60 seconds" },
-    ] : []),
   ];
+}
+
+export function modelBackendQualificationMetadata(backend: ModelBackend | null): TerasMetadataItem[] {
+  return backend?.experimental ? [
+    { label: "Qualification", value: "Experimental — real-account testing pending", tone: "warn" },
+    { label: "Explicit verification", value: "May consume up to 4,096 output tokens and 60 seconds" },
+  ] : [];
+}
+
+export function modelBackendMetadata(registry: ModelRegistry, backend: ModelBackend | null): TerasMetadataItem[] {
+  return [...modelBackendStatusMetadata(registry, backend), ...modelBackendQualificationMetadata(backend)];
 }
 
 export function modelRegistrationHealthLabel(registry: ModelRegistry, modelId: string) {
