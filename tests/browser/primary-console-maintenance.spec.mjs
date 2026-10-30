@@ -94,3 +94,29 @@ test("disconnected Proposal capture describes local preview persistence",async({
  await page.getByRole("button",{name:"Capture Proposal",exact:true}).click();
  await expect(page.getByRole("dialog",{name:"Capture Proposal",exact:true})).toContainText("disconnected preview");
 });
+
+test("Registry inventory preserves readable columns and evidence cards at every supported width",async({page})=>{
+ const revision="9".repeat(40),digest=c=>`sha256:${c.repeat(64)}`;
+ const name="synthetic-example-repository-with-a-long-name";
+ const record={id:`repo:${name}`,kind:"repo",name,version:1,posture:"active",maturity:null,record_digest:digest("2"),owner_refs:["synthetic-source-owner"],last_mutation:{action:"migrate",applied_at:"2026-09-01T00:00:00.000Z",id:`synthetic-migration:${name}`,readiness_ref:null,request_ref:null},lineage:{intake_entry_version:null,source:"legacy-migration",source_digest:digest("1"),source_ref:`git://synthetic-owner/${revision}`}};
+ const registry={schema_version:1,workflow_id:"workspace-inventory-registry",authority_revision:revision,canonical_authority:{branch:"main",intake_path:"contracts/intake-register.yaml",inventory_paths:{component:"contracts/components.yaml",product:"contracts/products.yaml",repo:"contracts/repos.yaml"},repo:"workspace-governance"},canonical_mutation:false,eligible_promotions:[],projected_at:new Date().toISOString(),projection_digest:digest("5"),projection_id:"workspace-inventory-registry:synthetic-test",records:[record]};
+ const continuity={schema_version:1,artifact_type:"workspace-continuity-projection",projection_state:"current",projection_id:`workspace-continuity-projection:${"c".repeat(64)}`,projection_digest:`sha256:${"c".repeat(64)}`,authority:{owner_repo:"workspace-governance",revision:registry.authority_revision,file_digests:{}},authority_boundary:{canonical_registry:"workspace-governance",readiness_projection:"workspace-governance-control-fabric",workflow_authority:"operator-orchestration-service",terminal_publication_authority:"operator-orchestration-service",mutation_authority:"none"},products:[],intake:[],inventory:registry.records.map(row=>({kind:row.kind,name:row.name,record_id:row.id,record_version:row.version,record_digest:row.record_digest,posture:row.posture,lifecycle:"active",retired_collection:false,lineage:row.lineage,last_mutation:{...row.last_mutation,idempotency_key:`fixture:${row.id}`,readiness_digest:null,request_digest:null}}))};
+ await page.route("**/api/workspace-registry",r=>r.fulfill({json:registry}));
+ await page.route("**/api/workspace-continuity",r=>r.fulfill({json:continuity}));
+ await ready(page);
+ await page.getByRole("navigation",{name:"Console navigation",exact:true}).locator('button[title="Workspace Registry"]').click();
+ const workspace=page.getByRole("dialog",{name:"Workspace Registry",exact:true});
+ await expect(workspace.getByRole("heading",{name:"Active inventory",exact:true})).toBeVisible();
+ for(const width of [1200,1440,1700,1920]){
+  await page.setViewportSize({width,height:1000});
+  const cells=await workspace.locator("tbody td").evaluateAll(nodes=>nodes.map(n=>({client:n.clientWidth,scroll:n.scrollWidth})));
+  expect(cells.length).toBeGreaterThan(0);
+  for(const cell of cells){expect(cell.client).toBeGreaterThan(40);expect(cell.scroll).toBeLessThanOrEqual(cell.client+2)}
+  const cards=await workspace.locator('[data-shape="list"][data-treatment="card"] > div').evaluateAll(nodes=>nodes.map(n=>({client:n.clientHeight,scroll:n.scrollHeight})));
+  expect(cards.length).toBeGreaterThan(0);
+  for(const card of cards)expect(card.scroll).toBeLessThanOrEqual(card.client+1);
+  const table=workspace.locator('table').first();
+  await table.getByRole("columnheader",{name:"Status",exact:true}).scrollIntoViewIfNeeded();
+  await expect(table.getByRole("columnheader",{name:"Status",exact:true})).toBeInViewport();
+ }
+});

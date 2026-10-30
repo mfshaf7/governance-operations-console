@@ -128,6 +128,7 @@ export function WorkspaceRegistrySurface({
               columns={registryColumns(view)}
               fill
               getRowId={(entry) => entryTarget(entry).record_id}
+              profile="inventory"
               onSelect={(entry) => setSelectedId(entryTarget(entry).record_id)}
               rows={[...filtered]}
               selectedRowId={selected ? entryTarget(selected).record_id : null}
