@@ -56,6 +56,15 @@ must work for keyboard and pointer users.
 
 ## Qualification
 
+Dock space is reserved once by the Console frame; the command header and
+Workbench launcher reflow within the remaining stage. Registers retain all
+columns through their existing bounded scroll pattern. Evidence cards retain
+their content height, and environment readiness, capabilities and history use
+one explicit scrolling content region. A selected Proposal shows a short
+overview with its next action; its complete original context remains in the
+Proposal Hub, details and owner-backed workflow inputs. Capture wording follows
+the same live/disconnected mode as the existing capture dialog.
+
 Source review and acceptance are distinct from live qualification. Validate
 projection, loading/failure, filtering and cursor boundaries, then inspect the
 real accepted-source UI with short and long event types at 1200, 1440, 1700 and

@@ -135,7 +135,7 @@ export const guard = {
     ]);
     assertIncludes(failures, selectorPresentationPath, [
       "operationWorkbenchSelectorEntries.map",
-      "xl:grid-cols-7",
+      "operator-approval-strip",
     ]);
     assertOmits(failures, pagePath, [
       "OperationWorkbenchHost",

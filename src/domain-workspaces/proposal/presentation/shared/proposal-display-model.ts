@@ -9,6 +9,14 @@ import type {
 export type ProposalIngressFilter = ProposalIngressKind | "all";
 export type ProposalStatusFilter = ProposalWorkspaceScenarioStatus | "all";
 
+export function proposalOverviewContext(body: string) {
+  const context = body.replace(/\s+/g, " ").trim();
+  if (context.length <= 240) return context;
+
+  const excerpt = context.slice(0, 240).replace(/\s+\S*$/, "");
+  return `${excerpt}… Full context is available in Proposal Hub.`;
+}
+
 export function proposalIngressLabel(ingress: ProposalIngressKind) {
   switch (ingress) {
     case "agent":

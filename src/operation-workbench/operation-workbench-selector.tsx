@@ -32,7 +32,7 @@ export function OperationWorkbenchSelector({
           {operationWorkbenchSelectorEntries.length} paths
         </span>
       </div>
-      <div className="operator-approval-strip mt-4 grid gap-1.5 md:grid-cols-4 xl:grid-cols-7">
+      <div className="operator-approval-strip mt-4 grid gap-1.5">
         {operationWorkbenchSelectorEntries.map((surface, index) => (
           <button
             key={surface.label}

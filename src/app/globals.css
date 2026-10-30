@@ -615,6 +615,7 @@ select {
 }
 
 .operator-approval-strip {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   border: 1px solid rgba(255, 193, 90, 0.16);
   border-radius: 16px;
   background:
