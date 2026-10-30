@@ -83,7 +83,17 @@ test("a long live Proposal keeps its next action visible and its full body in th
  const bounds=await selected.boundingBox(),button=await action.boundingBox();
  expect(button.y+button.height).toBeLessThanOrEqual(bounds.y+bounds.height);
  await action.click();
- await expect(page.getByText(body,{exact:true})).toBeAttached();
+ const full=page.getByText(body,{exact:true});
+ await expect(full).toBeAttached();
+ const context=page.locator('[data-teras-hub-slot="selected"]');
+ for(const width of [1200,1440,1700,1920]){
+  await page.setViewportSize({width,height:1000});
+  expect(await context.evaluate(n=>getComputedStyle(n).overflowY)).toMatch(/auto|scroll/);
+  await context.hover();await page.mouse.wheel(0,10000);
+  await expect.poll(()=>context.evaluate(n=>n.scrollTop>0&&n.scrollTop+n.clientHeight>=n.scrollHeight-1)).toBe(true);
+  const end=await full.evaluate(n=>{const r=document.createRange();r.selectNodeContents(n);r.setStart(n.firstChild,n.firstChild.textContent.length-1);const a=r.getBoundingClientRect(),b=n.closest('[data-teras-hub-slot="selected"]').getBoundingClientRect();return{top:a.top,bottom:a.bottom,panelTop:b.top,panelBottom:b.bottom};});
+  expect(end.top).toBeGreaterThanOrEqual(end.panelTop);expect(end.bottom).toBeLessThanOrEqual(end.panelBottom);
+ }
 });
 
 test("disconnected Proposal capture describes local preview persistence",async({page})=>{

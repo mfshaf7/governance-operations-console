@@ -4290,6 +4290,7 @@
 
 .terasHubPanel[data-teras-hub-slot="selected"] {
   min-height: 8.65rem;
+  overflow: auto;
   padding: 0.95rem 1.05rem;
 }
 
