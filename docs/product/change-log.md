@@ -1,5 +1,20 @@
 # Governance Operations Console Change Log
 
+## 2026-10-30 — Experimental provider connections
+
+Epic1363 story1369, Landing Unit Decision `child_isolated_landing_unit`,
+`delivery-1363-console`: extend the existing Models & routing controls with a
+Teras connection dialog, named Claude/DeepSeek/GLM presets, transient key entry,
+key rotation, disconnect/remove and original-operation recovery. Platform owns
+configuration and Vault custody; OOS retains workflow/operator binding.
+
+GLM uses exact manual model IDs. Native effort and all existing default, override,
+ordered fallback and history controls remain. Experimental qualification is
+visible independently of provider health. Controlled protocol and browser
+evidence must be distinguished from pending real-account qualification. This
+source requires Security1371 and Platform1381 commissioning before live use.
+Primary procedure: [Models & routing](model-operations-live-integration.md).
+
 ## Delivery archive fidelity and inspection controls
 
 Reuse original Work Design, Refinement and Execution interfaces with independent

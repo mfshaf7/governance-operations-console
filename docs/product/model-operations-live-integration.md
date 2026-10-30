@@ -21,6 +21,59 @@ activation.
 
 ## Models & Routing Procedure
 
+### Experimental API connections
+
+Epic1363 extends the same Models & routing surface with a connection dialog,
+using existing Teras controls. Its owner workflow is:
+
+```mermaid
+flowchart LR
+  Preset[Named API connection] --> Key[Explicit transient key entry]
+  Key --> Custody[Platform and Vault custody]
+  Custody --> Backend[Register admitted backend]
+  Backend --> Verify[Verify exact model and native controls]
+  Verify --> Route[Review and save workflow routing]
+  Key --> Unknown[Original operation read and reconciliation]
+  Unknown --> Fence[Explicit disconnect fences uncertain writes]
+```
+
+Claude, DeepSeek and GLM/Z.AI Standard API remain **Experimental — real-account
+testing pending**. Maturity is independent of health or a successful model probe.
+No eligible provider accounts are available for this qualification. The existing
+Codex/Ollama controls, defaults, task overrides, fallbacks and history remain.
+
+Choose Add API connection, select the reviewed preset and a short name, then
+explicitly enter its API key. Keys use a dedicated protected same-origin ingress
+to Platform/Vault; they are never autosaved, included in advisor context, kept in
+browser storage or passed through the generic model request journal. Closing or
+changing connection clears unsent key material. Reload recovery stores only the
+original safe command/reference and reads the authenticated owner again.
+
+After an uncertain key write, check/reconcile the original operation. Never
+automatically resubmit credentials. Disconnect clears stored credentials and
+fences uncertain prior writes; reconnect requires a new key. Removing a connection
+requires resolving its model/routing references first. A confirmed revision
+conflict can be cleared after refresh and reviewed as a new command; uncertain
+completion retains its original identity. Configuration restoration never
+restores provider keys or retired connections. Current state is read
+separately from an original operation's historical receipt.
+
+GLM uses exact manual model entry because this preset has no admitted catalogue
+API. Verification may consume up to 4,096 output tokens and 60 seconds. Native
+controls come from provider metadata or documented protocol capabilities;
+unknown controls use Provider default. Absent cloud runtime versions/digests are
+shown as not supplied by the provider. Saved settings never restore credentials
+or admission for removed connections; the owner rejects those stale references.
+
+The additional same-origin routes are GET `/connections`, POST
+`/connections/commands`, POST `/connections/credentials`, GET
+`/connections/operations/{command_id}` and POST `/connections/reconcile`, all
+under `/api/model-operations/runtime`. They retain the existing verified-session
+and same-origin mutation guards. OOS owns workflow authorization and Platform
+owns durable connection state and receipts. Source alone does not activate them.
+
+### Existing registration and routing
+
 1. Open Model Operations, **Models & routing**. The server reads admitted
    backends, current configuration and caller-owned history through OOS.
    First registration needs no prior completed request or lifecycle receipt.
@@ -63,8 +116,8 @@ The closed same-origin adapter routes are:
 - POST /api/model-operations/runtime/requests/{request_id}/controls
 
 Reads and writes require the verified operator session. The browser cannot
-choose owner addresses, caller credentials, roles, policy permissions or
-provider secrets. Server validation binds operator, request, command and
+choose owner addresses, caller credentials, roles or policy permissions.
+API keys use only the explicit transient ingress above. Server validation binds operator, request, command and
 receipt digests, accepted historical readback, native login and terminal state.
 Owner failure is unavailable without fixture substitution.
 

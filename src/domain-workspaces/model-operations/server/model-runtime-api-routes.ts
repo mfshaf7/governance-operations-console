@@ -8,7 +8,16 @@ export async function modelRuntimeRoute(request: NextRequest, path: string[]) {
     const client = createModelRuntimeClient();
     const method = request.method;
     let result: unknown;
-    if (method === "GET" && path.join("/") === "registry") result = await client.registry();
+    if (path[0] === "connections") {
+      if (method === "GET" && path.length === 1) result = await client.connections();
+      else if (method === "GET" && path.length === 3 && path[1] === "operations") result = await client.connectionOperation(path[2]);
+      else if (method === "POST" && path.length === 2 && ["commands", "credentials", "reconcile"].includes(path[1])) {
+        const raw = await request.text();
+        if (new TextEncoder().encode(raw).byteLength > 16_384) return NextResponse.json({ error: "Connection input exceeds its limit." }, { status: 413 });
+        const input: unknown = JSON.parse(raw);
+        result = path[1] === "credentials" ? await client.connectionCredentials(input) : path[1] === "commands" ? await client.connectionCommand(input) : await client.reconcileConnection(input);
+      } else return NextResponse.json({ error: "Connection route not found." }, { status: 404 });
+    } else if (method === "GET" && path.join("/") === "registry") result = await client.registry();
     else if (method === "GET" && path.join("/") === "catalogue") {
       const backend = request.nextUrl.searchParams.get("backend_id"), model = request.nextUrl.searchParams.get("model");
       if (!modelText(backend) || model !== null && !modelText(model)) throw new ModelRuntimeContractError();

@@ -8,7 +8,7 @@ export type ProviderHealth = {
   models: Array<Observation & { model_id: string; observed_runtime_version: string | null; observed_model_digest: string | null;
     last_success?: { kind: "verification" | "request"; at: string; reference: string } | null }>;
 };
-const codes = ["connection-not-probed", "check-budget-exhausted", "metadata-available", "account-sign-in-required",
+const codes = ["connection-disconnected", "credential-reconcile-required", "api-key-required", "connection-not-probed", "check-budget-exhausted", "metadata-available", "account-sign-in-required",
   "account-present-connection-unprobed", "provider-metadata-invalid", "provider-unavailable", "provider-busy",
   "model-not-advertised", "registration-changed", "metadata-matched", "connection-verified",
   "last-request-failed", "recent-model-success", "model-verification-required"];
@@ -50,6 +50,9 @@ export function currentProviderHealth(registry: { configuration: HealthBinding; 
 }
 export function providerHealthLabel(observation?: Observation & { last_success?: { at: string } | null }) {
   if (!observation) return "Health unknown";
+  if (observation.code === "connection-disconnected") return "Disconnected";
+  if (observation.code === "credential-reconcile-required") return "Key update needs reconciliation";
+  if (observation.code === "api-key-required") return "API key required";
   if (observation.code === "account-sign-in-required") return "Account sign-in required";
   if (observation.code === "account-present-connection-unprobed") return "Verification needed";
   if (observation.code === "connection-verified") return "Connection verified";

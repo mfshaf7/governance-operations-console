@@ -41,11 +41,11 @@ export function modelVerificationMetadata(registry: ModelRegistry, backendId: st
   const recent = success && Date.now() - Date.parse(success.at) <= 900_000;
   return [
     { label: "Registration", value: providerHealthLabel(observation) },
-    { label: "Registered runtime", value: selected[1].runtime_version },
-    { label: "Observed runtime", value: observation?.observed_runtime_version ?? "Not observed" },
+    { label: "Registered runtime", value: selected[1].runtime_version ?? "Not supplied by provider" },
+    { label: "Observed runtime", value: observation?.observed_runtime_version ?? (registry.backends.find(row => row.backend_id === backendId)?.experimental ? "Not supplied by provider" : "Not observed") },
     { label: "Model content", value: observation?.observed_model_digest
       ? observation.observed_model_digest === selected[1].model_digest ? "Unchanged" : "Changed"
-      : "Not observed",
+      : selected[1].model_digest === null && registry.backends.find(row => row.backend_id === backendId)?.experimental ? "Not supplied by provider" : "Not observed",
       title: "Registered digest: " + (selected[1].model_digest ?? "Not advertised") + "\nObserved digest: " + (observation?.observed_model_digest ?? "Not observed") },
     { label: "Last model success", value: success ? (success.kind === "verification" ? "Verification" : "Request") + (recent ? " · recent" : " · stale") : "Verification needed",
       detail: success ? new Date(success.at).toLocaleString() : "No timestamped result for this registration and account",
@@ -60,5 +60,8 @@ export function modelRouteHealthLabel(registry: ModelRegistry, task: string) {
 }
 
 export function modelProviderMetadata(registry: ModelRegistry, backend: ModelBackend | null, name: string): TerasMetadataItem[] {
-  return [...modelBackendMetadata(registry, backend), ...modelVerificationMetadata(registry, backend?.backend_id, name)];
+  return [...(backend?.experimental ? [
+    { label: "Qualification", value: "Experimental — real-account testing pending", tone: "warn" as const },
+    { label: "Explicit verification", value: "May consume up to 4,096 output tokens and 60 seconds" },
+  ] : []), ...modelBackendMetadata(registry, backend), ...modelVerificationMetadata(registry, backend?.backend_id, name)];
 }
