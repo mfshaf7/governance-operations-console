@@ -59,6 +59,7 @@
 
 .sectionHeader[data-actions-layout="inline"] {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
@@ -69,7 +70,7 @@
 }
 
 .sectionHeader[data-actions-layout="inline"] .sectionHeaderText {
-  flex: 1 1 auto;
+  flex: 1 1 13rem;
 }
 
 .sectionHeaderActions {
@@ -89,7 +90,7 @@
 .sectionHeader[data-actions-layout="inline"] .sectionHeaderActions {
   position: static;
   flex: 0 0 auto;
-  max-width: none;
+  max-width: 100%;
 }
 
 .terasPanel[data-layout] > .sectionHeader[data-has-description="true"] {
@@ -685,6 +686,8 @@
 .terasMetadataList[data-shape="grid"],
 .terasMetadataList[data-shape="list"] {
   display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: 0.65rem;
 }
 
@@ -2093,6 +2096,7 @@
   letter-spacing: 0.12em;
   text-align: left;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .recordTable td {
@@ -2101,6 +2105,14 @@
   color: var(--text);
   font-size: 0.78rem;
   vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+.recordTable .statusPill,
+.sectionHeaderActions .statusPill {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .recordTableShell[data-density="compact"] .recordTable th {

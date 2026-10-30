@@ -62,7 +62,7 @@ export const guard = {
     assertIncludes(
       failures,
       "src/operation-workbench/operation-workbench-selector.tsx",
-      ["xl:grid-cols-7"],
+      ["operationWorkbenchSelectorEntries.map"],
     );
     assertOmits(failures, "src/app/page.tsx", staleDomainTerms);
     assertOmits(

@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import {
+  TerasContentRegion,
   TerasDraftCloseGuardDialog,
   TerasFullscreenSurfaceFrame,
   TerasModalShell,
@@ -243,7 +244,7 @@ export function EnvironmentLifecycleWorkspace({
           }
         >
           {liveRuntime.snapshot.mode !== "disconnected-preview" ? (
-            <>
+            <TerasContentRegion fill gap="normal" scroll>
               <PlatformOperationsLiveSurface
                 kind={activeWorkspaceId}
                 focusRecordRef={entryIntent?.subjectRef}
@@ -256,7 +257,7 @@ export function EnvironmentLifecycleWorkspace({
                 onControl={liveRuntime.control}
                 operations={liveRuntime.snapshot.operations}
               />
-            </>
+            </TerasContentRegion>
           ) : activeWorkspaceId === "dev-integration" ? (
             <DevIntegrationSurface
               focusProfileId={entryIntent?.subjectRef ?? null}

@@ -137,6 +137,7 @@ export function ProductPortfolioContinuitySurface({
               columns={columns}
               fill
               getRowId={(item) => item.product_id}
+              profile="inventory"
               onSelect={(item) => setSelectedProductId(item.product_id)}
               rows={[...filtered]}
               selectedRowId={selected?.product_id ?? null}

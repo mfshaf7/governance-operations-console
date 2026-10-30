@@ -11,11 +11,6 @@
   min-width: 0;
   container-type: inline-size;
   container-name: console-stage;
+  padding-left: var(--console-navigation-stage-inset);
   padding-right: calc(var(--console-right-dock-width) + var(--console-right-dock-edge));
-}
-
-@media (min-width: 1440px) {
-  .stageSlot {
-    padding-left: var(--console-navigation-stage-inset);
-  }
 }

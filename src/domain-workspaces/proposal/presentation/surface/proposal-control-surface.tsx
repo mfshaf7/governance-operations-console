@@ -16,6 +16,7 @@ import { ProposalControlOverviewPanel } from "./proposal-control-overview-panel.
 import { ProposalWorkspaceRegisterTable } from "./proposal-workspace-register-table.tsx";
 import {
   proposalIngressFilterOptions,
+  proposalOverviewContext,
   proposalSelectedPanelMetadata,
 } from "../shared/proposal-display-model.ts";
 import { useProposalControlController } from "./use-proposal-control-controller.ts";
@@ -43,6 +44,7 @@ export function ProposalControlSurface({
           <ProposalControlOverviewPanel
             canCapture={controller.capture.available}
             onCaptureProposal={controller.capture.openModal}
+            previewMode={controller.capture.previewMode}
             summary={controller.summary}
             workspaceStatus={controller.workspaceStatus}
           />
@@ -114,7 +116,7 @@ export function ProposalControlSurface({
               ),
               title: selectedProposalMove.title,
             }}
-            description={selectedProposal.bodyPreview}
+            description={proposalOverviewContext(selectedProposal.bodyPreview)}
             kicker="Selected Proposal"
             meta={proposalSelectedPanelMetadata(selectedProposal)}
             selected

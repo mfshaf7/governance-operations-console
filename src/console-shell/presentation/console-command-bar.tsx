@@ -72,7 +72,7 @@ export function ConsoleCommandBar() {
                 Operations cockpit
               </p>
             </div>
-            <h1 className="display-title max-w-3xl text-4xl font-bold text-[var(--text)] md:text-6xl">
+            <h1 className={`display-title ${styles.title} max-w-3xl font-bold text-[var(--text)]`}>
               Command Center
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--muted)]">

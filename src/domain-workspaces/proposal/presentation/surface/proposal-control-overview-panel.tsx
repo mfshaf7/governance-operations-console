@@ -18,11 +18,13 @@ import type { ProposalWorkspaceSummaryMetric } from "../../read-model/proposal-w
 export function ProposalControlOverviewPanel({
   canCapture,
   onCaptureProposal,
+  previewMode,
   summary,
   workspaceStatus,
 }: {
   canCapture: boolean;
   onCaptureProposal: () => void;
+  previewMode: boolean;
   summary: ProposalWorkspaceSummaryMetric[];
   workspaceStatus: OperationSurfaceStatusModel;
 }) {
@@ -49,10 +51,9 @@ export function ProposalControlOverviewPanel({
           </TerasActionButton>
         }
         boundary={
-          <>
-            Console capture adds a proposal to this preview register. External
-            API, agent, and system proposals arrive through the source refresh.
-          </>
+          previewMode
+            ? "Console capture adds a local proposal to this disconnected preview. It does not create a canonical Workspace Proposal."
+            : "Console capture creates a proposal in Workspace Proposals through OOS. External API, agent, and system proposals arrive through the source refresh."
         }
         boundaryKicker="Ingress Boundary"
         description="Direct console ingress for operator-created proposals."

@@ -41,3 +41,56 @@ test("selected component details never cover monitor controls at supported width
   if((await rows.first().getAttribute("class"))?.includes("component-status-row-active"))await rows.first().click();
  }
 });
+
+test("the command header and all seven launcher paths fit between the fixed docks",async({page})=>{
+ await page.route("**/api/governance-activity*",r=>r.fulfill({json:snapshot("synthetic:head",null)}));
+ await ready(page);
+ const navigation=page.getByRole("navigation",{name:"Console navigation",exact:true});
+ const launcher=page.locator(".operator-approval-strip");
+ const buttons=launcher.locator("button");
+ await expect(buttons).toHaveCount(7);
+ for(const width of [1200,1440,1700,1920]){
+  await page.setViewportSize({width,height:1000});
+  await page.evaluate(()=>window.scrollTo(0,0));
+  const nav=await navigation.boundingBox();
+  const header=page.locator(".top-command-panel");
+  const bounds=await header.boundingBox();
+  expect(bounds.x).toBeGreaterThanOrEqual(nav.x+nav.width);
+  const title=await header.locator("h1").evaluate(n=>({width:n.clientWidth,scroll:n.scrollWidth}));
+  expect(title.width).toBeGreaterThan(240);
+  expect(title.scroll).toBeLessThanOrEqual(title.width+1);
+  for(const button of await buttons.all()){
+   await button.scrollIntoViewIfNeeded();
+   expect(await button.evaluate(n=>{const r=n.getBoundingClientRect();return n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})).toBe(true);
+   const label=await button.locator(".operator-approval-label").evaluate(n=>({client:n.clientWidth,scroll:n.scrollWidth}));
+   expect(label.scroll).toBeLessThanOrEqual(label.client+1);
+  }
+ }
+});
+
+test("a long live Proposal keeps its next action visible and its full body in the Hub",async({page})=>{
+ const at=new Date().toISOString();
+ const body="Synthetic proposal context that should remain complete in the owner workflow. ".repeat(70)+"END OF ORIGINAL CONTEXT";
+ const projection={schema_version:1,proposal_id:"idea-851",title:"Synthetic long proposal",body,status:"captured",projection_state:"current",record_project:"workspace-proposals",record_ref:"openproject://work_packages/851",record_system:"openproject",record_version:"version-17",decision_notes:null,triage_summary:null,route:null,last_event_ref:null,updated_at:at,handoff:{packet_ref:null,state:"not-requested",target_receipt_ref:null,target_record_ref:null},source:{context_ref:{request_id:"synthetic-851"},native_ref:{request_id:"synthetic-851"},ingress:"console",surface:"governance-operations-console"}};
+ await page.route("**/api/proposals",r=>r.fulfill({json:{mode:"live",status:"current",error:null,observedAt:at,records:[{createdAt:at,projection,history:{schema_version:1,proposal_id:"idea-851",record_version:"version-17",events:[],next_cursor:null}}]}}));
+ await ready(page);
+ await page.getByRole("navigation",{name:"Console navigation",exact:true}).locator('button[title="Open PROPOSAL"]').click();
+ const selected=page.locator('[data-proposal-selected-launcher="true"]');
+ await expect(selected).toContainText("Full context is available in Proposal Hub.");
+ await expect(selected).not.toContainText("END OF ORIGINAL CONTEXT");
+ await expect(page.getByText("Console capture creates a proposal in Workspace Proposals through OOS.",{exact:false})).toBeVisible();
+ const action=selected.getByRole("button",{name:"Open Proposal Hub",exact:true});
+ const bounds=await selected.boundingBox(),button=await action.boundingBox();
+ expect(button.y+button.height).toBeLessThanOrEqual(bounds.y+bounds.height);
+ await action.click();
+ await expect(page.getByText(body,{exact:true})).toBeAttached();
+});
+
+test("disconnected Proposal capture describes local preview persistence",async({page})=>{
+ await page.route("**/api/proposals",r=>r.fulfill({json:{mode:"disconnected-preview",status:"current",error:null,observedAt:new Date().toISOString(),records:[]}}));
+ await ready(page);
+ await page.getByRole("navigation",{name:"Console navigation",exact:true}).locator('button[title="Open PROPOSAL"]').click();
+ await expect(page.getByText("Console capture adds a local proposal to this disconnected preview.",{exact:false})).toBeVisible();
+ await page.getByRole("button",{name:"Capture Proposal",exact:true}).click();
+ await expect(page.getByRole("dialog",{name:"Capture Proposal",exact:true})).toContainText("disconnected preview");
+});
