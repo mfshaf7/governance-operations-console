@@ -200,7 +200,6 @@ export function proposalWorkspaceSummaryMetrics(
       value: String(parkedCount),
     },
     { id: "done", label: "Done", tone: "ok", value: String(doneCount) },
-    ...(retiredCount ? [{id: "retired", label: "Retired", tone: "muted" as const, value: String(retiredCount)}] : []),
   ];
 }
 

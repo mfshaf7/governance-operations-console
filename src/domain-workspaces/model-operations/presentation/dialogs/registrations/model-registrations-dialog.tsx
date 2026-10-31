@@ -13,9 +13,12 @@ import type { useProviderConnections } from "../../../live-runtime/use-provider-
 import type { ModelAction, ModelRegistry } from "../../../work-model/model-runtime-contract.ts";
 import {
   modelBackendMetadata, modelBackendStatusMetadata, modelBackendQualificationMetadata,
-  modelRegistrationHealthLabel, modelVerificationMetadata,
+  modelRegistrationHealthLabel,
   registeredModelsForBackend,
 } from "./model-registrations-view-model.ts";
+
+import { LocalExceptionRuntimeDialog } from "../local-runtime/local-exception-runtime-dialog.tsx";
+import { RegisteredModelInspector } from "./registered-model-inspector.tsx";
 
 type Props = {
   open: boolean;
@@ -28,6 +31,7 @@ type Props = {
   onSubmit: (action: ModelAction, input: Record<string, unknown>) => Promise<boolean | undefined>;
   onOpenConnections: () => void;
 };
+
 type ModelRow = ReturnType<typeof registeredModelsForBackend>[number];
 
 export function ModelRegistrationsDialog({
@@ -38,6 +42,7 @@ export function ModelRegistrationsDialog({
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
   const [candidate, setCandidate] = useState("");
+  const [localRuntimeOpen, setLocalRuntimeOpen] = useState(false);
   const backend = registry.backends.find(item => item.backend_id === backendId)
     ?? (!backendId ? registry.backends[0] ?? null : null);
   const connection = connections.snapshot?.connections.find(item => item.connection_id === backend?.backend_id);
@@ -55,9 +60,11 @@ export function ModelRegistrationsDialog({
 
   useEffect(() => {
     if (backendId && !registry.backends.some(item => item.backend_id === backendId)) {
-      setBackendId(""); setSelectedId(""); setCandidate(""); setAdding(false); runtime.clearCatalogue();
+      setBackendId(""); setSelectedId(""); setCandidate(""); setAdding(false); setLocalRuntimeOpen(false); runtime.clearCatalogue();
     }
   }, [backendId, registry, runtime.clearCatalogue]);
+
+  useEffect(() => { if (!open) setLocalRuntimeOpen(false); }, [open]);
 
   const submit = (action: ModelAction, input: Record<string, unknown>) => {
     setAdding(false);
@@ -84,7 +91,7 @@ export function ModelRegistrationsDialog({
             options={registry.backends.map(item => ({ value: item.backend_id,
               label: item.experimental ? backendLabels[item.backend_id] : item.backend_id + " · " + item.provider }))}
             onValueChange={value => {
-              setBackendId(value); setSelectedId(""); setSearch(""); setCandidate(""); setAdding(false); runtime.clearCatalogue();
+              setBackendId(value); setSelectedId(""); setSearch(""); setCandidate(""); setAdding(false); setLocalRuntimeOpen(false); runtime.clearCatalogue();
             }} />
           <TerasActionRow layout="split" end={
             <TerasActionRow>
@@ -94,6 +101,8 @@ export function ModelRegistrationsDialog({
               </TerasActionButton>
               {backend?.account_login_supported ? <TerasActionButton disabled={blocked || !backend.registered} emphasis="secondary"
                 onClick={() => submit("account.login.start", { backend_id: backend.backend_id })}>Connect account</TerasActionButton> : null}
+              {backend?.provider === "ollama" ? <TerasActionButton emphasis="secondary" size="table-compact"
+                onClick={() => setLocalRuntimeOpen(true)}>Inspect runtime</TerasActionButton> : null}
               <TerasActionButton emphasis="secondary" disabled={changesBlocked || runtime.preview}
                 onClick={onOpenConnections}>Add / manage API connections</TerasActionButton>
             </TerasActionRow>
@@ -115,17 +124,11 @@ export function ModelRegistrationsDialog({
             : <TerasEmptyState>{rows.length ? "No models match this search on the selected backend."
               : "No models are registered on this backend. Use Register model to add one."}</TerasEmptyState>}
         </TerasRegisterPanel>}
-        selected={selected ? <TerasPanel data-model-registration-selection="true" frame="padded" treatment="neutral" spacing="compact" fit="fill" overflow="auto">
-          <TerasPanelHeader kicker="Selected model" title={selected.model}
-            description={"Registered through " + backendLabel + ". Verification keeps existing route references."} />
-          <TerasMetadataList shape="line" wrap items={modelVerificationMetadata(registry, selected.backend_id, selected.model)} />
-          <TerasActionRow>
-            <TerasActionButton disabled={blocked || !backend?.registered || !canProbe}
-              onClick={() => submit("model.register", { backend_id: selected.backend_id, model: selected.model })}>Verify & update registration</TerasActionButton>
-            <TerasActionButton disabled={blocked} emphasis="secondary"
-              onClick={() => submit("model.remove", { model_id: selected.id })}>Remove selected registration</TerasActionButton>
-          </TerasActionRow>
-        </TerasPanel> : <TerasEmptyState fill>Select a registered model to inspect its verification details.</TerasEmptyState>} />
+        selected={selected ? <RegisteredModelInspector key={selected.id} registry={registry}
+          modelId={selected.id} backendLabel={backendLabel}
+          verificationBlocked={blocked || !backend?.registered || !canProbe} removalBlocked={blocked}
+          onVerify={() => submit("model.register", { backend_id: selected.backend_id, model: selected.model })}
+          onRemove={() => submit("model.remove", { model_id: selected.id })} /> : <TerasEmptyState fill>Select a registered model to inspect its verification details.</TerasEmptyState>} />
     </TerasDialog>
 
     <TerasDialog open={open && adding} onClose={() => setAdding(false)} title="Register model"
@@ -157,5 +160,6 @@ export function ModelRegistrationsDialog({
           }}>Verify & register model</TerasActionButton></TerasActionRow>
       </TerasFieldStack>
     </TerasDialog>
+    {open && localRuntimeOpen && backend?.provider === "ollama" ? <LocalExceptionRuntimeDialog open onClose={() => setLocalRuntimeOpen(false)} /> : null}
   </>;
 }

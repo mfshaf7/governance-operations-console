@@ -89,6 +89,11 @@ Runtime Readiness keeps one tabbed surface:
 - Alerts
 
 Selecting a resource, component, or alert opens a read-only focus surface.
+Each resource focus panel fills the existing Command Center slot regardless of metric
+name or description length. Resource charts, statistics and evidence reflow
+against that slot's usable width. The resource-card connector is visible only
+when the monitor and focus panel are side by side; vertically stacked panels
+keep a complete selected-card border without a lateral connector.
 Component focus may open a real declared HTTP route. It must not expose
 placeholder commands, fabricate stage or production posture, or imply that a
 declared route has been health checked.

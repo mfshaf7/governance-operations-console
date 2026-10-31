@@ -5,6 +5,7 @@ import {
   type AgentProviderStatus,
   type AgentRuntimeIdentity,
   AgentRuntimePresenceProvider,
+  aiActivityWorkspace,
   DraftAdvisorScopeProvider,
   ModelInteractionDock,
   useAgentConsoleSession,
@@ -187,7 +188,12 @@ function GovernanceConsoleContent({
           workspaceContextCandidate={liveAgentContext.workspace}
         providerStatus={providerStatus}
       />
-      <AgentRuntimeDock providerStatus={providerStatus} />
+      <AgentRuntimeDock providerStatus={providerStatus} onOpenActivityItem={item => {
+        const target = aiActivityWorkspace(item);
+        if (!target || !item.subjectRef) return;
+        const surface = item.kind?.startsWith("refinement-") ? "refinement" : item.kind === "execution-tree" ? "execution-board" : "work-design";
+        controller.openWorkbenchSurface(target, { mode: "inspect", subjectRef: item.subjectRef, requiredMoveRef: `ai-activity.${surface}.${item.id}` });
+      }} />
       {controller.activeConsoleWorkspaceId === "lifecycle-transitions" ? (
         <LifecycleTransitionsWorkspace
           entryIntent={controller.activeConsoleEntryIntent}

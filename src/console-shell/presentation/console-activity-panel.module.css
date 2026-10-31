@@ -257,7 +257,6 @@
 .detailKicker,
 .subjectBlock > span,
 .sourceBlock > span,
-.references > span,
 .detailFacts dt {
   display: block;
   color: rgba(255, 193, 90, 0.66);
@@ -341,52 +340,6 @@
   white-space: nowrap;
 }
 
-.references {
-  min-height: 0;
-  margin-top: 0.72rem;
-}
-
-.references dl {
-  display: grid;
-  max-height: 7.5rem;
-  gap: 0.36rem;
-  margin-top: 0.45rem;
-  overflow: auto;
-  scrollbar-color: var(--console-scroll-thumb) var(--console-scroll-track);
-  scrollbar-width: thin;
-}
-
-.references dl > div {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: 5rem minmax(0, 1fr);
-  gap: 0.5rem;
-  border: 1px solid rgba(245, 239, 226, 0.08);
-  border-radius: 10px;
-  padding: 0.48rem 0.55rem;
-  background: rgba(0, 0, 0, 0.22);
-}
-
-.references dt,
-.references dd {
-  overflow: hidden;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.7rem;
-  line-height: 1.5;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.references dt {
-  color: rgba(255, 193, 90, 0.58);
-  font-weight: 780;
-  text-transform: uppercase;
-}
-
-.references dd {
-  color: rgba(247, 240, 228, 0.6);
-}
-
 .emptyState {
   display: grid;
   min-height: 8rem;
@@ -467,9 +420,6 @@
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-.references summary { cursor: pointer; color: rgba(255, 223, 169, 0.9); font-size: 0.7rem; }
-.references dd { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
-.references dl > div { grid-template-columns: minmax(0, 1fr); }
 .detailSurface { overflow-y: auto; overflow-x: hidden; }
 @container console-stage (max-width: 800px) {
   .layout { grid-template-columns: minmax(0, 1fr); }

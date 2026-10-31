@@ -10,6 +10,7 @@ import {
   agentRuntimeStateLabel,
   type AgentRuntimeActivityState,
   type AgentProviderStatus,
+  type RecentAiActivity,
   useActiveAgentRuntimes,
 } from "../../agent-console";
 import {
@@ -19,6 +20,7 @@ import {
 } from "../console-shell-status";
 
 import styles from "./agent-runtime-dock.module.css";
+import { RecentAiActivityPanel } from "./recent-ai-activity-panel";
 
 const presenceTone: Record<AgentRuntimeActivityState, ConsoleTone> = {
   failed: "danger",
@@ -29,7 +31,9 @@ const presenceTone: Record<AgentRuntimeActivityState, ConsoleTone> = {
 
 export function AgentRuntimeDock({
   providerStatus,
+  onOpenActivityItem,
 }: {
+  onOpenActivityItem?: (item: RecentAiActivity) => void;
   providerStatus: AgentProviderStatus | null;
 }) {
   const [runtimeStatusOpen, setRuntimeStatusOpen] = useState(false);
@@ -85,9 +89,7 @@ export function AgentRuntimeDock({
     : "waiting";
   const runtimeDetail = providerStatus
     ? providerOnline
-      ? `${activeRuntimes.length} open agent panel${
-          activeRuntimes.length === 1 ? "" : "s"
-        } / OOS reachable; model readiness is not probed`
+      ? "OOS reachable; model readiness is not probed"
       : providerStatus.error ??
         (providerState === "offline"
           ? "orchestration path unavailable"
@@ -132,6 +134,17 @@ export function AgentRuntimeDock({
           </p>
         </button>
 
+        <RecentAiActivityPanel onOpenItem={onOpenActivityItem} />
+      </aside>
+
+      <AgentRuntimeStatusDialog
+        activeRuntimeCount={activeRuntimes.length}
+        onClose={() => setRuntimeStatusOpen(false)}
+        open={runtimeStatusOpen}
+        providerStatus={providerStatus}
+      >
+        <details>
+          <summary>Open panel diagnostics</summary>
         <section
           aria-label="Open agent panels"
           className={styles.roster}
@@ -150,7 +163,7 @@ export function AgentRuntimeDock({
                     aria-label={`Inspect ${runtime.displayName}`}
                     className={styles.runtimeRow}
                     key={runtime.runtimeId}
-                    onClick={() => setSelectedRuntimeId(runtime.runtimeId)}
+                    onClick={() => { setRuntimeStatusOpen(false); setSelectedRuntimeId(runtime.runtimeId); }}
                     type="button"
                   >
                     <span className={styles.runtimeRowHeader}>
@@ -176,14 +189,8 @@ export function AgentRuntimeDock({
             )}
           </div>
         </section>
-      </aside>
-
-      <AgentRuntimeStatusDialog
-        activeRuntimeCount={activeRuntimes.length}
-        onClose={() => setRuntimeStatusOpen(false)}
-        open={runtimeStatusOpen}
-        providerStatus={providerStatus}
-      />
+        </details>
+      </AgentRuntimeStatusDialog>
       <AgentRuntimePresenceDialog
         onClose={() => setSelectedRuntimeId(null)}
         open={Boolean(selectedRuntime)}

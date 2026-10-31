@@ -101,6 +101,7 @@ try {
       return Boolean(key && node[key].onClick);
     });
     await page.locator('button[title="Open MODEL"]').click({ timeout: 60_000 });
+    await page.getByRole("radio", { name: "Models & routing", exact: true }).click();
     await page.getByRole("button", { name: "Manage registrations", exact: true }).waitFor();
   }
   async function choose(label, option) {

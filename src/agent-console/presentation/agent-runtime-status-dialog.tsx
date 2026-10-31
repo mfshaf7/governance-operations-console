@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import {
   TerasDialog,
   TerasMetadataList,
@@ -34,11 +36,13 @@ function formatProviderTimestamp(value: string | null | undefined) {
 
 export function AgentRuntimeStatusDialog({
   activeRuntimeCount,
+  children,
   onClose,
   open,
   providerStatus,
 }: {
   activeRuntimeCount: number;
+  children?: ReactNode;
   onClose: () => void;
   open: boolean;
   providerStatus: AgentProviderStatus | null;
@@ -105,6 +109,7 @@ export function AgentRuntimeStatusDialog({
           },
         ]}
       />
+      {children}
     </TerasDialog>
   );
 }

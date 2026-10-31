@@ -151,8 +151,10 @@ function AvailableDeliveryWorkspaceController({
       return;
     }
 
+    const relatedPackage = completeModel.packages.find(p => p.delivery_package_id === entryIntent.subjectRef || `delivery-package:${p.legacy_epic_id}` === entryIntent.subjectRef);
+    const resolvedSubjectRef = relatedPackage?.delivery_package_id ?? entryIntent.subjectRef;
     if (!allowLocalProjection) {
-      const target = completeModel.packages.find(p => p.delivery_package_id === entryIntent.subjectRef);
+      const target = relatedPackage;
       const source = completeModel.intake_sources.find(s => s.accepted_source_id === entryIntent.subjectRef);
       if ((target && ["done", "retired", "parked"].includes(target.backend_status)) || source?.intake_status === "consumed") {
         setRecordScope("history");
@@ -160,7 +162,7 @@ function AvailableDeliveryWorkspaceController({
     }
     appliedEntryIntentRef.current = entryKey;
     if (surfaceId === "work-design" || surfaceId === "refinement") {
-      focusPackageRegister(surfaceId, entryIntent.subjectRef);
+      focusPackageRegister(surfaceId, resolvedSubjectRef);
       return;
     }
 

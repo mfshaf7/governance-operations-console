@@ -103,7 +103,7 @@ test("existing Delivery links close routing while retaining done, retired and un
   assert.equal(stateFor(records[3]).hubProjection.status.title,"Delivery Outcome Unavailable");
   const metrics=proposalWorkspaceSummaryMetrics(projectProposalLiveRecords(records));
   assert.equal(metrics.find(m=>m.id==="review").value,"0");
-  assert.equal(metrics.find(m=>m.id==="retired").value,"1");
+  assert.equal(metrics.some(m=>m.id==="retired"),false);
   const retainedRoute=projectProposalLiveRecords([{...records[0],projection:{...records[0].projection,route:proposalCompletionRoute("prototype")}}])[0];
   assert.equal(retainedRoute.routeTarget,"Prototype");
   assert.equal(retainedRoute.deliveryLink.recordRef,"openproject://work_packages/901");

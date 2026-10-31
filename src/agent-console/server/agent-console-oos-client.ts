@@ -118,6 +118,13 @@ export async function invokeGovernedAgent(
           content,
           content_digest: digest(content),
         },
+        activity: {
+          kind: options.draftContext?.scope.role ?? "assistant-response",
+          subject_ref: (() => {
+            const ref = options.draftContext?.scope.packageRef ?? options.draftContext?.scope.ref;
+            return ref && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(ref) && !/(?:sk-|gh[pousr]_|github_pat_|Bearer|PRIVATE KEY)/i.test(ref) ? ref : null;
+          })(),
+        },
         budget_tokens: options.draftContext ? 8000 : 1024,
       }),
       method: "POST",

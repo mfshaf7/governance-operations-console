@@ -4,7 +4,7 @@ const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:4317";
 test.use({ viewport: { width: 1700, height: 1000 }, actionTimeout: 15000 });
 test.setTimeout(90000);
 
-async function open(page, { offline = false } = {}) {
+async function open(page, { offline = false, view = "runtime" } = {}) {
   // The existing shell context may GET the registry independently.
   const writes = [], ownerReads = [];
   await page.route("**/api/**", route => {
@@ -27,6 +27,7 @@ async function open(page, { offline = false } = {}) {
   }, null, { timeout: 60000 });
   await page.locator('button[title="Open MODEL"]').click();
   const control = page.getByRole("dialog", { name: "Model Operations Control", exact: true });
+  if (view === "runtime") await control.getByRole("radio", { name: "Models & routing", exact: true }).click();
   return { control, writes, ownerReads };
 }
 
@@ -84,7 +85,7 @@ test("focused sample inspectors preserve saved effort and fallback without creat
 
 test("purpose-profile filtering, checks and evidence inspectors remain separate from model configuration", async ({ page }) => {
   const { control, writes } = await open(page);
-  await control.getByRole("button", { name: "Purpose profiles", exact: true }).click();
+  await control.getByRole("radio", { name: "Purpose profiles", exact: true }).click();
   await expect(control.getByRole("button", { name: "Request Profile", exact: true })).toBeDisabled();
   await expect(control.getByRole("button", { name: "Request History", exact: true })).toBeDisabled();
   await control.getByRole("searchbox", { name: "Search model profiles", exact: true }).fill("missing-profile");
@@ -92,17 +93,76 @@ test("purpose-profile filtering, checks and evidence inspectors remain separate 
   await control.getByRole("searchbox", { name: "Search model profiles", exact: true }).fill("");
   await control.getByRole("button", { name: "Request Requirements", exact: true }).click();
   await page.getByRole("dialog", { name: "Model Profile Request Boundary", exact: true }).getByRole("button", { name: "Close dialog", exact: true }).click();
-  await control.getByRole("button", { name: "Inspect Runtime", exact: true }).click();
-  await page.getByRole("dialog", { name: "Local Exception Runtime", exact: true }).getByRole("button", { name: "Close dialog", exact: true }).click();
+  await expect(control.getByRole("button", { name: "Inspect local runtime", exact: true })).toHaveCount(0);
   await control.getByRole("button", { name: "Open Profile Dashboard", exact: true }).click();
   const dashboard = page.getByRole("dialog", { name: "Model Profile Dashboard", exact: true });
   const checks = await dashboard.getByRole("button", { name: /^Inspect / }).evaluateAll(nodes => nodes.map(n => n.getAttribute("aria-label")));
   expect(checks.length).toBeGreaterThan(3);
   for (const name of checks) {
     await dashboard.getByRole("button", { name, exact: true }).click();
-    await page.getByRole("dialog", { name: /Model Profile (Inspector|Check)/ }).getByRole("button", { name: "Close dialog", exact: true }).click();
+    const evidence = page.getByRole("dialog", { name: /Model Profile (Inspector|Check)/ });
+    if (name === "Inspect Access Plane") {
+      await expect(evidence.getByText("Credential owner", { exact: true })).toBeVisible();
+      await expect(evidence.getByText("Access reason", { exact: true })).toBeVisible();
+      await expect(evidence.getByText(/Live profile activation remains blocked until/)).toBeVisible();
+    }
+    await evidence.getByRole("button", { name: "Close dialog", exact: true }).click();
   }
   await dashboard.screenshot({ path: test.info().outputPath("profile-dashboard.png") });
+  expect(writes).toEqual([]);
+});
+
+test("Purpose-profile actions and governed access remain reachable without clipped sidebar content", async ({ page }) => {
+  const { control, writes } = await open(page, { view: "default" });
+  const sidebar = control.locator('[data-model-operations-selected-profile="true"]');
+  const dashboardAction = sidebar.getByRole("button", { name: "Open Profile Dashboard", exact: true });
+  const access = sidebar.getByRole("list", { name: "Governed access summary", exact: true });
+  await expect(control.getByRole("button", { name: "Inspect local runtime", exact: true })).toHaveCount(0);
+  await expect(access).toContainText("Governed access");
+  await expect(access).toContainText("Activation blocked.");
+  for (const width of [1200, 1440, 1700, 1920]) for (const height of [900, 1000]) {
+    await page.setViewportSize({ width, height });
+    for (const target of [dashboardAction, access]) {
+      await target.scrollIntoViewIfNeeded();
+      const clipped = await target.evaluate(node => {
+        const rect = node.getBoundingClientRect(), failures = [];
+        for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+          const style = getComputedStyle(parent), box = parent.getBoundingClientRect();
+          if (["hidden", "clip", "auto"].includes(style.overflowY) && (rect.top < box.top - 0.5 || rect.bottom > box.bottom + 0.5)) failures.push("vertical");
+          if (["hidden", "clip", "auto"].includes(style.overflowX) && (rect.left < box.left - 0.5 || rect.right > box.right + 0.5)) failures.push("horizontal");
+        }
+        return failures;
+      });
+      expect(clipped).toEqual([]);
+    }
+  }
+  await page.setViewportSize({ width: 1700, height: 1000 });
+  await control.screenshot({ path: test.info().outputPath("purpose-sidebar.png") });
+  await dashboardAction.click();
+  await expect(page.getByRole("dialog", { name: "Model Profile Dashboard", exact: true })).toBeVisible();
+  expect(writes).toEqual([]);
+});
+
+test("local-runtime inspection stays in Ollama backend details and preserves unavailable source truth", async ({ page }) => {
+  const { control, writes } = await open(page, { view: "default" });
+  await expect(control.getByRole("button", { name: "Inspect local runtime", exact: true })).toHaveCount(0);
+  await control.getByRole("radio", { name: "Models & routing", exact: true }).click();
+  await expect(control.getByRole("button", { name: /Inspect.*runtime/i })).toHaveCount(0);
+  await control.getByRole("button", { name: "Manage registrations", exact: true }).click();
+  const registrations = page.getByRole("dialog", { name: "Model registrations", exact: true });
+  await expect(registrations.getByRole("button", { name: "Inspect runtime", exact: true })).toHaveCount(0);
+  await registrations.getByRole("button", { name: "Admitted backend", exact: true }).click();
+  await page.getByRole("option", { name: "sample-local · ollama", exact: true }).click();
+  await registrations.getByRole("button", { name: "Inspect runtime", exact: true }).click();
+  const inspector = page.getByRole("dialog", { name: "Local Exception Runtime", exact: true });
+  await expect(inspector.getByText("Provider", { exact: true })).toBeVisible();
+  await expect(inspector.getByText("No local runtime inventory has been admitted to this projection.", { exact: true })).toBeVisible();
+  await inspector.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.route("**/api/model-operations", route => route.fulfill({ status: 503, json: { error: "Synthetic inventory unavailable" } }));
+  await registrations.getByRole("button", { name: "Inspect runtime", exact: true }).click();
+  await expect(inspector.getByText(/could not reconcile|inventory.*unavailable/i)).toBeVisible();
+  await expect(inspector.getByText("Provider", { exact: true })).toHaveCount(0);
+  await expect(inspector.getByText("No local runtime inventory has been admitted to this projection.", { exact: true })).toHaveCount(0);
   expect(writes).toEqual([]);
 });
 
@@ -111,6 +171,40 @@ test("configured-owner failure shows unavailable state without substituting prev
   await expect(control.getByText("Synthetic owner unavailable", { exact: true })).toBeVisible();
   await expect(control.getByText(/Sample reasoning model/)).toHaveCount(0);
   await expect(control.getByRole("button", { name: "Manage registrations", exact: true })).toHaveCount(0);
+  expect(writes).toEqual([]);
+});
+
+test("Purpose profiles opens by default and page-selector hover/focus stays inside the modal", async ({ page }) => {
+  const { control, writes } = await open(page, { view: "default" });
+  const group = control.getByRole("radiogroup", { name: "Model Operations pages", exact: true });
+  const profiles = group.getByRole("radio", { name: "Purpose profiles", exact: true });
+  const runtime = group.getByRole("radio", { name: "Models & routing", exact: true });
+  await expect(profiles).toBeChecked();
+  await expect(group.getByRole("radio").first()).toHaveText("Purpose profiles");
+  for (const width of [1200, 1440, 1700, 1920]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const radio of [profiles, runtime]) {
+      await radio.hover();
+      const clipped = await radio.evaluate(node => {
+        const rect = node.getBoundingClientRect(), failures = [];
+        for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+          const style = getComputedStyle(parent), box = parent.getBoundingClientRect();
+          if (["hidden", "clip", "auto"].includes(style.overflowY) && (rect.top < box.top - 0.5 || rect.bottom > box.bottom + 0.5)) failures.push("vertical");
+          if (["hidden", "clip", "auto"].includes(style.overflowX) && (rect.left < box.left - 0.5 || rect.right > box.right + 0.5)) failures.push("horizontal");
+        }
+        return failures;
+      });
+      expect(clipped).toEqual([]);
+    }
+  }
+  await page.setViewportSize({ width: 1700, height: 1000 });
+  await control.screenshot({ path: test.info().outputPath("purpose-default-hover.png") });
+  await profiles.focus(); await page.keyboard.press("ArrowRight");
+  await expect(runtime).toBeChecked();
+  await page.keyboard.press("Home"); await expect(profiles).toBeChecked();
+  await control.getByRole("button", { name: "Close modal", exact: true }).click();
+  await page.locator('button[title="Open MODEL"]').click();
+  await expect(page.getByRole("radio", { name: "Purpose profiles", exact: true })).toBeChecked();
   expect(writes).toEqual([]);
 });
 
@@ -128,12 +222,26 @@ test("registration keeps backend status, scoped model inventory and new-model fo
   await expect(inventory).not.toContainText("Sample local model");
   await expect(inventory.getByText("1/1 shown", { exact: true })).toBeVisible();
   await expect(selected.getByRole("heading", { name: "Sample reasoning model", exact: true })).toBeVisible();
+  const technical = selected.locator("details");
+  const technicalToggle = technical.locator("summary");
+  await expect(technical).toHaveJSProperty("open", false);
+  await expect(selected.getByRole("list", { name: "Model verification summary", exact: true })).toContainText("Last successful check");
+  await technicalToggle.focus(); await page.keyboard.press("Enter");
+  await expect(technical).toHaveJSProperty("open", true);
+  await expect(technical.getByText("Registered runtime", { exact: true })).toBeVisible();
+  await technical.getByText("Registration evidence", { exact: true }).scrollIntoViewIfNeeded();
+  await expect(technical.getByText("Registration evidence", { exact: true })).toBeVisible();
+  await selected.screenshot({ path: test.info().outputPath("selected-model-technical-details.png") });
+  await technicalToggle.click();
+  await expect(technical).toHaveJSProperty("open", false);
+  await expect(technical.getByText("Registered runtime", { exact: true })).toBeHidden();
   await registrations.getByRole("button", { name: "Admitted backend", exact: true }).click();
   await page.getByRole("option", { name: "sample-local · ollama", exact: true }).click();
   await expect(inventory.locator("tbody tr")).toHaveCount(1);
   await expect(inventory).toContainText("Sample local model");
   await expect(inventory).not.toContainText("Sample reasoning model");
   await expect(selected.getByRole("heading", { name: "Sample local model", exact: true })).toBeVisible();
+  await expect(selected.locator("details")).toHaveJSProperty("open", false);
   await expect(backend.getByRole("button", { name: "Connect account", exact: true })).toHaveCount(0);
   await registrations.getByRole("searchbox", { name: "Search registered models", exact: true }).fill("absent");
   await expect(inventory.getByText("No models match this search on the selected backend.", { exact: true })).toBeVisible();

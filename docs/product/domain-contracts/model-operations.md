@@ -66,6 +66,10 @@ The domain has two stable surfaces:
 1. Model Operations Control
 2. Model Profile Dashboard
 
+Model Operations opens Purpose profiles by default. The existing segmented
+page selector places Purpose profiles first and Models & routing second;
+switching away from unsaved routing retains the draft guard.
+
 Local runtime inventory is a secondary inspector. It is not a peer primary
 surface and is not mixed into governed profile truth.
 
@@ -175,7 +179,7 @@ The primary surface uses the standard compact-control structure:
 - access-readiness filter
 - provider/runtime-resolution filter
 - selected-profile panel
-- access-plane status panel
+- compact Governed access status summary
 
 Register columns are:
 
@@ -196,8 +200,14 @@ The selected-profile panel shows stable orientation only:
 - access readiness
 - first-class `Open Profile` action
 
-The access-plane status panel summarizes registry, gateway, audit, and
-activation posture. It does not duplicate the selected-profile dashboard.
+The compact Governed access row reports access readiness and activation posture.
+Full gateway, audit, credential-owner and access-reason evidence remains in the
+Profile Dashboard's Access Plane check. Local inventory opens as a secondary
+inspector from the selected Ollama backend in Manage registrations. Neither
+Purpose profiles nor the Models & routing overview has a local-only shortcut. The inspector reads its existing authority projection
+only while open and preserves unavailable versus empty states. The selected-profile
+area uses content-aware scrolling so profile actions and access status remain
+reachable without compressing panels.
 
 ## Model Profile Dashboard
 

@@ -55,6 +55,7 @@ try {
   await page.goto(base, { waitUntil: "domcontentloaded", timeout: 60000 });
   await page.waitForFunction(() => { const n = [...document.querySelectorAll("button")].find(x => x.title === "Open MODEL"); const k = n && Object.keys(n).find(x => x.startsWith("__reactProps$")); return Boolean(k && n[k].onClick); });
   await page.locator('button[title="Open MODEL"]').click();
+  await page.getByRole("radio", { name: "Models & routing", exact: true }).click();
   await page.getByRole("button", { name: "Manage registrations", exact: true }).waitFor();
  }
  async function choose(label, option, index = 0) {
@@ -88,6 +89,10 @@ try {
  await page.getByRole("dialog", { name: "Model operation history", exact: true }).getByText("Synthetic lost acknowledgement", { exact: true }).waitFor();
  assert.equal(writes.length, prior + 1); const original = records[0].request_id;
  assert.equal(records[0].request.input.default.primary.effort, "high"); assert.equal(records[0].request.input.default.fallbacks[0].effort, false);
+ await back(); await page.getByRole("radio", { name: "Purpose profiles", exact: true }).click();
+ await page.getByRole("alertdialog", { name: "Discard unsaved routing changes?", exact: true }).getByRole("button", { name: "Keep editing", exact: true }).click();
+ assert.equal(await page.getByRole("radio", { name: "Models & routing", exact: true }).isChecked(), true);
+ assert.equal(writes.length, prior + 1, "Page switching cannot discard or resubmit the routing draft");
  await open(); await page.getByText(original, { exact: true }).waitFor(); await clear(); assert.equal(writes.length, prior + 1, "Cold recovery reads the same ID and never resubmits");
  const savedRoute = structuredClone(config.default);
  await registrations(); await choose("Admitted backend", "cloud · codex-app-server");

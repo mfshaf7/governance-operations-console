@@ -226,6 +226,7 @@ export function ModelInteractionDock({
             <span
               className="model-dock-context-pill rounded-full px-2 py-1"
               data-tone={contextPillTone}
+              title={contextPillTone === "admitted" ? "Context is checked for sensitive content and size before the model can use it." : undefined}
             >
               {contextPill}
             </span>
@@ -236,7 +237,7 @@ export function ModelInteractionDock({
         </div>
         <div className="model-dock-input-shell terminal-shell rounded-2xl p-3">
           <div className="terminal-topbar mb-3 flex items-center justify-between gap-3">
-            <span className="terminal-runtime-status" data-state={providerState}>
+            <span className="terminal-runtime-status" data-state={providerState} title="Connection to the assistant service. The selected model is checked when you send a request.">
               <span className="terminal-runtime-status-dot" />
               <span>{providerStateLabel}</span>
             </span>
