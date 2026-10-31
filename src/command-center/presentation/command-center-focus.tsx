@@ -17,6 +17,7 @@ import {
   ConsoleSurfaceFilterBar,
   ConsoleSurfaceMetadataList,
   ConsoleSurfaceTagList,
+  ConsoleSurfaceTechnicalDetails,
 } from "../../console-shell/console-surface-controls";
 import {
   consoleStatusCardClass,
@@ -285,7 +286,7 @@ function PriorityDetail({
   onOpenSource: (candidate: CommandCenterAttentionCandidate) => void;
 }) {
   return (
-    <section className={`${styles.view} ${styles.priorityView}`}>
+    <section aria-label="Selected priority" className={`${styles.view} ${styles.priorityView}`}>
       {candidate ? (
         <>
           <header
@@ -301,12 +302,13 @@ function PriorityDetail({
               </span>
               <span>{formatToken(candidate.attentionClass)}</span>
               <span>{formatToken(candidate.urgency)}</span>
+              <span>{sourcePostureLabel(candidate.source.freshness)}</span>
             </div>
             <h3>{priorityTitle(candidate)}</h3>
             <p>{priorityExplanation(candidate)}</p>
           </header>
 
-          <div className={styles.requiredMove}>
+          <div className={styles.requiredMove} role="group" aria-label="Required move">
             <div>
               <span>Required move</span>
               <strong>{priorityMove(candidate)}</strong>
@@ -317,7 +319,7 @@ function PriorityDetail({
             </span>
           </div>
 
-          <ConsoleSurfaceMetadataList
+          <ConsoleSurfaceTechnicalDetails
             items={[
               {
                 label: "Owner",
@@ -434,7 +436,7 @@ export function CommandCenterFocus({
   });
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} role="region" aria-label="Operator priority">
       <header className={styles.header}>
         <div className={styles.headerCopy}>
           <p>Command Center Focus</p>

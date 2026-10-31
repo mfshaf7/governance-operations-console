@@ -1,4 +1,5 @@
 import type { TerasTone } from "@/teras";
+import { proposalWorkflowClosed } from "../../../../domain/proposal-types.ts";
 import { repositoryOwnerRepoCatalogOptions } from "@/domain-workspaces/operation-integrations/repository-owner-repo-catalog-projection";
 
 import {
@@ -170,7 +171,9 @@ export function proposalDispositionStepProjection({
     proposal.status === "parked" && !dispositionRecorded;
   const canApply = !dispositionCompleted && routeComplete && notesComplete;
   const decisionCopy = proposalDecisionOutcomeCopy(decisionDraft.outcome);
-  const dispositionTone: TerasTone = dispositionCompleted
+  const dispositionTone: TerasTone = proposalWorkflowClosed(proposal)
+    ? proposal.tone
+    : dispositionCompleted
     ? accepting
       ? proposalRouteSelectionTone(routeSelectionDraft)
       : decisionCopy.tone
@@ -199,9 +202,11 @@ export function proposalDispositionStepProjection({
         : "Complete Required Fields";
   const advisorDraft = decisionDraft.advisorDraft ?? "";
   const advisorPrompt = decisionDraft.advisorPrompt ?? "";
-  const decisionDescription = sourceParkedRevisit
-    ? "Choose whether to accept, reject, or keep this proposal parked. Decision notes are required."
-    : "Choose the proposal outcome and record the required decision notes.";
+  const decisionDescription = proposalWorkflowClosed(proposal)
+    ? "Read the recorded decision. This Proposal workflow is closed."
+    : sourceParkedRevisit
+      ? "Choose whether to accept, reject, or keep this proposal parked. Decision notes are required."
+      : "Choose the proposal outcome and record the required decision notes.";
   const decisionTitle = dispositionRecorded
     ? "Receipt Recorded"
     : dispositionReadModelReadOnly
@@ -217,7 +222,9 @@ export function proposalDispositionStepProjection({
   const progressTitle = dispositionRecorded
     ? "Disposition Recorded"
     : dispositionReadModelReadOnly
-      ? "Disposition Ready"
+      ? proposalWorkflowClosed(proposal)
+        ? "Completed Disposition"
+        : "Disposition Ready"
       : sourceParkedRevisit
         ? "Revisit Decision"
         : canApply

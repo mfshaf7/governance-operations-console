@@ -77,7 +77,7 @@ export function ModelOperationsControlOverviewPanel({
         boundaryKicker="Capability Boundary"
         description={
           latestRequest
-            ? `Latest request ${latestRequest.request_id} is ${latestRequest.review_state}; fulfillment is ${latestRequest.fulfillment_state}.`
+            ? `Latest request is ${latestRequest.review_state}; fulfillment is ${latestRequest.fulfillment_state}. Open Request History for its reference and evidence.`
             : "The primary request path creates one profile intent without direct registry mutation."
         }
         kicker="Profile Requests"

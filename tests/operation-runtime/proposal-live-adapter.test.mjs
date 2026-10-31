@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { proposalCompletionRecord } from "../support/proposal-completion-fixture.mjs";
 
 import {
   projectProposalCanonicalDrafts,
@@ -31,6 +32,44 @@ const env = {
 };
 const handoffRef19 = "proposal-handoff:idea-851:version-19";
 const handoffRef21 = "proposal-handoff:idea-851:version-21";
+
+test("historical Delivery links use one bounded owner overview and retain unavailable outcomes without rerouting", async () => {
+  const records = Array.from({length:21},(_,index)=>{
+    const id=851+index;
+    return proposalCompletionRecord({status:"accepted",proposal_id:`idea-${id}`,record_ref:`openproject://work_packages/${id}`,
+      delivery_ref:`openproject://work_packages/${1901+index}`});
+  });
+  for(const outcome of ["current","unavailable","denied"]){
+    let overviewReads=0;
+    const fetchImpl=async(url,init)=>{
+      assert.equal(init.method,"GET");
+      if(String(url).includes("/v1/ideas?"))return jsonResponse({ideas:records.map(r=>({idea_id:r.projection.proposal_id})),
+        page:{offset:1,limit:25,count:21,total:21,has_more:false,next_offset:null}});
+      if(String(url).includes("/v1/delivery-initiatives?")){
+        overviewReads++;assertCanonicalSourceRequest(init);
+        if(outcome!=="current")return jsonResponse({error:"Owner unavailable"},outcome==="denied"?403:503);
+        return canonicalSourceResponse({schema_version:1,workflow_id:"delivery-console-overview",project:{identifier:"workspace-delivery-art"},
+          mutation_authority:"none",roots:records.map((r,index)=>({id:1901+index,record_ref:r.projection.delivery_ref,status:index<18?"done":"retired"}))},
+          {recordRef:"openproject://projects/workspace-delivery-art/initiatives",sourceOwner:"workspace-delivery-art"});
+      }
+      const record=records.find(r=>String(url).includes(`/v1/proposals/${r.projection.proposal_id}/projection?`));
+      assert.ok(record);return canonicalSourceResponse({schema_version:1,workflow_id:"proposal-read-snapshot",projection:record.projection,
+        history:{...record.history,proposal_id:record.projection.proposal_id}},
+        {recordRef:record.projection.record_ref,sourceOwner:"workspace-proposals"});
+    };
+    if(outcome==="denied")await assert.rejects(listProposalLiveRecords({env,fetchImpl}),ProposalOosError);
+    else{
+      const read=await listProposalLiveRecords({env,fetchImpl});
+      assert.equal(read.length,21);assert.equal(read[0].projection.status,"accepted");
+      const surface=projectProposalLiveRecords(read);
+      assert.equal(surface.filter(p=>p.status==="retired").length,outcome==="current"?3:0);
+      assert.equal(surface.filter(p=>p.status==="ready-to-route").length,0);
+      assert.equal(read[0].deliveryLink.sourceState,outcome);
+      if(outcome==="unavailable")assert.equal(read[0].deliveryLink.status,null);
+    }
+    assert.equal(overviewReads,1);
+  }
+});
 
 test("global Proposal reads retain older pages, bound snapshot concurrency and reject shifting or repeated inventory",async()=>{
  const total=142;let concurrent=0,maximum=0,snapshots=0;

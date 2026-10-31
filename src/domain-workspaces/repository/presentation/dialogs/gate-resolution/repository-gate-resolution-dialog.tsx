@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import type { ComponentProps } from "react";
+import { RepositoryProposalGatePanel } from "./repository-proposal-gate-panel.tsx";
 
 import {
   TerasActionButton,
+  TerasDraftCloseGuardDialog,
   TerasStatusItem,
   TerasList,
   TerasDetailGrid,
@@ -31,6 +34,7 @@ export function RepositoryGateResolutionDialog({
   onClose,
   onRecordResolution,
   repository,
+  canonical,
 }: {
   onClose: () => void;
   onRecordResolution: (
@@ -38,14 +42,32 @@ export function RepositoryGateResolutionDialog({
     draft: RepositoryGateResolutionDraft,
   ) => void;
   repository: RepositoryWorkspaceRecord | null;
+  canonical?: ComponentProps<typeof RepositoryProposalGatePanel>;
 }) {
   const [draft, setDraft] = useState<RepositoryGateResolutionDraft>({
     ...repositoryGateResolutionDraftFromRepository(repository),
   });
+  const [canonicalDirty, setCanonicalDirty] = useState(false);
+  const [closeGuardOpen, setCloseGuardOpen] = useState(false);
   const gateProjection = repositoryGateResolutionProjection({
     draft,
     repository,
   });
+
+  if (canonical) {
+    const requestClose = () => canonicalDirty ? setCloseGuardOpen(true) : onClose();
+    return <><TerasModalShell bodyLayout="scroll" height="content" width="standard"
+      description="Resolve a recorded Proposal repository gate using retained owner custody evidence."
+      kicker="Repository Gate" onClose={requestClose} surfaceId="repository-gate-resolution"
+      footer={<TerasActionButton emphasis="secondary" onClick={requestClose}>Back to Register</TerasActionButton>}
+      title="Resolve Repository Gate">
+      <RepositoryProposalGatePanel {...canonical} onDirtyChange={setCanonicalDirty} />
+    </TerasModalShell>
+    <TerasDraftCloseGuardDialog open={closeGuardOpen} title="Close Repository Gate Draft?"
+      kicker="Repository Gate" description="Unrecorded resolution notes and custody selection will be discarded."
+      leaveLabel="Discard Draft" onKeepEditing={() => setCloseGuardOpen(false)} onLeave={onClose} />
+    </>;
+  }
 
   if (!repository) {
     return null;

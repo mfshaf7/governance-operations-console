@@ -1,4 +1,5 @@
 import type { ProposalWorkflowApplyPayload } from "../work-model/proposal-workflow-command-model.ts";
+import type { ProposalDeliveryLink } from "../domain/proposal-types.ts";
 import type { ProposalRepositoryResolutionRecord } from "../../operation-contracts/proposal-repository-live.ts";
 
 export type ProposalOosLifecycleStatus =
@@ -29,6 +30,7 @@ export type ProposalOosRoute = {
 };
 
 export type ProposalOosProjection = {
+  delivery_ref?: string | null;
   repository_resolution?: ProposalRepositoryResolutionRecord;
   repository_resolution_history_pending?: boolean;
   body: string | null;
@@ -94,6 +96,7 @@ export type ProposalOosHistory = {
 };
 
 export type ProposalLiveRecord = {
+  deliveryLink?: ProposalDeliveryLink;
   createdAt: string;
   history: ProposalOosHistory;
   projection: ProposalOosProjection;

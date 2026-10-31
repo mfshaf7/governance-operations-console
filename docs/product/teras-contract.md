@@ -528,6 +528,12 @@ as structured `items` arrays, not JSX fact children. Domain JSX should receive
 those arrays from a typed view-model/helper function rather than constructing
 `items={[...]}` or raw `.map(...)` metadata rows in the render path.
 
+`TerasTechnicalDetails` uses a native disclosure with existing workspace
+metadata cards and a bounded scrolling body. It preserves keyboard-native
+expansion and exact reference wrapping. Current health, warnings and required
+actions remain outside the disclosure. Governance Activity retains its separate
+primary-console evidence presentation.
+
 ## Operation Hub Rules
 
 Use `TerasHubFrame` when a domain hub follows the selected-record,

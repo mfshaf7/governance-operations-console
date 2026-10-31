@@ -62,6 +62,8 @@ export {
 } from "./teras-media";
 export { TerasMetadataList } from "./teras-metadata";
 export type { TerasMetadataItem } from "./teras-metadata";
+export { TerasTechnicalDetails } from "./teras-technical-details";
+export type { TerasTechnicalDetailItem } from "./teras-technical-details";
 export { TerasModalShell } from "./teras-modal-shell";
 export { TerasNoteField } from "./teras-note-field";
 export type {

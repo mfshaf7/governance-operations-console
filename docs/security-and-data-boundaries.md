@@ -480,3 +480,23 @@ independently of health, authentication or one successful verification. No
 eligible real accounts were available for this qualification. Controlled
 protocol/UI tests do not establish vendor entitlement or real-account readiness.
 Security1371 must accept exact composed source before Platform1381 activation.
+
+
+## AI activity read projection
+
+Recent AI activity reads a fixed, bounded OOS endpoint using the existing
+server-held caller and operator configuration. Browser requests may supply only
+a bounded opaque continuation. OOS enforces caller-specific identity and the
+configured operator before reads/cache access or native advice recording.
+Closed metadata and retained evidence references are projected without prompt,
+response, draft, credential or error-message bodies. Replay identity includes
+new optional task metadata. Missing legacy metadata remains absent.
+
+History controls perform no model invocation or canonical mutation. Record
+navigation uses existing closed workspace intents; references are inert data,
+never arbitrary URLs or commands. Native Work Design/Refinement keep their own
+model routing and original evidence. Restart-interrupted outcomes remain
+unconfirmed. Live read failure cannot select disconnected preview examples.
+The source-scoped review is [AI activity read scope](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-10-31-console-ai-activity-read-scope.md);
+exact release acceptance and commissioning remain separate from local source
+and synthetic protocol/browser conformance.

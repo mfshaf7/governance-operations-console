@@ -207,6 +207,16 @@ Its stable content is:
 - contained source/evidence information dialog for longer facts
 - explicit empty, unavailable, and source-degraded states
 
+The required-move card accommodates wrapped action text and timing without
+shrinking below its contents. Selected-priority metadata uses the primary
+Console's native Technical details disclosure, shared with Governance Activity;
+workspace Teras metadata cards retain their own visual treatment. Source
+freshness remains visible with the selected priority while details are closed.
+Owner, authority, projection, original record timestamp and subject reference
+remain inspectable, alongside the existing full Source details dialog.
+The attention list retains its 20rem section with internal scrolling; additional
+entries must not expand the list or the surrounding page.
+
 The default Focus panel must have the same rendered height as the Workspace
 Pulse panel in the first Console grid row. Candidate count, selection, hover,
 loading state, or detail length must not resize that row. Queue overflow is

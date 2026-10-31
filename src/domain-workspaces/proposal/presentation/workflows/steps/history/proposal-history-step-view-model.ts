@@ -1,4 +1,5 @@
 import type { TerasTone } from "@/teras";
+import { proposalWorkflowClosed } from "../../../../domain/proposal-types.ts";
 
 import type { ProposalWorkflowLocalReceipt } from "../../../../local-runtime/proposal-runtime.ts";
 import {
@@ -45,9 +46,11 @@ export function proposalHistoryStepProjection({
     historyTone,
     progressStatusLabel: handoffReceipt
       ? "recorded"
-      : receiptsRecorded
-        ? "in progress"
-        : "archive",
+      : proposalWorkflowClosed(proposal)
+        ? "complete"
+        : receiptsRecorded
+          ? "in progress"
+          : "archive",
     receiptDescription: receiptsRecorded
       ? "Read-only receipt archive for this Proposal pass."
       : "No workflow receipt has been recorded for this Proposal pass.",

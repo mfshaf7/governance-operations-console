@@ -1,3 +1,7 @@
+export { useRecentAiActivity, fetchAiActivityPage } from "./state/use-recent-ai-activity";
+export { aiActivityWorkspace } from "./model/recent-ai-activity";
+export type { AiActivitySnapshot, RecentAiActivity } from "./model/recent-ai-activity";
+export { selectRecentAiActivity, type AiActivitySource } from "./read-model/recent-ai-activity";
 import type { ConsoleBoundary } from "../console-architecture";
 
 export { useDraftAdvisor } from "./state/use-draft-advisor";

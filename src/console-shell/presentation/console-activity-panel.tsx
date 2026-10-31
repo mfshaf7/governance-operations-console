@@ -20,6 +20,7 @@ import {
 } from "../console-shell-panel";
 import {activityPresentation} from "../activity/console-activity-view-model.ts";
 import {useConsoleActivityController} from "../activity/use-console-activity-controller.ts";
+import { ConsoleSurfaceTechnicalDetails } from "../console-surface-controls";
 import styles from "./console-activity-panel.module.css";
 
 const recentActivityLimit = 8;
@@ -124,13 +125,10 @@ export function ConsoleActivityPanel({
               {currentPage.truncated ? " Owner history is partial; this is not the complete audit history." : " No additional truncation reported for this page."}
               {!includeRoutine ? " Routine evidence reads are hidden; choose All events to inspect them." : " All event types in this page are shown."}
             </p>
-            <details className={styles.references}>
-              <summary>Source coverage and limits</summary>
-              <dl>{currentPage.sources.map(source => <div key={source.sourceId}>
-                <dt>{source.label}</dt>
-                <dd>{source.state}; {source.truncated ? "additional records exist outside this source window" : "no source truncation reported"}. Owner: {source.authority}. Source: {source.sourceId}.</dd>
-              </div>)}</dl>
-            </details>
+            <ConsoleSurfaceTechnicalDetails summary="Source coverage and limits"
+              items={currentPage.sources.map(source => ({ label: source.label,
+                value: `${source.state}; ${source.truncated ? "additional records exist outside this source window" : "no source truncation reported"}. Owner: ${source.authority}. Source: ${source.sourceId}.`,
+              }))} />
             {error ? <p role="alert" className={styles.description}>{error}</p> : null}
             <TerasUtilityButton disabled={loading || !currentPage.continuations?.length} onClick={() => void loadOlder()}>{loading ? "Loading older events" : "Older events"}</TerasUtilityButton>
             <TerasUtilityButton disabled={loading || pageNumber === 0} onClick={latest}>Back to latest</TerasUtilityButton>
@@ -329,17 +327,7 @@ function ActivityDetail({
       ) : null}
 
       {references.length > 0 ? (
-        <details className={styles.references}>
-          <summary>Technical evidence and original record</summary>
-          <dl>
-            {references.map((reference) => (
-              <div key={`${reference.label}:${reference.value}`}>
-                <dt>{reference.label}</dt>
-                <dd title={reference.value}>{reference.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </details>
+        <ConsoleSurfaceTechnicalDetails summary="Technical evidence and original record" items={references} />
       ) : null}
     </aside>
   );

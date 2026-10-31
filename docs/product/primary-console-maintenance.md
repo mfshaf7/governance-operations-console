@@ -38,6 +38,37 @@ conflicting owner identities fail closed. Initial source refreshes do not erase
 an operator's loaded history. Export describes exactly its loaded coverage.
 The Console remains a projection, not a second ledger or owner authority.
 
+## Recent AI activity
+
+The fixed Agent Runtime dock keeps its footprint. Recent AI activity replaces
+the default open-panel roster with a bounded task/result list and History
+dialog. Opening a row inspects that same history selection. Runtime Status
+retains the original open-panel diagnostics and individual presence inspection.
+
+Configured operation reads OOS's bounded AI history API. The list contains
+actual requests, including retained Agent Console invocations and native Work
+Design/Refinement advice from recording onward. Source coverage and missing
+legacy metadata remain explicit. Opening an advisor alone is not an activity.
+Requests show working, completed, failed, cancelled or unconfirmed interrupted
+outcomes independently of connection and panel-presence status.
+
+History provides request facts and the original available evidence references.
+Open related item appears only for an admitted workspace target and recorded
+owner identity. Local draft fragments and older requests without such metadata
+remain inspectable without a guessed record link. Completing a request does not
+accept its draft or advance the owning workflow.
+
+Earlier activity replaces a bounded page; a failed read retains that page and
+retries the same cursor. Latest / refresh returns to the current owner window.
+Background refresh is non-overlapping, visibility-aware and abortable. Failure
+retains previous recorded rows with an unavailable/stale explanation. Read
+controls never run or repeat a model request. Explicit current disconnected
+preview uses labelled examples; connected/failing owners never substitute them.
+
+The implementation stays local and uncommitted with the UI review batch.
+Commission OOS before the dependent Console through the existing acceptance
+path before reporting the new activity feed as live-qualified.
+
 ## Layout and interaction
 
 Reserve the fixed dock lanes at every supported desktop width. Existing panels

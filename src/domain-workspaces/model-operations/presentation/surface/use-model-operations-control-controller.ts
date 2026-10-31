@@ -64,7 +64,6 @@ export function useModelOperationsControlController() {
   );
   const [requestResult, setRequestResult] =
     useState<ModelProfileRequestProjection | null>(null);
-  const [localRuntimeOpen, setLocalRuntimeOpen] = useState(false);
 
   const filteredProfiles = useMemo(
     () =>
@@ -126,11 +125,6 @@ export function useModelOperationsControlController() {
         readModel.profiles,
       ),
       search,
-    },
-    localRuntime: {
-      close: () => setLocalRuntimeOpen(false),
-      open: localRuntimeOpen,
-      show: () => setLocalRuntimeOpen(true),
     },
     profiles: {
       all: readModel.profiles,

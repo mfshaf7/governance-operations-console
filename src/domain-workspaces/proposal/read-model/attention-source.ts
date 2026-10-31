@@ -35,7 +35,7 @@ export function projectProposalOwnerAttention(read: ConsoleOwnerRead | undefined
     const snapshot = assertProposalLiveSnapshot(payload);
     if (snapshot.mode !== "live" || snapshot.status !== "current") throw new Error("Proposal unavailable");
     return projectProposalLiveRecords(snapshot.records)
-      .filter(record => !["done", "parked", "waiting-on-repository"].includes(record.status))
+      .filter(record => !["done", "retired", "parked", "waiting-on-repository"].includes(record.status))
       .map(record => proposalAttentionCandidate(record, observedAt, false));
   });
 }
@@ -140,6 +140,7 @@ function projectProposalAttentionSnapshot(
   const candidates = records.flatMap((proposal) => {
     if (
       proposal.status === "done" ||
+      proposal.status === "retired" ||
       proposal.status === "parked" ||
       proposal.status === "waiting-on-repository"
     ) {
@@ -258,6 +259,7 @@ function proposalRequiredMoveId(proposal: ProposalWorkspaceScenario) {
     case "parked":
       return "proposal.revisit-disposition";
     case "done":
+    case "retired":
       return "proposal.history";
   }
 }

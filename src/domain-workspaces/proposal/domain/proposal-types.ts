@@ -8,6 +8,7 @@ export type ProposalWorkspaceScenarioStatus =
   | "captured"
   | "done"
   | "parked"
+  | "retired"
   | "triaged"
   | "ready-to-route"
   | "waiting-on-repository"
@@ -21,6 +22,8 @@ export type ProposalWorkspaceScenarioKind =
   | "source-context-stale";
 
 export type ProposalWorkspaceScenario = {
+  deliveryLink?: ProposalDeliveryLink;
+  sourceStatus?: string;
   backendRecordId: string;
   bodyPreview: string;
   evidence: ProposalWorkspaceScenarioEvidence[];
@@ -46,6 +49,17 @@ export type ProposalWorkspaceScenario = {
   title: string;
   tone: OperationTone;
 };
+
+export type ProposalDeliveryLink = {
+  recordRef: string;
+  status: "new" | "ready" | "in-progress" | "blocked" | "done" | "parked" | "retired" | null;
+  observedAt: string;
+  sourceState: "current" | "unavailable";
+};
+
+export function proposalWorkflowClosed(proposal: Pick<ProposalWorkspaceScenario, "status">) {
+  return proposal.status === "done" || proposal.status === "retired";
+}
 
 export type ProposalWorkspaceScenarioEvidence = OperationEvidenceSignal;
 

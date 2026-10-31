@@ -2,18 +2,32 @@
 
 import { TerasDialog, TerasEmptyState, TerasMetadataList } from "@/teras";
 
-import type { LocalExceptionRuntimeProjection } from "../../../read-model/types/model-operations-types.ts";
+import {
+  resolveConsoleFixtureIsolation,
+  selectConsoleAuthorityProjection,
+} from "../../../../../console-integration/fixture-isolation/console-fixture-isolation.ts";
+import { useModelOperationsLiveRuntime } from "../../../live-runtime/use-model-operations-live-runtime.ts";
+import { modelOperationsReadModel } from "../../../read-model/model-operations-read-model.ts";
 import { localExceptionRuntimeMetadata } from "../../shared/model-profile-display-model.ts";
 
 export function LocalExceptionRuntimeDialog({
   onClose,
   open,
-  runtime,
 }: {
   onClose: () => void;
   open: boolean;
-  runtime: LocalExceptionRuntimeProjection;
 }) {
+  const source = useModelOperationsLiveRuntime();
+  const snapshot = source.snapshot;
+  const decision = resolveConsoleFixtureIsolation({
+    mode: snapshot?.mode ?? null,
+    status: snapshot?.status ?? "loading",
+  });
+  const runtime = selectConsoleAuthorityProjection({
+    decision,
+    fixture: modelOperationsReadModel,
+    live: snapshot?.readModel ?? null,
+  })?.localExceptionRuntime;
   return (
     <TerasDialog
       contentOverflow="auto"
@@ -25,8 +39,9 @@ export function LocalExceptionRuntimeDialog({
       width="standard"
       title="Local Exception Runtime"
     >
-      <TerasMetadataList items={localExceptionRuntimeMetadata(runtime)} />
-      {runtime.models.length === 0 ? (
+      {runtime ? <TerasMetadataList items={localExceptionRuntimeMetadata(runtime)} />
+        : <TerasEmptyState>{snapshot ? snapshot.error ?? "Local runtime inventory is unavailable." : "Reading local runtime inventory."}</TerasEmptyState>}
+      {runtime && runtime.models.length === 0 ? (
         <TerasEmptyState>
           No local runtime inventory has been admitted to this projection.
         </TerasEmptyState>

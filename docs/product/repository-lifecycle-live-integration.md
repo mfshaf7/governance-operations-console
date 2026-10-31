@@ -66,6 +66,15 @@ reversal receipt selection remain on the server.
 8. Repository History reads the OOS audit and preserves retained local setup
    receipts as separately attributed evidence.
 
+Repository History also includes retained provisioning and existing-source
+linkage receipts bound to the repository's immutable provider identity. An
+unavailable owner read is shown as partial history, while previously loaded
+evidence remains visible. It must not be reported as no recorded history.
+Lifecycle inspection stays available when execution is unavailable. Unverified
+provider/workspace state is labelled explicitly; final execution requires both
+the configured capability and current owner state, or the existing exact
+successful-custody initialization path.
+
 ## Failure And Replay
 
 - Missing server configuration keeps mutation unavailable.

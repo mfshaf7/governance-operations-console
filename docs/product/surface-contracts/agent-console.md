@@ -16,11 +16,38 @@ Agent Console is cross-cutting. It is not an Operation Workbench domain.
 
 The fixed Agent Runtime dock is the canonical cross-console runtime surface. Its
 aggregate status card reports governed-path readiness separately from logical
-agent-runtime activity. Its bounded, scrollable roster lists only logical
-runtimes with a current heartbeat and keeps `idle`, `working`, `waiting`, and
+agent-runtime activity. Open panel diagnostics in Runtime Status list only logical
+runtimes with a current heartbeat and keep `idle`, `working`, `waiting`, and
 `failed` activity separate from presence. Each entry carries runtime identity,
 caller, owner surface, source authority, provider, model, current operation,
 current invocation, and optional model-profile and durable-run references.
+
+Recent AI activity replaces the dock's permanent panel roster, retaining its
+existing dimensions and diagnostics inside Runtime Status. Rows show recorded
+task, workspace/item, result and time; History and row inspection share one
+native dialog. Console reads OOS's bounded caller/operator-owned activity API.
+A fixed 10-row initial read refreshes without overlap while visible. Earlier
+pages replace one bounded retained page. Failed reads preserve that page and
+its cursor; source failure never selects examples or retries model generation.
+
+Retained Agent Console invocations include their original evidence. New request
+metadata binds closed task/record identities into the existing replay digest.
+Legacy labels and links remain absent when not recorded. Native Work Design and
+Refinement preserve their existing model paths and record safe future outcomes
+in OOS's existing private store. Their historical coverage begins when recording
+is commissioned. An unfinished earlier process's request is unconfirmed after
+restart, without inventing a completed or actively working outcome.
+
+Row inspection retains actual receipt, model-audit and context references.
+Known owner record identities navigate only through existing workspace intents;
+unknown or local-draft identities keep request inspection without a guessed
+record destination. Completion of assistance never implies workflow acceptance
+or canonical mutation. No raw prompt, response, draft or error body is projected.
+
+Explicit current disconnected preview remains a labelled visual example mode.
+The implementation is held in the operator's uncommitted local batch. Live
+qualification requires the OOS dependency, exact source review and normal
+Platform commissioning; source conformance is not proof of live history.
 
 The embedded Agent Console and the Docking Agent are separate logical agents.
 Each keeps its browser presentation state but binds its generated nonce,
@@ -58,8 +85,12 @@ aware, abortable during teardown, and backed off after transport failures.
 Detailed provider inventory and credentials are not path-health facts and must
 not enter the polling response.
 
-The dock, embedded header and status command describe this result as OOS
-reachable. A configured profile identifier does not establish entitlement,
+The agent chat uses Online/Offline for its service connection and Checking
+during its initial read. Its tooltip explains that model availability is checked
+on a request. The compact context badge reads Check on send; its tooltip
+explains context screening before model use. Technical runtime inspection and
+status diagnostics retain their source facts. A configured profile identifier
+does not establish entitlement,
 provider health or successful generation. Runtime presence counts logical
 browser agents with current heartbeats, not backend generation jobs.
 An idle runtime does not populate its model from the configured purpose-profile

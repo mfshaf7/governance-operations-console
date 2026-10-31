@@ -213,6 +213,11 @@ export function useProposalWorkflowSessionController({
       return;
     }
 
+    if (footerMove.action === "view-history") {
+      requestWorkflowStep("history");
+      return;
+    }
+
     switch (activeWorkflowStep) {
       case "triage":
         if (triageReadOnly || activeTriageDraft.appliedAt) {

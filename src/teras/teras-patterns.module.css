@@ -6698,3 +6698,24 @@
 .terasCodeEditor > div {
   height: 100%;
 }
+
+/* Native disclosure with the existing workspace metadata-card treatment. */
+.terasTechnicalDetails {
+  min-width: 0;
+  min-height: 0;
+  margin-top: 0.72rem;
+}
+
+.terasTechnicalDetails summary {
+  cursor: pointer;
+  color: rgba(255, 223, 169, 0.9);
+  font-size: 0.7rem;
+}
+
+.terasTechnicalDetailsBody {
+  max-height: 14rem;
+  margin-top: 0.45rem;
+  overflow: auto;
+  scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
+  scrollbar-width: thin;
+}

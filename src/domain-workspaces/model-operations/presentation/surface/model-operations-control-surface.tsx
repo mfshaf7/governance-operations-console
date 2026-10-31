@@ -1,6 +1,5 @@
 "use client";
 
-import { ScanSearch } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import {
@@ -10,48 +9,42 @@ import {
   TerasFieldStack,
   TerasEmptyState,
   TerasFilterBar,
-  TerasMetadataList,
-  TerasPanel,
-  TerasPanelHeader,
-  TerasPanelStack,
   TerasRecordControlLayout,
   TerasRegisterPanel,
   TerasSelectedPanel,
+  TerasList,
+  TerasStatusItem,
+  TerasSegmentedControl,
 } from "@/teras";
 
 import { modelProfileAvailability } from "../../read-model/selectors/model-profile-selectors.ts";
 import { ModelProfileDashboard } from "../dashboards/model-profile/model-profile-dashboard.tsx";
-import { LocalExceptionRuntimeDialog } from "../dialogs/local-runtime/local-exception-runtime-dialog.tsx";
 import { ModelProfileRequestSupportDialog } from "../dialogs/request-support/model-profile-request-support-dialog.tsx";
 import { ModelProfileRequestModal } from "../workflows/profile-request/model-profile-request-modal.tsx";
 import { ModelProfileRequestHistoryDialog } from "../dialogs/request-history/model-profile-request-history-dialog.tsx";
 import {
-  localExceptionRuntimeSummaryMetadata,
-  localExceptionRuntimeTone,
   modelProfileAvailabilityLabel,
   modelProfileAvailabilityTone,
-  modelReadinessLabel,
-  modelReadinessTone,
 } from "../shared/model-profile-display-model.ts";
 import { ModelOperationsControlOverviewPanel } from "./model-operations-control-overview-panel.tsx";
 import { ModelProfileRegisterTable } from "./model-profile-register-table.tsx";
 import {
-  modelAccessPlaneMetadata,
+  modelGovernedAccessSummary,
   modelProfileSelectedMetadata,
 } from "./model-operations-control-view-model.ts";
 import { useModelOperationsControlController } from "./use-model-operations-control-controller.ts";
 import { ModelRuntimeControlSurface } from "./model-runtime-control-surface.tsx";
 
 export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
-  const [view, setView] = useState<"runtime" | "profiles">("runtime");
+  const [view, setView] = useState<"runtime" | "profiles">("profiles");
   const [dirty, setDirty] = useState(false), [nextView, setNextView] = useState<"runtime" | "profiles" | null>(null);
   const reportDirty = useCallback((value: boolean) => { setDirty(value); onDirtyChange?.(value); }, [onDirtyChange]);
   const select = (value: "runtime" | "profiles") => { if (value === view) return; if (dirty) setNextView(value); else setView(value); };
   return <>
     <TerasFieldStack fill="last">
       <TerasActionRow>
-        <TerasActionButton aria-pressed={view === "runtime"} emphasis={view === "runtime" ? "primary" : "secondary"} onClick={() => select("runtime")}>Models & routing</TerasActionButton>
-        <TerasActionButton aria-pressed={view === "profiles"} emphasis={view === "profiles" ? "primary" : "secondary"} onClick={() => select("profiles")}>Purpose profiles</TerasActionButton>
+        <TerasSegmentedControl ariaLabel="Model Operations pages" value={view} onValueChange={select}
+          options={[{ value: "profiles", label: "Purpose profiles" }, { value: "runtime", label: "Models & routing" }]} />
       </TerasActionRow>
       {view === "runtime" ? <ModelRuntimeControlSurface onDirtyChange={reportDirty} /> : <ModelProfileControlSurface />}
     </TerasFieldStack>
@@ -71,9 +64,7 @@ function ModelProfileControlSurface() {
   const availability = selectedProfile
     ? modelProfileAvailability(selectedProfile)
     : null;
-  const localRuntimeTone = localExceptionRuntimeTone(
-    controller.readModel.localExceptionRuntime,
-  );
+
 
   return (
     <>
@@ -150,7 +141,7 @@ function ModelProfileControlSurface() {
           </TerasRegisterPanel>
         }
         selected={
-          selectedProfile && availability ? <TerasPanelStack fill="last">
+          selectedProfile && availability ? <TerasFieldStack overflow="auto" data-model-profile-sidebar="true">
             <TerasSelectedPanel
               action={{
                 description: selectedProfile.requiredMove.detail,
@@ -177,55 +168,10 @@ function ModelProfileControlSurface() {
               variant="compact"
             />
 
-            <TerasPanel
-              frame="padded"
-              treatment="rail"
-              fit="content"
-              tone={modelReadinessTone(selectedProfile.accessPlane.state)}
-            >
-              <TerasPanelHeader
-                description={selectedProfile.accessPlane.reason}
-                kicker="Access Plane"
-                statusLabel={modelReadinessLabel(
-                  selectedProfile.accessPlane.state,
-                )}
-                statusTone={modelReadinessTone(
-                  selectedProfile.accessPlane.state,
-                )}
-                title={selectedProfile.accessPlane.id}
-              />
-              <TerasMetadataList
-                items={modelAccessPlaneMetadata(selectedProfile.accessPlane)}
-                shape="line"
-                treatment="chip"
-                wrap
-              />
-            </TerasPanel>
-
-            <TerasPanel frame="padded" treatment="neutral" fit="fill">
-              <TerasPanelHeader
-                description="Separate local inventory; it does not satisfy governed profile or caller readiness."
-                kicker="Local Exception Runtime"
-                statusLabel={controller.readModel.localExceptionRuntime.state}
-                statusTone={localRuntimeTone}
-                title={controller.readModel.localExceptionRuntime.provider}
-              />
-              <TerasMetadataList
-                items={localExceptionRuntimeSummaryMetadata(
-                  controller.readModel.localExceptionRuntime,
-                )}
-              />
-              <TerasActionRow spacing="tight">
-                <TerasActionButton
-                  onClick={controller.localRuntime.show}
-                  emphasis="secondary"
-                >
-                  <ScanSearch aria-hidden="true" size={14} />
-                  Inspect Runtime
-                </TerasActionButton>
-              </TerasActionRow>
-            </TerasPanel>
-          </TerasPanelStack> : (
+            <TerasList ariaLabel="Governed access summary" frame="contained">
+              <TerasStatusItem {...modelGovernedAccessSummary(selectedProfile.accessPlane)} />
+            </TerasList>
+          </TerasFieldStack> : (
             <TerasEmptyState fill>
               No governed model profiles are available from the current authority projection.
             </TerasEmptyState>
@@ -257,11 +203,6 @@ function ModelProfileControlSurface() {
         step={controller.request.step}
       />
       <ModelProfileRequestHistoryDialog open={historyOpen} initialRequestId={historyTarget} requests={controller.request.all} onClose={() => setHistoryOpen(false)} onChanged={controller.request.refresh} />
-      <LocalExceptionRuntimeDialog
-        onClose={controller.localRuntime.close}
-        open={controller.localRuntime.open}
-        runtime={controller.readModel.localExceptionRuntime}
-      />
     </>
   );
 }

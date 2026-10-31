@@ -968,14 +968,14 @@ export function useAgentConsoleController({
   const providerOnline = providerState === "online";
   const providerStateLabel =
     providerState === "online"
-      ? "OOS reachable"
+      ? "Online"
       : providerState === "offline"
-        ? "OOS unreachable"
+        ? "Offline"
         : providerStatus
           ? providerStatus.observedAt
             ? "Stale"
             : "Unavailable"
-          : "Probing";
+          : "Checking";
   const focusedDraftScope = contextMode === "focused" ? focusedDraft?.getScope() : null;
   const providerStatusLabel = focusedDraftScope ? "governed workflow advisor / checked on request" :
     providerState === "online"
@@ -1007,7 +1007,7 @@ export function useAgentConsoleController({
   const contextPill =
     contextMode === "focused" || contextMode === "workspace"
       ? contextDecision.code === "cgg-required"
-        ? "CGG check on send"
+        ? "Check on send"
         : "Unavailable"
         : "Detached";
   const contextPillTone =

@@ -30,6 +30,7 @@ try {
   if (path === "/api/console/capabilities") return route.fulfill({ json: { artifactType: "console-runtime-capability-projection", schemaVersion: 1, mode: "live", capabilities: [{ id: "model-operations", mutation: { state: "available" }, source: { state: "available" } }] } });
   if (!path.startsWith("/api/model-operations/runtime/")) { assert.equal(method, "GET"); return route.fulfill({ status: 503, json: { error: "Unrelated owner isolated" } }); }
   if (offline) return route.fulfill({ status: 503, json: { error: "Synthetic owner unavailable" } });
+  if (path.endsWith("/connections") && method === "GET") return route.fulfill({ status: 503, json: { error: "Provider connections are outside this routing case" } });
   if (path.endsWith("/registry")) return route.fulfill({ json: registry() });
   if (path.endsWith("/catalogue")) return route.fulfill({ json: { backend_id: url.searchParams.get("backend_id"), models: [{ model: "synthetic-model", supported_efforts: null, model_digest: null, runtime_version: "synthetic" }] } });
   if (path.endsWith("/requests") && method === "GET") return route.fulfill({ json: { requests: records, next_cursor: null } });
@@ -54,21 +55,27 @@ try {
   await page.goto(base, { waitUntil: "domcontentloaded", timeout: 60000 });
   await page.waitForFunction(() => { const n = [...document.querySelectorAll("button")].find(x => x.title === "Open MODEL"); const k = n && Object.keys(n).find(x => x.startsWith("__reactProps$")); return Boolean(k && n[k].onClick); });
   await page.locator('button[title="Open MODEL"]').click();
-  await page.getByRole("heading", { name: "Backends & models", exact: true }).waitFor();
+  await page.getByRole("radio", { name: "Models & routing", exact: true }).click();
+  await page.getByRole("button", { name: "Manage registrations", exact: true }).waitFor();
  }
  async function choose(label, option, index = 0) {
   await page.getByRole("button", { name: label, exact: true }).nth(index).click();
   await page.getByRole("option", { name: option, exact: true }).click();
  }
- async function clear() { await page.getByRole("button", { name: "Clear selection", exact: true }).click(); }
+ async function back() { await page.getByRole("button", { name: "Back to Models & routing", exact: true }).click(); }
+ async function registrations() { await page.getByRole("button", { name: "Manage registrations", exact: true }).click(); }
+ async function routing() { await page.getByRole("button", { name: "Review routing", exact: true }).click(); }
+ async function clear() { await page.getByRole("button", { name: "Clear selection", exact: true }).click(); await back(); }
  async function register(backend) {
+  await registrations();
   await choose("Admitted backend", backend + " · " + (backend === "cloud" ? "codex-app-server" : "ollama"));
-  await page.getByRole("button", { name: "Register backend", exact: true }).click(); await clear();
+  await page.getByRole("button", { name: "Register backend", exact: true }).click(); await clear(); await registrations();
+  await page.getByRole("button", { name: "Register model", exact: true }).click();
   await page.getByRole("button", { name: "Discover models", exact: true }).click();
-  await choose("Discovered model", "synthetic-model");
+  await choose("Model", "synthetic-model");
   await page.getByRole("button", { name: "Verify & register model", exact: true }).click(); await clear();
  }
- await open(); assert.equal(writes.length, 0); await register("cloud"); await register("local");
+ await open(); assert.equal(writes.length, 0); await register("cloud"); await register("local"); await routing();
  await choose("Selection mode", "Choose registered models");
  await choose("Primary model", "cloud-model · cloud");
  await choose("Native effort", "High");
@@ -76,30 +83,39 @@ try {
  await choose("Fallback 1", "local-model · local");
  await choose("Native effort", "Thinking off", 1);
  const prior = writes.length;
- await page.getByRole("button", { name: "Purpose profiles", exact: true }).click();
+ await back();
  await page.getByRole("button", { name: "Keep editing", exact: true }).click(); assert.equal(writes.length, prior);
  loseNext = true; await page.getByRole("button", { name: "Save routing", exact: true }).click();
- await page.getByText("Synthetic lost acknowledgement", { exact: true }).waitFor();
+ await page.getByRole("dialog", { name: "Model operation history", exact: true }).getByText("Synthetic lost acknowledgement", { exact: true }).waitFor();
  assert.equal(writes.length, prior + 1); const original = records[0].request_id;
  assert.equal(records[0].request.input.default.primary.effort, "high"); assert.equal(records[0].request.input.default.fallbacks[0].effort, false);
+ await back(); await page.getByRole("radio", { name: "Purpose profiles", exact: true }).click();
+ await page.getByRole("alertdialog", { name: "Discard unsaved routing changes?", exact: true }).getByRole("button", { name: "Keep editing", exact: true }).click();
+ assert.equal(await page.getByRole("radio", { name: "Models & routing", exact: true }).isChecked(), true);
+ assert.equal(writes.length, prior + 1, "Page switching cannot discard or resubmit the routing draft");
  await open(); await page.getByText(original, { exact: true }).waitFor(); await clear(); assert.equal(writes.length, prior + 1, "Cold recovery reads the same ID and never resubmits");
- await page.getByText("Synthetic advisor · planning", { exact: true }).click();
+ const savedRoute = structuredClone(config.default);
+ await registrations(); await choose("Admitted backend", "cloud · codex-app-server");
+ await page.getByRole("button", { name: "Verify & update registration", exact: true }).click(); await clear();
+ assert.deepEqual(writes.at(-1).input, { backend_id: "cloud", model: "cloud-model" });
+ assert.deepEqual(config.default, savedRoute, "Verifying the selected registration preserves its route references");
+ await page.getByText("Synthetic advisor · planning", { exact: true }).click(); await routing();
  await choose("Selection mode", "Use existing profile binding");
  await page.getByRole("button", { name: "Save routing", exact: true }).click(); await clear();
- assert.equal(config.overrides[tasks[0]], null); assert.equal(config.default.primary.model_id, cloud);
+ assert.equal(config.overrides[tasks[0]], null); assert.equal(config.default.primary.model_id, cloud); await routing();
  await choose("Selection mode", "Choose registered models"); revision++;
- await page.getByRole("button", { name: "Refresh", exact: true }).click();
+ await page.getByRole("button", { name: "Refresh owner state", exact: true }).click();
  await page.getByText("Reload and review the current settings before saving.", { exact: true }).waitFor();
  assert.equal(await page.getByRole("button", { name: "Save routing", exact: true }).isEnabled(), false);
  await page.getByRole("button", { name: "Reload saved settings", exact: true }).click(); await page.getByRole("button", { name: "Discard draft", exact: true }).click();
- await choose("Admitted backend", "cloud · codex-app-server");
+ await back(); await registrations(); await choose("Admitted backend", "cloud · codex-app-server");
  await page.getByRole("button", { name: "Connect account", exact: true }).click();
  await page.getByText("SYNTHETIC", { exact: true }).waitFor();
  assert.equal(await page.getByRole("button", { name: "Open account sign-in", exact: true }).count(), 1);
  await page.getByRole("button", { name: "Cancel operation", exact: true }).click(); await clear();
  if (process.env.CONSOLE_MODEL_SCREENSHOT) await page.screenshot({ path: process.env.CONSOLE_MODEL_SCREENSHOT });
  offline = true; await page.getByRole("button", { name: "Refresh", exact: true }).click(); await page.getByText("Synthetic owner unavailable", { exact: true }).waitFor();
- assert.equal(await page.getByRole("button", { name: "Connect account", exact: true }).isEnabled(), false);
+ await registrations(); assert.equal(await page.getByRole("button", { name: "Connect account", exact: true }).isEnabled(), false);
  assert.deepEqual(errors, []);
  console.log("Model runtime synthetic browser conformance PASS: cold registration, discovery, native efforts/fallback, dirty guard, lost acknowledgement/cold original-ID recovery, task source override, stale revision denial, native account cancellation, unavailable owner denial. No live provider or owner changes.");
 } finally { await browser.close(); }

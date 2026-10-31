@@ -56,6 +56,12 @@ export function RepositoryControlDialogStack({
         onResolveProposalGate={controller.details.onResolveProposalGate}
         repository={controller.details.repository}
       />
+      {controller.canonicalGate.open ? <RepositoryGateResolutionDialog
+        onClose={controller.canonicalGate.close}
+        onRecordResolution={controller.gateResolution.onRecordResolution}
+        repository={null}
+        canonical={{subjectRef:controller.canonicalGate.subjectRef,
+          custodyCurrent:controller.proposalGate.custodyCurrent,custodyResults:controller.proposalGate.custodyResults}} /> : null}
       <RepositoryGateResolutionDialog
         key={
           controller.gateResolution.repository?.id ??
@@ -84,6 +90,12 @@ export function RepositoryControlDialogStack({
         result={controller.custody.result}
       />
       <RepositoryHistoryDialog
+        custodyResults={controller.history.custodyResults}
+        custodySourceStatus={controller.history.custodySourceStatus}
+        custodySourceError={controller.history.custodySourceError}
+        liveMode={controller.history.liveMode}
+        lifecycleSnapshot={controller.history.lifecycleSnapshot}
+        lifecycleError={controller.history.lifecycleError}
         lifecycleAudit={controller.history.lifecycleAudit}
         onClose={controller.history.close}
         receipts={controller.history.receipts}
@@ -97,6 +109,7 @@ export function RepositoryControlDialogStack({
         repository={controller.admissionRun.repository}
       />
       <RepositoryLifecycleDialog
+        executionAvailable={controller.lifecycle.executionAvailable}
         custodyResult={controller.lifecycle.custodyResult}
         error={controller.lifecycle.error}
         initialAction={controller.lifecycle.initialAction}

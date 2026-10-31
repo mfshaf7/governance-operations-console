@@ -24,7 +24,6 @@ import {
 } from "../shared/repository-control-projection.ts";
 import { RepositoryControlDialogStack } from "./repository-control-dialog-stack.tsx";
 import { useRepositoryControlController } from "./use-repository-control-controller.ts";
-import { RepositoryProposalGatePanel } from "./repository-proposal-gate-panel.tsx";
 
 export function RepositoryControlSurface({
   entryIntent = null,
@@ -38,15 +37,14 @@ export function RepositoryControlSurface({
     onOpenDeliveryCatalog,
   });
   const selectedRepository = controller.selectedRepository;
-  const overview = <>
+  const overview =
     <RepositoryControlOverviewPanel
       canProvisionRepository={controller.overview.canProvisionRepository}
+      onOpenProposalGates={controller.canonicalGate.openDialog}
+      showProposalGates={controller.canonicalGate.available}
       onOpenRepositoryRequestDraft={controller.overview.onOpenRepositoryRequestDraft}
       requestSubmittedAt={controller.overview.requestSubmittedAt}
-      summary={controller.overview.summary} workspaceStatus={controller.overview.workspaceStatus} />
-    <RepositoryProposalGatePanel subjectRef={entryIntent?.subjectRef}
-      custodyCurrent={controller.proposalGate.custodyCurrent} custodyResults={controller.proposalGate.custodyResults} />
-  </>;
+      summary={controller.overview.summary} workspaceStatus={controller.overview.workspaceStatus} />;
 
   if (!selectedRepository) {
     return (
@@ -87,7 +85,7 @@ export function RepositoryControlSurface({
               "data-repository-register": "standard",
             }}
             density="compact-control"
-            description="Contract-shaped repository records for request, admission, blocked-path inspection, and retirement requests."
+            description="Repository requests, ownership, admission status and retained history."
             filterBar={
               <TerasFilterBar
                 data-repository-filter-bar="true"

@@ -95,14 +95,20 @@ try {
   });
   async function open() {
     await page.goto(base, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    await page.waitForFunction(() => {
+      const node = document.querySelector('button[title="Open MODEL"]');
+      const key = node && Object.keys(node).find(value => value.startsWith("__reactProps$"));
+      return Boolean(key && node[key].onClick);
+    });
     await page.locator('button[title="Open MODEL"]').click({ timeout: 60_000 });
-    await page.getByRole("heading", { name: "Backends & models", exact: true }).waitFor();
+    await page.getByRole("radio", { name: "Models & routing", exact: true }).click();
+    await page.getByRole("button", { name: "Manage registrations", exact: true }).waitFor();
   }
   async function choose(label, option) {
     await page.getByRole("button", { name: label, exact: true }).click();
     await page.getByRole("option", { name: option, exact: true }).click();
   }
-  async function dialog() { await page.getByRole("button", { name: "Add / manage API connections", exact: true }).click(); }
+  async function dialog() { await page.getByRole("button", { name: "API connections", exact: true }).click(); }
   async function noSecretStored() {
     const stored = await page.evaluate(() => JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } }));
     assert.equal(stored.includes("synthetic-browser-test-key"), false); assert.equal(stored.includes('"api_key"'), false);
@@ -145,13 +151,17 @@ try {
   await page.getByRole("button", { name: "Clear completed operation", exact: true }).click();
   await expect(page.getByRole("button", { name: "Store key securely", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.getByRole("button", { name: "Manage registrations", exact: true }).click();
   await choose("Admitted backend", "Test glm-api · GLM · Z.AI Standard API · Experimental");
+  await page.getByRole("button", { name: "Register model", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Exact model ID", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Discover models", exact: true })).toBeDisabled();
-  await expect(page.locator('[data-model-runtime-control="true"]')).toContainText("Experimental — real-account testing pending");
+  await expect(page.getByRole("button", { name: "Discover models", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Register model", exact: true })).toContainText("Experimental — real-account testing pending");
   await noSecretStored(); assert.equal(keyWrites, 1); assert.deepEqual(errors, []);
   if (process.env.CONSOLE_MODEL_TEST_SCREENSHOT) {
     await page.screenshot({ path: process.env.CONSOLE_MODEL_TEST_SCREENSHOT });
+    await page.getByRole("button", { name: "Back to registrations", exact: true }).click();
+    await page.getByRole("button", { name: "Back to Models & routing", exact: true }).click();
     await dialog(); await choose("Named connection", "Test glm-api · active");
     await page.getByRole("dialog", { name: "API connections", exact: true }).screenshot({ path: process.env.CONSOLE_MODEL_TEST_SCREENSHOT.replace(/\.png$/, "-connections.png") });
   }

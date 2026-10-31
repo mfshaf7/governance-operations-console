@@ -1,5 +1,140 @@
 # Governance Operations Console Change Log
 
+## 2026-10-31 — Reviewed batch release
+
+Operator authorized publication, OOS-first landing, exact Security acceptance,
+normal Platform activation and live verification of the reviewed UI batch.
+Earlier local-only preview holds below describe development checkpoints and are
+superseded by this release authorization. Full owner checks and the production
+build gate publication; preview examples never substitute for live owner data.
+
+
+## 2026-10-31 — Plain agent-chat status labels
+
+Agent chat uses Online/Offline and the compact Check on send context badge.
+Tooltips explain service reachability and context screening before model use.
+The initial state reads Checking; existing stale/unavailable semantics and
+request controls are unchanged. This copy-only adjustment is scoped to the
+agent chat and is included in the operator-authorized batch release.
+
+## 2026-10-31 — Recorded AI activity integration
+
+The approved UI batch connects Recent AI activity to the new bounded OOS
+request-history read. Retained session requests and future native Work Design/
+Refinement outcomes supply task, owner/item, timestamp, state and original
+evidence. Legacy metadata remains absent and interrupted requests remain
+unconfirmed. Paging, failed-cursor retry, retained-source failure and existing
+workspace navigation preserve source truth without raw prompt/response bodies
+or automatic model retries. OOS must land before this Console dependency.
+Source-only Security review and controlled composed/browser proof are separate
+from exact-source commissioning. Operator authorized batch publication on October31.
+
+## 2026-10-31 — Recent AI activity visual trial
+
+Operator-approved preview exploration reuses the fixed Agent Runtime dock for
+a bounded Recent AI activity list and native history/detail inspection. The
+existing open-panel roster and presence inspection move into Runtime Status
+diagnostics. Connection checks and independent agent sessions retain their
+behavior. Clearly labelled examples are admitted only for current disconnected
+preview. A combined owner AI history feed and linked-record navigation remain
+unconnected; live/source-failure states expose that limit without sample fallback.
+No model calls, new persistence, owner mutations or backend changes are added.
+The later Recorded AI activity integration above supersedes this visual-only trial.
+
+## 2026-10-31 — Resource focus containment
+
+Resource inspection fills the existing Command Center slot consistently for
+CPU, RAM, VMEM, Disk, Bandwidth and Uptime. Previously content length determined
+panel width, making VMEM appear aligned while other metrics left empty space.
+The selected-card connector is suppressed in the stacked layout; the lateral
+layout retains its connected treatment. Resource content responds to its usable
+panel width, including narrow headings, statistics and long evidence values.
+Telemetry meaning and read-only behavior are unchanged. This repair remains
+part of the reviewed UI maintenance batch.
+
+## 2026-10-31 — Primary priority layout
+
+The local UI batch corrects selected-priority compression and Required Move
+content overflowing its card. Action text and timing wrap within the existing
+surface. Technical metadata uses the native disclosure and compact evidence
+rows shared with Governance Activity. Source freshness stays visible; original
+owner facts, full Source details and existing route controls remain available.
+The attention list keeps its previous 20rem section and internal scrolling
+instead of expanding to accommodate every candidate.
+This primary Console treatment does not change workspace Teras cards or owner
+records. Browser checks cover supported widths, long move text, keyboard
+disclosure, source inspection and Governance Activity containment.
+
+## 2026-10-31 — Model Operations compact controls
+
+The same local UI maintenance batch restores the shared summary/actions,
+workflow register and selected-route orientation. Existing registration,
+route editing and operation/configuration history use focused Teras dialogs.
+Native effort, ordered fallback, revision conflicts, original-request recovery,
+native account sign-in and API-key clearing retain their owner controls.
+Disconnected preview shows explicit read-only samples without creating owner
+requests, receipts, credentials or readiness. Configured-owner failure never
+selects those samples. Profile overview copy keeps request references in
+history and avoids repeating identical provider/resolution text.
+
+Registration review refines that same dialog: selected backend registration and
+health stay together; its model inventory is filtered by exact backend identity;
+verification/removal target the selected model; and Register model opens an
+independent discovery/manual-entry form. Global model counts remain in the main
+overview. Backend, registered-model and new-model selections no longer share one
+field value. Experimental qualification and verification cost remain visible.
+Backend registration/health use compact status chips below the selector,
+aligned left on the same row as the backend action buttons, and
+the register count/action use the standard spaced action row.
+The selected model uses a health badge, consistent verification/content rows
+and expandable runtime/digest/evidence details. Observed changes remain visible
+while technical details are collapsed.
+Technical disclosure keeps native expansion with the workspace metadata-card
+design and bounded scrolling. Governance Activity retains its primary-console
+evidence presentation.
+Purpose profiles is the default opening page. The two-page selector reuses the
+existing segmented control to keep hover/focus within the modal's clipped body;
+routing draft guards remain in place.
+Purpose-profile orientation and its compact Governed access row use natural
+scrolling. Local-runtime inventory opens from the selected Ollama backend in
+Manage registrations, using its existing read-only source on demand. The main
+overviews have no local-only action, and cloud backend details do not expose it. Access
+reason and credential-owner facts remain available in the dashboard Access Plane
+check, preserving evidence while removing the compressed sidebar panels.
+
+## 2026-10-31 — Repository compact layout and receipt inspection
+
+The approved local UI batch reuses the Repository gate dialog and existing
+action panel, removes the full-width integration panel from the main overview,
+and preserves exact Proposal request routing, acknowledgement recovery and
+unrecorded-draft protection. History includes identity-bound owner custody
+receipts, retains older successful linkage receipts, and distinguishes partial
+owner reads from empty history. Lifecycle inspection remains available while
+execution fails closed on unavailable capability or owner state. Live runtime
+configuration and provider/workspace records are unchanged.
+
+## 2026-10-31 — Completed Proposal inspection
+
+The Proposal overview keeps Total, Review, Waiting, Parked and Done summary
+cards. Retired Delivery remains inspectable in the register and excluded from
+Review without a separate Retired summary card.
+
+Owner maintenance `maintenance-proposal-completion`, Landing Unit Decision
+`feature_single_landing_unit`: keep completed source proposals complete across
+the register, Hub status, required move and workflow steps. Completed records
+remain read-only, supersede unfinished local drafts, and retain inspection of
+recorded steps. Missing historical route or handoff detail is shown as absent,
+without inventing evidence or requesting a new route. Source records and owner
+commands remain unchanged. Local preview review precedes batch publication.
+
+The same batch consumes the existing canonical Delivery reference exposed by
+the broker and one bounded Delivery overview. Earlier consumed proposals no
+longer appear in Review. Completed Delivery with pending source closeout and
+retired Delivery are distinct; unavailable owner outcomes remain explicit.
+Retirement does not imply implementation. The broker read extension must land
+before this dependent Console composition. No historical source mutation is
+performed by this UI maintenance.
+
 ## 2026-10-30 — Experimental provider connections
 
 Epic1363 story1369, Landing Unit Decision `child_isolated_landing_unit`,

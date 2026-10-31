@@ -36,6 +36,22 @@ workflow through OOS. Platform remains the configuration and invocation owner.
 The Console does not add an ad hoc session-model override or invoke a provider.
 Purpose-profile policy and permissions retain their existing review workflow.
 
+Models & routing retains the shared summary/actions overview, workflow register
+and selected-route orientation. Manage registrations opens the existing backend
+and model controls; Review routing opens primary model, native effort and
+ordered fallbacks; Operation history opens original requests and configuration
+restoration. Focused editors retain draft guards and revision checks. Submitted
+operations reveal their progress and account challenge without requiring the
+operator to find a hidden panel. Explicit disconnected preview permits only
+labelled read-only samples, without owner requests or receipts; configured-owner
+failure never substitutes samples.
+
+The registration dialog keeps selected-backend registration and health beside
+the backend selector. Registered models, their search/count, and selected-model
+inspection are scoped to that exact backend. Register model is an independent
+discovery/manual-entry form; it does not share selection with model update or
+removal. The overall registered-model count belongs in the main overview.
+
 ## Workbench Placement And Mode
 
 Model Operations is an Operation Workbench domain. It uses Compact Control
@@ -49,6 +65,10 @@ The domain has two stable surfaces:
 
 1. Model Operations Control
 2. Model Profile Dashboard
+
+Model Operations opens Purpose profiles by default. The existing segmented
+page selector places Purpose profiles first and Models & routing second;
+switching away from unsaved routing retains the draft guard.
 
 Local runtime inventory is a secondary inspector. It is not a peer primary
 surface and is not mixed into governed profile truth.
@@ -159,7 +179,7 @@ The primary surface uses the standard compact-control structure:
 - access-readiness filter
 - provider/runtime-resolution filter
 - selected-profile panel
-- access-plane status panel
+- compact Governed access status summary
 
 Register columns are:
 
@@ -180,8 +200,14 @@ The selected-profile panel shows stable orientation only:
 - access readiness
 - first-class `Open Profile` action
 
-The access-plane status panel summarizes registry, gateway, audit, and
-activation posture. It does not duplicate the selected-profile dashboard.
+The compact Governed access row reports access readiness and activation posture.
+Full gateway, audit, credential-owner and access-reason evidence remains in the
+Profile Dashboard's Access Plane check. Local inventory opens as a secondary
+inspector from the selected Ollama backend in Manage registrations. Neither
+Purpose profiles nor the Models & routing overview has a local-only shortcut. The inspector reads its existing authority projection
+only while open and preserves unavailable versus empty states. The selected-profile
+area uses content-aware scrolling so profile actions and access status remain
+reachable without compressing panels.
 
 ## Model Profile Dashboard
 

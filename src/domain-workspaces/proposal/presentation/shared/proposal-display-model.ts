@@ -35,7 +35,10 @@ export function proposalStatusPillLabel(proposal: ProposalWorkspaceScenario) {
     case "captured":
       return "Captured";
     case "done":
-      return "Done";
+      return proposal.deliveryLink?.sourceState === "unavailable" ? "Handed off"
+        : proposal.deliveryLink?.status && proposal.deliveryLink.status !== "done" ? "In Delivery" : "Done";
+    case "retired":
+      return "Delivery retired";
     case "parked":
       return "Parked";
     case "triaged":
@@ -57,6 +60,8 @@ export function proposalScenarioStatusLabel(
       return "Captured";
     case "done":
       return "Done";
+    case "retired":
+      return "Delivery retired";
     case "parked":
       return "Parked";
     case "triaged":
@@ -168,9 +173,10 @@ export function proposalWorkspaceSummaryMetrics(
   const doneCount = proposals.filter(
     (proposal) => proposal.status === "done",
   ).length;
+  const retiredCount = proposals.filter(proposal => proposal.status === "retired").length;
   const reviewCount = Math.max(
     0,
-    proposals.length - waitingCount - parkedCount - doneCount,
+    proposals.length - waitingCount - parkedCount - doneCount - retiredCount,
   );
 
   return [

@@ -2,6 +2,7 @@ import type { TerasMetadataItem, TerasTone } from "@/teras";
 
 import type { RepositoryRuntimeReceipt } from "../../../local-runtime/repository-runtime.ts";
 import type { RepositoryLifecycleAudit } from "../../../live-runtime/repository-lifecycle-live-types.ts";
+import type { RepositoryCustodyWorkflowResult } from "../../../live-runtime/repository-custody-live-types.ts";
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import {
   repositoryRecordStatusLabel,
@@ -20,8 +21,16 @@ export type RepositoryHistoryTimelineRow = {
 export function repositoryHistoryTimelineRows(
   receipts: RepositoryRuntimeReceipt[],
   lifecycleAudit: RepositoryLifecycleAudit | null = null,
+  custodyResults: RepositoryCustodyWorkflowResult[] = [],
 ): RepositoryHistoryTimelineRow[] {
   return [
+    ...custodyResults.filter(result => result.receipt && result.receipt_ref).map(result => ({
+      detail: `${result.provider_readback?.canonical_url ?? "Repository owner receipt"} · OOS custody history`,
+      label: result.request.action === "provision-new" ? "Repository Provisioning" : "Existing Repository Link",
+      status: result.status,
+      timestamp: result.receipt!.completed_at,
+      tone: result.status === "succeeded" ? "ok" as const : "danger" as const,
+    })),
     ...receipts.map(repositoryReceiptTimelineRow),
     ...(lifecycleAudit?.history.map((item) => ({
       detail: `OOS lifecycle receipt ${item.receipt_ref.digest.slice(-12)}.`,
@@ -84,6 +93,7 @@ export function repositoryHistoryControlFacts(
 export function repositoryHistoryReceiptFacts(
   receipts: RepositoryRuntimeReceipt[],
   lifecycleAudit: RepositoryLifecycleAudit | null = null,
+  custodyResults: RepositoryCustodyWorkflowResult[] = [],
 ): TerasMetadataItem[] {
   const admissionReceipt = latestRepositoryReceipt(receipts, "admission");
   const gateReceipt = latestRepositoryReceipt(
@@ -94,8 +104,14 @@ export function repositoryHistoryReceiptFacts(
     receipts,
     "retirement-request",
   );
+  const latestCustodyResults = [...new Map(custodyResults.map(result => [result.request.action, result])).values()];
 
   return [
+    ...latestCustodyResults.filter(result => result.receipt_ref).map(result => ({
+      label: result.request.action === "provision-new" ? "Provisioning" : "Existing Repository Link",
+      title: result.receipt_ref!.uri,
+      value: `${result.status} / ${result.receipt!.completed_at}`,
+    })),
     {
       label: "Admission",
       title: admissionReceipt?.receiptId,
@@ -122,12 +138,12 @@ export function repositoryHistoryReceiptFacts(
     {
       label: "Last Receipt",
       value:
-        repositoryHistoryTimelineRows(receipts, lifecycleAudit).at(-1)
+        repositoryHistoryTimelineRows(receipts, lifecycleAudit, custodyResults).at(-1)
           ?.timestamp ?? "none",
     },
     {
       label: "Source",
-      value: lifecycleAudit
+      value: lifecycleAudit || custodyResults.length
         ? "operator-orchestration-service"
         : receipts.length > 0
           ? "local runtime"

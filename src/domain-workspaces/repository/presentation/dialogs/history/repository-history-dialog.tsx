@@ -2,6 +2,7 @@
 
 import {
   TerasDialog,
+  TerasContentRegion,
   TerasEmptyState,
   TerasMetadataList,
   TerasPanel,
@@ -14,7 +15,8 @@ import {
 } from "@/teras";
 
 import type { RepositoryRuntimeReceipt } from "../../../local-runtime/repository-runtime.ts";
-import type { RepositoryLifecycleAudit } from "../../../live-runtime/repository-lifecycle-live-types.ts";
+import type { RepositoryLifecycleAudit, RepositoryLifecycleLiveSnapshot } from "../../../live-runtime/repository-lifecycle-live-types.ts";
+import type { RepositoryCustodyWorkflowResult } from "../../../live-runtime/repository-custody-live-types.ts";
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import {
   repositoryHistoryControlFacts,
@@ -32,24 +34,45 @@ export function RepositoryHistoryDialog({
   onClose,
   receipts,
   repository,
+  custodyResults = [],
+  custodySourceStatus = "current",
+  custodySourceError,
+  lifecycleSnapshot,
+  lifecycleError,
+  liveMode = false,
 }: {
   lifecycleAudit: RepositoryLifecycleAudit | null;
   onClose: () => void;
   receipts: RepositoryRuntimeReceipt[];
   repository: RepositoryWorkspaceRecord | null;
+  custodyResults?: RepositoryCustodyWorkflowResult[];
+  custodySourceStatus?: "loading" | "current" | "offline";
+  custodySourceError?: string | null;
+  lifecycleSnapshot?: RepositoryLifecycleLiveSnapshot;
+  lifecycleError?: string;
+  liveMode?: boolean;
 }) {
   if (!repository) {
     return null;
   }
 
-  const timelineRows = repositoryHistoryTimelineRows(receipts, lifecycleAudit);
+  const timelineRows = repositoryHistoryTimelineRows(receipts, lifecycleAudit, custodyResults);
+  const loading = liveMode && !lifecycleSnapshot && !lifecycleError;
+  const partial = liveMode && (Boolean(lifecycleError) || lifecycleSnapshot?.status === "offline" || custodySourceStatus !== "current");
+  const coverage = partial ? "Partial history" : loading ? "Loading history" : "Loaded history";
+  const coverageDescription = lifecycleError
+    ? `Lifecycle history is unavailable: ${lifecycleError} Other retained receipts remain visible.`
+    : custodySourceStatus === "offline"
+      ? `Custody history could not be refreshed: ${custodySourceError ?? "Owner read unavailable"}. Previously loaded evidence remains visible.`
+      : loading ? "Loading owner lifecycle history. Retained receipts remain visible."
+        : "Recorded provisioning, existing-source linkage, lifecycle and local setup receipts. Their original sources remain distinct.";
   const recordTone = repositoryRecordTone(repository);
   const receiptTone = timelineRows.length > 0 ? "ok" : "muted";
 
   return (
     <TerasDialog
       closeLabel="Close Repository history"
-      description="Read-only Repository actions from OOS lifecycle audit and retained local setup receipts."
+      description="Read-only Repository history from retained owner receipts and local setup evidence."
       kicker="Repository Archive"
       onClose={onClose}
       open
@@ -86,16 +109,17 @@ export function RepositoryHistoryDialog({
           >
             <TerasPanelHeader
               actions={
-                <TerasStatusPill tone="info">
-                  {timelineRows.length} receipts
+                <TerasStatusPill tone={partial ? "warn" : "info"}>
+                  {timelineRows.length} {timelineRows.length === 1 ? "receipt" : "receipts"} · {coverage}
                 </TerasStatusPill>
               }
               actionsLayout="inline"
-              description="Actual Repository command receipts in recorded order."
+              description={coverageDescription}
               kicker="Receipt Timeline"
               title="Receipt trail"
             />
             {timelineRows.length > 0 ? (
+              <TerasContentRegion scroll>
               <TerasTimeline ariaLabel="Repository receipt timeline">
                 {timelineRows.map((row, index) => (
                   <TerasTimelineItem
@@ -109,9 +133,12 @@ export function RepositoryHistoryDialog({
                   />
                 ))}
               </TerasTimeline>
+              </TerasContentRegion>
             ) : (
               <TerasEmptyState fill>
-                No Repository receipts are recorded.
+                {loading ? "Loading owner history…" : partial
+                  ? "Some history is unavailable. No receipts are loaded from the remaining sources."
+                  : "No receipts were returned by the loaded history sources."}
               </TerasEmptyState>
             )}
           </TerasPanel>
@@ -161,7 +188,7 @@ export function RepositoryHistoryDialog({
               title="Receipt coverage"
             />
             <TerasMetadataList
-              items={repositoryHistoryReceiptFacts(receipts, lifecycleAudit)}
+              items={repositoryHistoryReceiptFacts(receipts, lifecycleAudit, custodyResults)}
               topOffset="compact"
             />
           </TerasPanel>

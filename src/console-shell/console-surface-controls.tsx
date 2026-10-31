@@ -337,6 +337,31 @@ export function ConsoleSurfaceMetadataList({
   );
 }
 
+export function ConsoleSurfaceTechnicalDetails({
+  items,
+  summary = "Technical details",
+}: {
+  items: readonly ConsoleSurfaceMetadataItem[];
+  summary?: string;
+}) {
+  return (
+    <details className={styles.technicalDetails}>
+      <summary>{summary}</summary>
+      <dl>
+        {items.map((item, index) => (
+          <div key={`${item.label}:${index}`}>
+            <dt>{item.label}</dt>
+            <dd data-tone={item.tone ?? "default"} title={item.value}>
+              {item.value}
+              {item.meta ? <small>{item.meta}</small> : null}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  );
+}
+
 export function ConsoleSurfaceTagList({
   emptyLabel = "None recorded",
   items,

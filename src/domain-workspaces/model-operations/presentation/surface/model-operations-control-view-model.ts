@@ -11,6 +11,8 @@ import {
   modelProfileAvailabilityLabel,
   modelProfileLifecycleLabel,
   modelProfileResolutionLabel,
+  modelReadinessLabel,
+  modelReadinessTone,
 } from "../shared/model-profile-display-model.ts";
 
 export type ModelProfileLifecycleFilter = ModelProfileLifecycle | "all";
@@ -28,17 +30,13 @@ export function modelProfileSelectedMetadata(
   ];
 }
 
-export function modelAccessPlaneMetadata(
-  accessPlane: ModelAccessPlaneProjection,
-): TerasMetadataItem[] {
-  return [
-    { label: "Status", value: accessPlane.status },
-    {
-      label: "Activation",
-      value: accessPlane.activationAllowed ? "allowed" : "blocked",
-    },
-    { label: "Credential Owner", value: accessPlane.credentialOwner },
-  ];
+export function modelGovernedAccessSummary(accessPlane: ModelAccessPlaneProjection) {
+  return {
+    label: "Governed access",
+    status: modelReadinessLabel(accessPlane.state),
+    detail: (accessPlane.activationAllowed ? "Activation allowed." : "Activation blocked.") + " Details are in the Profile Dashboard.",
+    tone: modelReadinessTone(accessPlane.state),
+  };
 }
 
 export function modelProfileLifecycleOptions(profiles: ModelProfileRecord[]) {

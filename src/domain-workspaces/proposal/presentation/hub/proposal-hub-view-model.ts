@@ -1,4 +1,5 @@
 import type { TerasMetadataItem } from "@/teras";
+import { proposalWorkflowClosed } from "../../domain/proposal-types.ts";
 
 import {
   proposalDecisionOutcomeCopy,
@@ -91,6 +92,9 @@ export function proposalHubProjection(
       title: "Review Source Record",
       tone: "warn",
     };
+  } else if (proposalWorkflowClosed(proposal)) {
+    progressDescription =
+      "This Proposal workflow is closed. Recorded steps remain available for read-only inspection; missing historical details do not require new work.";
   } else if (handoffDraft) {
     const handoffCopy = proposalHandoffResultCopy(handoffDraft.result);
     progressDescription =

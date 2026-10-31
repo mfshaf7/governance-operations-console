@@ -1359,6 +1359,11 @@ select {
     0 24px 58px rgba(0, 0, 0, 0.24);
 }
 
+.resource-focus-content {
+  container-type: inline-size;
+  container-name: resource-focus;
+}
+
 .resource-performance-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -2016,8 +2021,10 @@ select {
   min-height: 0;
 }
 
-.command-center-focus-anchor > .focus-panel-default {
+.command-center-focus-anchor > .focus-panel-default,
+.command-center-focus-anchor > .resource-focus-panel {
   width: 100%;
+  min-width: 0;
 }
 
 .focus-panel-default > .relative {
@@ -2452,6 +2459,21 @@ select {
   font-size: 0.72rem;
   font-weight: 500;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@container resource-focus (max-width: 640px) {
+  .resource-performance-head,
+  .resource-performance-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .resource-performance-current { justify-self: start; }
+  .resource-performance-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@container resource-focus (max-width: 420px) {
+  .resource-focus-evidence-row { grid-template-columns: minmax(0, 1fr); }
 }
 
 .component-focus-count {
@@ -2697,5 +2719,10 @@ and focus content tray must share the same fill.
   .console-stage-system-mood-open .focus-panel-system-mood { position: relative; inset: auto; }
   .command-main-grid .system-mood-side-bridge,
   .command-main-grid .component-side-bridge,
-  .command-main-grid .resource-side-bridge { display: none; }
+  .command-main-grid .resource-side-bridge,
+  .command-main-grid .resource-status-open .wsl-resource-card-active > .resource-side-bridge { display: none; }
+  .command-main-grid .resource-status-open .wsl-resource-card-active {
+    border-left: 1px solid rgba(23, 17, 11, 0.16);
+    border-radius: 1rem;
+  }
 }

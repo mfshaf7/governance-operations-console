@@ -147,6 +147,41 @@ export async function listProposalLiveRecords({
       return { createdAt: idea.created_at ?? projection.updated_at, history, projection };
     })));
   }
+  // One bounded shared overview for linked records, rather than per-Proposal
+  // Delivery reads or archived child-tree expansion.
+  const linked = records.filter(record => record.projection.delivery_ref);
+  if (linked.length) {
+    const observedAt = new Date().toISOString();
+    let roots: Map<string, import("../domain/proposal-types.ts").ProposalDeliveryLink["status"]> | null = null;
+    try {
+      const value = await proposalOosRequest(config,
+        "/v1/delivery-initiatives?include_done=true&include_inactive=true&view=console",
+        {method: "GET"}, fetchImpl, {
+          authority: "operator-orchestration-service", sourceOwner: "workspace-delivery-art",
+          recordRef: "openproject://projects/workspace-delivery-art/initiatives",
+        });
+      if (!isRecord(value) || value.workflow_id !== "delivery-console-overview" || value.schema_version !== 1 ||
+          !isRecord(value.project) || value.project.identifier !== "workspace-delivery-art" || value.mutation_authority !== "none" ||
+          !Array.isArray(value.roots) || value.roots.length > 8192) throw new Error("Invalid Delivery overview.");
+      roots = new Map();
+      for (const root of value.roots) {
+        if (!isRecord(root) || !Number.isSafeInteger(root.id) || Number(root.id) < 1 ||
+            root.record_ref !== `openproject://work_packages/${root.id}` || roots.has(String(root.record_ref)) ||
+            !["new", "ready", "in-progress", "blocked", "done", "parked", "retired"].includes(String(root.status))) {
+          throw new Error("Invalid or repeated Delivery root.");
+        }
+        roots.set(String(root.record_ref), root.status as import("../domain/proposal-types.ts").ProposalDeliveryLink["status"]);
+      }
+    } catch (error) {
+      if (error instanceof ProposalOosError && [401,403].includes(error.status)) throw error;
+      roots = null;
+    }
+    for (const record of linked) {
+      const recordRef = record.projection.delivery_ref!;
+      record.deliveryLink = {recordRef, status: roots?.get(recordRef) ?? null, observedAt,
+        sourceState: roots?.has(recordRef) ? "current" : "unavailable"};
+    }
+  }
   return records;
   });
 }

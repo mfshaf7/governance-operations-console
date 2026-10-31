@@ -18,6 +18,7 @@ import {
 import { proposalRequiredMove as proposalHubCurrentMove } from "../../read-model/proposal-required-move.ts";
 import { proposalRouteSelectionProjectionTone } from "./proposal-hub-route-projection.ts";
 import type { ProposalHubProjection } from "./proposal-hub-types.ts";
+import { proposalWorkflowClosed } from "../../domain/proposal-types.ts";
 
 export function proposalHubStatusProjection({
   decisionApplied,
@@ -66,6 +67,33 @@ export function proposalHubStatusProjection({
       pillLabel: "Source",
       title: "Source Review Required",
       tone: "warn",
+    };
+  }
+
+  if (proposalWorkflowClosed(proposal)) {
+    const link = proposal.deliveryLink;
+    const retired = proposal.status === "retired";
+    const unavailable = link?.sourceState === "unavailable";
+    const closeoutPending = link?.status === "done" && proposal.sourceStatus === "accepted";
+    return {
+      description: retired
+        ? "This proposal already moved to Delivery. The linked initiative was retired; retirement is not implementation evidence. No new route is required."
+        : unavailable
+          ? "The recorded Delivery link is retained, but its current outcome is unavailable. No new route is required; refresh the linked owner status."
+          : closeoutPending
+            ? "The linked Delivery work is done. The Proposal still says accepted; source closeout is pending. No new route is required."
+            : link && link.status !== "done"
+              ? "This proposal has already moved to Delivery. Continue with the linked initiative rather than routing it again."
+              : "The source proposal is complete. Review its recorded decisions and available handoff evidence in History.",
+      facts: [...(link ? [
+        {label: "Linked Delivery", value: link.recordRef},
+        {label: "Delivery status", value: link.status ?? "Unavailable"},
+        {label: "Proposal source status", value: proposal.sourceStatus ?? "Not recorded"},
+        ...(closeoutPending ? [{label: "Source closeout", value: "Pending"}] : []),
+      ] : []), ...baseFacts],
+      pillLabel: proposalStatusPillLabel(proposal),
+      title: retired ? "Delivery Retired" : link ? unavailable ? "Delivery Outcome Unavailable" : link.status === "done" ? "Delivery Complete" : "Already In Delivery" : "Proposal Complete",
+      tone: unavailable ? "warn" : proposal.tone,
     };
   }
 

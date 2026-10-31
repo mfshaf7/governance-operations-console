@@ -201,3 +201,17 @@ function repositoryRecordFromCustodyResult(
     tone: "warn",
   };
 }
+export function repositoryCustodyHistoryForRecord(
+  repository: RepositoryWorkspaceRecord | null,
+  results: readonly RepositoryCustodyWorkflowResult[],
+): RepositoryCustodyWorkflowResult[] {
+  const identity = repository?.providerIdentity;
+  if (!identity) return [];
+  const matching = results.filter(result => result.receipt_ref && result.receipt &&
+    result.receipt.repository_identity?.provider === identity.provider &&
+    result.receipt.repository_identity.provider_repository_id === identity.repositoryId &&
+    result.provider_readback?.repository_identity.provider === identity.provider &&
+    result.provider_readback.repository_identity.provider_repository_id === identity.repositoryId);
+  return [...new Map(matching.map(result => [result.receipt_ref!.digest, result])).values()]
+    .sort((a,b) => a.receipt!.completed_at.localeCompare(b.receipt!.completed_at));
+}

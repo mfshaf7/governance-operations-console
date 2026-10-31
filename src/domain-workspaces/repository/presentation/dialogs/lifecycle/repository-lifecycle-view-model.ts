@@ -12,6 +12,27 @@ import type {
   RepositoryLifecycleWorkflowResult,
 } from "../../../live-runtime/repository-lifecycle-live-types.ts";
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
+import type { RepositoryCustodyWorkflowResult } from "../../../live-runtime/repository-custody-live-types.ts";
+
+export function repositoryLifecycleExecutionAvailable(
+  repository: RepositoryWorkspaceRecord,
+  snapshot: RepositoryLifecycleLiveSnapshot | undefined,
+  custodyResult: RepositoryCustodyWorkflowResult | undefined,
+  configured: boolean,
+  error: boolean,
+) {
+  if (!configured || error || snapshot?.mode !== "live") return false;
+  if (snapshot.status === "current") return true;
+  const identity = repository.providerIdentity;
+  return Boolean(snapshot.status === "not-initialized" && identity &&
+    custodyResult?.status === "succeeded" && custodyResult.receipt_ref &&
+    custodyResult.receipt?.outcome === "succeeded" &&
+    custodyResult.receipt.repository_identity?.provider === identity.provider &&
+    custodyResult.receipt.repository_identity.provider_repository_id === identity.repositoryId &&
+    custodyResult.provider_readback?.repository_identity.provider === identity.provider &&
+    custodyResult.provider_readback.repository_identity.provider_repository_id === identity.repositoryId &&
+    custodyResult.request.requested_custody.workspace_owner_ref === repository.custody?.workspaceOwnerRef);
+}
 
 export type RepositoryLifecycleStep = "action" | "review" | "result";
 
@@ -135,12 +156,14 @@ export function repositoryLifecycleSteps(
 
 export function repositoryLifecycleStateFacts(
   state: RepositoryLifecycleState,
+  authoritative = true,
 ): TerasMetadataItem[] {
   return [
+    { label: "State Source", value: authoritative ? "Current OOS audit" : "Repository record; owner state not verified" },
     { label: "Workspace Owner", value: state.workspace_owner_ref },
     { label: "Custody", value: state.custody_state },
-    { label: "Provider", value: state.provider_lifecycle_state },
-    { label: "Workspace Record", value: state.workspace_record_state },
+    { label: "Provider", value: authoritative ? state.provider_lifecycle_state : "Not verified" },
+    { label: "Workspace Record", value: authoritative ? state.workspace_record_state : "Not verified" },
   ];
 }
 

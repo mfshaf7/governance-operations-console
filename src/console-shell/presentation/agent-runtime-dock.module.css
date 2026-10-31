@@ -237,6 +237,7 @@
 
 .runtimeList {
   display: grid;
+  flex: 1;
   min-height: 0;
   align-content: start;
   gap: 0.3rem;
@@ -338,6 +339,31 @@
   text-align: center;
 }
 
+.historyButton {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0.25rem 0.35rem;
+  color: rgba(255, 223, 169, 0.9);
+  font-size: 0.65rem;
+}
+
+.historyButton:hover { background: rgba(255, 193, 90, 0.1); }
+.historyButton:focus-visible { outline: 2px solid rgba(255, 193, 90, 0.78); outline-offset: 2px; }
+
+.activityCoverage {
+  flex: 0 0 auto;
+  margin-top: 0.35rem;
+  color: rgba(169, 163, 150, 0.8);
+  font-size: 0.58rem;
+  line-height: 1.4;
+}
+
+.runtimeRowMeta time { flex: 0 0 auto; white-space: nowrap; }
+.activityHistoryList { display: grid; max-height: 17rem; overflow-y: auto; gap: 0.45rem; padding: 0.2rem; }
+.activityHistoryList .runtimeRow[aria-pressed="true"] { border-color: rgba(255, 193, 90, 0.62); background: rgba(255, 193, 90, 0.1); }
+.activitySelected { display: grid; gap: 0.8rem; margin-top: 1rem; }
+.activityDescription { color: rgba(247, 240, 228, 0.76); font-size: 0.8rem; line-height: 1.5; }
+
 @media (max-width: 1199px) {
   .dock {
     display: none;
@@ -358,3 +384,6 @@
     padding: 0.55rem;
   }
 }
+
+.activityHistoryActions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem; }
+.activityHistoryActions p { flex: 1; color: rgba(247, 240, 228, 0.65); font-size: 0.75rem; }

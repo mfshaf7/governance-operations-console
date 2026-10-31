@@ -91,6 +91,23 @@ trust boundary, activation decision, or runtime authority.
 
 ## Local Validation
 
+### Completed Proposal inspection
+
+A current completed source stays complete in the register, Hub, next action and
+workflow navigation. Its recorded steps are read-only. Unfinished local drafts
+cannot reopen it, and missing historical route or handoff details are shown as
+not recorded rather than as new work. History remains available. A stale or
+unavailable source still requires a source refresh before further decisions.
+
+Existing `delivery_ref` links from earlier consumption are preserved even when
+modern route/handoff receipts are absent. One source-validated global Delivery
+overview supplies linked outcomes without per-item Delivery reads or archived
+tree expansion. Done Delivery with an accepted Proposal is labelled as source
+closeout pending; retired Delivery stays distinct from implementation. An
+unavailable outcome does not erase the recorded link or invite duplicate routing.
+The Proposal source status and version stay unchanged; source closeout remains
+an independently governed owner operation.
+
 Run:
 
 ```bash
