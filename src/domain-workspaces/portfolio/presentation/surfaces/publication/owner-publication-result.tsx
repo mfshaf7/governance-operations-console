@@ -22,4 +22,3 @@ export function OwnerPublicationResult({ result }: { result: GovernedProductPubl
       title="Owner readiness finding" detail={typeof finding.message === "string" ? finding.message : "Inspect current owner evidence."} tone="warn" />)}</TerasList> : null}
   </TerasPanel>;
 }
-
