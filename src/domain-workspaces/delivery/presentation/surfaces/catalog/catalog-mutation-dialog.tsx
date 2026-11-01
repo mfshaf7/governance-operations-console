@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   TerasActionButton,
+  TerasDraftCloseGuardDialog,
+  TerasEmptyState,
   TerasFieldGrid,
   TerasMetadataList,
   TerasModalShell,
@@ -57,7 +59,7 @@ export function CatalogMutationDialog({
   mode: DeliveryCatalogMutationMode | null;
   mutationError: string | null;
   onClose: () => void;
-  onSubmit: (draft: CatalogMutationSubmit) => void;
+  onSubmit: (draft: CatalogMutationSubmit) => void | Promise<void>;
   open: boolean;
   ownerRepoOptions: OperationOwnerRepoCatalogOption[];
   preferredOwnerRepoId?: string | null;
@@ -73,6 +75,25 @@ export function CatalogMutationDialog({
   const [selectedOwnerRepoId, setSelectedOwnerRepoId] = useState("");
   const [planningWindowStartDate, setPlanningWindowStartDate] = useState("");
   const [planningWindowEndDate, setPlanningWindowEndDate] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [closeGuard, setCloseGuard] = useState<"close" | "reload" | null>(null);
+  const [sourceChanged, setSourceChanged] = useState(false);
+  const [reload, setReload] = useState(0);
+  const initializedSource = useRef<string | null>(null);
+  const baseline = useRef<string | null>(null);
+  const draftKey = JSON.stringify([label, description, parentCatalogValueKey, selectedOwnerRepoId, planningWindowStartDate, planningWindowEndDate]);
+  const draftRef = useRef(draftKey); draftRef.current = draftKey;
+  const dirty = open && baseline.current !== null && draftKey !== baseline.current;
+  function requestClose() {
+    if (submitting) return;
+    if (dirty) setCloseGuard("close");
+    else onClose();
+  }
+  useEffect(() => {
+    const guard = (event: BeforeUnloadEvent) => { if (open && (dirty || submitting)) event.preventDefault(); };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [open, dirty, submitting]);
   const resolvedMode = mode ?? "add";
   const isRetireMode = resolvedMode === "retire";
   const linksOwnerRepo = isOwnerRepoCatalog(catalog) && !isRetireMode;
@@ -160,10 +181,20 @@ export function CatalogMutationDialog({
           planningWindowEndDate.length === 0));
 
   useEffect(() => {
-    if (!open) {
-      return;
+    if (!open) { initializedSource.current = null; baseline.current = null; return; }
+    const sourceKey = JSON.stringify([catalog, value, mode, ownerRepoSelectCandidates, preferredOwnerRepoId, targetPiOptions, planningWindowForTargetPi(catalogValues, value?.value_key ?? null)]);
+    if (initializedSource.current === sourceKey) return;
+    if (initializedSource.current !== null && baseline.current !== draftRef.current) {
+      setSourceChanged(true); return;
     }
-
+    initializedSource.current = sourceKey;
+    setSourceChanged(false); setCloseGuard(null);
+    const initialOwner = isOwnerRepoCatalog(catalog)
+      ? (value ? ownerRepoOptions.find(option => option.valueKey === value.value_key) : null) ??
+        ownerRepoSelectCandidates.find(option => option.id === preferredOwnerRepoId) ?? ownerRepoSelectCandidates[0] ?? ownerRepoOptions[0]
+      : null;
+    const initialWindow = planningWindowForTargetPi(catalogValues, value?.value_key ?? null);
+    baseline.current = JSON.stringify([catalogDraftLabel(catalog, value), value?.description ?? "", parentTargetPiValueKey(value) ?? targetPiOptions[0]?.value ?? "", initialOwner?.id ?? "", initialWindow.startDate, initialWindow.endDate]);
     setLabel(catalogDraftLabel(catalog, value));
     setDescription(value?.description ?? "");
     if (isOwnerRepoCatalog(catalog)) {
@@ -200,15 +231,19 @@ export function CatalogMutationDialog({
     value,
     open,
     mode,
+    reload,
   ]);
 
-  function submitMutationDraft() {
+  async function submitMutationDraft() {
+    if (submitting || sourceChanged) return;
+    setSubmitting(true);
+    try {
     if (isRetireMode) {
       if (!value) {
         return;
       }
 
-      onSubmit({
+      await onSubmit({
         description: value.description,
         label: value.label,
         parentCatalogValueKey: parentTargetPiValueKey(value),
@@ -219,7 +254,7 @@ export function CatalogMutationDialog({
       return;
     }
 
-    onSubmit({
+    await onSubmit({
       description:
         selectedOwnerRepo?.description ??
         (description.trim() ||
@@ -237,6 +272,7 @@ export function CatalogMutationDialog({
         : undefined,
       valueKey: derivedValueKey,
     });
+    } finally { setSubmitting(false); }
   }
 
   if (!open) {
@@ -244,6 +280,7 @@ export function CatalogMutationDialog({
   }
 
   return (
+    <>
     <TerasModalShell
       bodyLayout="scroll"
       height="content"
@@ -251,11 +288,11 @@ export function CatalogMutationDialog({
       description={catalogMutationDescription(resolvedMode, value, catalog)}
       footer={
         <>
-          <TerasActionButton onClick={onClose} emphasis="secondary">
+          <TerasActionButton disabled={submitting} onClick={requestClose} emphasis="secondary">
             Cancel
           </TerasActionButton>
           <TerasActionButton
-            disabled={submitDisabled}
+            disabled={submitDisabled || submitting || sourceChanged}
             emphasis="primary"
             onClick={submitMutationDraft}
             tone={resolvedMode === "retire" ? "danger" : "accent"}
@@ -265,11 +302,14 @@ export function CatalogMutationDialog({
         </>
       }
       kicker="Catalog Mutation"
-      onClose={onClose}
+      onClose={requestClose}
       surfaceId="delivery-catalog-mutation"
       title={catalogMutationTitle(resolvedMode, catalog, value)}
     >
       <TerasTrayStack>
+        {sourceChanged ? <TerasEmptyState>Catalog values changed while this draft was open. Your edits are retained. Reload the current values before submitting.
+          <TerasActionButton disabled={submitting} emphasis="secondary" onClick={() => setCloseGuard("reload")}>Reload current values</TerasActionButton>
+        </TerasEmptyState> : null}
         {mutationError ? (
           <TerasMetadataList
             columns={1}
@@ -294,7 +334,7 @@ export function CatalogMutationDialog({
           <>
             {linksOwnerRepo ? (
               <TerasSelectField
-                disabled={ownerRepoSelectCandidates.length === 0}
+                disabled={submitting || ownerRepoSelectCandidates.length === 0}
                 helper="Select the repository admitted in Repository Control; Catalog links and syncs it as an owner_repo value."
                 label="Admitted Repository"
                 onValueChange={setSelectedOwnerRepoId}
@@ -305,6 +345,7 @@ export function CatalogMutationDialog({
               />
             ) : (
               <TerasTextField
+                disabled={submitting}
                 label={catalogDraftLabelFieldLabel(catalog)}
                 onValueChange={setLabel}
                 value={label}
@@ -313,12 +354,14 @@ export function CatalogMutationDialog({
             {editsTargetPiPlanningWindow ? (
               <TerasFieldGrid>
                 <TerasTextField
+                disabled={submitting}
                   label="Planning Start"
                   onValueChange={setPlanningWindowStartDate}
                   type="date"
                   value={planningWindowStartDate}
                 />
                 <TerasTextField
+                disabled={submitting}
                   label="Planning End"
                   onValueChange={setPlanningWindowEndDate}
                   type="date"
@@ -328,7 +371,7 @@ export function CatalogMutationDialog({
             ) : null}
             {requiresTargetPiLink ? (
               <TerasSelectField
-                disabled={targetPiValues.length === 0}
+                disabled={submitting || targetPiValues.length === 0}
                 helper="Iteration values must stay scoped to a Target PI."
                 label="Target PI"
                 onValueChange={setParentCatalogValueKey}
@@ -338,6 +381,7 @@ export function CatalogMutationDialog({
             ) : null}
             {!linksOwnerRepo ? (
               <TerasTextField
+                disabled={submitting}
                 label="Description"
                 onValueChange={setDescription}
                 value={description}
@@ -356,5 +400,13 @@ export function CatalogMutationDialog({
         )}
       </TerasTrayStack>
     </TerasModalShell>
+    <TerasDraftCloseGuardDialog open={closeGuard !== null} title={closeGuard === "reload" ? "Reload Catalog draft?" : "Discard Catalog edits?"}
+      kicker="Unsaved Catalog draft" description="These changes have not been submitted. Discarding removes the browser edits; the owner values remain available."
+      leaveLabel={closeGuard === "reload" ? "Discard and Reload" : "Discard Draft"}
+      onKeepEditing={() => setCloseGuard(null)} onLeave={() => {
+        if (closeGuard === "reload") { initializedSource.current = null; setReload(value => value + 1); setCloseGuard(null); }
+        else onClose();
+      }} />
+    </>
   );
 }

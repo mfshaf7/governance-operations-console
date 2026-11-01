@@ -1,16 +1,19 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { TerasActionButton, TerasChoiceGroup, TerasDraftCloseGuardDialog, TerasFieldStack, TerasMetadataList, TerasModalShell, TerasNoteField, TerasPanel, TerasPanelHeader, TerasTextField } from "@/teras";
+import { TerasActionButton, TerasChoiceGroup, TerasDraftCloseGuardDialog, TerasFieldStack, TerasMetadataList, TerasModalShell, TerasNoteField, TerasPanel, TerasPanelHeader, TerasTextField, TerasSelectField } from "@/teras";
+import type { OrchestrationRunRecord } from "../../../domain/orchestration-run-types.ts";
+import { orchestrationRunTitle, orchestrationRunStateLabel, formatOrchestrationRunTimestamp } from "../../surfaces/runs/orchestration-runs-view-model.ts";
 import { fetchOrchestrationStartContext, fetchOriginalOrchestrationRun, OrchestrationStartError, submitOrchestrationStart } from "../../../live-runtime/orchestration-start-client.ts";
 import type { OosOrchestrationRun } from "../../../live-runtime/orchestration-live-types.ts";
 import { orchestrationInitiativeId, originalOrchestrationRunId, type OrchestrationStartContext, type OrchestrationStartDraft, type OrchestrationStartReceipt } from "../../../work-model/run-start/run-start-model.ts";
 
 const noStartCodes = new Set(["orchestration_start_input_invalid", "orchestration_start_review_expired", "orchestration_start_not_admitted", "orchestration_start_source_changed"]);
 
-export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start" }: {
+export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start", runs = [] }: {
   onClose: () => void;
-  onViewRuns: () => Promise<unknown>;
+  onViewRuns: (runId?: string) => Promise<unknown>;
+  runs?: readonly OrchestrationRunRecord[];
   mode?: "start" | "recover";
 }) {
   const [initiative, setInitiative] = useState("");
@@ -76,7 +79,7 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
       description="Review an initiative source and explicitly approve the admitted read-only WGCF validation. OOS owns admission, execution and receipts."
       footer={<>
         <TerasActionButton emphasis="secondary" disabled={pending} onClick={close}>Back to workspace</TerasActionButton>
-        {receipt || original ? <TerasActionButton disabled={pending} onClick={() => { setPending(true); void onViewRuns().catch(cause => setError(message(cause))).finally(() => setPending(false)); }}>View Runs</TerasActionButton> : mode === "start" ?
+        {receipt || original ? <TerasActionButton disabled={pending} onClick={() => { setPending(true); void onViewRuns(original?.run_id ?? (frozen ? originalOrchestrationRunId(frozen.requestId) : undefined)).catch(cause => setError(message(cause))).finally(() => setPending(false)); }}>View Run</TerasActionButton> : mode === "start" ?
           <TerasActionButton disabled={pending || (!frozen && (!source?.startAllowed || !approved || !purpose.trim()))} onClick={() => void start()}>{pending ? "Contacting owner" : frozen ? "Retry original start" : "Start reviewed run"}</TerasActionButton> : null}
       </>}>
       <TerasFieldStack spacing="normal">
@@ -108,6 +111,9 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
           description={receipt.state ? `Owner state: ${receipt.state}.` : "No run projection is available yet. Read the original run as the worker becomes available."} /></TerasPanel> : null}
         <TerasPanel frame="padded" treatment="neutral">
           <TerasPanelHeader title="Recover the original run" kicker="Owner readback" description="Use the same reference after an interrupted response or reload. Reading never creates another run." />
+          {runs.length ? <TerasSelectField label="Choose a retained run" value={runs.some(run => run.runId === originalRef) ? originalRef : ""}
+            disabled={pending || Boolean(frozen)} onValueChange={value => { setOriginalRef(value); setOriginal(null); setError(null); }}
+            options={[{ label: "Select a run, or enter its reference below", value: "" }, ...runs.map(run => ({ value: run.runId, label: `${orchestrationRunTitle(run)} · ${orchestrationRunStateLabel(run.state)} · ${formatOrchestrationRunTimestamp(run.createdAt)}` }))]} /> : null}
           <TerasFieldStack spacing="normal">
             <TerasTextField label="Original run reference" value={originalRef} disabled={pending || Boolean(frozen)}
               onValueChange={value => { setOriginalRef(value); setOriginal(null); }} />

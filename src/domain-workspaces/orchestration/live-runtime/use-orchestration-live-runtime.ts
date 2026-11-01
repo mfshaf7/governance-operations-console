@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OrchestrationRunControlInput, OrchestrationRunControlReceipt } from "../work-model/run-control/run-control-types.ts";
 import { assertOosOrchestrationDefinitions, assertOosOrchestrationRun, assertOosOrchestrationRuns } from "./orchestration-live-contract.ts";
-import { projectLiveOrchestrationWorkspace, unavailableOrchestrationWorkspace } from "./orchestration-live-projection.ts";
+import { projectLiveOrchestrationWorkspace, unavailableOrchestrationWorkspace, loadingOrchestrationWorkspace } from "./orchestration-live-projection.ts";
 import type { OrchestrationLiveSnapshot } from "./orchestration-live-types.ts";
 
-const initial: OrchestrationLiveSnapshot = { error: null, mode: "unavailable", observedAt: new Date(0).toISOString(), readModel: unavailableOrchestrationWorkspace("Loading current OOS orchestration truth."), status: "loading" };
+const initial: OrchestrationLiveSnapshot = { error: null, mode: "unavailable", observedAt: new Date(0).toISOString(), readModel: loadingOrchestrationWorkspace(), status: "loading" };
 
 export function useOrchestrationLiveRuntime() {
   const [snapshot, setSnapshot] = useState(initial);

@@ -48,7 +48,7 @@ export function ProductPortfolioWorkspaceShell({
     <TerasModalShell
       agentHost
       bodyLayout="fill"
-      description="Fullscreen product catalog for managed-product discovery, publication, and Portfolio-owned listing curation."
+      description="Find managed products, review catalog publication, and control how products are listed."
       kicker="Product Portfolio"
       modalAttributes={getOperationWorkbenchSurfaceAttributes(contract)}
       onClose={onClose}
@@ -66,7 +66,7 @@ export function ProductPortfolioWorkspaceShell({
             kicker="Workspace Nav"
             title="Portfolio Areas"
           >
-            {productPortfolioWorkspaceSurfaces.map((surface) => (
+            {productPortfolioWorkspaceSurfaces.filter(surface => productContinuity.fixtureMode || surface.id !== "curation").map((surface) => (
               <TerasSurfaceNavButton
                 current={activeSurfaceId === surface.id}
                 data-product-portfolio-section={surface.id}
@@ -83,6 +83,9 @@ export function ProductPortfolioWorkspaceShell({
         summary={
           <TerasSurfaceSummaryHeader
             ariaLabel="Product Portfolio summary"
+            description={activeSurfaceId === "publication" ? {
+              kicker: "Catalog publication", description: "Choose a product and review its catalog change.",
+            } : null}
             metrics={productPortfolioWorkspaceSummaryMetrics(
               readModel,
               activeSurfaceId,

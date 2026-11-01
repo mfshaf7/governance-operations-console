@@ -13,6 +13,8 @@ import {
   orchestrationRunEffectPostureLabel,
   orchestrationRunStateLabel,
   orchestrationRunStateTone,
+  orchestrationRunTitle,
+  orchestrationRunSourceLabel,
 } from "../orchestration-runs-view-model.ts";
 
 export function OrchestrationRunsRegister({
@@ -33,9 +35,9 @@ export function OrchestrationRunsRegister({
       key: "run-source",
       render: (record) => (
         <TerasRecordCellText
-          description={`${record.sourceDomain} / ${record.sourceRecordRef}`}
-          meta={`${record.definitionId} / v${record.definitionVersion}`}
-          title={record.runId}
+          description={`${orchestrationRunSourceLabel(record)} · Run …${record.runId.slice(-8)}`}
+          meta={`Version ${record.definitionVersion}`}
+          title={orchestrationRunTitle(record)}
           variant="value-stack"
         />
       ),
@@ -68,7 +70,7 @@ export function OrchestrationRunsRegister({
     },
     {
       header: "Updated",
-      intent: "technical",
+      intent: "secondary",
       key: "updated",
       render: (record) => (
         <TerasRecordCellText
@@ -101,6 +103,7 @@ export function OrchestrationRunsRegister({
     <TerasRecordTable
       columns={columns}
       fill
+      profile="inventory"
       getRowId={(record) => record.id}
       onSelect={onSelectRun}
       rows={records}

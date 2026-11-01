@@ -17,7 +17,7 @@ export function initialDefinitionAdvisorTranscript(
     {
       id: "definition-advisor-initial",
       role: "advisor",
-      text: "Prototype-local advisor locked to the active workflow section. I can challenge the current boundary and prepare one explicit field patch for operator review. I cannot approve, route, or activate this definition.",
+      text: "Ask me to explain this section, challenge the execution design or suggest draft field changes. You review and apply changes; I cannot approve or activate the workflow.",
     },
   ];
 }

@@ -4,7 +4,7 @@ import {
   prototypePreviewNeedLabel,
   prototypeSourceHomeLabel,
 } from "../../../work-model/workflows/landing/prototype-landing-model.ts";
-import { prototypeBasePlatformLabel } from "@/domain-workspaces/prototype/domain/support/prototype-setup-profile-model";
+import { prototypeBasePlatformLabel } from "../../../domain/support/prototype-setup-profile-model.ts";
 import { prototypePreviewProfileInputComplete } from "../../../work-model/preview-runtime/prototype-preview-state-model.ts";
 import type {
   PrototypePreviewLaunchAdapter,
@@ -117,7 +117,6 @@ export function prototypePreviewSelectedProfileFacts(
   record: PrototypeRecord,
 ): PrototypePreviewRuntimeFact[] {
   return [
-    { label: "Profile", value: record.preview.profileRef },
     {
       label: "Base platform",
       value: prototypeBasePlatformLabel(record.landing.basePlatform),
@@ -137,7 +136,6 @@ export function prototypePreviewResolvedProfileFacts(
   record: PrototypeRecord,
 ): PrototypePreviewRuntimeFact[] {
   return [
-    { label: "Profile", value: record.preview.profileRef },
     {
       label: "Launch adapter",
       value: prototypePreviewLaunchAdapterLabel(record.preview.launchAdapter),
@@ -147,7 +145,6 @@ export function prototypePreviewResolvedProfileFacts(
     { label: "Healthcheck", value: record.preview.healthcheckPath },
     { label: "Command", value: record.preview.command },
     { label: "Working Dir", value: record.preview.workingDirectory },
-    { label: "Profile source", value: record.preview.profileSource },
   ];
 }
 

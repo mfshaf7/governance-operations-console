@@ -1,6 +1,7 @@
 import {
   TerasStatusItem,
   TerasDialog,
+  TerasContentTray,
   TerasEmptyState,
   TerasMetadataList,
   TerasList,
@@ -70,6 +71,7 @@ function renderStatusAreaDetail(
     case "source":
       return (
         <>
+          <TerasContentTray kicker="Original context">{record.summary}</TerasContentTray>
           <TerasMetadataList
             items={prototypeDashboardFacts(record)}
             topOffset="compact"

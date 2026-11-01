@@ -188,12 +188,17 @@ export function usePrototypeControlController({
     () => getSelectedPrototypeRecord(readModel, state.selectedRecordId),
     [readModel, state.selectedRecordId],
   );
-  const selectedPreviewMode = selectedRecord
+  const observedPreviewMode = selectedRecord
     ? (previewRuntime.modeByRecord[selectedRecord.id] ??
-      (state.activeDialog === "preview-runtime" ? "loading" : "disconnected"))
+      (primaryRecordIsolation.fixtureAllowed ? "disconnected" : "loading"))
     : "disconnected";
+  const selectedPreviewMode = !primaryRecordIsolation.fixtureAllowed && observedPreviewMode === "disconnected"
+    ? "error" : observedPreviewMode;
   const activeRecord = useMemo(() => {
     if (!selectedRecord || selectedPreviewMode === "disconnected") return selectedRecord;
+    // Only preview consumers replace source preview facts with an unrequested
+    // loading state. Other workflows retain their canonical source projection.
+    if (!previewRuntime.modeByRecord[selectedRecord.id] && !["dashboard", "preview-runtime"].includes(state.activeDialog ?? "")) return selectedRecord;
     return projectPrototypePreviewOwnerRecord(
       selectedRecord,
       previewRuntime.projectionByRecord[selectedRecord.id] ?? null,
@@ -206,9 +211,11 @@ export function usePrototypeControlController({
     );
   }, [
     previewRuntime.projectionByRecord,
+    previewRuntime.modeByRecord,
     previewRuntime.proofByRecord,
     selectedPreviewMode,
     selectedRecord,
+    state.activeDialog,
   ]);
 
   const refreshClosureSources = useCallback(async (record: PrototypeRecord) => {
@@ -222,9 +229,10 @@ export function usePrototypeControlController({
     void refreshClosureSources(activeRecord).catch(() => undefined);
   }, [activeRecord?.id, state.activeDialog, refreshClosureSources]);
   useEffect(() => {
-    if (!selectedRecord || state.activeDialog !== "preview-runtime") return;
+    if (!selectedRecord || !["dashboard", "preview-runtime"].includes(state.activeDialog ?? "")) return;
+    if (primaryRecordIsolation.fixtureAllowed && state.activeDialog !== "preview-runtime") return;
     void previewRuntime.load(selectedRecord).catch(() => undefined);
-  }, [selectedRecord?.id, state.activeDialog, previewRuntime.load]);
+  }, [selectedRecord?.id, selectedRecord?.projectionVersion, state.activeDialog, primaryRecordIsolation.fixtureAllowed, previewRuntime.load]);
   const selectedCanonicalDeliveryPacket = activeRecord ? sourceReadModel.deliveryPacketsByPrototypeId?.[activeRecord.id]?.packet : null;
   useEffect(() => {
     if (!selectedCanonicalDeliveryPacket || !["dashboard", "movement-request", "closeout-retirement", "history"].includes(state.activeDialog ?? "")) return;

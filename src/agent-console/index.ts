@@ -9,6 +9,7 @@ export { DraftAdvisorScopeProvider } from "./state/draft-advisor-scope-provider"
 export type { AdvisorScope, AdvisorField, AdvisorEdit, AdvisorReply, GovernedAdvisorReply } from "./model/advisor-drafts";
 
 export { ModelInteractionDock } from "./presentation/model-interaction-dock";
+export { GovernedAdvisorPanel } from "./presentation/governed-advisor-panel";
 export { openGovernedAgentConsole } from "./model/open-agent-console";
 export { AgentRobotIcon } from "./presentation/agent-robot-icon";
 export { AgentRuntimePresenceDialog } from "./presentation/agent-runtime-presence-dialog";

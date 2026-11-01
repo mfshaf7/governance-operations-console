@@ -1,137 +1,217 @@
 "use client";
 
-import { useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasChoiceGroup, TerasContentRegion, TerasContentTray, TerasFieldGrid, TerasFieldStack, TerasList, TerasMetadataList, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSelectField, TerasSignalItem, TerasStatusPill, TerasTextField } from "@/teras";
-import { emptyOwnerPublicationDraft, ownerPublicationIntent, type OwnerPublicationDraft } from "../../../live-runtime/owner-publication-intent.ts";
+import { useEffect, useState } from "react";
+import {
+  TerasActionButton, TerasActionRow, TerasChoiceGroup, TerasContentRegion,
+  TerasContentTray, TerasDraftCloseGuardDialog, TerasFieldGrid, TerasFieldStack,
+  TerasList, TerasMetadataList, TerasModalShell, TerasNoteField, TerasPanel,
+  TerasPanelHeader, TerasSelectField, TerasSignalItem, TerasStatusPill,
+  TerasTechnicalDetails, TerasTextField,
+} from "@/teras";
+import type { WorkspaceContinuityProduct } from "../../../../../workspace-continuity/workspace-continuity-types.ts";
 import type { useProductPublicationLiveRuntime } from "../../../live-runtime/use-product-publication-live-runtime.ts";
-import type { GovernedProductPublicationIntent, GovernedProductPublicationResult } from "../../../live-runtime/product-publication-live-types.ts";
+import type { GovernedProductPublicationAction, GovernedProductPublicationIntent, GovernedProductPublicationResult } from "../../../live-runtime/product-publication-live-types.ts";
+import { preparedPublicationIntent, publicationActionLabels, publicationPostureLabels, type ProductPublicationPreparation } from "../../../live-runtime/product-publication-preparation.ts";
+import { OwnerPublicationResult } from "./owner-publication-result.tsx";
 
 type Runtime = ReturnType<typeof useProductPublicationLiveRuntime>;
-const locatorFields = [
-  ["repo", "Owner repository"], ["path", "Relative manifest path"],
-  ["sourceRevision", "Owner source revision"], ["manifestRevision", "Later manifest revision"], ["manifestDigest", "Committed manifest digest"],
-] as const;
-
-export function OwnerPublicationSurface({ runtime, onApplied }: { runtime: Runtime; onApplied: () => void }) {
-  const [draft, setDraft] = useState<OwnerPublicationDraft>(emptyOwnerPublicationDraft);
-  const [review, setReview] = useState<{ intent: GovernedProductPublicationIntent; accepted: boolean } | null>(null);
+export function useOwnerPublicationState() {
+  const [productId, setProductId] = useState("");
+  const [preparation, setPreparation] = useState<ProductPublicationPreparation | null>(null);
+  const [action, setAction] = useState<GovernedProductPublicationAction>("publish");
+  const [reason, setReason] = useState("");
+  const [review, setReview] = useState<{ intent: GovernedProductPublicationIntent; accepted: boolean; expiresAt: string } | null>(null);
   const [result, setResult] = useState<GovernedProductPublicationResult | null>(null);
-  const [previous, setPrevious] = useState<GovernedProductPublicationResult | null>(null);
   const [requestReference, setRequestReference] = useState("");
   const [uncertain, setUncertain] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const live = runtime.mode?.mode === "live";
-  const locked = runtime.pending || uncertain !== null;
+  return { productId, setProductId, preparation, setPreparation, action, setAction, reason, setReason,
+    review, setReview, result, setResult, requestReference, setRequestReference, uncertain, setUncertain,
+    error, setError, dirty: reason.trim().length > 0 || review !== null
+      || (preparation !== null && preparation.available_actions.length > 0 && action !== preparation.available_actions[0]) };
+}
 
-  function change<K extends keyof OwnerPublicationDraft>(key: K, value: OwnerPublicationDraft[K]) {
-    setDraft(current => ({ ...current, [key]: value })); setReview(null); setError(null);
+export function OwnerPublicationSurface({ runtime, state, products, productsError, authorityRevision, previewMode = false, onRetryProducts, onApplied }: {
+  runtime: Runtime; state: ReturnType<typeof useOwnerPublicationState>;
+  products: readonly Pick<WorkspaceContinuityProduct, "product_id" | "name">[] | null; productsError: string | null;
+  authorityRevision: string | null;
+  previewMode?: boolean;
+  onRetryProducts: () => void; onApplied: () => void;
+}) {
+  const { productId, setProductId, preparation, setPreparation, action, setAction, reason, setReason,
+    review, setReview, result, setResult, requestReference, setRequestReference,
+    uncertain, setUncertain, error, setError } = state;
+  const [replaceProduct, setReplaceProduct] = useState<string | null>(null);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [, wakeExpiry] = useState(0);
+  const live = runtime.mode?.mode === "live";
+  const canLoad = live || previewMode;
+  const locked = runtime.pending || uncertain !== null;
+  const selected = products?.find(product => product.product_id === productId);
+  const sourceChanged = preparation !== null && (!selected || preparation.authority_revision !== authorityRevision);
+  const expired = preparation !== null && Date.parse(preparation.expires_at) <= Date.now();
+  const ready = preparation?.status === "prepared" && !expired && !sourceChanged;
+
+  useEffect(() => {
+    if (!preparation) return;
+    const timer = setTimeout(() => wakeExpiry(value => value + 1), Math.max(0, Date.parse(preparation.expires_at) - Date.now()) + 10);
+    return () => clearTimeout(timer);
+  }, [preparation]);
+
+  async function loadInformation(id: string, preserveDraft = false) {
+    const priorAction = action;
+    setProductId(id); setPreparation(null); setReview(null); setError(null);
+    if (!preserveDraft) setReason("");
+    try {
+      const prepared = await runtime.prepare(id);
+      setPreparation(prepared); setAction(preserveDraft ? priorAction : prepared.available_actions[0] ?? "publish");
+    } catch (failure) { setError(message(failure)); }
+  }
+  function selectProduct(id: string) {
+    if (locked || !id) return;
+    if (id === productId) { void loadInformation(id, true); return; }
+    if (state.dirty) setReplaceProduct(id);
+    else void loadInformation(id);
   }
   function beginReview() {
     try {
-      const requestId = `product-publication-request:console-${crypto.randomUUID()}`;
-      setReview({ intent: ownerPublicationIntent(draft, requestId, new Date().toISOString(), previous), accepted: false });
-      setRequestReference(requestId); setError(null);
+      if (!preparation || !selected) throw new Error("Choose a product and load its publication information first.");
+      const at = new Date().toISOString();
+      const intent = preparedPublicationIntent(preparation, action, reason, `product-publication-request:console-${crypto.randomUUID()}`, at);
+      setRequestReference(intent.request_id); setReview({ intent, accepted: false, expiresAt: preparation.expires_at }); setError(null);
     } catch (failure) { setError(message(failure)); }
   }
-  function remember(observed: GovernedProductPublicationResult) {
+  function remember(observed: GovernedProductPublicationResult, clearSubmittedDraft = false) {
     setResult(observed); setRequestReference(observed.request_id); setUncertain(null); setReview(null);
-    if (observed.state === "applied") { setPrevious(observed); onApplied(); }
+    if (clearSubmittedDraft) { setPreparation(null); setReason(""); }
+    if (clearSubmittedDraft && observed.state === "applied") onApplied();
   }
-  async function recover(requestId = requestReference) {
+  async function recover(id = uncertain ?? requestReference) {
+    if (uncertain && id !== uncertain) return;
     setError(null);
-    try { remember(await runtime.read(requestId.trim())); }
+    try { remember(await runtime.read(id.trim()), uncertain === id); setRecoveryOpen(false); }
     catch (failure) { setError(message(failure)); }
   }
   async function submit() {
     if (!live || !review?.accepted || locked) return;
+    if (Date.parse(review.expiresAt) <= Date.now() || sourceChanged) {
+      setError("The loaded information has expired or the product changed. Return to the draft and load current information before approving again."); return;
+    }
     setUncertain(review.intent.request_id); setError(null);
-    try { remember(await runtime.submit(review.intent)); }
+    try { remember(await runtime.submit(review.intent), true); }
     catch (failure) { setError(message(failure)); }
   }
-  function newAction() {
-    setReview(null); setError(null);
-    setDraft({ ...emptyOwnerPublicationDraft,
-      action: previous?.receipt.publication_posture === "internal" ? "update" : previous?.receipt.publication_posture === "archived" ? "restore" : "publish",
-      schemaVersion: previous?.receipt.publication_posture === "archived" || previous?.command.schema_version === 2 ? "2" : "1" });
-  }
-  const known = Object.values(runtime.results);
-  return <TerasContentRegion fill gap="normal" scroll>
-    <TerasPanel frame="padded" fit="content" treatment="neutral">
-      <TerasPanelHeader kicker="Native Product Publication" title="Review committed owner evidence"
-        description="Submit an exact owner-manifest locator to OOS. WGCF verifies the committed source, active product, lifecycle and readiness; entered pointers are not owner attestation."
-        actions={<TerasActionRow><TerasStatusPill tone={live ? "ok" : "warn"}>{live ? "Owner path connected" : runtime.mode === null ? "Reading owner path" : "Publication not selected"}</TerasStatusPill>
-          <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => void runtime.refreshMode().catch(failure => setError(message(failure)))}>Refresh owner path</TerasActionButton></TerasActionRow>} />
-      {!live ? <TerasContentTray kicker="Owner prerequisite" description="Publication requires its accepted runtime binding. Preview candidates and local receipts are not used in this connected workspace." /> : null}
-      <TerasFieldGrid columns={2}>
-        <TerasTextField label="Original publication request" value={requestReference} disabled={runtime.pending} onValueChange={setRequestReference}
-          placeholder="product-publication-request:..." />
-        <TerasActionButton emphasis="secondary" disabled={!live || runtime.pending || !requestReference.trim()} onClick={() => void recover()}>Read original publication request</TerasActionButton>
-      </TerasFieldGrid>
-      <TerasContentTray kicker="Recovery" description="Keep the displayed request reference before submitting. A fresh browser can read that same OOS request here without repeating its write. An unknown outcome is never an empty journal or permission to submit a replacement." />
-      {known.length ? <TerasList frame="contained">{known.map(item => <TerasSignalItem key={item.request_id}
-        label={item.request_id} title={`${item.receipt.product_id} / ${item.state}`} detail="Read this original request again from OOS; this workspace list is only a locator."
-        actionLabel="Read original request" ariaLabel={`Read original publication request ${item.request_id}`} onSelect={() => void recover(item.request_id)} />)}</TerasList> : null}
+  const failure = error ?? runtime.error;
+  return <>
+    <TerasPanel fit="fill" frame="padded" spacing="normal" layout="header-body-footer" overflow="hidden" treatment="neutral">
+      <TerasPanelHeader kicker="Product catalog" title="Publication"
+        description="Add a managed product to the workspace catalog, update its entry, or remove its listing. This does not deploy the product."
+        actionsLayout="inline" actions={<TerasActionRow>
+          <TerasStatusPill tone={live ? "info" : "warn"}>{previewMode ? "Design preview" : live ? "Configured" : runtime.mode === null ? "Checking setup" : "Not connected"}</TerasStatusPill>
+          <TerasActionButton emphasis="secondary" disabled={runtime.pending || previewMode} onClick={() => { onRetryProducts(); void runtime.refreshMode().catch(failure => setError(message(failure))); }}>Refresh</TerasActionButton>
+          <TerasActionButton emphasis="secondary" disabled={runtime.pending || previewMode} onClick={() => setRecoveryOpen(true)}>Find earlier request</TerasActionButton>
+        </TerasActionRow>} />
+      <TerasContentRegion fill gap="normal" scroll>
+        {previewMode ? <TerasContentTray kicker="Sample products" description="Review the interaction with example product information. Publishing is disabled; no catalog or owner data will change." /> : null}
+        {!canLoad || !products ? <TerasContentTray kicker="Publication unavailable"
+          description={productsError ?? (!live ? "This preview is not connected to the publication service. Product information and catalog changes are unavailable here." : "Product information is still loading. Choose a product when it becomes available.")} /> : <>
+          <TerasFieldGrid columns={2}>
+            <TerasSelectField label="Product" ariaLabel="Product to publish" value={productId} disabled={locked}
+              options={[...(!productId ? [{ value: "", label: "Choose a product" }] : []), ...products.map(product => ({ value: product.product_id, label: product.name }))]} onValueChange={selectProduct}
+              helper="Choose an existing managed product. Its source information and latest catalog state are loaded for you." />
+            <TerasSelectField label="Catalog change" value={action} disabled={locked || !ready || !preparation?.available_actions.length}
+              options={preparation?.available_actions.length ? [
+                ...(!preparation.available_actions.includes(action) ? [{ value: action, label: "Select a new catalog change" }] : []),
+                ...preparation.available_actions.map(value => ({ value, label: publicationActionLabels[value] })),
+              ]
+                : [{ value: action, label: productId ? "Product information needed" : "Choose a product first" }]}
+              helper={preparation ? `Current listing: ${publicationPostureLabels[preparation.current.posture]}` : undefined}
+              onValueChange={value => { setAction(value); setReview(null); }} />
+          </TerasFieldGrid>
+          {!products.length ? <TerasContentTray kicker="No managed products" description="Register a product in Workspace Registry before publishing it to the catalog." /> : null}
+          {runtime.pending && !uncertain ? <TerasContentTray kicker="Loading product information" description="Reading the selected product's committed publication file and latest catalog receipt." /> : null}
+          {preparation ? <>
+            {ready ? <TerasFieldStack spacing="normal">
+              <TerasNoteField label="Reason for this change" value={reason} disabled={locked} onValueChange={value => { setReason(value); setReview(null); }} />
+            </TerasFieldStack> : null}
+            <TerasTechnicalDetails summary="Product information" items={[
+                { label: "Product", value: selected?.name ?? productId },
+                { label: "Current listing", value: publicationPostureLabels[preparation.current.posture] },
+                { label: "Catalog version", value: String(preparation.current.version) },
+                { label: preparation.source_available ? "Source owners" : "Last request's source", value: preparation.owner_repos.join(", ") },
+              ]} />
+            {preparation.issues.length ? <TerasList frame="contained">{preparation.issues.map(issue => <TerasSignalItem key={issue.code}
+              label="Product information needed" title={selected?.name ?? "Selected product"} detail={`${issue.message} ${preparation.source_available ? "Source owners" : "Last request's source"}: ${preparation.owner_repos.join(", ")}.`} tone="warn" />)}</TerasList> : null}
+            {expired || sourceChanged ? <TerasContentTray kicker="Load current information" description="The product information is no longer current. Load it again before reviewing a change." /> : null}
+            <TerasActionRow><TerasActionButton emphasis="secondary" disabled={locked} onClick={() => selectProduct(productId)}>Load current information</TerasActionButton></TerasActionRow>
+            {preparation.recent_requests.length ? <TerasContentTray kicker="Latest requests for this product"
+              description="Up to 20 requests from the publication journal, including requests from earlier browser sessions.">
+              <TerasList frame="contained">{preparation.recent_requests.map(row => <TerasSignalItem key={row.request_id}
+                label={row.state === "applied" ? "Applied" : "Rejected"} title={publicationActionLabels[row.action]}
+                detail={new Date(row.recorded_at).toLocaleString()} actionLabel="View result"
+                ariaLabel={`View ${publicationActionLabels[row.action]} result from ${row.recorded_at}`}
+                onSelect={() => void recover(row.request_id)} />)}</TerasList>
+            </TerasContentTray> : null}
+          </> : productId && !runtime.pending ? <TerasActionRow><TerasActionButton emphasis="secondary" onClick={() => selectProduct(productId)}>Load product information</TerasActionButton></TerasActionRow> : null}
+        </>}
+        {uncertain ? <TerasContentTray kicker="Check the original request" description="The outcome is not confirmed. Check the same request before starting another change.">
+          <TerasActionButton disabled={runtime.pending} onClick={() => void recover()}>Check original request</TerasActionButton>
+        </TerasContentTray> : null}
+        {failure ? <TerasContentTray kicker="Publication needs attention" description={failure} /> : null}
+      </TerasContentRegion>
+      <TerasActionRow layout="split"><TerasActionButton disabled={!ready || locked || !reason.trim() || !preparation?.available_actions.includes(action)} onClick={beginReview}>Review catalog change</TerasActionButton></TerasActionRow>
     </TerasPanel>
-    {result ? <OwnerPublicationResult result={result} /> : null}
-    <TerasPanel frame="padded" fit="content" treatment="neutral">
-      <TerasPanelHeader kicker="New explicit decision" title="Owner manifest locator"
-        description="The product owner commits the source snapshot, then a later manifest commit. This action changes publication only; access, runtime, release, source custody and Security remain with their owners."
-        actions={<TerasActionButton emphasis="secondary" disabled={locked} onClick={newAction}>Prepare another action</TerasActionButton>} />
-      <TerasFieldStack spacing="normal">
-        {previous ? <TerasMetadataList columns={2} items={[
-          { label: "Prior native product", value: previous.receipt.product_id }, { label: "Current publication", value: previous.receipt.publication_posture ?? "Not advanced" },
-          { label: "Publication version", value: String(previous.receipt.publication_version) }, { label: "Prior receipt", value: previous.receipt.receipt_id },
-        ]} /> : <TerasContentTray kicker="Initial publication" description="Without a prior applied receipt, this reviews only initial unlisted/version-zero to internal publication. For an existing product, read its actual latest applied request first." />}
-        <TerasFieldGrid columns={2}>
-          <TerasSelectField label="Publication action" value={draft.action} disabled={!live || locked}
-            onValueChange={value => change("action", value as OwnerPublicationDraft["action"])}
-            options={["publish", "update", "unpublish", "archive", "restore"].map(value => ({ label: value, value }))} />
-          <TerasSelectField label="Owner manifest schema" value={draft.schemaVersion} disabled={!live || locked} onValueChange={value => change("schemaVersion", value)}
-            options={[{ label: "Schema 1 — initial owner evidence", value: "1" }, { label: "Schema 2 — Inventory lifecycle binding", value: "2" }]} />
-          {locatorFields.map(([key, label]) => <TerasTextField key={key} label={label} value={draft[key]} disabled={!live || locked} onValueChange={value => change(key, value)} />)}
-        </TerasFieldGrid>
-        <TerasNoteField label="Publication decision reason" value={draft.reason} disabled={!live || locked} onValueChange={value => change("reason", value)} />
-        <TerasActionButton disabled={!live || locked} onClick={beginReview}>Review owner publication</TerasActionButton>
-      </TerasFieldStack>
-    </TerasPanel>
-    {review ? <TerasPanel frame="padded" fit="content" tone="warn" treatment="state">
-      <TerasPanelHeader kicker="Operator review" title="Exact publication intent" description="No owner state has changed. Keep this request reference and verify the exact committed-manifest locator before approving." />
-      <TerasMetadataList columns={2} items={[
-        { label: "Request", value: review.intent.request_id }, { label: "Action", value: review.intent.action },
-        { label: "From", value: `${review.intent.current_publication_posture} / version ${review.intent.expected_publication_version}` },
-        { label: "Target", value: `${review.intent.target_publication.posture} / ${review.intent.target_publication.audience ?? "none"}` },
-        { label: "Listing scope", value: review.intent.target_publication.listing_scope ?? "none" }, { label: "Access class", value: review.intent.target_publication.access_class ?? "none" },
-        { label: "Owner path", value: `${review.intent.manifest_source.repo}/${review.intent.manifest_source.path}` },
-        { label: "Source revision", value: review.intent.manifest_source.source_revision },
-        { label: "Manifest revision", value: review.intent.manifest_source.manifest_revision }, { label: "Manifest digest", value: review.intent.manifest_source.manifest_digest },
-      ]} />
-      <TerasChoiceGroup ariaLabel="Owner publication acceptance" frame="tray" label="Accountable operator decision" disabled={locked}
-        selectedId={review.accepted ? "approved" : "review"} options={[{ id: "review", label: "Review required", tone: "warn" }, { id: "approved", label: "I approve this exact publication intent", tone: "ok" }]}
-        onSelect={value => { const at = new Date().toISOString(); setReview(current => current ? { accepted: value === "approved", intent: { ...current.intent, decided_at: at, requested_at: at } } : null); }} />
-      <TerasActionButton disabled={!live || locked || !review.accepted} onClick={() => void submit()}>Submit reviewed publication</TerasActionButton>
-    </TerasPanel> : null}
-    {uncertain ? <TerasContentTray kicker="Original request retained" description={`Outcome unknown for ${uncertain}. Read the original request before another decision; no replacement is submitted automatically.`} /> : null}
-    {error || runtime.error ? <TerasList frame="contained"><TerasSignalItem label="Publication unavailable" title="Inspect the original owner result" detail={error ?? runtime.error} tone="danger" /></TerasList> : null}
-  </TerasContentRegion>;
+    {review || result ? <TerasModalShell width="standard" height="content" bodyLayout="scroll" surfaceId="owner-publication-review"
+      title={result ? "Catalog result" : "Review catalog change"} kicker="Product publication"
+      description={result ? "The recorded owner result for this exact request." : "Check the product, current listing and proposed change before approving."}
+      onClose={() => { if (!locked) { setReview(null); setResult(null); } }}
+      footer={<TerasActionRow>
+        <TerasActionButton emphasis="secondary" disabled={locked} onClick={() => { setReview(null); setResult(null); }}>{result ? "Back to Publication" : "Back to draft"}</TerasActionButton>
+        {review && !result ? <TerasActionButton title={previewMode ? "Publishing is disabled in design preview" : undefined} disabled={!live || locked || !review.accepted || expired || sourceChanged} onClick={() => void submit()}>Confirm catalog change</TerasActionButton> : null}
+        {uncertain ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => void recover()}>Check original request</TerasActionButton> : null}
+      </TerasActionRow>}>
+      <TerasContentRegion gap="normal">
+        {previewMode ? <TerasContentTray kicker="Design preview" description="Sample product information. Publishing is disabled; this review cannot change the catalog." /> : null}
+        {result ? <OwnerPublicationResult result={result} /> : review ? <>
+          <TerasPanel frame="padded" fit="content" treatment="neutral"><TerasPanelHeader kicker="Catalog change" title={selected?.name ?? productId}
+            description={publicationActionLabels[review.intent.action]} />
+            <TerasMetadataList columns={2} items={[
+              { label: "Current listing", value: publicationPostureLabels[review.intent.current_publication_posture] },
+              { label: "After this change", value: publicationPostureLabels[review.intent.target_publication.posture] },
+              { label: "Reason", value: review.intent.operator_reason },
+            ]} />
+          </TerasPanel>
+          <TerasPanel frame="padded" fit="content" treatment="neutral">
+            <TerasTechnicalDetails summary="Source and request details" items={[
+              { label: "Request reference", value: review.intent.request_id },
+              { label: "Source owner", value: review.intent.manifest_source.repo },
+              { label: "Manifest path", value: review.intent.manifest_source.path },
+              { label: "Source revision", value: review.intent.manifest_source.source_revision },
+              { label: "Manifest revision", value: review.intent.manifest_source.manifest_revision },
+              { label: "Manifest digest", value: review.intent.manifest_source.manifest_digest },
+            ]} />
+          </TerasPanel>
+          <TerasChoiceGroup ariaLabel="Catalog change approval" frame="tray" label="Your decision" disabled={locked || expired || sourceChanged}
+            selectedId={review.accepted ? "approved" : "review"}
+            options={[{ id: "review", label: "Review required", tone: "warn" }, { id: "approved", label: "I approve this catalog change", tone: "ok" }]}
+            onSelect={value => { const at = new Date().toISOString(); setReview(current => current ? { ...current, accepted: value === "approved", intent: { ...current.intent, decided_at: at, requested_at: at } } : null); }} />
+        </> : null}
+        {expired || sourceChanged ? <TerasContentTray kicker="Load current information" description="Return to the draft and load current product information before approving again." /> : null}
+        {failure ? <TerasContentTray kicker={uncertain ? "Outcome not confirmed" : "Cannot continue"} description={failure} /> : null}
+      </TerasContentRegion>
+    </TerasModalShell> : null}
+    {recoveryOpen ? <TerasModalShell width="medium" height="content" bodyLayout="scroll" surfaceId="owner-publication-recovery" title="Find an earlier request" kicker="Publication recovery"
+      description="Select a product to see its latest requests. If you saved a request reference, you can also look it up here."
+      onClose={() => setRecoveryOpen(false)} footer={<TerasActionRow>
+        <TerasActionButton emphasis="secondary" onClick={() => setRecoveryOpen(false)}>Back</TerasActionButton>
+        <TerasActionButton disabled={!live || runtime.pending || !requestReference.trim()} onClick={() => void recover()}>Read request</TerasActionButton>
+      </TerasActionRow>}>
+      <TerasTextField label="Request reference" value={requestReference} disabled={runtime.pending || uncertain !== null} onValueChange={setRequestReference} />
+      {failure ? <TerasContentTray kicker="Request unavailable" description={failure} /> : null}
+    </TerasModalShell> : null}
+    <TerasDraftCloseGuardDialog open={replaceProduct !== null} title="Replace publication draft?" kicker="Unsaved publication"
+      description="Loading product information clears the current reason and review. Nothing will be submitted."
+      leaveLabel="Replace draft" onKeepEditing={() => setReplaceProduct(null)} onLeave={() => { const id = replaceProduct; setReplaceProduct(null); if (id) void loadInformation(id); }} />
+  </>;
 }
-
-function OwnerPublicationResult({ result }: { result: GovernedProductPublicationResult }) {
-  const posture = result.maintenance_projection;
-  const findings = posture.evidence_posture.findings;
-  return <TerasPanel frame="padded" fit="content" tone={result.state === "applied" ? "ok" : "warn"} treatment="state">
-    <TerasPanelHeader kicker="Native owner result" title={result.state === "applied" ? "Publication applied" : "Publication rejected"}
-      description="Validated OOS, WGCF and owner receipt evidence. Publication does not grant product access or operating approval." />
-    <TerasMetadataList columns={2} items={[
-      { label: "Request", value: result.request_id }, { label: "Product", value: result.receipt.product_id },
-      { label: "Publication", value: posture.publication.posture }, { label: "Version", value: String(posture.publication.version) },
-      { label: "Readiness", value: posture.evidence_posture.state }, { label: "Receipt", value: result.receipt.receipt_id },
-      { label: "Receipt digest", value: result.receipt_digest }, { label: "Owner receipt", value: result.owner_receipt.uri },
-      { label: "Owner source", value: posture.owner_route.repo }, { label: "Manifest digest", value: posture.owner_route.manifest_digest },
-      { label: "Next action", value: result.next_action }, { label: "Lifecycle", value: posture.lifecycle.state },
-    ]} />
-    {findings.length ? <TerasList frame="contained">{findings.map((finding, index) => <TerasSignalItem key={index} label={String(finding.code ?? "owner-finding")}
-      title="Owner readiness finding" detail={typeof finding.message === "string" ? finding.message : "Inspect current owner evidence."} tone="warn" />)}</TerasList> : null}
-  </TerasPanel>;
-}
-
-function message(error: unknown) { return error instanceof Error ? error.message : "Product Publication is unavailable."; }
+function message(error: unknown) { return error instanceof Error ? error.message : "Publication information is unavailable."; }

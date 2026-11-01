@@ -100,6 +100,7 @@ export function OrchestrationDefinitionsRegister({
     <TerasRecordTable
       columns={columns}
       fill
+      profile="inventory"
       getRowId={(record) => record.id}
       onSelect={onSelectDefinition}
       rows={records}

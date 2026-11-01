@@ -14,6 +14,7 @@ import {
   TerasPanelHeader,
   TerasPanelStack,
   TerasSelectedPanel,
+  TerasTechnicalDetails,
   TerasZone,
   TerasZoneLayout,
 } from "@/teras";
@@ -73,7 +74,7 @@ export function DefinitionDashboardModal({
   const definitionAction = orchestrationDefinitionAction(record);
   const canStart = record.source.mode === "live-authority" && record.source.freshness === "current" &&
     record.definitionId === "validation-readiness-run" && record.version === "1" && record.lifecycle === "active" &&
-    record.admissionChecks.length > 0 && record.admissionChecks.every(check => check.state === "ready");
+    record.startAllowed === true && record.admissionChecks.length > 0 && record.admissionChecks.every(check => check.state === "ready");
 
   function closeDashboard() {
     setActiveNode(null);
@@ -102,7 +103,7 @@ export function DefinitionDashboardModal({
     <>
       <TerasModalShell
         bodyLayout="fill"
-        description="Definition contract, execution plan, admission posture, focused evidence, and immutable version history."
+        description="Inspect how this workflow runs, its approval checks and available actions."
         kicker="Orchestration"
         onClose={closeDashboard}
         height="fill"
@@ -110,10 +111,10 @@ export function DefinitionDashboardModal({
         title="Definition Dashboard"
         width="large"
       >
-        <TerasContentFrame fill variant="standard">
+        <TerasContentFrame fill variant="single-region">
           <TerasZoneLayout variant="main-support">
-            <TerasZone fit="fill">
-              <TerasPanelStack fill="last">
+            <TerasZone fit="fill" scroll>
+              <TerasPanelStack fill="last" scroll>
                 <TerasSelectedPanel
                   description={record.purpose}
                   facts={orchestrationDefinitionDashboardFacts(record)}
@@ -127,11 +128,19 @@ export function DefinitionDashboardModal({
                   tone={posture.tone}
                   variant="rich"
                 />
+                <TerasTechnicalDetails items={[
+                  { label: "Definition ID", value: record.definitionId },
+                  { label: "Family", value: record.definitionFamilyId ?? "Not supplied" },
+                  { label: "Implementation repository", value: record.implementationRepo },
+                  { label: "Source", value: record.source.ref },
+                  { label: "Freshness", value: record.source.freshness },
+                ]} />
 
                 <TerasPanel
                   frame="padded"
                   treatment="neutral"
                   fit="fill"
+                  layout="header-body"
                   overflow="hidden"
                 >
                   <TerasPanelHeader
@@ -168,8 +177,8 @@ export function DefinitionDashboardModal({
               </TerasPanelStack>
             </TerasZone>
 
-            <TerasZone fit="content">
-              <TerasPanel
+            <TerasZone fit="fill" scroll>
+              <TerasPanel spacing="normal"
                 frame="padded"
                 treatment="rail"
                 fit="content"
@@ -198,7 +207,7 @@ export function DefinitionDashboardModal({
                 ) : null}
               </TerasPanel>
 
-              {onStartRun && record.source.mode === "live-authority" ? <TerasPanel frame="padded" treatment="rail" fit="content" tone={canStart ? "ok" : "warn"}>
+              {onStartRun && record.source.mode === "live-authority" ? <TerasPanel spacing="normal" frame="padded" treatment="rail" fit="content" tone={canStart ? "ok" : "warn"}>
                 <TerasPanelHeader kicker="Admitted run" title="Run the reviewed validation"
                   description={canStart ? "Review the current initiative source and explicitly approve a read-only run." : "Current owner admission and source freshness are required before starting."} />
                 <TerasActionRow><TerasActionButton disabled={!canStart} onClick={onStartRun}>Start Run</TerasActionButton></TerasActionRow>
@@ -209,16 +218,16 @@ export function DefinitionDashboardModal({
                   kicker="Admission Posture"
                   statusLabel={`${record.admissionChecks.length} checks`}
                   statusTone="info"
-                  title="Definition admission"
+                  title="Approval checks"
                 />
                 <TerasList>
                   {record.admissionChecks.map((check) => (
                     <TerasStatusItem
-                      ariaLabel={`Inspect ${orchestrationAdmissionAreaLabel(check.area)} admission`}
+                      ariaLabel={`Inspect ${check.label ?? orchestrationAdmissionAreaLabel(check.area)} admission`}
                       tone={check.tone}
                       detail={check.owner}
-                      key={check.area}
-                      label={orchestrationAdmissionAreaLabel(check.area)}
+                      key={check.id ?? check.area}
+                      label={check.label ?? orchestrationAdmissionAreaLabel(check.area)}
                       onSelect={() => setActiveAdmissionCheck(check)}
                       status={orchestrationAdmissionStateLabel(check.state)}
                       treatment="rail"

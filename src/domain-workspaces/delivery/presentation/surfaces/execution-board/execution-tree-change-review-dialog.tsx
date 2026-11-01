@@ -67,7 +67,7 @@ export function ExecutionTreeChangeReviewDialog({
       width="standard"
     >
       <TerasTrayStack spacing="compact">
-        <TerasPanel frame="flush" spacing="compact" treatment="state" tone="warn">
+        <TerasPanel frame="padded" spacing="compact" treatment="state" tone="warn">
           <TerasPanelHeader
             kicker="Change Review"
             title={`${plan.length} ${plan.length === 1 ? "change" : "changes"} ready`}

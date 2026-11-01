@@ -25,6 +25,12 @@ export type AiActivitySnapshot = Readonly<{
   error: string | null;
 }>;
 
+export function aiActivitySubject(kind: string | null, subjectRef: string | null): string {
+  if (subjectRef) return subjectRef;
+  if (kind === null) return "Historical item link unavailable";
+  return kind === "assistant-response" ? "General conversation" : "Item link unavailable";
+}
+
 export const aiActivityTasks: Readonly<Record<string, readonly [string, string]>> = {
   "assistant-response": ["Assistant request", "Agent Console"],
   "proposal-triage": ["Proposal triage assistance", "Proposal"],

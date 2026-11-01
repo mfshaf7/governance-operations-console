@@ -130,9 +130,11 @@ Workbench Focus reads the same current owner collections as Workspace, scoped
 to the selected domain. Its summary distinguishes retained Delivery history from
 current work and never substitutes the synthetic Workbench registry descriptor
 for live record knowledge. Collection context does not claim selected-record
-detail. Delivery Home's Open Agent Console entry expands the shared floating
-agent, preserves its existing session and uses manual requests; no local mock
-answer or automatic model turn is generated.
+detail. Delivery Home presents the existing governed Agent controller in an inline
+Teras advisor with its own browser session. It uses explicit requests, receipt
+verification and cancellation, with only fresh bounded Delivery overview counts.
+No scripted answer or automatic model turn is generated; owner mutations remain
+in their existing workflow surfaces.
 
 The whole overview covers nine owner inputs within the unchanged admission
 limits. Inventory and repository custody occupy one bounded signal with both

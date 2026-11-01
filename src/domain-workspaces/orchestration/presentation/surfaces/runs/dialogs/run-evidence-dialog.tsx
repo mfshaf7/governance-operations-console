@@ -4,6 +4,9 @@ import {
   TerasDialog,
   TerasEmptyState,
   TerasMetadataList,
+  TerasTechnicalDetails,
+  TerasTimeline,
+  TerasTimelineItem,
 } from "@/teras";
 
 import type { OrchestrationRunRecord } from "@/domain-workspaces/orchestration/domain/orchestration-run-types";
@@ -52,6 +55,10 @@ export function RunEvidenceDialog({
       title="Run Evidence"
     >
       <TerasMetadataList items={projection.facts} />
+      {inspector === "receipts" && record.controlHistory?.length ? <TerasTimeline frame="contained" ariaLabel="Recorded run controls">
+        {record.controlHistory.map(control => <TerasTimelineItem key={control.id} label={`${control.action === "signal" ? "Signal" : control.action.replace(/^./, letter => letter.toUpperCase())} recorded`}
+          detail={control.operator} status="Recorded" tone="info" timestamp={control.recordedAt} displayTimestamp={formatOrchestrationRunTimestamp(control.recordedAt)}
+          evidence={<TerasTechnicalDetails items={[{ label: "Control ID", value: control.id }, { label: "Reason reference", value: control.reasonRef }, { label: "Idempotency key", value: control.idempotencyKey }]} />}/>)}</TerasTimeline> : null}
       {projection.rows.length > 0 ? (
         <TerasList>
           {projection.rows.map((row, index) => (
@@ -147,17 +154,17 @@ function evidenceProjection(
 
       return {
         description:
-          "Final, node, and prototype-local control receipts remain distinct from events and logs.",
+          "Final receipts, node evidence and recorded controls are shown separately from events and logs.",
         facts: [
           { label: "Run", value: record.runId },
           {
             label: "Final Receipt",
             value: record.receipt?.receiptId ?? "Not recorded",
           },
-          {
+          ...(record.source.mode === "live-authority" ? [{ label: "Recorded controls", value: String(record.controlHistory?.length ?? 0) }] : [{
             label: "Local Control Receipts",
             value: String(controlRows.length),
-          },
+          }]),
           {
             label: "Recorded",
             value: formatOrchestrationRunTimestamp(
@@ -195,7 +202,7 @@ function evidenceProjection(
     case "runtime-diagnostics":
       return {
         description:
-          "Bounded adapter and worker diagnostics without a live durable-runtime claim.",
+          "Recorded runtime identity. Current worker health requires a separate runtime observation.",
         facts: [
           { label: "Adapter", value: record.runtimeDiagnostics.adapter },
           { label: "Worker", value: record.runtimeDiagnostics.worker },

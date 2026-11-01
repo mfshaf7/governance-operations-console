@@ -1,17 +1,19 @@
 "use client";
 
-import { openGovernedAgentConsole } from "@/agent-console";
-import { TerasActionButton, TerasPanel, TerasPanelHeader, TerasMetadataList } from "@/teras";
-import type { DeliveryHomeViewModel } from "./home-view-model.ts";
+import { useEffect, useMemo, useState } from "react";
+import { GovernedAdvisorPanel, type AgentRuntimeIdentity } from "@/agent-console";
+import { deliveryHomeAdvisorContext } from "./home-agent-model.ts";
+import type { DeliveryReadModel } from "../../../read-model/index.ts";
 
-export function DeliveryHomeAgentConsole({ viewModel }: { viewModel: DeliveryHomeViewModel }) {
-  return <TerasPanel frame="padded" fit="content" treatment="neutral">
-    <TerasPanelHeader kicker="Manual assistance" title="Governed Agent Console"
-      description="Use the shared Docking Agent with current Delivery owner context. OOS and CGG govern each request; opening this entry does not invoke a model." />
-    <TerasMetadataList items={[
-      { label: "Workspace", value: viewModel.workspaceStatus.title },
-      { label: "Context", value: "Current owner collection summary; inspect the candidate before sending" },
-    ]} />
-    <TerasActionButton onClick={openGovernedAgentConsole}>Open Agent Console</TerasActionButton>
-  </TerasPanel>;
+const identity: AgentRuntimeIdentity = {
+  runtimeId: "delivery-home-advisor", displayName: "Delivery advisor", ownerSurface: "Delivery Home",
+  callerId: "governance-operations-console", sourceAuthority: "governance-operations-console",
+  sourceRef: "console://delivery/home",
+};
+
+export function DeliveryHomeAgentConsole({ model }: { model: DeliveryReadModel }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 15_000); return () => clearInterval(timer); }, []);
+  const context = useMemo(() => deliveryHomeAdvisorContext(model, now), [model, now]);
+  return <GovernedAdvisorPanel title="Delivery advisor" identity={identity} context={context} />;
 }

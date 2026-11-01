@@ -210,7 +210,7 @@ export function ProductListingEditDialog({
             </TerasActionButton>
           </>
         }
-        kicker="Portfolio Curation"
+        kicker="Listing settings"
         onClose={requestClose}
         surfaceId="product-listing-edit"
         title="Edit Listing"

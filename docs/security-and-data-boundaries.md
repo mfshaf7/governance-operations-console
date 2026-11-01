@@ -126,6 +126,13 @@ grant mutation authority. Activation remains blocked until
 `gate:agent-console-operating-acceptance` under ART #1248 and the Platform #1246
 commissioning proof accept the exact composition.
 
+Delivery Home's inline advisor reuses that same Agent controller and same-origin
+adapter. Its dedicated browser session submits only an explicitly requested,
+bounded current Delivery overview. Fixture records, expired observations, source
+bytes, private drafts and raw logs are excluded. It adds no credentials, provider
+adapter, automated request or owner command. Presentation tests with synthetic
+responses do not replace exact-composition operating acceptance.
+
 Governance Activity is a server-only read composition over the OOS workflow
 activity and WGCF governance-history projections. Each owner uses a distinct
 runtime credential. Reads are bounded, payloads are contract-validated, and
@@ -500,3 +507,18 @@ unconfirmed. Live read failure cannot select disconnected preview examples.
 The source-scoped review is [AI activity read scope](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-10-31-console-ai-activity-read-scope.md);
 exact release acceptance and commissioning remain separate from local source
 and synthetic protocol/browser conformance.
+
+
+### Staged product publication preparation
+
+The product-based preparation GET retains the existing verified Console session
+and accountable operator authorization. OOS authenticates caller/operator and
+keeps current receipts and bounded recent requests caller-owned. WGCF uses only
+current registered product ownership and existing trusted committed source mounts;
+the browser supplies no repository path, revision or digest. Prepared references
+expire quickly and carry no readiness or publication authority. Final submission
+retains native source, current-version, Security, readiness and explicit approval
+checks. Journal/source failure never becomes inferred initial state. Source-only
+changes await exact-source delta review and commissioning before live acceptance.
+Explicit disconnected design samples cannot submit, recover owner requests or
+return a successful publication receipt.

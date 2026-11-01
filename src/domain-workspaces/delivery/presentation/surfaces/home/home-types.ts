@@ -27,31 +27,16 @@ export type DeliveryHomeRecentActivity = {
   detail: string;
   eventRef: string;
   eventId: string;
-  metadataLabel: string;
   packageRef: string;
   packageLabel: string;
   receiptLabel: string;
+  timestamp: string;
   timestampLabel: string;
   title: string;
   tone: DeliveryTone;
 };
 
-export type DeliveryHomeAgentTranscriptLine = {
-  id: string;
-  role: "advisor" | "operator";
-  text: string;
-};
-
-export type DeliveryHomeAgentConsole = {
-  profileLabel: string;
-  statusLabel: string;
-  statusTitle: string;
-  statusTone: DeliveryTone;
-  transcript: DeliveryHomeAgentTranscriptLine[];
-};
-
 export type DeliveryHomeViewModel = {
-  agentConsole: DeliveryHomeAgentConsole;
   attentionQueue: DeliveryHomeAttentionItem[];
   recentActivity: DeliveryHomeRecentActivity[];
   workspaceStatus: DeliveryHomeWorkspaceStatus;

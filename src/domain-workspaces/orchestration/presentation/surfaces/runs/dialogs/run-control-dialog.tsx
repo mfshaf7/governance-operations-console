@@ -11,6 +11,7 @@ import {
   TerasMetadataList,
   TerasNoteField,
   TerasTextField,
+  TerasDraftCloseGuardDialog,
 } from "@/teras";
 
 import type {
@@ -52,6 +53,7 @@ export function RunControlDialog({
   const [reviewAt, setReviewAt] = useState("");
   const [signalName, setSignalName] = useState("");
   const [signalRef, setSignalRef] = useState("");
+  const [leaveRequested, setLeaveRequested] = useState(false);
 
   if (!control) {
     return null;
@@ -85,8 +87,14 @@ export function RunControlDialog({
     } finally { setSubmitting(false); }
   }
 
+  function requestClose() {
+    if (submitting) return;
+    if (!receipt && [note, owner, reason, resumeCondition, reviewAt, signalName, signalRef].some(value => value.trim())) setLeaveRequested(true);
+    else onClose();
+  }
+
   return (
-    <TerasDialog
+    <><TerasDialog
       contentOverflow="auto"
       height="content"
       actions={
@@ -94,7 +102,7 @@ export function RunControlDialog({
           <TerasActionButton onClick={onClose}>Done</TerasActionButton>
         ) : (
           <>
-            <TerasActionButton onClick={onClose} emphasis="secondary">
+            <TerasActionButton disabled={submitting} onClick={requestClose} emphasis="secondary">
               Back
             </TerasActionButton>
             <TerasActionButton
@@ -103,7 +111,7 @@ export function RunControlDialog({
               onClick={() => void applyControl()}
               tone={control.id === "cancel" ? "danger" : "accent"}
             >
-              {control.label}
+              {submitting ? "Submitting" : control.label}
             </TerasActionButton>
           </>
         )
@@ -111,7 +119,7 @@ export function RunControlDialog({
       closeLabel={`Close ${control.label.toLowerCase()} run control`}
       description={control.expectedEffect}
       kicker={control.label}
-      onClose={onClose}
+      onClose={requestClose}
       open
       width="standard"
       title="Run Control"
@@ -154,6 +162,7 @@ export function RunControlDialog({
         </TerasContentTray>
       ) : (
         <RunControlFields
+          disabled={submitting}
           control={control}
           note={note}
           onNoteChange={setNote}
@@ -176,15 +185,20 @@ export function RunControlDialog({
         <TerasContentTray
           description={error}
           kicker="Control Result"
-          title="Request not recorded"
+          title="Run control needs attention"
           tone="muted"
         />
       ) : null}
     </TerasDialog>
+    <TerasDraftCloseGuardDialog open={leaveRequested} kicker="Run control" title="Discard this control draft?"
+      description="Your entered reason and control details will be discarded. If a request was attempted, inspect the run's current state before sending a different request."
+      leaveLabel="Discard draft" onKeepEditing={() => setLeaveRequested(false)} onLeave={onClose} />
+    </>
   );
 }
 
 function RunControlFields({
+  disabled,
   control,
   note,
   onNoteChange,
@@ -201,6 +215,7 @@ function RunControlFields({
   signalName,
   signalRef,
 }: {
+  disabled: boolean;
   control: OrchestrationRunControl;
   note: string;
   onNoteChange: (value: string) => void;
@@ -222,6 +237,7 @@ function RunControlFields({
     case "resume":
       return (
         <TerasNoteField
+          disabled={disabled}
           label={`${control.label} reason`}
           minimumHeight="short"
           onValueChange={onReasonChange}
@@ -234,12 +250,14 @@ function RunControlFields({
         <TerasFieldStack spacing="compact">
           <TerasFieldGrid columns={2} spacing="compact">
             <TerasTextField
+              disabled={disabled}
               label="Signal name"
               onValueChange={onSignalNameChange}
               placeholder="dependency-ready"
               value={signalName}
             />
             <TerasTextField
+              disabled={disabled}
               label="Signal reference"
               onValueChange={onSignalRefChange}
               placeholder="signal://approved-input"
@@ -247,6 +265,7 @@ function RunControlFields({
             />
           </TerasFieldGrid>
           <TerasNoteField
+            disabled={disabled}
             label="Signal note"
             minimumHeight="short"
             onValueChange={onNoteChange}
@@ -260,12 +279,14 @@ function RunControlFields({
         <TerasFieldStack spacing="compact">
           <TerasFieldGrid columns={2} spacing="compact">
             <TerasTextField
+              disabled={disabled}
               label="Deferral owner"
               onValueChange={onOwnerChange}
               placeholder="Owning team or operator"
               value={owner}
             />
             <TerasTextField
+              disabled={disabled}
               label="Review date"
               onValueChange={onReviewAtChange}
               type="datetime-local"
@@ -273,6 +294,7 @@ function RunControlFields({
             />
           </TerasFieldGrid>
           <TerasNoteField
+            disabled={disabled}
             label="Deferral reason"
             minimumHeight="short"
             onValueChange={onReasonChange}
@@ -280,6 +302,7 @@ function RunControlFields({
             value={reason}
           />
           <TerasNoteField
+            disabled={disabled}
             label="Resume condition"
             minimumHeight="short"
             onValueChange={onResumeConditionChange}
@@ -298,6 +321,7 @@ function RunControlFields({
             tone="muted"
           />
           <TerasNoteField
+            disabled={disabled}
             label="Cancellation reason"
             minimumHeight="short"
             onValueChange={onReasonChange}

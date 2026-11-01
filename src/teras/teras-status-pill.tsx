@@ -29,6 +29,7 @@ export function TerasStatusPill({
   size = "default",
   style,
   tone = "info",
+  wrap,
 }: {
   accentRgb?: string;
   children: ReactNode;
@@ -36,6 +37,7 @@ export function TerasStatusPill({
   size?: "compact" | "default";
   style?: CSSProperties;
   tone?: TerasTone;
+  wrap?: "nowrap";
 }) {
   const resolvedStyle = accentRgb
     ? ({
@@ -53,6 +55,7 @@ export function TerasStatusPill({
         className,
       )}
       data-size={size}
+      data-wrap={wrap}
       style={resolvedStyle}
     >
       {children}

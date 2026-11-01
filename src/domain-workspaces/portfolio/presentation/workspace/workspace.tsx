@@ -1,11 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
 import type { ConsoleWorkspaceId } from "../../../../console-architecture.ts";
 import type { OperationWorkbenchDomainContract } from "../../../../operation-workbench/operation-workbench-contract.ts";
-import { ProductPortfolioPublicationSurface } from "../surfaces/publication/publication-surface.tsx";
-import { OwnerPublicationSurface } from "../surfaces/publication/owner-publication-surface.tsx";
-import { TerasActionButton, TerasPanel, TerasPanelHeader } from "@/teras";
+import { OwnerPublicationPreview } from "../surfaces/publication/owner-publication-preview.tsx";
+import { OwnerPublicationSurface, useOwnerPublicationState } from "../surfaces/publication/owner-publication-surface.tsx";
+import { TerasActionButton, TerasDraftCloseGuardDialog, TerasPanel, TerasPanelHeader } from "@/teras";
 import { ProductPortfolioCurationSurface } from "../surfaces/curation/curation-surface.tsx";
 import { ProductDashboardModal } from "../surfaces/products/dashboard/product-dashboard-modal.tsx";
 import { ProductPortfolioProductsSurface } from "../surfaces/products/products-surface.tsx";
@@ -32,17 +33,30 @@ export function PortfolioWorkspace({
     consoleDevMode,
     entryIntent,
   });
+  const publicationState = useOwnerPublicationState();
+  const activeSurfaceId = !controller.productContinuity.fixtureMode && controller.activeSurfaceId === "curation"
+    ? "publication" : controller.activeSurfaceId;
+  const [pendingExit, setPendingExit] = useState<(() => void) | null>(null);
+  function requestExit(leave: () => void) {
+    if (controller.nativePublicationRuntime.pending || publicationState.uncertain) {
+      controller.setActiveSurfaceId("publication");
+      return;
+    }
+    if (publicationState.dirty) setPendingExit(() => leave);
+    else leave();
+  }
 
   return (
+    <>
     <ProductPortfolioWorkspaceShell
-      activeSurfaceId={controller.activeSurfaceId}
+      activeSurfaceId={activeSurfaceId}
       contract={contract}
       onActiveSurfaceChange={controller.setActiveSurfaceId}
-      onClose={onClose}
+      onClose={() => requestExit(onClose)}
       readModel={controller.readModel}
       productContinuity={controller.productContinuity}
     >
-      {controller.activeSurfaceId === "products" ? (
+      {activeSurfaceId === "products" ? (
         controller.productContinuity.fixtureMode ? (
           <ProductPortfolioProductsSurface
             entries={controller.readModel.entries}
@@ -53,31 +67,23 @@ export function PortfolioWorkspace({
             error={controller.productContinuity.error}
             focusProductId={controller.focusedContinuityProductId}
             loading={controller.productContinuity.loading}
-            onOpenRegistry={(product) => onOpenWorkspace("workspace-registry", {
+            onOpenRegistry={(product) => requestExit(() => onOpenWorkspace("workspace-registry", {
               mode: "review",
               requiredMoveRef: "workspace-inventory.lifecycle-maintenance",
               subjectRef: product.product_id,
-            })}
+            }))}
             onRetry={() => void controller.productContinuity.reload()}
             products={controller.productContinuity.products}
           />
         )
-      ) : controller.activeSurfaceId === "publication" ? (
+      ) : activeSurfaceId === "publication" ? (
         controller.productContinuity.fixtureMode ? (
-        <ProductPortfolioPublicationSurface
-          publicationSources={controller.readModel.publicationSources}
-          decidedByRef="operator://portfolio-console/local"
-          decisionReceipts={controller.decisionReceipts}
-          focusProductId={controller.focusedPublicationProductId}
-          onCapturePublication={controller.capturePublicationSource}
-          onApplyDecision={controller.applyPublicationDecision}
-          onOpenRoute={controller.openRoute}
-          onOpenProduct={controller.openProduct}
-          records={controller.readModel.publicationRecords}
-          runtime={controller.publicationRuntime}
-          resolveRoute={controller.resolveRoute}
-        />
-        ) : <OwnerPublicationSurface runtime={controller.nativePublicationRuntime} onApplied={() => void controller.productContinuity.reload().catch(() => undefined)} />
+        <OwnerPublicationPreview entries={controller.readModel.entries} state={publicationState} runtime={controller.nativePublicationRuntime} />
+        ) : <OwnerPublicationSurface state={publicationState} runtime={controller.nativePublicationRuntime}
+          products={controller.productContinuity.products} productsError={controller.productContinuity.error}
+          authorityRevision={controller.productContinuity.projection?.authority.revision ?? null}
+          onRetryProducts={() => void controller.productContinuity.reload().catch(() => undefined)}
+          onApplied={() => void controller.productContinuity.reload().catch(() => undefined)} />
       ) : (
         controller.productContinuity.fixtureMode ? (
         <ProductPortfolioCurationSurface
@@ -86,9 +92,9 @@ export function PortfolioWorkspace({
           listingReceipts={controller.listingReceipts}
           onApplyListing={controller.applyListing}
         />
-        ) : <TerasPanel frame="padded" fit="content" treatment="neutral"><TerasPanelHeader kicker="Governed listing" title="Manage listing through Publication"
-          description="Use the actual publication receipt and a fresh owner manifest for audience and listing changes. Product metadata remains with Registry and the product owner; access remains owner-enforced." />
-          <TerasActionButton onClick={() => controller.setActiveSurfaceId("publication")}>Manage governed publication</TerasActionButton>
+        ) : <TerasPanel frame="padded" fit="content" treatment="neutral"><TerasPanelHeader kicker="Listing settings" title="Manage listing through Publication"
+          description="Change listing and audience using the latest publication receipt and a committed product manifest. Product details remain in Registry; product access stays with its owner." />
+          <TerasActionButton onClick={() => controller.setActiveSurfaceId("publication")}>Open Publication</TerasActionButton>
         </TerasPanel>
       )}
 
@@ -101,13 +107,23 @@ export function PortfolioWorkspace({
           onManageListing={controller.openCuration}
           onOpenPrimaryTarget={controller.openPrimaryTarget}
           onOpenPublication={controller.openPublication}
-          onOpenWorkspaceRegistry={(entry) => onOpenWorkspace("workspace-registry", {
+          onOpenWorkspaceRegistry={(entry) => requestExit(() => onOpenWorkspace("workspace-registry", {
             mode: "review",
             requiredMoveRef: "workspace-inventory.lifecycle-maintenance",
             subjectRef: entry.identity.productId,
-          })}
+          }))}
         />
       ) : null}
     </ProductPortfolioWorkspaceShell>
+    <TerasDraftCloseGuardDialog
+      open={pendingExit !== null}
+      title="Discard publication draft?"
+      kicker="Unsaved publication"
+      description="Your publication inputs and review are kept while switching sections. Leaving Portfolio will discard this unsent draft."
+      leaveLabel="Discard draft"
+      onKeepEditing={() => setPendingExit(null)}
+      onLeave={() => { const leave = pendingExit; setPendingExit(null); leave?.(); }}
+    />
+    </>
   );
 }

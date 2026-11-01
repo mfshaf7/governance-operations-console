@@ -26,8 +26,16 @@ test("history rejects cross-operator data, unexpected raw content, duplicate ide
 test("older metadata is explicitly absent; request references cannot become executable links", () => {
   const value = page(); value.items[0].kind = null; value.items[0].subject_ref = null;
   const result = decodeAiActivityPage(value, config).items[0];
-  assert.equal(result.task, "Assistant request"); assert.equal(result.subject, "Item not recorded"); assert.equal(aiActivityWorkspace(result), null);
+  assert.equal(result.task, "Assistant request"); assert.equal(result.subject, "Historical item link unavailable"); assert.equal(aiActivityWorkspace(result), null);
   assert.match(result.detail, /older request/);
+  value.items[0].kind = "assistant-response";
+  assert.equal(decodeAiActivityPage(value, config).items[0].subject, "General conversation");
+  value.items[0].kind = "work-design-context";
+  const unlinked = decodeAiActivityPage(value, config).items[0];
+  assert.equal(unlinked.subject, "Item link unavailable");
+  assert.equal(aiActivityWorkspace(unlinked), null);
+  value.items[0].subject_ref = "delivery-1400";
+  assert.equal(decodeAiActivityPage(value, config).items[0].subject, "delivery-1400");
 });
 test("owner errors and oversized history are unavailable, never sample activity", async () => {
   await assert.rejects(readAiActivity({ config, fetchImpl: async () => Response.json({ items: [] }, { status: 503 }) }));

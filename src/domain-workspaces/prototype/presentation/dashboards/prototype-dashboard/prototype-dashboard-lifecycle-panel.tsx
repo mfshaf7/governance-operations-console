@@ -73,7 +73,7 @@ export function PrototypeDashboardLifecyclePanel({
         <TerasActionButton
           onClick={() => onOpenCloseout(record)}
 
-          emphasis="secondary"
+          emphasis="primary"
         >
           {pendingClosure ? "Resume Closure" : "Open Closure"}
         </TerasActionButton>

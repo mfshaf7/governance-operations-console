@@ -8,6 +8,7 @@ import {
 } from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
 import { readWorkspaceRegistry } from "../../../workspace-registry/server/workspace-registry-oos-client.ts";
+import { assertProductPublicationPreparation } from "../live-runtime/product-publication-preparation.ts";
 import {
   assertGovernedProductPublicationIntent,
   assertGovernedProductPublicationResult,
@@ -94,6 +95,17 @@ export async function submitGovernedProductPublication(
     options.fetchImpl ?? fetch,
   );
   return assertServerResult(result, command, intent.request_id);
+}
+
+export async function prepareGovernedProductPublication(productId: string, options: RequestOptions = {}) {
+  if (!/^product:[a-z0-9][a-z0-9._-]*$/.test(productId)) {
+    throw new ProductPublicationOosError("Select a registered product.", "product_publication_product_invalid", 400);
+  }
+  const config = options.config ?? resolveConfiguration();
+  const attribution = options.attributionHeaders ?? consoleMutationAttributionHeaders();
+  return assertProductPublicationPreparation(await request(config,
+    `/v1/product-publications/products/${encodeURIComponent(productId)}/preparation`, { method: "GET" },
+    attribution, options.fetchImpl ?? fetch), productId);
 }
 
 export async function readGovernedProductPublication(

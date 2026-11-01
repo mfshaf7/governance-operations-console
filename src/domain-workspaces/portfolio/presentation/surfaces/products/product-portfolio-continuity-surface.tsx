@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   TerasActionButton,
+  TerasContentRegion,
   TerasEmptyState,
   TerasFilterBar,
   TerasMetadataList,
@@ -17,6 +18,7 @@ import {
   TerasRegisterPanel,
   TerasSelectedPanel,
   TerasStatusPill,
+  TerasTechnicalDetails,
 } from "@/teras";
 import type { WorkspaceContinuityProduct } from "../../../../../workspace-continuity/workspace-continuity-types.ts";
 import {
@@ -64,15 +66,15 @@ export function ProductPortfolioContinuitySurface({
       <TerasPanelStack fill="last">
         <TerasPanel fit="content" frame="padded" treatment="neutral">
           <TerasPanelHeader
-            description={error ?? "Reading canonical product continuity from WGCF."}
+            description={error ?? "Reading managed products from Workspace Governance."}
             kicker="Product Portfolio"
             statusLabel={error ? "Unavailable" : "Loading"}
             statusTone={error ? "danger" : "info"}
-            title={error ? "Product continuity unavailable" : "Loading managed products"}
+            title={error ? "Managed products unavailable" : "Loading managed products"}
           />
           {error ? (
             <TerasActionButton emphasis="secondary" onClick={onRetry}>
-              Retry Product Continuity
+              Retry
             </TerasActionButton>
           ) : null}
         </TerasPanel>
@@ -92,7 +94,7 @@ export function ProductPortfolioContinuitySurface({
       mode="register-selected"
       register={
         <TerasRegisterPanel
-          description="Canonical managed-product identity and lifecycle from Workspace Governance through WGCF."
+          description="Product identity and lifecycle from Workspace Governance. Select a product to inspect its owners and readiness."
           filterBar={
             <TerasFilterBar
               filters={[
@@ -127,7 +129,7 @@ export function ProductPortfolioContinuitySurface({
               }}
             />
           }
-          kicker="Canonical Product Register"
+          kicker="Product register"
           statusLabel={`${filtered.length}/${products.length} shown`}
           statusTone="ok"
           title="Managed products"
@@ -166,7 +168,7 @@ function ProductContinuitySelected({
 }) {
   const readiness = product.publication_readiness;
   return (
-    <TerasPanelStack fill="last">
+    <TerasPanelStack fill="last" scroll>
       <TerasSelectedPanel
         action={{
           description: "Continue lifecycle work in the canonical Workspace Registry owner surface.",
@@ -199,30 +201,34 @@ function ProductContinuitySelected({
       />
       <TerasPanel fit="fill" frame="padded" layout="header-body" overflow="auto" treatment="neutral">
         <TerasPanelHeader
-          description="Exact source, lifecycle, ownership, and non-terminal readiness evidence from the same continuity projection."
-          kicker="Canonical Continuity"
+          description="Ownership and publication readiness from the same product record. Expand the source details for exact references."
+          kicker="Product evidence"
           statusLabel={productContinuityReadinessLabel(product)}
           statusTone={readiness.control_state === "current" ? "info" : "warn"}
-          title="Authority evidence"
+          title="Ownership and readiness"
         />
+        <TerasContentRegion fill scroll>
         <TerasMetadataList
           columns={1}
           items={[
-            { label: "Record digest", value: shortDigest(product.record_digest) },
-            { label: "Lineage source", value: product.lineage.source },
-            { label: "Lineage ref", value: product.lineage.source_ref },
             { label: "Source owners", value: product.owners.source.join(", ") },
             { label: "Platform owner", value: product.owners.platform },
             { label: "Security owner", value: product.owners.security },
             { label: "Stage supported", value: product.stage_supported ? "Yes" : "No" },
             { label: "Governed production", value: product.governed_prod_promotion ? "Supported" : "Not supported" },
-            { label: "Latest lifecycle event", value: product.latest_lifecycle_event?.id ?? "No lifecycle event" },
             { label: "Publication readiness", value: productContinuityReadinessLabel(product) },
-            { label: "Readiness ref", value: readiness.readiness_ref?.uri ?? "No readiness evidence" },
-            { label: "Readiness expiry", value: readiness.expires_at ?? "Not available" },
           ]}
           shape="list"
         />
+        <TerasTechnicalDetails summary="Source and readiness details" items={[
+          { label: "Record digest", value: product.record_digest },
+          { label: "Lineage source", value: product.lineage.source },
+          { label: "Lineage ref", value: product.lineage.source_ref },
+          { label: "Latest lifecycle event", value: product.latest_lifecycle_event?.id ?? "No lifecycle event" },
+          { label: "Readiness ref", value: readiness.readiness_ref?.uri ?? "No readiness evidence" },
+          { label: "Readiness expiry", value: readiness.expires_at ?? "Not available" },
+        ]} />
+        </TerasContentRegion>
       </TerasPanel>
     </TerasPanelStack>
   );
@@ -274,7 +280,3 @@ const columns = [
     ),
   },
 ];
-
-function shortDigest(value: string) {
-  return `${value.slice(0, 12)}...${value.slice(-8)}`;
-}

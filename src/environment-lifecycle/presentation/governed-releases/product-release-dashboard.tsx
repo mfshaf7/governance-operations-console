@@ -219,7 +219,7 @@ export function ProductReleaseDashboard({
         }
         sideFill={
           <TerasContentFrame fill variant="standard">
-            <TerasPanel
+            <TerasPanel spacing="normal"
               fit="content"
               frame="padded"
               tone={dashboard.nextMove ? "info" : "muted"}
@@ -274,7 +274,7 @@ export function ProductReleaseDashboard({
               ) : null}
             </TerasPanel>
 
-            <TerasPanel
+            <TerasPanel spacing="normal"
               fit="content"
               frame="padded"
               tone={productRuntimeLifecycleTone(currentLifecycle)}

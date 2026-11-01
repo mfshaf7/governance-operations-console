@@ -46,6 +46,11 @@ requests to current attention, and do not expose source-authoring entry actions.
 History and Preview inspection remain available; none of these display rules
 changes the owner's lifecycle, source custody or approval authority.
 
+The compact summary shows Exploring, Candidate, Baseline, Graduating and
+Graduated in one row. Total and Retired do not have separate summary cards;
+the register count, lifecycle filtering, status details and retained history
+preserve those facts and access to retired records.
+
 Allowed ingress classes:
 
 - `local-entry`
@@ -357,6 +362,21 @@ must not embed Landing, Candidate Promotion, Baseline Promotion, Source
 Transition Intent preparation, Preview Runtime controls, or History contents.
 It may link to those surfaces, but the surfaces own their own content, draft
 state, actions, guards, commands, and receipts.
+
+### Operational Dashboard Preview
+
+The authorized visual trial uses full-width reading order: selected project and
+current eligible action; Landing/Preview/Baseline/Handoff cards with supporting
+facts; balanced runtime/source and evidence panels; a wide issues table; then
+source/handoff inspection and the existing lifecycle/history controls. Cards
+summarize owner facts without inventing progress percentages. Finished incubation
+keeps baseline/handoff facts historical and suppresses source authoring. Preview
+loading or failure shows Checking/Unavailable for profile, runtime and endpoint
+facts rather than record defaults. Existing exact references, context, setup,
+evidence, receipts and history remain inspectable. One internal content region
+scrolls naturally; long issue lists retain the existing bounded table scrolling.
+This composition is a preview pending visual acceptance, not a change to command
+eligibility, source ownership or the workflow contract.
 
 The register selected panel owns the two primary selected-record routes:
 
@@ -769,6 +789,11 @@ receipt and proof. Baseline Promotion consumes preview proof when the baseline
 requires it. Preview Runtime does not create platform runtime authority and is
 not a lifecycle transition workflow.
 
+Runtime, Profile and Evidence use the existing two-panel content frame in each
+column: the upper panel keeps its content height and the second panel fills the
+remaining height. Shorter windows scroll the frame to preserve panel content;
+the Runtime command log retains its own bounded log scrolling.
+
 Baseline Promotion is the `candidate -> baseline-approved` workflow. Baseline
 Packet is the evidence artifact assembled inside that workflow. Use Baseline
 Promotion when referring to the operator workflow, current required action, or
@@ -1132,6 +1157,31 @@ Record, preview, and packet drafts are local draft state. Dirty state is
 derived from the draft compared with the selected record projection, saved
 draft baseline, or local receipt. Closing or navigating away from unapplied
 dirty draft content requires the shared close guard.
+
+Landing, Candidate Promotion, Baseline Promotion and Movement Request retain
+the source snapshot from which the open draft was derived. Background reads
+with equivalent selected-record facts must preserve both draft and active step.
+Changed selected-record or handoff-packet facts preserve the draft, show a
+Source changed warning and block submission until the operator loads the latest
+source. Reloading a dirty draft requires the shared discard confirmation. This
+local snapshot is an editing baseline, not a canonical business record.
+
+Workflow step badges describe the displayed navigation position (Current/Open).
+Draft completeness, owner progress and action eligibility stay in their existing
+status panels and command guards; an owner next-move label is not a step position.
+
+Dashboard requests the Studio Preview profile/runtime read when opened in live
+mode. Before owner readback it shows Checking, and failures show Unavailable.
+Unrequested or failed owner reads must not claim No profile or use disconnected
+examples. Dashboard and Preview Runtime share that owner projection. Other
+workflows retain their canonical source facts until a preview owner read exists.
+Register and selected-context summaries are bounded excerpts; Dashboard retains
+the full original context through its Source Context detail dialog. Dashboard
+content uses bounded internal scroll containers that preserve
+natural panel heights. Last actions must remain reachable by native wheel and
+keyboard scrolling at shorter supported desktop heights; fitting the outer modal
+does not prove that inner panels are readable. Exact profile references stay inspectable in Teras
+technical details rather than becoming large primary headings.
 
 Recorded or source-projected content remains reviewable but locks editing.
 

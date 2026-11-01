@@ -1,4 +1,5 @@
 import type { OperationTone } from "../../../../operation-projections/index.ts";
+import { orchestrationRunTitle, orchestrationRunSourceLabel } from "../runs/orchestration-runs-view-model.ts";
 import {
   orchestrationRunPosture,
   orchestrationRunRequiredMove,
@@ -44,6 +45,8 @@ export type OrchestrationHomeInFlightRow = {
 };
 
 export type OrchestrationHomeMaterialEventRow = {
+  occurredAt: string;
+  runRef: string;
   detail: string;
   id: string;
   label: string;
@@ -95,7 +98,7 @@ export function getOrchestrationHomeViewModel(
     scope: item.kind,
     targetSurfaceId:
       item.kind === "definition" ? ("definitions" as const) : ("runs" as const),
-    title: item.label,
+    title: item.kind === "run" ? orchestrationRunTitle(readModel.runs.find(run => `run:${run.id}` === item.id)) : item.label,
     tone: item.tone,
   }));
 
@@ -121,11 +124,12 @@ export function getOrchestrationHomeViewModel(
         label: posture.label,
         meta: `${run.definitionId} v${run.definitionVersion} / ${currentNode?.owner ?? run.sourceDomain} / ${formatOrchestrationTimestamp(run.updatedAt)}`,
         targetSurfaceId: "runs",
-        title: run.runId,
+        title: `${orchestrationRunTitle(run)} · ${orchestrationRunSourceLabel(run)}`,
         tone: posture.tone,
       };
     }),
     materialEvents: readModel.materialEvents.map((event) => ({
+      occurredAt: event.occurredAt,
       detail: event.summary,
       id: event.eventId,
       label: runStateLabel(event.state),
@@ -135,7 +139,8 @@ export function getOrchestrationHomeViewModel(
         event.nodeId ? `node ${event.nodeId}` : "run",
         formatOrchestrationTimestamp(event.occurredAt),
       ].join(" / "),
-      title: event.runId,
+      runRef: event.runId,
+      title: orchestrationRunTitle(readModel.runs.find(run => run.runId === event.runId)),
       tone: runStateTone(event.state),
     })),
     ownerOptions: [
@@ -160,6 +165,7 @@ export function filterOrchestrationHomeAttention(
       !query ||
       [
         row.condition,
+        row.id,
         row.detail,
         row.label,
         row.owner,

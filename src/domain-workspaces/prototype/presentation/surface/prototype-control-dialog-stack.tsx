@@ -129,6 +129,7 @@ export function PrototypeControlDialogStack({
   return (
     <>
       <PrototypeDashboardModal
+        previewOwnerMode={previewOwnerMode}
         closure={closure}
         receipts={receipts}
         onClose={onCloseDialog}
@@ -162,7 +163,6 @@ export function PrototypeControlDialogStack({
         onBackToDashboard={onBackToDashboard}
         onCancelLanding={onCancelLanding}
         onClose={onCloseDialog}
-        onOpenDashboard={() => onOpenDialog("dashboard")}
         onLandPrototype={onLandPrototype}
         onRunLanding={onRunLanding}
         liveProjection={landingProjection}

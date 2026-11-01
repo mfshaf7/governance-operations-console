@@ -39,14 +39,6 @@ export function OrchestrationDefinitionsSurface({
   );
   const selectedRecord = controller.selectedRecord;
 
-  if (records.length === 0) {
-    return (
-      <TerasEmptyState fill>
-        No definition records are available in the current projection.
-      </TerasEmptyState>
-    );
-  }
-
   const selectedPosture = selectedRecord
     ? orchestrationDefinitionPosture(selectedRecord)
     : null;
@@ -62,7 +54,7 @@ export function OrchestrationDefinitionsSurface({
             bodyProps={{
               "data-orchestration-definition-register": "standard",
             }}
-            description="Qualification records and immutable definition versions from contract-derived or synthetic source truth."
+            description="Workflow definitions and decisions about which operations need restart-safe execution."
             filterBar={
               <TerasFilterBar
                 filters={[
@@ -107,26 +99,25 @@ export function OrchestrationDefinitionsSurface({
               />
             ) : (
               <TerasEmptyState fill>
-                No definition records match the current search and filters.
+                {records.length ? "No definitions match these filters." : "No definitions are available. You can prepare a definition draft; approval and implementation remain separate."}
               </TerasEmptyState>
             )}
           </TerasRegisterPanel>
         }
         selected={
-          selectedRecord && selectedPosture ? (
-            <TerasPanelStack fill="last">
-              <TerasPanel
+            <TerasPanelStack fill="last" scroll>
+              <TerasPanel spacing="normal"
                 frame="padded"
                 treatment="rail"
                 fit="content"
                 tone="warn"
               >
                 <TerasPanelHeader
-                  description="Start with execution-boundary qualification before creating a durable definition."
+                  description="Decide whether an operation needs restart-safe execution, then draft its workflow contract. This prepares a draft; it does not deploy a workflow or submit Delivery work."
                   kicker="Definition Entry"
-                  statusLabel="Prototype local"
+                  statusLabel="Drafting"
                   statusTone="info"
-                  title="Qualify a backend operation"
+                  title="Design a workflow"
                 />
                 <TerasActionRow spacing="tight">
                   <TerasActionButton
@@ -139,7 +130,7 @@ export function OrchestrationDefinitionsSurface({
                 </TerasActionRow>
               </TerasPanel>
 
-              <TerasSelectedPanel
+              {selectedRecord && selectedPosture ? <TerasSelectedPanel
                 action={{
                   description: selectedPosture.detail,
                   kicker: "Current Required Move",
@@ -164,13 +155,10 @@ export function OrchestrationDefinitionsSurface({
                 title={selectedRecord.title}
                 tone={selectedPosture.tone}
                 variant="rich"
-              />
-            </TerasPanelStack>
-          ) : (
-            <TerasEmptyState fill>
+              /> : <TerasEmptyState>
               No definition is selected from the current results.
-            </TerasEmptyState>
-          )
+            </TerasEmptyState>}
+            </TerasPanelStack>
         }
         selectedProps={{
           "data-orchestration-selected-definition": "true",

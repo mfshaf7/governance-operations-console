@@ -16,6 +16,9 @@ export type OosOrchestrationDefinition = Readonly<{
   qualification: "durable-candidate";
   return_projection: string;
   rollout_and_rollback: Readonly<Record<string, unknown>>;
+  retry_and_timeout_contract: Readonly<Record<string, unknown>>;
+  compensation_strategy: Readonly<Record<string, unknown>>;
+  wait_and_signal_contract: Readonly<Record<string, unknown>>;
   schema_version: 1;
   security_requirements: Readonly<Record<string, unknown>>;
   source_domain: string;

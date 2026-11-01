@@ -216,7 +216,7 @@ export function productPublicationSessionSteps({
             } need attention.`,
       id: "checks",
       label: "Checks",
-      stateLabel: activeStep === "checks" ? "Current" : "Reviewed",
+      stateLabel: activeStep === "checks" ? "Current" : "Viewed",
       tone: unresolved.length === 0 ? "ok" : "warn",
     },
     {

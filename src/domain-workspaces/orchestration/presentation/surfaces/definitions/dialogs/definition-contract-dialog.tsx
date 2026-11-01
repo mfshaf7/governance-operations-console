@@ -1,6 +1,6 @@
 "use client";
 
-import { TerasDialog, TerasMetadataList, TerasReadoutField } from "@/teras";
+import { TerasDialog, TerasMetadataList, TerasReadoutField, TerasTechnicalDetails } from "@/teras";
 
 import type {
   OrchestrationAdmissionCheck,
@@ -53,7 +53,8 @@ export function DefinitionContractDialog({
         <TriggerAndResultDetail record={record} />
       ) : null}
       {inspector === "failure-controls" ? (
-        <FailureAndControlsDetail record={record} />
+        <><FailureAndControlsDetail record={record} />
+        {record.contractDetails ? <TerasTechnicalDetails summary="Exact owner contract" items={record.contractDetails} /> : null}</>
       ) : null}
       {inspector === "evidence-security" ? (
         <EvidenceAndSecurityDetail record={record} />
@@ -136,6 +137,7 @@ function AdmissionCheckDetail({
         label="Current finding"
         value={check.detail}
       />
+      {check.id ? <TerasTechnicalDetails items={[{ label: "Check ID", value: check.id }]} /> : null}
       <TerasReadoutField
         fit="content"
         label="Evidence references"

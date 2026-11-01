@@ -52,15 +52,15 @@ export function PrototypeControlOverviewPanel({
         }
         boundary={
           <>
-            Direct requests create local-entry records in Prototype Studio.
-            Landing still decides setup, tools, preview need, and first required
-            move before baseline, runtime, or Movement request work.
+            {canRequestPrototype
+              ? "Direct requests create local preview records. Landing defines their setup and first required move."
+              : "Start in Proposal Control, then use its Prototype route. Landing defines the setup and first required move after the handoff."}
           </>
         }
         boundaryKicker="Request Boundary"
         description={canRequestPrototype
           ? "Prototype-local ingress for a direct prototype request."
-          : "Direct prototype requests are unavailable in live mode until a canonical owner path is connected."}
+          : "Create and route a Proposal to begin a prototype. Direct capture here is not connected yet."}
         kicker="Prototype Ingress"
         receipt={
           requestSubmittedAt

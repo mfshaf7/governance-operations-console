@@ -32,8 +32,6 @@ export type OrchestrationRunConditionProjection = {
 
 export function orchestrationRunDashboardFacts(record: OrchestrationRunRecord) {
   return [
-    { label: "Run ID", value: record.runId },
-    { label: "Request ID", value: record.requestId },
     {
       label: "Definition",
       value: `${record.definitionId} / v${record.definitionVersion}`,
@@ -44,16 +42,10 @@ export function orchestrationRunDashboardFacts(record: OrchestrationRunRecord) {
       value: orchestrationRunStateLabel(record.state),
     },
     {
-      label: "Business State",
-      value: `${record.businessState.sourceDomain} / ${record.businessState.label}`,
-    },
-    {
       label: "Effect Posture",
       tone: orchestrationRunEffectPostureTone(record.effectPosture),
       value: orchestrationRunEffectPostureLabel(record.effectPosture),
     },
-    { label: "Source Record", value: record.sourceRecordRef },
-    { label: "Correlation", value: record.correlationRef },
   ];
 }
 
@@ -155,8 +147,8 @@ export function orchestrationRunConditionProjection(
       );
     case "completed":
       return condition(
-        "Verified result",
-        "The final result and retained effects are verified by the recorded receipt.",
+        record.receipt?.verified ? "Verified result" : "Completed · receipt unavailable",
+        record.receipt?.verified ? "The recorded receipt confirms this run's result." : "The owner reports completion, but this projection has no verified final receipt.",
         record,
         [
           {

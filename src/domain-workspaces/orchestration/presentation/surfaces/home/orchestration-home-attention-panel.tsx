@@ -26,7 +26,7 @@ export function OrchestrationHomeAttentionPanel({
   onOpenSurface,
   viewModel,
 }: {
-  onOpenSurface: (surfaceId: OrchestrationHomeTargetSurface) => void;
+  onOpenSurface: (surfaceId: OrchestrationHomeTargetSurface, recordId?: string) => void;
   viewModel: OrchestrationHomeViewModel;
 }) {
   const [filters, setFilters] = useState<OrchestrationHomeAttentionFilters>(
@@ -46,15 +46,16 @@ export function OrchestrationHomeAttentionPanel({
       fit="fill"
       frame="padded"
       treatment="neutral"
+      spacing="normal"
       layout="header-toolbar-body"
       overflow="hidden"
     >
       <TerasPanelHeader
-        description="Definition qualification, review, admission, and run exceptions that require operator attention."
+        description="Review blocked runs, failures and definition decisions."
         kicker="Attention Queue"
         statusLabel={panelProjection.statusLabel}
         statusTone={panelProjection.tone}
-        title="Required orchestration moves"
+        title="Needs attention"
       />
       <TerasFilterBar
         data-orchestration-home-filter="attention"
@@ -101,12 +102,12 @@ export function OrchestrationHomeAttentionPanel({
                   <ArrowUpRight aria-hidden="true" size={12} />
                 </>
               }
-              ariaLabel={`${row.actionLabel}: ${row.title}`}
+              ariaLabel={`${row.actionLabel}: ${row.title} · ${row.label}`}
               detail={row.detail}
               key={row.id}
               label={row.label}
               meta={row.meta}
-              onSelect={() => onOpenSurface(row.targetSurfaceId)}
+              onSelect={() => onOpenSurface(row.targetSurfaceId, row.id.replace(/^(definition|run):/, ""))}
               title={row.title}
               tone={row.tone}
             />

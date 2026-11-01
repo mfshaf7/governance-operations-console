@@ -81,7 +81,7 @@ export function refinementStepStateLabel({
   }
 
   if (refinementStepIndex(candidateStep) < refinementStepIndex(activeStep)) {
-    return "Done";
+    return "Open";
   }
 
   return "Next";

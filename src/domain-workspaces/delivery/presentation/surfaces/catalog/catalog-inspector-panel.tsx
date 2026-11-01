@@ -13,6 +13,7 @@ import {
   TerasPanel,
   TerasPanelHeader,
   TerasTrayStack,
+  TerasTechnicalDetails,
 } from "@/teras";
 
 import {
@@ -93,8 +94,9 @@ export function CatalogInspectorPanel({
 
             <TerasContentTray kicker="Authority">
               <TerasMetadataList
-                items={catalogAuthorityMetadata(activeCatalog, selectedValue)}
+                items={catalogAuthorityMetadata(activeCatalog, selectedValue).slice(0, 2)}
               />
+              <TerasTechnicalDetails items={catalogAuthorityMetadata(activeCatalog, selectedValue).slice(2)} />
             </TerasContentTray>
 
             <TerasContentTray kicker="Related Context">

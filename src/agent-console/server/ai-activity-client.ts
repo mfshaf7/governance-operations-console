@@ -1,6 +1,6 @@
 import { resolveConsoleOosOperatorConfiguration, type ConsoleOosOperatorConfiguration } from "../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../console-integration/identity/server/console-session-authorization.ts";
-import { aiActivityTasks, type AiActivitySnapshot, type RecentAiActivity } from "../model/recent-ai-activity.ts";
+import { aiActivitySubject, aiActivityTasks, type AiActivitySnapshot, type RecentAiActivity } from "../model/recent-ai-activity.ts";
 
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw Error("AI history returned an invalid projection.");
@@ -44,7 +44,7 @@ export function decodeAiActivityPage(value: unknown, identity: { callerId: strin
     if (row.source === "agent-console" && ["completed", "failed", "cancelled"].includes(String(row.state)) && receiptRef === null) throw Error("AI history terminal invocation has no receipt.");
     if (row.source !== "agent-console" && row.state === "completed" && (!row.audit_ref || !row.context_ref)) throw Error("AI history completed advice has no governed evidence.");
     const display = row.kind ? aiActivityTasks[row.kind as string] : ["Assistant request", "Agent Console"];
-    return { id: row.id as string, task: display[0], surface: display[1], subject: row.subject_ref as string ?? "Item not recorded",
+    return { id: row.id as string, task: display[0], surface: display[1], subject: aiActivitySubject(row.kind as string | null, row.subject_ref as string | null),
       state: row.state as RecentAiActivity["state"], occurredAt: row.requested_at as string,
       kind: row.kind as string | null, subjectRef: row.subject_ref as string | null, receiptRef,
       auditRef: row.audit_ref as string | null, contextRef: row.context_ref as string | null, sessionRef: row.session_ref as string | null,

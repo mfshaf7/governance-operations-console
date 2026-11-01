@@ -133,11 +133,12 @@ export type OrchestrationRuntimeDiagnostics = {
   adapter: string;
   detail: string;
   liveRuntimeClaimed: boolean;
-  state: "online" | "synthetic" | "unavailable";
+  state: "online" | "synthetic" | "unavailable" | "unknown";
   worker: string;
 };
 
 export type OrchestrationRunRecord = {
+  controlHistory?: Array<{ id: string; action: string; operator: string; recordedAt: string; reasonRef: string; idempotencyKey: string }>;
   artifactRefs: string[];
   blocker: OrchestrationRunBlocker | null;
   businessState: {

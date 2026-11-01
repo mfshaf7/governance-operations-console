@@ -51,7 +51,7 @@ export function DefinitionDefineStep({
           {findingCount > 0 ? `${findingCount} required` : "Section ready"}
         </TerasStatusPill>
       }
-      description="Author one implementation-ready definition section while the advisor remains locked to the same context."
+      description={sectionGuide[activeSection]}
       kicker="Definition Work"
       title={definitionDesignSectionLabel(activeSection)}
     >
@@ -74,3 +74,12 @@ export function DefinitionDefineStep({
     </TerasWizardPanel>
   );
 }
+
+const sectionGuide: Record<DefineSection, string> = {
+  "identity-ownership": "Name the workflow and its accountable owners. Use the existing domain and repository names; these fields do not create services or repositories.",
+  "trigger-result": "Describe what starts the workflow and what proves completion. Define how repeated requests are recognized and which source versions must stay fixed.",
+  "execution-plan": "Break execution into named steps. Each step needs an owner, inputs, outputs and dependencies. Use an existing adapter name; this draft does not provision an adapter.",
+  "failure-controls": "Describe retries, time limits and operator recovery. State what happens to effects already made when a run fails or is cancelled.",
+  "evidence-security": "Specify required evidence, access and approval boundaries. Reference the responsible owner's rules; drafting them here does not grant permission.",
+  "delivery-versioning": "Explain implementation tests, rollout and rollback. Identify the proposed work home; recording this draft does not create that work item.",
+};

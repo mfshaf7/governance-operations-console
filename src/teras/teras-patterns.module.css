@@ -2008,6 +2008,10 @@
   min-height: 0;
 }
 
+.recordTableShell[data-profile="value-matrix"] .recordTable {
+  min-width: 36rem;
+}
+
 .recordTableShell[data-profile="value-matrix"] {
   border-radius: 0.82rem;
 }
@@ -2030,8 +2034,12 @@
   width: 12.6rem;
 }
 
-.recordTableShell[data-profile="register"][data-has-evidence="true"] .recordTable col[data-intent="primary"] {
+.recordTableShell[data-profile="register"] .recordTable col[data-intent="primary"] {
   width: 16.75rem;
+}
+
+.recordTableShell[data-profile="register"][data-has-evidence="true"] .recordTable {
+  min-width: 49rem;
 }
 
 .recordTableShell[data-profile="register"][data-has-evidence="true"] .recordTable col[data-intent="evidence"] {
@@ -2113,6 +2121,12 @@
   max-width: 100%;
   overflow-wrap: anywhere;
   white-space: normal;
+}
+
+.statusPill[data-wrap="nowrap"] {
+  max-width: none;
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 .recordTableShell[data-density="compact"] .recordTable th {
@@ -3559,7 +3573,7 @@
 .terasSurfaceStatusGrid {
   display: grid;
   min-width: 0;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   gap: 0.5rem;
 }
 
@@ -3634,6 +3648,7 @@
   display: grid;
   min-width: 0;
   align-content: start;
+  overflow: auto;
   gap: 1.82rem;
   padding: 0.72rem 0.62rem 0.72rem 0.82rem;
 }
@@ -4337,6 +4352,17 @@
   overflow: hidden;
 }
 
+.terasPanelStack[data-scroll="true"],
+.terasZone[data-scroll="true"] {
+  overflow: auto;
+  scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
+  scrollbar-width: thin;
+}
+
+.terasPanelStack[data-scroll="true"] > .advisorPanel:not(.advisorPanelCollapsed) {
+  min-height: 17rem;
+}
+
 .terasPanelStack[data-bounded="first"] > :first-child,
 .terasPanelStack[data-bounded="middle"] > :nth-child(2),
 .terasPanelStack[data-bounded="last"] > :last-child {
@@ -4383,10 +4409,11 @@
   min-width: 0;
   min-height: 0;
   align-content: start;
+  grid-auto-rows: max-content;
   gap: 0.5rem;
   margin-top: 0.78rem;
   overflow: auto;
-  padding: 0.08rem 0.08rem 0.12rem;
+  padding: 0.2rem 0.08rem;
   margin-inline: -0.08rem;
   scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
   scrollbar-width: thin;
@@ -4402,7 +4429,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(430px, 0.46fr);
   gap: 0.82rem;
   align-items: stretch;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .terasPrimarySidePrimary,
@@ -4414,7 +4441,8 @@
 }
 
 .terasPrimarySidePrimary {
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(12rem, 1fr);
+  min-height: 32rem;
 }
 
 .terasPrimarySideSide {
@@ -4553,6 +4581,13 @@
 .terasContentFrame[data-relative="true"] {
   position: relative;
   flex: 1 1 auto;
+}
+
+.terasContentFrame[data-scroll="true"] {
+  grid-template-rows: auto minmax(max-content, 1fr);
+  overflow: auto;
+  scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
+  scrollbar-width: thin;
 }
 
 .terasContentFrame[data-gap="none"] {
@@ -4802,6 +4837,8 @@
   display: grid;
   min-width: 0;
   min-height: 0;
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: 0.58rem;
 }
 
@@ -5532,6 +5569,7 @@
 
 .terasSelectField {
   display: grid;
+  align-content: start;
   gap: 0.42rem;
   min-width: 0;
 }
@@ -5814,14 +5852,15 @@
   align-content: start;
   gap: 0.48rem;
   margin: 0;
-  padding: 0;
+  padding: 0.2rem;
 }
 
 .terasList[data-columns="2"] {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.terasList[data-frame="contained"] {
+.terasList[data-frame="contained"],
+.terasTimeline[data-frame="contained"] {
   border: 1px solid rgba(255, 240, 216, 0.11);
   border-radius: 8px;
   padding: 0.54rem;
@@ -6638,10 +6677,13 @@
   min-height: 0;
   margin: 0;
   overflow: auto;
-  padding: 0;
   list-style: none;
   scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
   scrollbar-width: thin;
+}
+
+.terasTimeline[data-frame="none"] {
+  padding: 0;
 }
 
 @media (max-width: 760px) {

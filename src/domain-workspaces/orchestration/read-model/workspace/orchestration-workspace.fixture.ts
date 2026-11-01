@@ -20,10 +20,10 @@ export const orchestrationWorkspaceStatus: OperationSurfaceStatusModel = {
   items: [
     {
       detail:
-        "OOS has bounded operator workflow routes, but no admitted durable definition, run, control, event, or receipt API.",
+        "This preview is not connected to the workflow service. It does not evaluate live API admission or health.",
       facts: [
         { label: "Authority", value: "Operator Orchestration Service" },
-        { label: "Durable API", value: "not admitted" },
+        { label: "Durable API", value: "not checked in preview" },
         { label: "Console write path", value: "unavailable" },
       ],
       id: "oos",
@@ -59,10 +59,10 @@ export const orchestrationWorkspaceStatus: OperationSurfaceStatusModel = {
     },
     {
       detail:
-        "No durable runtime adapter, worker, persistence, or admitted execution path is connected.",
+        "Controls here simulate sample runs. Live runtime and worker health are not checked in this preview.",
       facts: [
         { label: "Worker", value: "not available" },
-        { label: "Runtime adapter", value: "not admitted" },
+        { label: "Runtime adapter", value: "not checked in preview" },
         { label: "Controls", value: "prototype simulation only" },
       ],
       id: "execution",
@@ -72,10 +72,10 @@ export const orchestrationWorkspaceStatus: OperationSurfaceStatusModel = {
     },
   ],
   kicker: "Workspace Status",
-  statusLabel: "Prototype",
+  statusLabel: "Design preview",
   summary:
-    "Definition truth is contract-derived and run truth is synthetic; live durable execution remains unavailable.",
-  title: "Orchestration is prototype-local",
+    "Sample definitions and runs. Controls are simulated; live service health is not checked here.",
+  title: "Design preview",
   tone: "warn",
 };
 

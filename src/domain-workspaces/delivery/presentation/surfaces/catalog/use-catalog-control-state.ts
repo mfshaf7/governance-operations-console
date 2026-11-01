@@ -83,6 +83,7 @@ export function useCatalogControlState(
   const [localDraftReceipt, setLocalDraftReceipt] =
     useState<CatalogLocalDraftReceipt | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const initializedLinkTarget = useRef<string | null>(null);
   const [repositoryLinkOpen, setRepositoryLinkOpen] = useState(false);
   const [repositoryLinkNote, setRepositoryLinkNote] = useState("");
   const [repositoryLinkError, setRepositoryLinkError] = useState<string | null>(
@@ -247,9 +248,12 @@ export function useCatalogControlState(
   );
 
   useEffect(() => {
-    if (!deliveryLinkTarget) return;
+    if (!deliveryLinkTarget) { initializedLinkTarget.current = null; return; }
+    const targetKey = JSON.stringify(deliveryLinkTarget);
+    if (initializedLinkTarget.current === targetKey) return;
     const ownerRepoCatalog = catalogs.find(isOwnerRepoCatalog);
     if (!ownerRepoCatalog) return;
+    initializedLinkTarget.current = targetKey;
     setActiveCatalogId(ownerRepoCatalog.catalog_item_id);
     const firstValue = sourceCatalog.values.find(
       (value) => value.catalog_item_id === ownerRepoCatalog.catalog_item_id,

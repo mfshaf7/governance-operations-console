@@ -2,8 +2,9 @@ import {
   TerasEmptyState,
   TerasPanel,
   TerasPanelHeader,
-  TerasList,
-  TerasSignalItem,
+  TerasTimeline,
+  TerasTimelineItem,
+  TerasTechnicalDetails,
 } from "@/teras";
 
 import {
@@ -29,29 +30,31 @@ export function OrchestrationHomeMaterialEventsPanel({
       overflow="hidden"
     >
       <TerasPanelHeader
-        description="Material run-state events from the structured orchestration projection."
+        description="Recorded changes across workflow runs."
         kicker="Material Events"
         statusLabel={projection.statusLabel}
         statusTone={projection.tone}
-        title="System event feed"
+        title="Recent activity"
       />
       {viewModel.materialEvents.length > 0 ? (
-        <TerasList
+        <TerasTimeline
           data-orchestration-home-events="true"
-          fit="fill"
           frame="contained"
+          ariaLabel="Orchestration activity"
         >
           {viewModel.materialEvents.map((row) => (
-            <TerasSignalItem
-              detail={row.detail}
+            <TerasTimelineItem
+              detail={row.title}
               key={row.id}
-              label={row.label}
-              meta={row.meta}
-              title={row.title}
+              label={row.detail}
+              timestamp={row.occurredAt}
+              displayTimestamp={new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(new Date(row.occurredAt))}
+              status={row.label}
+              evidence={<TerasTechnicalDetails items={[{ label: "Run", value: row.runRef }, { label: "Event", value: row.id }, { label: "Context", value: row.meta }]} />}
               tone={row.tone}
             />
           ))}
-        </TerasList>
+        </TerasTimeline>
       ) : (
         <TerasEmptyState fill>
           No material orchestration event is projected.

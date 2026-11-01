@@ -5,6 +5,7 @@ import { prototypeIsTerminal } from "../../read-model/selectors/prototype-worksp
 import {
   prototypeSelectedPanelMeta,
   prototypeSelectedPanelStatus,
+  prototypeOverviewContext,
 } from "../shared/prototype-record-display-model.ts";
 
 export function PrototypeControlSelectedPanel({
@@ -51,7 +52,7 @@ export function PrototypeControlSelectedPanel({
         ),
         title: selectedRecord.currentMove.label,
       }}
-      description={selectedRecord.summary}
+      description={prototypeOverviewContext(selectedRecord.summary)}
       kicker="Selected Prototype"
       meta={prototypeSelectedPanelMeta(selectedRecord)}
       selected

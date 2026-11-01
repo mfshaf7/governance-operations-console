@@ -538,9 +538,13 @@ function projectProductPortfolioListingScenarios(
       ...scenario,
       projection: withForbiddenProductCommands({
         ...sourceProjection,
-        allowedCommands: productCommandsForEntry(entry),
+        allowedCommands: sourceProjection.publicationState === "rejected"
+          ? sourceProjection.allowedCommands
+          : productCommandsForEntry(entry),
         entry,
-        requiredAction: productRequiredActionForEntry(entry),
+        requiredAction: sourceProjection.publicationState === "rejected"
+          ? sourceProjection.requiredAction
+          : productRequiredActionForEntry(entry),
       }),
     };
   });

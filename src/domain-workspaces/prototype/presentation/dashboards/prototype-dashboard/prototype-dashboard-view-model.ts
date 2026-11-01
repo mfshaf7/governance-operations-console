@@ -9,7 +9,6 @@ import {
   prototypeBaselineStatus,
   prototypeCompactSupportBundleLabel,
   prototypeDataModeLabel,
-  prototypeIngressLabel,
   prototypeLandingStatus,
   prototypeLifecycleStatus,
   prototypeMovementStateLabel,
@@ -43,6 +42,7 @@ export function prototypeDashboardFacts(record: PrototypeRecord) {
       value: prototypeVisibilityLabel(record.visibilityTier),
     },
     { label: "Source", value: record.sourcePath },
+    { label: "Source ref", value: record.sourceRef },
     { label: "Record Version", value: record.projectionVersion },
     { label: "Freshness", value: record.projectionFreshness },
     {
@@ -52,10 +52,10 @@ export function prototypeDashboardFacts(record: PrototypeRecord) {
   ];
 }
 
-export function prototypeDashboardCards(record: PrototypeRecord) {
+export function prototypeDashboardCards(record: PrototypeRecord, previewOwnerMode?: "disconnected" | "loading" | "live" | "error") {
   const lifecycle = prototypeLifecycleStatus(record);
   const landing = prototypeLandingStatus(record);
-  const preview = prototypePreviewStatus(record);
+  const preview = prototypePreviewStatus(record, previewOwnerMode);
   const baseline = prototypeBaselineStatus(record);
   const movement = prototypeMovementStatus(record);
 
@@ -74,10 +74,7 @@ export function prototypeDashboardCards(record: PrototypeRecord) {
 
 export function prototypeDashboardPostureFacts(record: PrototypeRecord) {
   return [
-    { label: "Record", value: record.id },
     { label: "Owner", value: record.owner },
-    { label: "Ingress", value: prototypeIngressLabel(record.ingress) },
-    { label: "Lifecycle", value: prototypeLifecycleStatus(record).label },
     {
       label: "Visibility",
       value: prototypeVisibilityLabel(record.visibilityTier),
@@ -91,7 +88,6 @@ export function prototypeDashboardPostureFacts(record: PrototypeRecord) {
       label: "Boundary",
       value: prototypeMutationBoundaryLabel(record.mutationBoundary),
     },
-    { label: "Source ref", value: record.sourceRef },
   ];
 }
 

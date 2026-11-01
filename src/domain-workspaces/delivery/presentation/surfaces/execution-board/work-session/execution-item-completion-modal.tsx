@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasChoiceGroup, TerasFieldStack, TerasMetadataList, TerasModalShell, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSelectField, TerasSignalItem, TerasList, TerasTextField } from "@/teras";
+import { TerasActionButton, TerasActionRow, TerasDraftCloseGuardDialog, TerasChoiceGroup, TerasFieldStack, TerasMetadataList, TerasModalShell, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSelectField, TerasSignalItem, TerasList, TerasTextField } from "@/teras";
 import { assertCompletionContext, completionEvidence, itemPiReview, type ItemPiReview, type ItemCompletionContext, type ItemCompletionEvidence } from "../../../../live-runtime/delivery-item-completion-contract.ts";
 
 const emptyEvidence: ItemCompletionEvidence = { completion_summary: "", changed_surfaces: "", test_result_evidence: "", validation_evidence: "", completion_note: "" };
@@ -27,7 +27,24 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
   const [reviewOutcome, setReviewOutcome] = useState("");
   const [reviewNote, setReviewNote] = useState("");
   const [piConfirmed, setPiConfirmed] = useState(false);
+  const pendingPiDraft = useRef<string | null>(null);
   const pendingPiReview = useRef<ItemPiReview | null>(null);
+  const [closeGuardOpen, setCloseGuardOpen] = useState(false);
+  const recordedPiDraft = useRef(JSON.stringify(["", "", ""]));
+  const dirty = context?.status !== "done" && (
+    Object.values(evidence).some(value => value.trim()) || justification.trim() ||
+    JSON.stringify([actualValue, reviewOutcome, reviewNote]) !== recordedPiDraft.current
+  );
+  function requestClose() {
+    if (pending) return;
+    if (dirty || uncertain) setCloseGuardOpen(true);
+    else onClose();
+  }
+  useEffect(() => {
+    const guard = (event: BeforeUnloadEvent) => { if (dirty || pending || uncertain) event.preventDefault(); };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [dirty, pending, uncertain]);
   const endpoint = `/api/delivery/execution/${workItemId}/completion`;
   const read = useCallback(async () => {
     setPending(true); setError(null); setConfirmed(false); setPiConfirmed(false);
@@ -42,7 +59,7 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
       if (expected) {
         const recovered = next.pi_review?.actual_business_value === expected.actualBusinessValue && next.pi_review.review_outcome === expected.reviewOutcome;
         setUncertain(!recovered);
-        if (recovered) { pendingPiReview.current = null; setOutcome("Earned PI review recovered by read; completion remains a separate decision"); }
+        if (recovered) { recordedPiDraft.current = pendingPiDraft.current ?? recordedPiDraft.current; pendingPiDraft.current = null; pendingPiReview.current = null; setOutcome("Earned PI review recovered by read; completion remains a separate decision"); }
         return;
       }
       setUncertain(false);
@@ -62,7 +79,7 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
     setPending(true); setError(null); setConfirmed(false); setPiConfirmed(false);
     try {
       const review = piDraft();
-      pendingPiReview.current = review; setUncertain(true);
+      pendingPiReview.current = review; pendingPiDraft.current = JSON.stringify([actualValue, reviewOutcome, reviewNote]); setUncertain(true);
       const response = await fetch(`/api/delivery/execution/${workItemId}/pi-review`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ expectedRevision: context.revision, reviewConfirmed: true, review }) });
       const body = await response.json();
@@ -72,6 +89,7 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
         next.pi_review.review_outcome !== review.reviewOutcome || !["recorded", "already-recorded"].includes(body.outcome)) throw new Error("PI review readback is unconfirmed.");
       setContext(next); pendingPiReview.current = null; setUncertain(false);
       setOutcome("Earned PI review recorded and read back; completion remains a separate decision");
+      recordedPiDraft.current = pendingPiDraft.current ?? recordedPiDraft.current; pendingPiDraft.current = null;
     } catch (failure) { setError(message(failure)); }
     finally { setPending(false); }
   }
@@ -101,10 +119,10 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
   if (route === "stale-open-close" && (!justification.trim() || !context?.completed_related_count || context.open_child_count !== 0)) valid = false;
   let piValid = false;
   try { piDraft(); piValid = true; } catch { /* Editable values are not native earned review. */ }
-  return <TerasModalShell title="Complete non-source work" kicker="Delivery evidence" description="Record an actual non-source outcome through the existing OOS completion path. Source changes use their governed source session."
-    surfaceId="delivery-item-completion" width="large" height="content" bodyLayout="scroll" onClose={onClose}
+  return <><TerasModalShell title="Complete non-source work" kicker="Delivery evidence" description="Record an actual non-source outcome through the existing OOS completion path. Source changes use their governed source session."
+    surfaceId="delivery-item-completion" width="large" height="content" bodyLayout="scroll" onClose={requestClose}
     footer={<TerasActionRow>
-      <TerasActionButton emphasis="secondary" onClick={onClose} disabled={pending}>Back to Board</TerasActionButton>
+      <TerasActionButton emphasis="secondary" onClick={requestClose} disabled={pending}>Back to Board</TerasActionButton>
       <TerasActionButton emphasis="secondary" onClick={() => void read()} disabled={pending}>Read current target</TerasActionButton>
       <TerasActionButton onClick={() => void submit()} disabled={pending || uncertain || !context?.can_complete || !confirmed || !valid}>Record non-source completion</TerasActionButton>
     </TerasActionRow>}>
@@ -160,7 +178,11 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
         detail="The outcome is not confirmed. Read this same work item; no replacement completion is submitted automatically." tone="warn" /></TerasList> : null}
       {error ? <TerasList frame="contained"><TerasSignalItem label="Completion unavailable" title="Owner operation stopped" detail={error} tone="danger" /></TerasList> : null}
     </TerasFieldStack>
-  </TerasModalShell>;
+  </TerasModalShell>
+  <TerasDraftCloseGuardDialog open={closeGuardOpen} title="Leave completion draft?" kicker="Unapplied evidence"
+    description={uncertain ? "An owner result is not confirmed. Keep the draft and read the original target before retrying; leaving discards these browser inputs." : "This evidence has not been recorded. Leaving discards the draft; the owner record is unchanged."}
+    leaveLabel="Discard Draft" onKeepEditing={() => setCloseGuardOpen(false)} onLeave={onClose} />
+  </>;
 }
 
 function message(error: unknown) { return error instanceof Error ? error.message : "Completion is unavailable."; }

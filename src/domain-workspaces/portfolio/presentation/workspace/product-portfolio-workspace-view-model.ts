@@ -45,7 +45,7 @@ export const productPortfolioWorkspaceSurfaces: ProductPortfolioWorkspaceSurface
     {
       id: "curation",
       kicker: "03",
-      title: "Curation",
+      title: "Listings",
       tone: "info",
     },
   ];
@@ -55,11 +55,9 @@ export function productPortfolioWorkspaceNavMeta(
   surfaceId: ProductPortfolioWorkspaceSurfaceId,
   continuity: ProductContinuityWorkspaceProjection = disconnectedFixtureContinuity,
 ) {
-  if (!continuity.fixtureMode && surfaceId === "publication") return continuity.publicationMode === "live" ? `${continuity.publicationObserved?.total ?? 0} read` : "Owner path";
-  if (!continuity.fixtureMode && surfaceId === "curation") return "Owner routes";
+  if (surfaceId === "publication") return "";
+  if (!continuity.fixtureMode && surfaceId === "curation") return "";
   switch (surfaceId) {
-    case "publication":
-      return String(readModel.publicationQueue.length);
     case "curation":
       return String(
         readModel.entries.filter((entry) => entry.listing.state !== "retired")
@@ -79,9 +77,9 @@ export function productPortfolioWorkspaceSummaryTitle(
 ) {
   switch (surfaceId) {
     case "publication":
-      return "Product Publication";
+      return "Publication";
     case "curation":
-      return "Portfolio Curation";
+      return "Listing settings";
     case "products":
       return "Managed Products";
   }
@@ -179,7 +177,7 @@ export function productPortfolioWorkspaceSummaryMetrics(
           { id: "active", label: "Active", tone: "ok" as const, value: String(summary.active) },
           { id: "suspended", label: "Suspended", tone: "warn" as const, value: String(summary.suspended) },
           { id: "retired", label: "Retired", tone: "muted" as const, value: String(summary.retired) },
-          { id: "readiness-attention", label: "Readiness attention", tone: "warn" as const, value: String(summary.readinessAttention) },
+          { id: "readiness-attention", label: "Attention", tone: "warn" as const, value: String(summary.readinessAttention) },
         ];
       }
       return [
@@ -226,6 +224,14 @@ export function productPortfolioWorkspaceStatuses(
   continuity: ProductContinuityWorkspaceProjection = disconnectedFixtureContinuity,
   surfaceId: ProductPortfolioWorkspaceSurfaceId = "products",
 ): OperationSurfaceStatusItem[] {
+  if (surfaceId === "publication") return [
+    { id: "source-mode", label: "Data", state: continuity.fixtureMode ? "local" : continuity.projection ? "current" : continuity.mode === "loading" ? "syncing" : "offline",
+      facts: [{ label: "Mode", value: continuity.fixtureMode ? "Design examples" : "Product Registry" }],
+      detail: continuity.fixtureMode ? "Explicit design preview. Publishing is disabled." : "Product identity is read from the canonical Registry." },
+    { id: "publication", label: "Setup", state: continuity.fixtureMode ? "local" : continuity.publicationMode === "live" ? "current" : "offline",
+      facts: [{ label: "Mode", value: continuity.fixtureMode ? "Preview" : continuity.publicationMode === "live" ? "Configured" : "Unavailable" }],
+      detail: "Configuration status only. Owner information and the current receipt are checked after selecting a product; readiness is checked on submission." },
+  ];
   if (!continuity.fixtureMode && surfaceId !== "products") return [
     { id: "source-mode", label: "Source mode", state: continuity.publicationMode === "live" ? "current" : "offline",
       facts: [{ label: "Mode", value: "Owner-backed" }], detail: "Native owner requests and receipts; preview records are not admitted." },

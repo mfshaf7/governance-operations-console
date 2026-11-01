@@ -106,7 +106,7 @@ export function BuildTreeEditor({
         {treeContent}
       </TerasPanel>
 
-      <TerasPanelStack fill={sideFill}>
+      <TerasPanelStack scroll fill={sideFill}>
         {sideContent}
       </TerasPanelStack>
     </div>

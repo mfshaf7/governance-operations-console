@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePrototypeWorkflowDraftSource } from "../shared/use-prototype-workflow-draft-source.ts";
+import { PrototypeWorkflowSourceWarning } from "../shared/prototype-workflow-source-warning.tsx";
 
 import {
   TerasDraftCloseGuardDialog,
@@ -61,6 +63,7 @@ import {
 import {
   type PrototypeWorkflowGuardIntent,
   prototypeWorkflowStepNavigation,
+  prototypeWorkflowNavigationSteps,
   prototypeWorkflowSubject,
 } from "../shared/prototype-workflow-modal-model.ts";
 import type {
@@ -77,10 +80,9 @@ export function PrototypeLandingModal({
   onBackToDashboard,
   onCancelLanding,
   onClose,
-  onOpenDashboard,
   onLandPrototype,
   onRunLanding,
-  record,
+  record: incomingRecord,
 }: {
   liveProjection: PrototypeLandingLiveProjection | null;
   onBackToDashboard: () => void;
@@ -88,7 +90,6 @@ export function PrototypeLandingModal({
     input: PrototypeLandingSimulationInput,
   ) => Promise<PrototypeLandingRunResult | null>;
   onClose: () => void;
-  onOpenDashboard: () => void;
   onLandPrototype: (
     record: PrototypeRecord,
     input: PrototypeLandingCommandInput,
@@ -99,6 +100,7 @@ export function PrototypeLandingModal({
   ) => Promise<PrototypeLandingRunResult>;
   record: PrototypeRecord | null;
 }) {
+  const { record, stale: sourceStale, reload: reloadSource } = usePrototypeWorkflowDraftSource(incomingRecord);
   const [activeStep, setActiveStep] =
     useState<PrototypeLandingStepId>("entry-support");
   const [closeGuardIntent, setCloseGuardIntent] =
@@ -213,7 +215,7 @@ export function PrototypeLandingModal({
   const { complete: landingRunComplete, available: landingRunActionAvailable } =
     prototypeLandingRunControlState({
       atResult: activeStep === "result",
-      canStartNewRun: landingDraftMutable && !command.disabledReason,
+      canStartNewRun: !sourceStale && landingDraftMutable && !command.disabledReason,
       draftDirty: landingDraftDirty,
       liveStatus: liveResult?.status ?? null,
       sourceRunComplete: (landingRunRecorded && !landingDraftDirty) || localRunComplete,
@@ -226,7 +228,7 @@ export function PrototypeLandingModal({
     currentRunResult?.mode !== "live" &&
     (!landingRunRecorded || landingDraftDirty);
   const landingRecordActionDisabled =
-    !landingRunComplete || Boolean(command.disabledReason);
+    sourceStale || !landingRunComplete || Boolean(command.disabledReason);
   const landingRunStatus = liveResult
     ? prototypeLandingLiveStatus(liveResult.status)
     : landingRunError
@@ -329,7 +331,7 @@ export function PrototypeLandingModal({
       : landingRunLogRows;
 
   function requestBackToDashboard() {
-    if (landingDraftDirty && landingDraftMutable) {
+    if (landingDraftDirty) {
       setCloseGuardIntent("back");
       return;
     }
@@ -338,7 +340,7 @@ export function PrototypeLandingModal({
   }
 
   function requestClose() {
-    if (landingDraftDirty && landingDraftMutable) {
+    if (landingDraftDirty) {
       setCloseGuardIntent("close");
       return;
     }
@@ -391,6 +393,7 @@ export function PrototypeLandingModal({
 
   function recordLanding() {
     if (
+      sourceStale ||
       !landingRunResult ||
       landingRunResult.mode !== "local" ||
       landingRunResult.draftKey !== activeLandingDraftKey
@@ -410,6 +413,8 @@ export function PrototypeLandingModal({
   }
 
   async function runLanding() {
+    // A retained request continues its immutable input. Staleness blocks a new
+    // run, while existing owner progress and cancellation remain recoverable.
     if (!landingRunActionAvailable) {
       return;
     }
@@ -521,7 +526,7 @@ export function PrototypeLandingModal({
               landingCanOpenDashboard
                 ? {
                     label: "Open Dashboard",
-                    onClick: onOpenDashboard,
+                    onClick: requestBackToDashboard,
                     emphasis: "secondary",
                   }
                 : undefined
@@ -544,10 +549,11 @@ export function PrototypeLandingModal({
         }
         statusLabel={landingMove.statusLabel}
         statusTone={landingMove.tone}
-        steps={workflowSteps}
+        steps={prototypeWorkflowNavigationSteps(workflowSteps, activeStep)}
         subject={prototypeWorkflowSubject(record, activeLandingDraft.name)}
         support={
-          activeStep === "entry-support" ? (
+          <><PrototypeWorkflowSourceWarning stale={sourceStale} dirty={landingDraftDirty} busy={landingRunSubmitting} onReload={reloadSource} />
+          {activeStep === "entry-support" ? (
             <PrototypeLandingSupportCheckPanel
               supportCheckTone={supportCheckTone}
               supportProfile={activeLandingDraft.supportProfile}
@@ -586,7 +592,8 @@ export function PrototypeLandingModal({
                   : "Run the local landing setup before the footer can record the landing result."
               }
             />
-          )
+          )}
+          </>
         }
         surfaceId="prototype-landing"
         title="Prototype Landing"

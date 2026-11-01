@@ -54,12 +54,13 @@ export function OrchestrationWorkspace({
   } = useOrchestrationWorkspaceController({ entryIntent });
   const [runDialog, setRunDialog] = useState<"start" | "recover" | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [focusedRecord, setFocusedRecord] = useState<{ surfaceId: OrchestrationWorkspaceSurfaceId; recordId: string } | null>(null);
 
   return (
     <><TerasModalShell
       agentHost
       bodyLayout="fill"
-      description="Fullscreen orchestration workspace for durable-definition qualification, definition review, run inspection, and bounded run control."
+      description="Monitor background workflows, resolve exceptions and manage workflow definitions."
       kicker="Orchestration Workspace"
       modalAttributes={getOperationWorkbenchSurfaceAttributes(contract)}
       onClose={onClose}
@@ -94,7 +95,7 @@ export function OrchestrationWorkspace({
         summary={
           <TerasSurfaceSummaryHeader
             ariaLabel="Orchestration workspace summary"
-            metrics={summaryMetrics}
+            metrics={summaryMetrics.map(metric => ({ ...metric, label: metric.label === "Definition Work" ? "Design work" : metric.label }))}
             statuses={projectOperationSurfaceStatusItems(
               readModel.workspaceStatus.items,
             )}
@@ -106,23 +107,25 @@ export function OrchestrationWorkspace({
           {sourceMode !== "disconnected-preview" ? <TerasActionRow>
             <TerasActionButton emphasis="secondary" disabled={refreshing} onClick={() => {
               setRefreshing(true); void refreshOwnerTruth().finally(() => setRefreshing(false));
-            }}>{refreshing ? "Reading owner truth" : "Refresh owner truth"}</TerasActionButton>
+            }}>{refreshing ? "Refreshing" : "Refresh status"}</TerasActionButton>
             <TerasActionButton emphasis="secondary" onClick={() => setRunDialog("recover")}>Read original run</TerasActionButton>
           </TerasActionRow> : null}
           <OrchestrationWorkspaceSurfaceContent
           activeSurfaceId={activeSurfaceId}
           controlRun={controlRun}
           entryIntent={entryIntent}
-          onOpenSurface={setActiveSurfaceId}
+          focusedRecord={focusedRecord}
+          onOpenSurface={(surfaceId, recordId) => { setFocusedRecord(recordId ? { surfaceId, recordId } : null); setActiveSurfaceId(surfaceId); }}
           readModel={readModel}
           onStartRun={() => setRunDialog("start")}
         />
         </TerasFieldStack>
       </TerasFullscreenSurfaceFrame>
     </TerasModalShell>
-    {runDialog ? <OrchestrationRunStartDialog mode={runDialog} onClose={() => setRunDialog(null)} onViewRuns={async () => {
+    {runDialog ? <OrchestrationRunStartDialog mode={runDialog} runs={readModel.runs} onClose={() => setRunDialog(null)} onViewRuns={async (runId) => {
       const current = await refreshOwnerTruth();
       if (current.mode !== "live" || current.status !== "current") throw new Error("The original run remains retained; its current owner list is unavailable.");
+      if (runId) setFocusedRecord({ surfaceId: "runs", recordId: runId });
       setActiveSurfaceId("runs"); setRunDialog(null);
     }} /> : null}</>
   );
@@ -132,6 +135,7 @@ function OrchestrationWorkspaceSurfaceContent({
   activeSurfaceId,
   controlRun,
   entryIntent,
+  focusedRecord,
   onOpenSurface,
   readModel,
   onStartRun,
@@ -139,7 +143,8 @@ function OrchestrationWorkspaceSurfaceContent({
   activeSurfaceId: OrchestrationWorkspaceSurfaceId;
   controlRun: (runId: string, input: OrchestrationRunControlInput) => Promise<OrchestrationRunControlReceipt>;
   entryIntent: ConsoleSurfaceEntryIntent | null;
-  onOpenSurface: (surfaceId: OrchestrationWorkspaceSurfaceId) => void;
+  onOpenSurface: (surfaceId: OrchestrationWorkspaceSurfaceId, recordId?: string) => void;
+  focusedRecord: { surfaceId: OrchestrationWorkspaceSurfaceId; recordId: string } | null;
   readModel: OrchestrationWorkspaceReadModel;
   onStartRun: () => void;
 }) {
@@ -154,7 +159,7 @@ function OrchestrationWorkspaceSurfaceContent({
     case "definitions":
       return (
         <OrchestrationDefinitionsSurface
-          focusRecordId={orchestrationFocusRecordId(entryIntent, "definition")}
+          focusRecordId={focusedRecord?.surfaceId === "definitions" ? focusedRecord.recordId : orchestrationFocusRecordId(entryIntent, "definition")}
           records={readModel.definitions}
           onStartRun={onStartRun}
         />
@@ -163,7 +168,7 @@ function OrchestrationWorkspaceSurfaceContent({
       return (
         <OrchestrationRunsSurface
           onControl={controlRun}
-          focusRecordId={orchestrationFocusRecordId(entryIntent, "run")}
+          focusRecordId={focusedRecord?.surfaceId === "runs" ? focusedRecord.recordId : orchestrationFocusRecordId(entryIntent, "run")}
           records={readModel.runs}
         />
       );

@@ -81,7 +81,8 @@ test("Material events remain structured, sorted, and free of raw log content", (
     viewModel.materialEvents.every(
       (event) =>
         event.detail.length > 0 &&
-        event.title.includes("scenario-run-") &&
+        event.runRef.includes("scenario-run-") &&
+        event.title.includes("Prototype landing") &&
         !event.detail.includes("scenario-log://"),
     ),
   );
