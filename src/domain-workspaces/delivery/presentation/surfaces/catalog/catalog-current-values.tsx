@@ -116,7 +116,7 @@ function catalogColumns({
         <TerasRecordStatusStack
           meta={value.last_projected_at ? "projected" : "local draft"}
           status={
-            <TerasStatusPill tone={catalogLifecycleTone(value.lifecycle_state)}>
+            <TerasStatusPill tone={catalogLifecycleTone(value.lifecycle_state)} wrap="nowrap">
               {catalogLifecycleLabel(value.lifecycle_state)}
             </TerasStatusPill>
           }

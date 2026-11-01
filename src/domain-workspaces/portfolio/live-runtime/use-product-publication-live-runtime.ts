@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { assertProductPublicationPreparation } from "./product-publication-preparation.ts";
 
 import {
   assertGovernedProductPublicationIntent,
@@ -89,7 +90,14 @@ export function useProductPublicationLiveRuntime() {
     }
   }
 
-  return { error, mode, pending, read, refreshMode, results, submit };
+  const prepare = useCallback(async (productId: string) => run(async () => {
+    if (!/^product:[a-z0-9][a-z0-9._-]*$/.test(productId)) throw new Error("Select a registered product.");
+    const response = await fetch(`/api/product-portfolio/publications/products/${encodeURIComponent(productId)}/preparation`, { cache: "no-store" });
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok) throw clientError(body);
+    return assertProductPublicationPreparation(body, productId);
+  }), []);
+  return { error, mode, pending, prepare, read, refreshMode, results, submit };
 }
 
 function clientError(value: unknown) {

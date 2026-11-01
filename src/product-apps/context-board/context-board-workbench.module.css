@@ -3461,7 +3461,7 @@
   min-width: 0;
   min-height: 0;
   gap: 0.56rem;
-  overflow: hidden;
+  overflow: auto;
   scrollbar-color: rgba(255, 193, 90, 0.42) rgba(12, 10, 9, 0.72);
   scrollbar-width: thin;
 }
@@ -3472,7 +3472,7 @@
 
 .contextBoardRail > :last-child {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 17rem;
 }
 
 .contextBoardFloatingSources {
@@ -3574,7 +3574,7 @@
 
 .contextBoardBriefReadiness {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(7.3rem, 0.32fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem 0.62rem;
   align-items: stretch;
   border: 1px solid rgba(245, 239, 226, 0.11);

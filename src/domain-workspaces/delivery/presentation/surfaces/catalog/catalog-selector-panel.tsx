@@ -62,6 +62,7 @@ export function CatalogSelectorPanel({
               detail={catalog.description}
               key={catalog.catalog_item_id}
               label={catalog.label}
+              title={`${catalog.label}: ${catalog.description}`}
               metricLabel="values"
               metricValue={valueCount}
               onClick={() => onSwitchCatalog(catalog.catalog_item_id)}

@@ -6,8 +6,8 @@ const observedAt = "2026-10-31T12:00:00.000Z";
 test("visual examples require an explicit current disconnected source", () => {
   const preview = selectRecentAiActivity({ mode: "disconnected-preview", status: "current", observedAt });
   assert.equal(preview.examples, true);
-  assert.equal(preview.items.length, 5);
-  assert.equal(preview.items[0].occurredAt, "2026-10-31T11:58:00.000Z");
+  assert.equal(preview.items.length, 7);
+  assert.equal(preview.items[0].occurredAt, "2026-10-31T12:00:00.000Z");
   assert.match(preview.message, /Preview examples/);
   for (const [mode, status] of [["live", "current"], ["live", "offline"], ["live", "partial"], [null, "loading"], ["unavailable", "unavailable"], ["disconnected-preview", "offline"]]) {
     const result = selectRecentAiActivity({ mode, status, observedAt });

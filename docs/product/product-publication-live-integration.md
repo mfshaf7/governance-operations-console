@@ -17,32 +17,71 @@ evaluate readiness, approve Security posture, activate a runtime, or become the
 publication journal.
 
 `Products` uses canonical product continuity. In a connected workspace,
-`Publication` and `Curation` open the same native owner-publication surface;
-curation does not edit a local product listing. Fixture registers and local
+`Publication` and `Listing settings` open the same native owner-publication surface;
+Listing settings does not edit a local product listing. Fixture registers and local
 receipts remain limited to explicit disconnected development preview. The
 native Publication surface makes its posture visible as one of:
 
 - `Disconnected preview`: local fixtures and local receipts are available only
   for interaction proof.
-- `Owner path connected`: publication uses the server-only OOS path with an
+- `Connected`: publication uses the server-only OOS path with an
   exact committed-manifest locator, verified by the native owners.
-- `Owner path unavailable`: partial or invalid live configuration failed
+- `Not connected`: partial or invalid live configuration failed
   closed.
+
+## Normal Console flow
+
+1. Open **Portfolio → Publication** and choose an existing managed product.
+2. The read-only preparation API loads the committed owner manifest references,
+   current caller-owned publication receipt, and up to 20 recent requests.
+3. Choose an available catalog change and enter its reason. Operators do not
+   enter a repository path, Git revision, schema version or digest.
+4. Choose **Review catalog change**. Review the product and before/after listing.
+   Exact source and request references remain under **Source and request details**.
+5. Explicitly approve that change, then choose **Confirm catalog change**. The
+   original OOS/WGCF owner validation and immutable receipt path still run.
+
+The standalone connected Listings redirect is folded into Publication. Canonical
+product identity remains in Products and Registry. Publication changes catalog
+listing, not product deployment, access, release, or source custody.
+
+Preparation does not approve readiness or create missing owner information. A
+missing or ambiguous publication file names the source owners and blocks review.
+Expired information or changed Registry authority requires reloading and fresh
+approval. Source lookup is bounded to the existing registered source mounts and
+a typed product-publication owner manifest; the browser cannot choose arbitrary paths.
+
+Draft, review and original request survive section navigation. Leaving Portfolio
+or replacing a draft uses the shared discard guard. An unknown outcome retains
+its original request and blocks replacement. Recent journal requests can be read
+across browser sessions by selecting the product. **Find earlier request** retains
+optional recovery by an exact request reference.
+
+The preparation extension is source-only until exact-source Security/Platform
+acceptance and commissioning. An unconnected preview shows unavailable product
+information. Explicit disconnected development preview uses the same operator
+component with labeled sample data and disabled publishing; it is not operating
+proof and cannot emit a successful owner receipt.
+
+## Engineering protocol
+
+The steps below describe the existing owner protocol, not fields required from
+normal Console users. Source revisions and digests are obtained by preparation.
 
 ## Authority Sequence
 
 1. The product owner commits the product source snapshot and a later owner
    manifest revision. Active product registration remains a prerequisite.
-2. In `Publication`, enter the owner repository, relative manifest path, earlier
-   source revision, later manifest revision and exact manifest digest. These
+2. Preparation resolves the owner repository, manifest path, earlier source
+   revision, later manifest revision and exact manifest digest. These
    entered pointers are unverified intent, not an authority-snapshot attestation.
    Initial publication uses schema 1, `unlisted`, version zero and no prior
    receipt. For later actions, first use `Read original publication request` to
    obtain the latest applied native receipt and version. Lifecycle operations
    require the schema-2 manifest and its exact Inventory history binding.
-3. Choose `Review owner publication`. Check the exact locator, action, current
+3. Choose **Review catalog change**. Check the exact locator, action, current
    version and target tuple. Retain the displayed request reference, explicitly
-   approve that intent, then choose `Submit reviewed publication` once.
+   approve that intent, then choose **Confirm catalog change** once.
 4. The server verifies the private Platform session, operator role, `Workspace
    owner` authority and configured operator binding. For every new submission
    it reads the current authority revision through the existing strict native
@@ -60,8 +99,8 @@ native Publication surface makes its posture visible as one of:
    reference and choose `Read original publication request`. This issues only
    the existing GET; historical authority and receipts remain unchanged.
    An unknown outcome locks replacement submission until an owner read resolves
-   it. `Prepare another action` clears old manifest pointers; it retains only
-   the actual applied prior receipt, not fresh manifest evidence.
+   it. Loading current product information replaces old manifest pointers and binds
+   the latest native receipt; fresh evidence is never inferred from an old result.
 
 The manifest binding is publication evidence, not an access credential or an
 access grant. Listing scope controls who may see a Portfolio listing. Product
@@ -90,7 +129,7 @@ restore `archived` to `unlisted`. Neither path restores runtime, release, access
 or Security acceptance.
 
 The product-owned publication evidence is
-[`product-publication/manifest.json`](../../product-publication/manifest.json).
+[a typed product-publication owner manifest](../../product-publication/manifest.json).
 Its `owner_revision` identifies the earlier product-source snapshot described
 by the manifest. The later commit containing the manifest is the separate
 `manifest_revision` that WGCF must verify from merged owner-repository truth.

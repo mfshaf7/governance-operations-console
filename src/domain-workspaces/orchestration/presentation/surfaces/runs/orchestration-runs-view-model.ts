@@ -166,7 +166,7 @@ export function orchestrationRunEffectPostureTone(
 }
 
 export function orchestrationRunNodeDetail(node: OrchestrationRunNode) {
-  const duration = node.duration ?? "Duration pending";
+  const duration = node.duration ?? (["completed", "cancelled", "failed", "skipped"].includes(node.state) ? "Duration not recorded" : "Duration pending");
   const parallel = node.parallelGroup
     ? ` / Parallel group ${node.parallelGroup}`
     : "";
@@ -180,12 +180,8 @@ export function orchestrationRunSelectedFacts(record: OrchestrationRunRecord) {
 
   return [
     {
-      label: "Request / Run",
-      value: `${record.requestId} / ${record.runId}`,
-    },
-    {
       label: "Source",
-      value: `${record.sourceDomain} / ${record.sourceRecordRef}`,
+      value: orchestrationRunSourceLabel(record),
     },
     {
       label: "Definition",
@@ -198,10 +194,6 @@ export function orchestrationRunSelectedFacts(record: OrchestrationRunRecord) {
     {
       label: "Node Owner",
       value: currentNode?.owner ?? "Operator Orchestration Service",
-    },
-    {
-      label: "Business State",
-      value: record.businessState.label,
     },
     {
       label: "Effect Posture",
@@ -228,4 +220,23 @@ export function formatOrchestrationRunTimestamp(value: string | null) {
     month: "short",
     timeZone: "UTC",
   }).format(new Date(value));
+}
+
+export function orchestrationRunTitle(record: OrchestrationRunRecord | undefined) {
+  return (record?.definitionId ?? "Workflow run").replace(/^scenario[.:_-]/, "").replace(/[._:-]+/g, " ").replace(/^./, letter => letter.toUpperCase());
+}
+
+export function orchestrationRunSourceLabel(record: OrchestrationRunRecord) {
+  const initiative = /(?:work_packages\/|art:delivery-)([1-9][0-9]*)$/.exec(record.sourceRecordRef);
+  return initiative ? `Delivery #${initiative[1]}` : record.sourceDomain;
+}
+
+export function orchestrationRunTechnicalFacts(record: OrchestrationRunRecord) {
+  return [
+    { label: "Run ID", value: record.runId }, { label: "Request ID", value: record.requestId },
+    { label: "Source record", value: record.sourceRecordRef }, { label: "Source version", value: record.sourceProjectionVersion },
+    { label: "Correlation", value: record.correlationRef }, { label: "Source", value: record.source.ref },
+    { label: "Freshness", value: record.source.freshness },
+    { label: "Business state", value: record.businessState.label },
+  ];
 }

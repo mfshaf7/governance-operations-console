@@ -44,9 +44,9 @@ export function ProductPortfolioCurationValuesPanel({
       <TerasPanelHeader
         description={
           activeView?.description ??
-          "Review the current Portfolio listing cohort."
+          "Review products in the selected listing view."
         }
-        kicker={activeView?.label ?? "Curation"}
+        kicker={activeView?.label ?? "Listing settings"}
         statusLabel={`${entries.length} shown`}
         statusTone="info"
         title="Current listings"
@@ -70,7 +70,7 @@ export function ProductPortfolioCurationValuesPanel({
         />
       ) : (
         <TerasEmptyState fill>
-          No product listing matches this curation view and search.
+          No product listing matches this view and search.
         </TerasEmptyState>
       )}
     </TerasPanel>

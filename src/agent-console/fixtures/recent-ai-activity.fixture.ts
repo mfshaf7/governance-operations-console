@@ -1,7 +1,9 @@
-import type { RecentAiActivity } from "../model/recent-ai-activity";
+import { aiActivitySubject, type RecentAiActivity } from "../model/recent-ai-activity.ts";
 
 /** Visual-review examples only; no owner records, model calls or receipts. */
 export const recentAiActivityExamples: readonly (Omit<RecentAiActivity, "occurredAt"> & { minutesAgo: number })[] = [
+  { id: "preview-conversation", task: "Assistant request", surface: "Agent Console", subject: aiActivitySubject("assistant-response", null), kind: "assistant-response", subjectRef: null, state: "completed", minutesAgo: 0,
+    detail: "Example of a conversation without a linked work item. No item link is missing from this conversation." },
   { id: "preview-context", task: "Draft a context diagram", surface: "Work Design", subject: "Sample application", state: "completed", minutesAgo: 2,
     detail: "Example of a completed diagram request. Draft generation and final workflow acceptance are separate." },
   { id: "preview-proposal", task: "Review the proposal", surface: "Proposal", subject: "Sample developer tool", state: "working", minutesAgo: 4,
@@ -12,4 +14,6 @@ export const recentAiActivityExamples: readonly (Omit<RecentAiActivity, "occurre
     detail: "Example of a completed advisory review. It does not imply that the baseline was approved or promoted." },
   { id: "preview-tree", task: "Suggest a story breakdown", surface: "Work Design", subject: "Sample delivery feature", state: "cancelled", minutesAgo: 43,
     detail: "Example of an operator-cancelled request, distinguished from a failed or completed request." },
+  { id: "preview-historical", task: "Assistant request", surface: "Agent Console", subject: aiActivitySubject(null, null), kind: null, subjectRef: null, state: "completed", minutesAgo: 10080,
+    detail: "Example of an older request whose task and item link were not retained. Its recorded outcome remains separate from that missing metadata." },
 ];

@@ -56,6 +56,8 @@ export type OrchestrationAdmissionCheckState =
   "blocked" | "not-required" | "pending" | "ready" | "synthetic";
 
 export type OrchestrationAdmissionCheck = {
+  id?: string;
+  label?: string;
   area: OrchestrationAdmissionArea;
   detail: string;
   evidenceRefs: string[];
@@ -66,7 +68,7 @@ export type OrchestrationAdmissionCheck = {
 
 export type OrchestrationDefinitionVersionHistoryEntry = {
   lifecycle: OrchestrationDefinitionLifecycle;
-  recordedAt: string;
+  recordedAt: string | null;
   summary: string;
   version: string;
 };
@@ -82,6 +84,8 @@ export type OrchestrationQualificationProjection = {
 };
 
 export type OrchestrationDefinitionRecord = {
+  startAllowed?: boolean;
+  contractDetails?: Array<{ label: string; value: string }>;
   admissionChecks: OrchestrationAdmissionCheck[];
   approvalRequirements: string[];
   businessOwner: string;

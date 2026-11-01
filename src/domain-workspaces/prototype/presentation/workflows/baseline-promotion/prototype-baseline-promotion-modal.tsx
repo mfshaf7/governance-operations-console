@@ -2,6 +2,8 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { usePrototypeWorkflowDraftSource } from "../shared/use-prototype-workflow-draft-source.ts";
+import { PrototypeWorkflowSourceWarning } from "../shared/prototype-workflow-source-warning.tsx";
 import { useDraftAdvisor } from "@/agent-console";
 import { baselineAdvisorFields, applyBaselineAdvisorEdits } from "../shared/prototype-advisor-fields.ts";
 
@@ -20,6 +22,7 @@ import {
   type PrototypeWorkflowGuardIntent,
   prototypeWorkflowRecordCanEdit,
   prototypeWorkflowStepNavigation,
+  prototypeWorkflowNavigationSteps,
   prototypeWorkflowSubject,
 } from "../shared/prototype-workflow-modal-model.ts";
 import type { PrototypeBaselinePromotionStepId } from "../../../work-model/workflows/baseline-promotion/prototype-baseline-promotion-model.ts";
@@ -51,7 +54,7 @@ export function PrototypeBaselinePromotionModal({
   onBackToDashboard,
   onClose,
   onRecordReceipt,
-  record,
+  record: incomingRecord,
   ownerProgress,
 }: {
   onBackToDashboard: () => void;
@@ -64,6 +67,7 @@ export function PrototypeBaselinePromotionModal({
   record: PrototypeRecord | null;
   ownerProgress?: PrototypeMaturityOwnerProgress;
 }) {
+  const { record, stale: sourceStale, reload: reloadSource } = usePrototypeWorkflowDraftSource(incomingRecord);
   const [activeStep, setActiveStep] =
     useState<PrototypeBaselinePromotionStepId>("packet");
   const [closeGuardIntent, setCloseGuardIntent] =
@@ -75,7 +79,7 @@ export function PrototypeBaselinePromotionModal({
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const advisor = useDraftAdvisor({
     active: Boolean(record),
-    disabled: !record || submitting || ownerProgress?.pending === true ||
+    disabled: sourceStale || !record || submitting || ownerProgress?.pending === true ||
       prototypeMaturityRequestPending(ownerProgress) || Boolean(record && getPrototypeCommandView(record, "record-baseline-promotion").disabledReason),
     getScope: () => {
       if (!record) throw Error("Select a Prototype record first.");
@@ -147,7 +151,7 @@ export function PrototypeBaselinePromotionModal({
     reviewDispositionsReady &&
     baselineStateClear;
   const applyDisabled =
-    submitting || ownerProgress?.pending === true || ownerRequestPending ||
+    sourceStale || submitting || ownerProgress?.pending === true || ownerRequestPending ||
     Boolean(command.disabledReason) ||
     !draftComplete ||
     (draft.decision === "block-baseline" &&
@@ -167,7 +171,7 @@ export function PrototypeBaselinePromotionModal({
   }
 
   function requestBackToDashboard() {
-    if (draftDirty && draftMutable) {
+    if (draftDirty) {
       setCloseGuardIntent("back");
       return;
     }
@@ -176,7 +180,7 @@ export function PrototypeBaselinePromotionModal({
   }
 
   function requestClose() {
-    if (draftDirty && draftMutable) {
+    if (draftDirty) {
       setCloseGuardIntent("close");
       return;
     }
@@ -265,7 +269,7 @@ export function PrototypeBaselinePromotionModal({
               command.disabledReason
                 ? {
                     label: "Open Dashboard",
-                    onClick: onBackToDashboard,
+                    onClick: requestBackToDashboard,
                     emphasis: "secondary",
                   }
                 : undefined
@@ -290,10 +294,11 @@ export function PrototypeBaselinePromotionModal({
         }
         statusLabel={packetMove.statusLabel}
         statusTone={packetMove.tone}
-        steps={workflowSteps}
+        steps={prototypeWorkflowNavigationSteps(workflowSteps, activeStep)}
         subject={prototypeWorkflowSubject(record)}
         support={
           <TerasFieldStack spacing="normal">
+          <PrototypeWorkflowSourceWarning stale={sourceStale} dirty={draftDirty} busy={submitting || ownerProgress?.pending} onReload={reloadSource} />
           {submissionError ? <TerasEmptyState>{submissionError}</TerasEmptyState> : null}
           {ownerProgress?.projection?.input.transition === "baseline-promotion" || !ownerProgress?.projection ? <PrototypeMaturityOwnerProgressPanel progress={ownerProgress} /> : null}
           <PrototypeBaselinePromotionSupportPanels

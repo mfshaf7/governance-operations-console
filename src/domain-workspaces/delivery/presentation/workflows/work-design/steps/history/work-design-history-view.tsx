@@ -83,7 +83,7 @@ export function WorkDesignHistoryView({
 
   return (
     <TerasZoneLayout variant="main-aside">
-      <TerasZone fit="fill">
+      <TerasZone scroll fit="fill">
         <TerasSubjectHero
           actionDetail="Snapshot and finalization checks"
           actionLabel="View Finalized Brief"
@@ -117,7 +117,7 @@ export function WorkDesignHistoryView({
           </TerasTimeline>}
         </TerasPanel>
       </TerasZone>
-      <TerasZone fit="fill">
+      <TerasZone scroll fit="fill">
         <TerasPanel
           frame="padded"
           treatment="rail"

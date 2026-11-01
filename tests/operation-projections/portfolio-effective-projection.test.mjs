@@ -9,6 +9,22 @@ import { productPortfolioPublicationCaptureIdempotencyKey } from "../../src/doma
 import { productPortfolioReadModel } from "../../src/domain-workspaces/portfolio/read-model/product-portfolio-read-model.ts";
 import { applyProductPublicationDecision } from "../../src/domain-workspaces/portfolio/work-model/publication/product-publication-decision-model.ts";
 import { applyProductListingCommand } from "../../src/domain-workspaces/portfolio/work-model/listing/product-listing-model.ts";
+import { productPublicationRecordCanOpenProduct } from "../../src/domain-workspaces/portfolio/presentation/surfaces/publication/publication-view-model.ts";
+
+test("listing projection preserves a rejected duplicate's existing-product route and publication commands", () => {
+  const source = scenario("duplicate-product-candidate");
+  const effective = projectProductPortfolioEffectiveReadModel({
+    sourceReadModel: productPortfolioReadModel,
+    runtimeProjection: { publicationReceipts: [], captureReceipts: [], listingApplications: [] },
+  });
+  const duplicate = effective.scenarioProjections.find(record => record.scenarioId === source.scenarioId);
+  assert.equal(duplicate.projection.publicationState, "rejected");
+  assert.equal(duplicate.projection.entry.identity.productId, source.projection.entry.identity.productId);
+  assert.deepEqual(duplicate.projection.requiredAction, source.projection.requiredAction);
+  assert.deepEqual(duplicate.projection.allowedCommands, ["open-product"]);
+  assert.equal(productPublicationRecordCanOpenProduct(duplicate), true);
+  assert.equal(duplicate.projection.allowedCommands.includes("publish-product"), false);
+});
 
 test("Product Portfolio derives publication state from a local receipt without mutating source truth", () => {
   const record = scenario("new-product-delivery-candidate");

@@ -182,16 +182,10 @@ export function orchestrationDefinitionDashboardFacts(
   record: OrchestrationDefinitionRecord,
 ) {
   return [
-    { label: "Definition", value: record.definitionId },
-    {
-      label: "Family",
-      value: record.definitionFamilyId ?? "not assigned",
-    },
     { label: "Version", value: orchestrationDefinitionVersionLabel(record) },
     { label: "Source Domain", value: record.sourceDomain },
     { label: "Business Owner", value: record.businessOwner },
     { label: "Execution Owner", value: record.executionOwner },
-    { label: "Implementation Repo", value: record.implementationRepo },
     { label: "Source Mode", value: definitionSourceModeLabel(record) },
   ];
 }
@@ -349,7 +343,8 @@ export function orchestrationDefinitionNodeTone(
   return node.optional ? "muted" : node.type === "wait" ? "warn" : "info";
 }
 
-export function formatOrchestrationDefinitionTimestamp(value: string) {
+export function formatOrchestrationDefinitionTimestamp(value: string | null) {
+  if (!value) return "Recording time not supplied";
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     hour: "2-digit",

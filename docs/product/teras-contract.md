@@ -13,6 +13,13 @@ Governance Operations Console.
 Teras is product-local shared UI infrastructure. It owns product-neutral
 primitives only. Domain-specific read models adapt at the consuming edge.
 
+Pending preview maintenance preserves natural row heights in opted-in scrollable
+`TerasPanelStack` and `TerasZone` compositions. Non-fill rows use max-content so
+primary panels do not collapse into or overlap their following panel. The fill
+row retains its max-content minimum and remaining-space behavior. Non-scroll
+layouts retain their existing sizing. A timeline entry without an owner-supplied
+historical timestamp may omit its machine date rather than inventing one.
+
 ## Ownership Boundary
 
 Teras may own:
@@ -152,6 +159,16 @@ still own grid placement, exact surface sizing, register/control minimums, and
 intentionally local spacing around child content when Teras cannot express
 that boundary.
 
+Flat action panels that place a header, facts and an action row together use
+the existing `spacing="normal"` rhythm. Let that panel gap separate the groups;
+do not also add a metadata top offset for the same boundary. Panels whose
+field stack or specialized composition already owns the gap retain that shape.
+
+Scrollable lists and selector rails reserve a small internal inset for the
+existing hover lift and keyboard focus treatment. Keep edge rows inside their
+scroll boundary without removing the interaction treatment or expanding the
+list's allocated height. Contained lists retain their larger frame inset.
+
 Register panels use `TerasRegisterPanel` for the standard header, filter bar,
 and scroll-owned table/list body frame. Use `density="normal"` for app-sized
 or Delivery-style registers and `density="compact-control"` for focused
@@ -229,21 +246,33 @@ Each direct `TerasZone` declares `fit="fill"` or `fit="content"`.
 `fit="fill"` assigns the remaining height to the final child while preserving
 natural height for preceding children. `fit="content"` keeps every child at
 natural height. Callers must not describe CSS track mechanics in the public
-API.
+API. Opt-in `scroll` retains the fill child's natural minimum height and lets
+the zone scroll in short windows; existing callers keep their constrained frame.
 
 `TerasContentFrame` owns guided operation frames around a progress/current-move
 strip and the active work body. Use its `standard` and `single-region`
 variants explicitly instead of local shell CSS or a hidden default.
+Its opt-in `scroll` preserves the lower panel's natural content height in short
+windows while letting it fill unused height in larger windows. Existing callers
+retain their fixed frame behavior unless they opt in.
 `TerasContentRegion` owns nested fill, gap, and internal scroll behavior.
 Scroll regions must preserve natural row height and scroll the region rather
 than squeezing child panels. Domain code supplies the content; Teras owns the
 frame rhythm.
 
+`TerasStatusPill wrap="nowrap"` keeps concise status labels on one line even
+inside a table or header that otherwise allows wrapping. The caller must verify
+the complete label fits its column; it must not truncate or overlap adjacent
+content. Other pills retain their existing contextual wrapping.
+
 Vertical panel compositions use `TerasPanelStack fill="first"`,
 `fill="middle"`, or `fill="last"` to name the child that owns remaining
 height. Use `bounded` with the same position vocabulary only when one child
 needs a tokenized internal scroll cap. Callers must not pass child counts,
-mutable/final aliases, or child-level stack markers.
+mutable/final aliases, or child-level stack markers. Opt-in `scroll` preserves
+the fill child's natural minimum height and makes the stack the scroll owner;
+an expanded advisor retains usable input and transcript space. Existing callers
+retain their constrained layout unless they opt in.
 
 `TerasContentTray` keeps natural height by default. Use `fit="fill"` only when
 its body must consume the remaining height allocated by its parent. Tray
@@ -697,3 +726,31 @@ procedure and evidence boundaries.
 
 - `operation-workbench-contract.md`
 - current console Teras component implementations in the source tree
+
+
+Delivery evidence registers keep a readable minimum width instead of collapsing
+auto-width evidence to a few pixels. Value matrices also preserve readable status,
+usage and action columns; their existing table frame owns horizontal scrolling.
+Selector rails keep natural row heights and expose full catalog descriptions in
+the selector title. Surface-status signals wrap into fewer columns as their panel
+narrows. Primary/side layouts scroll when their content minimums exceed the view.
+
+Form stacks without a fill child keep natural row heights. A scroll-constrained
+dialog must not compress a source-owner list into the following input row.
+
+`TerasTimelineItem` accepts optional `evidence` content below its narrative, such
+as the existing `TerasTechnicalDetails` disclosure. Domain callers retain exact
+source references there without flattening raw metadata into the main event row.
+Existing timeline items retain their presentation when no evidence is supplied.
+
+`TerasTimeline frame="contained"` uses the same boundary and inset spacing as
+the contained list pattern while retaining timeline semantics and scrolling.
+The default `none` frame preserves existing timeline consumers.
+
+### Register primary-column containment
+
+Register tables reserve the existing 16.75rem primary-column width even without
+an evidence column. Fixed secondary/status/action columns must not consume the
+primary column at smaller desktop widths; the existing table shell scrolls when
+the combined column widths exceed its available space. Evidence-register sizing
+and inventory/value-matrix profiles retain their existing rules.

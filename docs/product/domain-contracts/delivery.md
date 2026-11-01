@@ -92,7 +92,7 @@ domain.
 Surface responsibilities:
 
 - Home shows workspace health, attention queue, recent activity, and the
-  shared agent console entry for Delivery-level context.
+  inline governed advisor for bounded Delivery-level context.
 - Intake consumes accepted source into a delivery package shell.
 - Work Design shapes the package through context brief, Context Board, Build
   Tree, draft review, and local apply receipt.
@@ -487,7 +487,7 @@ Source ownership facts:
 ## Normalization Baseline Decisions
 
 - Home uses focused panel-family projection files for workspace status,
-  attention queue, recent activity, and agent response projection.
+  attention queue, recent activity, and bounded advisor context projection.
   `home-view-model.ts` is the thin composition and public import point.
 - Catalog uses visible config/control ownership boundaries. Selection and
   local draft state live in `use-catalog-control-state.ts`, while selector,
@@ -954,3 +954,31 @@ Unverified Intake evidence uses the existing bounded scrolling Teras list so a
 long historical list cannot crowd the source register. Issues follow the record
 scope and text search; an unverified source does not match a selected owner or
 consumption-state filter. The overall coverage message remains explicit.
+
+
+## Delivery UI Maintenance Preview — November 2026
+
+The approved second UI batch retains the six native Delivery areas and the same
+active/locked History components. Registers preserve readable columns and use
+native horizontal scrolling where the available pane cannot fit them. Catalog
+selector rows keep natural height; technical authority references remain in the
+existing disclosure. Execution board lanes retain readable card widths with
+horizontal navigation rather than squeezing all lanes into the screen.
+
+Work Design, Refinement and recovery panels preserve natural content height and
+scroll access to final actions at shorter desktop heights. Merely visiting a
+Refinement step does not complete it. Closeout Result remains Pending until a
+recorded result is available; source-read failure is unavailable, not loading.
+
+Architecture Packet, Catalog, completion evidence, source-decision and repository
+link drafts use the existing explicit discard guard. Equivalent refreshes retain
+edits. Changed Catalog/decision source requires review and guarded reload before
+submission. Pending commands prevent closing the owning draft; no owner result
+is fabricated. JSON packet authoring and owner eligibility contracts remain.
+
+Home uses the existing governed Agent path through an inline Teras advisor. Its
+context includes only current bounded overview counts, never example records,
+private source or drafts. No request runs on opening the surface. Fixture-backed
+browser tests qualify presentation and failure handling only; successful native
+owner commands and retained live History require their original access evidence.
+This source remains unpublished in the combined preview batch.

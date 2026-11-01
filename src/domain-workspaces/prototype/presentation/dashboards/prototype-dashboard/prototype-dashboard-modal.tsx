@@ -1,60 +1,26 @@
 "use client";
 
 import { useState } from "react";
-
 import {
-  TerasActionButton,
-  TerasActionRow,
-  TerasStatusItem,
-  TerasCardGrid,
-  TerasSummaryCard,
-  TerasSummaryCardGrid,
-  TerasEmptyState,
-  TerasMetadataList,
-  TerasModalShell,
-  TerasPanel,
-  TerasPanelHeader,
-  TerasPrimarySideLayout,
-  TerasRailCard,
-  TerasList,
-  TerasStatusPill,
-  TerasZone,
+  TerasActionButton, TerasActionRow, TerasContentRegion, TerasContentTray,
+  TerasDetailGrid, TerasEmptyState, TerasFieldStack, TerasMetadataList,
+  TerasModalShell, TerasPanel, TerasPanelHeader, TerasRecordTable, TerasStatusPill,
 } from "@/teras";
-
-import type {
-  PrototypeProjectedReceipt,
-  PrototypeRecord,
-} from "../../../read-model/prototype-workspace-read-model.ts";
+import type { PrototypeProjectedReceipt, PrototypeRecord } from "../../../read-model/prototype-workspace-read-model.ts";
 import type { PrototypeClosureViewState } from "../../shared/prototype-closure-presentation-model.ts";
 import { prototypeDashboardRecord } from "../../shared/prototype-closure-presentation-model.ts";
-import {
-  prototypeDashboardAreas,
-  prototypeDashboardCards,
-  prototypeDashboardPostureFacts,
-  prototypeOpenIssueTone,
-  type PrototypeDashboardStatusAreaId,
-} from "./prototype-dashboard-view-model.ts";
-import {
-  prototypeLandingStatus,
-  prototypePreviewStatus,
-  prototypeSelectedPanelMeta,
-  prototypeSelectedPanelStatus,
-} from "../../shared/prototype-record-display-model.ts";
-import { prototypeSupportProfileLabel } from "@/domain-workspaces/prototype/domain/support/prototype-support-profile-model";
+import { prototypeDashboardAreas, type PrototypeDashboardStatusAreaId } from "./prototype-dashboard-view-model.ts";
+import { prototypeLifecycleStatus, prototypeOverviewContext, prototypeVisibilityLabel } from "../../shared/prototype-record-display-model.ts";
 import { PrototypeDashboardLifecyclePanel } from "./prototype-dashboard-lifecycle-panel.tsx";
+import { PrototypeDashboardStages, PrototypeDashboardOperationsPanels } from "./prototype-dashboard-panels.tsx";
+import type { PrototypeDashboardPreviewMode } from "./prototype-dashboard-operations-model.ts";
 import { PrototypeStatusAreaDialog } from "./prototype-dashboard-status-area-dialog.tsx";
 
 export function PrototypeDashboardModal({
-  closure,
-  receipts,
-  onClose,
-  onOpenCloseout,
-  onOpenCurrentAction,
-  onOpenHistory,
-  onOpenPreviewRuntime,
-  onOpenSourceAuthoring,
-  record,
+  previewOwnerMode, closure, receipts, onClose, onOpenCloseout, onOpenCurrentAction,
+  onOpenHistory, onOpenPreviewRuntime, onOpenSourceAuthoring, record,
 }: {
+  previewOwnerMode: PrototypeDashboardPreviewMode;
   closure: PrototypeClosureViewState | null;
   receipts: PrototypeProjectedReceipt[];
   onClose: () => void;
@@ -65,267 +31,71 @@ export function PrototypeDashboardModal({
   onOpenSourceAuthoring?: () => void;
   record: PrototypeRecord | null;
 }) {
-  const [openArea, setOpenArea] =
-    useState<PrototypeDashboardStatusAreaId | null>(null);
-
-  if (!record) {
-    return null;
-  }
-
+  const [openArea, setOpenArea] = useState<PrototypeDashboardStatusAreaId | null>(null);
+  if (!record) return null;
   const displayRecord = prototypeDashboardRecord(record, closure?.preparation);
   const sourceLifecycle = record.sourceEvidence?.authority === "workspace-prototype-studio"
     ? record.lifecycle : closure?.preparation?.expected_state.lifecycle;
-  const selectedStatus = prototypeSelectedPanelStatus(displayRecord);
-  const previewStatus = prototypePreviewStatus(displayRecord);
-  const landingStatus = prototypeLandingStatus(record);
-  const openIssueTone = prototypeOpenIssueTone(record);
-  const isTerminal =
-    displayRecord.lifecycle === "retired" || displayRecord.lifecycle === "graduated";
-  const statusAreas = prototypeDashboardAreas(displayRecord, receipts);
-  const openIssuesScrollable = record.openIssues.length > 2;
+  const lifecycle = prototypeLifecycleStatus(displayRecord);
+  const terminal = displayRecord.lifecycle === "retired" || displayRecord.lifecycle === "graduated";
+  const currentActionAvailable = !terminal && (!sourceLifecycle || sourceLifecycle === record.lifecycle);
+  const areas = prototypeDashboardAreas(displayRecord, receipts);
+  const handoff = areas.find(area => area.id === "movement")!;
 
-  function closeDashboard() {
-    setOpenArea(null);
-    onClose();
-  }
+  return <>
+    <TerasModalShell bodyLayout="fill" height="fill" kicker="Prototype" title="Prototype Dashboard" width="large"
+      surfaceId="prototype-dashboard" onClose={() => { setOpenArea(null); onClose(); }}>
+      <TerasContentRegion fill gap="normal" scroll role="region" aria-label="Prototype dashboard content" tabIndex={0} data-prototype-dashboard="true">
+        <TerasPanel frame="padded" treatment="neutral" spacing="normal">
+          <TerasPanelHeader kicker="Project overview" title={record.name} description={prototypeOverviewContext(record.summary, 200)}
+            actionsLayout="inline" actions={<TerasStatusPill tone={lifecycle.tone}>{lifecycle.label}</TerasStatusPill>} />
+          <TerasMetadataList shape="line" treatment="chip" wrap items={[
+            { label: "Owner", value: record.owner },
+            { label: "Visibility", value: prototypeVisibilityLabel(record.visibilityTier) },
+          ]} />
+          {currentActionAvailable ? <TerasContentTray kicker="Next required action">
+            <TerasActionRow layout="split" end={
+              <TerasActionButton emphasis="primary" tone={record.currentMove.tone === "danger" ? "danger" : "accent"} onClick={() => onOpenCurrentAction(record)}>{record.currentMove.actionLabel}</TerasActionButton>
+            }>
+              <TerasFieldStack spacing="compact">
+                <strong>{record.currentMove.label}</strong>
+                <span>{prototypeOverviewContext(record.currentMove.detail, 180)}</span>
+              </TerasFieldStack>
+            </TerasActionRow>
+          </TerasContentTray> : terminal ? <TerasEmptyState>{lifecycle.label}. History and owner receipts remain available.</TerasEmptyState> : null}
+          {record.summary.length > 200 ? <TerasActionRow layout="split" spacing="compact"><TerasActionButton size="table-compact" emphasis="secondary" onClick={() => setOpenArea("source")}>Full context</TerasActionButton></TerasActionRow> : null}
+        </TerasPanel>
 
-  return (
-    <>
-      <TerasModalShell
-        bodyLayout="fill"
-        height="fill"
-        description="Stable selected-record cockpit for posture, issues, evidence, controls, and the next state-derived action."
-        kicker="Prototype Dashboard"
-        onClose={closeDashboard}
-        surfaceId="prototype-dashboard"
-        title="Prototype Dashboard"
-        width="large"
-      >
-        <TerasPrimarySideLayout
-          data-prototype-dashboard="true"
-          primaryTop={
-            <TerasZone fit="content">
-              <TerasPanel
-                frame="padded"
-                treatment="rail"
-                tone={selectedStatus.tone}
-              >
-                <TerasPanelHeader
-                  actions={
-                    <TerasStatusPill tone={selectedStatus.tone}>
-                      {selectedStatus.label}
-                    </TerasStatusPill>
-                  }
-                  actionsLayout="inline"
-                  description={record.summary}
-                  kicker="Selected Prototype"
-                  title={record.name}
-                />
-                <TerasMetadataList
-                  items={prototypeSelectedPanelMeta(displayRecord)}
-                  shape="line"
-                  topOffset="compact"
-                  treatment="chip"
-                  wrap
-                />
-              </TerasPanel>
+        <PrototypeDashboardStages record={displayRecord} mode={previewOwnerMode} />
+        <PrototypeDashboardOperationsPanels record={displayRecord} mode={previewOwnerMode} receipts={receipts}
+          onInspect={setOpenArea} onPreview={onOpenPreviewRuntime} onSourceAuthoring={onOpenSourceAuthoring} />
 
-              <TerasSummaryCardGrid columns={5}>
-                {prototypeDashboardCards(displayRecord).map((card) => (
-                  <TerasSummaryCard
-                    key={card.label}
-                    label={card.label}
-                    tone={card.tone}
-                    value={card.value}
-                    variant="dense"
-                  />
-                ))}
-              </TerasSummaryCardGrid>
-            </TerasZone>
-          }
-          primaryMain={
-            <TerasZone fit="content">
-              <TerasPanel
-                density="comfortable"
-                frame="padded"
-                treatment="neutral"
-              >
-                <TerasPanelHeader
-                  actions={
-                    <TerasStatusPill tone={selectedStatus.tone}>
-                      {selectedStatus.label}
-                    </TerasStatusPill>
-                  }
-                  actionsLayout="inline"
-                  description={record.sourceEvidence?.authority === "workspace-prototype-studio" ? "Current Studio lifecycle and owner-backed workflow projection. Historical evidence remains separate from current readiness." : sourceLifecycle ? "Studio lifecycle with local preview posture for the remaining fields." :
-                    "Local preview posture; Studio lifecycle is not verified."}
-                  kicker="Record Status"
-                  title="Project posture"
-                />
-                <TerasMetadataList
-                  items={prototypeDashboardPostureFacts(displayRecord)}
-                  topOffset="compact"
-                />
-              </TerasPanel>
+        <TerasPanel frame="padded" treatment="neutral" spacing="normal" data-prototype-issues="true">
+          <TerasPanelHeader kicker="Attention" title="Open issues and required fixes" actionsLayout="inline"
+            actions={<TerasStatusPill tone={record.openIssues.length ? "warn" : "muted"}>{record.openIssues.length} open</TerasStatusPill>} />
+          {record.openIssues.length ? <TerasRecordTable profile="register" density="normal" rows={record.openIssues} getRowId={issue => issue.id} columns={[
+            { key: "issue", header: "Issue", intent: "primary", render: issue => issue.title },
+            { key: "status", header: "Status", intent: "status", render: issue => <TerasStatusPill tone={issue.tone}>{issue.status}</TerasStatusPill> },
+            { key: "owner", header: "Owner", render: issue => issue.owner },
+            { key: "fix", header: "Required fix", render: issue => issue.requiredFix },
+          ]} /> : <TerasEmptyState>No open issues are listed.</TerasEmptyState>}
+        </TerasPanel>
 
-              <TerasPanel frame="padded" treatment="neutral" spacing="loose">
-                <TerasPanelHeader
-                  actions={
-                    <TerasStatusPill tone={landingStatus.tone}>
-                      {prototypeSupportProfileLabel(
-                        record.landing.supportProfile,
-                      )}
-                    </TerasStatusPill>
-                  }
-                  actionsLayout="inline"
-                  description="Open one status area at a time for read-only source, support, blocker, evidence, receipt, and movement facts."
-                  kicker="Status Areas"
-                  title="Focused status details"
-                />
-                <TerasCardGrid columns={5}>
-                  {statusAreas.map((area) => (
-                    <TerasRailCard
-                      actionAriaLabel={`Open ${area.title} status detail`}
-                      actionEmphasis="secondary"
-                      key={area.id}
-                      kicker={area.kicker}
-                      onOpen={() => setOpenArea(area.id)}
-                      status={
-                        <TerasStatusPill size="compact" tone={area.tone}>
-                          {area.badge}
-                        </TerasStatusPill>
-                      }
-                      title={area.title}
-                      tone={area.tone}
-                    />
-                  ))}
-                </TerasCardGrid>
-              </TerasPanel>
-            </TerasZone>
-          }
-          sideFill={
-            <TerasZone fit="content">
-              {!isTerminal && (!sourceLifecycle || sourceLifecycle === record.lifecycle) ? (
-                <TerasPanel
-                  fit="content"
-                  frame="padded"
-                  treatment="rail"
-                  spacing="normal"
-                  tone={record.currentMove.tone}
-                >
-                  <TerasPanelHeader
-                    description={record.currentMove.detail}
-                    kicker="Current Required Move"
-                    title={record.currentMove.label}
-                  />
-                  <TerasActionRow spacing="normal">
-                    <TerasActionButton
-                      emphasis="primary"
-                      onClick={() => onOpenCurrentAction(record)}
-                      tone={
-                        record.currentMove.tone === "danger"
-                          ? "danger"
-                          : "accent"
-                      }
-                    >
-                      {record.currentMove.actionLabel}
-                    </TerasActionButton>
-                  </TerasActionRow>
-                </TerasPanel>
-              ) : null}
-
-              <TerasPanel
-                fit="content"
-                frame="padded"
-                treatment="rail"
-                spacing="normal"
-                tone={previewStatus.tone}
-              >
-                <TerasPanelHeader
-                  actions={
-                    <TerasStatusPill tone={previewStatus.tone}>
-                      {previewStatus.label}
-                    </TerasStatusPill>
-                  }
-                  actionsLayout="inline"
-                  description="Inspect runtime ops, profile config, local proof, logs, and receipt path."
-                  kicker="Preview Runtime"
-                  title={record.preview.profileRef}
-                />
-                <TerasActionRow spacing="normal">
-                  <TerasActionButton
-                    emphasis="primary"
-                    onClick={onOpenPreviewRuntime}
-                    tone={previewStatus.tone === "danger" ? "danger" : "accent"}
-                  >
-                    Open Preview Runtime
-                  </TerasActionButton>
-                </TerasActionRow>
-              </TerasPanel>
-
-              <TerasPanel
-                density="comfortable"
-                fit="content"
-                frame="padded"
-                treatment="state"
-                tone={openIssueTone}
-              >
-                <TerasPanelHeader
-                  actions={
-                    <TerasStatusPill tone={openIssueTone}>
-                      {record.openIssues.length} open
-                    </TerasStatusPill>
-                  }
-                  actionsLayout="inline"
-                  description="Issues that affect prototype status, evidence, or movement readiness."
-                  kicker="Open Issues"
-                  title="Current blockers and fixes"
-                />
-                {record.openIssues.length > 0 ? (
-                  <TerasList
-                    frame="contained"
-                    scrollHeight={openIssuesScrollable ? "medium" : undefined}
-                  >
-                    {record.openIssues.map((issue) => (
-                      <TerasStatusItem
-                        tone={issue.tone}
-                        detail={`${issue.owner} / ${issue.requiredFix}`}
-                        key={issue.id}
-                        label={issue.title}
-                        status={issue.status}
-                      />
-                    ))}
-                  </TerasList>
-                ) : (
-                  <TerasEmptyState>
-                    No open issues are listed for this prototype.
-                  </TerasEmptyState>
-                )}
-              </TerasPanel>
-
-              {onOpenSourceAuthoring && !isTerminal ? <TerasPanel frame="padded" treatment="rail" tone="info" fit="content" spacing="normal">
-                <TerasPanelHeader kicker="Source Authoring" title="App and design source" description="Open the owner-backed authoring tool. Source delivery does not replace Preview or maturity approval." />
-                <TerasActionButton emphasis="secondary" onClick={onOpenSourceAuthoring}>Open Source Authoring</TerasActionButton>
-              </TerasPanel> : null}
-
-              <PrototypeDashboardLifecyclePanel
-                lifecycle={displayRecord.lifecycle}
-                pendingClosure={Boolean(closure?.result && !["succeeded", "denied", "failed"].includes(closure.result.status))}
-                onOpenCloseout={onOpenCloseout}
-                onOpenHistory={onOpenHistory}
-                record={record}
-              />
-            </TerasZone>
-          }
-        />
-      </TerasModalShell>
-
-      <PrototypeStatusAreaDialog
-        areaId={openArea}
-        onClose={() => setOpenArea(null)}
-        receipts={receipts}
-        record={displayRecord}
-      />
-    </>
-  );
+        <TerasDetailGrid variant="balanced">
+          <TerasPanel frame="padded" treatment="neutral" spacing="normal">
+            <TerasPanelHeader kicker="Inspection" title="Source and handoff" description="Inspect the project source and its handoff records." />
+            <TerasActionRow layout="split" spacing="normal">
+              <TerasActionButton emphasis="secondary" aria-label="Open Source Context status detail" onClick={() => setOpenArea("source")}>Inspect source</TerasActionButton>
+              <TerasActionButton emphasis="secondary" aria-label={`Open ${handoff.title} status detail`} onClick={() => setOpenArea("movement")}>{terminal ? "Handoff history" : "Inspect handoff"}</TerasActionButton>
+              {!terminal ? <TerasActionButton emphasis="secondary" onClick={() => onOpenHistory(record)}>View History</TerasActionButton> : null}
+            </TerasActionRow>
+          </TerasPanel>
+          <PrototypeDashboardLifecyclePanel lifecycle={displayRecord.lifecycle}
+            pendingClosure={Boolean(closure?.result && !["succeeded", "denied", "failed"].includes(closure.result.status))}
+            onOpenCloseout={onOpenCloseout} onOpenHistory={onOpenHistory} record={record} />
+        </TerasDetailGrid>
+      </TerasContentRegion>
+    </TerasModalShell>
+    <PrototypeStatusAreaDialog areaId={openArea} onClose={() => setOpenArea(null)} receipts={receipts} record={displayRecord} />
+  </>;
 }

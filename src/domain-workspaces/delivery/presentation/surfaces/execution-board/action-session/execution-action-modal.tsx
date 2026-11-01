@@ -258,7 +258,7 @@ export function ExecutionActionModal({
         {actionStep === "draft" ? (
           <TerasTrayStack spacing="compact">
             <TerasPanel
-              frame="flush"
+              frame="padded"
               treatment="state"
               spacing="compact"
               tone={action.tone}
@@ -339,7 +339,7 @@ export function ExecutionActionModal({
         {actionStep === "apply" ? (
           <TerasTrayStack spacing="compact">
             <TerasPanel
-              frame="flush"
+              frame="padded"
               treatment="state"
               spacing="compact"
               tone="warn"
@@ -383,7 +383,7 @@ export function ExecutionActionModal({
         {actionStep === "receipt" ? (
           <TerasTrayStack spacing="compact">
             <TerasPanel
-              frame="flush"
+              frame="padded"
               treatment="state"
               spacing="compact"
               tone="ok"

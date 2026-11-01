@@ -104,7 +104,7 @@ export function WorkDesignReviewDraftView({
 
   return (
     <TerasZoneLayout variant="main-aside">
-      <TerasZone fit="fill">
+      <TerasZone scroll fit="fill">
         <TerasSubjectHero
           actionDetail="Snapshot and finalization checks"
           actionLabel="View Finalized Brief"
@@ -200,10 +200,10 @@ export function WorkDesignReviewDraftView({
         </TerasPanel>
       </TerasZone>
       <TerasPanel
-        fit="content"
+        fit="fill"
         frame="padded"
         treatment="rail"
-        layout="header-body"
+        overflow="auto"
         spacing="compact"
         tone={reviewGateProjection.gateTone}
       >

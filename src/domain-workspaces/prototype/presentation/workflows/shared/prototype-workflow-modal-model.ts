@@ -7,6 +7,18 @@ type PrototypeWorkflowStepLike<TStepId extends string> = {
   id: TStepId;
 };
 
+// Step badges describe navigation only. Workflow eligibility and draft readiness
+// are shown by their own status panels, not inferred from the source's next move.
+export function prototypeWorkflowNavigationSteps<T extends { id: string }>(
+  steps: T[], activeStep: string,
+) {
+  return steps.map((step) => ({
+    ...step,
+    stateLabel: step.id === activeStep ? "Current" : "Open",
+    tone: step.id === activeStep ? "info" as const : "muted" as const,
+  }));
+}
+
 export function prototypeWorkflowStepNavigation<TStepId extends string>(
   steps: readonly PrototypeWorkflowStepLike<TStepId>[],
   activeStep: TStepId,

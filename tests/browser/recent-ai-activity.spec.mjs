@@ -21,7 +21,7 @@ test("preview activity stays in the existing dock with keyboard-accessible histo
   await ready(page);
   const activity = page.getByRole("region", { name: "Recent AI activity", exact: true });
   await expect(activity).toContainText("Preview examples · no model requests were run");
-  await expect(activity.getByRole("button", { name: /^Inspect activity:/ })).toHaveCount(5);
+  await expect(activity.getByRole("button", { name: /^Inspect activity:/ })).toHaveCount(7);
   for (const width of [1200, 1440, 1700, 1920]) {
     await page.setViewportSize({ width, height: 1000 });
     const overflow = await activity.evaluate(node => node.scrollWidth - node.clientWidth);

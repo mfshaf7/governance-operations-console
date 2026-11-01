@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePrototypeWorkflowDraftSource } from "../shared/use-prototype-workflow-draft-source.ts";
+import { PrototypeWorkflowSourceWarning } from "../shared/prototype-workflow-source-warning.tsx";
 
 import {
   TerasDraftCloseGuardDialog,
@@ -16,6 +18,7 @@ import {
   type PrototypeWorkflowGuardIntent,
   prototypeWorkflowRecordCanEdit,
   prototypeWorkflowStepNavigation,
+  prototypeWorkflowNavigationSteps,
   prototypeWorkflowSubject,
 } from "../shared/prototype-workflow-modal-model.ts";
 import type { PrototypeMovementRequestStepId } from "../../../work-model/workflows/movement-request/prototype-movement-request-model.ts";
@@ -53,8 +56,8 @@ export function PrototypeMovementRequestModal({
   onClose,
   onOpenHistory,
   onRecordReceipt,
-  record,
-  sourceDeliveryPacket,
+  record: incomingRecord,
+  sourceDeliveryPacket: incomingPacket,
 }: {
   onBackToDashboard: () => void;
   onClose: () => void;
@@ -67,6 +70,7 @@ export function PrototypeMovementRequestModal({
   record: PrototypeRecord | null;
   sourceDeliveryPacket: PrototypeDeliveryPacketProjection | null;
 }) {
+  const { record, dependency: sourceDeliveryPacket, stale: sourceStale, reload: reloadSource } = usePrototypeWorkflowDraftSource(incomingRecord, incomingPacket);
   const [activeStep, setActiveStep] =
     useState<PrototypeMovementRequestStepId>("intent");
   const [closeGuardIntent, setCloseGuardIntent] =
@@ -184,7 +188,7 @@ export function PrototypeMovementRequestModal({
   }
 
   function requestBackToDashboard() {
-    if (draftDirty && draftMutable) {
+    if (draftDirty) {
       setCloseGuardIntent("back");
       return;
     }
@@ -193,7 +197,7 @@ export function PrototypeMovementRequestModal({
   }
 
   function requestClose() {
-    if (draftDirty && draftMutable) {
+    if (draftDirty) {
       setCloseGuardIntent("close");
       return;
     }
@@ -221,7 +225,7 @@ export function PrototypeMovementRequestModal({
 
   async function recordMovementRequest() {
     if (
-      !requestReady ||
+      sourceStale || !requestReady ||
       applicationPending ||
       (!sourceDeliveryPacket && command.disabledReason)
     ) {
@@ -264,7 +268,7 @@ export function PrototypeMovementRequestModal({
                 ? {
                     dataAction: command.id,
                     disabled:
-                      applicationPending ||
+                      sourceStale || applicationPending ||
                       !requestReady ||
                       (!sourceDeliveryPacket && Boolean(command.disabledReason)),
                     label: applicationPending
@@ -297,7 +301,7 @@ export function PrototypeMovementRequestModal({
                 : command.disabledReason
                   ? {
                       label: "Open Dashboard",
-                      onClick: onBackToDashboard,
+                      onClick: requestBackToDashboard,
                       emphasis: "secondary",
                     }
                   : undefined
@@ -322,9 +326,10 @@ export function PrototypeMovementRequestModal({
         }
         statusLabel={movementMove.statusLabel}
         statusTone={movementMove.tone}
-        steps={workflowSteps}
+        steps={prototypeWorkflowNavigationSteps(workflowSteps, activeStep)}
         subject={prototypeWorkflowSubject(record)}
         support={
+          <><PrototypeWorkflowSourceWarning stale={sourceStale} dirty={draftDirty} busy={applicationPending} onReload={reloadSource} />
           <PrototypeMovementRequestSupportPanels
             activeStep={activeStep}
             authorityStatus={authorityStatus}
@@ -339,7 +344,7 @@ export function PrototypeMovementRequestModal({
             record={record}
             reviewStatus={reviewStatus}
             sourceDeliveryPacket={Boolean(sourceDeliveryPacket)}
-          />
+          /></>
         }
         surfaceId="prototype-movement-request"
         title={sourceDeliveryPacket ? "Delivery Handoff" : "Movement Request"}

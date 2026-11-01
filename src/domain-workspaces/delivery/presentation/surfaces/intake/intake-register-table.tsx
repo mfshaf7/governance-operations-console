@@ -55,7 +55,7 @@ export function DeliveryIntakeRegisterTable({
       intent: "status",
       key: "status",
       render: (source) => (
-        <TerasStatusPill tone={source.tone}>
+        <TerasStatusPill wrap="nowrap" tone={source.tone}>
           {source.status_label}
         </TerasStatusPill>
       ),

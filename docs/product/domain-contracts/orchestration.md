@@ -20,6 +20,17 @@ Concrete definition contracts are indexed in
 
 ## Architecture Decision
 
+The pending UI maintenance batch preserves these three areas and the owner
+boundaries. Home keeps attention visible and opens detailed service inspection
+on demand. Item actions preserve selected identity; all register columns and
+supporting facts remain reachable by scrolling or disclosure. Admission rows
+retain exact owner gate identities. Runtime metadata is not a worker-health
+observation, and catalog observation time is not historical recording time.
+Definition design remains a draft/contract preparation path, including when the
+definition register is empty; it does not acquire deployment or ART-write power.
+See the [operator procedure](../orchestration-and-environment-live-controls.md)
+for recovery and the source/preview qualification limit.
+
 Recommendation posture: `extend`.
 
 Orchestration extends:

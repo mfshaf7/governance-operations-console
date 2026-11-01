@@ -9,6 +9,7 @@ import {
 } from "@/teras";
 
 import type { PrototypeRecord } from "../../read-model/prototype-workspace-read-model.ts";
+import { prototypeOverviewContext } from "../shared/prototype-record-display-model.ts";
 import {
   prototypeLifecycleLabel,
   prototypeRecordActionEmphasis,
@@ -56,7 +57,7 @@ function prototypeRegisterColumns({
       intent: "primary",
       key: "prototype",
       render: (record) => (
-        <TerasRecordCellText description={record.summary} title={record.name} />
+        <TerasRecordCellText description={prototypeOverviewContext(record.summary, 160)} title={record.name} />
       ),
     },
     {
@@ -75,7 +76,7 @@ function prototypeRegisterColumns({
       intent: "status",
       key: "status",
       render: (record) => (
-        <TerasStatusPill tone={prototypeRecordTone(record)}>
+        <TerasStatusPill tone={prototypeRecordTone(record)} wrap="nowrap">
           {prototypeRecordStatusLabel(record)}
         </TerasStatusPill>
       ),

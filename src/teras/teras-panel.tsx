@@ -175,11 +175,13 @@ export function TerasPanelStack({
   children,
   className,
   fill,
+  scroll = false,
 }: {
   bounded?: TerasPanelStackPosition;
   children: ReactNode;
   className?: string;
   fill: TerasPanelStackPosition;
+  scroll?: boolean;
 }) {
   const panelChildren = terasPanelStackChildren(children);
   const childCount = panelChildren.length;
@@ -191,7 +193,7 @@ export function TerasPanelStack({
         : Math.max(0, childCount - 1);
   const rowTracks = Array.from(
     { length: childCount },
-    (_, index) => (index === fillIndex ? "minmax(0, 1fr)" : "auto"),
+    (_, index) => (index === fillIndex ? (scroll ? "minmax(max-content, 1fr)" : "minmax(0, 1fr)") : scroll ? "max-content" : "auto"),
   ).join(" ");
 
   return (
@@ -199,6 +201,7 @@ export function TerasPanelStack({
       className={cx(styles.terasPanelStack, className)}
       data-bounded={bounded}
       data-fill={fill}
+      data-scroll={scroll ? "true" : "false"}
       data-teras-panel-stack="true"
       style={{ gridTemplateRows: rowTracks }}
     >

@@ -30,11 +30,11 @@ export function ProductPortfolioCurationSelectorPanel({
       tone="warn"
     >
       <TerasPanelHeader
-        description="Select one listing cohort, then inspect or change its Portfolio-owned catalog placement."
-        kicker="Curation Views"
+        description="Choose a view to inspect product visibility, audience, featured placement, and order."
+        kicker="Listing settings"
         statusLabel="local"
         statusTone="warn"
-        title="Listing cohorts"
+        title="Listing views"
       />
 
       <TerasSelectorRailList>

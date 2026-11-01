@@ -29,8 +29,8 @@ export function SourceEditorWorkspace({ target, onClose, onSaved, onReviewed }: 
       description="Edit text or import files, review the diff, then save a private draft. Exact-digest acceptance and Gary source delivery are separate actions."
       modalAttributes={{ onKeyDown: event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); if (runtime.editable && operations.length) save(); } } }}>
       <TerasFieldStack spacing="normal">
-        <TerasPanel frame="padded" treatment="state" tone={runtime.error ? "danger" : runtime.uncertain ? "warn" : "info"}>
-          <TerasPanelHeader kicker={runtime.pending ? "Working" : runtime.dirty ? "Unsaved local changes" : "Current retained source"} title={current?.current.state ?? "Loading source workspace"}
+        <TerasPanel spacing="normal" frame="padded" treatment="state" tone={runtime.error ? "danger" : runtime.uncertain ? "warn" : "info"}>
+          <TerasPanelHeader kicker={runtime.pending ? "Working" : runtime.dirty ? "Unsaved local changes" : "Current retained source"} title={current?.current.state ?? (runtime.error ? "Source workspace unavailable" : "Loading source workspace")}
             description={runtime.error ?? runtime.notice ?? "Ctrl/Cmd+S saves the private draft. Ctrl/Cmd+F searches the code editor. Tab indents; Escape then Tab moves keyboard focus out of the editor."} />
           {current && showDetails ? <TerasMetadataList items={[
             { label: "Session", value: current.current.sessionId }, { label: "Source base", value: current.base }, { label: "Owner revision", value: current.current.revision },

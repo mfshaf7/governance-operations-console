@@ -87,12 +87,10 @@ test("selected run facts preserve source, definition, progress, business, effect
   assert.deepEqual(
     orchestrationRunSelectedFacts(running).map((fact) => fact.label),
     [
-      "Request / Run",
       "Source",
       "Definition",
       "Current Node",
       "Node Owner",
-      "Business State",
       "Effect Posture",
       "Run State",
     ],

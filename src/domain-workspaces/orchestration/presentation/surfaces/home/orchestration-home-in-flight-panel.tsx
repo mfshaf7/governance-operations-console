@@ -18,7 +18,7 @@ export function OrchestrationHomeInFlightPanel({
   onOpenSurface,
   viewModel,
 }: {
-  onOpenSurface: (surfaceId: OrchestrationHomeTargetSurface) => void;
+  onOpenSurface: (surfaceId: OrchestrationHomeTargetSurface, recordId?: string) => void;
   viewModel: OrchestrationHomeViewModel;
 }) {
   const projection = orchestrationHomeInFlightProjection(
@@ -34,11 +34,11 @@ export function OrchestrationHomeInFlightPanel({
       overflow="hidden"
     >
       <TerasPanelHeader
-        description="Queued, running, and healthy structured waits outside the attention queue."
+        description="Runs in progress or waiting normally."
         kicker="In-flight Runs"
         statusLabel={projection.statusLabel}
         statusTone={projection.tone}
-        title="Active run posture"
+        title="In progress"
       />
       {viewModel.inFlightRuns.length > 0 ? (
         <TerasList fit="fill" frame="contained">
@@ -50,12 +50,12 @@ export function OrchestrationHomeInFlightPanel({
                   <ArrowUpRight aria-hidden="true" size={12} />
                 </>
               }
-              ariaLabel={`${row.actionLabel}: ${row.title}`}
+              ariaLabel={`${row.actionLabel}: ${row.title} · ${row.label}`}
               detail={row.detail}
               key={row.id}
               label={row.label}
               meta={row.meta}
-              onSelect={() => onOpenSurface(row.targetSurfaceId)}
+              onSelect={() => onOpenSurface(row.targetSurfaceId, row.id)}
               title={row.title}
               tone={row.tone}
             />

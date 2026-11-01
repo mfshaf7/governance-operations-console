@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import {
   TerasActionButton,
+  TerasDraftCloseGuardDialog,
   TerasContentTray,
   TerasMetadataList,
   TerasModalShell,
@@ -46,18 +49,32 @@ export function CatalogRepositoryLinkDialog({
   target: CatalogDeliveryLinkTarget | null;
   value: DeliveryCatalogValue | null;
 }) {
+  const [closeGuardOpen, setCloseGuardOpen] = useState(false);
+  const dirty = open && result?.status !== "applied" && Boolean(note.trim());
+  function requestClose() {
+    if (pending) return;
+    if (dirty) setCloseGuardOpen(true);
+    else onClose();
+  }
+  useEffect(() => { if (!open) setCloseGuardOpen(false); }, [open]);
+  useEffect(() => {
+    const guard = (event: BeforeUnloadEvent) => { if (open && (dirty || pending)) event.preventDefault(); };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [open, dirty, pending]);
   if (!open || !target) return null;
 
   const applied = result?.status === "applied";
   const catalogReceipt = catalogReceiptRef(result);
 
   return (
+    <>
     <TerasModalShell
       bodyLayout="scroll"
       description="Review one atomic OOS command that verifies Repository readiness, applies the Catalog link, updates the Delivery work item, and returns both receipts."
       footer={
         <>
-          <TerasActionButton emphasis="secondary" onClick={onClose}>
+          <TerasActionButton emphasis="secondary" disabled={pending} onClick={requestClose}>
             {applied ? "Close" : "Cancel"}
           </TerasActionButton>
           {!applied ? (
@@ -75,7 +92,7 @@ export function CatalogRepositoryLinkDialog({
       }
       height="content"
       kicker="Repository / Catalog / Delivery"
-      onClose={onClose}
+      onClose={requestClose}
       surfaceId="delivery-repository-link"
       title="Link Owner Repository"
       width="standard"
@@ -162,6 +179,10 @@ export function CatalogRepositoryLinkDialog({
         ) : null}
       </TerasTrayStack>
     </TerasModalShell>
+    <TerasDraftCloseGuardDialog open={closeGuardOpen} title="Discard Repository link note?" kicker="Unsubmitted acceptance note"
+      description="The link has not been confirmed. Discarding removes this draft note; inspect the original owner result before retrying an uncertain request."
+      leaveLabel="Discard Draft" onKeepEditing={() => setCloseGuardOpen(false)} onLeave={() => { setCloseGuardOpen(false); onNoteChange(""); onClose(); }} />
+    </>
   );
 }
 

@@ -2,8 +2,9 @@ import {
   TerasEmptyState,
   TerasPanel,
   TerasPanelHeader,
-  TerasList,
-  TerasSignalItem,
+  TerasTimeline,
+  TerasTimelineItem,
+  TerasTechnicalDetails,
 } from "@/teras";
 
 import {
@@ -31,32 +32,41 @@ export function DeliveryHomeRecentActivityPanel({
       overflow="hidden"
     >
       <TerasPanelHeader
-        kicker="Recent Activity"
+        kicker="Delivery Activity"
         statusLabel={panelProjection.statusLabel}
         statusTone={panelProjection.tone}
-        title="System activity"
-        description={sourceDetail??"Delivery audit events from projected packages, receipts, and system state."}
+        title="Recent activity"
+        description={sourceDetail ?? "Latest recorded events in this Delivery scope."}
       />
       {recentActivity.length > 0 ? (
-        <TerasList
-          data-delivery-home-activity-list="true"
-          fit="fill"
+        <TerasTimeline
           frame="contained"
+          ariaLabel="Recent Delivery activity"
+          data-delivery-home-activity-list="true"
         >
           {recentActivity.map((activity) => (
-            <TerasSignalItem
-              detail={activity.detail}
+            <TerasTimelineItem
+              detail={activity.packageLabel}
+              displayTimestamp={activity.timestampLabel}
+              timestamp={activity.timestamp}
               key={activity.eventId}
-              label={activity.categoryLabel}
-              meta={activity.metadataLabel}
-              title={activity.title}
+              label={activity.title}
+              status={activity.categoryLabel}
+              evidence={<TerasTechnicalDetails items={[
+                { label: "Recorded detail", value: activity.detail },
+                { label: "Recorded at (UTC)", value: activity.timestamp },
+                { label: "Actor", value: activity.actor || "Not recorded" },
+                { label: "Package reference", value: activity.packageRef },
+                { label: "Receipt", value: activity.receiptLabel },
+                { label: "Event reference", value: activity.eventRef },
+              ]} />}
               tone={activity.tone}
             />
           ))}
-        </TerasList>
+        </TerasTimeline>
       ) : (
         <TerasEmptyState fill>
-          {sourceDetail??"No recent Delivery audit events are projected."}
+          {sourceDetail ?? "No recent Delivery audit events are projected."}
         </TerasEmptyState>
       )}
     </TerasPanel>

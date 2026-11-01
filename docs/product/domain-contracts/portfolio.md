@@ -10,11 +10,17 @@ work.
 
 Surface label: `Product Portfolio`.
 
+In connected mode, publication and listing changes share **Publication** rather
+than exposing a standalone redirect. The disconnected listing-layout examples
+retain **Listings / Listing settings** (stable internal route `curation`).
+Publication registers a product in the catalog; it does not deploy the product.
+
 ## Connected Operation
 
-Connected Products reads canonical continuity. Publication and Curation share
-one existing native OOS command path with explicit committed-manifest locator
-review and original-request GET recovery. Entered pointers do not attest
+Connected Products reads canonical continuity. Publication first prepares source
+references and current publication state from a selected product, then uses the
+existing native OOS command path with explicit review and original-request GET
+recovery. The preparation extension awaits exact-source acceptance/commissioning. Entered pointers do not attest
 product identity or readiness: native owners verify both from source.
 Connected views do not expose fixture registers, local listing mutations or
 fixture counts. Exact current Inventory authority is read server-side for each
@@ -481,7 +487,7 @@ approve security posture, or make a Prototype preview a production product.
 ## Operator Surface Responsibilities
 
 Product Portfolio uses a fullscreen workspace with exactly three peer
-surfaces: `Products`, `Publication`, and `Curation`. `Products` is the landing
+surfaces: `Products`, `Publication`, and `Listings`. `Products` is the landing
 surface; Portfolio does not add a shallow Home page. Health and source
 freshness remain visible through persistent workspace status signals and the
 product dashboard rather than separate navigation.
@@ -499,7 +505,7 @@ Product Dashboard uses a stable `large` detail surface. Its identity header is
 followed by five dense summary cards for Maturity, Availability, Release,
 Listing, and Freshness. `Overview`, `Operations`, and `History` are stable tabs.
 The primary product access action is first class. Listing changes route to
-`Curation`; the dashboard must not duplicate listing mutation controls.
+`Listing settings`; the dashboard must not duplicate listing mutation controls.
 History composes source classification, active-inventory promotion,
 publication, release, runtime observation, publication-decision, and listing
 receipts in event order without mutating source history.
@@ -533,9 +539,9 @@ This is dashboard composition, not a fourth peer Portfolio surface.
 - the result is a prototype-local receipt and dirty drafts use the shared exit
   guard
 
-### Curation
+### Listing settings
 
-Curation uses the accepted three-zone configuration layout: catalog views,
+Listing settings uses the accepted three-zone configuration layout: catalog views,
 current listings, and selected listing. Catalog views are `All Active`,
 `Featured`, `Internal`, `Client`, `Public`, and `Unlisted`.
 
@@ -543,7 +549,7 @@ Portfolio may change only listing state, a policy-permitted listing scope,
 featured placement, and relative position (`First`, `Last`, or `After
 product`). It must never expose raw numeric sort order. Retired entries remain
 read-only. Product-owned purpose, summary, classification, artwork, access,
-runtime, release, and security facts are not editable through Curation.
+runtime, release, and security facts are not editable through Listing settings.
 After apply, selection remains on the affected product and receipt confirmation
 is scoped to that product rather than whichever listing receipt was recorded
 last.
@@ -566,7 +572,7 @@ Portfolio must not:
 
 ## Current Implementation Disposition
 
-The mounted implementation exposes Products, Publication, and Curation as
+The mounted implementation exposes Products, Publication, and Listings as
 separate peer surfaces. Publication accepts only structured product-owner
 packets carrying canonical Workspace product identity. It cannot create or
 admit a product.

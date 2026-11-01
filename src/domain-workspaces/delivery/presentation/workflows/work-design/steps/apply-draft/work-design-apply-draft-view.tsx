@@ -102,7 +102,7 @@ export function WorkDesignApplyDraftView({
   return (
     <TerasContentRegion gap="normal">
       <TerasZoneLayout variant="main-aside">
-        <TerasZone fit="fill">
+        <TerasZone scroll fit="fill">
           <TerasSubjectHero
             actionDetail="Snapshot and finalization checks"
             actionLabel="View Finalized Brief"
@@ -140,7 +140,7 @@ export function WorkDesignApplyDraftView({
             </TerasList>
           </TerasPanel>
         </TerasZone>
-        <TerasZone fit="fill">
+        <TerasZone scroll fit="fill">
           <TerasPanel
             density="compact"
             frame="padded"

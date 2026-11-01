@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveConsoleProductPublicationConfiguration } from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import {
   productPublicationOosConfigured,
+  prepareGovernedProductPublication,
   ProductPublicationOosError,
   readGovernedProductPublication,
   submitGovernedProductPublication,
@@ -54,6 +55,12 @@ export async function readProductPublicationRoute(requestId: string) {
   } catch (error) {
     return productPublicationErrorResponse(error);
   }
+}
+
+export async function prepareProductPublicationRoute(productId: string) {
+  try {
+    return NextResponse.json(await prepareGovernedProductPublication(productId), { headers: noStoreHeaders });
+  } catch (error) { return productPublicationErrorResponse(error); }
 }
 
 function productPublicationErrorResponse(error: unknown) {

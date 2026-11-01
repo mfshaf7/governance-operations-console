@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   TerasActionButton,
   TerasContentTray,
+  TerasDraftCloseGuardDialog,
   TerasEmptyState,
   TerasFieldStack,
   TerasList,
@@ -57,13 +58,40 @@ export function ExecutionWorkSessionModal({
   const [submitting, setSubmitting] = useState(false);
   const [sourceIntent, setSourceIntent] = useState<string | null>(null);
 
+  const [closeGuard, setCloseGuard] = useState<"close" | "reload" | null>(null);
+  const [sourceChanged, setSourceChanged] = useState(false);
+  const sourceKey = JSON.stringify(draft);
+  const initializedSource = useRef<string | null>(null);
+  const savedDecision = useRef<string | null>(null);
+  const decisionKey = JSON.stringify(decision);
+  const decisionRef = useRef(decisionKey); decisionRef.current = decisionKey;
+  const dirty = !runtime.projection?.session_id && savedDecision.current !== null && decisionKey !== savedDecision.current;
+  function loadDecision() {
+    const next = decisionInputFromDraft(draft ?? undefined);
+    initializedSource.current = sourceKey;
+    savedDecision.current = JSON.stringify(next);
+    setDecision(next); setSourceChanged(false); setCloseGuard(null);
+  }
   useEffect(() => {
-    if (!draft) {
-      setDecision(null);
-      return;
+    if (initializedSource.current === sourceKey) return;
+    if (!runtime.projection?.session_id && savedDecision.current !== null && savedDecision.current !== decisionRef.current) {
+      setSourceChanged(true); return;
     }
-    setDecision(decisionInputFromDraft(draft));
-  }, [draft]);
+    const next = decisionInputFromDraft(draft ?? undefined);
+    initializedSource.current = sourceKey;
+    savedDecision.current = JSON.stringify(next);
+    setDecision(next); setSourceChanged(false);
+  }, [sourceKey, draft, runtime.projection?.session_id]);
+  function requestClose() {
+    if (submitting) return;
+    if (dirty) setCloseGuard("close");
+    else onClose();
+  }
+  useEffect(() => {
+    const guard = (event: BeforeUnloadEvent) => { if (dirty || submitting) event.preventDefault(); };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [dirty, submitting]);
 
   const decisionReady = useMemo(
     () => (decision ? workSessionDecisionReady(decision) &&
@@ -88,7 +116,7 @@ export function ExecutionWorkSessionModal({
   const canStart =
     runtime.mode === "live" &&
     runtime.projectionStatus === "current" &&
-    Boolean(draft && decisionReady);
+    Boolean(draft && decisionReady && !sourceChanged);
   const canRunProjectedCommand =
     runtime.mode === "live" &&
     runtime.projectionStatus === "current" &&
@@ -117,21 +145,25 @@ export function ExecutionWorkSessionModal({
   }
 
   return (
+    <>
     <TerasModalShell
       bodyLayout="scroll"
       description="Run the governed source lifecycle from authoritative OOS state, gates, and receipts."
       footer={
-        <TerasActionButton emphasis="secondary" onClick={onClose}>
+        <TerasActionButton emphasis="secondary" disabled={submitting} onClick={requestClose}>
           Back to Board
         </TerasActionButton>
       }
       height="content"
       kicker="Delivery Execution"
-      onClose={onClose}
+      onClose={requestClose}
       surfaceId="delivery-execution-work-session"
       title="Governed Work Session"
       width="large"
     >
+      {sourceChanged ? <TerasEmptyState>The owner decision changed while you were editing. Your draft is retained; reload the current decision before starting work.
+        <TerasActionButton disabled={submitting} emphasis="secondary" onClick={() => setCloseGuard("reload")}>Reload current decision</TerasActionButton>
+      </TerasEmptyState> : null}
       <TerasZoneLayout variant="main-aside">
         <TerasZone fit="fill">
           <TerasPanel
@@ -188,6 +220,7 @@ export function ExecutionWorkSessionModal({
               />
               <TerasFieldStack spacing="normal">
                 <TerasTextField
+                  disabled={submitting}
                   label="Covered ART items (comma-separated)"
                   onValueChange={(value) => setDecision(current => current ? { ...current,
                     coveredWorkItemIds: value.split(",").map(item => item.trim().replace(/^#?([1-9][0-9]*)$/, "work-item-$1"))
@@ -196,6 +229,7 @@ export function ExecutionWorkSessionModal({
                     .map(item => item.replace(/^work-item-/, "")).join(", ")}
                 />
                 <TerasSelectField
+                  disabled={submitting}
                   label="Landing unit model"
                   onValueChange={(value) =>
                     updateDecision(setDecision, "landingUnitDecision", value)
@@ -213,6 +247,7 @@ export function ExecutionWorkSessionModal({
                   value={decision.landingUnitDecision}
                 />
                 <TerasTextField
+                  disabled={submitting}
                   label="Landing unit id"
                   onValueChange={(value) =>
                     updateDecision(setDecision, "landingUnitId", value)
@@ -220,6 +255,7 @@ export function ExecutionWorkSessionModal({
                   value={decision.landingUnitId}
                 />
                 <TerasTextField
+                  disabled={submitting}
                   label="Branch"
                   onValueChange={(value) =>
                     updateDecision(setDecision, "branch", value)
@@ -227,6 +263,7 @@ export function ExecutionWorkSessionModal({
                   value={decision.branch}
                 />
                 <TerasNoteField
+                  disabled={submitting}
                   label="Split reason"
                   minimumHeight="short"
                   onValueChange={(value) =>
@@ -235,6 +272,7 @@ export function ExecutionWorkSessionModal({
                   value={decision.splitReason}
                 />
                 <TerasNoteField
+                  disabled={submitting}
                   label="Rollback boundary"
                   minimumHeight="short"
                   onValueChange={(value) =>
@@ -243,6 +281,7 @@ export function ExecutionWorkSessionModal({
                   value={decision.rollbackBoundary}
                 />
                 <TerasSelectField
+                  disabled={submitting}
                   label="Architecture packet"
                   onValueChange={(value) =>
                     setDecision((current) =>
@@ -267,6 +306,7 @@ export function ExecutionWorkSessionModal({
                   <TerasContentTray kicker="Architecture Location">
                     <TerasFieldStack spacing="normal">
                       <TerasTextField
+                  disabled={submitting}
                         label="Owner repo"
                         onValueChange={(value) =>
                           updateArchitectureLocation(setDecision, "repo", value)
@@ -274,6 +314,7 @@ export function ExecutionWorkSessionModal({
                         value={decision.architecture.artifactLocation?.repo ?? ""}
                       />
                       <TerasTextField
+                  disabled={submitting}
                         label="Relative path"
                         onValueChange={(value) =>
                           updateArchitectureLocation(
@@ -295,8 +336,8 @@ export function ExecutionWorkSessionModal({
 
           {runtime.mode === "live" && target.workItemId && (projection?.session_id || draft) ? <SourceAuthorizationPanel
             subject={{ kind: "delivery", work_item_ref: `work-item-${target.workItemId}` }} sourceStartDigest={null}
-            decision={projection?.session_id || !decisionReady ? null : sourceDecision} onIntentChange={setSourceIntent}
-            preparationAllowed={Boolean(projection?.session_id || decisionReady)}
+            decision={projection?.session_id || !decisionReady || sourceChanged ? null : sourceDecision} onIntentChange={setSourceIntent}
+            preparationAllowed={Boolean(projection?.session_id || (decisionReady && !sourceChanged))}
             boundIntentRef={projection?.source_authorization?.intent_ref ?? null}
             onContinueApprovedScope={canContinueApprovedSourceAccess(runtime)
               ? (intentId) => run(() => runtime.continueWork(intentId)) : undefined}
@@ -531,6 +572,11 @@ export function ExecutionWorkSessionModal({
         </TerasZone>
       </TerasZoneLayout>
     </TerasModalShell>
+    <TerasDraftCloseGuardDialog open={closeGuard !== null} title={closeGuard === "reload" ? "Reload work-session decision?" : "Discard work-session edits?"}
+      kicker="Unsubmitted source decision" description="These decision edits have not started a work session. Discarding removes the local edits; the owner decision remains available."
+      leaveLabel={closeGuard === "reload" ? "Discard and Reload" : "Discard Draft"}
+      onKeepEditing={() => setCloseGuard(null)} onLeave={() => { if (closeGuard === "reload") loadDecision(); else onClose(); }} />
+    </>
   );
 }
 

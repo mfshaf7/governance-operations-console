@@ -63,7 +63,7 @@ export function DeliveryHomeSurface({
           sourceDetail={model.evidence_coverage?.activity.detail}
         />
       }
-      sideFill={model.history_scope === "history" ? <TerasEmptyState>History is read-only. Inspect retained packages in Work Design, Refinement or Execution. Switch to Current to ask the Delivery advisor.</TerasEmptyState> : <DeliveryHomeAgentConsole viewModel={viewModel} />}
+      sideFill={model.history_scope === "history" ? <TerasEmptyState>History is read-only. Inspect retained packages in Work Design, Refinement or Execution. Switch to Current to ask the Delivery advisor.</TerasEmptyState> : <DeliveryHomeAgentConsole model={model} />}
       sideFillProps={{ "data-delivery-home-agent-console": "true" }}
     />
   );

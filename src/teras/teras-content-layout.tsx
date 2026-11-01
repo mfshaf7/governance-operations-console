@@ -12,6 +12,7 @@ export function TerasContentFrame({
   fill = false,
   gap = "normal",
   relative = false,
+  scroll = false,
   variant,
   ...props
 }: HTMLAttributes<HTMLDivElement> & {
@@ -19,6 +20,7 @@ export function TerasContentFrame({
   fill?: boolean;
   gap?: TerasContentGap;
   relative?: boolean;
+  scroll?: boolean;
   variant: TerasContentFrameVariant;
 }) {
   return (
@@ -28,6 +30,7 @@ export function TerasContentFrame({
       data-fill={fill ? "true" : "false"}
       data-gap={gap}
       data-relative={relative ? "true" : "false"}
+      data-scroll={scroll ? "true" : "false"}
       data-teras-content-frame="true"
       data-variant={variant}
     >

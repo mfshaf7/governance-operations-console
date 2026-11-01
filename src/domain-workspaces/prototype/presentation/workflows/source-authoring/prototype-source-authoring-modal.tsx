@@ -47,7 +47,7 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
     : selectedOwner?.kind === "delivery-packet" ? `Native Delivery packet + Studio registry backlink / ${selectedOwner.custody.owner} / ${selectedOwner.decision_ref}`
       : current ? `${current.source_scope.source_root} + ${current.source_scope.design_profile}` : "Not prepared";
   return <TerasFieldStack spacing="normal">
-    <TerasPanel frame="padded" treatment="state" tone={runtime.error ? "danger" : "info"}>
+    <TerasPanel spacing="normal" frame="padded" treatment="state" tone={runtime.error ? "danger" : "info"}>
       <TerasPanelHeader kicker="Canonical Source Request" title={current?.state ?? "Select or prepare source work"} description={runtime.error ?? current?.next_action.reason ?? current?.next_action.code ?? "Recover existing requests before creating new source work."} />
       <TerasActionRow>
         <TerasActionButton disabled={runtime.pending} emphasis="secondary" onClick={() => void runtime.refresh()}>Refresh retained source requests</TerasActionButton>
@@ -79,7 +79,7 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
     </TerasPanel>
     {current && current.state !== "succeeded" ? <>
       <SourceAuthorizationPanel key={current.request_id} subject={{ kind: "prototype", prototype_id: prototypeId, source_request_id: current.request_id }} sourceStartDigest={current.source_start_digest} onIntentChange={setSourceIntent} />
-      <TerasPanel frame="padded" treatment="neutral">
+      <TerasPanel spacing="normal" frame="padded" treatment="neutral">
         <TerasPanelHeader kicker="Bounded Authoring Controls" title="Draft, inspect and deliver source" description="Generation creates no source commit. Exact draft acceptance and accountable human PR approval are separate actions." />
         <TerasActionRow>
           {current.session_id && realization && !current.source_request.owner_preparation ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => setEditorOpen(true)}>Edit or import source</TerasActionButton> : null}

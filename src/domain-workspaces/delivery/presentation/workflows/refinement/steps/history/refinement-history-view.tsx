@@ -54,7 +54,7 @@ export function RefinementHistoryView({
 
   return (
     <TerasZoneLayout variant="main-aside">
-      <TerasZone fit="fill">
+      <TerasZone scroll fit="fill">
         <TerasSubjectHero
           actionDetail={packet ? "Finalized brief and Work Design apply receipt" : "Original Work Design evidence; no Refinement handoff is inferred"}
           actionLabel={packet ? "View Work Design Handoff" : "Inspect Work Design History"}
@@ -94,7 +94,7 @@ export function RefinementHistoryView({
         </TerasPanel>
       </TerasZone>
 
-      <TerasZone fit="fill">
+      <TerasZone scroll fit="fill">
         <TerasPanel
           frame="padded"
           treatment="rail"

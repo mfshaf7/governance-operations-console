@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import {
   TerasActionButton,
+  TerasEmptyState,
   TerasMetadataList,
   TerasModalShell,
   TerasPanel,
@@ -23,6 +24,7 @@ import {
   prototypePreviewStatus,
   prototypeSelectedPanelMeta,
   prototypeSelectedPanelStatus,
+  prototypeOverviewContext,
 } from "../../shared/prototype-record-display-model.ts";
 import type {
   PrototypePreviewRuntimeActionId,
@@ -110,7 +112,7 @@ export function PrototypePreviewRuntimeModal({
     "refresh-preview-proof",
   );
   const proofResult = prototypePreviewProofResult(selectedRecord);
-  const previewStatus = prototypePreviewStatus(selectedRecord);
+  const previewStatus = prototypePreviewStatus(selectedRecord, ownerMode);
   const selectedStatus = prototypeSelectedPanelStatus(selectedRecord);
   const activeProfileDraft =
     profileDraft ?? prototypePreviewProfileDraftFromRecord(selectedRecord);
@@ -216,7 +218,7 @@ export function PrototypePreviewRuntimeModal({
                   </TerasStatusPill>
                 }
                 actionsLayout="inline"
-                description={selectedRecord.summary}
+                description={prototypeOverviewContext(selectedRecord.summary)}
                 kicker="Selected Prototype"
                 title={selectedRecord.name}
               />
@@ -240,10 +242,12 @@ export function PrototypePreviewRuntimeModal({
               value={activeTab}
             />
 
-            {modeStage}
+            {ownerMode === "loading" || ownerMode === "error" ? <TerasEmptyState>
+              {ownerMode === "loading" ? "Checking the Studio preview profile and runtime…" : "Studio preview status is unavailable. Reopen Preview Runtime to retry; local examples are excluded."}
+            </TerasEmptyState> : modeStage}
           </TerasZone>
 
-          <TerasZone fit="fill">{modeDock}</TerasZone>
+          <TerasZone fit="fill">{ownerMode === "loading" || ownerMode === "error" ? null : modeDock}</TerasZone>
         </TerasZoneLayout>
       </TerasModalShell>
 

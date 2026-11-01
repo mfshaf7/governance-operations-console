@@ -142,7 +142,7 @@ export function useAgentConsoleController({
   const lastDraftConversationScope = useRef<string | null>(null);
   const [contextModeChanging, setContextModeChanging] = useState(false);
   const [pendingOpenCommand, setPendingOpenCommand] = useState<{ command: string; mode: AgentInteractionMode } | null>(null);
-  const [floatingModeMenuOpen, setFloatingModeMenuOpen] = useState(false);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [modalSurfaceOpen, setModalSurfaceOpen] = useState(false);
   const agentTranscriptRef = useRef<HTMLDivElement | null>(null);
   const dockDragOffsetRef = useRef({ x: 0, y: 0 });
@@ -860,7 +860,7 @@ export function useAgentConsoleController({
       rotateAgentSession();
       setAgentConversationTurns([]);
       setAgentContextMode(mode);
-      setFloatingModeMenuOpen(false);
+      setModeMenuOpen(false);
       return true;
     } catch (error) {
       appendAgentTranscript([terminalEntry("error", error instanceof Error ? error.message : "current governed session could not be closed")]);
@@ -1023,7 +1023,6 @@ export function useAgentConsoleController({
         ? "workspace"
         : "neutral";
   const floatingDockConstrainedByModal = isFloatingDock && modalSurfaceOpen;
-  const useCompactFloatingControls = isFloatingDock && !modelDockExpanded;
   const modeLabel = agentInteractionModeLabel(contextMode);
   const dockStyle: CSSProperties | undefined =
     !modelDockExpanded && dockPosition
@@ -1049,7 +1048,7 @@ export function useAgentConsoleController({
     contextTitle,
     dockStyle,
     floatingDockConstrainedByModal,
-    floatingModeMenuOpen,
+    modeMenuOpen,
     handleAgentCancel,
     handleAgentContextModeChange,
     handleAgentPromptKeyDown,
@@ -1065,8 +1064,7 @@ export function useAgentConsoleController({
     providerStateLabel,
     providerStatusLabel,
     setAgentPrompt,
-    setFloatingModeMenuOpen,
+    setModeMenuOpen,
     setModelDockExpanded,
-    useCompactFloatingControls,
   };
 }

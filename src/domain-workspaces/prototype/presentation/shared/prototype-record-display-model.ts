@@ -90,11 +90,19 @@ export function prototypeLandingStatus(record: PrototypeRecord) {
   };
 }
 
-export function prototypePreviewStatus(record: PrototypeRecord) {
+export function prototypePreviewStatus(record: PrototypeRecord, ownerMode?: "disconnected" | "loading" | "live" | "error") {
+  if (ownerMode === "loading") return { label: "Checking", tone: "info" as const };
+  if (ownerMode === "error") return { label: "Unavailable", tone: "warn" as const };
   return {
     label: prototypePreviewLabel(record),
     tone: prototypePreviewTone(record),
   };
+}
+
+export function prototypeOverviewContext(summary: string, limit = 240) {
+  const context = summary.replace(/\s+/g, " ").trim();
+  if (context.length <= limit) return context;
+  return `${context.slice(0, limit).replace(/\s+\S*$/, "")}…`;
 }
 
 function prototypeLandingTone(record: PrototypeRecord): TerasTone {

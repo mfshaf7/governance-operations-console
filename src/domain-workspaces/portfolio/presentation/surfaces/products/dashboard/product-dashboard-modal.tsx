@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import {
   TerasActionButton,
+  TerasContentRegion,
   TerasActionRow,
   TerasContentTray,
   TerasEmptyState,
@@ -168,7 +169,7 @@ export function ProductDashboardModal({
           </TerasZone>
         }
         sideFill={
-          <TerasZone fit="content">
+          <TerasContentRegion fill gap="normal" scroll>
             <TerasPanel
               frame="padded"
               treatment="rail"
@@ -216,7 +217,7 @@ export function ProductDashboardModal({
               <TerasPanelHeader
                 description={
                   canManageListing
-                    ? "Change catalog visibility, permitted scope, placement, and relative order in Curation."
+                    ? "Change catalog visibility, audience, featured placement, and order in Listing settings."
                     : "Retired product listings remain read-only."
                 }
                 kicker="Portfolio Listing"
@@ -228,7 +229,7 @@ export function ProductDashboardModal({
                   onClick={() => onManageListing(entry)}
                   emphasis="primary"
                 >
-                  Open Curation
+                  Listing settings
                 </TerasActionButton>
               </TerasActionRow>
             </TerasPanel>
@@ -269,7 +270,7 @@ export function ProductDashboardModal({
                 </TerasActionButton>
               </TerasActionRow>
             </TerasPanel>
-          </TerasZone>
+          </TerasContentRegion>
         }
       />
     </TerasModalShell>
@@ -294,6 +295,7 @@ function ProductDashboardTabContent({
           frame="padded"
           treatment="neutral"
           fit="fill"
+          layout="header-body"
           overflow="hidden"
         >
           <TerasPanelHeader
@@ -301,7 +303,7 @@ function ProductDashboardTabContent({
             kicker="Product Record"
             title="Profile and ownership"
           />
-          <TerasTrayStack scroll>
+          <TerasContentRegion fill gap="normal" scroll>
             <TerasTrayStack columns={2}>
               <TerasContentTray kicker="Product Profile">
                 <TerasMetadataList
@@ -327,7 +329,7 @@ function ProductDashboardTabContent({
             <TerasContentTray kicker="Source Record">
               <TerasMetadataList items={productDashboardSourceFacts(entry)} />
             </TerasContentTray>
-          </TerasTrayStack>
+          </TerasContentRegion>
         </TerasPanel>
       );
     case "operations":
@@ -336,6 +338,7 @@ function ProductDashboardTabContent({
           frame="padded"
           treatment="neutral"
           fit="fill"
+          layout="header-body"
           overflow="hidden"
         >
           <TerasPanelHeader
@@ -343,7 +346,7 @@ function ProductDashboardTabContent({
             kicker="Operating Record"
             title="Runtime, release, and security"
           />
-          <TerasTrayStack scroll>
+          <TerasContentRegion fill gap="normal" scroll>
             <TerasTrayStack columns={2}>
               <TerasContentTray kicker="Runtime">
                 <TerasMetadataList
@@ -368,7 +371,7 @@ function ProductDashboardTabContent({
                 />
               </TerasContentTray>
             </TerasTrayStack>
-          </TerasTrayStack>
+          </TerasContentRegion>
         </TerasPanel>
       );
     case "history":
@@ -379,6 +382,7 @@ function ProductDashboardTabContent({
           frame="padded"
           treatment="neutral"
           fit="fill"
+          layout="header-body"
           overflow="hidden"
         >
           <TerasPanelHeader
@@ -392,7 +396,7 @@ function ProductDashboardTabContent({
             kicker="Product History"
             title="Product trail"
           />
-          <TerasTrayStack scroll>
+          <TerasContentRegion fill gap="normal" scroll>
             {historyRows.length > 0 ? (
               <TerasTimeline ariaLabel="Product Portfolio history">
                 {historyRows.map((row, index) => (
@@ -439,7 +443,7 @@ function ProductDashboardTabContent({
                 />
               </TerasContentTray>
             </TerasTrayStack>
-          </TerasTrayStack>
+          </TerasContentRegion>
         </TerasPanel>
       );
   }

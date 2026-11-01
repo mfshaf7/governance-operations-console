@@ -7,20 +7,23 @@ import type { TerasDataAttributes, TerasTone } from "./teras-types";
 export type TerasTimelineItemProps = TerasDataAttributes & {
   detail: ReactNode;
   displayTimestamp: ReactNode;
+  evidence?: ReactNode;
   label: ReactNode;
   status: ReactNode;
-  timestamp: string;
+  timestamp?: string;
   tone: TerasTone;
 };
 
 export type TerasTimelineProps = TerasDataAttributes & {
   ariaLabel?: string;
+  frame?: "contained" | "none";
   children: ReactNode;
 };
 
 export function TerasTimelineItem({
   detail,
   displayTimestamp,
+  evidence,
   label,
   status,
   timestamp,
@@ -40,6 +43,7 @@ export function TerasTimelineItem({
       <section>
         <strong>{label}</strong>
         <p>{detail}</p>
+        {evidence}
       </section>
     </li>
   );
@@ -47,6 +51,7 @@ export function TerasTimelineItem({
 
 export function TerasTimeline({
   ariaLabel,
+  frame = "none",
   children,
   ...dataAttributes
 }: TerasTimelineProps) {
@@ -56,6 +61,7 @@ export function TerasTimeline({
       aria-label={ariaLabel}
       className={styles.terasTimeline}
       data-teras-timeline="true"
+      data-frame={frame}
     >
       {children}
     </ol>

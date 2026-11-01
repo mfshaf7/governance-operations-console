@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { bodies } from "../console-architecture/agent-workspace-fixtures.mjs";
-const agentContextSources = { continuity: "/api/workspace-continuity", registry: "/api/workspace-registry", proposals: "/api/proposals", prototypes: "/api/prototypes/records", delivery: "/api/delivery/workspace", orchestration: "/api/orchestration", lifecycle: "/api/lifecycle-transitions", platform: "/api/environment-operations", models: "/api/model-operations/runtime/registry" };
+const agentContextSources = { continuity: "/api/workspace-continuity", registry: "/api/workspace-registry", repositories: "/api/repositories/custody/requests", proposals: "/api/proposals", prototypes: "/api/prototypes/records", delivery: "/api/delivery/workspace", orchestration: "/api/orchestration", lifecycle: "/api/lifecycle-transitions", platform: "/api/environment-operations", models: "/api/model-operations/runtime/registry" };
 const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:3320";
 test.setTimeout(120_000);
 test.use({ actionTimeout: 15_000, navigationTimeout: 60_000, viewport: { width: 1600, height: 1050 } });
 test.beforeEach(async ({ page }) => {
  for (const [source, path] of Object.entries(agentContextSources)) {
-  await page.route(`**${path}`, route => route.fulfill({ json: bodies[source] }));
+  await page.route(`**${path}`, route => route.fulfill({ json: source === "repositories" ? { ...bodies[source], schema_version: 1, next_cursor: null } : bodies[source] }));
  }
  await page.route("**/api/agent-interaction*", route => {
   if (route.request().method() === "DELETE") return route.fulfill({ json: { closed: true } });
@@ -14,7 +14,15 @@ test.beforeEach(async ({ page }) => {
  });
  await page.goto(base, { waitUntil: "domcontentloaded" });
  // Owner context arrives only after the client effect has mounted.
- await expect(page.locator('[data-agent-console-dock][aria-label="Agent Console"]').getByRole("button", { name: "Workspace", exact: true })).toBeEnabled({ timeout: 60_000 });
+ await page.waitForFunction(() => {
+  const button = document.querySelector('[data-agent-console-dock][aria-label="Agent Console"] .model-dock-mode-select');
+  const key = button && Object.keys(button).find(value => value.startsWith('__reactProps$'));
+  return Boolean(key && button[key].onClick);
+ }, null, { timeout: 60000 });
+ const embedded = page.locator('[data-agent-console-dock][aria-label="Agent Console"]');
+ await embedded.getByRole("button", { name: "Agent context mode", exact: true }).click();
+ await expect(embedded.getByRole("button", { name: "Workspace", exact: true })).toBeEnabled({ timeout: 60_000 });
+ await page.keyboard.press("Escape");
  // A real state transition proves interaction before navigation.
  await page.getByRole("button", { name: "Inspect context", exact: true }).first().click();
  await expect(page.getByRole("dialog", { name: "Context Candidate", exact: true })).toBeVisible();
@@ -30,17 +38,20 @@ async function navigate(page, title) {
 }
 test("Workspace is usable from home; changing mode preserves transcript and closes old session", async ({ page }) => {
  const embedded = page.locator('[data-agent-console-dock][aria-label="Agent Console"]');
+ const mode = embedded.getByRole("button", { name: "Agent context mode", exact: true });
+ await mode.click();
  const workspace = embedded.getByRole("button", { name: "Workspace", exact: true });
  await expect(workspace).toBeEnabled();
  let closed = 0; page.on("request", r => { if (r.method() === "DELETE" && r.url().endsWith("/api/agent-interaction")) closed++; });
  await workspace.click();
- await expect(workspace).toHaveAttribute("aria-pressed", "true");
+ await expect(mode).toContainText("Workspace");
  await expect(embedded.locator(".model-dock-context-title")).toContainText("Console workspace");
  const input = embedded.getByRole("textbox", { name: "Agent terminal command input", exact: true });
  await input.fill("context"); await input.press("Enter");
- await expect(embedded.locator(".terminal-transcript")).toContainText("8/8 sources current");
+ await expect(embedded.locator(".terminal-transcript")).toContainText("9/9 sources current");
+ await mode.click();
  await embedded.getByRole("button", { name: "Focus", exact: true }).click();
- await expect(embedded.locator(".terminal-transcript")).toContainText("8/8 sources current");
+ await expect(embedded.locator(".terminal-transcript")).toContainText("9/9 sources current");
  expect(closed).toBe(2);
 });
 for (const [title, id] of [["Dev Integration", "dev-integration"], ["Governed Releases", "governed-releases"], ["Lifecycle Transitions", "lifecycle-transitions"], ["Workspace Registry", "workspace-registry"]]) {
@@ -55,6 +66,7 @@ for (const [title, id] of [["Dev Integration", "dev-integration"], ["Governed Re
   await expect(dock.locator(".model-dock-context-title")).toContainText(title);
   await input.fill("context"); await input.press("Enter");
   await expect(dock.locator(".terminal-transcript")).toContainText(`PAGE CANDIDATE / ${id}`);
+  await dock.getByRole("button", { name: "Floating agent context mode", exact: true }).click();
   await dock.getByRole("button", { name: "Workspace", exact: true }).click();
   await expect(dock.locator(".model-dock-context-title")).toContainText("Console workspace");
   await input.fill("context"); await input.press("Enter");

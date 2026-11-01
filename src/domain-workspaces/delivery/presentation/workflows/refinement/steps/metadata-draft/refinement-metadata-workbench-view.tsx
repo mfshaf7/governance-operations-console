@@ -55,7 +55,7 @@ export function RefinementMetadataWorkbenchView({
   const selectedNodeId = selectedTarget?.node.id ?? packet.target_tree.id;
 
   return (
-    <TerasZone fit="fill">
+    <TerasZone scroll fit="fill">
       <TerasSubjectHero
         actionDetail="Receipt and finalized brief source"
         actionLabel="View Work Design Handoff"

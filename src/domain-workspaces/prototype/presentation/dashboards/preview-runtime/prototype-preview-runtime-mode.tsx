@@ -2,7 +2,6 @@ import {
   TerasActivityLogPanel,
   TerasActionButton,
   TerasContentFrame,
-  TerasContentRegion,
   TerasContentTray,
   TerasFieldGrid,
   TerasMetadataList,
@@ -39,7 +38,7 @@ export function PrototypePreviewRuntimeMode({
   record: PrototypeRecord;
 }) {
   return (
-    <TerasContentRegion fill gap="normal" scroll>
+    <TerasContentFrame fill scroll variant="standard">
       <TerasPanel
         data-prototype-preview-runtime-ops="true"
         frame="padded"
@@ -76,9 +75,10 @@ export function PrototypePreviewRuntimeMode({
 
       <TerasPanel
         data-prototype-preview-runtime-state="true"
+        fit="fill"
         frame="padded"
         treatment="neutral"
-        overflow="visible"
+        overflow="auto"
         spacing="compact"
       >
         <TerasPanelHeader
@@ -100,7 +100,7 @@ export function PrototypePreviewRuntimeMode({
           items={prototypePreviewRuntimeContractFacts(record)}
         />
       </TerasPanel>
-    </TerasContentRegion>
+    </TerasContentFrame>
   );
 }
 

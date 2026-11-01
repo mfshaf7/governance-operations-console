@@ -62,7 +62,7 @@ function DefinitionDesignWorkflowBody({
           ? {
               disabled: !reviewReady,
               label: durable
-                ? "Request Implementation"
+                ? "Record Draft Request"
                 : "Record Qualification",
               onClick: controller.recordOutcome,
               emphasis: "primary",
@@ -98,7 +98,7 @@ function DefinitionDesignWorkflowBody({
     <>
       <TerasWizardModal
         activeStepId={draft.activeStage}
-        description="Qualify the execution boundary, define durable behavior when justified, and record one implementation route without activating runtime source."
+        description="Decide whether restart-safe execution is needed, then draft its contract. Recording a request here does not submit Delivery work or deploy a workflow."
         footer={<><SavedWorkStatus/>{footer}</>}
         kicker="Orchestration Workflow"
         onClose={controller.requestClose}
@@ -155,7 +155,7 @@ function DefinitionDesignWorkflowBody({
       </TerasWizardModal>
 
       <TerasDraftCloseGuardDialog
-        description="This definition draft has local edits. The draft is already saved in prototype-local continuity state and will remain available when you return."
+        description="This draft has edits. Check the saved-work status before leaving: server-saved work can be recovered across browsers; browser-only work stays on this browser."
         kicker="Design Orchestration"
         leaveLabel="Leave Workflow"
         onKeepEditing={controller.closeGuard.close}

@@ -38,17 +38,12 @@ export function getDeliveryHomeRecentActivity(
         detail: event.detail,
         eventRef: event.event_id,
         eventId: event.event_id,
-        metadataLabel: [
-          timestampLabel,
-          event.delivery_package_id,
-          receiptLabel,
-          event.event_id,
-        ].join(" / "),
         packageRef: event.delivery_package_id,
         packageLabel,
         receiptLabel,
+        timestamp: event.occurred_at,
         timestampLabel,
-        title: generatedActivityTitle(event.category, packageLabel),
+        title: event.title || "Delivery event",
         tone: event.tone,
       };
     });
@@ -79,26 +74,6 @@ function categoryLabel(category: DeliveryAuditEvent["category"]) {
   }
 }
 
-function generatedActivityTitle(
-  category: DeliveryAuditEvent["category"],
-  packageLabel: string,
-) {
-  switch (category) {
-    case "action":
-      return `Action recorded for ${packageLabel}`;
-    case "apply":
-      return `Apply state recorded for ${packageLabel}`;
-    case "milestone":
-      return `Milestone recorded for ${packageLabel}`;
-    case "projection":
-      return `Projection updated for ${packageLabel}`;
-    case "readiness":
-      return `Readiness updated for ${packageLabel}`;
-    case "receipt":
-      return `Receipt recorded for ${packageLabel}`;
-  }
-}
-
 function formatAuditTimestamp(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -107,6 +82,5 @@ function formatAuditTimestamp(value: string) {
     month: "short",
     timeZone: "UTC",
     timeZoneName: "short",
-    year: "numeric",
   }).format(new Date(value));
 }

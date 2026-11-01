@@ -9,6 +9,9 @@ import {
   TerasList,
   TerasContentFrame,
   TerasContentTray,
+  TerasTechnicalDetails,
+  TerasTimeline,
+  TerasTimelineItem,
   TerasMetadataList,
   TerasModalShell,
   TerasPanel,
@@ -45,6 +48,9 @@ import {
   orchestrationRunNodeStateTone,
   orchestrationRunStateLabel,
   orchestrationRunStateTone,
+  orchestrationRunTitle,
+  orchestrationRunTechnicalFacts,
+  orchestrationRunSourceLabel,
 } from "../orchestration-runs-view-model.ts";
 import {
   orchestrationRunConditionProjection,
@@ -131,7 +137,7 @@ export function RunDashboardModal({
     <>
       <TerasModalShell
         bodyLayout="fill"
-        description="Aggregate run state, bounded execution progress, current condition, focused evidence, structured events, and projected controls."
+        description="See progress, required actions, recorded evidence and the history of this run."
         kicker="Orchestration"
         onClose={closeDashboard}
         height="fill"
@@ -139,12 +145,12 @@ export function RunDashboardModal({
         title="Run Dashboard"
         width="large"
       >
-        <TerasContentFrame fill variant="standard">
+        <TerasContentFrame fill variant="single-region">
           <TerasZoneLayout variant="main-support">
-            <TerasZone fit="fill">
-              <TerasPanelStack fill="last">
+            <TerasZone fit="fill" scroll>
+              <TerasPanelStack fill="last" scroll>
                 <TerasSelectedPanel
-                  description={`Source-domain state: ${record.businessState.label}.`}
+                  description={`${orchestrationRunSourceLabel(record)} · ${orchestrationRunStateLabel(record.state)}`}
                   facts={orchestrationRunDashboardFacts(record)}
                   kicker="Selected Run"
                   selected
@@ -152,15 +158,17 @@ export function RunDashboardModal({
                     label: orchestrationRunStateLabel(record.state),
                     tone: orchestrationRunStateTone(record.state),
                   }}
-                  title={record.runId}
+                  title={orchestrationRunTitle(record)}
                   tone={orchestrationRunStateTone(record.state)}
                   variant="rich"
                 />
+                <TerasTechnicalDetails items={orchestrationRunTechnicalFacts(record)} />
 
                 <TerasPanel
                   frame="padded"
                   treatment="neutral"
                   fit="fill"
+                  layout="header-body"
                   overflow="hidden"
                 >
                   <TerasPanelHeader
@@ -189,9 +197,9 @@ export function RunDashboardModal({
               </TerasPanelStack>
             </TerasZone>
 
-            <TerasZone fit="fill">
-              <TerasPanelStack bounded="last" fill="middle">
-                <TerasPanel
+            <TerasZone fit="fill" scroll>
+              <TerasPanelStack fill="middle" scroll>
+                <TerasPanel spacing="normal"
                   frame="padded"
                   treatment="rail"
                   fit="content"
@@ -206,7 +214,7 @@ export function RunDashboardModal({
                   />
                   <TerasMetadataList
                     items={condition.facts}
-                    topOffset="normal"
+                    topOffset="none"
                   />
                   {overlay ? (
                     <TerasContentTray
@@ -237,6 +245,7 @@ export function RunDashboardModal({
                       ))}
                     </TerasActionRow>
                   ) : null}
+                  {record.controls.some(control => !control.available) ? <TerasTechnicalDetails summary="Unavailable actions" items={record.controls.filter(control => !control.available).map(control => ({ label: control.label, value: control.disabledReason ?? "Not available for this run." }))} /> : null}
                 </TerasPanel>
 
                 <TerasPanel
@@ -279,26 +288,26 @@ export function RunDashboardModal({
                     statusTone="info"
                     title="Structured event feed"
                   />
-                  <TerasList fit="fill">
+                  <TerasTimeline frame="contained" ariaLabel="Run event history">
                     {record.events.map((event) => {
                       const eventNode = record.nodes.find(
                         (node) => node.id === event.nodeId,
                       );
 
                       return (
-                        <TerasStatusItem
+                        <TerasTimelineItem
                           tone={orchestrationRunStateTone(event.state)}
-                          detail={`${formatOrchestrationRunTimestamp(
-                            event.occurredAt,
-                          )} / ${eventNode?.label ?? "Run"}`}
-                          index={String(event.sequence).padStart(2, "0")}
+                          detail={eventNode?.label ?? "Run"}
+                          timestamp={event.occurredAt}
+                          displayTimestamp={formatOrchestrationRunTimestamp(event.occurredAt)}
                           key={event.eventId}
                           label={event.summary}
                           status={orchestrationRunStateLabel(event.state)}
+                          evidence={<TerasTechnicalDetails items={[{ label: "Event ID", value: event.eventId }, { label: "Sequence", value: String(event.sequence) }, { label: "Node ID", value: event.nodeId ?? "Run" }]} />}
                         />
                       );
                     })}
-                  </TerasList>
+                  </TerasTimeline>
                 </TerasPanel>
               </TerasPanelStack>
             </TerasZone>

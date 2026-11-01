@@ -100,7 +100,7 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
     { key: "health", header: "Primary health", intent: "secondary", render: task => <TerasRecordCellText title={registry ? modelRouteHealthLabel(registry, task) : "Health unknown"} /> },
     { key: "mode", header: "Setting", intent: "status", render: task => <TerasStatusPill tone="info">{task === defaultModelScope ? "Default" : config && Object.hasOwn(config.overrides, task) ? "Override" : "Inherits"}</TerasStatusPill> },
   ];
-  if (!registry || !config) return <TerasPanelStack fill="first"><TerasPanel frame="padded" treatment="neutral" fit="fill">
+  if (!registry || !config) return <TerasPanelStack fill="first"><TerasPanel spacing="normal" layout="header-body-footer" frame="padded" treatment="neutral" fit="fill">
     <TerasPanelHeader kicker="Models & routing" title="Runtime model configuration" statusLabel={runtime.error ? "Unavailable" : "Loading"} statusTone={runtime.error ? "warn" : "info"} />
     <TerasEmptyState fill>{runtime.error ?? "Reading the admitted model registry."}</TerasEmptyState>
     <TerasActionRow><TerasActionButton emphasis="secondary" onClick={() => void runtime.refresh().catch(() => undefined)}>Refresh owner state</TerasActionButton></TerasActionRow>

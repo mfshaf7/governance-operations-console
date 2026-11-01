@@ -1,5 +1,6 @@
 export {
   productPublicationModeRoute,
+  prepareProductPublicationRoute,
   readProductPublicationRoute,
   submitProductPublicationRoute,
 } from "./product-publication-api-routes.ts";

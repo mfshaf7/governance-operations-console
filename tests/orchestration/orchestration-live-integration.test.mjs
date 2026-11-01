@@ -56,6 +56,60 @@ test("run control binds the reviewed input digest and preserves bounded OOS deni
   );
 });
 
+test("active catalog entries cannot imply start readiness when admission or a gate denies it", () => {
+  for (const denial of ["admission", "gate"]) {
+    const entry = definition();
+    if (denial === "admission") entry.admission.start_allowed = false;
+    else entry.admission.gates[0].satisfied = false;
+    const model = projectLiveOrchestrationWorkspace([entry], [], now);
+    assert.equal(model.workspaceStatus.items.find(item => item.id === "execution").state, "blocked");
+    assert.equal(model.definitions[0].startAllowed, entry.admission.start_allowed);
+  }
+});
+
+test("distinct admission gates keep their identity, explanation and owner evidence", () => {
+  const entry = definition();
+  const model = projectLiveOrchestrationWorkspace([entry], [], now);
+  const checks = model.definitions[0].admissionChecks;
+  assert.equal(new Set(checks.map(check => check.id)).size, 14);
+  assert.deepEqual(checks.map(check => check.id), entry.admission.gates.map(gate => gate.gate_id));
+  assert.equal(checks[0].label, "Gate 1");
+  assert.deepEqual(checks[0].evidenceRefs, [entry.admission.gates[0].detail]);
+});
+
+test("catalog rereads cannot manufacture historical decision times", () => {
+  const first = projectLiveOrchestrationWorkspace([definition()], [], now).definitions[0];
+  const later = projectLiveOrchestrationWorkspace([definition()], [], "2026-10-21T00:00:00.000Z").definitions[0];
+  assert.equal(first.qualification.decidedAt, null);
+  assert.equal(first.qualification.decidedBy, null);
+  assert.equal(first.versionHistory[0].recordedAt, null);
+  assert.deepEqual(first.versionHistory, later.versionHistory);
+});
+
+test("failure details use the retry contract and retain rollout separately", () => {
+  const projected = projectLiveOrchestrationWorkspace([definition()], [], now).definitions[0];
+  assert.match(projected.failureStrategy, /Automatic max attempts: 3/);
+  assert.doesNotMatch(projected.failureStrategy, /start_disabled_by_default/);
+  assert.ok(projected.contractDetails.some(detail => detail.label === "Rollout and rollback" && detail.value.includes("start_disabled_by_default")));
+});
+
+test("stored runtime identity is not a live worker-health observation or business state", () => {
+  const run = projectLiveOrchestrationWorkspace([], [runProjection()], now).runs[0];
+  assert.equal(run.runtimeDiagnostics.state, "unknown");
+  assert.equal(run.runtimeDiagnostics.liveRuntimeClaimed, false);
+  assert.equal(run.runtimeDiagnostics.worker, "Not observed");
+  assert.match(run.runtimeDiagnostics.detail, /validationReadinessRunV1/);
+  assert.doesNotMatch(run.businessState.label, /projection:v1/);
+});
+
+test("retained owner controls survive projection independently of aggregate receipts", () => {
+  const raw = runProjection();
+  raw.controls = [{ control_id: "control:retained", action: "resume", operator_id: "operator:synthetic", reason_ref: "reason:retained", idempotency_key: "control:retained", recorded_at: now }];
+  const run = projectLiveOrchestrationWorkspace([], [raw], now).runs[0];
+  assert.deepEqual(run.controlHistory, [{ id: "control:retained", action: "resume", operator: "operator:synthetic", reasonRef: "reason:retained", idempotencyKey: "control:retained", recordedAt: now }]);
+  assert.equal(run.receipt, null);
+});
+
 function definition() {
   return {
     schema_version: 1, definition_id: "validation-readiness-run", definition_version: 1, title: "Validation readiness run", purpose: "Validate readiness.", qualification: "durable-candidate", lifecycle: "active", source_domain: "workspace-governance-control-fabric", source_record_type: "workspace-delivery-art-initiative", business_owner: "workspace-governance", implementation_repo: "operator-orchestration-service", execution_owner: "operator-orchestration-service", execution_node_owners: ["workspace-governance-control-fabric"], trigger: { request_type: "validation-readiness" }, approval_requirements: ["explicit-operator-approval"], source_version_refs: { immutable: true }, idempotency_strategy: { key: "request" }, lock_strategy: { required: false },

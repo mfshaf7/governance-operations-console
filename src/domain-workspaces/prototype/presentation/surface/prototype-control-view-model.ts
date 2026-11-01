@@ -16,7 +16,6 @@ export function prototypeSummaryMetrics(
   stats: PrototypeWorkspaceStats,
 ): PrototypeSummaryMetric[] {
   return [
-    { id: "total", label: "Total", tone: "info", value: stats.total },
     {
       id: "exploring",
       label: "Exploring",
@@ -37,7 +36,6 @@ export function prototypeSummaryMetrics(
     },
     { id: "graduating", label: "Graduating", tone: "warn", value: stats.graduating },
     { id: "graduated", label: "Graduated", tone: "muted", value: stats.graduated },
-    { id: "retired", label: "Retired", tone: "muted", value: stats.retired },
   ];
 }
 

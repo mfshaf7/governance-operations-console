@@ -92,13 +92,13 @@ export function ProductPortfolioPublicationSurface({
                   }
                 >
                   {runtime.error
-                    ? "Owner path unavailable"
+                    ? "Connection unavailable"
                     : runtime.mode?.mode === "live"
                       ? runtime.pending
-                        ? "Owner path working"
-                        : "Owner path connected"
+                        ? "Working"
+                        : "Connected"
                       : runtime.mode === null
-                        ? "Checking owner path"
+                        ? "Checking connection"
                         : "Disconnected preview"}
                 </TerasStatusPill>
                 <TerasStatusPill tone="info">
@@ -122,8 +122,8 @@ export function ProductPortfolioPublicationSurface({
             }}
             description={
               runtime.mode?.mode === "live"
-                ? "Review exact product-owner evidence and project OOS/WGCF publication receipts without transferring authority to the Console."
-                : "Review product-owner publication packets in disconnected preview; fixture decisions are never publication evidence."
+                ? "Review committed product evidence and verified publication receipts before changing a catalog listing."
+                : "Review product candidates for the catalog. Disconnected preview decisions are local examples, not actual publication evidence."
             }
             filterBar={
               <TerasFilterBar

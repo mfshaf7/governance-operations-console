@@ -66,7 +66,7 @@ export function DefinitionDesignSupport({
 
   if (draft.activeStage === "qualify") {
     return (
-      <TerasPanelStack fill="last">
+      <TerasPanelStack fill="last" scroll>
         <QualificationCheckPanel draft={draft} />
         <DefinitionAdvisor advisor={advisor} draft={draft} />
       </TerasPanelStack>
@@ -75,7 +75,7 @@ export function DefinitionDesignSupport({
 
   if (draft.activeStage === "define") {
     return (
-      <TerasPanelStack fill="last">
+      <TerasPanelStack fill="last" scroll>
         <DefinitionSectionCheckPanel draft={draft} setSection={setSection} />
         <DefinitionAdvisor advisor={advisor} draft={draft} />
       </TerasPanelStack>

@@ -37,19 +37,21 @@ export function TerasZone({
   className,
   fit,
   spacing = "normal",
+  scroll = false,
   style,
   ...props
 }: HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
   fit: TerasZoneFit;
   spacing?: "compact" | "normal";
+  scroll?: boolean;
 }) {
   const childCount = Children.toArray(children).length;
   const rowTracks =
     fit === "fill" && childCount > 0
       ? [
-          ...Array.from({ length: childCount - 1 }, () => "auto"),
-          "minmax(0, 1fr)",
+          ...Array.from({ length: childCount - 1 }, () => scroll ? "max-content" : "auto"),
+          scroll ? "minmax(max-content, 1fr)" : "minmax(0, 1fr)",
         ].join(" ")
       : undefined;
   const resolvedStyle = rowTracks
@@ -62,6 +64,7 @@ export function TerasZone({
       className={cx(styles.terasZone, className)}
       data-fit={fit}
       data-spacing={spacing}
+      data-scroll={scroll ? "true" : "false"}
       data-teras-zone="true"
       style={resolvedStyle}
     >

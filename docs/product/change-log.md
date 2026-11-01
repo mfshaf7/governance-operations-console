@@ -1,5 +1,175 @@
 # Governance Operations Console Change Log
 
+## 2026-11-01 — Guided publication repair (preview)
+
+The operator rejected the earlier engineering form and redirect-only listing
+section. Publication now starts with a product choice, loads machine references
+through a bounded owner preparation API, and reviews the catalog change before
+explicit confirmation. Request recovery is secondary; the owner journal provides
+recent requests across browser sessions. Connected Listings is composed into
+Publication. The same UI supports explicit design examples with publishing
+disabled. Backend preparation is staged source, not live commissioning evidence.
+
+
+## 2026-11-01 — Portfolio inspection repairs in preview
+
+Curation is now labeled Listings, with Listing settings inside the section, with concise catalog-publication guidance
+and grouped technical evidence. Register primary columns retain a readable width;
+Dashboard tabs and sidebar use existing bounded scroll layouts. Connected Publication
+keeps its draft, review and original request across section changes; workspace exit
+and draft replacement use the shared discard guard. Unknown outcomes retain their
+original recovery path. Rejected duplicate records keep the existing-product route
+and publication command boundary through listing projection. These repairs remain
+in the uncommitted preview batch. Rich Dashboard/listing views are still limited
+to explicit disconnected preview; connected capability parity is not claimed.
+
+## 2026-11-01 — Execution action panel edge clipping
+
+Continue Remaining Work exposed a shared execution-action template using rounded
+flush panels. Draft, review and receipt now use the existing padded frame so
+headings and evidence stay inside the boundary. The Execution tree-change review
+had the same bare-header pattern and uses the same correction. Existing body scrolling, owner
+gates and submission behaviour remain. This is still preview-only UI maintenance.
+
+## 2026-11-01 — Execution board scrollbar placement
+
+Control Board and Family Map keep their horizontal scrollbar at the bottom of
+the canvas by filling its available height. Lanes retain readable widths and
+scroll their own cards when necessary. This remains in the uncommitted preview
+batch.
+
+## 2026-11-01 — Delivery Home activity and advisor polish
+
+The inline advisor uses the shared Run/Cancel control during a governed request.
+Recent Activity reuses TerasTimeline with compact UTC time, original owner event
+title and package context. Technical disclosure retains the complete source
+narrative, timestamp, actor and exact references; the main row no longer combines
+those into a raw metadata string. Empty and source-coverage states remain explicit.
+The timeline is enclosed in the shared contained-list frame for a cleaner boundary.
+These changes stay in the existing uncommitted preview batch.
+
+## 2026-11-01 — Delivery inspection repairs in preview
+
+Operator approved repairs for the full Delivery inspection and restoration of the
+inline Home advisor. The existing governed Agent request/session path supplies
+real replies on explicit request; it excludes example records and private content
+from bounded overview context. There is no scripted response or provider fallback.
+
+Registers, Catalog selectors, Execution lanes, workflow/recovery panels and impact
+forms preserve readable content and scroll access at shorter desktop sizes.
+Refinement navigation no longer claims completion, Closeout Result distinguishes
+pending evidence, and source read failure no longer remains Loading. Unsaved
+Architecture Packet, Catalog, completion, repository-link and source-decision
+drafts require explicit discard; refreshes preserve edits and changed decision or
+Catalog source requires review before submission. Native History continues using
+the same locked workflow components. This is part of the uncommitted second UI
+batch; no publication or successful live owner command is claimed.
+
+## 2026-11-01 — Prototype register status pills
+
+Prototype register status labels remain on one line, including Candidate
+Promotion. An explicit Teras pill nowrap option preserves the full label without
+changing the font size or other surfaces' contextual wrapping. Part of the
+uncommitted UI preview batch.
+
+## 2026-11-01 — Preview Runtime panel sizing
+
+Operator-requested preview polish makes the second panel in each Runtime,
+Profile and Evidence column fill its remaining height through the existing Teras
+content-frame pattern. Its opt-in scroll mode preserves natural panel height
+and scroll access in shorter windows. The
+Runtime command log retains its existing fill layout. This remains part of the
+uncommitted UI batch; runtime controls and owner state are unchanged.
+
+## 2026-10-31 — Operational Dashboard preview
+
+Operator-approved local trial uses the reviewed Octopus/Vercel references: a
+full-width header and next action, substantial stage cards, balanced operational
+panels and wide issue/fix rows. Existing Teras components, semantic state, exact
+source references, owner checks and native routes remain. Preview-only source is
+held in the coherent UI batch for visual review; no activation or publication is
+claimed. Previous repaired source is retained privately for rollback.
+
+Operator-requested polish gives the four stage cards primary amber treatment,
+aligned header pills and smaller supporting facts. Preview Runtime and Source
+Authoring use primary button emphasis. Source/handoff inspection has a concise
+purpose description. State labels and command availability retain their meaning.
+The two supporting facts are grouped in a neutral inset card within each summary.
+Closure/Resume Closure use primary workflow-entry emphasis; History stays secondary.
+
+## 2026-10-31 — UI batch two: AI activity item labels
+
+Publication authorized on 2026-11-01 after operator preview review. The combined
+batch includes Agent activity/mode controls, Prototype dashboards and drafts,
+Delivery surfaces and advisor, Portfolio publication preparation, Orchestration
+and shared spacing/interaction repairs. Land the existing Workspace contract,
+WGCF reader and OOS preparation dependencies before this Console consumer;
+exact composed Security acceptance and normal Platform activation precede live
+claims. Earlier preview-only statements below record the development stage.
+
+Owner-repo maintenance; Landing Unit `maintenance-console-ui-batch-2`, decision
+`feature_single_landing_unit`. The operator approved a second coherent preview
+batch beginning with AI activity copy. General conversation is distinguished
+from unavailable historical item links and known workflow requests missing a
+link. Actual references, outcomes, evidence, navigation and owner records retain
+their existing meaning. Explicit disconnected examples include both new labels
+for visual review. Changes remain local for batch review before publication.
+
+Agent headers now reuse the Docking Agent's single compact mode selector in
+embedded and expanded presentations. Remove the former three-column layout
+that reserved an unused slot beside Focus/Workspace. Expand/compact is a 28px
+icon button with a tooltip and accessible name. Mode switching retains original
+session-close, busy/availability guards and transcript behavior; menu Escape
+returns focus without closing the enclosing agent.
+
+Prototype's summary removes the Total and Retired cards at the operator's
+request, keeping five lifecycle cards in one row. Register counts, retired
+filtering, status details and history remain available. Broader Dashboard and
+workflow repairs were subsequently approved for this same preview batch.
+
+The operator subsequently approved the Orchestration inspection repairs in this
+same uncommitted Landing Unit. Home retains item identity on navigation and
+prioritizes attention over expanded service diagnostics. Existing registers,
+dashboards, authoring sections, timelines, technical disclosures and draft guards
+provide readable, scrollable access without removing workflow capabilities.
+Owner gate identity/admission, retry policy, retained controls and history are
+projected without invented health, source business state or historical dates.
+Definition design explicitly prepares a draft rather than deploying a workflow
+or writing ART. Recovery can select a retained run. Changes remain in preview
+for the coherent batch review; no publication or live operating claim is made.
+
+The operator's subsequent spacing review identified fourteen flat action
+panels using the same missing-gap pattern across Orchestration, Delivery,
+Model Operations, source editing and environment controls. They now use the
+existing normal panel spacing, with redundant metadata offsets removed where
+the panel gap owns that boundary. Shared lists and selector rails retain a
+small internal hover/focus inset so edge rows are not clipped by their scroll
+containers. Existing framed-list padding, full-height attention queues and
+natural-height qualification checks are preserved. This remains part of the
+same uncommitted preview batch.
+
+Prototype Dashboard now reads Studio Preview status on entry, shows Checking
+before that read and Unavailable on owner failure, and shares the loaded profile
+with Preview Runtime. No fixture fallback or new profile creation is introduced.
+Register/selected context uses bounded excerpts, with complete original context
+available in Dashboard. Repeated posture facts are consolidated and exact profile
+references use the existing Teras technical disclosure instead of large headings.
+The live direct-request boundary explains the existing Proposal-to-Prototype route.
+
+Landing, Candidate, Baseline and Movement preserve the source snapshot behind an
+open draft across background reads. Equivalent record objects do not reset edits
+or the current step. Changed source/dependency content shows Source changed and
+blocks submission until an explicit reload; dirty reload uses the existing discard
+guard. Step badges describe actual Current/Open navigation, independently of owner
+readiness. Owner commands, receipts, lifecycle and review requirements are retained.
+
+Operator review exposed clipped Dashboard content inside the left/right column
+slots despite the outer modal fitting the viewport. Both columns now use the
+existing bounded Teras scroll region, preserving natural panel heights and access
+to the last action. Long original context opens in the existing Source Context
+dialog. Native wheel/keyboard checks exercise bottom actions at shorter desktop
+heights; outer-modal overflow alone is not sufficient layout evidence.
+
 ## 2026-10-31 — Reviewed batch release
 
 Operator authorized publication, OOS-first landing, exact Security acceptance,

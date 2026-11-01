@@ -7,6 +7,8 @@ import {
   TerasRecordControlLayout,
   TerasRegisterPanel,
   TerasSelectedPanel,
+  TerasPanelStack,
+  TerasTechnicalDetails,
 } from "@/teras";
 
 import {
@@ -15,7 +17,7 @@ import {
 } from "../../../read-model/runs/orchestration-run-selectors.ts";
 import type { OrchestrationRunRecord } from "@/domain-workspaces/orchestration/domain/orchestration-run-types";
 import { RunDashboardModal } from "./dashboard/run-dashboard-modal.tsx";
-import { orchestrationRunSelectedFacts } from "./orchestration-runs-view-model.ts";
+import { orchestrationRunSelectedFacts, orchestrationRunTitle, orchestrationRunTechnicalFacts, orchestrationRunSourceLabel } from "./orchestration-runs-view-model.ts";
 import { OrchestrationRunsRegister } from "./register/orchestration-runs-register.tsx";
 import { useOrchestrationRunsController } from "./use-orchestration-runs-controller.ts";
 import type { OrchestrationRunControlInput, OrchestrationRunControlReceipt } from "../../../work-model/run-control/run-control-types.ts";
@@ -107,7 +109,7 @@ export function OrchestrationRunsSurface({
         }
         selected={
           selectedRecord && selectedPosture ? (
-            <TerasSelectedPanel
+            <TerasPanelStack fill="last" scroll><TerasSelectedPanel
               action={{
                 description: selectedPosture.detail,
                 kicker: "Current Required Move",
@@ -121,7 +123,7 @@ export function OrchestrationRunsSurface({
                 ),
                 title: orchestrationRunRequiredMove(selectedRecord),
               }}
-              description={`Source-domain state: ${selectedRecord.businessState.label}.`}
+              description={`${orchestrationRunSourceLabel(selectedRecord)} · ${selectedPosture.detail}`}
               facts={orchestrationRunSelectedFacts(selectedRecord)}
               kicker="Selected Run"
               selected
@@ -129,10 +131,10 @@ export function OrchestrationRunsSurface({
                 label: selectedPosture.label,
                 tone: selectedPosture.tone,
               }}
-              title={selectedRecord.runId}
+              title={orchestrationRunTitle(selectedRecord)}
               tone={selectedPosture.tone}
               variant="rich"
-            />
+            /><TerasTechnicalDetails items={orchestrationRunTechnicalFacts(selectedRecord)} /></TerasPanelStack>
           ) : (
             <TerasEmptyState fill>
               No run is selected from the current results.

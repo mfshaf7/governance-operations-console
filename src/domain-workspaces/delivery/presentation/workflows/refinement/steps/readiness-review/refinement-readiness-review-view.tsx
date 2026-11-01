@@ -59,7 +59,7 @@ export function RefinementReadinessReviewView({
 
   return (
     <TerasZoneLayout variant="main-aside">
-      <TerasZone fit="fill">
+      <TerasZone scroll fit="fill">
         <TerasSubjectHero
           actionDetail="Finalized brief and Work Design apply receipt"
           actionLabel="View Work Design Handoff"
@@ -170,11 +170,11 @@ export function RefinementReadinessReviewView({
       </TerasZone>
 
       <TerasPanel
-        fit="content"
+        fit="fill"
         frame="padded"
         treatment="rail"
-        layout="header-body"
         spacing="compact"
+        overflow="auto"
         tone={reviewProjection.reviewTone}
       >
         <TerasPanelHeader

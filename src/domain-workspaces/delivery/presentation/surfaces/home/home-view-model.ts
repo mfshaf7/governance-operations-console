@@ -4,7 +4,6 @@ import {
   type DeliveryTone,
 } from "../../../read-model/index.ts";
 
-import { getDeliveryHomeAgentConsole } from "./home-agent-model.ts";
 import { getDeliveryHomeRecentActivity } from "./home-activity-model.ts";
 import { getDeliveryHomeWorkspaceStatus } from "./home-workspace-status-model.ts";
 import type { DeliveryHomeViewModel } from "./home-types.ts";
@@ -14,8 +13,6 @@ export type DeliveryHomeAttentionFilter =
 
 export type {
   DeliveryHomeActionSurfaceId,
-  DeliveryHomeAgentConsole,
-  DeliveryHomeAgentTranscriptLine,
   DeliveryHomeAttentionItem,
   DeliveryHomeRecentActivity,
   DeliveryHomeTarget,
@@ -66,11 +63,6 @@ export function getDeliveryHomeViewModel(
   const workspaceStatus = getDeliveryHomeWorkspaceStatus(model);
 
   return {
-    agentConsole: getDeliveryHomeAgentConsole({
-      attentionQueue,
-      recentActivity,
-      workspaceStatus,
-    }),
     attentionQueue,
     recentActivity,
     workspaceStatus,

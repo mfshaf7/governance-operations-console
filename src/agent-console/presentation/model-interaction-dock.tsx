@@ -55,7 +55,7 @@ export function ModelInteractionDock({
     contextTitle,
     dockStyle,
     floatingDockConstrainedByModal,
-    floatingModeMenuOpen,
+    modeMenuOpen,
     handleAgentCancel,
     handleAgentContextModeChange,
     handleAgentPromptKeyDown,
@@ -71,9 +71,8 @@ export function ModelInteractionDock({
     providerStateLabel,
     providerStatusLabel,
     setAgentPrompt,
-    setFloatingModeMenuOpen,
+    setModeMenuOpen,
     setModelDockExpanded,
-    useCompactFloatingControls,
   } = useAgentConsoleController({
     contextCandidate,
     workspaceContextCandidate,
@@ -85,6 +84,13 @@ export function ModelInteractionDock({
   const { titleId: modalTitleId, presentationRef } = useAgentModalPresentation(modelDockExpanded);
   const modeOptions: AgentInteractionMode[] = ["focused", "workspace"];
   const workspaceModeAvailable = workspaceContextCandidate?.scope === "workspace" && workspaceContextCandidate.sourceMode !== "unavailable";
+
+  async function selectMode(mode: AgentInteractionMode) {
+    if (await handleAgentContextModeChange(mode)) {
+      setModeMenuOpen(false);
+      presentationRef.current?.querySelector<HTMLButtonElement>(".model-dock-mode-select")?.focus();
+    }
+  }
 
   const presentation = (
     <>
@@ -106,6 +112,11 @@ export function ModelInteractionDock({
         style={dockStyle}
         hidden={portal.blocked}
         onKeyDownCapture={(event) => {
+          if (event.key === "Escape" && modeMenuOpen) {
+            event.preventDefault(); event.stopPropagation(); setModeMenuOpen(false);
+            event.currentTarget.querySelector<HTMLButtonElement>(".model-dock-mode-select")?.focus();
+            return;
+          }
           if (portal.host && modelDockExpanded && event.key === "Escape") {
             event.preventDefault(); event.stopPropagation(); setModelDockExpanded(false);
             event.currentTarget.querySelector<HTMLButtonElement>(".model-dock-expand")?.focus();
@@ -136,73 +147,55 @@ export function ModelInteractionDock({
             </div>
           </div>
           <div className="model-dock-header-actions">
-            {useCompactFloatingControls ? (
-              <div className="model-dock-mode-select-wrap">
-                <span>Mode</span>
-                <button
-                  aria-label="Floating agent context mode"
-                  aria-expanded={floatingModeMenuOpen}
-                  className="model-dock-mode-select"
-                  disabled={agentBusy || contextModeChanging}
-                  type="button"
-                  onClick={() => setFloatingModeMenuOpen((current) => !current)}
-                >
-                  {modeLabel}
-                  <ChevronRight className="h-3 w-3" />
-                </button>
-                {floatingModeMenuOpen ? (
-                  <div className="model-dock-mode-menu rounded-2xl p-1">
-                    {modeOptions.map((mode) => {
-                      const label = mode === "focused" ? "Focus" : mode === "workspace" ? "Workspace" : "General";
+            <div
+              className="model-dock-mode-select-wrap"
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setModeMenuOpen(false);
+              }}
+            >
+              <span>Mode</span>
+              <button
+                aria-label={isFloatingDock ? "Floating agent context mode" : "Agent context mode"}
+                aria-expanded={modeMenuOpen}
+                className="model-dock-mode-select"
+                disabled={agentBusy || contextModeChanging}
+                type="button"
+                onClick={() => setModeMenuOpen((current) => !current)}
+              >
+                {modeLabel}
+                <ChevronRight className="h-3 w-3" />
+              </button>
+              {modeMenuOpen ? (
+                <div className="model-dock-mode-menu rounded-2xl p-1">
+                  {modeOptions.map((mode) => {
+                    const label = mode === "focused" ? "Focus" : "Workspace";
 
-                      return (
-                        <button
-                          key={mode}
-                          className="model-dock-mode-menu-item"
-                          data-active={agentContextMode === mode ? "true" : "false"}
-                          disabled={agentBusy || contextModeChanging || (mode === "workspace" && !workspaceModeAvailable)}
-                          title={
-                            mode === "workspace"
-                              ? "Workspace mode requires a current workspace context candidate."
-                              : undefined
-                          }
-                          type="button"
-                          onClick={() => handleAgentContextModeChange(mode)}
-                        >
-                          <span>{label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="model-dock-mode-compact" aria-label="Page agent context mode">
-                {modeOptions.map((mode) => (
-                  <button
-                    key={mode}
-                    aria-pressed={agentContextMode === mode}
-                    className="model-dock-mode-compact-button"
-                    data-active={agentContextMode === mode ? "true" : "false"}
-                    disabled={agentBusy || contextModeChanging || (mode === "workspace" && !workspaceModeAvailable)}
-                    title={
-                      mode === "workspace"
-                        ? "Workspace mode requires a current workspace context candidate."
-                        : undefined
-                    }
-                    type="button"
-                    onClick={() => handleAgentContextModeChange(mode)}
-                  >
-                    {mode === "focused" ? "Focus" : mode === "workspace" ? "Workspace" : "General"}
-                  </button>
-                ))}
-              </div>
-            )}
+                    return (
+                      <button
+                        key={mode}
+                        aria-pressed={agentContextMode === mode}
+                        className="model-dock-mode-menu-item"
+                        data-active={agentContextMode === mode ? "true" : "false"}
+                        disabled={agentBusy || contextModeChanging || (mode === "workspace" && !workspaceModeAvailable)}
+                        title={
+                          mode === "workspace"
+                            ? "Workspace mode requires a current workspace context candidate."
+                            : undefined
+                        }
+                        type="button"
+                        onClick={() => void selectMode(mode)}
+                      >
+                        <span>{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
             <button
               aria-label={modelDockExpanded ? "Compact agent interaction console" : "Expand agent interaction console"}
-              className={`model-dock-expand rounded-full ${
-                useCompactFloatingControls ? "model-dock-expand-small px-2 py-2" : "px-3 py-1.5 text-xs"
-              }`}
+              className="model-dock-expand model-dock-expand-small rounded-full"
+              title={modelDockExpanded ? "Compact agent interaction console" : "Expand agent interaction console"}
               type="button"
               onClick={() => setModelDockExpanded((current) => !current)}
             >
@@ -211,7 +204,6 @@ export function ModelInteractionDock({
               ) : (
                 <Maximize2 className="h-3.5 w-3.5" />
               )}
-              {useCompactFloatingControls ? null : modelDockExpanded ? "compact" : "expand"}
             </button>
           </div>
         </div>

@@ -72,7 +72,7 @@ export function DeliveryBlockerRecoveryDialog({
       title={shellCopy.title}
     >
       <TerasZoneLayout variant="main-aside">
-        <TerasZone fit="fill">
+        <TerasZone scroll fit="fill">
           <DeliveryBlockerProblemPanel
             activeBlockerIssue={activeBlockerIssue}
             blockerProblemClearanceValue={blockerProblemClearanceValue}
@@ -119,7 +119,7 @@ export function DeliveryBlockerRecoveryDialog({
           />
         </TerasZone>
 
-        <TerasZone fit="fill">
+        <TerasZone scroll fit="fill">
           <DeliveryBlockerRecoveryResultPanel
             blockerDispositionRecordedCopy={blockerDispositionRecordedCopy}
             blockerDispositionReceiptRecordedAt={

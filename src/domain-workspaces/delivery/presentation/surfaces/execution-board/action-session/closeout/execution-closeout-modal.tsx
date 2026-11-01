@@ -104,14 +104,15 @@ export function ExecutionCloseoutModal({
         connectsToNext: false,
         id: "result",
         label: "Result",
-        stateLabel: result?.status ?? projection?.projection_state ?? "Pending",
-        tone: closeoutResultTone(result?.status, projection?.projection_state),
+        stateLabel: result?.status ?? (existingHistory.length ? "Recorded" : "Pending"),
+        tone: result || existingHistory.length ? closeoutResultTone(result?.status ?? existingHistory.at(-1)?.status) : ("muted" as const),
       },
     ],
     [evidenceComplete, existingHistory.length, projection?.projection_state, readyToApply, result],
   );
 
   function requestClose() {
+    if (applying) return;
     if (!result && executionCloseoutDraftDirty(draft)) {
       setCloseGuardOpen(true);
       return;

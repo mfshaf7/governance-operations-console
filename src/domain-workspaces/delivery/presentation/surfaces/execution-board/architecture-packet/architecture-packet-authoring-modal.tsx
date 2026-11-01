@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   TerasActionButton,
   TerasActionRow,
+  TerasDraftCloseGuardDialog,
   TerasEmptyState,
   TerasFieldStack,
   TerasList,
@@ -56,6 +57,23 @@ export function ArchitecturePacketAuthoringModal({
   const [persisted, setPersisted] = useState<ArchitecturePacketPersistResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [closeGuardOpen, setCloseGuardOpen] = useState(false);
+  const savedDraft = useRef(JSON.stringify(editor));
+  const dirty = JSON.stringify(editor) !== savedDraft.current;
+
+  function requestClose() {
+    if (submitting) return;
+    if (dirty) setCloseGuardOpen(true);
+    else onClose();
+  }
+
+  useEffect(() => {
+    const guard = (event: BeforeUnloadEvent) => {
+      if (dirty || submitting) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [dirty, submitting]);
 
   const draftIssues = useMemo(
     () => architecturePacketEditorIssues(editor, "draft"),
@@ -132,26 +150,29 @@ export function ArchitecturePacketAuthoringModal({
 
   async function persistCandidate() {
     if (!approved) throw new Error("Approve the exact candidate before persistence.");
+    const persistedDraft = JSON.stringify(editor);
     const snapshot = await runtime.persist(approved.architecture_packet);
     const result = snapshot.result;
     if (!result || result.workflow_id !== "delivery-art-architecture-packet-persist") {
       throw new Error("OOS did not return durable Architecture Packet custody.");
     }
     setPersisted(result);
+    savedDraft.current = persistedDraft;
   }
 
   return (
+    <>
     <TerasModalShell
       bodyLayout="scroll"
-      description="Author, validate, approve, and persist one schema-v6 packet through OOS and WGCF without giving the browser identity or custody authority."
+      description="Prepare the architecture and conformance plan, validate the packet, then review and save it through the governed owner path."
       footer={
-        <TerasActionButton emphasis="secondary" onClick={onClose}>
+        <TerasActionButton disabled={submitting} emphasis="secondary" onClick={requestClose}>
           Back to Execution Board
         </TerasActionButton>
       }
       height="fill"
       kicker="Delivery Architecture"
-      onClose={onClose}
+      onClose={requestClose}
       surfaceId="delivery-architecture-packet-authoring"
       title="Architecture Packet"
       width="viewport"
@@ -166,12 +187,14 @@ export function ArchitecturePacketAuthoringModal({
             />
             <TerasFieldStack spacing="normal">
               <TerasTextField
+                disabled={submitting}
                 label="Delivery identity"
                 onValueChange={(deliveryId) => edit((value) => ({ ...value, deliveryId }))}
                 placeholder="delivery-1275"
                 value={editor.deliveryId}
               />
               <TerasTextListField
+                disabled={submitting}
                 addLabel="Add covered work item"
                 itemLabel={(index) => `Covered work item ${index + 1}`}
                 items={editor.coveredWorkItemIds}
@@ -185,6 +208,7 @@ export function ArchitecturePacketAuthoringModal({
                 visibleItems={4}
               />
               <TerasNoteField
+                disabled={submitting}
                 label="Repository revisions (JSON array)"
                 minimumHeight="tall"
                 onValueChange={(repoRevisionsJson) =>
@@ -194,6 +218,7 @@ export function ArchitecturePacketAuthoringModal({
                 value={editor.repoRevisionsJson}
               />
               <TerasNoteField
+                disabled={submitting}
                 label="Architecture design (JSON object)"
                 minimumHeight="tall"
                 onValueChange={(architectureJson) =>
@@ -203,6 +228,7 @@ export function ArchitecturePacketAuthoringModal({
                 value={editor.architectureJson}
               />
               <TerasNoteField
+                disabled={submitting}
                 label="Conformance plan (JSON object)"
                 minimumHeight="tall"
                 onValueChange={(conformanceJson) =>
@@ -212,6 +238,7 @@ export function ArchitecturePacketAuthoringModal({
                 value={editor.conformanceJson}
               />
               <TerasNoteField
+                disabled={submitting}
                 label="Operator rationale"
                 minimumHeight="short"
                 onValueChange={(rationale) => edit((value) => ({ ...value, rationale }))}
@@ -231,6 +258,7 @@ export function ArchitecturePacketAuthoringModal({
               />
               <TerasMetadataList items={candidateMetadata(candidate)} />
               <TerasNoteField
+                disabled={submitting}
                 aria-label="Canonical Architecture Packet JSON"
                 fill
                 label="Canonical packet"
@@ -253,6 +281,7 @@ export function ArchitecturePacketAuthoringModal({
               />
               <TerasMetadataList items={candidateMetadata(persisted.artifact)} />
               <TerasNoteField
+                disabled={submitting}
                 label="Custody receipt"
                 minimumHeight="short"
                 onValueChange={() => undefined}
@@ -261,6 +290,7 @@ export function ArchitecturePacketAuthoringModal({
                 value={JSON.stringify(persisted.custody_receipt, null, 2)}
               />
               <TerasNoteField
+                disabled={submitting}
                 label="OOS owner receipt"
                 minimumHeight="short"
                 onValueChange={() => undefined}
@@ -372,7 +402,7 @@ export function ArchitecturePacketAuthoringModal({
               <TerasMetadataList items={candidateMetadata(current.artifact)} />
               <TerasActionRow>
                 <TerasActionButton
-                  disabled={current.contract_posture !== "current"}
+                  disabled={submitting || current.contract_posture !== "current"}
                   emphasis="secondary"
                   onClick={() => {
                     edit(() => architecturePacketEditorFromArtifact(current.artifact));
@@ -412,6 +442,16 @@ export function ArchitecturePacketAuthoringModal({
         </TerasZone>
       </TerasZoneLayout>
     </TerasModalShell>
+    <TerasDraftCloseGuardDialog
+      open={closeGuardOpen}
+      title="Discard Architecture Packet edits?"
+      kicker="Unsaved packet"
+      description="These edits have not been persisted. Leaving discards this draft; the current owner packet remains available."
+      leaveLabel="Discard Draft"
+      onKeepEditing={() => setCloseGuardOpen(false)}
+      onLeave={onClose}
+    />
+    </>
   );
 }
 

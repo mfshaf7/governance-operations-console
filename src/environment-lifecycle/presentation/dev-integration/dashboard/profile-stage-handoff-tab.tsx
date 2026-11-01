@@ -156,7 +156,7 @@ export function ProfileStageHandoffDock({
 
   return (
     <TerasContentFrame fill variant="standard">
-      <TerasPanel
+      <TerasPanel spacing="normal"
         fit="content"
         frame="padded"
         tone={devIntegrationPromoteCheckTones[handoff.result]}
@@ -177,7 +177,7 @@ export function ProfileStageHandoffDock({
               value: handoff.ownerRepo,
             },
           ]}
-          topOffset="compact"
+          topOffset="none"
         />
         <TerasActionRow spacing="normal">
           <TerasActionButton

@@ -2,6 +2,8 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { usePrototypeWorkflowDraftSource } from "../shared/use-prototype-workflow-draft-source.ts";
+import { PrototypeWorkflowSourceWarning } from "../shared/prototype-workflow-source-warning.tsx";
 import { useDraftAdvisor } from "@/agent-console";
 import { candidateAdvisorFields, applyCandidateAdvisorEdits } from "../shared/prototype-advisor-fields.ts";
 
@@ -20,6 +22,7 @@ import {
   type PrototypeWorkflowGuardIntent,
   prototypeWorkflowRecordCanEdit,
   prototypeWorkflowStepNavigation,
+  prototypeWorkflowNavigationSteps,
   prototypeWorkflowSubject,
 } from "../shared/prototype-workflow-modal-model.ts";
 import type { PrototypeCandidatePromotionStepId } from "../../../work-model/workflows/candidate-promotion/prototype-candidate-promotion-model.ts";
@@ -52,7 +55,7 @@ export function PrototypeCandidatePromotionModal({
   onBackToDashboard,
   onClose,
   onRecordReceipt,
-  record,
+  record: incomingRecord,
   ownerProgress,
 }: {
   onBackToDashboard: () => void;
@@ -65,6 +68,7 @@ export function PrototypeCandidatePromotionModal({
   record: PrototypeRecord | null;
   ownerProgress?: PrototypeMaturityOwnerProgress;
 }) {
+  const { record, stale: sourceStale, reload: reloadSource } = usePrototypeWorkflowDraftSource(incomingRecord);
   const [activeStep, setActiveStep] =
     useState<PrototypeCandidatePromotionStepId>("interview");
   const [closeGuardIntent, setCloseGuardIntent] =
@@ -76,7 +80,7 @@ export function PrototypeCandidatePromotionModal({
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const advisor = useDraftAdvisor({
     active: Boolean(record),
-    disabled: !record || submitting || ownerProgress?.pending === true ||
+    disabled: sourceStale || !record || submitting || ownerProgress?.pending === true ||
       prototypeMaturityRequestPending(ownerProgress) || Boolean(record && getPrototypeCommandView(record, "record-candidate-promotion").disabledReason),
     getScope: () => {
       if (!record) throw Error("Select a Prototype record first.");
@@ -133,7 +137,7 @@ export function PrototypeCandidatePromotionModal({
     reviewReady,
   });
   const applyDisabled =
-    submitting || ownerProgress?.pending === true || ownerRequestPending ||
+    sourceStale || submitting || ownerProgress?.pending === true || ownerRequestPending ||
     Boolean(command.disabledReason) ||
     !draftComplete ||
     (draft.decision === "block-promotion" && !blockedIssue) ||
@@ -151,7 +155,7 @@ export function PrototypeCandidatePromotionModal({
   }
 
   function requestBackToDashboard() {
-    if (draftDirty && draftMutable) {
+    if (draftDirty) {
       setCloseGuardIntent("back");
       return;
     }
@@ -160,7 +164,7 @@ export function PrototypeCandidatePromotionModal({
   }
 
   function requestClose() {
-    if (draftDirty && draftMutable) {
+    if (draftDirty) {
       setCloseGuardIntent("close");
       return;
     }
@@ -249,7 +253,7 @@ export function PrototypeCandidatePromotionModal({
               command.disabledReason
                 ? {
                     label: "Open Dashboard",
-                    onClick: onBackToDashboard,
+                    onClick: requestBackToDashboard,
                     emphasis: "secondary",
                   }
                 : undefined
@@ -274,10 +278,11 @@ export function PrototypeCandidatePromotionModal({
         }
         statusLabel={candidateMove.statusLabel}
         statusTone={candidateMove.tone}
-        steps={workflowSteps}
+        steps={prototypeWorkflowNavigationSteps(workflowSteps, activeStep)}
         subject={prototypeWorkflowSubject(record)}
         support={
           <TerasFieldStack spacing="normal">
+          <PrototypeWorkflowSourceWarning stale={sourceStale} dirty={draftDirty} busy={submitting || ownerProgress?.pending} onReload={reloadSource} />
           {submissionError ? <TerasEmptyState>{submissionError}</TerasEmptyState> : null}
           {ownerProgress?.projection?.input.transition === "candidate-promotion" || !ownerProgress?.projection ? <PrototypeMaturityOwnerProgressPanel progress={ownerProgress} /> : null}
           <PrototypeCandidatePromotionSupportPanels

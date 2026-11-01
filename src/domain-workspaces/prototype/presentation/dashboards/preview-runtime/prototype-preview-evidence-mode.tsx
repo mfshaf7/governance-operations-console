@@ -2,7 +2,7 @@ import {
   TerasActionButton,
   TerasActionRow,
   TerasStatusItem,
-  TerasContentRegion,
+  TerasContentFrame,
   TerasPanel,
   TerasPanelHeader,
   TerasList,
@@ -38,7 +38,7 @@ export function PrototypePreviewEvidenceMode({
   );
 
   return (
-    <TerasContentRegion fill gap="normal" scroll>
+    <TerasContentFrame fill scroll variant="standard">
       <TerasPanel frame="padded" treatment="neutral" spacing="normal">
         <TerasPanelHeader
           actions={
@@ -62,7 +62,13 @@ export function PrototypePreviewEvidenceMode({
         </TerasStatGroup>
       </TerasPanel>
 
-      <TerasPanel frame="padded" treatment="neutral" spacing="normal">
+      <TerasPanel
+        fit="fill"
+        overflow="auto"
+        frame="padded"
+        treatment="neutral"
+        spacing="normal"
+      >
         <TerasPanelHeader
           actions={
             <TerasStatusPill tone={receiptProjection.tone}>
@@ -86,7 +92,7 @@ export function PrototypePreviewEvidenceMode({
           ))}
         </TerasList>
       </TerasPanel>
-    </TerasContentRegion>
+    </TerasContentFrame>
   );
 }
 
@@ -118,7 +124,7 @@ export function PrototypePreviewEvidenceModeDock({
   );
 
   return (
-    <TerasContentRegion data-layout="evidence" fill gap="normal" scroll>
+    <TerasContentFrame data-layout="evidence" fill scroll variant="standard">
       <TerasPanel
         frame="padded"
         treatment="rail"
@@ -147,7 +153,13 @@ export function PrototypePreviewEvidenceModeDock({
         </TerasActionRow>
       </TerasPanel>
 
-      <TerasPanel frame="padded" treatment="neutral" spacing="compact">
+      <TerasPanel
+        fit="fill"
+        overflow="auto"
+        frame="padded"
+        treatment="neutral"
+        spacing="compact"
+      >
         <TerasPanelHeader
           actions={
             <TerasStatusPill tone={receiptProjection.tone}>
@@ -179,6 +191,6 @@ export function PrototypePreviewEvidenceModeDock({
           </TerasActionButton>
         </TerasActionRow>
       </TerasPanel>
-    </TerasContentRegion>
+    </TerasContentFrame>
   );
 }

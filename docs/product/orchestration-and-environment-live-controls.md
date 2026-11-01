@@ -29,7 +29,7 @@ Its records and receipts are explicitly local and cannot enter the live path.
 5. Follow the returned state, owner, exact next action, events, blocker or
    failure, and terminal receipt. A failed or cancelled operation never renders
    as successful, and cancellation never implies rollback.
-6. Use **Refresh owner truth** when a dependency is degraded or stale.
+6. Use **Refresh status** when a dependency is degraded or stale.
    Environment controls also refresh every 15 seconds while visible and briefly
    reconcile an accepted nonterminal operation from its exact OOS record.
    Orchestration refreshes on entry, after controls, and through its explicit
@@ -53,7 +53,7 @@ Its records and receipts are explicitly local and cannot enter the live path.
    the bound authenticated operator. There is no model-submitted decision.
 5. Keep the original request and run references. **Run admitted** confirms OOS
    admission, including when no worker projection is available yet. It is not
-   a completion receipt. Use **Read original run** or **View Runs** for actual
+   a completion receipt. Use **Read original run** or **View Run** for actual
    owner state and receipts.
 
 A first explicit pre-dispatch refusal permits source review again. An unknown
@@ -62,6 +62,44 @@ request and approval. A later refusal cannot erase its earlier unknown effect.
 After reload, use the workspace's **Read original run** entry with the retained
 reference. No replacement start is submitted automatically, and reading does
 not grant execution or control authority.
+
+## Select a retained run
+
+The recovery form can select a retained run from the current list or accept an
+exact reference. Reading it creates no replacement run. **View Run** selects the
+recovered identity in Runs. Home attention and in-progress entries similarly
+select their exact definition or run, rather than merely opening its area.
+
+## Preview maintenance: operational presentation
+
+The pending UI batch keeps Home, Definitions and Runs and the existing Teras
+patterns. Home prioritizes required actions; **Service details** opens the
+complete service inspection. Registers, selected context, dashboards and design
+support have explicit scrolling. Technical references remain inspectable without
+dominating the operational summary, and activity uses the shared timeline.
+
+Owner gate identities, names, results and evidence stay distinct. An active
+definition alone does not mean new runs are admitted: the owner must allow start
+and its gates must pass. A retained run's adapter/workflow identity does not
+prove current worker health. Unknown health is displayed as unknown. The owner
+catalog supplies the current version without historical actor/time metadata;
+the Console does not invent a recording timestamp on reread. Retry and timeout
+details are separate from rollout/rollback settings.
+
+**Design Orchestration** prepares a definition contract and **Record Draft
+Request** records its existing local implementation-request outcome. This does
+not create an ART item, implement a worker or activate a workflow. The shared
+saved-work indicator separately reports server acknowledgement or browser-only
+continuity. The advisor offers draft help only when requested. An empty register
+retains the drafting entry; unavailable source is never replaced with samples.
+
+Control input is protected by a discard guard, and pending controls cannot be
+edited or dismissed. An unconfirmed request does not display a false refusal;
+inspect its run before sending changed input. Recorded owner controls remain
+distinct from final receipts and disconnected simulated control receipts.
+
+These are source/preview changes. Exact-source review, commissioning and real
+operating proof remain required before treating this batch as released.
 
 ## Recovery
 

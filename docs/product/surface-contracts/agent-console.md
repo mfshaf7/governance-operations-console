@@ -38,6 +38,12 @@ in OOS's existing private store. Their historical coverage begins when recording
 is commissioned. An unfinished earlier process's request is unconfirmed after
 restart, without inventing a completed or actively working outcome.
 
+Display a request without a linked item as General conversation when its
+recorded kind is ordinary assistant response. Older requests with no task/item
+metadata say Historical item link unavailable. A known workflow request with
+no item reference says Item link unavailable. Recorded references remain exact;
+these labels do not infer or reconstruct missing links.
+
 Row inspection retains actual receipt, model-audit and context references.
 Known owner record identities navigate only through existing workspace intents;
 unknown or local-draft identities keep request inspection without a guessed
@@ -45,9 +51,10 @@ record destination. Completion of assistance never implies workflow acceptance
 or canonical mutation. No raw prompt, response, draft or error body is projected.
 
 Explicit current disconnected preview remains a labelled visual example mode.
-The implementation is held in the operator's uncommitted local batch. Live
-qualification requires the OOS dependency, exact source review and normal
-Platform commissioning; source conformance is not proof of live history.
+New UI refinements remain in the operator's local batch until reviewed for
+publication. Live qualification remains bound to the OOS dependency, exact
+source review and normal Platform commissioning; source conformance alone is
+not proof of live history.
 
 The embedded Agent Console and the Docking Agent are separate logical agents.
 Each keeps its browser presentation state but binds its generated nonce,
@@ -99,9 +106,15 @@ supplies an observed model; profile version remains unobserved until an owner
 projection actually provides it. The governance badge describes the enforced
 request path, not current profile approval.
 
-Delivery Home opens the existing Docking Agent through its shared entry.
-It does not create another assistant, invoke a model on open, or generate local
-keyword replies. Workbench Focus uses a current bounded owner collection
+Delivery Home presents an inline Teras advisor using the existing Agent session
+provider and governed request controller. It sends only after an explicit prompt;
+opening Home never invokes a model. It has an independent session, cancellation,
+receipt checks and bounded read-only Delivery context. Current owner overview
+counts expire after 120 seconds; preview, stale and future observations are
+unavailable context. Package bodies, source, drafts and raw logs are excluded.
+History retains read-only inspection without an advisor request surface. No local
+keyword replies, direct-provider fallback or workflow mutation authority are added.
+Workbench Focus uses a current bounded owner collection
 summary with explicit missing coverage. Workspace adds Repository custody to
 the existing overview; Inventory/custody share one bounded signal so the
 unchanged eight-item admission limit still holds. The whole overview references
@@ -168,6 +181,12 @@ separate explicit-action boundary; this manual assistance surface does not
 construct or dispatch mutations.
 
 ## Modes
+
+Embedded, floating and expanded agents reuse the same compact current-mode
+button with Focus and Workspace choices. No third mode is offered. Expand and
+compact use the same 28px icon control with an accessible name and tooltip.
+Mode-menu Escape closes that menu and returns focus to its button; expanding
+or compacting retains the existing session, transcript and request lifecycle.
 
 Agent Console may support:
 

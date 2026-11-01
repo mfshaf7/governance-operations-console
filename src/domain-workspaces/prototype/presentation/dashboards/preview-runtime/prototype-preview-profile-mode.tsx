@@ -2,8 +2,8 @@ import {
   TerasActionButton,
   TerasActionRow,
   TerasStatusItem,
-  TerasContentRegion,
   TerasContentTray,
+  TerasContentFrame,
   TerasDetailGrid,
   TerasDialog,
   TerasFieldGrid,
@@ -15,6 +15,7 @@ import {
   TerasList,
   TerasStatusPill,
   TerasTextField,
+  TerasTechnicalDetails,
 } from "@/teras";
 import type { TerasTone } from "@/teras";
 
@@ -48,7 +49,7 @@ export function PrototypePreviewProfileMode({
   const resolvedProfileFacts = prototypePreviewResolvedProfileFacts(record);
 
   return (
-    <TerasContentRegion fill gap="normal" scroll>
+    <TerasContentFrame fill scroll variant="standard">
       <TerasPanel frame="padded" treatment="neutral" spacing="compact">
         <TerasPanelHeader
           actions={
@@ -64,7 +65,13 @@ export function PrototypePreviewProfileMode({
         <TerasMetadataList items={selectedProfileFacts} />
       </TerasPanel>
 
-      <TerasPanel frame="padded" treatment="neutral" spacing="compact">
+      <TerasPanel
+        fit="fill"
+        overflow="auto"
+        frame="padded"
+        treatment="neutral"
+        spacing="compact"
+      >
         <TerasPanelHeader
           actions={
             <TerasStatusPill tone={previewTone}>
@@ -78,7 +85,7 @@ export function PrototypePreviewProfileMode({
         />
         <TerasMetadataList items={resolvedProfileFacts} />
       </TerasPanel>
-    </TerasContentRegion>
+    </TerasContentFrame>
   );
 }
 
@@ -97,7 +104,7 @@ export function PrototypePreviewProfileModeDock({
   const validationRows = prototypePreviewValidationRows(record);
 
   return (
-    <TerasContentRegion data-layout="profile" fill gap="normal" scroll>
+    <TerasContentFrame data-layout="profile" fill scroll variant="standard">
       <TerasPanel
         frame="padded"
         treatment="rail"
@@ -117,8 +124,12 @@ export function PrototypePreviewProfileModeDock({
               : "Open the profile editor only when the saved preview profile needs to change."
           }
           kicker="Profile Control"
-          title={record.preview.profileRef}
+          title="Preview profile"
         />
+        <TerasTechnicalDetails items={[
+          { label: "Profile reference", value: record.preview.profileRef },
+          { label: "Profile source", value: record.preview.profileSource },
+        ]} />
         <TerasContentTray kicker="Edit boundary">
           {ownerControlled
             ? "Profile changes belong in Workspace Prototype Studio. The Console renders the exact owner projection and cannot replace it with a local draft."
@@ -131,7 +142,13 @@ export function PrototypePreviewProfileModeDock({
         </TerasActionRow>
       </TerasPanel>
 
-      <TerasPanel frame="padded" treatment="neutral" spacing="compact">
+      <TerasPanel
+        fit="fill"
+        overflow="auto"
+        frame="padded"
+        treatment="neutral"
+        spacing="compact"
+      >
         <TerasPanelHeader
           actions={
             <TerasStatusPill tone={previewTone}>
@@ -155,7 +172,7 @@ export function PrototypePreviewProfileModeDock({
           ))}
         </TerasList>
       </TerasPanel>
-    </TerasContentRegion>
+    </TerasContentFrame>
   );
 }
 

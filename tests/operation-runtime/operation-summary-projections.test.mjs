@@ -100,8 +100,6 @@ test("prototype summary keeps lifecycle metrics separate from record posture", (
     Exploring: 4,
     Graduated: 0,
     Graduating: 0,
-    Retired: 1,
-    Total: 8,
   });
 });
 

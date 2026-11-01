@@ -115,7 +115,7 @@ export function RefinementApplyView({
   return (
     <TerasContentRegion fill>
       <TerasZoneLayout variant="main-aside">
-        <TerasZone fit="fill">
+        <TerasZone scroll fit="fill">
           <TerasSubjectHero
             actionDetail="Finalized brief and Work Design apply receipt"
             actionLabel="View Work Design Handoff"
@@ -167,7 +167,7 @@ export function RefinementApplyView({
           </TerasPanel>
         </TerasZone>
 
-        <TerasZone fit="fill">
+        <TerasZone scroll fit="fill">
           <TerasPanel
             density="compact"
             frame="padded"

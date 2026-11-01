@@ -42,7 +42,7 @@ export function PlatformOperationsLiveSurface({ kind, onControl, onRefresh, onSu
     finally { setPending(false); setDestructiveCapability(null); }
   }
 
-  const readinessPanel = <TerasPanel fit="content" frame="padded" treatment="neutral"><TerasPanelHeader kicker="Operating Readiness" title="Platform operation path" description={readiness.detail} statusLabel={readiness.label} statusTone={readiness.tone} />
+  const readinessPanel = <TerasPanel spacing="normal" fit="content" frame="padded" treatment="neutral"><TerasPanelHeader kicker="Operating Readiness" title="Platform operation path" description={readiness.detail} statusLabel={readiness.label} statusTone={readiness.tone} />
     <TerasMetadataList items={[
       { label: "Platform catalog", value: readiness.catalogState },
       { label: "Operation readback", value: readiness.operationState },
@@ -69,7 +69,7 @@ export function PlatformOperationHistory({ onControl, operations }: { onControl:
   const [pending, setPending] = useState(false);
   if (!operations.length) return null;
   async function control(operationId: string, action: "cancel" | "retry", reason: string) { setPending(true); setError(null); try { await onControl(operationId, action, reason); setCancelOperationId(null); } catch (caught) { setError(caught instanceof Error ? caught.message : "The operation control was not accepted."); } finally { setPending(false); } }
-  return <><TerasPanel fit="content" frame="padded" treatment="neutral"><TerasPanelHeader kicker="OOS Operations" title="Recent durable operations" description={error ?? "Terminal receipt and exact next action remain OOS-owned."} statusLabel={`${operations.length} records`} statusTone={error ? "warn" : "info"} />
+  return <><TerasPanel spacing="normal" fit="content" frame="padded" treatment="neutral"><TerasPanelHeader kicker="OOS Operations" title="Recent durable operations" description={error ?? "Terminal receipt and exact next action remain OOS-owned."} statusLabel={`${operations.length} records`} statusTone={error ? "warn" : "info"} />
     <TerasList>{operations.slice(0, 10).map((operation) => <TerasStatusItem key={operation.operation_id} label={actionLabel(operation.command.action)} detail={`${operation.next_action.authority}: ${operation.next_action.reason}`} status={operation.state} tone={operation.state === "succeeded" ? "ok" : operation.state === "failed" || operation.state === "blocked" ? "danger" : "info"} />)}</TerasList>
     <TerasMetadataList items={operations[0].provider_operation.receipt ? [{ label: "Latest receipt", value: operations[0].provider_operation.receipt.receipt_ref }, { label: "Effect", value: operations[0].provider_operation.receipt.effect }] : [{ label: "Latest next action", value: operations[0].next_action.code }]} />
     <TerasActionRow spacing="tight">{operations[0].provider_operation.retryable ? <TerasActionButton disabled={pending} onClick={() => void control(operations[0].operation_id, "retry", "Retry the retained operation after reviewing current owner truth.")}>Retry</TerasActionButton> : null}{operations[0].provider_operation.cancel_available ? <TerasActionButton disabled={pending} tone="danger" onClick={() => setCancelOperationId(operations[0].operation_id)}>Cancel</TerasActionButton> : null}</TerasActionRow>
