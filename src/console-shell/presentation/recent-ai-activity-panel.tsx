@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TerasDialog, TerasMetadataList, TerasUtilityButton } from "@/teras";
+import { TerasDialog, TerasLoadingState, TerasMetadataList, TerasUtilityButton } from "@/teras";
 import { selectRecentAiActivity, useRecentAiActivity, fetchAiActivityPage, aiActivityWorkspace, type AiActivitySnapshot, type RecentAiActivity } from "../../agent-console";
 import { consoleToneClass } from "../console-shell-status";
 import { ConsoleSurfaceTechnicalDetails } from "../console-surface-controls";
@@ -49,10 +49,11 @@ export function RecentAiActivityPanel({ onOpenItem }: { onOpenItem?: (item: Rece
   return <>
     <section aria-label="Recent AI activity" className={styles.roster}>
       <div className={styles.rosterHeader}><p>Recent AI activity</p><button className={styles.historyButton} onClick={() => setHistoryOpen(true)} type="button">History</button></div>
-      <p className={styles.activityCoverage} role={snapshot.error ? "status" : undefined}>{head.message}</p>
+      {snapshot.status === "loading" && !head.items.length ? <TerasLoadingState inline label="Loading AI activity…" />
+        : <p className={styles.activityCoverage} role={snapshot.error ? "status" : undefined}>{head.message}</p>}
       <div className={styles.runtimeList}>
         {head.items.length ? head.items.map(item => <ActivityRow key={item.id} item={item} observedAt={snapshot.observedAt} onClick={() => { setHistoryPage(null); setPageNumber(1); setSelectedId(item.id); setHistoryOpen(true); }} />)
-          : <p className={styles.emptyRoster}>{snapshot.status === "offline" ? "Restore the owner connection or refresh History." : "Requests appear here after you ask an assistant."}</p>}
+          : snapshot.status === "loading" ? null : <p className={styles.emptyRoster}>{snapshot.status === "offline" ? "Restore the owner connection or refresh History." : "Requests appear here after you ask an assistant."}</p>}
       </div>
     </section>
     <TerasDialog title="AI Activity" kicker="Agent Runtime" width="standard" height="content" contentOverflow="auto"
@@ -61,7 +62,7 @@ export function RecentAiActivityPanel({ onOpenItem }: { onOpenItem?: (item: Rece
       <div className={styles.activityHistoryActions}>
         <p role="status">Page {pageNumber}{currentPage.status === "stale" ? " · retained observation" : ""}</p>
         <TerasUtilityButton disabled={loading} onClick={latest}>Latest / refresh</TerasUtilityButton>
-        <TerasUtilityButton disabled={loading || !currentPage.nextCursor} onClick={() => void older()}>{loading ? "Loading earlier activity" : "Earlier activity"}</TerasUtilityButton>
+        <TerasUtilityButton busy={loading} disabled={loading || !currentPage.nextCursor} onClick={() => void older()}>{loading ? "Loading earlier activity" : "Earlier activity"}</TerasUtilityButton>
       </div>
       {error ? <p className={styles.activityDescription} role="alert">{error}</p> : null}
       {snapshot.error && historyPage ? <p className={styles.activityDescription} role="alert">Owner refresh is unavailable. This page retains its recorded observation.</p> : null}

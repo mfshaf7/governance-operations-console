@@ -36,19 +36,19 @@ export function ExecutionTreeChangeReviewDialog({
   if (!open) return null;
 
   return (
-    <TerasModalShell
+    <TerasModalShell busy={submitting} busyLabel="Applying reviewed changes…"
       bodyLayout="scroll"
       description="Review the exact changes before OOS applies each mutation against fresh Delivery truth."
       footer={
         <>
-          <TerasActionButton
+          <TerasActionButton busy={submitting}
             disabled={submitting}
             emphasis="secondary"
             onClick={onClose}
           >
             Back to Editing
           </TerasActionButton>
-          <TerasActionButton
+          <TerasActionButton busy={submitting}
             disabled={
               submitting || plan.length === 0 || !acceptanceNote.trim()
             }

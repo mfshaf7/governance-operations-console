@@ -10,6 +10,7 @@ export function TerasSectionHeader({
   description,
   descriptionId,
   kicker,
+  support,
   title,
   titleId,
 }: {
@@ -19,6 +20,7 @@ export function TerasSectionHeader({
   description?: ReactNode;
   descriptionId?: string;
   kicker: string;
+  support?: ReactNode;
   title: ReactNode;
   titleId?: string;
 }) {
@@ -39,6 +41,7 @@ export function TerasSectionHeader({
             {description}
           </p>
         ) : null}
+        {support}
       </div>
       {actions ? <div className={styles.sectionHeaderActions}>{actions}</div> : null}
     </div>

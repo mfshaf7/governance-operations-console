@@ -80,7 +80,7 @@ export function RepositoryRequestDialog({
           : "Provision Repository";
 
   return (
-    <TerasModalShell
+    <TerasModalShell busy={pending} busyLabel="Recording repository request…"
       bodyLayout="scroll"
       height="content"
       width="standard"

@@ -1,6 +1,7 @@
 "use client";
 
 import { UserRound } from "lucide-react";
+import { TerasLoadingState } from "@/teras";
 
 import {
   ConsoleSurfaceDialog,
@@ -91,10 +92,10 @@ export function OperatorAccountCenter({
             activeId={controller.activeView}
             groupId="operator-account"
           >
-            <AccountView
+            {controller.identityLoading ? <TerasLoadingState label="Loading account details…" skeleton="details" /> : <AccountView
               controller={controller}
               view={controller.activeView}
-            />
+            />}
           </ConsoleSurfaceTabPanel>
         </div>
       </ConsoleSurfaceDialog>

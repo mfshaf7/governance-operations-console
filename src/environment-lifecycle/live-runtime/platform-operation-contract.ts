@@ -1,3 +1,4 @@
+import { assertReleaseWorkflowEvidence } from "./release-workflow-contract.ts";
 import type {
   PlatformOperationAction,
   PlatformOperationCatalog,
@@ -57,7 +58,7 @@ export function assertPlatformOperationRecord(value: unknown): PlatformOperation
   exact(command, ["schema_version", "command_id", "idempotency_key", "correlation_id", "causation_id", "actor_ref", "subject", "capability_id", "action", "input", "requested_at", "intent_digest", "approval"], "command");
   exact(subject, ["kind", "ref", "expected_source_version"], "command.subject");
   exact(approval, ["decision", "operator_id", "decision_ref", "decided_at", "intent_digest"], "command.approval");
-  exact(provider, ["schema_version", "operation_id", "command_id", "correlation_id", "state", "attempt", "subject_ref", "capability_id", "action", "retryable", "cancel_available", "blocker", "failure", "receipt", "safe_log_ref", "updated_at", "events"], "provider_operation");
+  exact(provider, ["schema_version", "operation_id", "command_id", "correlation_id", "state", "attempt", "subject_ref", "capability_id", "action", "retryable", "cancel_available", "blocker", "failure", "receipt", "safe_log_ref", "updated_at", "events", ...("release_workflow" in provider ? ["release_workflow"] : [])], "provider_operation");
   exact(security, ["uri", "digest", "revision"], "security_decision");
   exact(nextAction, ["code", "authority", "reason"], "next_action");
   if (operation.schema_version !== 1 || operation.workflow_id !== "platform-operation" || !identifier(operation.operation_id) || !states.has(String(operation.state)) || typeof operation.reconciled !== "boolean" || typeof operation.replayed !== "boolean" || !timestamp(operation.created_at) || !timestamp(operation.updated_at)) invalid("operation");
@@ -67,6 +68,7 @@ export function assertPlatformOperationRecord(value: unknown): PlatformOperation
   if (provider.schema_version !== 1 || !identifier(provider.operation_id) || !identifier(provider.command_id) || !identifier(provider.correlation_id) || !states.has(String(provider.state)) || !positiveInteger(provider.attempt) || !identifier(provider.subject_ref) || !identifier(provider.capability_id) || !actions.has(provider.action as PlatformOperationAction) || typeof provider.retryable !== "boolean" || typeof provider.cancel_available !== "boolean" || (provider.safe_log_ref !== null && !identifier(provider.safe_log_ref)) || !timestamp(provider.updated_at) || !Array.isArray(provider.events) || provider.events.length > 1024) invalid("provider_operation");
   if (provider.command_id !== command.command_id || provider.correlation_id !== command.correlation_id || provider.subject_ref !== subject.ref || provider.capability_id !== command.capability_id || provider.action !== command.action || provider.state !== operation.state) invalid("provider binding");
   validateBlocker(provider.blocker);
+  if (String(command.capability_id).startsWith("release.openclaw.") && ["succeeded", "failed", "cancelled"].includes(String(provider.state)) && !("release_workflow" in provider)) invalid("native terminal evidence");
   if (String(command.action).startsWith("agent-source.")) {
     exact(command.input, ["source_intent", "session_id"], "source input");
     const intent = assertSourceCredentialIntent(command.input.source_intent);
@@ -74,6 +76,16 @@ export function assertPlatformOperationRecord(value: unknown): PlatformOperation
   }
   validateFailure(provider.failure, String(command.action));
   validateReceipt(provider.receipt, String(provider.state), command);
+  if ("release_workflow" in provider) {
+    const release = assertReleaseWorkflowEvidence(provider.release_workflow, String(command.action));
+    if (["failed", "cancelled"].includes(String(provider.state)) && release.phase !== provider.state || ["applied", "no-change"].includes(release.phase) && provider.state !== "succeeded") invalid("release terminal meaning");
+    if (subject.ref !== "product:openclaw" || command.capability_id !== "release.openclaw." + release.workflow_id || record(command.input, "command input").workflow_id !== release.workflow_id) invalid("release workflow binding");
+    if (provider.retryable || (provider.state === "succeeded" && !release.desired_state_verified) || (release.phase === "awaiting-approval" && !["queued", "blocked"].includes(String(provider.state))) || (release.phase === "awaiting-review" && !["running", "blocked"].includes(String(provider.state)))) invalid("release workflow state");
+    if (provider.receipt) {
+      const receiptRelease = assertReleaseWorkflowEvidence(record(provider.receipt, "receipt").release_workflow, String(command.action));
+      if (Object.keys(release).some(key => release[key as keyof typeof release] !== receiptRelease[key as keyof typeof release])) invalid("release receipt binding");
+    }
+  }
   validateEvents(provider.events, String(provider.state));
   if (!Array.isArray(operation.controls) || operation.controls.length > 128) invalid("controls");
   operation.controls.forEach(validateControl);
@@ -125,7 +137,11 @@ function validateReceipt(value: unknown, state: string, command: Record<string, 
   if (!terminal) invalid("non-terminal receipt");
   const receipt = record(value, "provider_operation.receipt");
   const sourceSuccess = String(command.action).startsWith("agent-source.") && state === "succeeded";
-  exact(receipt, ["receipt_ref", "outcome", "recorded_at", "source_version", "effect", ...(sourceSuccess ? ["source_credential"] : [])], "provider_operation.receipt");
+  exact(receipt, ["receipt_ref", "outcome", "recorded_at", "source_version", "effect", ...(sourceSuccess ? ["source_credential"] : []), ...("release_workflow" in receipt ? ["release_workflow"] : [])], "provider_operation.receipt");
+  if ("release_workflow" in receipt) {
+    assertReleaseWorkflowEvidence(receipt.release_workflow, String(command.action));
+    if (receipt.source_version !== record(command.subject,"command subject").expected_source_version) invalid("release receipt source");
+  }
   if (sourceSuccess) {
     const source = assertSourceCredentialReceipt(receipt.source_credential), input = record(command.input, "command.input"), intent = assertSourceCredentialIntent(input.source_intent);
     if (source.command_id !== command.command_id || source.action !== command.action || source.source_intent_id !== intent.intent_id || source.session_id !== input.session_id || receipt.effect !== "verified") invalid("source receipt binding");
@@ -147,3 +163,10 @@ function validateControl(raw: unknown, index: number) {
   if (!identifier(control.control_id) || !identifier(control.idempotency_key) || !digest(control.request_digest) || !["retry", "cancel"].includes(String(control.action)) || !timestamp(control.requested_at) || !["dispatching", "confirmed", "unknown"].includes(String(control.status))) invalid(`controls[${index}]`);
 }
 function invalid(label: string): never { throw new Error(`Platform operation ${label} is malformed.`); }
+
+export function assertPlatformHistoryPage(value:unknown,workspace?:string):import("./platform-operation-types.ts").PlatformHistoryPage|null {
+ if(value===undefined||value===null)return null;
+ const page=record(value,"history.page");exact(page,["workspace","limit","total","snapshot","next_cursor"],"history.page");
+ if(!["all","dev-integration","governed-releases"].includes(String(page.workspace))||workspace&&page.workspace!==workspace||!Number.isSafeInteger(page.limit)||Number(page.limit)<1||Number(page.limit)>25||!Number.isSafeInteger(page.total)||Number(page.total)<0||!digest(page.snapshot)||page.next_cursor!==null&&(typeof page.next_cursor!=="string"||page.next_cursor.length>512))invalid("history.page");
+ return page as unknown as import("./platform-operation-types.ts").PlatformHistoryPage;
+}

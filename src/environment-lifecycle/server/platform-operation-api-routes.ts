@@ -11,10 +11,13 @@ import {
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
-export async function listPlatformOperationsRoute() {
+export async function listPlatformOperationsRoute(request:NextRequest) {
   if (!consoleOosModeSelected()) return NextResponse.json({ catalog: null, error: null, mode: "disconnected-preview", observedAt: new Date().toISOString(), operations: [], status: "current" }, { headers: noStoreHeaders });
   try {
-    const result = await readPlatformOperations();
+    const query=request?.nextUrl.searchParams;
+    if(query&&[...query].some(([key,value])=>!["workspace","cursor"].includes(key)||value.length>512||query.getAll(key).length!==1))throw new PlatformOperationOosError("Unsupported history filter.","platform_history_query_invalid",400);
+    const historyQuery=query?.has("workspace") ? new URLSearchParams({workspace:query.get("workspace")!,limit:"10",...(query.has("cursor")?{cursor:query.get("cursor")!}:{})}) : undefined;
+    const result = await readPlatformOperations({},historyQuery);
     return NextResponse.json({ ...result, mode: "live", observedAt: new Date().toISOString() }, { headers: noStoreHeaders });
   } catch (error) { return errorResponse(error); }
 }

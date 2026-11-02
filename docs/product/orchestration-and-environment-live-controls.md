@@ -29,7 +29,8 @@ Its records and receipts are explicitly local and cannot enter the live path.
 5. Follow the returned state, owner, exact next action, events, blocker or
    failure, and terminal receipt. A failed or cancelled operation never renders
    as successful, and cancellation never implies rollback.
-6. Use **Refresh status** when a dependency is degraded or stale.
+6. Use **Refresh** in Environment Lifecycle or **Refresh status** in
+   Orchestration when a dependency is degraded or stale.
    Environment controls also refresh every 15 seconds while visible and briefly
    reconcile an accepted nonterminal operation from its exact OOS record.
    Orchestration refreshes on entry, after controls, and through its explicit
@@ -100,6 +101,110 @@ distinct from final receipts and disconnected simulated control receipts.
 
 These are source/preview changes. Exact-source review, commissioning and real
 operating proof remain required before treating this batch as released.
+
+## Dev Integration maintenance preview
+
+The pending source extends the existing operation catalog with bounded owner
+profile readback and native OOS request recording. In **Dev Integration**, choose a reported profile
+and a supported operation. **Authorize**, **Renew** and **Revoke** source access
+belong to the project's **Source authoring** workflow because they require its
+repository, approved intent and source session; the generic profile action list
+must not send empty source-authorization inputs.
+
+**Stop profile** opens a separate review bound to that profile, capability and
+source version. A changed or removed capability, a new source version or a lost
+connection disables confirmation. The server rereads current source before issuing
+a command and rejects a mismatch. A submitted acknowledgement is not completion;
+follow its original operation until the owner records the outcome and receipt.
+
+**Operation history** shows only this workspace's loaded records. **Show more
+operations** reveals the next ten, including older records. Select any operation
+for owner events, receipt, failure/blocker and exact technical references. **Refresh
+original operation** rereads that exact identity, even when the current profile
+catalog has changed. Retry/cancel appear only when the owner advertises them for
+the selected operation; cancellation rechecks current availability and never
+implies rollback. A retained list does not establish current runtime health.
+
+The staged profile adapter reads the committed owner registry and keeps absent
+support/runtime evidence unknown. Its accepted Intent, Runtime Contract and Review
+stages record a native OOS request, with retained request history and an exact
+recording receipt. Recording does not register or admit a profile. Admission is
+read separately and linked to the original request; no Proposal or ART item is
+created. Historical admission references are retained.
+
+These source paths have isolated composed proof, including cold readback and exact
+receipt replay. They are not commissioned in the live Console yet. Disconnected
+sample views remain explicitly labelled; provider failure never substitutes them
+for live records. Exact-source Security review and Platform composition remain
+required before activation.
+
+## Governed Releases maintenance preview
+
+The pending product read adapter keeps the existing register and three Dashboard
+tabs. It reads registered products independently of executable Platform subjects;
+owner-managed products and products without a release rail remain inspectable.
+Product support, owner-record status, recorded runtime state, current resource
+health and authorized Console execution are separate facts.
+
+Release Path shows recorded owner evidence with its original timestamps,
+candidate references and pinned source links. A record is not projected as an
+executable or completed workflow step. Missing evidence remains not recorded.
+
+Protected workflow buttons open existing Platform GitHub workflows in a new tab.
+Review current source and inputs there and satisfy their environment approvals.
+Opening the link does not submit a Console command, authorize production or create
+a release receipt. Native Console dispatch remains uncommissioned in the live installation. The
+staged native entry is described below. A failed product
+refresh retains old facts visibly and preserves read-only workflow navigation. Current source and inputs must be
+reviewed in GitHub; the Console cannot authorize its execution.
+
+Both workspaces use the owner-scoped history API before pagination. **Load older
+operations** reads another bounded owner page instead of revealing only a global
+200-record slice. Immutable command-creation continuation survives state updates
+and new commands. Exact-original refresh remains the recovery route. The current
+file store retains lightweight metadata; cold discovery and file-stat costs still
+grow with history. This does not claim a database index or constant query cost.
+
+Disconnected release dashboards and forms retain explicit Preview/Simulation
+labels. Sample review values remain reachable at shorter desktop sizes and empty
+optional values say Not provided. Protected owner routes never use the simulator.
+
+These are uncommitted source/preview repairs. Separate default-off OOS product
+readback, exact-source Security review, Platform composition and live readback
+qualification remain required before activation. No actual release was performed.
+
+
+### Native owner workflow entry and source freshness
+
+The staged OpenClaw adapter reuses the existing release Details/Review pattern
+and OOS Platform-operation journal. Owner-defined inputs, product, capability and
+exact source are reviewed before submission. Actual verification results start
+blank. Human environment approval, source PR review/merge, desired-state readback
+and observed health remain separate. Workflow success alone is not completion.
+Native authority stays unavailable until the accepted composition and dedicated
+Platform App are commissioned. Read-only GitHub links grant no mutation.
+
+The running Platform code stays at its accepted revision. A bounded read adapter
+may follow GitHub main only when every non-record Git leaf still matches that
+revision and main retains the accepted lineage. Only the explicit existing
+OpenClaw release/verification/lifecycle GitOps records may advance. A normal
+release merge therefore refreshes owner records and permits the next reviewed
+operation without a manual pull, checkout change or runtime-code repin.
+
+`owner-main` means current owner main was verified. `accepted-snapshot` is the
+reviewed local source snapshot; `retained-owner-main` is a last verified remote
+snapshot. The latter two remain inspectable, with a source notice and original
+observation time, and cannot enable a new native action. A source outage never
+substitutes examples. A bounded derived cache retains one verified snapshot for
+restart recovery; it is not canonical work-state authority. Immutable blobs and
+shared head proofs avoid per-product probes and repeated full source reads.
+
+A lost response retains only an opaque browser recovery pointer. Recover the
+original OOS request; never redispatch after Platform's write-ahead marker. Exact
+original reads, events, workflow/PR links and immutable receipts remain available
+independently of current catalog admission. Cancellation targets the original run
+and does not prove rollback. The two-consecutive-operation qualification uses an
+isolated GitHub transport; it is source evidence, not live operating acceptance.
 
 ## Recovery
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { TerasDialog, TerasEmptyState, TerasMetadataList } from "@/teras";
+import { TerasLoadingState, TerasDialog, TerasEmptyState, TerasMetadataList } from "@/teras";
 
 import {
   resolveConsoleFixtureIsolation,
@@ -40,7 +40,7 @@ export function LocalExceptionRuntimeDialog({
       title="Local Exception Runtime"
     >
       {runtime ? <TerasMetadataList items={localExceptionRuntimeMetadata(runtime)} />
-        : <TerasEmptyState>{snapshot ? snapshot.error ?? "Local runtime inventory is unavailable." : "Reading local runtime inventory."}</TerasEmptyState>}
+        : snapshot ? <TerasEmptyState>{snapshot.error ?? "Local runtime inventory is unavailable."}</TerasEmptyState> : <TerasLoadingState label="Loading local runtime inventory…" skeleton="details" />}
       {runtime && runtime.models.length === 0 ? (
         <TerasEmptyState>
           No local runtime inventory has been admitted to this projection.

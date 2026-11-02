@@ -1,3 +1,4 @@
+import type { NativeReleaseWorkflow } from "../live-runtime/release-workflow-contract.ts";
 import {
   assertEnvironmentLifecycleNextMove,
   assertEnvironmentLifecycleSource,
@@ -6,6 +7,7 @@ import {
 } from "./environment-lifecycle-types.ts";
 
 export type ProductReleaseMaturity =
+  | "owner-managed"
   | "fully-governed"
   | "platform-integrated";
 
@@ -106,6 +108,10 @@ export type ProductRuntimeLifecycleCapability = Readonly<{
 }>;
 
 export type ProductReleaseCapability = Readonly<{
+  ownerWorkflows?: readonly {id:string;label:string;environment:string;url:string;native?:NativeReleaseWorkflow}[];
+  ownerGuidanceUrl?: string;
+  recordedEvidence?: readonly {id:string;label:string;status:string;recorded_at:string|null;source_bundle:string|null;image_digest:string|null;evidence_ref:string|null;url:string}[];
+  recordedRuntime?: {state:string;recorded_at:string|null;url:string}|null;
   highestRealEndpoint: string;
   maturity: ProductReleaseMaturity;
   nextMove: EnvironmentLifecycleNextMove | null;

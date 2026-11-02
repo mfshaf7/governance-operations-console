@@ -106,6 +106,7 @@ function GovernanceConsoleContent({
         <CommandCenterWorkspacePulse
           posture={controller.systemMood}
           pulseSignals={controller.pulseSignals}
+          sources={controller.workspacePulseSnapshot.sources}
           selectedPulseSignal={controller.selectedPulseSignal}
           systemMoodOpen={controller.systemMoodOpen}
           onPulseSignalChange={controller.setPulseSignalSelection}
@@ -165,6 +166,7 @@ function GovernanceConsoleContent({
           activeResourceScenario={controller.activeResourceScenario}
           componentScenarioId={controller.componentScenarioId}
           componentSourceError={controller.componentSourceError}
+          componentSourceLoading={controller.componentSourceLoading}
           consoleDevMode={controller.consoleDevMode}
           onComponentScenarioChange={controller.setComponentScenario}
           onSelectAlert={controller.selectAlert}

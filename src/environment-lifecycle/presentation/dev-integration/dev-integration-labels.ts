@@ -71,6 +71,7 @@ export const devIntegrationStateModelLabels: Record<
   DevIntegrationRuntimeStateModel,
   string
 > = {
+  unknown: "Not recorded",
   disposable: "Disposable",
   persistent: "Persistent",
 };
@@ -79,6 +80,7 @@ export const devIntegrationWriteClassLabels: Record<
   DevIntegrationExpectedWriteClass,
   string
 > = {
+  unknown: "Not recorded",
   "canonical-backend": "Canonical backend",
   "external-sandbox": "External sandbox",
   none: "No writes",
@@ -89,6 +91,7 @@ export const devIntegrationPromoteCheckLabels: Record<
   DevIntegrationPromoteCheckState,
   string
 > = {
+  unknown: "Unknown",
   failed: "Failed",
   "not-ready": "Not ready",
   "not-run": "Not run",
@@ -101,6 +104,7 @@ export const devIntegrationPromoteCheckTones: Record<
   DevIntegrationPromoteCheckState,
   TerasTone
 > = {
+  unknown: "stale",
   failed: "danger",
   "not-ready": "warn",
   "not-run": "muted",

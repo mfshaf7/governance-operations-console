@@ -5,12 +5,14 @@ import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode } f
 import styles from "./teras-patterns.module.css";
 import type { TerasTone } from "./teras-types";
 import { cx } from "./teras-utils";
+import { TerasLoadingIndicator } from "./teras-loading-state";
 
 export type TerasActionEmphasis = "primary" | "secondary";
 export type TerasActionTreatment = "solid" | "tonal";
 export type TerasActionTone = "accent" | TerasTone;
 
 type TerasActionButtonBaseProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  busy?: boolean;
   accentRgb?: string;
   size?: "default" | "table-compact";
 };
@@ -32,6 +34,7 @@ export type TerasActionButtonProps = TerasActionButtonBaseProps &
 
 export function TerasActionButton({
   accentRgb,
+  busy = false,
   children,
   className,
   emphasis,
@@ -81,7 +84,10 @@ export function TerasActionButton({
       style={resolvedStyle}
       type="button"
       {...props}
+      aria-busy={busy || undefined}
+      disabled={busy || props.disabled}
     >
+      {busy ? <TerasLoadingIndicator /> : null}
       {children}
     </button>
   );

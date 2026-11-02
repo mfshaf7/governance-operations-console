@@ -106,6 +106,7 @@ export function useRuntimeComponentObservations({
 
   return {
     activeScenario,
+    loading: projection === null,
     error:
       activeScenario.mode === "unavailable"
         ? observationFailureMessage(projection?.reasonCode)

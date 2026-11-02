@@ -54,8 +54,9 @@ function ConsoleCommandClock({
 }
 
 export function ConsoleCommandBar() {
+  const accountSnapshot = useOperatorAccountSnapshot();
   const accountController = useOperatorAccountController(
-    useOperatorAccountSnapshot(),
+    accountSnapshot, accountSnapshot.loading,
   );
 
   return (
@@ -85,6 +86,7 @@ export function ConsoleCommandBar() {
           <div className={styles.accountSlot}>
             <OperatorAccountCard
               account={accountController.account}
+              loading={accountController.identityLoading}
               onOpen={accountController.openAccount}
             />
           </div>

@@ -281,7 +281,7 @@ export function CatalogMutationDialog({
 
   return (
     <>
-    <TerasModalShell
+    <TerasModalShell busy={submitting} busyLabel="Applying catalog change…"
       bodyLayout="scroll"
       height="content"
       width="standard"

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { WorkspaceIntakeDialog } from "@/console-integration/workspace-intake/presentation/workspace-intake-dialog.tsx";
-import {
+import { TerasLoadingState,
   TerasActionButton,
   TerasChoiceGroup,
   TerasDraftCloseGuardDialog,
@@ -437,7 +437,7 @@ function ExecutionCloseoutSupport({
           kicker="Closeout Readiness"
           title="Loading Delivery Truth"
         />
-        <TerasEmptyState fill>Waiting for the closeout projection.</TerasEmptyState>
+        <TerasLoadingState fill label="Loading closeout readiness…" skeleton="details" />
       </TerasPanel>
     );
   }

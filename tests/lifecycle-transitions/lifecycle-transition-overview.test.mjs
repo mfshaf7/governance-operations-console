@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { lifecycleTransitionArtifactFixtures } from "../../src/lifecycle-transitions/fixtures/lifecycle-transition-artifacts.fixture.ts";
 import { projectLifecycleTransitions } from "../../src/lifecycle-transitions/read-model/lifecycle-transition-projector.ts";
-import { buildLifecycleTransitionRouteOverviews } from "../../src/lifecycle-transitions/presentation/lifecycle-transition-overview-view-model.ts";
+import { buildLifecycleTransitionRouteOverviews, buildLifecycleTransitionOverviewItem } from "../../src/lifecycle-transitions/presentation/lifecycle-transition-overview-view-model.ts";
 import {
   lifecycleTransitionRouteNavLabel,
   lifecycleTransitionTargetFact,
@@ -68,7 +68,7 @@ test("workspace summaries preserve all route outcomes without duplicating route 
   );
   assert.deepEqual(
     routes.map((route) => lifecycleTransitionRouteNavLabel(route.routeId)),
-    ["Prototype", "Delivery", "Handoff"],
+    ["Proposal → Prototype", "Proposal → Delivery", "Prototype → Delivery"],
   );
 });
 
@@ -422,4 +422,17 @@ test("case:1282-negative blocks unknown, stale, conflicting, and unavailable res
     }).code,
     "canonical-source-truncated",
   );
+});
+
+
+test("history preserves every evidence reference and separate owner receipts", () => {
+  const original = transitions[0];
+  const item = buildLifecycleTransitionOverviewItem({ ...original,
+    application: { ...original.application, receiptRef: "oos://receipts/application" },
+    admission: { ...original.admission, receiptRef: "oos://receipts/admission" },
+    history: [{ ...original.history[0], evidenceRefs: ["oos://receipts/one", "wgcf://validation/two"] }],
+  });
+  assert.deepEqual(item.history[0].evidenceRefs, ["oos://receipts/one", "wgcf://validation/two"]);
+  assert.ok(item.references.some(ref => ref.label === "Application receipt" && ref.value === "oos://receipts/application"));
+  assert.ok(item.references.some(ref => ref.label === "Admission receipt" && ref.value === "oos://receipts/admission"));
 });

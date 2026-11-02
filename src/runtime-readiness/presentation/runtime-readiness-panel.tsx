@@ -1,5 +1,7 @@
 "use client";
 
+import { TerasLoadingState } from "@/teras";
+
 import type {
   ComponentStatusScenario,
   ResourceMetricCard,
@@ -184,6 +186,7 @@ export function WslResourceUsage({
   activeResourceScenario,
   componentScenarioId,
   componentSourceError,
+  componentSourceLoading = false,
   consoleDevMode,
   onComponentScenarioChange,
   onSelectAlert,
@@ -199,6 +202,7 @@ export function WslResourceUsage({
   activeResourceScenario: ResourceUsageScenario;
   componentScenarioId: string;
   componentSourceError: string | null;
+  componentSourceLoading?: boolean;
   consoleDevMode: boolean;
   onComponentScenarioChange: (scenarioId: string) => void;
   onSelectAlert: (alert: RuntimeAlertItem | null) => void;
@@ -437,12 +441,12 @@ export function WslResourceUsage({
               options={componentStatusScenarios}
               onChange={onComponentScenarioChange}
             />
-            <ComponentStatusView
+            {componentSourceLoading ? <TerasLoadingState label="Checking connected components…" /> : <ComponentStatusView
               components={activeComponentScenario.components}
               sourceUnavailable={activeComponentScenario.mode === "unavailable"}
               selectedComponent={selectedComponent}
               onSelectComponent={onSelectComponent}
-            />
+            />}
           </>
         ) : null}
 
@@ -467,7 +471,7 @@ export function WslResourceUsage({
           </>
         ) : null}
 
-        {activeResourceTab === "resources" ? (
+        {activeResourceTab === "resources" && sourceState === "warming" ? <TerasLoadingState fill label="Loading resource readings…" detail="Waiting for the first host sample." /> : activeResourceTab === "resources" ? (
           <>
             <div className="flex items-start justify-between gap-4">
               <SectionTitle kicker="Platform Resources" title="Capacity Monitor" />

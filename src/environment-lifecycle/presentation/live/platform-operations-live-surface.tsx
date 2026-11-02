@@ -1,79 +1,104 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasDialog, TerasEmptyState, TerasList, TerasMetadataList, TerasPanel, TerasPanelHeader, TerasRecordControlLayout, TerasRegisterPanel, TerasSelectedPanel, TerasStatusItem } from "@/teras";
-import type { PlatformOperationCapability, PlatformOperationRecord, PlatformOperationSubject, PlatformOperationsLiveSnapshot } from "../../live-runtime/platform-operation-types.ts";
+import { TerasActionButton, TerasActionRow, TerasContentTray, TerasDialog, TerasEmptyState, TerasLoadingState, TerasFieldStack, TerasList, TerasMetadataList, TerasPanel, TerasPanelHeader, TerasRecordControlLayout, TerasRegisterPanel, TerasSelectedPanel, TerasStatusItem, TerasTechnicalDetails } from "@/teras";
+import type { PlatformOperationAction, PlatformOperationCapability, PlatformOperationRecord, PlatformOperationSubject, PlatformOperationsLiveSnapshot } from "../../live-runtime/platform-operation-types.ts";
 import { projectPlatformRuntimeReadiness } from "../../read-model/platform-runtime-readiness.ts";
+import { operationStateLabel, platformActionContext, platformActionLabel, platformSubjectLabel, workspaceSubjectKinds } from "../../read-model/platform-operation-display.ts";
+export { PlatformOperationHistory } from "./platform-operation-history";
 
-export function PlatformOperationsLiveSurface({ kind, onControl, onRefresh, onSubmit, snapshot, focusRecordRef }: {
+type ReviewedAction = { subjectRef: string; sourceVersion: string; capabilityId: string; action: PlatformOperationCapability["action"] };
+
+export function PlatformOperationsLiveSurface({ kind, onRefresh, onSubmit, snapshot, focusRecordRef, controlsOnly = false, selectedSubjectRef, actionFilter }: {
+  controlsOnly?: boolean;
+  selectedSubjectRef?: string;
+  actionFilter?: readonly PlatformOperationAction[];
   kind: "dev-integration" | "governed-releases";
   onControl: (operationId: string, action: "cancel" | "retry", reason: string) => Promise<PlatformOperationRecord>;
   onRefresh: () => Promise<unknown>;
-  onSubmit: (subjectRef: string, capabilityId: string) => Promise<PlatformOperationRecord>;
-  snapshot: PlatformOperationsLiveSnapshot;
-  focusRecordRef?: string | null;
+  onSubmit: (subjectRef: string, capabilityId: string, input?: Record<string, unknown>, reviewedSourceVersion?: string) => Promise<PlatformOperationRecord>;
+  snapshot: PlatformOperationsLiveSnapshot; focusRecordRef?: string | null;
 }) {
-  const subjects = useMemo(() => (snapshot.catalog?.subjects ?? []).filter((subject) => kind === "dev-integration" ? subject.kind === "dev-integration-profile" || subject.kind === "profile-request" : subject.kind === "product-release" || subject.kind === "product-runtime-lifecycle"), [kind, snapshot.catalog]);
+  const subjects = useMemo(() => (snapshot.catalog?.subjects ?? []).filter(subject => workspaceSubjectKinds(kind).includes(subject.kind) && (!selectedSubjectRef || subject.ref === selectedSubjectRef)), [kind, snapshot.catalog, selectedSubjectRef]);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
   useEffect(() => {
     const operation = snapshot.operations.find(item => item.operation_id === focusRecordRef);
     const ref = operation?.command.subject.ref ?? focusRecordRef;
     if (ref && subjects.some(subject => subject.ref === ref)) setSelectedRef(ref);
   }, [focusRecordRef, snapshot.operations, subjects]);
+  const selected = subjects.find(subject => subject.ref === selectedRef) ?? subjects[0] ?? null;
+  const readiness = projectPlatformRuntimeReadiness(snapshot, new Date(), workspaceSubjectKinds(kind));
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [destructiveCapability, setDestructiveCapability] = useState<PlatformOperationCapability | null>(null);
-  const selected = subjects.find((subject) => subject.ref === selectedRef) ?? subjects[0] ?? null;
-  const readiness = useMemo(() => projectPlatformRuntimeReadiness(snapshot, new Date(), kind === "dev-integration"
-    ? ["dev-integration-profile", "profile-request"]
-    : ["product-release", "product-runtime-lifecycle"]), [kind, snapshot]);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reviewed, setReviewed] = useState<ReviewedAction | null>(null);
+  const [recordedOutcome, setOutcome] = useState<PlatformOperationRecord | null>(null);
+  const outcome = snapshot.operations.find(operation => operation.operation_id === recordedOutcome?.operation_id) ?? recordedOutcome;
+  const boundSubject = subjects.find(subject => subject.ref === reviewed?.subjectRef && subject.source_version === reviewed.sourceVersion);
+  const boundCapability = boundSubject?.capabilities.find(capability => capability.capability_id === reviewed?.capabilityId && capability.action === reviewed.action && capability.destructive);
+  const confirmationCurrent = Boolean(readiness.actionable && boundSubject && boundCapability?.available && !platformActionContext(boundCapability.action));
 
   async function refresh() {
-    setRefreshing(true);
-    try { await onRefresh(); }
+    setRefreshing(true); setError(null);
+    try { await onRefresh(); } catch (caught) { setError(caught instanceof Error ? caught.message : "The connection could not be refreshed."); }
     finally { setRefreshing(false); }
   }
-
   async function execute(subject: PlatformOperationSubject, capability: PlatformOperationCapability) {
+    const current = subjects.find(item => item.ref === subject.ref && item.source_version === subject.source_version);
+    const permitted = current?.capabilities.find(item => item.capability_id === capability.capability_id && item.action === capability.action && item.available);
+    if (pending || !projectPlatformRuntimeReadiness(snapshot, new Date(), workspaceSubjectKinds(kind)).actionable || !current || !permitted || platformActionContext(permitted.action)) {
+      setError("This action or its source has changed. Refresh and review it again."); return;
+    }
     setPending(true); setError(null);
-    try { await onSubmit(subject.ref, capability.capability_id); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "The operation was not accepted."); }
-    finally { setPending(false); setDestructiveCapability(null); }
+    try { setOutcome(await onSubmit(current.ref, permitted.capability_id, {}, current.source_version)); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "The operation outcome is unavailable. Inspect the original operation in history before trying another."); }
+    finally { setPending(false); setReviewed(null); }
   }
-
-  const readinessPanel = <TerasPanel spacing="normal" fit="content" frame="padded" treatment="neutral"><TerasPanelHeader kicker="Operating Readiness" title="Platform operation path" description={readiness.detail} statusLabel={readiness.label} statusTone={readiness.tone} />
-    <TerasMetadataList items={[
-      { label: "Platform catalog", value: readiness.catalogState },
-      { label: "Operation readback", value: readiness.operationState },
-      { label: "Next authority", value: readiness.nextAction.authority },
-      { label: "Next action", value: `${readiness.nextAction.code}: ${readiness.nextAction.reason}` },
-      { label: "Observed", value: snapshot.observedAt },
-    ]} />
-    <TerasActionRow spacing="tight"><TerasActionButton disabled={refreshing} onClick={() => void refresh()}>{refreshing ? "Refreshing…" : "Refresh owner truth"}</TerasActionButton></TerasActionRow>
+  function selectAction(subject: PlatformOperationSubject, capability: PlatformOperationCapability) {
+    if (capability.destructive) setReviewed({ subjectRef: subject.ref, sourceVersion: subject.source_version, capabilityId: capability.capability_id, action: capability.action });
+    else void execute(subject, capability);
+  }
+  const connection = <TerasPanel spacing="normal" fit="content" frame="padded" treatment="neutral">
+    <TerasPanelHeader kicker="Connection" title={snapshot.status === "loading" ? "Reading available actions" : snapshot.catalog ? snapshot.status === "current" ? "Connected Platform actions" : "Retained Platform actions" : "Platform connection unavailable"}
+      description={error ?? (readiness.catalogState === "current" ? "Choose an existing profile and an available action. An action result does not change profile admission or approve a release." : readiness.detail)}
+      statusLabel={snapshot.status === "current" && readiness.catalogState === "current" ? "Connected" : readiness.label} statusTone={snapshot.status === "current" && readiness.catalogState === "current" ? "info" : readiness.tone}
+      actions={<TerasActionButton busy={refreshing} emphasis="secondary" disabled={refreshing || pending} onClick={() => void refresh()}>{refreshing ? "Refreshing…" : "Refresh"}</TerasActionButton>}/>
+    <TerasTechnicalDetails summary="Connection details" items={[{label:"Catalog",value:readiness.catalogState},{label:"History read",value:readiness.operationState},{label:"Observed",value:snapshot.observedAt},{label:"Next authority",value:readiness.nextAction.authority},{label:"Owner next action",value:`${readiness.nextAction.code}: ${readiness.nextAction.reason}`} ]}/>
   </TerasPanel>;
-
-  if (snapshot.status === "loading") return <>{readinessPanel}<TerasEmptyState fill>Loading current OOS operation truth…</TerasEmptyState></>;
-  if (!snapshot.catalog) return <>{readinessPanel}<TerasEmptyState fill>{snapshot.error?.message ?? "Current OOS operation truth is unavailable. Live mode does not fall back to fixture controls."}</TerasEmptyState></>;
-
-  return <>{readinessPanel}<TerasRecordControlLayout composition="fullscreen-register" mode="register-selected" register={<TerasRegisterPanel description="Current Platform-owned subjects and OOS-authorized capabilities. No fixture records are shown in live mode." filterBar={null} kicker={kind === "dev-integration" ? "Dev Integration" : "Governed Releases"} statusLabel={`${subjects.length} live subjects`} statusTone={readiness.ready ? "ok" : "warn"} title="Platform operation catalog">
-    {subjects.length ? <TerasList fit="fill">{subjects.map((subject, index) => <TerasStatusItem ariaLabel={`Select ${subject.ref}`} key={`${subject.kind}:${subject.ref}`} index={String(index + 1).padStart(2, "0")} label={subject.ref} detail={`${subject.owner} / ${subject.source_version}`} status={readiness.actionable && subject.capabilities.some((capability) => capability.available) ? "Actionable" : "Unavailable"} tone={readiness.actionable && subject.capabilities.some((capability) => capability.available) ? "ok" : "muted"} onSelect={() => setSelectedRef(subject.ref)} />)}</TerasList> : <TerasEmptyState fill>No live subjects are published for this workspace.</TerasEmptyState>}
-  </TerasRegisterPanel>} selected={selected ? <TerasSelectedPanel kicker="Live Platform Subject" title={selected.ref} selected tone="info" variant="rich" description="Actions are admitted only from this current OOS catalog version." facts={[{ label: "Owner", value: selected.owner }, { label: "Kind", value: selected.kind }, { label: "Source version", value: selected.source_version }, { label: "Catalog observed", value: snapshot.catalog.observed_at }]} action={{ kicker: "Authorized Actions", title: "Current capabilities", description: error ?? (readiness.actionable ? "Only actions currently marked available by Platform truth are executable." : readiness.detail), node: <TerasActionRow spacing="tight">{selected.capabilities.map((capability) => <TerasActionButton disabled={pending || !readiness.actionable || !capability.available} key={capability.capability_id} onClick={() => capability.destructive ? setDestructiveCapability(capability) : void execute(selected, capability)} tone={capability.destructive ? "danger" : "accent"}>{actionLabel(capability.action)}</TerasActionButton>)}</TerasActionRow> }} /> : <TerasEmptyState fill>No live subject is selected.</TerasEmptyState>} />
-    <TerasDialog actions={<><TerasActionButton emphasis="secondary" onClick={() => setDestructiveCapability(null)}>Back</TerasActionButton><TerasActionButton disabled={pending || !readiness.actionable || !selected || !destructiveCapability} onClick={() => selected && destructiveCapability ? void execute(selected, destructiveCapability) : undefined} tone="danger">Confirm operation</TerasActionButton></>} contentOverflow="auto" description={destructiveCapability?.action === "dev-integration.stop" ? "Stopping the profile can stop this Console's control-plane dependencies. OOS retains the exact approved intent; recovery then follows the Platform-owned next action shown here." : "This command may remove or reset runtime state. OOS will retain the exact approved intent and Platform remains the effect authority."} height="content" kicker="Destructive Action" onClose={() => setDestructiveCapability(null)} open={Boolean(destructiveCapability)} role="alertdialog" title={`Run ${destructiveCapability ? actionLabel(destructiveCapability.action) : "operation"}?`} width="compact"><TerasMetadataList items={[{ label: "Subject", value: selected?.ref ?? "Unavailable" }, { label: "Capability", value: destructiveCapability?.capability_id ?? "Unavailable" }, { label: "Source version", value: selected?.source_version ?? "Unavailable" }]} /></TerasDialog>
+  if (snapshot.status === "loading") return <>{connection}<TerasLoadingState fill label="Loading profiles and operation history…" /></>;
+  if (!snapshot.catalog) return <>{connection}<TerasEmptyState fill>{snapshot.error?.message ?? "The current action catalog is unavailable. Retained history remains available below."}</TerasEmptyState></>;
+  const direct = selected?.capabilities.filter(capability => !platformActionContext(capability.action) && (!actionFilter || actionFilter.includes(capability.action))) ?? [];
+  const contextual = selected?.capabilities.filter(capability => platformActionContext(capability.action) && (!actionFilter || actionFilter.includes(capability.action))) ?? [];
+  const selectedPanel = selected ? <TerasSelectedPanel kicker={kind === "dev-integration" ? "Selected profile" : "Selected product"} title={platformSubjectLabel(selected.ref)} selected tone="info" variant="rich"
+        description={snapshot.status === "current" ? "Only supported actions from the current provider are available here." : "Retained record. Refresh the connection before starting another action."} facts={[{label:"Operation owner",value:selected.owner}]}
+        action={{kicker:"Profile operations",title:direct.length ? "Available actions" : contextual.length ? "Action details" : "No controls for this view",description:error ?? (!direct.length && !contextual.length ? "The owner does not publish an executable control for this view." : readiness.actionable ? "Each action records its own operation and outcome." : readiness.detail),node:<TerasFieldStack spacing="normal">
+          {direct.length ? <TerasActionRow spacing="tight">{direct.map(capability => <TerasActionButton key={capability.capability_id} title={capability.unavailable_reason ?? undefined} disabled={pending || !readiness.actionable || !capability.available}
+            tone={capability.destructive ? "danger" : "accent"} onClick={() => selectAction(selected,capability)}>{platformActionLabel(capability.action)}</TerasActionButton>)}</TerasActionRow> : null}
+          {direct.filter(capability => !capability.available && capability.unavailable_reason).map(capability => <TerasStatusItem key={capability.capability_id} label={platformActionLabel(capability.action)} status="Unavailable" detail={capability.unavailable_reason} tone="warn"/>)}
+          {contextual.some(capability => capability.action.startsWith("agent-source.")) ? <TerasContentTray kicker="Source access" description="Authorize, renew or revoke access from the project's Source authoring workflow. These actions need its approved repository and source session."/> : null}
+          {contextual.filter(capability => !capability.action.startsWith("agent-source.")).map(capability => <TerasStatusItem key={capability.capability_id} label={platformActionLabel(capability.action)} status="Use its workflow" detail={platformActionContext(capability.action)} tone="info"/>)}
+          <TerasTechnicalDetails summary="Profile and capability details" items={[{label:"Profile reference",value:selected.ref},{label:"Source version",value:selected.source_version},{label:"Catalog observation",value:snapshot.catalog.observed_at},...selected.capabilities.map(capability => ({label:platformActionLabel(capability.action),value:`${capability.capability_id} · ${capability.available ? "advertised available" : "unavailable"}`}))]}/>
+        </TerasFieldStack>}}/> : <TerasEmptyState fill>No current controls are published for this profile. Registry visibility does not grant runtime access.</TerasEmptyState>;
+  return <>
+    {controlsOnly ? null : connection}
+    {controlsOnly ? selectedPanel : <TerasRecordControlLayout composition="fullscreen-register" mode="register-selected"
+      register={<TerasRegisterPanel description="Profiles reported by the connected Platform provider." filterBar={null} kicker={kind === "dev-integration" ? "Dev Integration" : "Governed Releases"}
+        statusLabel={`${subjects.length} ${kind === "dev-integration" ? "items" : "products"}${snapshot.status === "current" ? "" : " · retained"}`} statusTone={snapshot.status === "current" ? "info" : "warn"} title={kind === "dev-integration" ? "Integration profiles" : "Connected products"}>
+        {subjects.length ? <TerasList fit="fill">{subjects.map((subject,index) => <TerasStatusItem ariaLabel={`Select ${subject.ref}`} key={`${subject.kind}:${subject.ref}`} index={String(index+1).padStart(2,"0")}
+          label={platformSubjectLabel(subject.ref)} detail={subject.owner} status={readiness.actionable && subject.capabilities.some(capability => capability.available && !platformActionContext(capability.action)) ? "Actions available" : "View only"}
+          tone={subject.ref === selected?.ref ? "info" : "muted"} onSelect={() => setSelectedRef(subject.ref)}/>)}</TerasList> : <TerasEmptyState fill>No products or profiles are published for this workspace by the connected provider.</TerasEmptyState>}
+      </TerasRegisterPanel>}
+      selected={selectedPanel}/>}
+    {!controlsOnly && kind === "dev-integration" && !subjects.some(subject => subject.capabilities.some(capability => capability.action === "dev-integration.request-profile" && capability.available)) ? <TerasContentTray kicker="Profile management" title="Profile requests are not connected" description="This provider supplies operations for existing profiles. New profile requests and the detailed profile dashboard still need their owner integration; sample dashboards are available only in design preview."/> : null}
+    <TerasDialog open={Boolean(reviewed)} onClose={() => {if(!pending)setReviewed(null);}} closeDisabled={pending} contentOverflow="auto" height="content" width="compact" role="alertdialog" kicker="Confirm profile action"
+      title={reviewed ? `${platformActionLabel(reviewed.action)}?` : "Confirm action"}
+      description={confirmationCurrent ? "Confirm this action for the reviewed profile. Stopping it can interrupt dependent services; the owner controls recovery." : "The action or its source is no longer current. Go back, refresh and review it again."}
+      actions={<><TerasActionButton emphasis="secondary" disabled={pending} onClick={() => setReviewed(null)}>Back</TerasActionButton><TerasActionButton tone="danger" disabled={pending || !confirmationCurrent} onClick={() => {if(boundSubject&&boundCapability)void execute(boundSubject,boundCapability);}}>Confirm operation</TerasActionButton></>}>
+      <TerasMetadataList items={[{label:"Profile",value:reviewed ? platformSubjectLabel(reviewed.subjectRef) : "Unavailable"}]}/>
+    </TerasDialog>
+    <TerasDialog open={Boolean(outcome)} onClose={() => setOutcome(null)} contentOverflow="auto" height="content" width="standard" kicker="Operation recorded" title={outcome?.state === "succeeded" ? "Operation completed" : outcome?.state === "failed" ? "Operation failed" : outcome?.state === "blocked" ? "Operation blocked" : outcome?.state === "cancelled" ? "Operation cancelled" : "Operation submitted"}
+      description="Inspect this original operation in history for its latest owner result and receipt." actions={<TerasActionButton onClick={() => setOutcome(null)}>Done</TerasActionButton>}>
+      {outcome ? <TerasMetadataList items={[{label:"Action",value:platformActionLabel(outcome.command.action)},{label:"Profile",value:platformSubjectLabel(outcome.command.subject.ref)},{label:"State",value:operationStateLabel(outcome.state)},{label:"Operation",value:outcome.operation_id}]}/> : null}
+    </TerasDialog>
   </>;
 }
-
-export function PlatformOperationHistory({ onControl, operations }: { onControl: (operationId: string, action: "cancel" | "retry", reason: string) => Promise<PlatformOperationRecord>; operations: readonly PlatformOperationRecord[] }) {
-  const [cancelOperationId, setCancelOperationId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-  if (!operations.length) return null;
-  async function control(operationId: string, action: "cancel" | "retry", reason: string) { setPending(true); setError(null); try { await onControl(operationId, action, reason); setCancelOperationId(null); } catch (caught) { setError(caught instanceof Error ? caught.message : "The operation control was not accepted."); } finally { setPending(false); } }
-  return <><TerasPanel spacing="normal" fit="content" frame="padded" treatment="neutral"><TerasPanelHeader kicker="OOS Operations" title="Recent durable operations" description={error ?? "Terminal receipt and exact next action remain OOS-owned."} statusLabel={`${operations.length} records`} statusTone={error ? "warn" : "info"} />
-    <TerasList>{operations.slice(0, 10).map((operation) => <TerasStatusItem key={operation.operation_id} label={actionLabel(operation.command.action)} detail={`${operation.next_action.authority}: ${operation.next_action.reason}`} status={operation.state} tone={operation.state === "succeeded" ? "ok" : operation.state === "failed" || operation.state === "blocked" ? "danger" : "info"} />)}</TerasList>
-    <TerasMetadataList items={operations[0].provider_operation.receipt ? [{ label: "Latest receipt", value: operations[0].provider_operation.receipt.receipt_ref }, { label: "Effect", value: operations[0].provider_operation.receipt.effect }] : [{ label: "Latest next action", value: operations[0].next_action.code }]} />
-    <TerasActionRow spacing="tight">{operations[0].provider_operation.retryable ? <TerasActionButton disabled={pending} onClick={() => void control(operations[0].operation_id, "retry", "Retry the retained operation after reviewing current owner truth.")}>Retry</TerasActionButton> : null}{operations[0].provider_operation.cancel_available ? <TerasActionButton disabled={pending} tone="danger" onClick={() => setCancelOperationId(operations[0].operation_id)}>Cancel</TerasActionButton> : null}</TerasActionRow>
-  </TerasPanel><TerasDialog actions={<><TerasActionButton emphasis="secondary" onClick={() => setCancelOperationId(null)}>Back</TerasActionButton><TerasActionButton disabled={pending || !cancelOperationId} onClick={() => cancelOperationId ? void control(cancelOperationId, "cancel", "Cancel the retained operation without assuming rollback.") : undefined} tone="danger">Confirm cancellation</TerasActionButton></>} contentOverflow="auto" description="Cancellation stops future work but does not prove rollback of effects already retained by Platform." height="content" kicker="Cancellation Boundary" onClose={() => setCancelOperationId(null)} open={Boolean(cancelOperationId)} role="alertdialog" title="Cancel this operation?" width="compact"><TerasMetadataList items={[{ label: "Operation", value: cancelOperationId ?? "Unavailable" }, { label: "Effect posture", value: "Retained effects remain visible in the terminal receipt." }]} /></TerasDialog></>;
-}
-
-function actionLabel(action: string) { return action.split(".").at(-1)?.replaceAll("-", " ") ?? action; }

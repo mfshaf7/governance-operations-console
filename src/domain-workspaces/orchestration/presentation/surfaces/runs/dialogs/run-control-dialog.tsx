@@ -94,7 +94,7 @@ export function RunControlDialog({
   }
 
   return (
-    <><TerasDialog
+    <><TerasDialog busy={submitting} busyLabel="Submitting run control…"
       contentOverflow="auto"
       height="content"
       actions={
@@ -105,7 +105,7 @@ export function RunControlDialog({
             <TerasActionButton disabled={submitting} onClick={requestClose} emphasis="secondary">
               Back
             </TerasActionButton>
-            <TerasActionButton
+            <TerasActionButton busy={submitting}
               disabled={!validation.available || submitting}
               emphasis="primary"
               onClick={() => void applyControl()}

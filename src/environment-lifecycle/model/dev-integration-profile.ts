@@ -19,7 +19,8 @@ export type DevIntegrationProfileLifecycle =
 
 export type DevIntegrationRuntimeStateModel =
   | "disposable"
-  | "persistent";
+  | "persistent"
+  | "unknown";
 
 export type DevIntegrationRuntimeObservationState =
   | "degraded"
@@ -41,6 +42,7 @@ export type DevIntegrationProfileAction =
   | "up";
 
 export type DevIntegrationPromoteCheckState =
+  | "unknown"
   | "failed"
   | "not-ready"
   | "not-run"
@@ -61,6 +63,7 @@ export type DevIntegrationStageHandoffCheckResult = Readonly<{
 }>;
 
 export type DevIntegrationExpectedWriteClass =
+  | "unknown"
   | "canonical-backend"
   | "external-sandbox"
   | "none"
@@ -84,6 +87,8 @@ export type DevIntegrationPersistentConfiguration = Readonly<{
 }>;
 
 export type DevIntegrationProfile = Readonly<{
+  supportGaps?: readonly string[];
+  declaredPersistence?: Readonly<Record<string, string | null>> | null;
   actions: readonly DevIntegrationProfileAction[];
   admissionRefs: readonly string[];
   dependencies: readonly string[];
@@ -158,7 +163,8 @@ export function assertDevIntegrationProfile(
 
   if (
     profile.runtime.stateModel === "persistent" &&
-    profile.persistence === null
+    profile.persistence === null &&
+    !(profile.source.provenance === "authority-snapshot" && profile.supportGaps?.includes("persistence"))
   ) {
     throw new Error(
       `${profile.profileId} requires persistent runtime configuration.`,

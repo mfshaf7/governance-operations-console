@@ -1,3 +1,4 @@
+import type { LifecycleTransitionRuntimePosture } from "../../live-runtime/lifecycle-transition-live-types.ts";
 import {
   TerasActionButton,
   TerasEmptyState,
@@ -7,6 +8,7 @@ import {
   TerasSelectedPanel,
   TerasTimeline,
   TerasTimelineItem,
+  TerasTechnicalDetails,
 } from "@/teras";
 
 import type {
@@ -23,7 +25,6 @@ import type {
 } from "../lifecycle-transition-overview-view-model";
 import {
   lifecycleTransitionDomainLabel,
-  lifecycleTransitionShortReference,
   lifecycleTransitionTargetFact,
   lifecycleTransitionTimestamp,
   lifecycleTransitionTitle,
@@ -31,9 +32,11 @@ import {
 
 export function LifecycleTransitionSelected({
   item,
+  runtimePosture,
   onOpenWorkbenchSurface,
 }: {
   item: LifecycleTransitionOverviewItem | null;
+  runtimePosture: LifecycleTransitionRuntimePosture | null;
   onOpenWorkbenchSurface: (
     surfaceLabel: OperationWorkbenchPathLabel,
     focusIntent?: ConsoleSurfaceEntryIntent | null,
@@ -67,11 +70,11 @@ export function LifecycleTransitionSelected({
         : `Open the owning workspace to inspect the applied ${lifecycleTransitionDomainLabel(item.targetDomain)} record.`);
 
   return (
-    <TerasPanelStack fill="last">
+    <TerasPanelStack fill="last" scroll>
       <TerasSelectedPanel
         action={{
           description: actionDescription,
-          kicker: item.nextAction ? "Current Required Move" : "Applied Target",
+          kicker: item.nextAction ? "Next step" : item.state === "applied" ? "Applied target" : "Transition outcome",
           node:
             ownerRoute.kind === "workbench" ? (
               <TerasActionButton
@@ -88,9 +91,13 @@ export function LifecycleTransitionSelected({
             ) : undefined,
           title:
             item.nextAction?.actionLabel ??
-            `Open ${lifecycleTransitionDomainLabel(item.targetDomain)}`,
+            (item.state === "applied" && ownerRoute.kind === "workbench" ? `Open ${lifecycleTransitionDomainLabel(item.targetDomain)}` : item.stateLabel),
         }}
-        description={item.reasonDetail}
+        description={item.stateLabel === "Source reported"
+          ? "The source reports this handoff as applied; independent target confirmation is not projected."
+          : item.stateLabel === "Owner confirmed"
+            ? "The Prototype owner confirmed graduation and references the Delivery handoff."
+            : item.reasonDetail}
         facts={[
           {
             label: targetFact.label,
@@ -113,13 +120,11 @@ export function LifecycleTransitionSelected({
         variant="rich"
       />
       <TerasPanel
-        fit="fill"
-        layout="header-body"
-        overflow="auto"
+        fit="content"
         treatment="neutral"
       >
         <TerasPanelHeader
-          description="Owner-published evidence in newest-first order. Native readbacks do not reconstruct missing journal phases."
+          description="Newest recorded evidence first. Owner readbacks may contain fewer events than the original workflow."
           kicker="History"
           title="Evidence history"
         />
@@ -127,13 +132,12 @@ export function LifecycleTransitionSelected({
           <TerasTimeline ariaLabel="Transition receipt history">
             {item.history.map((historyItem) => (
               <TerasTimelineItem
-                detail={
-                  historyItem.evidenceRef
-                    ? lifecycleTransitionShortReference(
-                        historyItem.evidenceRef,
-                      )
-                    : historyItem.ownerLabel
-                }
+                detail={historyItem.ownerLabel}
+                evidence={<TerasTechnicalDetails summary="Evidence details" items={[
+                  { label: "Event", value: historyItem.artifactId },
+                  { label: "Recorded", value: historyItem.recordedAt },
+                  ...historyItem.evidenceRefs.map((value, index) => ({ label: `Reference ${index + 1}`, value })),
+                ]} />}
                 displayTimestamp={lifecycleTransitionTimestamp(
                   historyItem.recordedAt,
                 )}
@@ -148,6 +152,16 @@ export function LifecycleTransitionSelected({
         ) : (
           <TerasEmptyState>No receipt history is available.</TerasEmptyState>
         )}
+      </TerasPanel>
+      <TerasPanel fit="content" treatment="neutral">
+        <TerasTechnicalDetails summary="Record details" items={[
+          ...(runtimePosture ? [
+            { label: "Source coverage", value: runtimePosture.mode === "disconnected-preview" ? "Preview" : runtimePosture.status !== "current" ? "Unavailable" : runtimePosture.truncated ? "Partial" : "Current" },
+            { label: "Observed", value: runtimePosture.observedAt },
+            ...(runtimePosture.error ? [{ label: "Source detail", value: runtimePosture.error }] : []),
+          ] : []),
+          ...item.references,
+        ]} />
       </TerasPanel>
     </TerasPanelStack>
   );

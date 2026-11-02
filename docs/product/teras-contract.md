@@ -57,6 +57,7 @@ Teras may own:
 - setup and readiness compositions assembled from neutral primitives
 - activity log panels and full-log viewers
 - empty states
+- request loading states and decorative waiting indicators
 
 Teras must not import Proposal, Repository, Delivery, Prototype, Portfolio,
 Risk, Orchestration, Lifecycle Transitions, Runtime, Model Operations, or
@@ -69,6 +70,16 @@ Board lane, package card, progress, and family-map dashboard shapes belong to
 the Control Board product app. Context Board drawing and snapshot workbench
 behavior belongs to the Context Board product app. Consuming domains use public
 product-app APIs and adapters instead of promoting those shapes into Teras.
+
+## Waiting feedback
+
+The operator-requested unpublished loading treatment uses `TerasLoadingState`
+and `TerasLoadingIndicator` across product surfaces. See
+[Loading feedback](loading-feedback.md) for first-read, refresh, error,
+accessibility and coverage rules. Dialogs, modal shells, wizards and panel headers
+accept an explicit `busy` flag and task-specific `busyLabel`; action and utility
+buttons accept `busy`. The consuming workflow owns the real request state and
+existing command/close guards. Teras supplies presentation only.
 
 ## Collection And Event Rules
 

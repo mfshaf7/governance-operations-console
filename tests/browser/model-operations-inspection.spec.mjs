@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../support/filled-surface-layout.mjs";
 
 const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:4317";
 test.use({ viewport: { width: 1700, height: 1000 }, actionTimeout: 15000 });

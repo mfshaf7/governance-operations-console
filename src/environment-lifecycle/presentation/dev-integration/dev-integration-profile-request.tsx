@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import {
   TerasDraftCloseGuardDialog,
+  TerasActionButton,
+  TerasDialog,
   TerasList,
   TerasMetadataList,
   TerasPanel,
@@ -14,6 +16,8 @@ import {
   type TerasTone,
   type TerasWizardStep,
 } from "@/teras";
+import type { DevIntegrationRequestOptions } from "../../model/dev-integration-request-options.ts";
+import type { ProfileRequestRecord } from "../../live-runtime/dev-integration-profile-contract.ts";
 
 import type {
   DevIntegrationProfile,
@@ -106,6 +110,8 @@ function RequestCheckPanel({
 }
 
 export function DevIntegrationProfileRequest({
+  options,
+  live,
   existingProfiles,
   onBack,
   onCompleted,
@@ -115,6 +121,10 @@ export function DevIntegrationProfileRequest({
   operations,
   receipts,
 }: {
+  options: DevIntegrationRequestOptions;
+  live?: { current: boolean; sourceVersion: string;
+    submit: (request: DevIntegrationProfileRequestRecord, reviewedSourceVersion: string) => Promise<ProfileRequestRecord>;
+    pendingId: () => string | null; read: (id: string) => Promise<ProfileRequestRecord> };
   existingProfiles: readonly DevIntegrationProfile[];
   onBack: () => void;
   onCompleted: (profileId: string) => void;
@@ -128,7 +138,17 @@ export function DevIntegrationProfileRequest({
   operations: readonly EnvironmentLifecycleOperation[];
   receipts: readonly EnvironmentLifecycleOperationReceipt[];
 }) {
-  const [draft, setDraft] = useState(createDevIntegrationProfileRequestDraft);
+  const [draft, setDraft] = useState(() => {
+    const initial = createDevIntegrationProfileRequestDraft();
+    if (!live) return initial;
+    return {...initial,
+      laneClass: options.laneClasses.some(option => option.value === initial.laneClass) ? initial.laneClass : options.laneClasses[0]?.value ?? initial.laneClass,
+      runtimePlatform: options.runtimePlatforms.includes(initial.runtimePlatform) ? initial.runtimePlatform : options.runtimePlatforms[0] ?? initial.runtimePlatform,
+      runtimeStateModel: options.runtimeStateModels.some(option => option.value === initial.runtimeStateModel) ? initial.runtimeStateModel : options.runtimeStateModels[0]?.value ?? initial.runtimeStateModel};
+  });
+  const [liveOutcome, setLiveOutcome] = useState<ProfileRequestRecord | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [reviewedSource, setReviewedSource] = useState<string | null>(null);
   const [exitGuardOpen, setExitGuardOpen] = useState(false);
   const [failedCorrelationId, setFailedCorrelationId] =
     useState<string | null>(null);
@@ -155,10 +175,14 @@ export function DevIntegrationProfileRequest({
     requestedAt: new Date().toISOString(),
     requestedBy: "operator:local-console",
   };
-  const validationErrors = validateDevIntegrationProfileRequestDraft(
+  const validationErrors = [...validateDevIntegrationProfileRequestDraft(
     draft,
     validationContext,
-  );
+  )];
+  if (live && (!options.ownerRepos.includes(draft.ownerRepo) || draft.participatingRepos.some(repo => !options.participatingRepos.includes(repo)) ||
+    !options.laneClasses.some(option => option.value === draft.laneClass) || !options.runtimePlatforms.includes(draft.runtimePlatform) ||
+    !options.runtimeStateModels.some(option => option.value === draft.runtimeStateModel)))
+    validationErrors.push("Review the current owner and runtime choices before submitting.");
   const reviewChecks = [
     profileRequestCheckItem(
       "intent-complete",
@@ -175,7 +199,7 @@ export function DevIntegrationProfileRequest({
     profileRequestCheckItem(
       "projection-boundary",
       "Projection boundary",
-      "Submission creates proposed local truth only.",
+      live ? "Submission records a durable request in Dev Integration. Admission and runtime launch remain separate." : "Submission creates proposed local truth only.",
       true,
     ),
   ];
@@ -234,8 +258,16 @@ export function DevIntegrationProfileRequest({
   ) {
     setDraft((current) => ({ ...current, ...update }));
   }
+  function closeLiveOutcome() {
+    if (submitting) return;
+    if (liveOutcome?.state === "recorded") {
+      setDraft(createDevIntegrationProfileRequestDraft()); onDirtyChange(false); onBack();
+    }
+    setLiveOutcome(null); setLiveError(null);
+  }
 
   function exitRequest() {
+    if (submitting) return;
     if (dirty) {
       setExitGuardOpen(true);
       return;
@@ -259,6 +291,7 @@ export function DevIntegrationProfileRequest({
     if (stepId === step) return;
 
     setFailedCorrelationId(null);
+    if (stepId === "review") setReviewedSource(live?.sourceVersion ?? null);
     setStep(stepId as RequestStep);
   }
 
@@ -282,7 +315,13 @@ export function DevIntegrationProfileRequest({
     }
 
     setSubmitting(true);
+    setLiveError(null);
     try {
+      if (live) {
+        if (!live.current || reviewedSource !== live.sourceVersion) throw new Error("Profile source changed. Review the current request again before submission.");
+        setLiveOutcome(await live.submit(request, reviewedSource));
+        return;
+      }
       const operation = await onSubmitted(request);
       if (operation.state !== "succeeded") {
         setFailedCorrelationId(operation.correlationId);
@@ -292,6 +331,8 @@ export function DevIntegrationProfileRequest({
       setDraft(createDevIntegrationProfileRequestDraft());
       onDirtyChange(false);
       onCompleted(request.profileId);
+    } catch (error) {
+      setLiveError(error instanceof Error ? error.message : "The request outcome is unconfirmed; inspect its original identity before trying another.");
     } finally {
       setSubmitting(false);
     }
@@ -341,7 +382,7 @@ export function DevIntegrationProfileRequest({
         <TerasPanelHeader
           description={
             reviewReady
-              ? "The request can be recorded as prototype-local proposed truth."
+              ? live ? liveError ?? (reviewedSource !== live.sourceVersion || !live.current ? "Source changed or is unavailable. Review current source before submitting." : "The request will be recorded in Dev Integration for owner review; it will not admit or launch a profile.") : "The request can be recorded as prototype-local proposed truth."
               : validationErrors[0]
           }
           kicker="Final Check"
@@ -353,9 +394,9 @@ export function DevIntegrationProfileRequest({
           columns={1}
           items={[
             {
-              detail: devIntegrationProfileRequestRoute.destinationRef,
+              detail: live ? "OOS-owned profile request" : devIntegrationProfileRequestRoute.destinationRef,
               label: "Destination",
-              value: devIntegrationProfileRequestRoute.destinationLabel,
+              value: live ? "Dev Integration" : devIntegrationProfileRequestRoute.destinationLabel,
             },
             {
               label: "Owner review",
@@ -393,7 +434,7 @@ export function DevIntegrationProfileRequest({
 
   return (
     <>
-      <TerasWizardModal
+      <TerasWizardModal busy={submitting} busyLabel="Submitting profile request…"
         activeStepId={step}
         description="Define a local environment contract for owner review. Submission does not admit or launch the profile."
         footer={
@@ -402,7 +443,7 @@ export function DevIntegrationProfileRequest({
               step === "review" && !failedCorrelationId
                 ? {
                     dataAction: "submit-profile-request",
-                    disabled: !reviewReady || submitting,
+                    disabled: !reviewReady || submitting || Boolean(live && (!live.current || reviewedSource !== live.sourceVersion)),
                     label: submitting
                       ? "Submitting"
                       : "Submit Profile Request",
@@ -435,7 +476,7 @@ export function DevIntegrationProfileRequest({
                   ? {
                       disabled: !runtimeComplete,
                       label: "Review Request",
-                      onClick: () => setStep("review"),
+                      onClick: () => { setReviewedSource(live?.sourceVersion ?? null); setStep("review"); },
                     }
                   : undefined
             }
@@ -476,12 +517,14 @@ export function DevIntegrationProfileRequest({
       >
         {step === "intent" ? (
           <ProfileRequestIntentStep
+            options={options}
             draft={draft}
             existingProfileIds={existingProfileIds}
             onChange={updateDraft}
           />
         ) : step === "runtime" ? (
           <ProfileRequestRuntimeStep
+            options={options}
             draft={draft}
             onChange={updateDraft}
             onOpenPersistence={() => setPersistentDialogOpen(true)}
@@ -507,6 +550,19 @@ export function DevIntegrationProfileRequest({
         open={exitGuardOpen}
         title="Discard Profile Request?"
       />
+      <TerasDialog open={Boolean(live && (liveOutcome || liveError))} onClose={closeLiveOutcome} closeDisabled={submitting}
+        title={liveOutcome?.state === "recorded" ? "Profile request recorded" : "Profile request needs attention"}
+        kicker="Request outcome" width="standard" height="content" contentOverflow="auto"
+        description={liveOutcome?.next_action.reason ?? liveError ?? ""}
+        actions={<><TerasActionButton emphasis="secondary" disabled={submitting} onClick={closeLiveOutcome}>Done</TerasActionButton>
+          {(liveOutcome?.request_id || live?.pendingId()) ? <TerasActionButton disabled={submitting} onClick={async () => {
+            const id = liveOutcome?.request_id ?? live?.pendingId(); if (!id || !live) return;
+            setSubmitting(true);try {setLiveOutcome(await live.read(id));setLiveError(null);} catch(error) {setLiveError(error instanceof Error ? error.message : "Original request unavailable.");} finally {setSubmitting(false);}
+          }}>Read original request</TerasActionButton> : null}</>}>
+        <TerasMetadataList items={[{label:"Request",value:liveOutcome?.request_id ?? live?.pendingId() ?? "Not submitted"},
+          {label:"Recording receipt",value:liveOutcome?.receipt.digest ?? "Not confirmed"},{label:"State",value:liveOutcome?.state === "recorded" ? "Request recorded" : "Unconfirmed"},
+          {label:"Readback",value:liveOutcome?.readback ?? "Unavailable"},...(liveError ? [{label:"Read error",value:liveError}] : [])]}/>
+      </TerasDialog>
     </>
   );
 }

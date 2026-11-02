@@ -6,12 +6,15 @@ import { X } from "lucide-react";
 import styles from "./teras-patterns.module.css";
 import { TerasModalFoundation } from "./teras-modal-foundation";
 import { cx } from "./teras-utils";
+import { TerasLoadingState } from "./teras-loading-state";
 
 type TerasModalShellAttributes = Omit<HTMLAttributes<HTMLElement>, "children"> &
   Record<`data-${string}`, string | number | boolean | undefined>;
 
 export function TerasModalShell({
   agentHost = false,
+  busy = false,
+  busyLabel = "Working…",
   bodyLayout,
   children,
   description,
@@ -25,6 +28,8 @@ export function TerasModalShell({
   width,
 }: {
   agentHost?: boolean;
+  busy?: boolean;
+  busyLabel?: string;
   bodyLayout: "fill" | "scroll";
   children: ReactNode;
   description?: ReactNode;
@@ -69,6 +74,7 @@ export function TerasModalShell({
                   {description}
                 </p>
               ) : null}
+              {busy ? <TerasLoadingState inline label={busyLabel} /> : null}
             </div>
             <button
               aria-label="Close modal"

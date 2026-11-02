@@ -3,6 +3,7 @@
 import {
   TerasActionButton,
   TerasEmptyState,
+  TerasLoadingState,
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
@@ -86,7 +87,7 @@ export function ProposalControlSurface({
             statusTone="info"
             title="Proposal register"
           >
-            {controller.proposals.filtered.length > 0 ? (
+            {controller.source.loading ? <TerasLoadingState fill label="Loading proposals…" /> : controller.proposals.filtered.length > 0 ? (
               <ProposalWorkspaceRegisterTable
                 onInspectProposal={controller.register.inspect}
                 onSelectProposal={controller.register.select}
@@ -128,7 +129,7 @@ export function ProposalControlSurface({
             tone={selectedProposalHubProjection.status.tone}
             variant="compact"
           />
-        ) : (
+        ) : controller.source.loading ? <TerasLoadingState fill label="Preparing proposal details…" skeleton="details" /> : (
           <TerasEmptyState fill>
             No canonical proposal record is available. Check Workspace Status for source health.
           </TerasEmptyState>
@@ -165,6 +166,8 @@ export function ProposalControlSurface({
         proposal={controller.details.proposal}
       />
       <ProposalCaptureModal
+        pending={controller.capture.pending}
+        error={controller.capture.error}
         previewMode={controller.capture.previewMode}
         canSubmit={controller.capture.canSubmit}
         context={controller.capture.context}

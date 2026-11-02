@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../support/filled-surface-layout.mjs";
 import { execFileSync } from "node:child_process";
 import { publicationPreparation } from "../support/product-publication-preparation.mjs";
 

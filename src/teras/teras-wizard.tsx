@@ -49,6 +49,8 @@ function terasWizardSubjectDescription(subject: TerasWizardSubject) {
 
 export function TerasWizardModal({
   activeStepId,
+  busy = false,
+  busyLabel,
   children,
   description,
   footer,
@@ -64,6 +66,8 @@ export function TerasWizardModal({
   title,
 }: {
   activeStepId: string;
+  busy?: boolean;
+  busyLabel?: string;
   children: ReactNode;
   description?: ReactNode;
   footer: ReactNode;
@@ -86,6 +90,8 @@ export function TerasWizardModal({
 
   return (
     <TerasModalShell
+      busy={busy}
+      busyLabel={busyLabel}
       bodyLayout="fill"
       description={description}
       footer={footer}

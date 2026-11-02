@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../support/filled-surface-layout.mjs";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { prototypeWorkspaceReadModel } = require("../../src/domain-workspaces/prototype/read-model/prototype-workspace-read-model.ts");

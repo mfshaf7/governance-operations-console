@@ -162,7 +162,7 @@ export function ArchitecturePacketAuthoringModal({
 
   return (
     <>
-    <TerasModalShell
+    <TerasModalShell busy={submitting} busyLabel="Processing architecture packet…"
       bodyLayout="scroll"
       description="Prepare the architecture and conformance plan, validate the packet, then review and save it through the governed owner path."
       footer={

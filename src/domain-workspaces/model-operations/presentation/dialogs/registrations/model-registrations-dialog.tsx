@@ -77,7 +77,7 @@ export function ModelRegistrationsDialog({
   ];
 
   return <>
-    <TerasDialog open={open} onClose={onClose} title="Model registrations"
+    <TerasDialog busy={runtime.pending} busyLabel="Updating model registration…" open={open} onClose={onClose} title="Model registrations"
       kicker="Models & routing" width="wide" height="fill" contentOverflow="hidden"
       actions={<TerasActionButton emphasis="secondary" onClick={onClose}>Back to Models & routing</TerasActionButton>}>
       <TerasRecordControlLayout composition="compact-control" mode="overview-register-selected"

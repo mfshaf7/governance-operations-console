@@ -21,7 +21,7 @@ export function ExecutionSourceRealizationPanel({ sessionId, sessionRevision, so
   const authorization = sourceIntentRef ? { sourceIntentRef } : {};
 
   return <TerasPanel frame="padded" layout="header-body" tone={runtime.error ? "danger" : "info"} treatment="state">
-    <TerasPanelHeader kicker="Bounded Source Realization" title="Implement the accepted work"
+    <TerasPanelHeader busy={runtime.pending} busyLabel="Reading source realization…" kicker="Bounded Source Realization" title="Implement the accepted work"
       description={runtime.error ?? current?.next_action.reason ?? "Reading authoritative source realization state."}
       statusLabel={runtime.pending ? "Working" : current?.state ?? "Unavailable"} />
     <TerasFieldStack spacing="normal">

@@ -19,7 +19,7 @@ import {
 import {
   getOperationWorkbenchSurfaceAttributes,
 } from "../../../../operation-workbench/operation-workbench-contract.ts";
-import { TerasActionButton, TerasEmptyState, TerasModalShell } from "@/teras";
+import { TerasActionButton, TerasEmptyState, TerasLoadingState, TerasModalShell } from "@/teras";
 
 import type { DeliveryIntakeSource } from "../../read-model/index.ts";
 import {
@@ -244,9 +244,8 @@ function DeliveryWorkspaceUnavailable({
       width="viewport"
       footer={<TerasActionButton emphasis="secondary" onClick={() => void onRetry()}>Refresh canonical records</TerasActionButton>}
     >
-      <TerasEmptyState fill>
-        {loading ? "Loading canonical Delivery records." : "Canonical Delivery records are unavailable. Restore the OOS owner projection before continuing Delivery work."}
-      </TerasEmptyState>
+      {loading ? <TerasLoadingState fill label="Loading Delivery workspace…" detail="Reading projects and their current workflow state." />
+        : <TerasEmptyState fill>Canonical Delivery records are unavailable. Restore the OOS owner projection before continuing Delivery work.</TerasEmptyState>}
     </TerasModalShell>
   );
 }

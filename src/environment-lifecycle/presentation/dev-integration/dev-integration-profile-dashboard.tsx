@@ -1,7 +1,7 @@
 "use client";
 
 import { History } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   TerasActionButton,
@@ -58,6 +58,10 @@ const dashboardTabs = [
 ] as const;
 
 export function DevIntegrationProfileDashboard({
+  runtimeControls,
+  handoffControls,
+  sourceCurrent = true,
+  connected = false,
   onBack,
   onOpenHistory,
   onRetryOperation,
@@ -66,6 +70,10 @@ export function DevIntegrationProfileDashboard({
   profile,
   receipts,
 }: {
+  runtimeControls?: ReactNode;
+  handoffControls?: ReactNode;
+  sourceCurrent?: boolean;
+  connected?: boolean;
   onBack: () => void;
   onOpenHistory: () => void;
   onRetryOperation: (
@@ -101,7 +109,7 @@ export function DevIntegrationProfileDashboard({
         profile={profile}
       />
     ) : activeTab === "runtime" ? (
-      <ProfileRuntimeDock
+      runtimeControls ?? <ProfileRuntimeDock
         onRetryOperation={onRetryOperation}
         onSubmitProfileAction={onSubmitProfileAction}
         operations={operations}
@@ -109,7 +117,7 @@ export function DevIntegrationProfileDashboard({
         receipts={receipts}
       />
     ) : (
-      <ProfileStageHandoffDock
+      handoffControls ?? <ProfileStageHandoffDock
         onRetryOperation={onRetryOperation}
         onSubmitProfileAction={onSubmitProfileAction}
         operations={operations}
@@ -122,14 +130,14 @@ export function DevIntegrationProfileDashboard({
     <>
       <TerasModalShell
         bodyLayout="fill"
-        description="Stable profile truth, runtime controls, and governed stage handoff evidence."
+        description={connected ? sourceCurrent ? "Current owner profile contract. Runtime observations and handoff evidence retain their own source and freshness." : "Retained owner profile. Refresh current source before starting another action." : "Design preview — sample profile, runtime and stage-handoff observations. These are not current owner records."}
         footer={
           <TerasActionButton emphasis="secondary" onClick={onBack}>
             Back to Register
           </TerasActionButton>
         }
         height="fill"
-        kicker="Dev Integration Dashboard"
+        kicker={connected ? "Dev Integration" : "Dev Integration Preview"}
         onClose={onBack}
         surfaceId="dev-integration-profile-dashboard"
         title="Profile Dashboard"
@@ -158,7 +166,9 @@ export function DevIntegrationProfileDashboard({
                   }
                   actionsLayout="inline"
                   description={profile.purpose}
-                  kicker="Selected Profile"
+                  kicker={connected ? "Owner profile" : "Sample profile"}
+                  statusLabel={connected ? sourceCurrent ? "Owner record" : "Retained" : "Preview"}
+                  statusTone="info"
                   title={profile.profileId}
                 />
                 <TerasMetadataList
@@ -253,6 +263,7 @@ export function DevIntegrationProfileDashboard({
       </TerasModalShell>
 
       <ProfileSupportDetailsDialog
+        connected={connected}
         onClose={() => setSupportDetailsOpen(false)}
         open={supportDetailsOpen}
         profile={profile}

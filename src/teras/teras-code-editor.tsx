@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { EditorView } from "@codemirror/view";
 import { normalizedCodeText } from "./teras-code-text.ts";
 import styles from "./teras-patterns.module.css";
+import { TerasLoadingState } from "./teras-loading-state";
 
 /** A product-neutral text/diff field. No network, storage or source execution. */
 export function TerasCodeEditor({ path, value, original, diff, readOnly, onValueChange, maxBytes = 65536 }: {
@@ -10,12 +11,13 @@ export function TerasCodeEditor({ path, value, original, diff, readOnly, onValue
 }) {
   const host = useRef<HTMLDivElement>(null), view = useRef<EditorView | null>(null), raw = useRef(value), callback = useRef(onValueChange), replacing = useRef(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const readOnlyRef = useRef(readOnly), reconfigureReadOnly = useRef<((value: boolean) => void) | null>(null);
   const replaceText = useRef<((value: string) => void) | null>(null);
   readOnlyRef.current = readOnly;
   callback.current = onValueChange;
   useEffect(() => {
-    let cancelled = false; setError(null); raw.current = value;
+    let cancelled = false; setError(null); setLoading(true); raw.current = value;
     void (async () => {
       const [{ EditorView, keymap }, { EditorState, Compartment }, { basicSetup }, { indentWithTab, temporarilySetTabFocusMode }, { unifiedMergeView }, { HighlightStyle, syntaxHighlighting }, { tags }] = await Promise.all([
         import("@codemirror/view"), import("@codemirror/state"), import("codemirror"), import("@codemirror/commands"), import("@codemirror/merge"),
@@ -57,9 +59,10 @@ export function TerasCodeEditor({ path, value, original, diff, readOnly, onValue
         }),
       ] }) });
       view.current = editor;
+      setLoading(false);
       reconfigureReadOnly.current = value => editor.dispatch({ effects: editable.reconfigure(editableState(value)) });
       replaceText.current = value => editor.dispatch({ effects: rawState.replace(editor.state, value), changes: { from: 0, to: editor.state.doc.length, insert: normalizedCodeText(value) } });
-    })().catch(() => { if (!cancelled) setError("The code editor could not load. Your source buffer is retained; close and reopen this view to retry."); });
+    })().catch(() => { if (!cancelled) { setLoading(false); setError("The code editor could not load. Your source buffer is retained; close and reopen this view to retry."); } });
     return () => { cancelled = true; replaceText.current = null; reconfigureReadOnly.current = null; view.current?.destroy(); view.current = null; };
     // Value changes from typing must preserve cursor and undo state.
     // A parent remounts the field when explicitly replacing a buffer.
@@ -76,5 +79,5 @@ export function TerasCodeEditor({ path, value, original, diff, readOnly, onValue
       finally { replacing.current = false; }
     }
   }, [value]);
-  return <div className={styles.terasCodeEditor} data-teras-code-editor="true"><div ref={host} />{error ? <p role="alert">{error}</p> : null}</div>;
+  return <div className={styles.terasCodeEditor} data-teras-code-editor="true">{loading ? <TerasLoadingState label="Opening code editor…" skeleton="details" /> : null}<div ref={host} aria-busy={loading} />{error ? <p role="alert">{error}</p> : null}</div>;
 }

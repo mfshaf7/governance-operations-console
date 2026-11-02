@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import {
+import { TerasLoadingState,
   TerasChoiceGroup,
   TerasDraftCloseGuardDialog,
   TerasEmptyState,
@@ -167,7 +167,7 @@ export function PrototypeClosureModal({
 
   return (
     <>
-      <TerasWizardModal
+      <TerasWizardModal busy={busy || closure?.pending === true} busyLabel="Reading closure state…"
         activeStepId={step}
         description="Review Studio source and evidence before requesting a governed lifecycle change."
         footer={<TerasWizardFooter
@@ -217,8 +217,7 @@ export function PrototypeClosureModal({
                 status="current" tone="info" />
               <TerasStatusItem label="Custody" detail={preparation.expected_state.source_custody ?? "none"}
                 status="source" tone="info" />
-            </TerasList> : <TerasEmptyState>{closure?.pending ? "Reading Studio source..." :
-              closure?.error?.message ?? "No authoritative Closure source is available."}</TerasEmptyState>}
+            </TerasList> : closure?.pending ? <TerasLoadingState label="Loading Studio closure source…" skeleton="details" /> : <TerasEmptyState>{closure?.error?.message ?? "No authoritative Closure source is available."}</TerasEmptyState>}
           </TerasPanel>
           {visibleResult ? <TerasPanel frame="padded" treatment="state" tone={statusTone}
             fit="content" spacing="normal">

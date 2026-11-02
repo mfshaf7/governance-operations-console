@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import { TerasLoadingIndicator } from "./teras-loading-state";
 
 import styles from "./teras-patterns.module.css";
 import {
@@ -24,6 +25,23 @@ type TerasMediaSnapshotAction = {
   onClick: () => void;
   tone?: TerasActionTone;
 };
+
+function SnapshotImage({ src, alt, style }: { src: string; alt: string; style?: CSSProperties }) {
+  const image = useRef<HTMLImageElement>(null);
+  const [observation, setObservation] = useState<{ src: string; state: "ready" | "error" } | null>(null);
+  const state = observation?.src === src ? observation.state : "loading";
+  useEffect(() => {
+    // A cached image may finish before hydration attaches its load handler.
+    if (image.current?.complete) setObservation({ src, state: image.current.naturalWidth ? "ready" : "error" });
+  }, [src]);
+  return <>
+    <img ref={image} alt={alt} src={src} style={style} data-teras-media-state={state}
+      onLoad={() => setObservation({ src, state: "ready" })} onError={() => setObservation({ src, state: "error" })} />
+    {state !== "ready" ? <span className={styles.terasMediaWait} role="status">
+      {state === "loading" ? <><TerasLoadingIndicator />Loading snapshot…</> : "Snapshot could not load."}
+    </span> : null}
+  </>;
+}
 
 function terasMediaSnapshotActionKey(
   action: TerasMediaSnapshotAction,
@@ -86,7 +104,7 @@ export function TerasMediaSnapshot({
       disabled={previewDisabled}
       type="button"
     >
-      <img alt={imageAlt} src={imageSrc} />
+      <SnapshotImage alt={imageAlt} src={imageSrc} />
     </button>
   );
   const factsGrid = <TerasMetadataList items={facts} />;
@@ -198,7 +216,7 @@ export function TerasMediaSnapshotViewerDialog({
           ref={snapshotViewerFullscreenRef}
         >
           <div className={styles.terasMediaSnapshotViewerCanvas} style={{overflow:"auto",display:"block"}}>
-            <img alt={imageAlt} src={imageSrc} style={{width:`${zoom * 100}%`,maxWidth:"none",maxHeight:"none",height:"auto"}} />
+            <SnapshotImage alt={imageAlt} src={imageSrc} style={{width:`${zoom * 100}%`,maxWidth:"none",maxHeight:"none",height:"auto"}} />
           </div>
         </div>
       </div>

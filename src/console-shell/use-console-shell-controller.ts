@@ -346,6 +346,7 @@ export function useConsoleShellController() {
     commandCenterFocusRef,
     componentScenarioId,
     componentSourceError: componentObservations.error,
+    componentSourceLoading: componentObservations.loading,
     closeConsoleWorkspace,
     consoleActivity,
     consoleDevMode,

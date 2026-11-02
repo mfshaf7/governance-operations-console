@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  TerasActionButton, TerasActionRow, TerasDialog, TerasDraftCloseGuardDialog, TerasEmptyState,
+  TerasActionButton, TerasActionRow, TerasDialog, TerasDraftCloseGuardDialog, TerasEmptyState, TerasLoadingState,
   TerasFieldStack, TerasMetadataList, TerasSelectField, TerasTextField,
 } from "@/teras";
 import type { useProviderConnections } from "../../../live-runtime/use-provider-connections.ts";
@@ -33,14 +33,14 @@ export function ProviderConnectionsDialog({ open, onClose, runtime, registry, ch
   const close = () => { setApiKey(""); setConfirmation(null); onClose(); };
   const act = (action: ConnectionAction) => { if (item) { setApiKey(""); void runtime.submit(action, { connection_id: item.connection_id }); } };
   return <>
-    <TerasDialog open={open} onClose={close} kicker="Models & routing" title="API connections"
+    <TerasDialog busy={runtime.pending} busyLabel="Contacting connection owner…" open={open} onClose={close} kicker="Models & routing" title="API connections"
       description={experimentalLabel + ". Keys are sent only on your explicit action. They are never saved in the browser or sent to advisors."}
       width="standard" height="content" contentOverflow="auto">
       <TerasFieldStack>
         <TerasSelectField label="Named connection" value={connectionId} disabled={runtime.pending}
           options={[{ value: "", label: "Add a new connection" }, ...(snapshot?.connections ?? []).map(value => ({ value: value.connection_id, label: value.name + " · " + value.state }))]}
           onValueChange={value => { setApiKey(""); setConnectionId(value); }} />
-        {!snapshot ? <TerasEmptyState>{runtime.error ?? "Reading provider connections from the owner."}</TerasEmptyState> : !item ? <>
+        {!snapshot ? runtime.error ? <TerasEmptyState>{runtime.error}</TerasEmptyState> : <TerasLoadingState label="Loading provider connections…" skeleton="details" /> : !item ? <>
           <TerasSelectField label="Provider" value={provider} disabled={blocked} options={snapshot.presets.map(value => ({ value: value.provider, label: value.label + " · Experimental" }))}
             onValueChange={value => { setApiKey(""); setProvider(value as ApiProvider); }} />
           <TerasTextField label="Connection name" value={name} maxLength={100} autoComplete="off" disabled={blocked} onValueChange={setName} />

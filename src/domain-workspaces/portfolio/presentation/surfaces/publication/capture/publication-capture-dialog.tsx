@@ -56,7 +56,7 @@ export function ProductPublicationCaptureDialog({
       description="Select one product-owner packet and place it in the Publication register."
       footer={
         <>
-          <TerasActionButton
+          <TerasActionButton busy={applying}
             disabled={applying}
             emphasis="secondary"
             onClick={onClose}

@@ -116,7 +116,7 @@ export function ProductRuntimeLifecycleIntentStep({
     >
       <TerasFieldStack spacing="normal">
         <TerasSelectField
-          helper="Release progression and runtime lifecycle remain separate."
+          helper={targetState?.description ?? "Choose what should happen to the running product. This does not promote a release."}
           label="Target state"
           onValueChange={(targetStateId) => {
             const transition = selectProductRuntimeLifecycleTransition(
@@ -145,6 +145,7 @@ export function ProductRuntimeLifecycleIntentStep({
           value={draft.targetState}
         />
         <TerasNoteField
+          required
           label="Lifecycle reason"
           minimumHeight="short"
           onValueChange={(reason) => onChange({ reason })}
@@ -154,6 +155,7 @@ export function ProductRuntimeLifecycleIntentStep({
         {targetTransition &&
         targetTransition.incidentRequirement !== "none" ? (
           <TerasTextField
+            required
             label={
               targetTransition?.incidentRequirement ===
               "incident-follow-up"

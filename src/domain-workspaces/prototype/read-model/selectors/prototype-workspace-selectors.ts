@@ -66,6 +66,23 @@ export function filterPrototypeRecords(
   });
 }
 
+// Capture and registry record paths address the same immutable Studio slug.
+// Resolve only these owner-defined namespaces against the current inventory.
+export function resolvePrototypeEntryRecord(
+  records: readonly PrototypeRecord[],
+  subjectRef: string,
+): { kind: "ready"; record: PrototypeRecord } | { kind: "missing" | "conflict" } {
+  const slug = /^record:\/\/(?:prototype-captures|prototypes)\/([a-z0-9][a-z0-9-]*)$/.exec(subjectRef)?.[1];
+  const canonicalId = slug ? `prototype-${slug}` : null;
+  const matches = records.filter(record =>
+    record.id === subjectRef || record.sourceRef === subjectRef ||
+    record.linkedRecords.some(link => link.ref === subjectRef) ||
+    canonicalId !== null && record.id === canonicalId,
+  );
+  if (matches.length !== 1) return { kind: matches.length ? "conflict" : "missing" };
+  return { kind: "ready", record: matches[0] };
+}
+
 export function getSelectedPrototypeRecord(
   readModel: PrototypeWorkspaceReadModel,
   selectedRecordId: string | null,

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronRight, UserRound } from "lucide-react";
+import { TerasLoadingIndicator } from "@/teras";
 
 import type { OperatorAccountSnapshot } from "../../identity/operator-account-model";
 import { projectOperatorIdentity } from "../../identity/operator-identity-projection";
@@ -8,9 +9,11 @@ import styles from "./operator-account.module.css";
 
 export function OperatorAccountCard({
   account,
+  loading = false,
   onOpen,
 }: {
   account: OperatorAccountSnapshot;
+  loading?: boolean;
   onOpen: () => void;
 }) {
   const identity = projectOperatorIdentity(account.identity);
@@ -28,7 +31,7 @@ export function OperatorAccountCard({
           Operator Account
         </span>
         <span className={styles.cardStatus} data-tone={identity.tone}>
-          {identity.statusLabel}
+          {loading ? <><TerasLoadingIndicator />Checking…</> : identity.statusLabel}
         </span>
       </span>
       <span className={styles.cardIdentity}>

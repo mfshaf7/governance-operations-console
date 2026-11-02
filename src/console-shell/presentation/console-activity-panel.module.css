@@ -1,6 +1,6 @@
 .header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
@@ -13,7 +13,7 @@
   line-height: 1.55;
 }
 
-.viewAllButton {
+.activityButton {
   display: inline-flex;
   min-height: 2.1rem;
   flex: 0 0 auto;
@@ -30,6 +30,8 @@
   font-weight: 800;
   line-height: 1;
   text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
   transition:
     border-color 160ms ease,
     background 160ms ease,
@@ -37,14 +39,24 @@
     transform 160ms ease;
 }
 
-.viewAllButton:hover {
+.activityButton:hover:not(:disabled) {
   border-color: rgba(255, 193, 90, 0.58);
   color: #fff7e7;
   background: rgba(255, 193, 90, 0.14);
   transform: translateY(-1px);
 }
 
-.viewAllButton:focus-visible,
+.activityButton:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.activityButton[aria-pressed="true"] {
+  border-color: rgba(255, 193, 90, 0.58);
+  background: rgba(255, 193, 90, 0.14);
+}
+
+.activityButton:focus-visible,
 .activityRow:focus-visible {
   outline: 2px solid rgba(255, 193, 90, 0.78);
   outline-offset: 2px;
@@ -83,6 +95,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.75rem;
   padding: 0 0.18rem 0.62rem;
   color: rgba(255, 193, 90, 0.76);
@@ -93,8 +106,42 @@
   text-transform: uppercase;
 }
 
-.surfaceHeader span:last-child {
+.surfaceCount {
   color: rgba(247, 240, 228, 0.46);
+  white-space: nowrap;
+}
+
+.surfaceIdentity {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.filterNote {
+  color: rgba(247, 240, 228, 0.46);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  line-height: 1.35;
+  text-transform: none;
+}
+
+.surfaceActions,
+.historyNavigation {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.surfaceActions {
+  margin-left: auto;
+}
+
+.historyNavigation {
+  gap: 0.5rem;
+  padding: 2px;
 }
 
 .activityList {

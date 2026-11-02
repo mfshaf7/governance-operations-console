@@ -97,7 +97,7 @@ export function lifecycleTransitionWorkspaceStatus(
       ],
       id: "source",
       label: "Source",
-      stateLabel: preview ? "Preview" : current ? runtimePosture.sourceScope ? runtimePosture.truncated ? "Partial owner readbacks" : "Owner readbacks" : "OOS current" : "Unavailable",
+      stateLabel: preview ? "Preview" : current ? runtimePosture.sourceScope ? runtimePosture.truncated ? "Partial" : "Current" : "Current" : "Unavailable",
       tone: preview ? "info" : current ? runtimePosture.truncated ? "warn" : "ok" : "danger",
     });
   }
@@ -110,11 +110,11 @@ export function lifecycleTransitionRouteNavLabel(
 ): string {
   switch (routeId) {
     case "proposal-to-prototype":
-      return "Prototype";
+      return "Proposal → Prototype";
     case "proposal-to-delivery":
-      return "Delivery";
+      return "Proposal → Delivery";
     case "prototype-to-delivery":
-      return "Handoff";
+      return "Prototype → Delivery";
   }
 }
 
@@ -156,8 +156,9 @@ export function lifecycleTransitionTimestamp(timestamp: string): string {
     hour12: false,
     minute: "2-digit",
     month: "short",
+    year: "numeric",
     timeZone: "UTC",
-  }).format(new Date(timestamp));
+  }).format(new Date(timestamp)) + " UTC";
 }
 
 export function lifecycleTransitionDomainLabel(
@@ -195,7 +196,7 @@ export function lifecycleTransitionTargetFact(
 export function lifecycleTransitionTitle(
   item: LifecycleTransitionOverviewItem,
 ): string {
-  return `${lifecycleTransitionShortReference(item.sourceRecordId)} to ${lifecycleTransitionDomainLabel(item.targetDomain)}`;
+  return `${item.sourceTitle ?? lifecycleTransitionShortReference(item.sourceRecordId)} to ${lifecycleTransitionDomainLabel(item.targetDomain)}`;
 }
 
 export function lifecycleTransitionTone(

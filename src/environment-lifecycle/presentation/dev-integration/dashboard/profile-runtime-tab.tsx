@@ -122,7 +122,7 @@ export function ProfileRuntimeStage({
             },
             {
               label: "Persistence",
-              value: profile.persistence
+              value: profile.runtime.stateModel === "unknown" ? "Not recorded" : profile.runtime.stateModel === "persistent" && !profile.persistence ? "Persistent; detailed contract not recorded" : profile.persistence
                 ? "Retained runtime state"
                 : "Disposable runtime state",
             },
@@ -191,7 +191,7 @@ export function ProfileRuntimeDock({
           {runtimeActions.length > 0 ? (
             <TerasFieldGrid columns={2} spacing="compact">
               {runtimeActions.map((action) => (
-                <TerasActionButton
+                <TerasActionButton busy={actionInFlight === action.action}
                   disabled={!action.enabled || actionInFlight !== null}
                   emphasis="secondary"
                   key={action.action}

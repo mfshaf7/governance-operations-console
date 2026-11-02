@@ -51,6 +51,15 @@
   align-items: flex-end;
 }
 
+.metricIndicator {
+  display: inline-flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 18px;
+}
+
 .metricBody > strong {
   color: #fff7e7;
   font-family: "IBM Plex Mono", monospace;
@@ -95,6 +104,10 @@
   font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.16em;
+}
+
+.moodLabel .metricIndicator {
+  margin-left: auto;
 }
 
 .moodPosture {

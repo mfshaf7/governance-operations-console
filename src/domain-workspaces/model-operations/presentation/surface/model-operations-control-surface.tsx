@@ -6,8 +6,10 @@ import {
   TerasActionButton,
   TerasActionRow,
   TerasDraftCloseGuardDialog,
+  TerasContentFrame,
   TerasFieldStack,
   TerasEmptyState,
+  TerasLoadingState,
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
@@ -41,6 +43,7 @@ export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange
   const reportDirty = useCallback((value: boolean) => { setDirty(value); onDirtyChange?.(value); }, [onDirtyChange]);
   const select = (value: "runtime" | "profiles") => { if (value === view) return; if (dirty) setNextView(value); else setView(value); };
   return <>
+    <TerasContentFrame fill variant="single-region">
     <TerasFieldStack fill="last">
       <TerasActionRow>
         <TerasSegmentedControl ariaLabel="Model Operations pages" value={view} onValueChange={select}
@@ -48,6 +51,7 @@ export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange
       </TerasActionRow>
       {view === "runtime" ? <ModelRuntimeControlSurface onDirtyChange={reportDirty} /> : <ModelProfileControlSurface />}
     </TerasFieldStack>
+    </TerasContentFrame>
     <TerasDraftCloseGuardDialog kicker="Routing draft" title="Discard unsaved routing changes?" description="Saved routing remains with the model owner."
       open={nextView !== null} keepEditingLabel="Keep editing" leaveLabel="Discard draft" onKeepEditing={() => setNextView(null)}
       onLeave={() => { reportDirty(false); if (nextView) setView(nextView); setNextView(null); }} />
@@ -133,7 +137,7 @@ function ModelProfileControlSurface() {
                 profiles={controller.profiles.filtered}
                 selectedProfileId={selectedProfile?.policy.profileId ?? null}
               />
-            ) : (
+            ) : controller.source.loading ? <TerasLoadingState fill label="Loading purpose profiles…" /> : (
               <TerasEmptyState fill>
                 {controller.source.unavailable ? controller.source.description : "No profiles match the current search and filters."}
               </TerasEmptyState>
@@ -171,7 +175,7 @@ function ModelProfileControlSurface() {
             <TerasList ariaLabel="Governed access summary" frame="contained">
               <TerasStatusItem {...modelGovernedAccessSummary(selectedProfile.accessPlane)} />
             </TerasList>
-          </TerasFieldStack> : (
+          </TerasFieldStack> : controller.source.loading ? <TerasLoadingState fill label="Preparing profile details…" skeleton="details" /> : (
             <TerasEmptyState fill>
               No governed model profiles are available from the current authority projection.
             </TerasEmptyState>

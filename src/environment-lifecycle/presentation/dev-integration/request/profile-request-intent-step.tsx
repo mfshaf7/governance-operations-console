@@ -7,19 +7,19 @@ import {
   TerasWizardPanel,
 } from "@/teras";
 
-import {
-  devIntegrationRequestOptions,
-} from "../../../fixtures/dev-integration-request-options.fixture";
+import type { DevIntegrationRequestOptions } from "../../../model/dev-integration-request-options.ts";
 import type {
   DevIntegrationProfileRequestDraft,
 } from "../../../work-model/profile-request/dev-integration-profile-request-draft";
 import { ProfileRequestSelectionList } from "./profile-request-selection-list";
 
 export function ProfileRequestIntentStep({
+  options: devIntegrationRequestOptions,
   draft,
   existingProfileIds,
   onChange,
 }: {
+  options: DevIntegrationRequestOptions;
   draft: DevIntegrationProfileRequestDraft;
   existingProfileIds: readonly string[];
   onChange: (update: Partial<DevIntegrationProfileRequestDraft>) => void;

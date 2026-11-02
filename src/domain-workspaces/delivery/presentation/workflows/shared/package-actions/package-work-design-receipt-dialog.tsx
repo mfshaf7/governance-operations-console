@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
 import { useWorkDesignLiveRuntime } from "../../../../live-runtime/use-work-design-live-runtime.ts";
-import { TerasActionButton, TerasContentTray, TerasDialog, TerasMetadataList } from "@/teras";
+import { TerasLoadingState, TerasActionButton, TerasContentTray, TerasDialog, TerasMetadataList } from "@/teras";
 import { DeliveryWorkDesignSessionModal } from "../../work-design/session/work-design-session-modal.tsx";
 import { workDesignHandoffApplication } from "./package-work-design-receipt-model.ts";
 
@@ -59,7 +59,7 @@ export function CanonicalWorkDesignReceiptDialog({
         </>
       ) : (
         <TerasContentTray kicker="Canonical Evidence" title={error ? "Evidence unavailable" : "Reading OOS evidence"}>
-          {error ?? "Waiting for the current owner projection. Local or fixture evidence is not used as fallback."}
+          {error ?? <TerasLoadingState label="Loading Work Design evidence…" skeleton="details" />}
         </TerasContentTray>
       )}
     </TerasDialog>

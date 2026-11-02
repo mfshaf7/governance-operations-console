@@ -1,7 +1,10 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { DevIntegrationProfilesRuntime } from "../../live-runtime/use-dev-integration-profiles.ts";
+import { requestOptionsFromOwner } from "../../live-runtime/dev-integration-profile-contract.ts";
+import { devIntegrationRequestOptions } from "../../fixtures/dev-integration-request-options.fixture.ts";
 
 import {
   TerasActionButton,
@@ -165,7 +168,7 @@ function ProfileHistory({
     <TerasDialog
       closeLabel="Close Dev Integration profile history"
       contentOverflow="hidden"
-      description="Authority-shaped lifecycle, runtime, and handoff events for this profile."
+      description="Design preview — Authority-shaped lifecycle, runtime, and handoff events for this profile."
       height="fill"
       kicker="Profile History"
       onClose={onBack}
@@ -263,20 +266,26 @@ function ProfileHistory({
 }
 
 export function DevIntegrationSurface({
+  live,
   focusProfileId = null,
   historyEvents,
   onDirtyChange,
   profiles,
   runtime,
 }: {
+  live?: { runtime: DevIntegrationProfilesRuntime;
+    controls: (profileId: string, tab: "runtime" | "handoff") => ReactNode;
+    history: (profileId: string) => ReactNode };
   focusProfileId?: string | null;
   historyEvents: readonly DevIntegrationProfileHistoryEvent[];
   onDirtyChange: (dirty: boolean) => void;
   profiles: readonly DevIntegrationProfile[];
-  runtime: EnvironmentLifecycleRuntimeController;
+  runtime?: EnvironmentLifecycleRuntimeController;
 }) {
-  const [filters, setFilters] =
+  const [localFilters, setLocalFilters] =
     useState<DevIntegrationProfileFilters>(initialFilters);
+  const filters = live?.runtime.filters ?? localFilters;
+  const setFilters = live?.runtime.setFilters ?? setLocalFilters;
   const [mode, setMode] =
     useState<DevIntegrationSurfaceMode>("register");
   const [selectedProfileId, setSelectedProfileId] =
@@ -320,6 +329,7 @@ export function DevIntegrationSurface({
   async function handleRequestSubmitted(
     request: DevIntegrationProfileRequestRecord,
   ) {
+    if (!runtime) throw new Error("The simulated request adapter is unavailable in live mode.");
     return runtime.submitProfileRequest(request);
   }
 
@@ -396,7 +406,7 @@ export function DevIntegrationSurface({
               />
             }
             kicker="Dev Integration"
-            statusLabel={`${filteredProfiles.length}/${profiles.length} shown`}
+            statusLabel={live ? `${profiles.length} of ${live.runtime.projection?.page.total ?? 0} loaded` : `${filteredProfiles.length}/${profiles.length} shown`}
             statusTone="info"
             title="Profile Register"
           >
@@ -416,6 +426,7 @@ export function DevIntegrationSurface({
                 No profiles match the current search and filters.
               </TerasEmptyState>
             )}
+            {live?.runtime.projection?.page.next_offset !== null && live ? <TerasActionButton emphasis="secondary" onClick={() => void live.runtime.load(true)}>Load more profiles</TerasActionButton> : null}
           </TerasRegisterPanel>
         }
         selected={
@@ -423,6 +434,7 @@ export function DevIntegrationSurface({
             <TerasRecordControlActionPanel
               action={
                 <TerasActionButton
+                  disabled={Boolean(live && (!live.runtime.current || live.runtime.pendingId()))}
                   onClick={() => {
                     onDirtyChange(false);
                     setMode("request");
@@ -448,39 +460,49 @@ export function DevIntegrationSurface({
           </TerasZone>
         }
       />
-      {mode === "request" ? (
+      {mode === "request" && (!live || live.runtime.projection) ? (
         <DevIntegrationProfileRequest
+          options={live ? requestOptionsFromOwner(live.runtime.projection!) : devIntegrationRequestOptions}
+          live={live?.runtime.projection ? { current: live.runtime.current, sourceVersion: live.runtime.projection.source_version,
+            submit: live.runtime.submit, read: live.runtime.read, pendingId: live.runtime.pendingId } : undefined}
           existingProfiles={profiles}
           onBack={() => setMode("register")}
           onCompleted={completeProfileRequest}
           onDirtyChange={onDirtyChange}
-          onRetryOperation={runtime.retryOperation}
+          onRetryOperation={runtime?.retryOperation ?? (async () => {throw new Error("Use the original owner operation controls.");})}
           onSubmitted={handleRequestSubmitted}
-          operations={runtime.snapshot.operations}
-          receipts={runtime.snapshot.receipts}
+          operations={runtime?.snapshot.operations ?? []}
+          receipts={runtime?.snapshot.receipts ?? []}
         />
       ) : null}
       {selectedProfile &&
       (mode === "dashboard" || mode === "history") ? (
         <DevIntegrationProfileDashboard
+          connected={Boolean(live)}
+          sourceCurrent={live?.runtime.current}
+          runtimeControls={live?.controls(selectedProfile.profileId, "runtime")}
+          handoffControls={live?.controls(selectedProfile.profileId, "handoff")}
           onBack={() => setMode("register")}
           onOpenHistory={() => setMode("history")}
-          onRetryOperation={runtime.retryOperation}
-          onSubmitProfileAction={runtime.submitProfileAction}
-          operations={runtime.snapshot.operations}
+          onRetryOperation={runtime?.retryOperation ?? (async () => {throw new Error("Use the original owner operation controls.");})}
+          onSubmitProfileAction={runtime?.submitProfileAction ?? (async () => {throw new Error("Use the native owner operation controls.");})}
+          operations={runtime?.snapshot.operations ?? []}
           profile={selectedProfile}
-          receipts={runtime.snapshot.receipts}
+          receipts={runtime?.snapshot.receipts ?? []}
         />
       ) : null}
-      {selectedProfile && mode === "history" ? (
+      {selectedProfile && mode === "history" && !live ? (
         <ProfileHistory
           events={historyEvents}
           onBack={() => setMode("dashboard")}
-          operations={runtime.snapshot.operations}
+          operations={runtime?.snapshot.operations ?? []}
           profile={selectedProfile}
-          receipts={runtime.snapshot.receipts}
+          receipts={runtime?.snapshot.receipts ?? []}
         />
       ) : null}
+      {selectedProfile && mode === "history" && live ? <TerasDialog open title="Profile operation history"
+        kicker={selectedProfile.profileId} description="Loaded owner operations for this profile. This does not invent missing admission or lifetime audit events."
+        width="large" height="fill" contentOverflow="auto" onClose={() => setMode("dashboard")}>{live.history(selectedProfile.profileId)}</TerasDialog> : null}
     </>
   );
 }

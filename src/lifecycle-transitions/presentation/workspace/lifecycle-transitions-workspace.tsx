@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   TerasFullscreenSurfaceFrame,
   TerasEmptyState,
+  TerasLoadingState,
   TerasModalShell,
   TerasSurfaceNav,
   TerasSurfaceNavButton,
@@ -83,7 +84,7 @@ export function LifecycleTransitionsWorkspace({
     <TerasModalShell
       agentHost
       bodyLayout="fill"
-      description="Read-only coordination for cross-domain validation, admission, application, receipts, and owner routing."
+      description="Track handoffs between workspaces and open the record that owns the next step."
       height="fill"
       kicker="Lifecycle Transitions"
       onClose={onClose}
@@ -91,7 +92,7 @@ export function LifecycleTransitionsWorkspace({
       title="Lifecycle Transitions"
       width="viewport"
     >
-      {resume.state === "blocked" ? (
+      {!runtimePosture ? <TerasLoadingState fill label="Loading workspace handoffs…" /> : resume.state === "blocked" ? (
         <TerasEmptyState fill>
           {resume.message}
         </TerasEmptyState>
@@ -101,7 +102,7 @@ export function LifecycleTransitionsWorkspace({
           nav={
             <TerasSurfaceNav
               ariaLabel="Lifecycle transition routes"
-              description="Select a supported cross-domain route."
+              description="Choose a handoff route."
               kicker="Route Nav"
               title="Transition Routes"
             >
@@ -112,7 +113,8 @@ export function LifecycleTransitionsWorkspace({
                   key={route.routeId}
                   meta={String(route.totalCount)}
                   onClick={() => setActiveRouteId(route.routeId)}
-                  title={lifecycleTransitionRouteNavLabel(route.routeId)}
+                  aria-label={lifecycleTransitionRouteNavLabel(route.routeId)}
+                  title={<>{route.sourceLabel}<br />→ {route.targetLabel}</>}
                   tone={route.tone}
                 />
               ))}
@@ -138,6 +140,7 @@ export function LifecycleTransitionsWorkspace({
             key={activeRoute.routeId}
             onOpenWorkbenchSurface={onOpenWorkbenchSurface}
             route={activeRoute}
+            runtimePosture={runtimePosture}
           />
         </TerasFullscreenSurfaceFrame>
       )}

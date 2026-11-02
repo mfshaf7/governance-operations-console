@@ -119,7 +119,7 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
   if (route === "stale-open-close" && (!justification.trim() || !context?.completed_related_count || context.open_child_count !== 0)) valid = false;
   let piValid = false;
   try { piDraft(); piValid = true; } catch { /* Editable values are not native earned review. */ }
-  return <><TerasModalShell title="Complete non-source work" kicker="Delivery evidence" description="Record an actual non-source outcome through the existing OOS completion path. Source changes use their governed source session."
+  return <><TerasModalShell busy={pending} busyLabel="Reading or recording completion…" title="Complete non-source work" kicker="Delivery evidence" description="Record an actual non-source outcome through the existing OOS completion path. Source changes use their governed source session."
     surfaceId="delivery-item-completion" width="large" height="content" bodyLayout="scroll" onClose={requestClose}
     footer={<TerasActionRow>
       <TerasActionButton emphasis="secondary" onClick={requestClose} disabled={pending}>Back to Board</TerasActionButton>

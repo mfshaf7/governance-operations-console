@@ -1,11 +1,11 @@
 "use client";
 
 import { Download, History } from "lucide-react";
+import type { ButtonHTMLAttributes } from "react";
 
-import {
+import { TerasLoadingIndicator, TerasLoadingState,
   TerasDialog,
   TerasFilterBar,
-  TerasUtilityButton,
 } from "@/teras";
 import type { GovernanceActivitySnapshot } from "@/governance-activity/governance-activity-types";
 
@@ -24,6 +24,26 @@ import { ConsoleSurfaceTechnicalDetails } from "../console-surface-controls";
 import styles from "./console-activity-panel.module.css";
 
 const recentActivityLimit = 8;
+
+function ActivityButton({
+  busy = false,
+  children,
+  disabled,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean }) {
+  return (
+    <button
+      {...props}
+      aria-busy={busy || undefined}
+      className={styles.activityButton}
+      disabled={busy || disabled}
+      type="button"
+    >
+      {busy ? <TerasLoadingIndicator /> : null}
+      {children}
+    </button>
+  );
+}
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
@@ -61,28 +81,16 @@ export function ConsoleActivityPanel({
     <>
       <ConsoleShellPanel className="lg:col-span-3">
         <div className={styles.header}>
-          <div>
-            <ConsoleShellSectionTitle
-              kicker="Governance Activity"
-              title="Material system events"
-            />
-            <p className={styles.description}>
-              {activityDescription(snapshot)}
-            </p>
-            <p className={styles.description}>
-              {hiddenRoutineCount > 0 ? `${hiddenRoutineCount} routine evidence reads are hidden from this loaded page. ` : ""}
-              <TerasUtilityButton onClick={() => setIncludeRoutine(!includeRoutine)}>{includeRoutine ? "Show operator activity" : "Show all events"}</TerasUtilityButton>
-            </p>
-          </div>
-          <button
-            className={styles.viewAllButton}
-            onClick={openFullActivity}
-            type="button"
-          >
+          <ConsoleShellSectionTitle
+            kicker="Governance Activity"
+            title="Material system events"
+          />
+          <ActivityButton onClick={openFullActivity}>
             <History aria-hidden="true" size={14} />
             View all activity
-          </button>
+          </ActivityButton>
         </div>
+        <p className={styles.description}>{activityDescription(snapshot)}</p>
 
         <div className={styles.layout}>
           <section
@@ -90,18 +98,26 @@ export function ConsoleActivityPanel({
             className={styles.recentSurface}
           >
             <div className={styles.surfaceHeader}>
-              <span>Recent activity</span>
-              <span>
-                {Math.min(recentEvents.length, recentActivityLimit)} of{" "}
-                {visibleHead.length}
-              </span>
+              <div className={styles.surfaceIdentity}>
+                <span>Recent activity</span>
+                {hiddenRoutineCount > 0 ? <span className={styles.filterNote}>{hiddenRoutineCount} routine reads hidden</span> : null}
+              </div>
+              <div className={styles.surfaceActions}>
+                <span className={styles.surfaceCount}>
+                  {Math.min(recentEvents.length, recentActivityLimit)} of{" "}
+                  {visibleHead.length}
+                </span>
+                <ActivityButton aria-pressed={includeRoutine} onClick={() => setIncludeRoutine(!includeRoutine)}>
+                  {includeRoutine ? "Show operator activity" : "Show all events"}
+                </ActivityButton>
+              </div>
             </div>
-            <ActivityList
+            {snapshot.observedAt === new Date(0).toISOString() ? <TerasLoadingState label="Loading governance activity…" /> : <ActivityList
               emptyLabel="No operator activity in this loaded page. Show all events or open history to inspect older pages."
               events={recentEvents}
               onSelect={setSelectedEventId}
               selectedEventId={selectedEvent?.eventId ?? null}
-            />
+            />}
           </section>
 
           <ActivityDetail event={selectedEvent} />
@@ -130,15 +146,13 @@ export function ConsoleActivityPanel({
                 value: `${source.state}; ${source.truncated ? "additional records exist outside this source window" : "no source truncation reported"}. Owner: ${source.authority}. Source: ${source.sourceId}.`,
               }))} />
             {error ? <p role="alert" className={styles.description}>{error}</p> : null}
-            <TerasUtilityButton disabled={loading || !currentPage.continuations?.length} onClick={() => void loadOlder()}>{loading ? "Loading older events" : "Older events"}</TerasUtilityButton>
-            <TerasUtilityButton disabled={loading || pageNumber === 0} onClick={latest}>Back to latest</TerasUtilityButton>
           </div>
           <TerasFilterBar
             action={
-              <TerasUtilityButton onClick={exportActivity}>
+              <ActivityButton onClick={exportActivity}>
                 <Download aria-hidden="true" size={13} />
                 <span>Export JSON</span>
-              </TerasUtilityButton>
+              </ActivityButton>
             }
             filters={[
               { label: "Events", onValueChange: value => setIncludeRoutine(value === "all"), options: [{label: "Operator activity", value: "operator"}, {label: "All events", value: "all"}], value: includeRoutine ? "all" : "operator" },
@@ -170,10 +184,16 @@ export function ConsoleActivityPanel({
             >
               <div className={styles.surfaceHeader}>
                 <span>Activity history</span>
-                <span>
-                  {filteredEvents.length}{" "}
-                  {filteredEvents.length === 1 ? "event" : "events"}
-                </span>
+                <div className={styles.surfaceActions}>
+                  <span className={styles.surfaceCount}>
+                    {filteredEvents.length}{" "}
+                    {filteredEvents.length === 1 ? "event" : "events"}
+                  </span>
+                  <div aria-label="Activity history pages" className={styles.historyNavigation} role="group">
+                    <ActivityButton disabled={loading || pageNumber === 0} onClick={latest}>Back to latest</ActivityButton>
+                    <ActivityButton busy={loading} disabled={!currentPage.continuations?.length} onClick={() => void loadOlder()}>{loading ? "Loading older events" : "Older events"}</ActivityButton>
+                  </div>
+                </div>
               </div>
               <ActivityList
                 emptyLabel="No activity matches the current filters."

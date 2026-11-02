@@ -16,6 +16,7 @@ export type OperatorAccountView = "access" | "profile" | "security";
 
 export function useOperatorAccountController(
   initialSnapshot: OperatorAccountSnapshot,
+  identityLoading = false,
 ) {
   const [activeView, setActiveView] =
     useState<OperatorAccountView>("profile");
@@ -88,6 +89,7 @@ export function useOperatorAccountController(
     accountOpen,
     activeView,
     discardGuardOpen,
+    identityLoading,
     identityDetailsOpen,
     profileDirty,
     profileDraft,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ConsoleEntryIntent } from "../../console-architecture";
 
 import {
@@ -19,6 +19,7 @@ import { reconcileWorkspaceRegistryContinuity } from "../../workspace-continuity
 import type {
   WorkspaceRegistryTarget,
   WorkspaceRegistryRecord,
+  WorkspaceRegistrySnapshot,
 } from "../model/workspace-registry-types";
 import { WorkspaceRegistryLifecycleWorkflow } from "./workspace-registry-lifecycle-workflow";
 import { WorkspaceRegistryPromotionWorkflow } from "./workspace-registry-promotion-workflow";
@@ -48,6 +49,9 @@ export function WorkspaceRegistryWorkspace({
     useState<WorkspaceRegistryTarget | null>(null);
   const [lifecycleRecord, setLifecycleRecord] =
     useState<WorkspaceRegistryRecord | null>(null);
+  const retainedSnapshot = useRef<WorkspaceRegistrySnapshot | null>(null);
+  const refreshInFlight = useRef<Promise<boolean> | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const appliedEntryIntentRef = useRef<string | null>(null);
   const reconciliation = useMemo(() => {
     if (!continuity.projection || !runtime.snapshot) {
@@ -91,20 +95,47 @@ export function WorkspaceRegistryWorkspace({
     fixtureIsolation,
     "durable-command",
   );
-  const snapshot = fixtureMode
+  const currentSnapshot = fixtureMode
     ? workspaceRegistryFixture
     : liveActionExecutable
       ? reconciliation.snapshot
       : null;
+  useEffect(() => {
+    if (currentSnapshot && !fixtureMode) retainedSnapshot.current = currentSnapshot;
+  }, [currentSnapshot, fixtureMode]);
+  const snapshot = currentSnapshot ?? retainedSnapshot.current;
+  const retained = Boolean(snapshot && !currentSnapshot);
   const availabilityError = reconciliation.error ?? continuity.error?.message ?? runtime.error?.message ?? null;
   const owners = useMemo(
     () => new Set(snapshot?.records.flatMap((record) => record.owner_refs) ?? []).size,
     [snapshot],
   );
 
-  useEffect(() => {
-    void Promise.allSettled([continuity.load(), runtime.load()]);
+  const refresh = useCallback((): Promise<boolean> => {
+    if (refreshInFlight.current) return refreshInFlight.current;
+    setRefreshing(true);
+    const request = (async () => {
+      try {
+        const [owner, inventory] = await Promise.allSettled([continuity.load(), runtime.load()]);
+        if (owner.status !== "fulfilled" || inventory.status !== "fulfilled") return false;
+        try { reconcileWorkspaceRegistryContinuity(owner.value, inventory.value); return true; }
+        catch { return false; }
+      } finally { refreshInFlight.current = null; setRefreshing(false); }
+    })();
+    refreshInFlight.current = request;
+    return request;
   }, [continuity.load, runtime.load]);
+
+  useEffect(() => {
+    if (intakeOpen || promotionTarget || lifecycleRecord) return;
+    void refresh();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible" && !intakeOpen && !promotionTarget && !lifecycleRecord) void refresh();
+    }, 15_000);
+    const visible = () => { if (document.visibilityState === "visible" && !intakeOpen && !promotionTarget && !lifecycleRecord) void refresh(); };
+    document.addEventListener("visibilitychange", visible);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", visible); };
+  }, [refresh, intakeOpen, promotionTarget, lifecycleRecord]);
 
   useEffect(() => {
     if (!entryIntent || !snapshot) return;
@@ -140,12 +171,14 @@ export function WorkspaceRegistryWorkspace({
               kicker="Registry Nav"
               title="Inventory Views"
             >
-              <TerasActionButton disabled={!liveActionExecutable || fixtureMode || !snapshot}
+              <TerasActionButton busy={refreshing} emphasis="secondary" disabled={refreshing || runtime.pending}
+                onClick={() => void refresh()}>{refreshing ? "Refreshing…" : "Refresh Registry"}</TerasActionButton>
+              <TerasActionButton disabled={!snapshot || refreshing || (!fixtureMode && (!liveActionExecutable || retained))}
                 onClick={() => setIntakeOpen(true)}>Workspace Intake</TerasActionButton>
               <TerasSurfaceNavButton
                 current={view === "registry"}
                 kicker="01"
-                meta={String(snapshot?.records.length ?? 0)}
+                meta={snapshot ? String(snapshot.records.length) : "—"}
                 onClick={() => setView("registry")}
                 title="Registry"
                 tone="ok"
@@ -153,7 +186,7 @@ export function WorkspaceRegistryWorkspace({
               <TerasSurfaceNavButton
                 current={view === "eligible"}
                 kicker="02"
-                meta={String(snapshot?.eligible_promotions.length ?? 0)}
+                meta={snapshot ? String(snapshot.eligible_promotions.length) : "—"}
                 onClick={() => setView("eligible")}
                 title="Eligible"
                 tone="warn"
@@ -164,31 +197,31 @@ export function WorkspaceRegistryWorkspace({
             <TerasSurfaceSummaryHeader
               ariaLabel="Workspace Registry summary"
               metrics={[
-                { id: "records", label: "Records", value: String(snapshot?.records.length ?? 0) },
-                { id: "eligible", label: "Eligible", tone: "warn", value: String(snapshot?.eligible_promotions.length ?? 0) },
-                { id: "owners", label: "Owners", value: String(owners) },
+                { id: "records", label: "Records", value: snapshot ? String(snapshot.records.length) : "—" },
+                { id: "eligible", label: "Eligible", tone: "warn", value: snapshot ? String(snapshot.eligible_promotions.length) : "—" },
+                { id: "owners", label: "Owners", value: snapshot ? String(owners) : "—" },
               ]}
               statuses={[
                 {
-                  detail: "Projection source",
+                  detail: "Reconciled Workspace Governance reads through WGCF and OOS",
                   facts: [],
                   id: "source",
                   label: "Source",
                   stateLabel: fixtureMode
-                    ? "Fixture"
-                    : snapshot
-                      ? "WGCF + OOS"
+                    ? "Preview"
+                    : retained ? "Retained" : snapshot
+                      ? "Current"
                       : combinedMode === null
                         ? "Loading"
                         : "Unavailable",
-                  tone: fixtureMode ? "info" : snapshot ? "ok" : "danger",
+                  tone: fixtureMode ? "info" : retained ? "warn" : snapshot ? "ok" : combinedMode === null ? "info" : "danger",
                 },
                 {
                   detail: "Canonical authority",
                   facts: [],
                   id: "authority",
-                  label: "Authority",
-                  stateLabel: snapshot ? "Workspace Governance" : "Pending",
+                  label: "Owner",
+                  stateLabel: snapshot ? "Governance" : "Not read",
                   tone: snapshot ? "ok" : "warn",
                 },
               ]}
@@ -199,20 +232,20 @@ export function WorkspaceRegistryWorkspace({
         >
           <WorkspaceRegistrySurface
             availabilityError={availabilityError}
+            actionsCurrent={liveActionExecutable && !retained && !refreshing}
+            retained={retained}
             fixtureMode={fixtureMode}
             onLifecycle={setLifecycleRecord}
             onPromote={candidate => setPromotionTarget(candidate.target)}
             onPromotionHistory={record => setPromotionTarget({ kind: record.kind, name: record.name, record_id: record.id })}
-            onRetry={() => {
-              void Promise.allSettled([continuity.load(), runtime.load()]);
-            }}
+            onRetry={() => void refresh()}
             snapshot={snapshot}
             view={view}
           />
         </TerasFullscreenSurfaceFrame>
       </TerasModalShell>
-      {intakeOpen && snapshot && liveActionExecutable && !fixtureMode ? <WorkspaceRegistryIntakeDialog snapshot={snapshot}
-        onClose={() => { setIntakeOpen(false); void Promise.allSettled([continuity.load(), runtime.load()]); }} /> : null}
+      {intakeOpen && snapshot && (fixtureMode || (liveActionExecutable && !retained)) ? <WorkspaceRegistryIntakeDialog snapshot={snapshot} fixtureMode={fixtureMode}
+        onClose={() => { setIntakeOpen(false); void refresh(); }} /> : null}
       {promotionTarget ? (
         <WorkspaceRegistryPromotionWorkflow
           key={promotionTarget.record_id}
@@ -234,6 +267,7 @@ export function WorkspaceRegistryWorkspace({
             setLifecycleRecord(null);
           }}
           record={lifecycleRecord}
+          onRefreshSource={refresh}
           runtime={runtime}
         />
       ) : null}

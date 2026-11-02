@@ -23,6 +23,7 @@ export {
   TerasDraftCloseGuardDialog,
 } from "./teras-dialog";
 export { TerasEmptyState } from "./teras-empty-state";
+export { TerasLoadingIndicator, TerasLoadingState } from "./teras-loading-state";
 export { TerasFieldGrid, TerasFieldStack } from "./teras-field-layout";
 export type {
   TerasFieldGridAlign,

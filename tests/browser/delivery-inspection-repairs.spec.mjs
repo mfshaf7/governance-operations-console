@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../support/filled-surface-layout.mjs";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { deliveryReadModel } = require("../../src/domain-workspaces/delivery/read-model/projections/root-projection.ts");

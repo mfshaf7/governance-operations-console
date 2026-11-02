@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent, ReactNode } from "react";
+import { TerasLoadingState } from "./teras-loading-state";
 import {
   ChevronDown,
   LockKeyhole,
@@ -142,6 +143,7 @@ export function TerasAdvisorPanel({
                 )}
               </div>
             ))}
+            {draftControls?.busy ? <TerasLoadingState inline label="Preparing response…" /> : null}
           </div>
           {prompt ? (
             <form className={styles.advisorTerminalForm} onSubmit={prompt.onSubmit}>

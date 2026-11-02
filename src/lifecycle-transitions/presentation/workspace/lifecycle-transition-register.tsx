@@ -22,7 +22,7 @@ const columns: TerasRecordTableColumn<LifecycleTransitionOverviewItem>[] = [
     key: "source",
     render: (item) => (
       <TerasRecordCellText
-        meta={item.sourceVersion}
+        meta={item.nextAction ? `Next: ${item.nextAction.ownerLabel}` : item.state === "applied" ? "Target recorded" : "No next action"}
         title={item.sourceTitle ?? lifecycleTransitionShortReference(item.sourceRecordId)}
       />
     ),
@@ -38,17 +38,6 @@ const columns: TerasRecordTableColumn<LifecycleTransitionOverviewItem>[] = [
             {item.stateLabel}
           </TerasStatusPill>
         }
-      />
-    ),
-  },
-  {
-    header: "Current owner",
-    intent: "secondary",
-    key: "owner",
-    render: (item) => (
-      <TerasRecordCellText
-        meta={item.nextAction?.actionLabel}
-        title={item.nextAction?.ownerLabel ?? "Target recorded"}
       />
     ),
   },

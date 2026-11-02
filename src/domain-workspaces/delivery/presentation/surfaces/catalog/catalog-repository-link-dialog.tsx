@@ -69,7 +69,7 @@ export function CatalogRepositoryLinkDialog({
 
   return (
     <>
-    <TerasModalShell
+    <TerasModalShell busy={pending} busyLabel="Linking repository…"
       bodyLayout="scroll"
       description="Review one atomic OOS command that verifies Repository readiness, applies the Catalog link, updates the Delivery work item, and returns both receipts."
       footer={
@@ -78,7 +78,7 @@ export function CatalogRepositoryLinkDialog({
             {applied ? "Close" : "Cancel"}
           </TerasActionButton>
           {!applied ? (
-            <TerasActionButton
+            <TerasActionButton busy={pending}
               disabled={
                 pending || Boolean(blockedReason) || note.trim().length === 0
               }

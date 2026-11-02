@@ -5,6 +5,7 @@ import {
   TerasMetadataList,
   TerasPanel,
   TerasPanelHeader,
+  TerasPanelStack,
 } from "@/teras";
 
 import type { DevIntegrationProfile } from "../../../model/dev-integration-profile";
@@ -28,7 +29,7 @@ export function ProfileOverviewStage({
   const overview = buildDevIntegrationProfileDashboard(profile, []).overview;
 
   return (
-    <TerasContentFrame fill variant="standard">
+    <TerasPanelStack fill="last" scroll>
       <TerasPanel fit="content" frame="padded" treatment="neutral">
         <TerasPanelHeader
           description="Request identity and source authority carried by this profile."
@@ -107,7 +108,7 @@ export function ProfileOverviewStage({
           </TerasActionButton>
         </TerasActionRow>
       </TerasPanel>
-    </TerasContentFrame>
+    </TerasPanelStack>
   );
 }
 
@@ -157,10 +158,12 @@ export function ProfileOverviewDock({
         <TerasPanelHeader
           description={
             overview.nextMove?.reason ??
-            "No required move is currently projected."
+            (profile.source.provenance === "authority-snapshot"
+              ? "The owner has not supplied next-action guidance."
+              : "No required move is currently projected.")
           }
           kicker="Current Required Move"
-          title={overview.nextMove?.label ?? "No action required"}
+          title={overview.nextMove?.label ?? (profile.source.provenance === "authority-snapshot" ? "Next action not recorded" : "No action required")}
         />
         {overview.nextMove ? (
           <TerasMetadataList

@@ -4,16 +4,19 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 import styles from "./teras-patterns.module.css";
 import { cx } from "./teras-utils";
+import { TerasLoadingIndicator } from "./teras-loading-state";
 
 type TerasUtilityButtonVariant = "emphasis" | "subtle";
 
 export function TerasUtilityButton({
   children,
+  busy = false,
   className,
   variant = "emphasis",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
+  busy?: boolean;
   className?: string;
   variant?: TerasUtilityButtonVariant;
 }) {
@@ -23,7 +26,10 @@ export function TerasUtilityButton({
       data-variant={variant}
       type="button"
       {...props}
+      aria-busy={busy || undefined}
+      disabled={busy || props.disabled}
     >
+      {busy ? <TerasLoadingIndicator /> : null}
       {typeof children === "string" ? <span>{children}</span> : children}
     </button>
   );

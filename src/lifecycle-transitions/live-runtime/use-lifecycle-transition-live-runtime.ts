@@ -19,13 +19,18 @@ export function useLifecycleTransitionLiveRuntime() {
 
   const refresh = useCallback(async () => {
     const sequence = ++refreshSequence.current;
-    const response = await fetch("/api/lifecycle-transitions", {
-      cache: "no-store",
-    });
-    const body: unknown = await response.json().catch(() => null);
-    const next = response.ok
-      ? assertLifecycleTransitionLiveSnapshot(body)
-      : lifecycleTransitionOfflineSnapshot(body);
+    let next: LifecycleTransitionLiveSnapshot;
+    try {
+      const response = await fetch("/api/lifecycle-transitions", {
+        cache: "no-store",
+      });
+      const body: unknown = await response.json().catch(() => null);
+      next = response.ok
+        ? assertLifecycleTransitionLiveSnapshot(body)
+        : lifecycleTransitionOfflineSnapshot(body);
+    } catch (error) {
+      next = lifecycleTransitionOfflineSnapshot(error);
+    }
     if (sequence === refreshSequence.current) setSnapshot(next);
     return next;
   }, []);
@@ -42,6 +47,7 @@ export function useLifecycleTransitionLiveRuntime() {
     }, pollIntervalMs);
     return () => {
       active = false;
+      refreshSequence.current += 1;
       window.clearInterval(timer);
     };
   }, [refresh]);

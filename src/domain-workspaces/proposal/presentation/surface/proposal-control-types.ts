@@ -20,7 +20,10 @@ import type { OperationSurfaceStatusModel } from "../../../operation-contracts/s
 import type { ProposalTargetApplicationResult } from "../../live-runtime/proposal-live-types.ts";
 
 export type ProposalControlController = {
+  source: { loading: boolean; error: string | null };
   capture: {
+    pending: boolean;
+    error: string | null;
     previewMode: boolean;
     available: boolean;
     canSubmit: boolean;

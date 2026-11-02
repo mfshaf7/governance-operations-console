@@ -6,6 +6,7 @@ import {
   TerasActionButton,
   TerasContentRegion,
   TerasEmptyState,
+  TerasLoadingState,
   TerasFilterBar,
   TerasMetadataList,
   TerasPanel,
@@ -78,11 +79,8 @@ export function ProductPortfolioContinuitySurface({
             </TerasActionButton>
           ) : null}
         </TerasPanel>
-        <TerasEmptyState fill>
-          {loading
-            ? "Canonical managed products are loading."
-            : "No canonical product projection is available."}
-        </TerasEmptyState>
+        {loading && !error ? <TerasLoadingState fill label="Loading managed products…" />
+          : <TerasEmptyState fill>No canonical product projection is available.</TerasEmptyState>}
       </TerasPanelStack>
     );
   }

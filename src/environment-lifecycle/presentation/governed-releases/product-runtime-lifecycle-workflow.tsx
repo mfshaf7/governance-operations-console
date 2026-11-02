@@ -254,13 +254,13 @@ export function ProductRuntimeLifecycleWorkflow({
         treatment="rail"
       >
         <TerasPanelHeader
-          description="Validated transition boundary for the declared prototype-local adapter."
+          description="Simulation only. Completed inputs do not authorize a runtime change."
           kicker="Execution Boundary"
           statusLabel={
-            lifecycle.adapter.available ? "Ready" : "Unavailable"
+            lifecycle.adapter.available ? "Simulation" : "Unavailable"
           }
           statusTone={lifecycle.adapter.available ? "ok" : "danger"}
-          title="Lifecycle execution"
+          title="Runtime simulation"
         />
         <TerasList ariaLabel="Runtime lifecycle execution checks">
           <TerasStatusItem
@@ -275,7 +275,7 @@ export function ProductRuntimeLifecycleWorkflow({
             index="02"
             label="Execution adapter"
             status={
-              lifecycle.adapter.available ? "Ready" : "Unavailable"
+              lifecycle.adapter.available ? "Simulation" : "Unavailable"
             }
             tone={lifecycle.adapter.available ? "ok" : "danger"}
           />
@@ -287,7 +287,7 @@ export function ProductRuntimeLifecycleWorkflow({
     <>
       <TerasWizardModal
         activeStepId={step}
-        description="Prepare a product-scoped runtime lifecycle request without changing release progression."
+        description="Design preview — prepare a sample runtime state change. No live runtime is changed."
         footer={
           <TerasWizardFooter
             apply={
@@ -300,7 +300,7 @@ export function ProductRuntimeLifecycleWorkflow({
                       submitting,
                     label: submitting
                       ? "Applying"
-                      : "Apply Lifecycle",
+                      : "Simulate Change",
                     onClick: () => void submitLifecycle(),
                   }
                 : undefined
@@ -330,14 +330,14 @@ export function ProductRuntimeLifecycleWorkflow({
             }
           />
         }
-        kicker="Governed Release"
+        kicker="Release Preview"
         onClose={exitWorkflow}
         onStepSelect={selectStep}
         statusLabel={
           failedCorrelationId
             ? "Failed"
             : detailsReady
-              ? "Ready"
+              ? "Draft complete"
               : "Draft"
         }
         statusTone={
@@ -374,7 +374,7 @@ export function ProductRuntimeLifecycleWorkflow({
 
       <TerasDraftCloseGuardDialog
         description="This runtime lifecycle request has unsubmitted local changes."
-        kicker="Governed Release"
+        kicker="Release Preview"
         leaveLabel="Discard Draft"
         onKeepEditing={() => setExitGuardOpen(false)}
         onLeave={discardAndExit}

@@ -132,6 +132,7 @@ export function useModelOperationsControlController() {
     },
     readModel,
     source: {
+      loading: !liveRuntime.snapshot,
       unavailable: liveRuntime.snapshot?.status === "offline",
       description: fixtureIsolation.fixtureAllowed
         ? "Disconnected design preview; these sample profiles are not current Platform state."

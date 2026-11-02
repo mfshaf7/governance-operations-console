@@ -50,12 +50,12 @@ export function RepositoryIntakeDialog({ repository, custodyResult, onClose }: {
       setReview(null);
       if (targetName && custodyRequestId) void runtime.list(targetName, custodyRequestId).catch(() => undefined);
     }} returnLabel="Back to Repository" onClose={onClose} />;
-  return <TerasModalShell bodyLayout="scroll" height="content" width="standard"
+  return <TerasModalShell busy={runtime.pending} busyLabel="Reading registration details…" bodyLayout="scroll" height="content" width="standard"
     kicker="Workspace Intake" title="Prepare repository entrant" surfaceId="repository-intake-preparation"
     description="Prepare a candidate from successful OOS custody. Classification, trusted bootstrap, active Inventory and Delivery Catalog are separate reviewed actions."
     onClose={onClose} footer={<>
       <TerasActionButton emphasis="secondary" onClick={onClose}>Back to Repository</TerasActionButton>
-      <TerasActionButton disabled={!custody || !requestedRecord || runtime.pending || !runtime.requestPage || Boolean(runtime.requestPage.pending_request_count)} onClick={() => void prepare()}>
+      <TerasActionButton busy={runtime.pending} disabled={!custody || !requestedRecord || runtime.pending || !runtime.requestPage || Boolean(runtime.requestPage.pending_request_count)} onClick={() => void prepare()}>
         {runtime.pending ? "Reading custody and authority…" : "Prepare exact custody candidate"}
       </TerasActionButton>
     </>}>

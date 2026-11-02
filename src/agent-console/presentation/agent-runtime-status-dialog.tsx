@@ -69,6 +69,8 @@ export function AgentRuntimeStatusDialog({
 
   return (
     <TerasDialog
+      busy={!providerStatus}
+      busyLabel="Checking assistant connection…"
       contentOverflow="auto"
       height="content"
       description="Connection checks and open agent panels in this browser. An OOS connection does not prove that the configured model can generate a response. Model Operations owns profile approval."

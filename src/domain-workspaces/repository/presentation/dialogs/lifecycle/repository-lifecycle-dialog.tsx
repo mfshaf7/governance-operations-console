@@ -169,7 +169,7 @@ export function RepositoryLifecycleDialog({
   }
 
   return (
-    <TerasWizardModal
+    <TerasWizardModal busy={pending} busyLabel="Reading or applying repository change…"
       activeStepId={activeStep}
       description="Review impact and apply one governed Repository lifecycle action through OOS."
       footer={
