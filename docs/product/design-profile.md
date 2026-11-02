@@ -22,6 +22,40 @@ single-domain Delivery clone.
 
 ## Shared Visual System
 
+### Primary Console activity controls (batch three preview)
+
+The primary Console retains its own visual treatment. Governance Activity actions
+reuse its existing View all activity pill style, including the routine-read toggle
+and History pagination/export controls. The history launcher sits beside the panel
+heading, the event toggle sits in the Recent activity header, and pagination sits
+beside the history list it controls. Action groups wrap with explicit gaps. Shared
+Workbench utility-button chrome is not imposed on these primary Console controls.
+The existing dialog, filters, source wording and owner-history behavior remain.
+
+The selected Focus Center priority expands technical details into its remaining
+height. Exact metadata shares the selected priority's existing scrolling area,
+rather than using a second compact list scroller or expanding the attention queue.
+
+### Shared waiting feedback (batch three preview)
+
+Operator-requested loading maintenance extends Teras with one shared waiting
+pattern throughout the Console. First reads use a quiet amber signal, a concise
+task label and neutral skeleton rows that reserve content space. Partial and
+background reads retain visible content and use the inline variant. Active
+buttons show the same small signal and preserve their existing action guards.
+This is presentation feedback, never an invented percentage or completion claim.
+
+Bind feedback to the actual local request state, not text matching, a global
+network interceptor or a permanent business state such as awaiting approval.
+Do not show empty results before the initial read settles. Failures and retained
+source warnings replace loading feedback; existing recovery controls remain.
+Long waits say that the response is still pending without claiming a timeout,
+retrying a mutation or concealing an error. Motion uses transform/opacity only,
+stops when unmounted and becomes static under reduced-motion preferences. Keep
+the existing typography, panel chrome, navigation and workflow layouts.
+
+Source changes stay in the unpublished maintenance batch for visual review.
+
 Teras is the shared UI primitive layer. Operation domains compose surfaces
 through Teras layout primitives and exposed component props. Domain-local CSS
 is an exception only when inspection proves that no accepted primitive can
@@ -143,3 +177,71 @@ No surface is visually baseline-approved unless it has:
 - source-of-truth and status semantics visible in the UI
 - no stale legacy comparison path
 - focused preview or validation proof
+
+
+## Lifecycle inspection repair preview
+
+Batch three reuses the existing full-viewport register and Teras components.
+Readable project/next-owner rows keep Updated visible; raw versions move to the
+selected Record details disclosure. Full route names, concise source status and
+separate source-reported/owner-confirmed labels preserve meaning at narrow desktop
+widths. Natural-height selected and evidence panels scroll as one existing stack;
+event disclosures retain all exact references. No new CSS or primitive is added.
+
+## Registry inspection repair preview
+
+Batch three keeps Record/type, Owners and Status in one readable register.
+Selected facts and natural-height lineage share the existing scroll stack;
+exact evidence uses Teras technical details, and mutation/request/receipt labels
+remain distinct. Retained source is visibly marked and new actions require a
+current reconciled read. Existing discard guards protect authoring and do not
+interfere with read-only history. Intake examples explain power-user fields
+without guessing classification or granting new authority. No new visual
+primitive, CSS or workflow service is introduced.
+
+Guided Registry registration orders Purpose, Responsibility and Checks in existing
+Teras trays. User-facing labels explain decisions; owner metadata, validation role
+and evidence bindings are prepared automatically. Advanced role/check overrides
+remain deliberate and inspectable. Automatic facts, operator intent and actual
+passed validation stay distinct. No new CSS, modal size or visual primitive.
+
+Registry forms follow the existing Workspace Intake pattern: standard-width,
+content-height `TerasModalShell`, one scrolling body, grouped fields and footer
+actions. Promotion, direct classification and record changes do not use wizard
+shells, selected-subject banners, side panels or progress navigation. A necessary
+metadata confirmation and each submission outcome use separate standard Teras
+dialogs. Receipt/history details stay available through disclosures and original
+request controls. Accepted requests remain submitted, not completed. The shared
+wizard primitive remains unchanged for actual workflows elsewhere. This is
+uncommitted preview maintenance, pending operator review.
+
+
+## Dev Integration inspection repair preview
+
+Keep the profile-centric workspace and the accepted Intent, Runtime Contract and
+Review request stages. Live operations use the existing register/selected pattern;
+connection facts and exact capability references use technical disclosures. Operation
+history is scoped to the workspace, grows in ten-record increments and opens any
+loaded original operation in the same standard details dialog. Owner events, receipt,
+source version and exact request remain inspectable independently of the current
+catalog. Counts describe loaded records and never imply a complete lifetime total.
+
+Current, retained and design-preview records stay visibly distinct, including nested
+profile/support dialogs. Natural-height Overview and request-review panels share the
+existing scroll stack. Confirmation captures the reviewed profile and source; it
+cannot follow a later selection or keep working after the owner removes that action.
+Reuse Teras components without new CSS, modal dimensions or a shared wizard change.
+
+
+## Governed Releases maintenance preview
+
+Reuse the inventory table minimum widths and existing Dashboard zones. Natural
+height and existing body scrolling keep reviewed values reachable at shorter
+desktop sizes. Preserve the accepted release/runtime draft and review structure;
+this is not a generic wizard conversion. Carry explicit sample provenance into
+nested screens and label simulated actions accordingly. Group candidate/source
+references in technical disclosure while retaining every exact value.
+
+Connected product records and protected owner workflow navigation reuse the same
+interface. Recorded evidence does not become executable workflow progress. Source
+health, product capability, release state and runtime observation remain distinct.

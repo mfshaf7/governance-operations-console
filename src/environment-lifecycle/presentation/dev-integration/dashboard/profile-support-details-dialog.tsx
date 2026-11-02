@@ -15,10 +15,12 @@ function formatCollection(
 }
 
 export function ProfileSupportDetailsDialog({
+  connected = false,
   onClose,
   open,
   profile,
 }: {
+  connected?: boolean;
   onClose: () => void;
   open: boolean;
   profile: DevIntegrationProfile;
@@ -28,8 +30,8 @@ export function ProfileSupportDetailsDialog({
       contentOverflow="auto"
       height="content"
       closeLabel="Close profile support details"
-      description="Repository, write, review, and persistence boundaries declared by this profile."
-      kicker="Profile Support"
+      description={connected ? "Declared owner boundaries. Missing structured details are shown as not recorded." : "Design preview — repository, write, review and persistence boundaries from this sample profile."}
+      kicker={connected ? "Profile support" : "Preview profile support"}
       onClose={onClose}
       open={open}
       title="Declared Support Details"
@@ -62,7 +64,7 @@ export function ProfileSupportDetailsDialog({
             label="Targets"
             value={formatCollection(
               profile.expectedWrites.targets,
-              "No write targets",
+              profile.supportGaps?.includes("expected-writes") ? "Not recorded" : "No write targets",
             )}
           />
         </TerasContentTray>
@@ -72,7 +74,7 @@ export function ProfileSupportDetailsDialog({
             label="Triggers"
             value={formatCollection(
               profile.securityTriggers,
-              "No security triggers",
+              profile.supportGaps?.includes("security-triggers") ? "Not recorded" : "No security triggers",
             )}
           />
         </TerasContentTray>
@@ -132,6 +134,9 @@ export function ProfileSupportDetailsDialog({
             </TerasContentTray>
           </>
         ) : null}
+        {!profile.persistence && profile.runtime.stateModel === "persistent" ? <TerasContentTray kicker="Persistence contract">
+          <TerasReadoutField fit="content" label="Owner detail" value={profile.declaredPersistence ? Object.entries(profile.declaredPersistence).map(([key,value]) => `${key.replaceAll("_", " ")}: ${value ?? "Not recorded"}`).join("\n") : "Detailed persistence terms are not recorded as structured owner data. The profile is declared persistent; no reset authority follows from missing detail."}/>
+        </TerasContentTray> : null}
       </TerasTrayStack>
     </TerasDialog>
   );

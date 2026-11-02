@@ -37,6 +37,8 @@ export function useModelRuntime() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pending, setPending] = useState(false), [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false), [readingMore, setReadingMore] = useState(false);
+  const refreshReads = useRef(0);
   const [fresh, setFresh] = useState(false);
   const [lookupMissing, setLookupMissing] = useState(false);
   const sequence = useRef(0), backendSequence = useRef(0), selected = useRef<string | null>(null), alive = useRef(true);
@@ -51,6 +53,7 @@ export function useModelRuntime() {
       setError(dataMode === "invalid" ? "Model owner configuration is unavailable." : null);
       return null;
     }
+    refreshReads.current++; setRefreshing(true);
     try {
       const [rawRegistry, rawList] = await Promise.all([request("/registry"), request("/requests")]);
       const next = assertModelRegistry(rawRegistry), list = modelRecord(rawList);
@@ -62,6 +65,7 @@ export function useModelRuntime() {
       }
       return next;
     } catch (cause) { if (alive.current && current === sequence.current) setFresh(false); showError(cause); throw cause; }
+    finally { refreshReads.current--; if (alive.current && refreshReads.current === 0) setRefreshing(false); }
   }, [dataMode, showError]);
   const loadOperation = useCallback(async (id: string) => {
     let next: ModelRuntimeOperation;
@@ -160,6 +164,7 @@ export function useModelRuntime() {
   }, [operation, refresh, showError]);
   const loadMore = useCallback(async () => {
     if (!cursor) return;
+    setReadingMore(true);
     try {
       const raw = modelRecord(await request("/requests?" + new URLSearchParams({ cursor })));
       if (!Array.isArray(raw.requests)) throw new Error("Model-operation history is unavailable.");
@@ -167,9 +172,10 @@ export function useModelRuntime() {
       setRecords(current => [...current, ...next.filter(item => !current.some(existing => existing.request_id === item.request_id))]);
       setCursor(typeof raw.next_cursor === "string" ? raw.next_cursor : null);
     } catch (cause) { showError(cause); }
+    finally { if (alive.current) setReadingMore(false); }
   }, [cursor, showError]);
   return {
-    registry, catalogue, operation, records, cursor, selectedId, pending, fresh, error, lookupMissing, preview, dataMode,
+    registry, catalogue, operation, records, cursor, selectedId, pending, refreshing, readingMore, fresh, error, lookupMissing, preview, dataMode,
     refresh, discover, submit, control, selectOperation, loadMore,
     checkOriginal: () => selectedId ? loadOperation(selectedId).catch(showError) : Promise.resolve(),
     clearSelection: () => { remember(null); selected.current = null; setSelectedId(null); setOperation(null); setError(null); },

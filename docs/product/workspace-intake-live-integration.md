@@ -35,6 +35,50 @@ routine live use remains blocked until Security `#1216` accepts the
 exact merged Console and OOS revisions, Platform `#1217` activates their
 bounded composition, and operating proof `#1210` succeeds.
 
+## Guided registration and automatic context collection (preview)
+
+Registry Intake groups new Product/Component input into Purpose, Responsibility
+and Checks. The operator supplies the purpose, responsible repositories, delivery
+or component type, and intended validation approach. Contract codes are presented
+as explained choices; the normal validation role is derived from the item type.
+Explicit role and check-binding exceptions remain in Advanced validation settings.
+No new authority, runtime service or governance policy is introduced.
+
+The existing Inventory lifecycle **preparation read** supplies a selected active
+repository's current validation plan. The Console validates its exact target,
+active posture and record envelope; a missing or invalid plan remains unavailable.
+It loads on owner selection and is read again before building classification
+review. A late response cannot replace a different selected repository. The
+operation is `canonical_mutation: false`; this does not request a lifecycle action.
+
+The system attaches an immutable owner-record source reference and contextual
+validation notes. Supporting links and item-specific check limits are optional.
+For a direct-check approach, recorded owner catalog bindings are collected unless
+the operator deliberately supplies an advanced override. For repository-run tests,
+no direct governance check is invented. The repository's plan is context, never
+attestation that the new item passed its checks. The new direct candidate remains
+operator-authored and its final bytes retain their own digest.
+
+Classification preparation and submission retain the existing server-owned
+identity, source-state, expected-version, digest and approval construction.
+Current authority is reread before submit. The operator reviews the prepared
+metadata and explicitly confirms; automatic collection does not classify, admit,
+promote or activate anything. No raw local filesystem, provider credentials or
+new backend execution path is added.
+
+Live lookup failure keeps the draft and permits refreshing owner setup. Explicit
+disconnected preview uses labelled fixture plans and cannot submit classification.
+New forms do not ask operators to reconstruct graph-role codes, source versions,
+digests or mandatory evidence references. Existing registered items show their
+request history rather than another blank registration form.
+
+Product and Component review includes exact owner and validation metadata, full
+purpose/evidence details and a return route to retained authored details.
+Out-of-scope review excludes ownership/validation fields according to the owner
+contract. Invalid input receives focus. Pending local drafts retain discard
+protection; retained owner requests remain immutable. These changes remain preview
+work until batch review and live commissioning.
+
 ## Operator Flow
 
 For operator-authored product or component classification, open Workspace
@@ -48,9 +92,8 @@ For a new target, explicitly select active owner repositories, record purpose,
 boundary and contextual evidence, then Review direct candidate. Product
 metadata includes platform/runtime/security owners, source owners and intended
 endpoint. Component metadata includes owner, security owner, class and optional
-existing product association. Both carry explicit validation posture, WGCF
-graph role, applicable catalog references and owner evidence explanation into
-Intake so the resulting record can be evaluated for Inventory promotion.
+existing product association. Both carry the selected validation approach, derived role, automatically collected
+owner context and applicable check bindings into Intake for Inventory evaluation.
 An empty catalog list is valid; no new profile or catalog is invented.
 There are no guessed owners or deployment
 defaults. Contextual references are retained in the exact reviewed notes;
@@ -139,3 +182,12 @@ workspace-layout checks; this entry does not bypass those dependencies.
 An accepted HTTP response means acknowledgement only. A prepared branch or
 open review is not canonical mutation. Completion requires `succeeded`,
 `canonical_mutation: true`, and a `merged-authority` receipt from OOS.
+
+Direct Registry registration uses the ordinary Workspace Intake dialog shape,
+with classification, normalized metadata and explicit acceptance in one scrolling
+form. It does not render a wizard shell, banner, side rail or step navigation.
+Submission outcomes open separately and distinguish recorded requests from
+completed registration. Changing classification clears acceptance; returning to
+item details preserves the draft. This is opt-in at the Registry entry point;
+other source domains keep their existing workflow. Retained request inspection
+uses the same separate result dialog and exact original identity.

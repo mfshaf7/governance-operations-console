@@ -1,70 +1,103 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack,
-  TerasList, TerasModalShell, TerasNoteField, TerasSelectField, TerasSignalItem, TerasTextField } from "@/teras";
+import { useEffect, useRef, useState } from "react";
+import { TerasLoadingState, TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack,
+  TerasDraftCloseGuardDialog, TerasTechnicalDetails, TerasMetadataList, TerasSelectableRow, TerasList, TerasModalShell, TerasNoteField, TerasSelectField, TerasSignalItem, TerasTextField } from "@/teras";
 import { WorkspaceIntakeDialog } from "../../console-integration/workspace-intake/presentation/workspace-intake-dialog";
 import { useWorkspaceIntakeLiveRuntime } from "../../console-integration/workspace-intake/live-runtime/use-workspace-intake-live-runtime";
 import { completedDirectIntakeCandidate, directIntakeTarget, directWorkspaceIntakeCandidate, emptyDirectIntakeDraft,
   type DirectIntakeDraft, type DirectIntakeKind } from "../../console-integration/workspace-intake/workspace-intake-direct-candidate";
 import type { WorkspaceIntakeCandidate } from "../../console-integration/workspace-intake/workspace-intake-live-types";
+import { useIntakeOwnerSetup } from "../live-runtime/use-intake-owner-setup";
+import { componentTypes, deliveryTargets, graphRoles, guidedIntakeDraft, derivedIntakeRole, validationApproaches } from "../model/workspace-intake-guidance";
 import type { WorkspaceRegistrySnapshot } from "../model/workspace-registry-types";
 
-export function WorkspaceRegistryIntakeDialog({ snapshot, onClose }: {
-  snapshot: WorkspaceRegistrySnapshot; onClose: () => void;
+export function WorkspaceRegistryIntakeDialog({ snapshot, onClose, fixtureMode = false }: {
+  snapshot: WorkspaceRegistrySnapshot; fixtureMode?: boolean; onClose: () => void;
 }) {
   const [kind, setKind] = useState<DirectIntakeKind>("product");
   const [name, setName] = useState("");
   const [selected, setSelected] = useState<{ kind: DirectIntakeKind; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [closeGuardOpen, setCloseGuardOpen] = useState(false);
+  const requestClose = () => { if (name.trim()) setCloseGuardOpen(true); else onClose(); };
   if (selected) return <DirectIntakeTarget key={`${selected.kind}:${selected.name}`} target={selected}
-    snapshot={snapshot} onChangeTarget={() => setSelected(null)} onClose={onClose} />;
-  return <TerasModalShell bodyLayout="scroll" height="content" width="standard" title="Workspace Intake"
+    snapshot={snapshot} fixtureMode={fixtureMode} onChangeTarget={() => setSelected(null)} onClose={onClose} />;
+  return <><TerasModalShell bodyLayout="scroll" height="content" width="standard" title="Workspace Intake"
     kicker="Direct classification" surfaceId="workspace-registry-intake-target"
-    description="Classify a product or component using operator-authored metadata. Repository admission stays in Repository Control."
-    onClose={onClose} footer={<>
-      <TerasActionButton emphasis="secondary" onClick={onClose}>Back to Registry</TerasActionButton>
+    description={fixtureMode ? "Preview only. Explore the registration forms without changing workspace records." : "Register an application or service as a product, or a supporting service, library or plugin as a component."}
+    onClose={requestClose} footer={<>
+      <TerasActionButton emphasis="secondary" onClick={requestClose}>Back to Registry</TerasActionButton>
       <TerasActionButton onClick={() => { try { setSelected(directIntakeTarget(kind, name.trim())); }
-        catch (failure) { setError(failure instanceof Error ? failure.message : "Invalid target."); } }}>Inspect Intake requests</TerasActionButton>
+        catch (failure) { setError(failure instanceof Error ? failure.message : "Invalid target."); } }}>{fixtureMode ? "Preview Intake Form" : "Inspect Intake requests"}</TerasActionButton>
     </>}>
     <TerasFieldStack spacing="loose">
-      <TerasSelectField label="Entrant type" value={kind} onValueChange={setKind}
+      <TerasSelectField label="Registration type" value={kind} onValueChange={setKind}
         options={[{ label: "Product", value: "product" }, { label: "Component", value: "component" }]} />
-      <TerasTextField label="Canonical entrant key" value={name} onValueChange={setName} />
+      <TerasTextField label="Short name" value={name} onValueChange={setName} placeholder="For example team-dashboard; lowercase letters, numbers, dots, hyphens or underscores" />
+      <TerasContentTray kicker="Choose an identity" description="A product is an application or service delivered as a whole. A component supports a product or the workspace. The short name becomes its stable workspace identifier; repository registration starts in Repository Control." />
       {error ? <TerasContentTray kicker="Target required" description={error} /> : null}
     </TerasFieldStack>
-  </TerasModalShell>;
+  </TerasModalShell><TerasDraftCloseGuardDialog open={closeGuardOpen} kicker="Unsaved Intake target"
+    title="Discard Intake Target?" description="The entrant key has not been submitted." leaveLabel="Discard Draft"
+    onKeepEditing={() => setCloseGuardOpen(false)} onLeave={onClose} /></>;
 }
 
-function DirectIntakeTarget({ target, snapshot, onChangeTarget, onClose }: {
-  target: { kind: DirectIntakeKind; name: string }; snapshot: WorkspaceRegistrySnapshot;
+function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onClose }: {
+  target: { kind: DirectIntakeKind; name: string }; snapshot: WorkspaceRegistrySnapshot; fixtureMode: boolean;
   onChangeTarget: () => void; onClose: () => void;
 }) {
   const runtime = useWorkspaceIntakeLiveRuntime();
-  const [draft, setDraft] = useState<DirectIntakeDraft>(emptyDirectIntakeDraft);
+  const [draft, setDraft] = useState<DirectIntakeDraft>(() => ({ ...emptyDirectIntakeDraft, graphRole: target.kind === "product" ? "product-readiness-aggregate" : "" }));
+  const [componentType, setComponentType] = useState("");
+  const [validationRepository, setValidationRepository] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [customEndpoint, setCustomEndpoint] = useState(false);
+  const [roleOverridden, setRoleOverridden] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState<{ candidate: WorkspaceIntakeCandidate; requestId?: string } | null>(null);
   const [building, setBuilding] = useState(false);
+  const errorRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (error || runtime.error) errorRef.current?.focus();
+  }, [error, runtime.error]);
   const owners = snapshot.records.filter(record => record.kind === "repo" && record.posture === "active").map(record => record.name);
   const products = snapshot.records.filter(record => record.kind === "product" && record.posture === "active").map(record => record.name);
   const inInventory = snapshot.records.some(record => record.kind === target.kind && record.name === target.name);
   const busy = runtime.pending || building;
+  const codeOwners = draft.sourceOwners.split(",").filter(Boolean);
+  const validationSource = validationRepository || (target.kind === "component" ? draft.ownerRepo : codeOwners.length === 1 ? codeOwners[0] : draft.runtimeOwner);
+  const validationRecord = snapshot.records.find(record => record.kind === "repo" && record.name === validationSource && record.posture === "active") ?? null;
+  const ownerSetup = useIntakeOwnerSetup(validationRecord, fixtureMode);
+  const [leaveAction, setLeaveAction] = useState<(() => void) | null>(null);
+  const dirty = Object.entries(draft).some(([key, value]) => key === "graphRole"
+    ? value !== (target.kind === "product" ? "product-readiness-aggregate" : "") : value.trim().length > 0) || Boolean(validationRepository || componentType);
+  function requestLeave(next: () => void) {
+    if (busy) return;
+    if (dirty) setLeaveAction(() => next);
+    else next();
+  }
   const page = runtime.requestPage?.target.kind === target.kind && runtime.requestPage.target.name === target.name ? runtime.requestPage : null;
   const completed = page?.records.find(entry => entry.status === "succeeded") ?? null;
-  useEffect(() => { void runtime.listDirect(target.kind, target.name).catch(() => undefined); }, [target.kind, target.name, runtime.listDirect]);
+  useEffect(() => { if (!fixtureMode) void runtime.listDirect(target.kind, target.name).catch(() => undefined); }, [target.kind, target.name, runtime.listDirect, fixtureMode]);
   function update(field: keyof DirectIntakeDraft, value: string) { if (!busy) setDraft(current => ({ ...current, [field]: value })); }
   async function prepare() {
-    if (busy || !page || page.pending_request_count || inInventory) return;
+    if (fixtureMode || busy || !page || page.pending_request_count || inInventory) return;
     setBuilding(true); setError(null);
     try {
       const current = await runtime.listDirect(target.kind, target.name);
       if (current.pending_request_count) throw new Error("Reopen the original pending request before another classification.");
-      setReview({ candidate: await directWorkspaceIntakeCandidate(target, draft, owners, products) });
+      if (!draft.notes.trim()) throw new Error(`Describe what this ${target.kind} does and what it is responsible for.`);
+      if (!draft.validationPosture) throw new Error("Choose how this item will be checked.");
+      const source = await ownerSetup.load();
+      if (!source) throw new Error("Choose the repository with the validation plan and refresh its setup. Your entered details are kept.");
+      const resolved = guidedIntakeDraft(target.kind, draft, source);
+      setReview({ candidate: await directWorkspaceIntakeCandidate(target, resolved, owners, products) });
     } catch (failure) { setError(failure instanceof Error ? failure.message : "Intake preparation failed."); }
     finally { setBuilding(false); }
   }
   async function reclassify() {
-    if (busy || !page || !completed || page.pending_request_count || inInventory) return;
+    if (fixtureMode || busy || !page || !completed || page.pending_request_count || inInventory) return;
     setBuilding(true); setError(null);
     try {
       const candidate = completedDirectIntakeCandidate(page, completed.request_id);
@@ -77,27 +110,106 @@ function DirectIntakeTarget({ target, snapshot, onChangeTarget, onClose }: {
     } catch (failure) { setError(failure instanceof Error ? failure.message : "Reclassification unavailable."); }
     finally { setBuilding(false); }
   }
-  if (review) return <WorkspaceIntakeDialog candidate={review.candidate} initialRequestId={review.requestId}
-    returnLabel="Back to Registry" onClose={onClose} onNewCandidate={() => {
+  if (review) return <WorkspaceIntakeDialog singleReview candidate={review.candidate} initialRequestId={review.requestId} hasLocalDraft={dirty}
+    returnLabel="Back to Registry" onClose={onClose}
+    onEditCandidate={review.requestId ? undefined : () => setReview(null)} onNewCandidate={() => {
       setReview(null); void runtime.listDirect(target.kind, target.name).catch(() => undefined);
     }} />;
-  const ownerOptions = [{ label: "Select owner explicitly", value: "" }, ...owners.map(value => ({ label: value, value }))];
-  const ownerField = (label: string, field: keyof DirectIntakeDraft) => <TerasSelectField label={label} value={draft[field]}
+  const ownerOptions = [{ label: "Choose a responsible repository", value: "" }, ...owners.map(value => ({ label: value, value }))];
+  const ownerField = (label: string, field: keyof DirectIntakeDraft, helper: string) => <TerasSelectField label={label} helper={helper} value={draft[field]}
     disabled={busy} onValueChange={value => update(field, value)} options={ownerOptions} />;
-  return <TerasModalShell bodyLayout="scroll" height="content" width="standard" title="Prepare direct entrant"
-    kicker={`${target.kind}:${target.name}`} surfaceId="workspace-registry-intake-preparation"
-    description="Operator-authored classification. Admission, Inventory promotion, runtime and publication are separate decisions."
-    onClose={onClose} footer={<>
-      <TerasActionButton emphasis="secondary" disabled={busy} onClick={onChangeTarget}>Change target</TerasActionButton>
-      <TerasActionButton disabled={busy || !page || Boolean(page.pending_request_count) || inInventory}
-        onClick={() => void prepare()}>Review direct candidate</TerasActionButton>
+  const roleLabel = graphRoles.find(role => role.value === draft.graphRole)?.label ?? "Choose a component type";
+  const approach = validationApproaches.find(item => item.value === draft.validationPosture);
+  function selectComponentType(value: string) {
+    setComponentType(value);
+    setRoleOverridden(false);
+    const type = componentTypes.find(item => item.value === value);
+    setDraft(current => ({ ...current, componentClass: type ? "componentClass" in type ? type.componentClass : type.value : "", graphRole: derivedIntakeRole(target.kind, value, current.validationPosture) }));
+    if (value === "custom") setAdvancedOpen(true);
+  }
+  return <><TerasModalShell busy={busy} busyLabel="Reading registration details…" bodyLayout="scroll" height="content" width="standard" title={target.kind === "product" ? "Product details" : "Component details"}
+    kicker={target.name} surfaceId="workspace-registry-intake-preparation"
+    description={fixtureMode ? "Preview only. Explore the guided form and sample owner setup. Live registration is disabled." : "Describe the item and choose its responsible repositories. Current source bindings and validation context are collected automatically for review."}
+    onClose={() => requestLeave(onClose)} footer={<>
+      <TerasActionButton emphasis="secondary" disabled={busy} onClick={() => requestLeave(onChangeTarget)}>Change item</TerasActionButton>
+      <TerasActionButton disabled={fixtureMode || busy || !page || Boolean(page.pending_request_count) || inInventory}
+        onClick={() => void prepare()}>Review registration</TerasActionButton>
     </>}>
     <TerasFieldStack spacing="loose">
+      {!inInventory ? <>
+      <TerasContentTray kicker="1. Purpose" description="Describe the responsibility of this item in your own words.">
+        <TerasFieldStack spacing="normal">
+          <TerasNoteField label="What does this item do?" placeholder="Who is it for, what does it provide, and what is outside its responsibility?" value={draft.notes} disabled={busy} onValueChange={value => update("notes", value)} />
+          {target.kind === "product" ? <>
+            <TerasSelectField label="What will be handed over?" helper="This describes the intended result. It does not activate hosting or grant release permission."
+              value={customEndpoint ? "custom" : draft.endpoint} disabled={busy} options={[{label:"Choose a delivery target",value:""},...deliveryTargets,{label:"Another delivery target",value:"custom"}]}
+              onValueChange={value => { setCustomEndpoint(value === "custom"); update("endpoint", value === "custom" ? "" : value); }} />
+            {customEndpoint ? <TerasTextField label="Delivery target" placeholder="Describe the intended endpoint or use its agreed owner-contract name." value={draft.endpoint} disabled={busy} onValueChange={value => update("endpoint", value)} /> : null}
+          </> : <TerasSelectField label="What kind of component is this?" helper="The system uses this choice to fill its validation role."
+            value={componentType} disabled={busy} onValueChange={selectComponentType}
+            options={[{label:"Choose a component type",value:""},...componentTypes,{label:"Another kind of component",value:"custom"}]} />}
+          {target.kind === "component" ? <TerasSelectField label="Which product does it support?" helper="Optional. Shared workspace components can remain independent of a product."
+            value={draft.product} disabled={busy} onValueChange={value => update("product",value)}
+            options={[{label:"No product association",value:""},...products.map(value=>({label:value,value}))]} /> : null}
+        </TerasFieldStack>
+      </TerasContentTray>
+      <TerasContentTray kicker="2. Responsibility" description="Choose repositories that own the work. These are ownership decisions, not requests for repository access.">
+        <TerasFieldStack spacing="normal">
+          {target.kind === "product" ? <>
+            {ownerField("Platform owner", "platformOwner", "Owns hosting, deployment and environment decisions.")}
+            {ownerField("Runtime owner", "runtimeOwner", "Maintains and operates the delivered product.")}
+            <TerasContentTray kicker="Code owner repositories" description="Select the repositories responsible for the product's source code.">
+              <TerasList ariaLabel="Code owner repositories" frame="contained" scrollHeight="short">
+                {owners.map(owner => { const selected=codeOwners.includes(owner); return <TerasSelectableRow key={owner} label={owner}
+                  ariaLabel={`${selected ? "Remove" : "Add"} source owner ${owner}`} selected={selected} disabled={busy} tone={selected ? "ok" : "muted"}
+                  onSelect={()=>update("sourceOwners",(selected?codeOwners.filter(value=>value!==owner):[...codeOwners,owner]).join(","))} />; })}
+              </TerasList>
+            </TerasContentTray>
+          </> : ownerField("Owner repository", "ownerRepo", "Maintains this component and its source code.")}
+          {ownerField("Security owner", "securityOwner", "Owns the security review and security-related follow-up for this item.")}
+        </TerasFieldStack>
+      </TerasContentTray>
+      <TerasContentTray kicker="3. Checks" description="Choose how quality will be checked. The system reads the repository's recorded plan and prepares its technical bindings.">
+        <TerasFieldStack spacing="normal">
+          <TerasSelectField label="How will this item be checked?" helper={approach?.detail ?? "Choose the approach agreed with the responsible owner."}
+            value={draft.validationPosture} disabled={busy} options={[{label:"Choose a validation approach",value:""},...validationApproaches]}
+            onValueChange={value=>{
+              setDraft(current=>({...current,validationPosture:value,graphRole:roleOverridden?current.graphRole:derivedIntakeRole(target.kind,componentType,value)}));
+              if (target.kind === "product" && (value === "proposed-profile-gated" || value === "build-admitted-profile-gated")) setAdvancedOpen(true);
+            }} />
+          <TerasSelectField label="Repository with the validation plan" helper="Suggested from the code or component owner. Choose another repository when it owns the agreed checks."
+            value={validationSource} disabled={busy} options={ownerOptions} onValueChange={setValidationRepository} />
+          {ownerSetup.status === "loading" ? <TerasLoadingState inline label="Reading owner setup…" /> : null}
+          <TerasContentTray kicker="Collected automatically" title={ownerSetup.current ? fixtureMode ? "Sample owner setup" : "Owner setup loaded" : ownerSetup.status === "loading" ? "Reading owner setup…" : "Owner setup needed"}
+            description={ownerSetup.error ?? (ownerSetup.current ? "Validation context and source references will be attached for review. This is not proof that the new item passed its checks." : "Choose the repository responsible for the checks. Its current record is read automatically.")}
+            actions={<TerasActionButton emphasis="secondary" disabled={busy||!validationRecord||ownerSetup.status==="loading"} onClick={()=>void ownerSetup.load()}>Refresh owner setup</TerasActionButton>}>
+            <TerasMetadataList items={[{label:roleOverridden?"Role adjusted by operator":"Role filled from item type",value:roleLabel},{label:"Checks available from owner",value:ownerSetup.current?String(ownerSetup.setup?.catalogRefs.length??0):"Not read"}]} />
+          </TerasContentTray>
+          <TerasNoteField label="Additional checks or limits (optional)" placeholder="Add anything specific to this item that the owner's recorded validation plan does not cover." value={draft.validationNotes} disabled={busy} onValueChange={value=>update("validationNotes",value)} />
+          <TerasNoteField label="Supporting links (optional)" placeholder="One reference per line. The owner-record reference is attached automatically." value={draft.evidence} disabled={busy} onValueChange={value=>update("evidence",value)} />
+          <TerasActionButton emphasis="secondary" onClick={()=>setAdvancedOpen(value=>!value)}>{advancedOpen?"Hide advanced validation settings":"Advanced validation settings"}</TerasActionButton>
+          {advancedOpen ? <TerasContentTray kicker="Advanced validation settings" description="Override derived metadata only when the owner has agreed a different binding. Canonical validation still decides whether it is allowed.">
+            <TerasFieldStack spacing="normal">
+              {componentType==="custom"?<TerasTextField label="Component category" value={draft.componentClass} disabled={busy} onValueChange={value=>update("componentClass",value)} />:null}
+              <TerasSelectField label="Validation role override" helper="The normal role is derived from the item type; this is an explicit owner-defined exception."
+                value={draft.graphRole} disabled={busy} options={[{label:"Choose the agreed role",value:""},...graphRoles]} onValueChange={value=>{setRoleOverridden(true);update("graphRole",value);}} />
+              <TerasTextField label="Check binding overrides (optional)" placeholder="Exact existing catalog keys, comma-separated. Leave blank to use the recorded owner bindings when required."
+                value={draft.catalogRefs} disabled={busy} onValueChange={value=>update("catalogRefs",value)} />
+              {ownerSetup.current&&ownerSetup.setup?<TerasTechnicalDetails summary="Collected source details" items={[
+                {label:"Owner record",value:ownerSetup.setup.evidenceRef},{label:"Owner record version",value:String(ownerSetup.setup.version)},
+                {label:"Record digest",value:ownerSetup.setup.digest},{label:"Recorded owner checks",value:ownerSetup.setup.catalogRefs.join(", ")||"No direct checks recorded"},
+                {label:"Recorded owner plan",value:ownerSetup.setup.notes},{label:"Derived role",value:draft.graphRole},
+              ]}/>:null}
+            </TerasFieldStack>
+          </TerasContentTray>:null}
+        </TerasFieldStack>
+      </TerasContentTray>
+      </> : null}
       <TerasContentTray kicker="Retained Intake requests"
-        description={page ? `${page.pending_request_count} pending request(s) across all pages. Reopen reads the original request without resubmitting.`
+        description={fixtureMode ? "Preview only; no owner journal is loaded and no classification can be submitted." : page ? `${page.pending_request_count} pending request(s) across all pages. Reopen reads the original request without resubmitting.`
           : runtime.error?.message ?? "Reading the native journal. New classification requires a successful read."}
         actions={<TerasActionRow>
-          <TerasActionButton emphasis="secondary" disabled={busy} onClick={() => void runtime.listDirect(target.kind, target.name).catch(() => undefined)}>Refresh retained requests</TerasActionButton>
+          <TerasActionButton emphasis="secondary" disabled={busy || fixtureMode} onClick={() => void runtime.listDirect(target.kind, target.name).catch(() => undefined)}>Refresh retained requests</TerasActionButton>
           {page?.next_cursor ? <TerasActionButton emphasis="secondary" disabled={busy}
             onClick={() => void runtime.listDirect(target.kind, target.name, page.next_cursor).catch(() => undefined)}>More retained requests</TerasActionButton> : null}
           {completed ? <TerasActionButton emphasis="secondary" disabled={busy || Boolean(page?.pending_request_count) || inInventory}
@@ -107,33 +219,20 @@ function DirectIntakeTarget({ target, snapshot, onChangeTarget, onClose }: {
           {page.records.map(entry => <TerasSignalItem key={entry.request_id} label={entry.request_id}
             title={`${entry.classification} / ${entry.status}`} detail={entry.updated_at} tone="info"
             {...(busy ? { statusLabel: "Reading" } : { ariaLabel: `Reopen original request ${entry.request_id}`,
-              actionLabel: "Reopen original request", onSelect: () => setReview({ requestId: entry.request_id,
+              actionLabel: "Reopen original request", onSelect: () => requestLeave(() => setReview({ requestId: entry.request_id,
                 candidate: { label: target.name, target, source: entry.candidate.source,
-                  requested_record: entry.candidate.requested_record, evidence_refs: entry.candidate.evidence_refs } }) })} />)}
+                  requested_record: entry.candidate.requested_record, evidence_refs: entry.candidate.evidence_refs } })) })} />)}
         </TerasList> : null}
       </TerasContentTray>
       {completed ? <TerasContentTray kicker="Completed candidate origin"
         description={`Reclassification reuses ${completed.request_id} with its original source and recorded metadata, then opens a fresh explicit Decision / Review. Changing new-entrant fields is a different candidate, not a change of classification.`} /> : null}
       {inInventory ? <TerasContentTray kicker="Already in Inventory" description="Use Registry to inspect this record. The retained Intake history remains readable; admission is not repeated." /> : null}
-      {target.kind === "product" ? <>
-        {ownerField("Platform owner", "platformOwner")}
-        {ownerField("Runtime owner", "runtimeOwner")}
-        <TerasTextField label="Source owners (comma-separated canonical keys)" value={draft.sourceOwners} disabled={busy} onValueChange={value => update("sourceOwners", value)} />
-        <TerasTextField label="Intended endpoint" value={draft.endpoint} disabled={busy} onValueChange={value => update("endpoint", value)} />
-      </> : <>
-        {ownerField("Owner repository", "ownerRepo")}
-        <TerasTextField label="Component class" value={draft.componentClass} disabled={busy} onValueChange={value => update("componentClass", value)} />
-        <TerasSelectField label="Associated product" value={draft.product} disabled={busy} onValueChange={value => update("product", value)}
-          options={[{ label: "No product association", value: "" }, ...products.map(value => ({ label: value, value }))]} />
-      </>}
-      {ownerField("Security owner", "securityOwner")}
-      <TerasTextField label="Validation posture" value={draft.validationPosture} disabled={busy} onValueChange={value => update("validationPosture", value)} />
-      <TerasTextField label="WGCF graph role" value={draft.graphRole} disabled={busy} onValueChange={value => update("graphRole", value)} />
-      <TerasTextField label="Applicable catalog references (comma-separated)" value={draft.catalogRefs} disabled={busy} onValueChange={value => update("catalogRefs", value)} />
-      <TerasNoteField label="Owner validation evidence and boundary" value={draft.validationNotes} disabled={busy} onValueChange={value => update("validationNotes", value)} />
-      <TerasNoteField label="Purpose and ownership boundary" value={draft.notes} disabled={busy} onValueChange={value => update("notes", value)} />
-      <TerasNoteField label="Contextual evidence references (one per line)" value={draft.evidence} disabled={busy} onValueChange={value => update("evidence", value)} />
-      {error || runtime.error ? <TerasContentTray kicker="Intake unavailable" description={error ?? runtime.error!.message} /> : null}
+
+      {error || runtime.error ? <div ref={errorRef} role="alert" tabIndex={-1}>
+        <TerasContentTray kicker={runtime.error ? "Registration source unavailable" : "Check registration details"} description={error ?? runtime.error!.message} />
+      </div> : null}
     </TerasFieldStack>
-  </TerasModalShell>;
+  </TerasModalShell><TerasDraftCloseGuardDialog open={Boolean(leaveAction)} kicker="Unsaved registration"
+    title="Discard Intake Draft?" description="Your registration details have not been submitted." leaveLabel="Discard Draft"
+    onKeepEditing={()=>setLeaveAction(null)} onLeave={()=>{const next=leaveAction;setLeaveAction(null);setDraft({...emptyDirectIntakeDraft,graphRole:target.kind==="product"?"product-readiness-aggregate":""});next?.();}} /></>;
 }

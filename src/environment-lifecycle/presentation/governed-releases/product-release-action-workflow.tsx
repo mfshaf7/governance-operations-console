@@ -224,13 +224,13 @@ export function ProductReleaseActionWorkflow({
         treatment="rail"
       >
         <TerasPanelHeader
-          description="Validated request boundary for the declared prototype-local adapter."
+          description="Simulation only. Completed inputs do not authorize a live release."
           kicker="Execution Boundary"
           statusLabel={
-            operation.adapter.available ? "Ready" : "Unavailable"
+            operation.adapter.available ? "Simulation" : "Unavailable"
           }
           statusTone={operation.adapter.available ? "ok" : "danger"}
-          title="Release execution"
+          title="Release simulation"
         />
         <TerasList ariaLabel="Product release execution checks">
           <TerasStatusItem
@@ -252,7 +252,7 @@ export function ProductReleaseActionWorkflow({
             index="03"
             label="Execution adapter"
             status={
-              operation.adapter.available ? "Ready" : "Unavailable"
+              operation.adapter.available ? "Simulation" : "Unavailable"
             }
             tone={operation.adapter.available ? "ok" : "danger"}
           />
@@ -264,7 +264,7 @@ export function ProductReleaseActionWorkflow({
     <>
       <TerasWizardModal
         activeStepId={step}
-        description={operation.description}
+        description={`Design preview — ${operation.description} No live release is changed.`}
         footer={
           <TerasWizardFooter
             apply={
@@ -275,7 +275,7 @@ export function ProductReleaseActionWorkflow({
                       !detailsReady ||
                       !operation.adapter.available ||
                       submitting,
-                    label: submitting ? "Submitting" : "Submit Action",
+                    label: submitting ? "Submitting" : "Simulate Action",
                     onClick: () => void submitAction(),
                   }
                 : undefined
@@ -305,14 +305,14 @@ export function ProductReleaseActionWorkflow({
             }
           />
         }
-        kicker="Governed Release"
+        kicker="Release Preview"
         onClose={exitWorkflow}
         onStepSelect={selectStep}
         statusLabel={
           failedCorrelationId
             ? "Failed"
             : detailsReady
-              ? "Ready"
+              ? "Draft complete"
               : "Draft"
         }
         statusTone={
@@ -350,7 +350,7 @@ export function ProductReleaseActionWorkflow({
 
       <TerasDraftCloseGuardDialog
         description="This product release request has unsubmitted local changes."
-        kicker="Governed Release"
+        kicker="Release Preview"
         leaveLabel="Discard Draft"
         onKeepEditing={() => setExitGuardOpen(false)}
         onLeave={discardAndExit}

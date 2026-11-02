@@ -1,5 +1,104 @@
 # Governance Operations Console Change Log
 
+## 2026-11-01 — UI batch three remaining workspaces
+
+Governance Activity now uses its existing Console pill style for its event toggle,
+History pagination and JSON export. The launcher aligns with the panel heading;
+the toggle and pagination sit beside their respective lists with explicit spacing.
+Read filtering, original cursor retry, disabled/busy states and export scope remain.
+This is primary Console styling within the unpublished maintenance batch.
+
+The selected Focus Center priority gives its expanded technical disclosure the
+remaining vertical space instead of capping its list at 120 pixels. The selected
+priority scrolls as one area when necessary; the required move and action controls
+remain reachable. Other technical disclosures keep their existing sizing.
+
+The operator requested consistent waiting feedback before batch publication.
+
+Workspace Pulse now uses the shared animated signal in its metric and mood cards
+while owner reads are pending. Initial counts stay unknown, known partial results
+remain visible, and failures retain their explicit state. Short placeholders
+replace repeated coverage paragraphs only while a card has no result yet.
+Loaded cards and existing inspectors retain their original wording. Reserved
+indicator slots prevent the animation from shifting card headers. No request,
+polling or aggregation authority changes.
+Shared Teras loading states cover first reads, partial detail reads, retained
+refreshes and active controls. Feedback follows real request state, preserves
+usable content and existing command guards, distinguishes errors from waiting,
+and respects reduced motion. This extends the same unpublished maintenance
+Landing Unit; it introduces no new backend, polling, mutation or authority.
+
+Model Operations now retains its complete content width from the first visible
+frame. Its page-switch stack uses the existing filling single-region content
+frame, so loading or unavailable profile content cannot shrink the stack before
+records arrive. The existing modal size, page selector and draft guards remain.
+Browser checks sample layout across first paint, delayed source, success/error
+and page switches at both desktop sizes.
+
+The same inspection found an underfilled Prototype Dashboard for retired records.
+Its existing scrolling content now sits in the same filling single-region frame
+as active workspace content. A shared browser fixture measures fixed filling
+workspaces and nested dashboards through their actual walkthroughs; content-sized
+dialogs retain their intentional sizing.
+
+Repeat-use qualification also separates accepted runtime code from current owner
+release data. Verified record-only main updates refresh the register and the next
+native request without a checkout/pin change. Accepted/retained snapshots stay
+labelled and cannot enable writes. The isolated authenticated browser proof now
+covers two consecutive merged operations and cold recovery.
+
+Governed Releases adds the approved native OpenClaw entry through existing OOS
+Platform operations and protected owner workflows. Owner-defined fields reuse
+Details/Review. Source and executable capability must both be current. Original
+request recovery survives a lost acknowledgement; approval, PR review, merge and
+verified desired-source readback remain distinct. History links and read-only
+inspection survive outages. The dedicated Platform connection remains default-off
+until exact-source composition and real App commissioning. Isolated qualification
+is not live operating acceptance. This stays uncommitted for batch review.
+
+Registry follow-up replaces the unnecessary wizard composition with the existing
+Workspace Intake form pattern: standard dialogs, grouped fields and one body
+scroll, with separate confirmation/outcome dialogs. Source details load
+automatically. Pending-original, stale-source and draft guards remain; accepted
+requests say submitted until owner completion is proven. The shared wizard
+primitive is unchanged. This stays uncommitted for operator surface review.
+
+Operator-approved maintenance starts with Lifecycle Transitions: visible handoff
+routes, source-failure coverage, complete evidence disclosures, terminal-state
+wording and reachable history. Prototype inspection resolves owner-defined
+capture/registry references to the current immutable record and blocks unknown
+or conflicting entries instead of selecting a different record. This remains
+uncommitted preview work; live commissioning and batch review are separate.
+
+Registry now binds lifecycle review to current preparation, marks retained source
+and unknown totals, protects unfinished Intake/lifecycle drafts, corrects history
+and receipt labels, and keeps scan columns and full evidence readable. Direct
+Intake selects active source owners and explains advanced fields. Product and
+Component review now shows exact submitted metadata, focuses invalid-input
+feedback and returns to retained entrant details for correction. Guided registration now collects the selected repository's validation plan and
+source evidence through the existing read-only preparation, derives the item role
+and uses explained choices. Normal form input is purpose and ownership intent;
+advanced overrides remain available.
+
+Dev Integration follow-up scopes history by workspace, makes every loaded original
+operation inspectable and adds incremental history disclosure. Actions use readable
+labels; source credentials point to their project-bound Source authoring workflow.
+Stop review binds the exact profile, capability and source version, with a server
+source recheck before dispatch. Failed reads retain visibly old records and disable
+new actions. Existing dashboard and request-review panels scroll without clipping,
+and nested sample views remain labelled as design preview. The accepted three-step
+profile request stays intact. The follow-up source extension below supplies bounded owner profile readback and
+native request recording; it does not implement profile admission or authorize
+live activation. Governed Releases remains a later surface review.
+All changes remain uncommitted in preview for operator review.
+
+The Dev Integration backend extension is being staged with real owner registry
+reads and native OOS profile requests. The earlier unpublished Proposal-backed
+request mapping was rejected during operator review and removed. Submission,
+history and receipt recovery remain within Dev Integration; no Proposal is
+created. Workspace policy and Platform operator guidance are corrected in the
+same maintenance work. Source implementation is not live commissioning evidence.
+
 ## 2026-11-01 — Guided publication repair (preview)
 
 The operator rejected the earlier engineering form and redirect-only listing
@@ -1409,3 +1508,19 @@ lives in `surface-contracts/lifecycle-transitions.md`.
   review, sequential source-revision commands, fail-closed conflict/reject
   handling, durable receipt authority, and Repository/Catalog custody routing
   without changing the established board design.
+
+
+## 2026-11-02 — Governed Releases repair in batch three
+
+Operator-approved maintenance preserves the existing register, Dashboard and
+sample workflows. Readable table widths, reachable review values, explicit nested
+preview labels and empty-value feedback address confirmed interface failures.
+Bounded product readback represents registered owner-managed products and existing
+owner release records without inventing workflow progress or runtime health.
+Protected GitHub workflow navigation remains distinct from Console dispatch,
+which is not commissioned. Workspace-scoped history continuation removes the
+fixed global200 discovery cutoff and preserves exact-original recovery.
+
+Changes remain uncommitted for coherent batch review. Local checks and isolated
+composed readback are separate from exact-source Security acceptance, Platform
+commissioning and live release evidence. No real release or runtime change occurs.

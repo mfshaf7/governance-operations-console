@@ -184,7 +184,7 @@ export function EnvironmentOperationLogPanel({
         latestOperation?.state === "failed" ? (
           <>
             {onReturnToDraft ? (
-              <TerasActionButton
+              <TerasActionButton busy={retrying}
                 emphasis="secondary"
                 onClick={onReturnToDraft}
               >

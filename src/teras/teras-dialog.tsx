@@ -8,9 +8,12 @@ import { TerasActionButton } from "./teras-action";
 import { TerasModalFoundation } from "./teras-modal-foundation";
 import { TerasSectionHeader } from "./teras-section-header";
 import { cx } from "./teras-utils";
+import { TerasLoadingState } from "./teras-loading-state";
 
 export function TerasDialog({
   actions,
+  busy = false,
+  busyLabel = "Working…",
   children,
   className,
   closeDisabled = false,
@@ -26,6 +29,8 @@ export function TerasDialog({
   width,
 }: {
   actions?: ReactNode;
+  busy?: boolean;
+  busyLabel?: string;
   children?: ReactNode;
   className?: string;
   closeDisabled?: boolean;
@@ -75,6 +80,7 @@ export function TerasDialog({
               ) : undefined
             }
             description={description}
+            support={open && busy ? <TerasLoadingState inline label={busyLabel} /> : undefined}
             descriptionId={description ? descriptionId : undefined}
             kicker={kicker}
             title={title}

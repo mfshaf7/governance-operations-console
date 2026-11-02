@@ -9,7 +9,7 @@ import type { WorkDesignApplyReceipt } from "../../../../work-model/work-design/
 import { useWorkDesignSessionController } from "../session-controller/use-work-design-session-controller.ts";
 import { WorkDesignSessionDialogs } from "./work-design-session-dialogs.tsx";
 import { WorkDesignSessionFooter } from "./work-design-session-footer.tsx";
-import { TerasModalShell, TerasDialog, TerasEmptyState, TerasActionButton } from "@/teras";
+import { TerasLoadingState, TerasModalShell, TerasDialog, TerasEmptyState, TerasActionButton } from "@/teras";
 import { loadWorkDesignSessionDraft } from "../../../../local-runtime/index.ts";
 import { normalizeWorkDesignPersistedSession } from "../../../../local-runtime/persistence/work-design-session-persistence.ts";
 import { useDeliveryChangeLiveRuntime } from "../../../../live-runtime/use-delivery-change-live-runtime.ts";
@@ -46,7 +46,7 @@ function DeliveryWorkDesignSessionBody(props: WorkDesignModalProps) {
     catch {return {tree:undefined,error:"The selected package tree could not be verified."};}
   }, [props.readOnly,props.workflow.deliveryPackage.delivery_package_id,source.projection,savedTree]);
   if (props.readOnly && !retained.tree) return <TerasDialog open title="Design Hub" kicker="Work Design Session" description={props.workflow.deliveryPackage.display_name} contentOverflow="auto" height="content" width="standard" closeLabel="Close Design Hub" onClose={props.onClose} actions={<TerasActionButton onClick={props.onClose}>Back to Register</TerasActionButton>}>
-    <TerasEmptyState>{retained.error ?? source.projectionError ?? "Reading retained Work Design content…"}</TerasEmptyState>
+    {retained.error || source.projectionError ? <TerasEmptyState>{retained.error ?? source.projectionError}</TerasEmptyState> : source.loading ? <TerasLoadingState label="Loading saved Work Design…" skeleton="details" /> : <TerasEmptyState>No saved Work Design tree is available for this item.</TerasEmptyState>}
   </TerasDialog>;
   return <WorkDesignSession {...props} retainedTree={retained.tree}/>;
 }

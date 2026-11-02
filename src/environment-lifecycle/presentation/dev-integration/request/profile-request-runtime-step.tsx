@@ -9,19 +9,19 @@ import {
   TerasWizardPanel,
 } from "@/teras";
 
-import {
-  devIntegrationRequestOptions,
-} from "../../../fixtures/dev-integration-request-options.fixture";
+import type { DevIntegrationRequestOptions } from "../../../model/dev-integration-request-options.ts";
 import type {
   DevIntegrationProfileRequestDraft,
 } from "../../../work-model/profile-request/dev-integration-profile-request-draft";
 import { ProfileRequestSelectionList } from "./profile-request-selection-list";
 
 export function ProfileRequestRuntimeStep({
+  options: devIntegrationRequestOptions,
   draft,
   onChange,
   onOpenPersistence,
 }: {
+  options: DevIntegrationRequestOptions;
   draft: DevIntegrationProfileRequestDraft;
   onChange: (update: Partial<DevIntegrationProfileRequestDraft>) => void;
   onOpenPersistence: () => void;

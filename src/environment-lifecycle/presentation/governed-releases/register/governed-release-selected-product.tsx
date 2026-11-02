@@ -7,6 +7,7 @@ import {
 import type { ProductReleaseCapability } from "../../../model/product-release-capability";
 import { selectCurrentProductReleaseStep } from "../../../read-model/product-release-selectors";
 import {
+  formatProductReleaseStatus,
   productReleaseMaturityLabels,
   productReleaseStepPostureLabels,
   productReleaseStepPostureTones,
@@ -79,11 +80,11 @@ export function GovernedReleaseSelectedProduct({
               { label: "Platform owner", value: product.platformOwner },
               {
                 label: "Highest endpoint",
-                value: product.highestRealEndpoint,
+                value: formatProductReleaseStatus(product.highestRealEndpoint),
               },
               {
-                label: "Runtime lifecycle",
-                value: product.runtimeLifecycle ? "Available" : "Unavailable",
+                label: product.ownerGuidanceUrl ? "Runtime controls" : "Runtime lifecycle",
+                value: product.ownerGuidanceUrl ? product.ownerWorkflows?.some(w=>w.id==="runtime") ? "Owner workflow" : "Not supported" : product.runtimeLifecycle ? "Available" : "Unavailable",
               },
             ]
           : []

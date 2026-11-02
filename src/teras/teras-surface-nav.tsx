@@ -49,7 +49,7 @@ export function TerasSurfaceNavButton({
   title,
   tone = "muted",
   ...buttonProps
-}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
+}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "title"> & {
   current: boolean;
   kicker: ReactNode;
   meta?: ReactNode;

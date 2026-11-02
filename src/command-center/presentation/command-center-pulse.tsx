@@ -1,5 +1,7 @@
 "use client";
 
+import { TerasLoadingIndicator } from "@/teras";
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -45,6 +47,7 @@ function toneForSource(source: WorkspacePulseSource): WorkspacePulseTone {
 }
 
 function sourceStateLabel(source: WorkspacePulseSource) {
+  if (source.state === "loading") return "LOADING";
   if (source.state === "unavailable") {
     return "UNAVAILABLE";
   }
@@ -63,24 +66,31 @@ function sourceStateLabel(source: WorkspacePulseSource) {
 function CommandCenterMetricCard({
   active = false,
   onOpen,
+  loading = false,
+  pending = false,
   signal,
 }: {
   active?: boolean;
   onOpen: () => void;
+  loading?: boolean;
+  pending?: boolean;
   signal: WorkspacePulseSignal;
 }) {
   return (
     <button
       aria-pressed={active}
       className={consoleStatusCardClass(
-        signal.tone as ConsoleTone,
+        (loading ? "info" : signal.tone) as ConsoleTone,
         `workspace-pulse-card workspace-pulse-card-button ${styles.metricCard} ${
           active
             ? `workspace-pulse-card-active ${styles.cardActive}`
             : ""
         }`,
       )}
-      data-tone={signal.tone}
+      data-tone={loading ? "info" : signal.tone}
+      data-pulse-signal={signal.id}
+      data-pulse-loading={loading ? "true" : "false"}
+      aria-busy={loading || undefined}
       type="button"
       onClick={onOpen}
     >
@@ -94,15 +104,15 @@ function CommandCenterMetricCard({
         <span className={`metric-label ${styles.metricLabel}`}>
           {signal.label}
         </span>
-        <CommandCenterStatusDot tone={signal.tone as ConsoleTone} />
+        <span className={styles.metricIndicator}>{pending ? <TerasLoadingIndicator /> : <CommandCenterStatusDot tone={signal.tone as ConsoleTone} />}</span>
       </span>
       <span className={styles.metricBody}>
-        <strong>{signal.value}</strong>
+        <strong>{loading ? "—" : signal.value}</strong>
         <span className={`metric-detail ${styles.metricDetail}`}>
-          {signal.detail}
+          {loading ? "Reading status…" : signal.detail}
         </span>
       </span>
-      <span className={styles.metricState}>{signal.stateLabel}</span>
+      <span className={styles.metricState}>{loading ? "LOADING" : signal.stateLabel}</span>
     </button>
   );
 }
@@ -112,6 +122,7 @@ export function CommandCenterWorkspacePulse({
   onSystemMoodChange,
   posture,
   pulseSignals,
+  sources,
   selectedPulseSignal,
   systemMoodOpen,
 }: {
@@ -119,9 +130,12 @@ export function CommandCenterWorkspacePulse({
   onSystemMoodChange: (open: boolean) => void;
   posture: WorkspacePosture;
   pulseSignals: readonly WorkspacePulseSignal[];
+  sources: readonly WorkspacePulseSource[];
   selectedPulseSignal: WorkspacePulseSignal | null;
   systemMoodOpen: boolean;
 }) {
+  const pending = sources.some(source => source.state === "loading");
+  const firstRead = sources.length > 0 && sources.every(source => source.state === "loading");
   return (
     <ConsoleShellPanel
       className={`workspace-pulse-panel selective-bright-copy ${
@@ -136,12 +150,15 @@ export function CommandCenterWorkspacePulse({
         kicker="Workspace Pulse"
         title="Operating State"
       />
+      {pending ? <span className="sr-only" role="status">Reading workspace signals.</span> : null}
       <div className={styles.metricGrid}>
         {pulseSignals.map((signal) => (
           <CommandCenterMetricCard
             active={selectedPulseSignal?.id === signal.id}
             key={signal.id}
             signal={signal}
+            pending={pending}
+            loading={signal.id === "source-coverage" ? firstRead : pending && signal.records.length === 0}
             onOpen={() => {
               onSystemMoodChange(false);
               onPulseSignalChange(
@@ -159,6 +176,8 @@ export function CommandCenterWorkspacePulse({
             : ""
         }`}
         data-tone={posture.tone}
+        data-pulse-mood={posture.id}
+        aria-busy={posture.id === "loading" || undefined}
         type="button"
         onClick={() => onSystemMoodChange(!systemMoodOpen)}
       >
@@ -171,11 +190,12 @@ export function CommandCenterWorkspacePulse({
         <span className={`system-mood-label ${styles.moodLabel}`}>
           <Gauge aria-hidden="true" size={16} />
           SYSTEM MOOD
+          <span className={styles.metricIndicator}>{posture.id === "loading" ? <TerasLoadingIndicator /> : null}</span>
         </span>
         <strong className={`system-mood-posture ${styles.moodPosture}`}>
-          {posture.label}
+          {posture.id === "loading" ? "Checking…" : posture.label}
         </strong>
-        <span className={styles.moodDetail}>{posture.detail}</span>
+        <span className={styles.moodDetail}>{posture.id === "loading" ? "Reading workspace status…" : posture.detail}</span>
       </button>
     </ConsoleShellPanel>
   );
@@ -338,7 +358,7 @@ function PulseRecordList({
               key={source.id}
             >
               <span className={styles.recordState}>
-                <CommandCenterStateIcon tone={tone as ConsoleTone} />
+                {source.state === "loading" ? <TerasLoadingIndicator /> : <CommandCenterStateIcon tone={tone as ConsoleTone} />}
                 {sourceStateLabel(source)}
               </span>
               <span className={styles.recordCopy}>

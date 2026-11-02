@@ -11,6 +11,7 @@ export function useOperatorAccountSnapshot() {
     return { ...next, profile: { ...consoleOperatorAccountFixture.profile, displayName: identity.principal.displayName } };
   }
   const [account, setAccount] = useState<OperatorAccountSnapshot>(() => snapshot(unavailableOperatorIdentity));
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (account.identity.source.mode !== "live") return;
     const delay = Date.parse(account.identity.session.expiresAt ?? "") - Date.now();
@@ -30,7 +31,7 @@ export function useOperatorAccountSnapshot() {
         if (body.mode !== "disconnected-preview" && (body.mode !== "live" || !body.identity?.session || !body.identity?.source || !Array.isArray(body.identity?.access?.roles) || !Array.isArray(body.identity?.access?.authorities))) throw new Error("Identity unavailable");
         if (!lifetime.signal.aborted) setAccount(body.mode === "disconnected-preview" ? consoleOperatorAccountFixture : snapshot(body.identity as OperatorIdentitySnapshot));
       } catch { if (!lifetime.signal.aborted) setAccount(snapshot(unavailableOperatorIdentity)); }
-      finally { busy = false; }
+      finally { busy = false; if (!lifetime.signal.aborted) setLoading(false); }
     }
     void refresh();
     const timer = setInterval(() => void refresh(), 15000);
@@ -39,6 +40,7 @@ export function useOperatorAccountSnapshot() {
   }, []);
   // Never keep an authenticated badge beyond the source-issued expiry while hidden.
   const expires = Date.parse(account.identity.session.expiresAt ?? "");
-  return account.identity.source.mode === "live" && (!Number.isFinite(expires) || expires <= Date.now())
+  const current = account.identity.source.mode === "live" && (!Number.isFinite(expires) || expires <= Date.now())
     ? { ...account, identity: unavailableOperatorIdentity } : account;
+  return { ...current, loading };
 }

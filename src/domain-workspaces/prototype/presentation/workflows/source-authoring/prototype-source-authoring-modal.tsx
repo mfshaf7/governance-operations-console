@@ -48,7 +48,7 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
       : current ? `${current.source_scope.source_root} + ${current.source_scope.design_profile}` : "Not prepared";
   return <TerasFieldStack spacing="normal">
     <TerasPanel spacing="normal" frame="padded" treatment="state" tone={runtime.error ? "danger" : "info"}>
-      <TerasPanelHeader kicker="Canonical Source Request" title={current?.state ?? "Select or prepare source work"} description={runtime.error ?? current?.next_action.reason ?? current?.next_action.code ?? "Recover existing requests before creating new source work."} />
+      <TerasPanelHeader busy={runtime.pending} busyLabel="Reading or updating source request…" kicker="Canonical Source Request" title={current?.state ?? "Select or prepare source work"} description={runtime.error ?? current?.next_action.reason ?? current?.next_action.code ?? "Recover existing requests before creating new source work."} />
       <TerasActionRow>
         <TerasActionButton disabled={runtime.pending} emphasis="secondary" onClick={() => void runtime.refresh()}>Refresh retained source requests</TerasActionButton>
         {runtime.requests.map(request => <TerasActionButton key={request.request_id} disabled={runtime.pending} emphasis="secondary" onClick={() => void runtime.refresh(request.request_id)}>{request.request_id} / {request.state}</TerasActionButton>)}

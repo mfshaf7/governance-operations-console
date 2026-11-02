@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../support/filled-surface-layout.mjs";
 import { ownerWorkspace, retainedRun } from "../support/orchestration-ui-fixture.mjs";
 const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:3320";
 test.setTimeout(120000);

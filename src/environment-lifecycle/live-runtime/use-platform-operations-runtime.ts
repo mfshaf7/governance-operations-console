@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { assertPlatformOperationCatalog, assertPlatformOperationList, assertPlatformOperationRecord } from "./platform-operation-contract.ts";
+import { assertPlatformOperationCatalog, assertPlatformOperationList, assertPlatformOperationRecord, assertPlatformHistoryPage } from "./platform-operation-contract.ts";
 import type { PlatformOperationRecord, PlatformOperationsLiveSnapshot } from "./platform-operation-types.ts";
 
 const initialSnapshot: PlatformOperationsLiveSnapshot = { catalog: null, error: null, mode: "unavailable", observedAt: new Date(0).toISOString(), operations: [], status: "loading" };
@@ -11,14 +11,16 @@ const reconcileIntervalMs = 2_000;
 const reconcileAttempts = 10;
 const terminalStates = new Set(["blocked", "cancelled", "failed", "succeeded"]);
 
-export function usePlatformOperationsRuntime() {
+export function usePlatformOperationsRuntime(workspace?:"dev-integration"|"governed-releases") {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
+  const scope=useRef(workspace);scope.current=workspace;
   const pendingRequestIds = useRef(new Map<string, string>());
   const mounted = useRef(true);
   const reconciling = useRef(new Set<string>());
   const load = useCallback(async () => {
     try {
-      const body = record(await jsonRequest("/api/environment-operations", { cache: "no-store" }));
+      const body = record(await jsonRequest(`/api/environment-operations${workspace ? `?workspace=${workspace}` : ""}`, { cache: "no-store" }));
+      if(scope.current!==workspace)return initialSnapshot;
       if (body.mode === "disconnected-preview") {
         const next = { ...initialSnapshot, mode: "disconnected-preview" as const, observedAt: text(body.observedAt), status: "current" as const };
         setSnapshot(next);
@@ -49,17 +51,19 @@ export function usePlatformOperationsRuntime() {
         mode: "live",
         observedAt: text(body.observedAt),
         operations,
+        historyPage: assertPlatformHistoryPage(body.historyPage,workspace),
         status: "current",
       };
-      setSnapshot(next);
+      setSnapshot(current=>({...next,operations:workspace ? [...operations,...current.operations.filter(old=>!operations.some(item=>item.operation_id===old.operation_id))] : operations,historyPage:workspace&&current.historyPage&&current.operations.length>operations.length ? {...next.historyPage!,next_cursor:current.historyPage.next_cursor} : next.historyPage}));
       return next;
     } catch (caught) {
+      if(scope.current!==workspace)return initialSnapshot;
       const error = normalizeError(caught);
       const next: PlatformOperationsLiveSnapshot = { ...initialSnapshot, error, mode: "unavailable", observedAt: new Date().toISOString(), status: "offline" };
       setSnapshot((current) => ({ ...current, error, mode: "unavailable", observedAt: next.observedAt, status: "offline" }));
       return next;
     }
-  }, []);
+  }, [workspace]);
 
   useEffect(() => {
     mounted.current = true;
@@ -100,11 +104,11 @@ export function usePlatformOperationsRuntime() {
     }
   }, []);
 
-  const submit = useCallback(async (subjectRef: string, capabilityId: string, input: Record<string, unknown> = {}) => {
-    const requestKey = `submit:${subjectRef}:${capabilityId}:${stableJson(input)}`;
-    const requestId = retainedRequestId(pendingRequestIds.current, requestKey);
+  const submit = useCallback(async (subjectRef: string, capabilityId: string, input: Record<string, unknown> = {}, reviewedSourceVersion?: string, explicitRequestId?: string) => {
+    const requestKey = `submit:${subjectRef}:${capabilityId}:${reviewedSourceVersion ?? ""}:${stableJson(input)}`;
+    const requestId = explicitRequestId ?? retainedRequestId(pendingRequestIds.current, requestKey);
     const operation = assertPlatformOperationRecord(await jsonRequest("/api/environment-operations", {
-      body: JSON.stringify({ capabilityId, input, requestId, subjectRef }),
+      body: JSON.stringify({ capabilityId, input, requestId, subjectRef, ...(reviewedSourceVersion ? { reviewedSourceVersion } : {}) }),
       headers: { "Content-Type": "application/json" }, method: "POST",
     }));
     pendingRequestIds.current.delete(requestKey);
@@ -126,7 +130,20 @@ export function usePlatformOperationsRuntime() {
     return operation;
   }, [reconcile]);
 
-  return { control, load, snapshot, submit };
+  const read = useCallback(async (operationId: string) => {
+    const operation = assertPlatformOperationRecord(await jsonRequest(`/api/environment-operations/${encodeURIComponent(operationId)}`, {cache: "no-store", method: "GET"}));
+    if (operation.operation_id !== operationId) throw new Error("The owner returned a different operation.");
+    upsert(setSnapshot, operation);
+    return operation;
+  }, []);
+  async function loadMore(){
+    if(!workspace||!snapshot.historyPage?.next_cursor)return;
+    const body=record(await jsonRequest(`/api/environment-operations?${new URLSearchParams({workspace,cursor:snapshot.historyPage.next_cursor})}`));
+    if(body.status!=="current")throw new Error("Older history could not be read. Existing records are retained.");
+    const operations=assertPlatformOperationList({workflow_id:"platform-operation-list",operations:body.operations});
+    setSnapshot(current=>({...current,operations:[...current.operations,...operations.filter(item=>!current.operations.some(old=>old.operation_id===item.operation_id))],historyPage:assertPlatformHistoryPage(body.historyPage,workspace)}));
+  }
+  return { control, load, loadMore, read, snapshot, submit };
 }
 
 function upsert(setSnapshot: React.Dispatch<React.SetStateAction<PlatformOperationsLiveSnapshot>>, operation: PlatformOperationRecord) {
@@ -137,7 +154,7 @@ async function jsonRequest(url: string, init: RequestInit = {}) {
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     const source = record(body);
-    throw new Error(typeof source.error === "string" ? source.error : "Platform operation request failed.");
+    throw Object.assign(new Error(typeof source.error === "string" ? source.error : "Platform operation request failed."), { status: response.status, code: typeof source.code === "string" ? source.code : null });
   }
   return body;
 }

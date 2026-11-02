@@ -4,6 +4,7 @@ import {
   TerasActionButton,
   TerasActionRow,
   TerasEmptyState,
+  TerasLoadingState,
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
@@ -55,13 +56,13 @@ export function RepositoryControlSurface({
         mode="overview-register-selected"
         overview={overview}
         register={
-          <TerasEmptyState fill>
+          controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading repositories…" /> : <TerasEmptyState fill>
             No canonical Repository records are available to select. Provision
             a repository above when required; live mode never substitutes fixtures.
           </TerasEmptyState>
         }
         selected={
-          <TerasEmptyState fill>
+          controller.sourceAvailability.loading ? <TerasLoadingState fill label="Preparing repository details…" skeleton="details" /> : <TerasEmptyState fill>
             No canonical Repository record is available to select.
           </TerasEmptyState>
         }

@@ -1,0 +1,10 @@
+export function governedProductsProjection(){
+ const revision='a'.repeat(40),platform='b'.repeat(40),blob=path=>`https://github.com/mfshaf7/platform-engineering/blob/${platform}/${path}`;
+ const products=[['openclaw','OpenClaw','fully-governed','governed-prod',true],['openproject','OpenProject','platform-integrated','platform-integrated-runtime',false],['governance-operations-console','Governance Operations Console','owner-managed','owner-repository-local-preview',false],['console-todo-1275','Console Todo 1275','owner-managed','owner-managed-source',false]].map(([id,label,maturity,endpoint,supported])=>({
+ product_id:id,label,maturity,platform_owner:'platform-engineering',security_owner:'security-architecture',highest_real_endpoint:endpoint,stage_supported:supported,production_supported:supported,
+ evidence:supported?[{id:'stage-verification',label:'Stage verification',status:'pending',recorded_at:null,source_bundle:'synthetic-bundle',image_digest:'sha256:'+'c'.repeat(64),evidence_ref:null,url:blob('environments/stage/verification.yaml')}]:[],
+ runtime:supported?{state:'suspended',recorded_at:'2026-01-01T00:00:00Z',url:blob('environments/prod/openclaw-lifecycle.yaml')}:null,
+ workflows:supported?[['readiness','Review stage readiness','confirm-stage-promotion-readiness.yaml','stage'],['promotion','Promote approved candidate','promote-environment.yaml','prod'],['runtime','Change production runtime state','manage-prod-environment.yaml','prod']].map(([id,label,file,environment])=>({id,label,environment,url:`https://github.com/mfshaf7/platform-engineering/actions/workflows/${file}`})):[],
+ guidance_url:blob('products/openclaw/runbooks/release-governance.md'),execution:supported?'owner-workflow':'unsupported',unavailable_reason:supported?'Console dispatch is not commissioned.':'This product has no governed stage-to-production release path.'}));
+ return {schema_version:1,workflow_id:'governed-product-projection',source_version:`products:${revision}:${platform}`,observed_at:new Date().toISOString(),products,page:{offset:0,limit:20,total:4,next_offset:null}};
+}

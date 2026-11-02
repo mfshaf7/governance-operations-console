@@ -14,6 +14,7 @@ import {
 import { assertSourceCredentialReceipt, assertSourceCredentialIntent, assertSourceAuthorizationPreparation,
   assertSourceOperationIntent, assertSourceOperationReceipt, assertSourceOperationPreparation } from "../../src/environment-lifecycle/live-runtime/source-authorization-contract.ts";
 import { commandSourceAuthorization, prepareSourceAuthorization, readSourceAuthorization } from "../../src/environment-lifecycle/server/source-authorization-oos-client.ts";
+import { assertNativeReleaseWorkflow, assertReleaseWorkflowEvidence } from "../../src/environment-lifecycle/live-runtime/release-workflow-contract.ts";
 
 const now = "2026-10-15T00:00:00.000Z";
 const config = {
@@ -22,6 +23,25 @@ const config = {
   callerSecret: "test-secret",
   operatorId: "operator:mfshaf7",
 };
+
+test("native release fields and evidence remain closed, source-bound and nonterminal through approval", () => {
+  const source=`products:${"a".repeat(40)}:${"b".repeat(40)}`;
+  const native={schema_version:1,workflow_id:"runtime",capability_id:"release.openclaw.runtime",action:"governed-release.change-runtime-lifecycle",available:false,unavailable_reason:"Not commissioned",source_version:source,fields:[]};
+  assertNativeReleaseWorkflow(native,"runtime",source);
+  assert.throws(()=>assertNativeReleaseWorkflow({...native,available:true},"runtime",source));
+  assert.throws(()=>assertNativeReleaseWorkflow({...native,token:"private"},"runtime",source));
+  assert.throws(()=>assertNativeReleaseWorkflow(native,"runtime","stale"));
+  const evidence={schema_version:1,workflow_id:"runtime",phase:"awaiting-approval",run_id:42,run_url:"https://github.com/mfshaf7/platform-engineering/actions/runs/42",pull_request_url:null,branch:null,merge_commit:null,desired_state_verified:false};
+  assertReleaseWorkflowEvidence(evidence,native.action);
+  for(const change of [value=>value.desired_state_verified=true,value=>value.run_url="https://attacker.example/",value=>value.workflow_id="promotion",value=>value.token="private"]){const altered=structuredClone(evidence);change(altered);assert.throws(()=>assertReleaseWorkflowEvidence(altered,native.action));}
+});
+
+test("native runtime selects its exact capability when release and runtime share a product reference",async()=>{
+  const value=catalog();
+  value.subjects=[{...value.subjects[0],kind:"product-release",ref:"product:openclaw",capabilities:[{...value.subjects[0].capabilities[0],capability_id:"release.openclaw.promotion",action:"governed-release.execute-step"}]},{...value.subjects[0],kind:"product-runtime-lifecycle",ref:"product:openclaw",capabilities:[{...value.subjects[0].capabilities[0],capability_id:"release.openclaw.runtime",action:"governed-release.change-runtime-lifecycle"}]}];
+  const calls=[];const result=await submitPlatformOperation({subjectRef:"product:openclaw",capabilityId:"release.openclaw.runtime",requestId:"native-runtime-1",input:{workflow_id:"runtime",values:{state:"suspended"}}},{config,fetchImpl:async(url,init)=>{calls.push(init.method);if(init.method==="GET")return Response.json(value);return Response.json(operation(JSON.parse(init.body).command));}});
+  assert.equal(result.command.subject.kind,"product-runtime-lifecycle");assert.deepEqual(calls,["GET","POST"]);
+});
 
 test("case:1289-positive re-reads current capability truth and binds the exact approved command", async () => {
   const calls = [];
@@ -57,6 +77,21 @@ test("case:1289-negative denies stale capability truth before command submission
     (error) => error.code === "platform_operation_capability_unavailable" && error.status === 409,
   );
   assert.equal(calls, 1);
+});
+
+test("the reviewed profile source must still match before any command is issued", async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push(init.method);
+    if (init.method === "GET") return Response.json(catalog());
+    return Response.json(operation(JSON.parse(init.body).command));
+  };
+  const intent = {capabilityId:"capability:start:alpha",input:{},requestId:"request:reviewed-profile",subjectRef:"profile:alpha"};
+  await assert.rejects(submitPlatformOperation({...intent,reviewedSourceVersion:"profile-source:v2"},{config,fetchImpl}), error => error.code === "platform_operation_review_stale" && error.status === 409);
+  assert.deepEqual(calls,["GET"]);
+  const result = await submitPlatformOperation({...intent,reviewedSourceVersion:"profile-source:v3"},{config,fetchImpl,now:()=>new Date(now)});
+  assert.equal(result.command.subject.expected_source_version,"profile-source:v3");
+  await assert.rejects(submitPlatformOperation({...intent,reviewedSourceVersion:{}},{config,fetchImpl}), error => error.code === "platform_operation_intent_invalid");
 });
 
 test("catalog and operation projections reject unknown, contradictory, and incomplete owner truth", () => {

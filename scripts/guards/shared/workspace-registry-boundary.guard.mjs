@@ -47,14 +47,21 @@ export const guard = {
       "liveActionExecutable",
     ]);
     assertIncludes(failures, workflow, [
-      "TerasWizardModal",
-      'type PromotionStep = "apply" | "result" | "review"',
-      "Apply Promotion",
+      "TerasModalShell",
+      "TerasDialog",
+      "Add to Registry",
+      "runtime.submit(candidate",
+      "!sourceReady",
+      "!journal.canStart",
     ]);
     assertIncludes(failures, lifecycleWorkflow, [
-      "TerasWizardModal",
+      "TerasModalShell",
+      "TerasDialog",
       'type LifecycleStep = "configure" | "result" | "review"',
-      "Apply Lifecycle Action",
+      "runtime.submitLifecycle",
+      "workspaceInventoryLifecycleActionLabels[action]",
+      "sourceCurrent",
+      "!journal.canStart",
       "workspaceInventoryLifecycleActionOptions",
     ]);
     assertRepoIncludes(failures, integrationDoc, [

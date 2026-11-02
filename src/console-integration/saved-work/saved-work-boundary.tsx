@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, Fragment, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { TerasActionButton, TerasActionRow, TerasDialog, TerasEmptyState, TerasStatusPill } from "@/teras";
+import { TerasLoadingState, TerasLoadingIndicator, TerasActionButton, TerasActionRow, TerasDialog, TerasEmptyState, TerasStatusPill } from "@/teras";
 import { savedWorkBrowserSession, type SavedWorkBrowserSession } from "./browser-session.ts";
 
 const SavedWorkContext = createContext<SavedWorkBrowserSession | null>(null);
@@ -22,7 +22,7 @@ export function SavedWorkBoundary({ children, storageKey, onClose, readOnly = fa
   }, [session, readOnly]);
   if (!opened || !state.hydrated) return <TerasDialog open title="Saved work" kicker="Reading saved draft" onClose={onClose} contentOverflow="auto" height="content" width="standard"
     actions={<><TerasActionButton emphasis="secondary" onClick={onClose}>Close</TerasActionButton>{state.status === "error" ? <TerasActionButton onClick={() => void session.retry()}>Retry</TerasActionButton> : null}</>}>
-    <TerasEmptyState>{state.message}</TerasEmptyState>
+    {state.status === "error" || state.status === "conflict" ? <TerasEmptyState>{state.message}</TerasEmptyState> : <TerasLoadingState label="Opening saved work…" detail={state.message} skeleton="details" />}
   </TerasDialog>;
   return <SavedWorkContext.Provider value={session}><Fragment key={`${storageKey}:${state.generation}`}>{children}</Fragment></SavedWorkContext.Provider>;
 }
@@ -45,7 +45,7 @@ function SavedWorkStatusContent({ session }: { session: SavedWorkBrowserSession 
     <TerasActionRow spacing="compact">
       <span role="status" aria-live="polite" title={state.message} data-saved-work-status={state.status}>
         <TerasStatusPill tone={state.status === "saved" ? "ok" : ["error", "conflict"].includes(state.status) ? "warn" : "info"}>
-          {state.message}
+          {state.status === "saving" ? <TerasLoadingIndicator /> : null}{state.message}
         </TerasStatusPill>
       </span>
       {state.status === "error" ? <TerasActionButton emphasis="secondary" onClick={() => void session.retry()}>Retry save</TerasActionButton> : null}

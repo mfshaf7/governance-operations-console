@@ -6,6 +6,7 @@ import {
   TerasActionButton,
   TerasActionRow,
   TerasFieldStack,
+  TerasLoadingState,
   TerasFullscreenSurfaceFrame,
   TerasModalShell,
   TerasSurfaceNav,
@@ -47,6 +48,7 @@ export function OrchestrationWorkspace({
     controlRun,
     refreshOwnerTruth,
     sourceMode,
+    sourceLoading,
     readModel,
     setActiveSurfaceId,
     summaryMetrics,
@@ -105,12 +107,12 @@ export function OrchestrationWorkspace({
       >
         <TerasFieldStack fill="last">
           {sourceMode !== "disconnected-preview" ? <TerasActionRow>
-            <TerasActionButton emphasis="secondary" disabled={refreshing} onClick={() => {
+            <TerasActionButton busy={refreshing} emphasis="secondary" disabled={refreshing} onClick={() => {
               setRefreshing(true); void refreshOwnerTruth().finally(() => setRefreshing(false));
             }}>{refreshing ? "Refreshing" : "Refresh status"}</TerasActionButton>
             <TerasActionButton emphasis="secondary" onClick={() => setRunDialog("recover")}>Read original run</TerasActionButton>
           </TerasActionRow> : null}
-          <OrchestrationWorkspaceSurfaceContent
+          {sourceLoading ? <TerasLoadingState fill label="Loading workflow definitions and runs…" /> : <OrchestrationWorkspaceSurfaceContent
           activeSurfaceId={activeSurfaceId}
           controlRun={controlRun}
           entryIntent={entryIntent}
@@ -118,7 +120,7 @@ export function OrchestrationWorkspace({
           onOpenSurface={(surfaceId, recordId) => { setFocusedRecord(recordId ? { surfaceId, recordId } : null); setActiveSurfaceId(surfaceId); }}
           readModel={readModel}
           onStartRun={() => setRunDialog("start")}
-        />
+        />}
         </TerasFieldStack>
       </TerasFullscreenSurfaceFrame>
     </TerasModalShell>

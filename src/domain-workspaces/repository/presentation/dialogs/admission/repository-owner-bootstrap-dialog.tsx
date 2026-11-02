@@ -72,7 +72,7 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, on
   };
   const next = current ? actionFor[current.nextAction] : null;
   const files = ((draft?.change_set as { operations?: { path: string; content: string }[] } | undefined)?.operations ?? (plan?.files as { path: string; content: string }[] | undefined) ?? []);
-  return <TerasModalShell width="standard" height="content" bodyLayout="scroll" kicker="Repository Owner Setup" title={ownerRepo} surfaceId="repository-owner-bootstrap"
+  return <TerasModalShell busy={pending} busyLabel="Reading or updating owner setup…" width="standard" height="content" bodyLayout="scroll" kicker="Repository Owner Setup" title={ownerRepo} surfaceId="repository-owner-bootstrap"
     description="Current proposed custody → reviewed owner controls → canonical checkout. App building, Inventory admission and runtime activation remain separate. Public synthetic main-source route only."
     onClose={onClose} footer={<TerasActionButton emphasis="secondary" disabled={pending} onClick={onClose}>Back to Intake</TerasActionButton>}>
     <TerasFieldStack spacing="loose">

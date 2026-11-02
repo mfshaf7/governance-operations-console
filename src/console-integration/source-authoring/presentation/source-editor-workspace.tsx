@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasCodeEditor, TerasDetailGrid, TerasDraftCloseGuardDialog, TerasEmptyState, TerasFieldStack, TerasList, TerasMetadataList, TerasModalShell, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSegmentedControl, TerasSignalItem, TerasTextField } from "@/teras";
+import { TerasLoadingState, TerasActionButton, TerasActionRow, TerasCodeEditor, TerasDetailGrid, TerasDraftCloseGuardDialog, TerasEmptyState, TerasFieldStack, TerasList, TerasMetadataList, TerasModalShell, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSegmentedControl, TerasSignalItem, TerasTextField } from "@/teras";
 import { byteLength, sourcePathIssue, type SourceDraft, type SourceEditorTarget } from "../source-editor-contract.ts";
 import { sourceBufferOperations } from "../source-editor-model.ts";
 import { useSourceEditor } from "../live-runtime/use-source-editor.ts";
@@ -32,6 +32,7 @@ export function SourceEditorWorkspace({ target, onClose, onSaved, onReviewed }: 
         <TerasPanel spacing="normal" frame="padded" treatment="state" tone={runtime.error ? "danger" : runtime.uncertain ? "warn" : "info"}>
           <TerasPanelHeader kicker={runtime.pending ? "Working" : runtime.dirty ? "Unsaved local changes" : "Current retained source"} title={current?.current.state ?? (runtime.error ? "Source workspace unavailable" : "Loading source workspace")}
             description={runtime.error ?? runtime.notice ?? "Ctrl/Cmd+S saves the private draft. Ctrl/Cmd+F searches the code editor. Tab indents; Escape then Tab moves keyboard focus out of the editor."} />
+          {runtime.pending ? <TerasLoadingState inline={!!current} label={current ? "Reading or saving source…" : "Loading source workspace…"} skeleton="details" /> : null}
           {current && showDetails ? <TerasMetadataList items={[
             { label: "Session", value: current.current.sessionId }, { label: "Source base", value: current.base }, { label: "Owner revision", value: current.current.revision },
             { label: "Saved draft digest", value: current.draft?.digest ?? "No draft saved" },
@@ -76,7 +77,7 @@ export function SourceEditorWorkspace({ target, onClose, onSaved, onReviewed }: 
                   <TerasActionButton emphasis="secondary" disabled={!runtime.editable || !buffer?.changed} onClick={() => void runtime.undoChange()}>Undo file change</TerasActionButton>
                 </TerasActionRow>
                 {buffer ? <TerasCodeEditor key={buffer.path} path={buffer.path} value={buffer.deleted ? "" : buffer.content} original={buffer.baseline ?? ""}
-                  diff={mode === "diff" && buffer.baseline !== undefined} readOnly={!runtime.editable || buffer.deleted || buffer.baseline === undefined} onValueChange={runtime.edit} /> : <TerasEmptyState>Source text is loaded on selection.</TerasEmptyState>}
+                  diff={mode === "diff" && buffer.baseline !== undefined} readOnly={!runtime.editable || buffer.deleted || buffer.baseline === undefined} onValueChange={runtime.edit} /> : runtime.pending ? <TerasLoadingState label="Loading source text…" skeleton="details" /> : <TerasEmptyState>Source text is loaded on selection.</TerasEmptyState>}
               </TerasFieldStack>
             </TerasPanel>
           </TerasDetailGrid>

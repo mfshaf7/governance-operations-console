@@ -45,7 +45,9 @@ The server-only adapter uses:
 
 Missing or malformed configuration remains unavailable. Live failure never
 falls back to fixture data or a local mutation. `?dev=1` exposes a visibly
-fixture-backed, read-only surface for interface verification only.
+fixture-backed, read-only surface for interface verification only. Its Intake
+forms can be inspected with local drafts, but request reads, candidate review
+and classification submission remain disabled.
 
 Runtime activation is separate from this source contract. The original OOS
 Registry command adapter was admitted under ART `#1209`. The shared continuity
@@ -65,16 +67,17 @@ The detailed cross-surface read contract is
 
 1. Open `Workspace Registry` from Console navigation.
 2. Inspect active records or filter entrants in `Eligible`.
-3. Inspect `Original Inventory requests` first. Reopen any pending original;
-   a missing, offline or invalid journal never enables a new review.
-   Otherwise review candidate identity, ownership, approvals and bound source.
-4. Request a current OOS preparation.
-5. Apply the promotion only against that reviewed preparation.
-6. Continue durable progress when OOS requires it and retain the returned
-   review, readback, history, and receipt evidence.
-   At `review-and-merge`, use `Open Review` for the source review and the
-   existing accountable-human provider review/merge path. `Check Review`
-   reconciles the same original request; it is not a merge endpoint.
+3. Open `Review Promotion`. The Console checks original requests first and
+   automatically reads the current source when no request is pending. An
+   unavailable or invalid journal blocks a new request. Open any pending original
+   instead; reading history never prepares or advances it.
+4. Review identity, owners, the approved record and source details together.
+   Select `Add to Registry` once to submit against the reviewed preparation.
+   `Refresh source` retries a failed source read; it never submits a promotion.
+5. Inspect the recorded outcome and continue only when its next action requires
+   it. `Open Review` opens the source review; the existing accountable-human
+   provider path owns review and merge. `Check Review` reconciles the same
+   original request and is not a merge endpoint.
 
 Lifecycle completion is deliberately stricter than request acceptance. The
 Console reports a canonical change only when the exact reviewed source is
@@ -84,19 +87,59 @@ history-event evidence. An accepted or in-progress request remains pending.
 For an active inventory record:
 
 1. Open `Manage Lifecycle` from the selected record.
-2. Inspect its original requests. Reopening reads the exact retained ID only;
-   it does not prepare a replacement or advance execution. With no pending
-   original, explicitly select `Prepare a New Lifecycle Action`, then choose
-   only an action allowed by posture: update, suspend, restore or retire.
-3. Record the reason, approval reference, acknowledged impact, and complete
-   validated record value when updating metadata.
-4. Review the exact current and expected posture plus authority revision.
-5. Apply through OOS, then inspect or continue the durable result until review,
-   canonical readback, and history evidence are complete.
+2. The Console checks request history and automatically reads the current
+   record when no request is pending. Open pending originals by their retained
+   IDs; this never prepares a replacement. `Refresh record` explicitly retries a
+   source read, with a discard guard if edits exist.
+3. Choose an allowed action and supply its reason and exact approval reference.
+   Suspend, restore and retire use one form with current/expected status, impact
+   confirmation and a single final action. Metadata changes use one ordinary form and a separate confirmation dialog:
+   labelled fields cover common properties, and `Edit complete record` preserves
+   access to every owner field. Unchanged
+   values remain intact and the managed envelope stays excluded.
+4. Inspect or continue the original outcome until source review, merged readback,
+   receipt and history evidence are complete. No stepper labels an unperformed
+   review or mutation as complete.
 
 Suspension and retirement preserve identity and history. Restoration is a new
 reviewed action bound to the latest suspension or retirement event. No Console
 action performs hard deletion.
+
+## Preview maintenance: current records and readable evidence
+
+The pending UI batch retains this owner path and the existing Teras workspace.
+Registry refreshes both owner projections together on entry, on explicit
+**Refresh Registry**, and every fifteen seconds while visible with no child
+workflow open. A failed or contradictory refresh keeps the last reconciled
+inventory visibly **Retained**, disables new Intake/lifecycle/promotion entry,
+and leaves original-request inspection available. Unknown totals show an em dash;
+retained totals describe the retained snapshot. No new freshness authority or
+business cache is introduced. Exact source revision, digest and owner projection
+time remain in **Record details**.
+
+The register keeps Record/type, Owners and Status readable together. The selected
+record and lineage use the existing scrolling stack; full source, record,
+projection and mutation references stay available in technical details.
+Mutation events and request locators are not labelled as terminal receipts.
+
+Preparing a lifecycle action refreshes and reconciles both Registry owners first.
+Lifecycle action availability, subject version, current posture and expected
+posture all use the same freshly prepared record. A preparation that differs
+from that Registry snapshot cannot be submitted; refresh against
+matching owner source. A changed preparation resets
+impact/review confirmation and returns to configuration. Metadata editing
+preserves posture and the managed envelope remains excluded. The guided Intake form collects current owner validation metadata through that
+existing preparation-read route. It never submits a lifecycle action to collect
+facts. User intent stays separate from the automatically attached source context;
+see [Workspace Intake](workspace-intake-live-integration.md#guided-registration-and-automatic-context-collection-preview).
+Draft exit or replacement requires explicit discard; Keep Editing retains input, and pending
+requests cannot be dismissed through these controls.
+
+Promotion history starts with **Choose a request**, not completed
+Review/Apply stages. Reopened requests use their recorded outcome; no preparation
+is requested merely to inspect history. A terminal outcome without a receipt
+says **No receipt issued**, rather than implying another step is pending.
+These changes are preview evidence, not a new live commissioning claim.
 
 ## Cold Recovery And Uncertain Acknowledgement
 
@@ -143,3 +186,28 @@ canonical mutation. Lifecycle completion requires `succeeded`,
 `canonical_mutation: true`, a merged human-reviewed Workspace Governance pull
 request, matching lifecycle readback and merged state, and the immutable
 canonical history event reference returned by OOS.
+
+## Ordinary forms and separate feedback dialogs in the pending UI batch
+
+Registry actions reuse the clean Workspace Intake form pattern: standard width,
+content height, one scrolling body, grouped fields and footer actions. They do
+not use the wizard shell, selected-item banner, support rail or step navigation.
+Promotion reviews the approved item directly; metadata editing opens a separate
+confirmation dialog only when needed. Direct classification uses the same
+ordinary dialog composition while retaining normalized metadata and explicit
+acceptance. Changing classification clears acceptance, including Out of scope
+normalization; returning to details preserves the authored draft. Other source-domain classification entry points retain their existing workflow.
+
+Submission opens a separate result dialog. Accepted requests say submitted;
+completed labels require a succeeded owner outcome. Source review, pending work,
+failures, cancellation and unavailable outcomes retain their actual state.
+Original opaque request IDs, pagination, pending totals, recovery, cancellation
+and continuation stay bound to the existing owner journal. Request history is a
+secondary inspection action and opens automatically when pending requests or
+journal errors need attention. Exact source, receipt and event details remain
+inspectable. The shared wizard primitive is unchanged.
+
+These are operator-review preview changes in the same maintenance Landing Unit.
+The Console server and OOS authority checks are unchanged. Verification submits
+no real classification, promotion or lifecycle business command; an isolated
+synthetic acknowledgement test proves the separate submitted-state dialog.

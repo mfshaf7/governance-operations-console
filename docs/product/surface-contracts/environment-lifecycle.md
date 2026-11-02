@@ -302,6 +302,15 @@ Persistent details open in a focused dialog so the main wizard remains stable:
 Submission creates a structured request and a `proposed` projection. It does
 not create an active profile, launch a runtime, or approve implementation.
 
+The live request is owned durably by OOS and remains within the existing Dev
+Integration workflow for submission, status and original-request recovery. It
+does not create a Proposal or ART item. The recording receipt proves only that
+the exact request was saved. A requested profile does not enter the canonical
+register until Workspace Governance records it. Admission readback must match
+both the profile identity and original request reference; matching names alone
+cannot adopt another request's approval. Historical OpenProject or document
+references on older profiles remain provenance, not a route for new requests.
+
 Canonical selectors are used where a registry exists. Free text is limited to
 purpose, justification, and explicitly unregistered dependency notes.
 
@@ -609,3 +618,77 @@ Environment Lifecycle must not:
 - Workspace Governance developer-integration policy and registries
 - Platform Engineering dev-integration and product-release runbooks
 - Operator Orchestration Service workflow boundary
+
+
+## Pending maintenance preview: operation inspection and reachability
+
+The operation-backed live surface scopes retained records by their original subject
+kind, including profiles no longer in the current catalog. Every loaded operation
+can be inspected and read again by exact identity. History expands in ten-record
+increments and labels loaded counts without implying a complete lifetime history.
+Owner events, effects, receipts and recovery flags stay distinct from catalog health.
+New commands require current catalog truth; a destructive review also binds the
+reviewed source version and capability, and the server rejects source drift before
+dispatch. Context-bound source authorization remains in project Source authoring.
+
+Overview and request-review panels retain natural content heights in the existing
+scroll stack. Nested disconnected dashboards and support/history dialogs visibly
+identify design-preview provenance. These presentation repairs preserve the accepted
+three-step profile request and do not establish live profile-request submission or
+full registry/dashboard projection. The finite operation catalog alone is not that
+integration. Owner composition and operating acceptance remain separate evidence.
+
+
+## Governed Releases maintenance extension
+
+The existing register and Dashboard consume bounded real product readback when
+commissioned. Product inventory is independent of executable subjects. Newer
+owner-managed products are represented without claiming staging or production.
+Recorded owner evidence is a separate projection from executable release steps;
+its status and candidate binding do not create a Console approval or operation.
+
+Existing protected owner workflows are opened as navigation, clearly labelled
+with the execution boundary. They retain their own current source, inputs and
+environment approval. No command or receipt is created by opening a link. Native
+Console dispatch remains uncommissioned in the live installation. The approved
+staged native entry adds a dedicated Platform dispatch identity, reuses the
+existing protected workflow and introduces no new executor. Missing owner data and failed refreshes stay explicit;
+configured live source never falls back to samples. Nested sample screens retain
+Preview and Simulation labels.
+
+Workspace history is filtered at OOS before bounded keyset pagination. Original
+records and exact-read recovery remain authoritative. A warm page uses lightweight
+file metadata rather than decoding all retained operation payloads; cold discovery
+and file-stat costs still grow. The source extension is not live commissioning.
+
+### Native owner workflow entry and source freshness
+
+The staged OpenClaw adapter reuses the existing release Details/Review pattern
+and OOS Platform-operation journal. Owner-defined inputs, product, capability and
+exact source are reviewed before submission. Actual verification results start
+blank. Human environment approval, source PR review/merge, desired-state readback
+and observed health remain separate. Workflow success alone is not completion.
+Native authority stays unavailable until the accepted composition and dedicated
+Platform App are commissioned. Read-only GitHub links grant no mutation.
+
+The running Platform code stays at its accepted revision. A bounded read adapter
+may follow GitHub main only when every non-record Git leaf still matches that
+revision and main retains the accepted lineage. Only the explicit existing
+OpenClaw release/verification/lifecycle GitOps records may advance. A normal
+release merge therefore refreshes owner records and permits the next reviewed
+operation without a manual pull, checkout change or runtime-code repin.
+
+`owner-main` means current owner main was verified. `accepted-snapshot` is the
+reviewed local source snapshot; `retained-owner-main` is a last verified remote
+snapshot. The latter two remain inspectable, with a source notice and original
+observation time, and cannot enable a new native action. A source outage never
+substitutes examples. A bounded derived cache retains one verified snapshot for
+restart recovery; it is not canonical work-state authority. Immutable blobs and
+shared head proofs avoid per-product probes and repeated full source reads.
+
+A lost response retains only an opaque browser recovery pointer. Recover the
+original OOS request; never redispatch after Platform's write-ahead marker. Exact
+original reads, events, workflow/PR links and immutable receipts remain available
+independently of current catalog admission. Cancellation targets the original run
+and does not prove rollback. The two-consecutive-operation qualification uses an
+isolated GitHub transport; it is source evidence, not live operating acceptance.

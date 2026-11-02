@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
+import { TerasLoadingState,
   TerasActionButton, TerasActionRow, TerasChoiceGroup, TerasContentRegion,
   TerasContentTray, TerasDraftCloseGuardDialog, TerasFieldGrid, TerasFieldStack,
   TerasList, TerasMetadataList, TerasModalShell, TerasNoteField, TerasPanel,
@@ -113,7 +113,7 @@ export function OwnerPublicationSurface({ runtime, state, products, productsErro
         </TerasActionRow>} />
       <TerasContentRegion fill gap="normal" scroll>
         {previewMode ? <TerasContentTray kicker="Sample products" description="Review the interaction with example product information. Publishing is disabled; no catalog or owner data will change." /> : null}
-        {!canLoad || !products ? <TerasContentTray kicker="Publication unavailable"
+        {live && !products && !productsError ? <TerasLoadingState label="Loading products for publication…" /> : !canLoad || !products ? <TerasContentTray kicker="Publication unavailable"
           description={productsError ?? (!live ? "This preview is not connected to the publication service. Product information and catalog changes are unavailable here." : "Product information is still loading. Choose a product when it becomes available.")} /> : <>
           <TerasFieldGrid columns={2}>
             <TerasSelectField label="Product" ariaLabel="Product to publish" value={productId} disabled={locked}
@@ -129,7 +129,7 @@ export function OwnerPublicationSurface({ runtime, state, products, productsErro
               onValueChange={value => { setAction(value); setReview(null); }} />
           </TerasFieldGrid>
           {!products.length ? <TerasContentTray kicker="No managed products" description="Register a product in Workspace Registry before publishing it to the catalog." /> : null}
-          {runtime.pending && !uncertain ? <TerasContentTray kicker="Loading product information" description="Reading the selected product's committed publication file and latest catalog receipt." /> : null}
+          {runtime.pending && !uncertain ? <TerasLoadingState inline={!!preparation} label="Loading product information…" detail="Reading the publication file and latest catalog receipt." /> : null}
           {preparation ? <>
             {ready ? <TerasFieldStack spacing="normal">
               <TerasNoteField label="Reason for this change" value={reason} disabled={locked} onValueChange={value => { setReason(value); setReview(null); }} />
@@ -161,7 +161,7 @@ export function OwnerPublicationSurface({ runtime, state, products, productsErro
       </TerasContentRegion>
       <TerasActionRow layout="split"><TerasActionButton disabled={!ready || locked || !reason.trim() || !preparation?.available_actions.includes(action)} onClick={beginReview}>Review catalog change</TerasActionButton></TerasActionRow>
     </TerasPanel>
-    {review || result ? <TerasModalShell width="standard" height="content" bodyLayout="scroll" surfaceId="owner-publication-review"
+    {review || result ? <TerasModalShell busy={runtime.pending} busyLabel="Contacting publication owner…" width="standard" height="content" bodyLayout="scroll" surfaceId="owner-publication-review"
       title={result ? "Catalog result" : "Review catalog change"} kicker="Product publication"
       description={result ? "The recorded owner result for this exact request." : "Check the product, current listing and proposed change before approving."}
       onClose={() => { if (!locked) { setReview(null); setResult(null); } }}

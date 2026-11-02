@@ -121,7 +121,7 @@ export function RepositoryCustodyDialog({
   }
 
   return (
-    <TerasModalShell
+    <TerasModalShell busy={pending} busyLabel="Checking repository custody…"
       bodyLayout="scroll"
       height="content"
       width="standard"

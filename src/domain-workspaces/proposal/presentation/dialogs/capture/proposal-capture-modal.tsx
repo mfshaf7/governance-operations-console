@@ -11,6 +11,8 @@ import {
 
 export function ProposalCaptureModal({
   canSubmit,
+  pending = false,
+  error = null,
   previewMode,
   context,
   onClose,
@@ -21,6 +23,8 @@ export function ProposalCaptureModal({
   title,
 }: {
   canSubmit: boolean;
+  pending?: boolean;
+  error?: string | null;
   previewMode: boolean;
   context: string;
   onClose: () => void;
@@ -36,16 +40,18 @@ export function ProposalCaptureModal({
 
   return (
     <TerasModalShell
+      busy={pending}
+      busyLabel="Recording proposal…"
       bodyLayout="scroll"
       height="content"
       width="standard"
       description={previewMode ? "Capture a proposal in the disconnected preview." : "Capture a proposal in Workspace Proposals for review."}
       footer={
         <>
-          <TerasActionButton onClick={onClose} emphasis="secondary">
+          <TerasActionButton disabled={pending} onClick={onClose} emphasis="secondary">
             Back to Register
           </TerasActionButton>
-          <TerasActionButton disabled={!canSubmit} onClick={onSubmit}>
+          <TerasActionButton busy={pending} disabled={!canSubmit} onClick={onSubmit}>
             Submit Capture
           </TerasActionButton>
         </>
@@ -57,6 +63,7 @@ export function ProposalCaptureModal({
     >
       <TerasFieldStack data-proposal-capture-modal="true" spacing="comfortable">
         <TerasTextField
+          disabled={pending}
           aria-label="Proposal title"
           label="Proposal title"
           onValueChange={onTitleChange}
@@ -64,12 +71,14 @@ export function ProposalCaptureModal({
           value={title}
         />
         <TerasNoteField
+          disabled={pending}
           aria-label="Proposal context"
           label="Context"
           onValueChange={onContextChange}
           placeholder="Describe the problem, intended outcome, likely owner boundary, and why this belongs in Workspace Proposals."
           value={context}
         />
+        {error ? <p role="alert">{error}</p> : null}
         <TerasContentTray kicker="Capture Boundary">
           {previewMode
             ? "Creates a local preview proposal. No backend proposal is sent."

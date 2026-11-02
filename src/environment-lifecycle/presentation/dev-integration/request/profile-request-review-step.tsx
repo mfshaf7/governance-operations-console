@@ -29,7 +29,7 @@ export function ProfileRequestReviewStep({
   draft: DevIntegrationProfileRequestDraft;
 }) {
   return (
-    <TerasPanelStack fill="last">
+    <TerasPanelStack fill="last" scroll>
       <TerasWizardPanel
         description="Confirm the normalized identity and runtime boundary before recording the request."
         fit="content"
@@ -78,6 +78,7 @@ export function ProfileRequestReviewStep({
       </TerasWizardPanel>
 
       <TerasWizardPanel
+        fit="content"
         description="Repository, review, and expected-write boundaries carried by the request."
         kicker="Request Scope"
         title="Participation and review"

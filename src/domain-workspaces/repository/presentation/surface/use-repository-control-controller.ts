@@ -757,6 +757,7 @@ export function useRepositoryControlController({
       filtered: filteredRecords,
     },
     sourceAvailability: {
+      loading: consoleRuntime.status === "loading" || continuityRuntime.mode === "loading" || custodyRuntime.sourceStatus === "loading",
       error: consoleRuntime.error,
       reasonCode: primaryRecordIsolation.reasonCode,
       unavailable: !primaryRecordIsolation.fixtureAllowed && records.length === 0,

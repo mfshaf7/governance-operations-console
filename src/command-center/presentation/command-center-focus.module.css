@@ -315,6 +315,15 @@
   flex-shrink: 0;
 }
 
+.priorityView > details[open] {
+  flex: 1 0 auto;
+}
+
+.priorityView > details[open] dl {
+  max-height: none;
+  overflow: visible;
+}
+
 .priorityHeader {
   --priority-rgb: 255, 193, 90;
   border-bottom: 1px solid rgba(255, 236, 198, 0.1);

@@ -1,3 +1,4 @@
+import type {PlatformHistoryPage} from "../live-runtime/platform-operation-types.ts";
 import { createHash, randomUUID } from "node:crypto";
 
 import {
@@ -43,17 +44,27 @@ type Options = Readonly<{
   randomId?: () => string;
 }>;
 
-export async function readPlatformOperations(options: Options = {}) {
+export async function readPlatformHistory(query:URLSearchParams,options:Options={}){
+  const value=await request(`/v1/platform-operations/history?${query}`,{method:"GET"},options);
+  const source=value as {workflow_id:unknown;operations:unknown;page:unknown};
+  const operations=assertPlatformOperationList({workflow_id:source?.workflow_id,operations:source?.operations});
+  const page=source?.page as PlatformHistoryPage;
+  if(!page||Object.keys(page).sort().join(",")!=="limit,next_cursor,snapshot,total,workspace"||!["all","dev-integration","governed-releases"].includes(page.workspace)||page.workspace!==query.get("workspace")||!Number.isSafeInteger(page.limit)||page.limit<1||page.limit>25||!Number.isSafeInteger(page.total)||page.total<operations.length||!/^sha256:[a-f0-9]{64}$/.test(page.snapshot)||page.next_cursor!==null&&(typeof page.next_cursor!=="string"||page.next_cursor.length>512))throw new PlatformOperationOosError("Scoped history page is invalid.","platform_history_invalid",502);
+  if(operations.some(operation=>page.workspace==="dev-integration"?!["dev-integration-profile","profile-request"].includes(operation.command.subject.kind):page.workspace==="governed-releases"?!["product-release","product-runtime-lifecycle"].includes(operation.command.subject.kind):false))throw new PlatformOperationOosError("History contains a record from another workspace.","platform_history_scope_invalid",502);
+  return {operations,historyPage:page};
+}
+export async function readPlatformOperations(options: Options = {},historyQuery?:URLSearchParams) {
   const [catalogResult, operationsResult] = await Promise.allSettled([
     request("/v1/platform-operations/catalog", { method: "GET" }, options).then(assertPlatformOperationCatalog),
-    request("/v1/platform-operations?limit=200", { method: "GET" }, options).then(assertPlatformOperationList),
+    historyQuery ? readPlatformHistory(historyQuery,options) : request("/v1/platform-operations?limit=200", { method: "GET" }, options).then(assertPlatformOperationList),
   ]);
   if (catalogResult.status === "rejected" && operationsResult.status === "rejected") throw catalogResult.reason;
   const failure = catalogResult.status === "rejected" ? catalogResult.reason : operationsResult.status === "rejected" ? operationsResult.reason : null;
   return {
     catalog: catalogResult.status === "fulfilled" ? catalogResult.value : null,
     error: failure instanceof PlatformOperationOosError ? { code: failure.code, message: failure.message } : failure ? { code: "platform_operation_projection_partial", message: "Part of the Platform operation projection is unavailable." } : null,
-    operations: operationsResult.status === "fulfilled" ? operationsResult.value : [],
+    operations: operationsResult.status === "fulfilled" ? (Array.isArray(operationsResult.value) ? operationsResult.value : operationsResult.value.operations) : [],
+    ...(historyQuery ? {historyPage:operationsResult.status==="fulfilled"&&!Array.isArray(operationsResult.value)?operationsResult.value.historyPage:null}:{}),
     status: failure ? "partial" as const : "current" as const,
   };
 }
@@ -71,6 +82,9 @@ export async function submitPlatformOperation(value: unknown, options: Options =
   const { capability, subject } = selectCapability(catalog.subjects, intent.subjectRef, intent.capabilityId);
   if (catalog.freshness !== "current" || !capability.available || !capability.approval_required) {
     throw new PlatformOperationOosError(capability.unavailable_reason ?? "The current Platform capability is not executable.", "platform_operation_capability_unavailable", 409);
+  }
+  if (intent.reviewedSourceVersion !== undefined && intent.reviewedSourceVersion !== subject.source_version) {
+    throw new PlatformOperationOosError("The reviewed profile source changed. Refresh and review this action again.", "platform_operation_review_stale", 409);
   }
   const now = intent.requestedAt ?? (options.now?.() ?? new Date()).toISOString();
   const nonce = intent.requestId || (options.randomId ?? randomUUID)();
@@ -208,10 +222,11 @@ function selectCapability(subjects: readonly PlatformOperationSubject[], subject
   return matches[0];
 }
 
-function assertBrowserIntent(value: unknown): { capabilityId: string; input: Record<string, unknown>; requestId: string; subjectRef: string; requestedAt?: string } {
+function assertBrowserIntent(value: unknown): { capabilityId: string; input: Record<string, unknown>; requestId: string; subjectRef: string; requestedAt?: string; reviewedSourceVersion?: string } {
   if (!isRecord(value) || !isText(value.capabilityId) || !isText(value.subjectRef) || !isText(value.requestId) || !isRecord(value.input) || JSON.stringify(value.input).length > 32_768) throw new PlatformOperationOosError("Platform operation intent is invalid.", "platform_operation_intent_invalid", 400);
+  if (value.reviewedSourceVersion !== undefined && !isText(value.reviewedSourceVersion)) throw new PlatformOperationOosError("The reviewed source version is invalid.", "platform_operation_intent_invalid", 400);
   if (value.requestedAt !== undefined && (typeof value.requestedAt !== "string" || !Number.isFinite(Date.parse(value.requestedAt)))) throw new PlatformOperationOosError("Platform operation request time is invalid.", "platform_operation_intent_invalid", 400);
-  return value as { capabilityId: string; input: Record<string, unknown>; requestId: string; subjectRef: string; requestedAt?: string };
+  return value as { capabilityId: string; input: Record<string, unknown>; requestId: string; subjectRef: string; requestedAt?: string; reviewedSourceVersion?: string };
 }
 function assertControlIntent(value: unknown): { action: "cancel" | "retry"; reason: string; requestId: string } {
   if (!isRecord(value) || !new Set(["cancel", "retry"]).has(String(value.action)) || !isText(value.reason) || !isText(value.requestId)) throw new PlatformOperationOosError("Platform operation control is invalid.", "platform_operation_control_invalid", 400);

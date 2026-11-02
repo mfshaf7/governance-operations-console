@@ -14,7 +14,7 @@ import {
   getPackageTree,
 } from "../../../read-model/index.ts";
 
-import {
+import { TerasLoadingState,
   TerasActionButton,
   TerasActionRow,
   TerasDraftCloseGuardDialog,
@@ -682,7 +682,7 @@ export function DeliveryExecutionBoard({
             tree={treeEditActive}
           />
         ) : (
-          readOnly && !selectedBoardTreeWithDraft ? <TerasEmptyState>{historyTreeRead.error ?? deliveryChangeRuntime.projectionError ?? "Reading the selected package's complete ART tree…"}</TerasEmptyState> : <ControlBoardArtTreeView tree={selectedBoardTreeWithDraft} />
+          readOnly && !selectedBoardTreeWithDraft ? historyTreeRead.error || deliveryChangeRuntime.projectionError ? <TerasEmptyState>{historyTreeRead.error ?? deliveryChangeRuntime.projectionError}</TerasEmptyState> : deliveryChangeRuntime.loading ? <TerasLoadingState label="Loading selected work tree…" skeleton="details" /> : <TerasEmptyState>No verified work tree is available for this item.</TerasEmptyState> : <ControlBoardArtTreeView tree={selectedBoardTreeWithDraft} />
         )
       ) : null}
     </>

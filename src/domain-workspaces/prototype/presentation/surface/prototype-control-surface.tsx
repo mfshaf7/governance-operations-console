@@ -3,6 +3,7 @@
 import {
   TerasActionButton,
   TerasEmptyState,
+  TerasLoadingState,
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
@@ -41,14 +42,14 @@ export function PrototypeControlSurface({
           />
         }
         register={
-          <TerasEmptyState fill>
-            {controller.sourceAvailability.loading ? "Loading canonical Prototype records." : controller.sourceAvailability.unavailable ? "Canonical Prototype records are unavailable. Fixtures are not used as fallback in live mode." : "No canonical Prototype records yet. Capture and route a Proposal to Prototype."}
+          controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading prototypes…" /> : <TerasEmptyState fill>
+            {controller.entryError ?? (controller.sourceAvailability.unavailable ? "Canonical Prototype records are unavailable. Fixtures are not used as fallback in live mode." : "No canonical Prototype records yet. Capture and route a Proposal to Prototype.")}
             <TerasActionButton emphasis="secondary" onClick={() => void controller.sourceAvailability.refresh()}>Refresh canonical records</TerasActionButton>
           </TerasEmptyState>
         }
         selected={
-          <TerasEmptyState fill>
-            No canonical Prototype record is available to select.
+          controller.sourceAvailability.loading ? <TerasLoadingState fill label="Preparing prototype details…" skeleton="details" /> : <TerasEmptyState fill>
+            {controller.entryError ? "The requested record has not been resolved. No unrelated record actions are available." : "No canonical Prototype record is available to select."}
           </TerasEmptyState>
         }
       />

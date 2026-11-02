@@ -93,7 +93,7 @@ export function ModelProfileRequestHistoryDialog({ open, onClose, initialRequest
   const locked = busy || Boolean(frozen);
   if (!open) return null;
   return <>
-    <TerasDialog open title="Purpose request history" kicker="Model Operations" width="wide" height="fill" contentOverflow="auto" closeDisabled={busy} onClose={close}
+    <TerasDialog busy={busy} busyLabel="Reading or updating profile request…" open title="Purpose request history" kicker="Model Operations" width="wide" height="fill" contentOverflow="auto" closeDisabled={busy} onClose={close}
       description="Read the original OOS request, record an explicit operator review, and verify its own Platform fulfillment. Approval does not apply registry source or activate a profile."
       actions={<TerasActionButton disabled={busy} onClick={close} emphasis="secondary">Back to Purpose profiles</TerasActionButton>}>
       <TerasFieldStack spacing="normal">

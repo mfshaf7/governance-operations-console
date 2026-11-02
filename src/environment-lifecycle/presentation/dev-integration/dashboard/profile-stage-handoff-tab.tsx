@@ -43,11 +43,10 @@ export function ProfileStageHandoffStage({
   const handoff = profile.stageHandoff;
 
   return (
-    <TerasPanelStack fill="first">
+    <TerasPanelStack fill="last" scroll>
       <TerasPanel
-        fit="fill"
+        fit="content"
         frame="padded"
-        overflow="auto"
         treatment="neutral"
       >
         <TerasPanelHeader
@@ -180,7 +179,7 @@ export function ProfileStageHandoffDock({
           topOffset="none"
         />
         <TerasActionRow spacing="normal">
-          <TerasActionButton
+          <TerasActionButton busy={submitting}
             disabled={!promoteCheck?.enabled || submitting}
             onClick={() => {
               setSubmitting(true);

@@ -494,7 +494,7 @@ export function PrototypeLandingModal({
 
   return (
     <>
-      <TerasWizardModal
+      <TerasWizardModal busy={landingRunSubmitting} busyLabel="Preparing prototype landing…"
         activeStepId={activeStep}
         description="Review and apply the Prototype Studio landing shape before candidate, baseline, or movement work starts."
         footer={

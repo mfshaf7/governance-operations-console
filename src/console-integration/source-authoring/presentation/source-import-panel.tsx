@@ -42,7 +42,7 @@ export function SourceImportPanel({ disabled, scope, onImport }: {
     finally { setPending(false); }
   }
   return <TerasPanel frame="padded" treatment="neutral">
-    <TerasPanelHeader kicker="Import from your computer" title="Review file mapping before importing"
+    <TerasPanelHeader busy={pending} busyLabel="Reading selected files…" kicker="Import from your computer" title="Review file mapping before importing"
       description="Choose files edited in VS Code or a source folder. Missing files never become deletions. Import replaces only the mapped local buffers; saving and source acceptance remain separate." />
     <TerasFieldStack spacing="normal">
       <TerasTextField label="Target folder in source (empty means repository root)" value={folder} disabled={locked} maxLength={240} onValueChange={value => { setFolder(value); setSelected(new Set()); setPrepared(null); setReadErrors({}); }} />

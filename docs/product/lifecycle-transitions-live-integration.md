@@ -91,3 +91,24 @@ Run:
 npm run test:lifecycle-transitions
 npm run check
 ```
+
+
+## Inspecting a retained handoff
+
+Choose the full source-to-target route, search the register, then select a row.
+The source name and next owner are shown together; Updated uses UTC. Read the
+recorded outcome and next step, then open the existing owning workspace. Unknown
+or conflicting Prototype targets require refreshing owner records; another
+Prototype is never substituted. Cancellation and supersession retain their own
+outcome wording and have no applied-target shortcut.
+
+Scroll the selected column to Evidence history. Expand Evidence details for an
+event's complete references and exact recording time. Record details retains
+source version, original description, correlation and separate owner receipts.
+Short native histories do not imply that missing journal phases passed.
+
+Partial source status means one or more native or journal reads failed or the
+projection is bounded. Read its source details and refresh the originating owner;
+waiting for the existing poll can restore current coverage. Native records may
+remain readable while the journal is unavailable. These preview repairs require
+normal batch validation and exact composed acceptance before live qualification.

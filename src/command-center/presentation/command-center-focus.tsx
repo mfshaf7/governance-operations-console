@@ -1,5 +1,7 @@
 "use client";
 
+import { TerasLoadingIndicator, TerasLoadingState } from "@/teras";
+
 import {
   ArrowUpRight,
   ChevronRight,
@@ -448,6 +450,7 @@ export function CommandCenterFocus({
             <CommandCenterStatusDot tone={sourceTone} />
           </span>
           <span>
+            {loadingSourceCount > 0 ? <TerasLoadingIndicator /> : null}
             {projectionPostureLabel}
           </span>
         </div>
@@ -484,7 +487,7 @@ export function CommandCenterFocus({
               {Math.min(filteredCandidates.length, 5)} visible
             </span>
           </header>
-          {filteredCandidates.length > 0 ? (
+          {loadingSourceCount > 0 && !snapshot.candidates.length ? <TerasLoadingState label="Checking required actions…" /> : filteredCandidates.length > 0 ? (
             <div className={styles.queueViewport}>
               {filteredCandidates.map((candidate, index) => (
                 <AttentionQueueRow

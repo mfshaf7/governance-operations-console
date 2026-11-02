@@ -1,6 +1,6 @@
 "use client";
 
-import {
+import { TerasLoadingState,
   TerasDialog,
   TerasContentRegion,
   TerasEmptyState,
@@ -118,7 +118,7 @@ export function RepositoryHistoryDialog({
               kicker="Receipt Timeline"
               title="Receipt trail"
             />
-            {timelineRows.length > 0 ? (
+            {loading && !timelineRows.length ? <TerasLoadingState fill label="Loading repository history…" /> : timelineRows.length > 0 ? (
               <TerasContentRegion scroll>
               <TerasTimeline ariaLabel="Repository receipt timeline">
                 {timelineRows.map((row, index) => (

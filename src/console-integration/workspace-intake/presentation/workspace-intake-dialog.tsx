@@ -8,8 +8,14 @@ import {
   TerasChoiceGroup,
   TerasContentTray,
   TerasEmptyState,
+  TerasLoadingState,
+  TerasDraftCloseGuardDialog,
   TerasList,
   TerasMetadataList,
+  TerasModalShell,
+  TerasDialog,
+  TerasFieldStack,
+  TerasTechnicalDetails,
   TerasSignalItem,
   TerasWizardFooter,
   TerasWizardModal,
@@ -17,6 +23,7 @@ import {
 } from "@/teras";
 
 import { useWorkspaceIntakeLiveRuntime } from "../live-runtime/use-workspace-intake-live-runtime.ts";
+import { validationApproachLabel, validationRoleLabel, deliveryTargetLabel } from "../workspace-intake-display-options";
 import { workspaceIntakeRecordForDecision } from "../workspace-intake-live-contract.ts";
 import type {
   WorkspaceIntakeCandidate,
@@ -33,6 +40,9 @@ export function WorkspaceIntakeDialog({
   repositoryCustody,
   returnLabel = "Back to Delivery",
   initialRequestId,
+  hasLocalDraft = false,
+  singleReview = false,
+  onEditCandidate,
   onNewCandidate,
   onClose,
 }: {
@@ -40,6 +50,9 @@ export function WorkspaceIntakeDialog({
   repositoryCustody?: WorkspaceIntakeCustodyPreparation;
   returnLabel?: string;
   initialRequestId?: string;
+  hasLocalDraft?: boolean;
+  singleReview?: boolean;
+  onEditCandidate?: () => void;
   onNewCandidate?: () => void;
   onClose: () => void;
 }) {
@@ -73,10 +86,18 @@ export function WorkspaceIntakeDialog({
     void runtime.prepare(candidate, selectedCustody).catch(() => undefined);
   }, [candidate, selectedCustody, initialRequestId, runtime.read, runtime.prepare]);
 
+  const decisionRecord = workspaceIntakeRecordForDecision(reviewedCandidate.requested_record,
+    decision === "unselected" ? "proposed" : decision);
   const decisionComplete = decision !== "unselected";
   const reviewComplete = decisionComplete && confirmed && !runtime.pending && Boolean(runtime.preparation) &&
     (!repositoryCustody || Boolean(sourceCandidate));
   const result = runtime.result;
+  const [closeGuardOpen, setCloseGuardOpen] = useState(false);
+  function requestClose() {
+    if (runtime.pending) return;
+    if (!result && (hasLocalDraft || decision !== "unselected" || confirmed)) setCloseGuardOpen(true);
+    else onClose();
+  }
   const steps = useMemo(
     () => [
       {
@@ -121,14 +142,152 @@ export function WorkspaceIntakeDialog({
     void runtime.prepare(candidate, selectedCustody).catch(() => undefined);
   }
 
+  const decisionControls = <>
+<TerasChoiceGroup<IntakeDecisionSelection>
+            ariaLabel="Workspace classification"
+            disabled={runtime.pending}
+            frame="tray"
+            label="Classification"
+            onSelect={(value) => {
+              if (runtime.pending) return;
+              setDecision(value);
+              setConfirmed(false);
+            }}
+            options={[
+              {
+                disabled: true,
+                id: "unselected",
+                label: "Select classification",
+                tone: "muted",
+              },
+              { id: "admitted", label: "Admitted", tone: "ok" },
+              { id: "proposed", label: "Proposed", tone: "warn" },
+              { id: "out-of-scope", label: "Out of scope", tone: "muted" },
+            ]}
+            selectedId={decision}
+          />
+          <TerasContentTray kicker="Decision guidance" description={decision === "admitted" ? "Admitted requests entry into the governed workspace after the required owner checks and review. It does not activate a runtime." : decision === "proposed" ? "Proposed records the item for planning and review before admission." : decision === "out-of-scope" ? "Out of scope records that this item will not enter the governed workspace; ownership and validation metadata are excluded." : "Choose Proposed to record a plan, Admitted to request governed workspace entry, or Out of scope to record an exclusion."} />
+  </>;
+
+
+  const reviewContents = <>          <TerasMetadataList
+            items={[
+              { label: "Decision", value: decision === "unselected" ? "Choose a classification" : decision },
+              { label: "Target", value: `${candidate.target.kind}:${candidate.target.name}` },
+              { label: "Source", value: reviewedCandidate.source.class },
+              ...(reviewedCandidate.requested_record.kind === "repo" ? [
+                { label: "Repository class", value: reviewedCandidate.requested_record.repo_class ?? "Not in scope" },
+                { label: "Security bindings", value: reviewedCandidate.requested_record.requires_security_bindings === null ? "Not in scope" : String(reviewedCandidate.requested_record.requires_security_bindings) },
+                { label: "Security owner", value: reviewedCandidate.requested_record.security_owner ?? "None" },
+                { label: "Provider identity", value: reviewedCandidate.requested_record.provider_repository ? `${reviewedCandidate.requested_record.provider_repository.full_name} / ${reviewedCandidate.requested_record.provider_repository.provider_repository_id}` : "Legacy source" },
+                { label: "Validation posture", value: reviewedCandidate.requested_record.validation_behavior?.posture ?? "Not in scope" },
+              ] : []),
+              {
+                label: "Current Record",
+                value: runtime.preparation?.expected_state.record_version
+                  ? `Version ${runtime.preparation.expected_state.record_version}`
+                  : "New record",
+              },
+            ]}
+          />
+          {decisionRecord.kind !== "repo" ? <TerasContentTray kicker="Entrant metadata"
+            description={decision === "out-of-scope" ? "Ownership and validation metadata is excluded from an out-of-scope classification." : "Review the exact owner and validation metadata for this classification. Return to item details to correct it."}>
+            <TerasMetadataList columns={2} items={[
+              ...(decisionRecord.kind === "product" ? [
+                { label: "Platform owner", value: decisionRecord.platform_owner ?? "Not in scope" },
+                { label: "Runtime owner", value: decisionRecord.runtime_owner ?? "Not in scope" },
+                { label: "Security owner", value: decisionRecord.security_owner ?? "Not in scope" },
+                { label: "Source owners", value: decisionRecord.source_owners.join(", ") || "Not in scope" },
+                { label: "Delivery target", value: deliveryTargetLabel(decisionRecord.intended_endpoint) },
+              ] : [
+                { label: "Owner repository", value: decisionRecord.owner_repo ?? "Not in scope" },
+                { label: "Security owner", value: decisionRecord.security_owner ?? "Not in scope" },
+                { label: "Component class", value: decisionRecord.component_class ?? "Not in scope" },
+                { label: "Associated product", value: decisionRecord.product ?? "None" },
+              ]),
+              { label: "Validation approach", value: validationApproachLabel(decisionRecord.validation_behavior?.posture) },
+              { label: "Item role", value: validationRoleLabel(decisionRecord.validation_behavior?.wgcf_graph_role) },
+              { label: "Direct governance checks", value: decisionRecord.validation_behavior ? decisionRecord.validation_behavior.catalog_refs.length ? `${decisionRecord.validation_behavior.catalog_refs.length} recorded checks` : "No direct checks" : "Not in scope" },
+            ]} />
+            <TerasTechnicalDetails summary="Purpose, validation and evidence" items={[
+              { label: "Purpose and boundary", value: decisionRecord.notes },
+              { label: "Owner validation evidence", value: decisionRecord.validation_behavior?.notes ?? "Not in scope" },
+              { label: "Source reference", value: reviewedCandidate.source.ref },
+              { label: "Source digest", value: reviewedCandidate.source.digest },
+              { label: "Validation posture code", value: decisionRecord.validation_behavior?.posture ?? "Not in scope" },
+              { label: "Validation role code", value: decisionRecord.validation_behavior?.wgcf_graph_role ?? "Not in scope" },
+              { label: "Catalog bindings", value: decisionRecord.validation_behavior?.catalog_refs.join(", ") || "None" },
+              ...(decisionRecord.kind === "product" ? [{ label: "Delivery target code", value: decisionRecord.intended_endpoint ?? "Not in scope" }] : []),
+              ...reviewedCandidate.evidence_refs.map((value, index) => ({ label: `Evidence ${index + 1}`, value })),
+            ]} />
+          </TerasContentTray> : null}
+          <TerasList frame="contained">
+            {!singleReview ? <TerasSignalItem
+              label="Review Check"
+              statusLabel={runtime.preparation ? "Current" : "Unavailable"}
+              title="Canonical authority binding"
+              tone={runtime.preparation ? "ok" : "warn"}
+            /> : null}
+            <TerasSignalItem
+              actionLabel={confirmed ? "Confirmed" : "Confirm exact review"}
+              ariaLabel="Confirm the Workspace Intake review"
+              label="Operator Acceptance"
+              onSelect={() => { if (!runtime.pending && decisionComplete) setConfirmed((current) => !current); }}
+              title={confirmed ? "Exact candidate confirmed" : "Confirmation required"}
+              tone={confirmed ? "ok" : "warn"}
+            />
+          </TerasList></>;
+  if (singleReview) {
+    const showingResult = activeStep === "result";
+    const resultTitle = result ? ({ accepted: "Registration submitted", succeeded: "Registration completed", rejected: "Registration not accepted", "requires-action": "Registration needs attention", cancelled: "Registration cancelled", cancelling: "Cancelling registration", evaluating: "Checking registration", preparing: "Preparing registration", "review-required": "Registration awaiting review" } satisfies Record<WorkspaceIntakeResult["status"], string>)[result.status] : "Registration request";
+    const plainActions = <>
+      <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={!showingResult && onEditCandidate ? onEditCandidate : requestClose}>{!showingResult && onEditCandidate ? "Back to Entrant Details" : returnLabel}</TerasActionButton>
+      {!showingResult ? <TerasActionButton busy={runtime.pending} disabled={!reviewComplete || runtime.pending} onClick={() => void submit()}>{runtime.pending ? "Submitting…" : "Submit Classification"}</TerasActionButton> : null}
+    </>;
+    const closeGuard = <TerasDraftCloseGuardDialog open={closeGuardOpen} kicker="Unsaved classification" title="Discard Classification Draft?" description="Your candidate and classification choices have not been submitted." leaveLabel="Discard Draft" onKeepEditing={() => setCloseGuardOpen(false)} onLeave={onClose}/>;
+    if (showingResult) return <>
+      <TerasDialog busy={runtime.pending} busyLabel="Reading original registration…" open width="standard" height="content" contentOverflow="auto" closeLabel="Close modal" closeDisabled={runtime.pending} onClose={requestClose} kicker={candidate.label} title={resultTitle} actions={plainActions}>
+        <TerasFieldStack spacing="normal">
+          {runtime.error ? <TerasContentTray kicker="Needs attention" description={runtime.error.message}/> : null}
+          {result ? <>
+            <TerasContentTray description={result.status === "succeeded" ? "The registration is recorded. Active inventory promotion remains a separate action." : "Your request is recorded. Follow its next action; submission is not completion."}/>
+            <TerasMetadataList items={[{label:"Status",value:result.status.replaceAll("-"," ")},{label:"Next action",value:result.next_action.replaceAll("-"," ")}]}/>
+            {result.readiness_findings?.length ? <TerasList frame="contained">{result.readiness_findings.map((finding,index)=><TerasSignalItem key={index} label="Readiness finding" title={finding.message} detail={finding.next_action.replaceAll("-"," ")} tone="danger"/>)}</TerasList> : null}
+            <TerasTechnicalDetails summary="Request and receipt details" items={[{label:"Request",value:result.request_id},{label:"Revision",value:String(result.revision)},{label:"Receipt",value:result.receipt?.receipt_id ?? "Not issued"},{label:"Request history",value:JSON.stringify(result.history,null,2)}]}/>
+            <TerasActionRow>
+              <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={()=>void runtime.read(requestId).catch(()=>undefined)}>Refresh Original Request</TerasActionButton>
+              {result.review ? <TerasActionButton emphasis="secondary" onClick={()=>window.open(result.review?.url,"_blank","noopener,noreferrer")}>Open Review</TerasActionButton> : null}
+              {["continue","restore-dependency-and-retry","review-and-merge"].includes(result.next_action) || result.status === "review-required" ? <TerasActionButton disabled={runtime.pending} onClick={()=>void runtime.continueRequest(requestId).catch(()=>undefined)}>{result.status === "review-required" ? "Check Review" : "Continue"}</TerasActionButton> : null}
+              {result.status === "review-required" ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={()=>void runtime.cancel(requestId).catch(()=>undefined)}>Cancel Request</TerasActionButton> : null}
+              {result.next_action === "submit-corrected-request" ? <TerasActionButton disabled={runtime.pending} onClick={startCorrection}>Correct Request</TerasActionButton> : null}
+            </TerasActionRow>
+          </> : runtime.pending ? <TerasLoadingState label="Reading original request…" skeleton="details" /> : <TerasEmptyState>No request outcome is available.</TerasEmptyState>}
+        </TerasFieldStack>
+      </TerasDialog>{closeGuard}
+    </>;
+    return <>
+      <TerasModalShell busy={runtime.pending} busyLabel="Reading classification details…" bodyLayout="scroll" height="content" width="standard" title="Workspace Intake Classification" kicker={candidate.label} surfaceId="workspace-intake-classification" description="Choose the classification and confirm this registration." onClose={requestClose} footer={plainActions}>
+        <TerasFieldStack spacing="loose">
+          {runtime.error ? <TerasContentTray kicker="Source unavailable" description={runtime.error.message}/> : null}
+          {decisionControls}
+          {reviewContents}
+          <TerasTechnicalDetails summary="Source details" items={[{label:"Source reference",value:reviewedCandidate.source.ref},{label:"Source digest",value:reviewedCandidate.source.digest},{label:"Authority revision",value:runtime.preparation?.authority_revision ?? "Not read"},...reviewedCandidate.evidence_refs.map((value,index)=>({label:`Evidence ${index+1}`,value}))]}/>
+        </TerasFieldStack>
+      </TerasModalShell>{closeGuard}
+    </>;
+  }
+
   return (
+    <>
     <TerasWizardModal
+      busy={runtime.pending}
+      busyLabel="Reading or submitting registration…"
       activeStepId={activeStep}
-      description="Classify the candidate against current Workspace Governance authority and follow the resulting review."
+      description={singleReview ? "Review this registration and choose how it should enter the workspace." : "Classify the candidate against current Workspace Governance authority and follow the resulting review."}
       footer={
         <TerasWizardFooter
           apply={
-            activeStep === "review"
+            (activeStep === "review" || (singleReview && activeStep === "decision"))
               ? {
                   disabled: !reviewComplete || runtime.pending,
                   label: runtime.pending ? "Submitting..." : "Submit Classification",
@@ -138,18 +297,19 @@ export function WorkspaceIntakeDialog({
           }
           back={
             activeStep === "review"
-              ? { label: "Back", onClick: () => setActiveStep("decision") }
+              ? { disabled: runtime.pending, label: "Back", onClick: () => setActiveStep("decision") }
               : activeStep === "decision"
-                ? { label: returnLabel, onClick: onClose }
+                ? { disabled: runtime.pending, label: onEditCandidate && !initialRequestId ? "Back to Entrant Details" : returnLabel,
+                    onClick: onEditCandidate && !initialRequestId ? onEditCandidate : requestClose }
                 : undefined
           }
           finish={
             activeStep === "result"
-              ? { label: returnLabel, onClick: onClose }
+              ? { disabled: runtime.pending, label: returnLabel, onClick: requestClose }
               : undefined
           }
           next={
-            activeStep === "decision"
+            activeStep === "decision" && !singleReview
               ? {
                   disabled: !decisionComplete || !runtime.preparation || runtime.pending || Boolean(repositoryCustody && !sourceCandidate),
                   label: "Review Classification",
@@ -160,9 +320,9 @@ export function WorkspaceIntakeDialog({
         />
       }
       kicker="Workspace Intake"
-      onClose={onClose}
+      onClose={requestClose}
       onStepSelect={(stepId) => {
-        if (initialRequestId) return;
+        if (initialRequestId || runtime.pending) return;
         if (
           stepId === "decision" ||
           (stepId === "review" && decisionComplete) ||
@@ -195,89 +355,35 @@ export function WorkspaceIntakeDialog({
       surfaceId="workspace-intake-classification"
       title="Workspace Intake Classification"
     >
-      {activeStep === "decision" ? (
+      {activeStep === "decision" && !singleReview ? (
         <TerasWizardPanel
           description="Choose the workspace classification for this exact source candidate."
           kicker="Classification"
-          title="Intake Decision"
+          title={singleReview ? "Registration review" : "Intake Decision"}
         >
-          <TerasChoiceGroup<IntakeDecisionSelection>
-            ariaLabel="Workspace classification"
-            disabled={runtime.pending}
-            frame="tray"
-            label="Classification"
-            onSelect={(value) => {
-              if (runtime.pending) return;
-              setDecision(value);
-              setConfirmed(false);
-            }}
-            options={[
-              {
-                disabled: true,
-                id: "unselected",
-                label: "Select classification",
-                tone: "muted",
-              },
-              { id: "admitted", label: "Admitted", tone: "ok" },
-              { id: "proposed", label: "Proposed", tone: "warn" },
-              { id: "out-of-scope", label: "Out of scope", tone: "muted" },
-            ]}
-            selectedId={decision}
-          />
-          <TerasContentTray
-            description={candidate.requested_record.notes}
-            kicker="Source Context"
-          />
+          {decisionControls}
+          {!singleReview ? <TerasContentTray description={candidate.requested_record.notes} kicker="Source Context" /> : null}
         </TerasWizardPanel>
       ) : null}
-      {activeStep === "review" ? (
+      {activeStep === "review" || (singleReview && activeStep === "decision") ? (
         <TerasWizardPanel
-          description="Confirm the reviewed candidate and exact canonical state before OOS accepts the command."
+          description={singleReview ? "Check the item details, choose its classification and confirm to submit." : "Confirm the reviewed candidate and exact canonical state before OOS accepts the command."}
           kicker="Authority Review"
-          title="Review Classification"
+          title={singleReview ? "Registration review" : "Review Classification"}
         >
-          <TerasMetadataList
-            items={[
-              { label: "Decision", value: decision },
-              { label: "Target", value: `${candidate.target.kind}:${candidate.target.name}` },
-              { label: "Source", value: reviewedCandidate.source.class },
-              ...(reviewedCandidate.requested_record.kind === "repo" ? [
-                { label: "Repository class", value: reviewedCandidate.requested_record.repo_class ?? "Not in scope" },
-                { label: "Security bindings", value: reviewedCandidate.requested_record.requires_security_bindings === null ? "Not in scope" : String(reviewedCandidate.requested_record.requires_security_bindings) },
-                { label: "Security owner", value: reviewedCandidate.requested_record.security_owner ?? "None" },
-                { label: "Provider identity", value: reviewedCandidate.requested_record.provider_repository ? `${reviewedCandidate.requested_record.provider_repository.full_name} / ${reviewedCandidate.requested_record.provider_repository.provider_repository_id}` : "Legacy source" },
-                { label: "Validation posture", value: reviewedCandidate.requested_record.validation_behavior?.posture ?? "Not in scope" },
-              ] : []),
-              {
-                label: "Current Record",
-                value: runtime.preparation?.expected_state.record_version
-                  ? `Version ${runtime.preparation.expected_state.record_version}`
-                  : "New record",
-              },
-            ]}
-          />
-          <TerasList frame="contained">
-            <TerasSignalItem
-              label="Review Check"
-              statusLabel={runtime.preparation ? "Current" : "Unavailable"}
-              title="Canonical authority binding"
-              tone={runtime.preparation ? "ok" : "warn"}
-            />
-            <TerasSignalItem
-              actionLabel={confirmed ? "Confirmed" : "Confirm exact review"}
-              ariaLabel="Confirm the Workspace Intake review"
-              label="Operator Acceptance"
-              onSelect={() => setConfirmed((current) => !current)}
-              title={confirmed ? "Exact candidate confirmed" : "Confirmation required"}
-              tone={confirmed ? "ok" : "warn"}
-            />
-          </TerasList>
+          {singleReview ? decisionControls : null}
+          {reviewContents}
+
         </TerasWizardPanel>
       ) : null}
       {activeStep === "result" ? (
         <WorkspaceIntakeResultPanel result={result} error={runtime.error?.message} />
       ) : null}
     </TerasWizardModal>
+    <TerasDraftCloseGuardDialog open={closeGuardOpen} kicker="Unsaved classification"
+      title="Discard Classification Draft?" description="Your candidate and classification choices have not been submitted."
+      leaveLabel="Discard Draft" onKeepEditing={() => setCloseGuardOpen(false)} onLeave={onClose} />
+    </>
   );
 }
 
@@ -308,20 +414,22 @@ function WorkspaceIntakeSupport({
         description="Source evidence and current canonical binding used for this classification."
         fit="content"
         kicker="Candidate Evidence"
-        title={retained ? "Retained owner request" : preparation ? "Authority Current" : "Authority Unavailable"}
+        title={retained ? "Original request source" : preparation ? "Source prepared" : "Source unavailable"}
         tone={retained || preparation ? "info" : "warn"}
         treatment="rail"
       >
-        <TerasMetadataList
-          columns={1}
-          items={[
-            { label: "Source ref", value: candidate.source.ref },
-            { label: "Source digest", value: candidate.source.digest },
-            ...(preparation?.source_candidate ? [{ label: "Candidate digest", value: preparation.source_candidate.candidate_digest }] : []),
-            { label: "Evidence", value: String(candidate.evidence_refs.length) },
-            { label: "Authority", value: preparation?.authority_revision.slice(0, 12) ?? (retained ? "OOS rechecks current authority before advancing" : "Unavailable") },
-          ]}
-        />
+        <TerasMetadataList columns={1} items={[
+          { label: "Source", value: candidate.source.class === "direct" ? "Operator registration" : candidate.source.class === "delivery" ? "Delivery closeout" : candidate.source.class === "prototype" ? "Prototype handoff" : "Repository custody" },
+          { label: "Attached references", value: String(candidate.evidence_refs.length) },
+          { label: "Owner authority", value: preparation ? "Current source checked" : retained ? "Recorded original request" : "Not yet read" },
+        ]} />
+        <TerasTechnicalDetails summary="Source details" items={[
+          { label: "Source reference", value: candidate.source.ref },
+          { label: "Source digest", value: candidate.source.digest },
+          ...(preparation?.source_candidate ? [{ label: "Candidate digest", value: preparation.source_candidate.candidate_digest }] : []),
+          { label: "Authority revision", value: preparation?.authority_revision ?? "Not read" },
+          ...candidate.evidence_refs.map((value, index) => ({ label: `Evidence ${index + 1}`, value })),
+        ]} />
       </TerasWizardPanel>
       {result ? (
         <>

@@ -490,3 +490,26 @@ preview, while configured live failure never falls back to fixtures.
 - `../operation-workbench-contract.md`
 - `../orchestration-boundary-contract.md`
 - `../lifecycle-transitions-live-integration.md`
+
+
+## Preview maintenance: inspection and recovery
+
+Operator-approved batch-three maintenance preserves the three locked routes and
+read-only coordination. Route labels include source and target. The register
+combines source identity and next owner, with exact versions in Record details.
+Selected records use the supplied project title when available. Cancelled and
+superseded outcomes never receive applied-target wording or an invented action.
+
+Evidence history and Record details use natural-height panels within the
+existing scrolling Teras stack. Every event reference, distinct receipt and
+available correlation stays inspectable. Display dates include year and UTC.
+Original owner descriptions and raw references remain in technical disclosure;
+source-reported application remains distinct from an owner confirmation.
+
+A transport, parsing or owner error in any journal refresh invalidates that
+journal observation. Current native owner readbacks may remain visible with
+explicit Partial coverage; failed journal data never substitutes sample records.
+Prototype capture and registry references address the same immutable Studio
+slug. Prototype resolves only its known namespaces against current owner records;
+missing or conflicting targets show recovery guidance without an unrelated
+selection. No new mutation or approval authority is introduced.

@@ -247,10 +247,11 @@ export const guard = {
       "visibilitychange",
     ]);
     assertIncludes(failures, liveRuntimeSurface, [
-      "Operating Readiness",
-      "Refresh owner truth",
+      "Connected Platform actions",
+      "Refresh",
       "projectPlatformRuntimeReadiness",
-      "readiness.ready",
+      "readiness.actionable",
+      "confirmationCurrent",
     ]);
     assertIncludes(failures, platformReadiness, [
       "platformOperationFreshnessWindowMs",

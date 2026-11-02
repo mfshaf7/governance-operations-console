@@ -74,13 +74,13 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
   const ownerReceipt = original?.aggregate_receipt && typeof original.aggregate_receipt === "object"
     ? original.aggregate_receipt as Record<string, unknown> : null;
   return <>
-    <TerasModalShell title={mode === "recover" ? "Recover original run" : "Start validation readiness run"} kicker="Orchestration" surfaceId="orchestration-run-start"
+    <TerasModalShell busy={pending} busyLabel="Contacting workflow owner…" title={mode === "recover" ? "Recover original run" : "Start validation readiness run"} kicker="Orchestration" surfaceId="orchestration-run-start"
       width="large" height="content" bodyLayout="scroll" onClose={close}
       description="Review an initiative source and explicitly approve the admitted read-only WGCF validation. OOS owns admission, execution and receipts."
       footer={<>
         <TerasActionButton emphasis="secondary" disabled={pending} onClick={close}>Back to workspace</TerasActionButton>
         {receipt || original ? <TerasActionButton disabled={pending} onClick={() => { setPending(true); void onViewRuns(original?.run_id ?? (frozen ? originalOrchestrationRunId(frozen.requestId) : undefined)).catch(cause => setError(message(cause))).finally(() => setPending(false)); }}>View Run</TerasActionButton> : mode === "start" ?
-          <TerasActionButton disabled={pending || (!frozen && (!source?.startAllowed || !approved || !purpose.trim()))} onClick={() => void start()}>{pending ? "Contacting owner" : frozen ? "Retry original start" : "Start reviewed run"}</TerasActionButton> : null}
+          <TerasActionButton busy={pending} disabled={pending || (!frozen && (!source?.startAllowed || !approved || !purpose.trim()))} onClick={() => void start()}>{pending ? "Contacting owner" : frozen ? "Retry original start" : "Start reviewed run"}</TerasActionButton> : null}
       </>}>
       <TerasFieldStack spacing="normal">
         {mode === "start" ? <TerasPanel frame="padded" treatment="neutral">

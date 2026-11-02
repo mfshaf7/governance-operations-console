@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import {
+import { TerasLoadingState,
   TerasActionButton,
   TerasEmptyState,
   TerasMetadataList,
@@ -242,9 +242,7 @@ export function PrototypePreviewRuntimeModal({
               value={activeTab}
             />
 
-            {ownerMode === "loading" || ownerMode === "error" ? <TerasEmptyState>
-              {ownerMode === "loading" ? "Checking the Studio preview profile and runtime…" : "Studio preview status is unavailable. Reopen Preview Runtime to retry; local examples are excluded."}
-            </TerasEmptyState> : modeStage}
+            {ownerMode === "loading" ? <TerasLoadingState label="Checking preview runtime…" skeleton="details" /> : ownerMode === "error" ? <TerasEmptyState>Studio preview status is unavailable. Reopen Preview Runtime to retry; local examples are excluded.</TerasEmptyState> : modeStage}
           </TerasZone>
 
           <TerasZone fit="fill">{ownerMode === "loading" || ownerMode === "error" ? null : modeDock}</TerasZone>

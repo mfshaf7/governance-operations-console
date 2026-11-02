@@ -11,6 +11,7 @@ import { TerasSectionHeader } from "./teras-section-header";
 import { TerasStatusPill } from "./teras-status-pill";
 import type { TerasTone } from "./teras-types";
 import { cx } from "./teras-utils";
+import { TerasLoadingState } from "./teras-loading-state";
 
 export type TerasPanelFrame = "flush" | "padded";
 export type TerasPanelFit = "content" | "fill";
@@ -120,6 +121,8 @@ export function TerasPanel({
 
 export function TerasPanelHeader({
   actions,
+  busy = false,
+  busyLabel = "Working…",
   actionsLayout,
   className,
   description,
@@ -130,6 +133,8 @@ export function TerasPanelHeader({
   titleOverflow = "default",
 }: {
   actions?: ReactNode;
+  busy?: boolean;
+  busyLabel?: string;
   actionsLayout?: "inline" | "overlay";
   className?: string;
   description?: ReactNode;
@@ -164,6 +169,7 @@ export function TerasPanelHeader({
       actionsLayout={resolvedActionsLayout}
       className={className}
       description={description}
+      support={busy ? <TerasLoadingState inline label={busyLabel} /> : undefined}
       kicker={kicker}
       title={resolvedTitle}
     />

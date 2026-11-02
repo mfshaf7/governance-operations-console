@@ -231,7 +231,7 @@ export function EnvironmentOperationPanel({
             />
             <TerasActionRow spacing="normal">
               {latestOperation.state === "failed" && onReturnToDraft ? (
-                <TerasActionButton
+                <TerasActionButton busy={retrying}
                   emphasis="secondary"
                   onClick={onReturnToDraft}
                 >

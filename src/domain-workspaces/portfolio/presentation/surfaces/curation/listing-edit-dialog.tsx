@@ -201,7 +201,7 @@ export function ProductListingEditDialog({
             <TerasActionButton onClick={requestClose} emphasis="secondary">
               Cancel
             </TerasActionButton>
-            <TerasActionButton
+            <TerasActionButton busy={applying}
               disabled={applying || !dirty || scopeOptions.length === 0}
               onClick={applyDraft}
               emphasis="primary"

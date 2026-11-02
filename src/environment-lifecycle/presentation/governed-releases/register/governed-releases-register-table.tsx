@@ -100,6 +100,7 @@ export function GovernedReleasesRegisterTable({
     <TerasRecordTable
       columns={columns}
       fill
+      profile="inventory"
       getRowId={(product) => product.productId}
       onSelect={onSelect}
       rows={rows}

@@ -119,7 +119,7 @@ function WorkDesignFinalizeBriefPreparationDialog({
       height="content"
       width="standard"
       actions={
-        <TerasActionButton
+        <TerasActionButton busy={contextFinalizeRunning}
           disabled={applyCompleted || !contextFinalizeCanRun || contextFinalizeRunning}
           onClick={finalizeContextBrief}
           tone={

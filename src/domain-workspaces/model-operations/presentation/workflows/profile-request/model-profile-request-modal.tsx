@@ -90,7 +90,7 @@ export function ModelProfileRequestModal({
     },
   ];
   return (
-    <TerasModalShell
+    <TerasModalShell busy={pending} busyLabel="Recording profile request…"
       bodyLayout="scroll"
       description={mode === "revise" ? "Revise the original requested intent. Saving does not submit, approve or fulfill it." : "Submit one governed create request to OOS. Platform selects the provider and model; the Console never writes the profile registry."}
       footer={
@@ -105,14 +105,14 @@ export function ModelProfileRequestModal({
             </TerasActionButton>
           ) : null}
           {step === "intent" ? (
-            <TerasActionButton
+            <TerasActionButton busy={pending}
               disabled={!intentComplete}
               onClick={() => onStepChange("review")}
             >
               Review Request
             </TerasActionButton>
           ) : step === "review" ? (
-            <TerasActionButton
+            <TerasActionButton busy={pending}
               disabled={!reviewComplete || pending}
               onClick={() => void onSubmit().catch(() => undefined)}
             >

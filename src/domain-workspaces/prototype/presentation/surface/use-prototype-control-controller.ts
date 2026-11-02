@@ -40,6 +40,7 @@ import {
   getPrototypeLifecycleOptions,
   getPrototypeWorkspaceStats,
   getSelectedPrototypeRecord,
+  resolvePrototypeEntryRecord,
 } from "../../read-model/selectors/prototype-workspace-selectors.ts";
 import type { PrototypeCommandId } from "../../work-model/commands/prototype-command-model.ts";
 import { prototypeRecordFromEntryPacket } from "../../work-model/entry/prototype-entry-packet.ts";
@@ -180,13 +181,23 @@ export function usePrototypeControlController({
     ],
   );
   const readModel = { ...effectiveProjection.readModel, source: sourceReadModel.source };
+  const [handledEntry, setHandledEntry] = useState<ConsoleSurfaceEntryIntent | null>(null);
+  const entryResolution = entryIntent ? resolvePrototypeEntryRecord(readModel.records, entryIntent.subjectRef) : null;
+  const entryError = (primaryRecordIsolation.fixtureAllowed || primaryRecordIsolation.liveAuthorityAllowed) && entryResolution && entryResolution.kind !== "ready"
+    ? entryResolution.kind === "conflict"
+      ? "The requested Prototype matches conflicting owner records. Refresh owner records before continuing."
+      : "The requested Prototype is not present in current owner records. Refresh the source and reopen this handoff; another Prototype has not been selected."
+    : null;
   const filteredRecords = useMemo(
     () => filterPrototypeRecords(readModel.records, state.filters),
     [readModel.records, state.filters],
   );
   const selectedRecord = useMemo(
-    () => getSelectedPrototypeRecord(readModel, state.selectedRecordId),
-    [readModel, state.selectedRecordId],
+    () => entryResolution && entryResolution.kind !== "ready" ? null
+      : entryIntent && handledEntry !== entryIntent && entryResolution?.kind === "ready"
+        ? entryResolution.record
+        : getSelectedPrototypeRecord(readModel, state.selectedRecordId),
+    [readModel, state.selectedRecordId, entryResolution, entryIntent, handledEntry],
   );
   const observedPreviewMode = selectedRecord
     ? (previewRuntime.modeByRecord[selectedRecord.id] ??
@@ -310,24 +321,18 @@ export function usePrototypeControlController({
       return;
     }
 
-    const focusedRecord = readModel.records.find(
-      (record) =>
-        record.id === entryIntent.subjectRef ||
-        record.sourceRef === entryIntent.subjectRef ||
-        record.linkedRecords.some(
-          (linkedRecord) => linkedRecord.ref === entryIntent.subjectRef,
-        ),
-    );
-
-    if (!focusedRecord) {
-      return;
-    }
+    if (handledEntry === entryIntent) return;
+    const resolution = resolvePrototypeEntryRecord(readModel.records, entryIntent.subjectRef);
+    if (resolution.kind !== "ready") return;
+    const focusedRecord = resolution.record;
 
     state.setFilters({ baseline: "all", lifecycle: "all", search: "" });
     state.setSelectedRecordId(focusedRecord.id);
     state.setActiveDialog("dashboard");
+    setHandledEntry(entryIntent);
   }, [
     entryIntent,
+    handledEntry,
     readModel.records,
     state.setActiveDialog,
     state.setFilters,
@@ -585,6 +590,7 @@ export function usePrototypeControlController({
   }
 
   return {
+    entryError,
     activeDialog: state.activeDialog,
     activeRecord,
     closeDialog,

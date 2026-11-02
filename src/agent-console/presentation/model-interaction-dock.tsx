@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useAgentModalPresentation } from "../state/use-agent-modal-presentation.ts";
-import { TerasModalFoundation } from "@/teras";
+import { TerasLoadingIndicator, TerasLoadingState, TerasModalFoundation } from "@/teras";
 import { useAgentConsoleSession } from "../state/agent-console-session-provider";
 import { useAgentDockPortal } from "../state/use-agent-dock-portal";
 import type { AgentContextCandidate } from "../../console-shell/context/agent-context-candidate";
@@ -230,6 +230,7 @@ export function ModelInteractionDock({
         <div className="model-dock-input-shell terminal-shell rounded-2xl p-3">
           <div className="terminal-topbar mb-3 flex items-center justify-between gap-3">
             <span className="terminal-runtime-status" data-state={providerState} title="Connection to the assistant service. The selected model is checked when you send a request.">
+              {!providerStatus ? <TerasLoadingIndicator /> : null}
               <span className="terminal-runtime-status-dot" />
               <span>{providerStateLabel}</span>
             </span>
@@ -243,6 +244,7 @@ export function ModelInteractionDock({
               aria-live="polite"
               className="terminal-transcript mono"
             >
+              {contextModeChanging ? <TerasLoadingState inline label="Changing agent mode…" /> : null}
               {agentTranscript.map((entry) => (
                 <div
                   key={entry.id}
@@ -270,7 +272,7 @@ export function ModelInteractionDock({
                   <span className="terminal-speaker">
                     agent[{providerStatus?.model ?? "governed"}]
                   </span>
-                  <pre className="terminal-thinking">Processing request...</pre>
+                  <TerasLoadingState inline label="Processing request…" />
                 </div>
               ) : null}
             </div>

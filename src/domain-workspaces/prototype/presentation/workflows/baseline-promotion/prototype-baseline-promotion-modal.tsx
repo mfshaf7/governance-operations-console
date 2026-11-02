@@ -238,7 +238,7 @@ export function PrototypeBaselinePromotionModal({
 
   return (
     <>
-      <TerasWizardModal
+      <TerasWizardModal busy={submitting || ownerProgress?.pending === true} busyLabel="Checking baseline promotion…"
         activeStepId={activeStep}
         description={ownerProgress?.mode === "live" ? "Review the Baseline decision and owner evidence, then follow exact Studio review and merged readback before preparing movement." : "Prepare a local Baseline Packet before Movement request preparation. Prototype records acceptance; Movement Control owns boundary movement."}
         footer={

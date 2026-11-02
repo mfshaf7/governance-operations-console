@@ -6,6 +6,7 @@ import {
   TerasActionButton,
   TerasActionRow,
   TerasEmptyState,
+  TerasLoadingState,
   TerasFilterBar,
   TerasMetadataList,
   TerasPanel,
@@ -18,6 +19,7 @@ import {
   TerasRegisterPanel,
   TerasSelectedPanel,
   TerasStatusPill,
+  TerasTechnicalDetails,
 } from "@/teras";
 
 import type {
@@ -32,6 +34,8 @@ type KindFilter = "all" | WorkspaceRegistryKind;
 
 export function WorkspaceRegistrySurface({
   availabilityError,
+  actionsCurrent = true,
+  retained = false,
   fixtureMode,
   onLifecycle,
   onPromote,
@@ -41,6 +45,8 @@ export function WorkspaceRegistrySurface({
   view,
 }: {
   availabilityError: string | null;
+  actionsCurrent?: boolean;
+  retained?: boolean;
   fixtureMode: boolean;
   onLifecycle: (record: WorkspaceRegistryRecord) => void;
   onPromote: (candidate: WorkspaceRegistryCandidate) => void;
@@ -83,7 +89,8 @@ export function WorkspaceRegistrySurface({
             </TerasActionButton>
           ) : null}
         </TerasPanel>
-        <TerasEmptyState fill>No canonical records are available.</TerasEmptyState>
+        {availabilityError ? <TerasEmptyState fill>No canonical records are available.</TerasEmptyState>
+          : <TerasLoadingState fill label="Loading workspace inventory…" />}
       </TerasPanelStack>
     );
   }
@@ -94,7 +101,10 @@ export function WorkspaceRegistrySurface({
       mode="register-selected"
       register={
         <TerasRegisterPanel
-          description={view === "registry" ? "Canonical active inventory from Workspace Governance." : "Approved intake entrants eligible for canonical promotion."}
+          description={retained
+            ? `Retained inventory; current source could not be confirmed. Refresh before making changes. ${availabilityError ?? ""}`
+            : fixtureMode ? "Preview records; no canonical changes are submitted."
+            : view === "registry" ? "Workspace inventory, including retained suspended and retired records." : "Approved intake entrants eligible for inventory promotion."}
           filterBar={
             <TerasFilterBar
               filters={[
@@ -120,15 +130,15 @@ export function WorkspaceRegistrySurface({
           }
           kicker={view === "registry" ? "Canonical Register" : "Promotion Register"}
           statusLabel={`${filtered.length}/${records.length} shown`}
-          statusTone={fixtureMode ? "info" : "ok"}
-          title={view === "registry" ? "Active inventory" : "Eligible entrants"}
+          statusTone={retained ? "warn" : fixtureMode ? "info" : "ok"}
+          title={view === "registry" ? "Workspace inventory" : "Eligible entrants"}
         >
           {filtered.length ? (
             <TerasRecordTable
               columns={registryColumns(view)}
               fill
               getRowId={(entry) => entryTarget(entry).record_id}
-              profile="inventory"
+              profile="register"
               onSelect={(entry) => setSelectedId(entryTarget(entry).record_id)}
               rows={[...filtered]}
               selectedRowId={selected ? entryTarget(selected).record_id : null}
@@ -143,6 +153,8 @@ export function WorkspaceRegistrySurface({
           view === "registry" ? (
             <RegistryRecordSelected
               fixtureMode={fixtureMode}
+              actionsCurrent={actionsCurrent}
+              snapshot={snapshot}
               onLifecycle={onLifecycle}
               onPromotionHistory={onPromotionHistory}
               record={selected as WorkspaceRegistryRecord}
@@ -150,6 +162,7 @@ export function WorkspaceRegistrySurface({
           ) : (
             <PromotionCandidateSelected
               candidate={selected as WorkspaceRegistryCandidate}
+              actionsCurrent={actionsCurrent}
               fixtureMode={fixtureMode}
               onPromote={onPromote}
             />
@@ -163,27 +176,32 @@ export function WorkspaceRegistrySurface({
 }
 
 function RegistryRecordSelected({
+  actionsCurrent,
+  snapshot,
   fixtureMode,
   onLifecycle,
   onPromotionHistory,
   record,
 }: {
   fixtureMode: boolean;
+  actionsCurrent: boolean;
+  snapshot: WorkspaceRegistrySnapshot;
   onLifecycle: (record: WorkspaceRegistryRecord) => void;
   onPromotionHistory: (record: WorkspaceRegistryRecord) => void;
   record: WorkspaceRegistryRecord;
 }) {
   return (
-    <TerasPanelStack fill="last">
+    <TerasPanelStack fill="last" scroll>
       <TerasSelectedPanel
         action={{
           description: fixtureMode
             ? "Inspect the lifecycle flow; fixture mode cannot mutate canonical inventory."
+            : !actionsCurrent ? "Current authority is unavailable. Refresh Registry before preparing a change."
             : "Review current authority before updating metadata or changing posture through OOS.",
           kicker: "Available Action",
           node: (
             <TerasActionRow>
-            <TerasActionButton onClick={() => onLifecycle(record)}>
+            <TerasActionButton disabled={!fixtureMode && !actionsCurrent} onClick={() => onLifecycle(record)}>
               Manage Lifecycle
             </TerasActionButton>
             <TerasActionButton emphasis="secondary" onClick={() => onPromotionHistory(record)}>View Promotion Requests</TerasActionButton>
@@ -191,7 +209,7 @@ function RegistryRecordSelected({
           ),
           title: "Lifecycle control",
         }}
-        description="Canonical inventory identity and current ownership posture."
+        description={fixtureMode ? "Preview record; no inventory changes are submitted." : !actionsCurrent ? "Last reconciled record. Refresh Registry to confirm its current posture." : "Current inventory identity and ownership posture."}
         facts={[
           { label: "Type", value: record.kind },
           { label: "Version", value: String(record.version) },
@@ -205,24 +223,27 @@ function RegistryRecordSelected({
         tone={record.posture === "active" ? "ok" : "warn"}
         variant="rich"
       />
-      <TerasPanel fit="fill" layout="header-body" overflow="auto" treatment="neutral">
-        <TerasPanelHeader
-          description="Versioned source and latest mutation evidence for this record."
-          kicker="Record Evidence"
-          title="Authority lineage"
-        />
-        <TerasMetadataList
-          columns={1}
-          items={[
-            { label: "Source", value: record.lineage.source },
-            { label: "Source ref", value: record.lineage.source_ref },
-            { label: "Record digest", value: shortDigest(record.record_digest) },
-            { label: "Last action", value: record.last_mutation.action },
-            { label: "Applied", value: new Date(record.last_mutation.applied_at).toLocaleString() },
-            { label: "Receipt", value: record.last_mutation.request_ref ?? record.last_mutation.id },
-          ]}
-          shape="list"
-        />
+      <TerasPanel fit="content" treatment="neutral">
+        <TerasPanelHeader description="Latest source and mutation context; request journals retain workflow history."
+          kicker="Record Evidence" title="Authority lineage" />
+        <TerasMetadataList columns={1} shape="list" items={[
+          { label: "Origin", value: record.lineage.source.replaceAll("-", " ") },
+          { label: "Latest change", value: record.last_mutation.action.replaceAll("-", " ") },
+          { label: "Recorded", value: new Date(record.last_mutation.applied_at).toLocaleString("en-GB", { timeZone: "UTC" }) + " UTC" },
+        ]} />
+        <TerasTechnicalDetails summary="Record details" items={[
+          { label: "Record", value: record.id },
+          { label: "Source reference", value: record.lineage.source_ref },
+          { label: "Source digest", value: record.lineage.source_digest },
+          { label: "Record digest", value: record.record_digest },
+          { label: "Mutation event", value: record.last_mutation.id },
+          { label: "Request", value: record.last_mutation.request_ref ?? "No request recorded" },
+          { label: "Readiness reference", value: record.last_mutation.readiness_ref ?? "Not recorded" },
+          { label: "Sources", value: "Workspace Governance via WGCF and OOS" },
+          { label: "Authority revision", value: snapshot.authority_revision },
+          { label: "Owner projection", value: snapshot.projected_at },
+          { label: "Projection digest", value: snapshot.projection_digest },
+        ]} />
       </TerasPanel>
     </TerasPanelStack>
   );
@@ -230,23 +251,25 @@ function RegistryRecordSelected({
 
 function PromotionCandidateSelected({
   candidate,
+  actionsCurrent,
   fixtureMode,
   onPromote,
 }: {
   candidate: WorkspaceRegistryCandidate;
+  actionsCurrent: boolean;
   fixtureMode: boolean;
   onPromote: (candidate: WorkspaceRegistryCandidate) => void;
 }) {
   return (
-    <TerasPanelStack fill="last">
+    <TerasPanelStack fill="last" scroll>
       <TerasSelectedPanel
         action={{
           description: fixtureMode ? "Inspect the promotion flow; fixture mode cannot mutate canonical inventory." : "Review current authority evidence before sending the promotion through OOS.",
           kicker: "Available Action",
-          node: <TerasActionButton onClick={() => onPromote(candidate)}>Review Promotion</TerasActionButton>,
+          node: <TerasActionButton disabled={!fixtureMode && !actionsCurrent} onClick={() => onPromote(candidate)}>Review Promotion</TerasActionButton>,
           title: "Promote entrant",
         }}
-        description="Approved intake entrant that is not yet part of active inventory."
+        description={!fixtureMode && !actionsCurrent ? "Retained entrant. Refresh Registry to confirm it is still eligible." : "Approved intake entrant that is not yet part of active inventory."}
         facts={[
           { label: "Type", value: candidate.target.kind },
           { label: "Version", value: String(candidate.intake_entry_ref.version) },
@@ -255,27 +278,28 @@ function PromotionCandidateSelected({
         ]}
         kicker="Selected Entrant"
         selected
-        status={{ label: "Eligible", tone: "ok" }}
+        status={{ label: !fixtureMode && !actionsCurrent ? "Retained" : "Eligible", tone: !fixtureMode && !actionsCurrent ? "warn" : "ok" }}
         title={candidate.target.name}
         tone="ok"
         variant="rich"
       />
-      <TerasPanel fit="fill" layout="header-body" overflow="auto" treatment="neutral">
+      <TerasPanel fit="content" treatment="neutral">
         <TerasPanelHeader
           description="Digest-bound source evidence used to detect stale review state."
           kicker="Promotion Evidence"
           title="Reviewed inputs"
         />
-        <TerasMetadataList
-          columns={1}
-          items={[
-            { label: "Record", value: candidate.target.record_id },
-            { label: "Intake digest", value: shortDigest(candidate.intake_entry_ref.digest) },
-            { label: "Candidate digest", value: shortDigest(candidate.candidate_digest) },
-            { label: "Approval refs", value: candidate.approval_refs.join(", ") },
-          ]}
-          shape="list"
-        />
+        <TerasMetadataList columns={1} shape="list" items={[
+          { label: "Intake version", value: String(candidate.intake_entry_ref.version) },
+          { label: "Approval references", value: String(candidate.approval_refs.length) },
+        ]} />
+        <TerasTechnicalDetails summary="Promotion details" items={[
+          { label: "Record", value: candidate.target.record_id },
+          { label: "Intake reference", value: candidate.intake_entry_ref.id },
+          { label: "Intake digest", value: candidate.intake_entry_ref.digest },
+          { label: "Candidate digest", value: candidate.candidate_digest },
+          ...candidate.approval_refs.map((value, index) => ({ label: `Approval ${index + 1}`, value })),
+        ]} />
       </TerasPanel>
     </TerasPanelStack>
   );
@@ -289,20 +313,14 @@ function registryColumns(view: RegistryView) {
       key: "record",
       render: (entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) => {
         const target = entryTarget(entry);
-        return <TerasRecordCellText description={target.record_id} title={target.name} />;
+        return <TerasRecordCellText meta={target.kind === "repo" ? "Repository" : target.kind === "product" ? "Product" : "Component"} title={target.name} />;
       },
     },
     {
-      header: "Type",
-      intent: "secondary" as const,
-      key: "type",
-      render: (entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) => entryTarget(entry).kind,
-    },
-    {
-      header: "Owner",
-      intent: "secondary" as const,
+      header: "Owners",
+      intent: "technical" as const,
       key: "owner",
-      render: (entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) => entryOwners(entry)[0] ?? "Unassigned",
+      render: (entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) => entryOwners(entry).join(", ") || "Unassigned",
     },
     {
       header: "Status",
@@ -328,8 +346,4 @@ function entryTarget(entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate
 
 function entryOwners(entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) {
   return [...entry.owner_refs];
-}
-
-function shortDigest(value: string) {
-  return `${value.slice(0, 12)}...${value.slice(-8)}`;
 }

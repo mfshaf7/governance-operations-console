@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  TerasActionButton, TerasActionRow, TerasContentRegion, TerasContentTray,
+  TerasActionButton, TerasActionRow, TerasContentFrame, TerasContentRegion, TerasContentTray,
   TerasDetailGrid, TerasEmptyState, TerasFieldStack, TerasMetadataList,
   TerasModalShell, TerasPanel, TerasPanelHeader, TerasRecordTable, TerasStatusPill,
 } from "@/teras";
@@ -45,6 +45,7 @@ export function PrototypeDashboardModal({
   return <>
     <TerasModalShell bodyLayout="fill" height="fill" kicker="Prototype" title="Prototype Dashboard" width="large"
       surfaceId="prototype-dashboard" onClose={() => { setOpenArea(null); onClose(); }}>
+      <TerasContentFrame fill variant="single-region">
       <TerasContentRegion fill gap="normal" scroll role="region" aria-label="Prototype dashboard content" tabIndex={0} data-prototype-dashboard="true">
         <TerasPanel frame="padded" treatment="neutral" spacing="normal">
           <TerasPanelHeader kicker="Project overview" title={record.name} description={prototypeOverviewContext(record.summary, 200)}
@@ -95,6 +96,7 @@ export function PrototypeDashboardModal({
             onOpenCloseout={onOpenCloseout} onOpenHistory={onOpenHistory} record={record} />
         </TerasDetailGrid>
       </TerasContentRegion>
+      </TerasContentFrame>
     </TerasModalShell>
     <PrototypeStatusAreaDialog areaId={openArea} onClose={() => setOpenArea(null)} receipts={receipts} record={displayRecord} />
   </>;

@@ -28,7 +28,7 @@ export function ProductReleaseActionReviewStep({
   releaseStep: ProductReleaseStep;
 }) {
   return (
-    <TerasPanelStack fill="last">
+    <TerasPanelStack fill="last" scroll>
       <TerasWizardPanel
         description="Confirm the canonical step, owner, and required capability."
         fit="content"
@@ -68,6 +68,7 @@ export function ProductReleaseActionReviewStep({
 
       <TerasWizardPanel
         description="Normalized values sent through the declared product adapter."
+        fit="content"
         kicker="Request Draft"
         title="Requested values"
       >
@@ -80,7 +81,7 @@ export function ProductReleaseActionReviewStep({
                 (option) =>
                   option.value === draft.values[field.id],
               )?.label ??
-              draft.values[field.id]?.trim() ??
+              (draft.values[field.id]?.trim() || null) ??
               "Not provided",
           }))}
         />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { LifecycleTransitionRuntimePosture } from "../../live-runtime/lifecycle-transition-live-types.ts";
 
 import {
   TerasEmptyState,
@@ -34,6 +35,7 @@ export function LifecycleTransitionsWorkspaceSurface({
   focusTransitionId = null,
   onOpenWorkbenchSurface,
   route,
+  runtimePosture,
 }: {
   focusTransitionId?: string | null;
   onOpenWorkbenchSurface: (
@@ -41,6 +43,7 @@ export function LifecycleTransitionsWorkspaceSurface({
     focusIntent?: ConsoleSurfaceEntryIntent | null,
   ) => void;
   route: LifecycleTransitionRouteOverview;
+  runtimePosture: LifecycleTransitionRuntimePosture | null;
 }) {
   const [query, setQuery] = useState("");
   const [selectedTransitionId, setSelectedTransitionId] = useState<string | null>(
@@ -96,7 +99,7 @@ export function LifecycleTransitionsWorkspaceSurface({
       mode="register-selected"
       register={
         <TerasRegisterPanel
-          description={route.description}
+          description={`${route.description}${runtimePosture?.mode === "live" && (runtimePosture.status !== "current" || runtimePosture.truncated) ? " Some source reads are unavailable or incomplete." : ""}`}
           filterBar={
             <TerasFilterBar
               filters={[
@@ -128,7 +131,11 @@ export function LifecycleTransitionsWorkspaceSurface({
             />
           ) : (
             <TerasEmptyState fill>
-              No transition matches the current search and filter.
+              {runtimePosture?.mode === "live" && runtimePosture.status !== "current"
+                ? "Handoff records are unavailable. Waiting for a current owner read."
+                : runtimePosture?.truncated && route.totalCount === 0
+                  ? "No handoff is available from the sources currently read. Coverage is incomplete."
+                  : "No transition matches the current search and filter."}
             </TerasEmptyState>
           )}
         </TerasRegisterPanel>
@@ -136,6 +143,7 @@ export function LifecycleTransitionsWorkspaceSurface({
       selected={
         <LifecycleTransitionSelected
           item={selectedTransition}
+          runtimePosture={runtimePosture}
           onOpenWorkbenchSurface={onOpenWorkbenchSurface}
         />
       }

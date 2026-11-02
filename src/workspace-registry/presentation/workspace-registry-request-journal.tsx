@@ -1,25 +1,27 @@
 "use client";
 
-import { TerasActionButton, TerasActionRow, TerasContentTray, TerasList, TerasSignalItem } from "@/teras";
+import { TerasLoadingState, TerasActionButton, TerasActionRow, TerasContentTray, TerasList, TerasSignalItem } from "@/teras";
+import { registryRequestStatus, registryTimestamp } from "./workspace-registry-copy";
 import type { InventoryRequestJournalRuntime } from "../live-runtime/use-inventory-request-journal";
 
 export function WorkspaceRegistryRequestJournal({ journal, disabled, onReopen }: {
   journal: InventoryRequestJournalRuntime; disabled: boolean; onReopen: (requestId: string) => void;
 }) {
-  return <TerasContentTray kicker="Original Inventory requests"
-    description={journal.error ?? (journal.pending ? "Reading the OOS journal; unavailable data never means no pending requests."
-      : journal.page ? `${journal.page.pending_request_count} pending request(s) across all pages. Reopening only reads the original request; it does not prepare or advance it.`
-      : "Read the original journal before a new review.")}
+  return <TerasContentTray kicker="Request history"
+    description={journal.error ?? (journal.pending ? "Reading request history…"
+      : journal.page ? journal.page.pending_request_count ? `${journal.page.pending_request_count} pending. Open the original request before starting another.` : journal.page.records.length ? "Open a request to inspect its recorded progress." : "No previous requests for this item."
+      : "History must be available before a new request.")}
     actions={<TerasActionRow>
       <TerasActionButton emphasis="secondary" disabled={disabled || journal.pending} onClick={() => void journal.load()}>Refresh original requests</TerasActionButton>
       {journal.page?.next_cursor ? <TerasActionButton emphasis="secondary" disabled={disabled || journal.pending}
         onClick={() => void journal.load(journal.page!.next_cursor!)}>More original requests</TerasActionButton> : null}
     </TerasActionRow>}>
+    {journal.pending ? <TerasLoadingState inline={!!journal.page} label="Loading request history…" /> : null}
     {journal.page?.records.length ? <TerasList frame="contained" scrollHeight="short">
-      {journal.page.records.map(entry => <TerasSignalItem key={entry.request_id} label={entry.request_id}
-        title={`${entry.action ? `${entry.action} / ` : ""}${entry.status}`} detail={entry.updated_at} tone="info"
+      {journal.page.records.map(entry => <TerasSignalItem key={entry.request_id} label={entry.action ? ({ update: "Metadata update", suspend: "Suspension", restore: "Restoration", retire: "Retirement" } as Record<string, string>)[entry.action] ?? entry.action : "Promotion"}
+        title={registryRequestStatus(entry.status)} detail={registryTimestamp(entry.updated_at)} tone="info"
         {...(disabled || journal.pending ? { statusLabel: "Wait for current read" } : {
-          ariaLabel: `Reopen original request ${entry.request_id}`, actionLabel: "Reopen original request",
+          ariaLabel: `Reopen original request ${entry.request_id}`, actionLabel: "Open request",
           onSelect: () => onReopen(entry.request_id),
         })} />)}
     </TerasList> : null}

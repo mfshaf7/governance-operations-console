@@ -139,6 +139,8 @@ export function useProposalControlController({
   );
   const [captureContext, setCaptureContext] = useState("");
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [capturePending, setCapturePending] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
   const [captureRequestId, setCaptureRequestId] = useState(
     createProposalCaptureRequestId,
   );
@@ -374,10 +376,12 @@ export function useProposalControlController({
   }, [entryIntent, proposals]);
 
   async function submitCapturedProposal() {
-    if (!canSubmitCapture) {
+    if (!canSubmitCapture || capturePending) {
       return;
     }
-
+    setCapturePending(true);
+    setCaptureError(null);
+    try {
     const capturedProposalId = previewMode
       ? (
           await submitProposalCaptureCommand({
@@ -397,6 +401,9 @@ export function useProposalControlController({
     setCaptureRequestId(createProposalCaptureRequestId());
     setCaptureTitle("");
     setCaptureOpen(false);
+    } catch (error) {
+      setCaptureError(error instanceof Error ? error.message : "Proposal capture was not confirmed. Your draft is retained.");
+    } finally { setCapturePending(false); }
   }
 
   function inspectProposal(proposal: ProposalWorkspaceScenario) {
@@ -407,9 +414,11 @@ export function useProposalControlController({
   return {
     capture: {
       previewMode,
+      pending: capturePending,
+      error: captureError,
       available: previewMode || liveSnapshot?.status === "current",
       canSubmit: canSubmitCapture,
-      close: () => setCaptureOpen(false),
+      close: () => { if (!capturePending) setCaptureOpen(false); },
       context: captureContext,
       onContextChange: setCaptureContext,
       onTitleChange: setCaptureTitle,
@@ -418,6 +427,7 @@ export function useProposalControlController({
       submit: submitCapturedProposal,
       title: captureTitle,
     },
+    source: { loading: liveSnapshot === null, error: liveSnapshot?.error ?? null },
     details: {
       close: () => setInspectedProposalId(null),
       inspect: inspectProposal,

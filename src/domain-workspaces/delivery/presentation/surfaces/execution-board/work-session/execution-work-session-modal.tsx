@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import {
+import { TerasLoadingState,
   TerasActionButton,
   TerasContentTray,
   TerasDraftCloseGuardDialog,
@@ -146,7 +146,7 @@ export function ExecutionWorkSessionModal({
 
   return (
     <>
-    <TerasModalShell
+    <TerasModalShell busy={submitting} busyLabel="Reading or updating execution session…"
       bodyLayout="scroll"
       description="Run the governed source lifecycle from authoritative OOS state, gates, and receipts."
       footer={
@@ -474,7 +474,7 @@ export function ExecutionWorkSessionModal({
                 />
               </TerasList>
             ) : runtime.mode === null ? (
-              <TerasEmptyState>Loading authoritative session state.</TerasEmptyState>
+              <TerasLoadingState label="Loading execution session…" skeleton="details" />
             ) : (
               <TerasEmptyState>
                 No work-session mutation is currently available from this surface.

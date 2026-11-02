@@ -254,7 +254,7 @@ export function PrototypeMovementRequestModal({
 
   return (
     <>
-      <TerasWizardModal
+      <TerasWizardModal busy={applicationPending} busyLabel="Reading movement progress…"
         activeStepId={activeStep}
         description={
           sourceDeliveryPacket

@@ -37,7 +37,7 @@ const lifecycle = assertWorkspaceInventoryLifecycleResult({ schema_version: 1, w
     action: "suspend", approval_refs: ["synthetic:approval"], impact_acknowledgements: ["references reviewed"], reason: "Synthetic UI recovery only.",
     operator_ref: "operator:synthetic", correlation_ref: lifecycleId, idempotency_key: lifecycleId, requested_value: null, prior_event_ref: null,
     target: preparation.target, expected_state: preparation.expected_state } });
-const writes = [], reads = [], errors = [];
+const writes = [], reads = [], errors = [], readOnlyPreparations = [];
 let offline = false, malformed = false, pageTwo = false, cancelUnknown = true;
 const browser = await chromium.launch({ headless: true });
 try {
@@ -47,6 +47,10 @@ try {
   await page.route("**/api/**", async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname, method = request.method();
     const family = path.includes("/lifecycle/") ? "lifecycle" : "promotion";
+    if (path === "/api/workspace-registry/preparations") {
+      readOnlyPreparations.push(path);
+      return route.fulfill({ status: 503, json: { error: "Synthetic new-source read unavailable" } });
+    }
     if (method === "GET") reads.push(path + url.search); else writes.push({ path, method, body: request.postDataJSON() });
     if (path === "/api/console/capabilities") return route.fulfill({ json: { artifactType: "console-runtime-capability-projection", schemaVersion: 1, mode: "live",
       capabilities: [{ id: "workspace-registry", mutation: { state: "available" }, source: { state: "available" } }] } });
@@ -117,35 +121,37 @@ try {
   await openPromotion();
   await page.getByRole("button", { name: `Reopen original request ${promotionId}`, exact: true }).click();
   await page.getByRole("button", { name: "Cancel Request", exact: true }).click();
-  await page.getByRole("button", { name: "Start a New Reviewed Promotion", exact: true }).waitFor();
-  await page.getByRole("button", { name: "Start a New Reviewed Promotion", exact: true }).click();
-  assert.equal(await page.getByRole("button", { name: "Review Promotion", exact: true }).last().isEnabled(), true);
+  await page.getByRole("button", { name: "Review another promotion", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Review another promotion", exact: true }).click();
+  await page.getByText("Synthetic new-source read unavailable", { exact: true }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Add to Registry", exact: true }).isEnabled(), false);
+  assert.equal(readOnlyPreparations.length, 1, "Only an explicit new review reads a preparation");
   assert.equal(writes.length, 3);
   await openRegistry();
   await page.getByRole("button", { name: "View Promotion Requests", exact: true }).click();
   await page.getByRole("button", { name: `Reopen original request ${promotionId}`, exact: true }).waitFor();
-  assert.equal(await page.getByRole("button", { name: "Start a New Reviewed Promotion", exact: true }).count(), 0, "Active records offer history, not a fabricated entrant");
+  assert.equal(await page.getByRole("button", { name: "Review another promotion", exact: true }).count(), 0, "Active records offer history, not a fabricated entrant");
   await openRegistry();
   await page.getByRole("button", { name: "Manage Lifecycle", exact: true }).click();
   await page.getByRole("button", { name: `Reopen original request ${lifecycleId}`, exact: true }).click();
   await page.getByRole("button", { name: "Check Review", exact: true }).waitFor();
   assert.equal(writes.length, 3, "Lifecycle cold recovery must not prepare a replacement action");
-  assert.equal(await page.getByRole("button", { name: "Prepare a New Lifecycle Action", exact: true }).isEnabled(), false);
+  assert.equal(await page.getByRole("button", { name: "Start another change", exact: true }).count(), 0);
   await page.getByRole("button", { name: "Refresh Original Request", exact: true }).click();
   assert.equal(writes.length, 3);
   offline = true;
   await openPromotion();
   await page.getByText(/Original Inventory requests are unavailable/).waitFor();
-  assert.equal(await page.getByRole("button", { name: "Review Promotion", exact: true }).last().isEnabled(), false);
+  assert.equal(await page.getByRole("button", { name: "Add to Registry", exact: true }).isEnabled(), false);
   offline = false; malformed = true;
   await page.getByRole("button", { name: "Refresh original requests", exact: true }).click();
   await page.getByText(/journal is invalid or mismatched/).waitFor();
-  assert.equal(await page.getByRole("button", { name: "Review Promotion", exact: true }).last().isEnabled(), false);
+  assert.equal(await page.getByRole("button", { name: "Add to Registry", exact: true }).isEnabled(), false);
   malformed = false; pageTwo = true;
   promotion = { ...promotion, status: "review-required", next_action: "review-and-merge" };
   await page.getByRole("button", { name: "Refresh original requests", exact: true }).click();
   await page.getByRole("button", { name: "More original requests", exact: true }).waitFor();
-  assert.equal(await page.getByRole("button", { name: "Review Promotion", exact: true }).last().isEnabled(), false);
+  assert.equal(await page.getByRole("button", { name: "Add to Registry", exact: true }).isEnabled(), false);
   await page.getByRole("button", { name: "More original requests", exact: true }).click();
   await page.getByRole("button", { name: `Reopen original request ${promotionId}`, exact: true }).click();
   await page.getByRole("button", { name: "Check Review", exact: true }).waitFor();

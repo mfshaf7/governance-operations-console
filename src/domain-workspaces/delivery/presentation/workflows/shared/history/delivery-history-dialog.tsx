@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasEmptyState, TerasFieldStack, TerasMetadataList, TerasModalShell, TerasPanel, TerasPanelHeader, TerasTimeline, TerasTimelineItem } from "@/teras";
+import { TerasLoadingState, TerasActionButton, TerasActionRow, TerasEmptyState, TerasFieldStack, TerasMetadataList, TerasModalShell, TerasPanel, TerasPanelHeader, TerasTimeline, TerasTimelineItem } from "@/teras";
 import { assertDeliveryHistoryProjection, type DeliveryHistoryProjection, type DeliveryIntakeRecord } from "../../../../live-runtime/delivery-history-live-contract.ts";
 
 const labels={intake:"Intake",work_design:"Work Design",refinement:"Refinement",closeout:"Delivery closeout"};
@@ -31,7 +31,8 @@ export function DeliveryOwnerHistoryContent({projection,error,sections,loading=f
   return (
     <TerasFieldStack overflow="auto">
       {error?<TerasEmptyState>{error}</TerasEmptyState>:null}
-      {!projection?(!error?<TerasEmptyState>Reading original owner history…</TerasEmptyState>:null):<>
+      {projection && loading ? <TerasLoadingState inline label="Refreshing owner history…" /> : null}
+      {!projection?(!error&&loading?<TerasLoadingState label="Loading original owner history…" />:null):<>
         <TerasMetadataList items={[{label:"Delivery",value:projection.record_ref},{label:"Current package status",value:projection.package.status},{label:"Current owner",value:projection.package.owner_repo??"Not projected"},{label:"History coverage",value:projection.history_state},{label:"Observed",value:projection.projected_at}]} />
         <DeliveryOwnerEventTrail projection={projection} loading={loading} onPage={onPage}/>
         {sections.map(key=>{const section=projection.sections[key];return <TerasPanel key={key} frame="padded" treatment="rail" tone={["unavailable","partial"].includes(section.state)?"warn":"info"}>

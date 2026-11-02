@@ -1,4 +1,5 @@
 import type { SourceCredentialReceipt } from "./source-authorization-contract.ts";
+import type { ReleaseWorkflowEvidence } from "./release-workflow-contract.ts";
 
 export type PlatformOperationAction =
   | "agent-source.issue"
@@ -97,6 +98,7 @@ export type PlatformOperationRecord = Readonly<{
   }>;
   operation_id: string;
   provider_operation: Readonly<{
+    release_workflow?: ReleaseWorkflowEvidence;
     action: PlatformOperationAction;
     attempt: number;
     blocker: Readonly<{
@@ -125,6 +127,7 @@ export type PlatformOperationRecord = Readonly<{
       recorded_at: string;
       source_version: string;
       source_credential?: SourceCredentialReceipt;
+      release_workflow?: ReleaseWorkflowEvidence;
     }> | null;
     retryable: boolean;
     safe_log_ref: string | null;
@@ -142,11 +145,14 @@ export type PlatformOperationRecord = Readonly<{
   workflow_id: "platform-operation";
 }>;
 
+export type PlatformHistoryPage={workspace:string;limit:number;total:number;snapshot:string;next_cursor:string|null};
+
 export type PlatformOperationsLiveSnapshot = Readonly<{
   catalog: PlatformOperationCatalog | null;
   error: Readonly<{ code: string; message: string }> | null;
   mode: "disconnected-preview" | "live" | "unavailable";
   observedAt: string;
   operations: readonly PlatformOperationRecord[];
+  historyPage?: PlatformHistoryPage|null;
   status: "current" | "degraded" | "loading" | "offline";
 }>;

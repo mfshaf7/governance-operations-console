@@ -28,6 +28,7 @@ export type LifecycleTransitionPostureItem = Readonly<{
 export type LifecycleTransitionHistoryItem = Readonly<{
   artifactId: string;
   evidenceRef: string | null;
+  evidenceRefs: readonly string[];
   label: string;
   ownerLabel: string;
   recordedAt: string;
@@ -36,6 +37,7 @@ export type LifecycleTransitionHistoryItem = Readonly<{
 
 export type LifecycleTransitionOverviewItem = Readonly<{
   sourceTitle?: string;
+  references: readonly Readonly<{ label: string; value: string }>[];
   admissionTargetRecordRef: string | null;
   applicationRunRef: string | null;
   attentionDetail: string | null;
@@ -88,11 +90,11 @@ const routeOrder = [
 
 const routeDescriptions = {
   "proposal-to-delivery":
-    "Accepted proposal becomes a Delivery Intake source after validation and target admission.",
+    "Follow an accepted proposal into Delivery Intake.",
   "proposal-to-prototype":
-    "Accepted proposal enters Prototype Landing after validation and target application.",
+    "Follow an accepted proposal into Prototype Landing.",
   "prototype-to-delivery":
-    "OOS applies the baseline-approved Prototype packet before Delivery Intake continues the admitted Epic.",
+    "Follow an approved Prototype into governed Delivery.",
 } as const satisfies Record<LifecycleTransitionRouteId, string>;
 
 const stateLabels = {
@@ -131,6 +133,8 @@ const ownerLabels: Record<string, string> = {
   "delivery-ingress-policy": "Delivery ingress",
   "operator-orchestration-service": "Orchestration",
   proposal: "Proposal",
+  "workspace-proposals": "Proposal",
+  "workspace-prototype-studio": "Prototype Studio",
   "prototype-ingress-adapter": "Prototype ingress",
   "prototype-ingress-policy": "Prototype ingress",
   prototype: "Prototype",
@@ -235,6 +239,34 @@ export function buildLifecycleTransitionOverviewItem(
     transition.admission.targetRecordRef;
 
   return {
+    references: [
+      { label: "Transition", value: transition.transitionId },
+      { label: "Source record", value: transition.source.recordId },
+      { label: "Source version", value: transition.source.sourceVersion },
+      { label: "Correlation", value: transition.correlationId },
+      { label: "Original description", value: transition.reason.detail },
+      ...[
+        ["Target record", targetRecordRef],
+        ["Validation receipt", transition.validation.receiptRef],
+        ["Validation run", transition.validation.runRef],
+        ["Admission receipt", transition.admission.receiptRef],
+        ["Application receipt", transition.application.receiptRef],
+        ["Application run", transition.application.runRef],
+        ["Native source", transition.nativeEvidence?.sourceRef],
+        ["Evidence origin", transition.nativeEvidence ? `${transition.nativeEvidence.authority} · ${transition.nativeEvidence.kind}` : null],
+        ["Supersedes", transition.supersedesTransitionId],
+        ["Superseded by", transition.supersededByTransitionId],
+        ["Cancellation reason", transition.cancelledReasonCode],
+        ["Review due", transition.nextAction?.reviewAt],
+      ].flatMap(([label, value]) => value ? [{ label: label!, value }] : []),
+      ...transition.application.resultingRefs.map((value, index) => ({ label: `Result ${index + 1}`, value })),
+      ...(transition.nativeEvidence?.evidenceRefs ?? []).map((value, index) => ({ label: `Native evidence ${index + 1}`, value })),
+      ...transition.authorityDecisions.flatMap((decision, index) => [
+        { label: `Decision ${index + 1}`, value: `${decision.authorityOwnerRef} · ${decision.controlId} · ${decision.decision}` },
+        ...(decision.receiptRef ? [{ label: `Decision receipt ${index + 1}`, value: decision.receiptRef }] : []),
+        ...(decision.justification ? [{ label: `Decision reason ${index + 1}`, value: decision.justification }] : []),
+      ]),
+    ],
     admissionTargetRecordRef: transition.admission.targetRecordRef,
     applicationRunRef: transition.application.runRef,
     attentionDetail: transitionAttentionDetail(transition),
@@ -251,7 +283,7 @@ export function buildLifecycleTransitionOverviewItem(
         }
       : null,
     posture: [
-      ...(transition.nativeEvidence ? [{ label: "Evidence origin", stateLabel: `${transition.nativeEvidence.authority} · ${transition.nativeEvidence.kind}`, tone: "info" as const }] : []),
+
       {
         label: "Validation",
         stateLabel: projectionStateLabel(transition.validation.state),
@@ -275,7 +307,7 @@ export function buildLifecycleTransitionOverviewItem(
     sourceRecordId: transition.source.recordId,
     sourceVersion: transition.source.sourceVersion,
     state: transition.state,
-    stateLabel: transition.nativeEvidence ? transition.nativeEvidence.kind === "source-acknowledgement" ? "Applied · source readback" : "Applied · owner confirmed" : stateLabels[transition.state],
+    stateLabel: transition.nativeEvidence ? transition.nativeEvidence.kind === "source-acknowledgement" ? "Source reported" : "Owner confirmed" : stateLabels[transition.state],
     targetDomain: transition.target.domain,
     targetHomeRef: transition.target.homeRef,
     targetRecordRef,
@@ -295,6 +327,7 @@ function buildLifecycleTransitionHistoryItem(
   return {
     artifactId: artifact.artifactId,
     evidenceRef: artifactEvidenceRef(artifact),
+    evidenceRefs: [...artifact.evidenceRefs],
     label: artifactLabels[artifact.artifactKind],
     ownerLabel: ownerLabel(artifact.authority.ownerRef),
     recordedAt: artifact.recordedAt,

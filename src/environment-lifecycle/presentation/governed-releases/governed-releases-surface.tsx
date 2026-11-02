@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import {
   TerasEmptyState,
+  TerasActionButton,
+  TerasActionRow,
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
@@ -46,18 +48,22 @@ const initialFilters: ProductReleaseFilters = {
 };
 
 export function GovernedReleasesSurface({
+  live,
   focusProductId = null,
   onDirtyChange,
   products,
   runtime,
 }: {
+  live?: {runtime: ReturnType<typeof import("../../live-runtime/use-governed-products.ts").useGovernedProducts>; history:(productId:string)=>ReactNode; actions?:(product:ProductReleaseCapability,onInspect:()=>void)=>ReactNode};
   focusProductId?: string | null;
   onDirtyChange: (dirty: boolean) => void;
   products: readonly ProductReleaseCapability[];
   runtime: EnvironmentLifecycleRuntimeController;
 }) {
-  const [filters, setFilters] =
+  const [localFilters, setLocalFilters] =
     useState<ProductReleaseFilters>(initialFilters);
+  const filters=live?.runtime.filters??localFilters;
+  const setFilters=live?.runtime.setFilters??setLocalFilters;
   const [mode, setMode] =
     useState<GovernedReleasesMode>("register");
   const [releaseStepId, setReleaseStepId] =
@@ -185,7 +191,7 @@ export function GovernedReleasesSurface({
               />
             }
             kicker="Governed Releases"
-            statusLabel={`${filteredProducts.length}/${products.length} shown`}
+            statusLabel={live ? `${products.length} of ${live.runtime.projection?.page.total??"?"} loaded` : `${filteredProducts.length}/${products.length} shown`}
             statusTone="info"
             title="Product Release Register"
           >
@@ -218,6 +224,7 @@ export function GovernedReleasesSurface({
           />
         }
       />
+      {live?.runtime.projection?.page.next_offset!=null ? <TerasActionRow><TerasActionButton emphasis="secondary" disabled={live.runtime.loading} onClick={()=>void live.runtime.loadMore()}>Load more products</TerasActionButton></TerasActionRow> : null}
       {selectedProduct &&
       (mode === "dashboard" ||
         mode === "release-workflow" ||
@@ -226,17 +233,23 @@ export function GovernedReleasesSurface({
           onBack={backToRegister}
           onOpenReleaseWorkflow={(stepId) => {
             onDirtyChange(false);
+            if(live)return;
             setReleaseStepId(stepId);
             setMode("release-workflow");
           }}
           onOpenRuntimeLifecycle={() => {
             onDirtyChange(false);
+            if(live)return;
             setMode("runtime-workflow");
           }}
           onRetryOperation={runtime.retryOperation}
           operations={runtime.snapshot.operations}
           product={selectedProduct}
-          receipts={runtime.snapshot.receipts}
+          receipts={live ? [] : runtime.snapshot.receipts}
+          connected={Boolean(live)}
+          sourceCurrent={live?.runtime.current}
+          ownerOperations={live?.history(selectedProduct.productId)}
+          ownerActions={live?.actions ? onInspect => live.actions!(selectedProduct,onInspect) : undefined}
         />
       ) : null}
       {selectedProduct &&
