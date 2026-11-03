@@ -63,13 +63,13 @@ export const proposalRegisteredRepoOptions: ProposalRegisteredRepoOption[] =
     value: `repo://${repo.valueKey}`,
   }));
 
-export function proposalRegisteredRepoSelectOptions(): Array<{
+export function proposalRegisteredRepoSelectOptions(repositories = proposalRegisteredRepoOptions): Array<{
   label: string;
   value: string;
 }> {
   return [
     { label: "Select owner repo", value: "" },
-    ...proposalRegisteredRepoOptions.map((repo) => ({
+    ...repositories.map((repo) => ({
       label: `${repo.label} / ${repo.owner}`,
       value: repo.value,
     })),
@@ -137,11 +137,13 @@ export function proposalDispositionRoutePanelProjection(accepting: boolean) {
 }
 
 export function proposalDispositionStepProjection({
+  registeredRepositories = proposalRegisteredRepoOptions,
   decisionDraft,
   proposal,
   readOnly,
   routeSelectionDraft,
 }: {
+  registeredRepositories?: ProposalRegisteredRepoOption[];
   decisionDraft: ProposalDecisionDraft;
   proposal: ProposalWorkspaceScenario;
   readOnly: boolean;
@@ -161,7 +163,7 @@ export function proposalDispositionStepProjection({
   const routeHasRepositoryGate =
     accepting && proposalRouteSelectionHasRepositoryGate(routeSelectionDraft);
   const selectedRepo =
-    proposalRegisteredRepoOptions.find(
+    registeredRepositories.find(
       (repo) => repo.value === routeSelectionDraft.repoRef,
     ) ?? null;
   const routeComplete =

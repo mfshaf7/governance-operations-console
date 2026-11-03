@@ -1,4 +1,5 @@
 export type OwnerBootstrapSummary = {
+  operation: "bootstrap" | "configure-verification";
   requestId: string; ownerRepo: string; state: string; revision: string; sourceRevision: string | null;
   sourceStartDigest: string; sessionId: string | null; sourceIntentRef: string | null; nextAction: string;
   draft: { state: string; digest: string; revision: string } | null;
@@ -39,6 +40,7 @@ export function projectOwnerBootstrap(value: unknown): OwnerBootstrapSummary {
   if (item.schema_version !== 1 || item.workflow_id !== "repository-owner-bootstrap" ||
       item.app_acceptance !== false || item.inventory_admission !== false || item.runtime_activation !== false ||
       !["prepared", "existing-controls-inspected", "source-work", "source-created", "succeeded", "cancelled"].includes(String(item.state))) throw new Error("Owner controls are not app acceptance or admission.");
+  if (item.operation !== undefined && item.operation !== "configure-verification") throw new Error("Unknown owner setup operation.");
   const next = bootstrapClosed(item.next_action, ["code", "authority"]);
   if (next.authority !== "operator-orchestration-service") throw new Error("Owner setup authority changed.");
   const draft = item.draft == null ? null : bootstrapObject(item.draft);
@@ -64,7 +66,7 @@ export function projectOwnerBootstrap(value: unknown): OwnerBootstrapSummary {
     if (pr && (typeof pr.url !== "string" || !/^https:\/\/github\.com\/[A-Za-z0-9-]+\/[A-Za-z0-9._-]+\/pull\/[1-9][0-9]*$/.test(pr.url) || !/^[0-9a-f]{40}$/.test(String(pr.head_commit)))) throw new Error("Owner setup PR identity is malformed.");
     sourceDelivery[action] = { state: String(control.state), command, pullRequest: pr ? { url: String(pr.url), head_commit: String(pr.head_commit) } : null };
   }
-  return { requestId: bootstrapId(item.request_id), ownerRepo: bootstrapOwner(item.owner_repo), state: String(item.state), revision: bootstrapTime(item.revision),
+  return { operation: item.operation === "configure-verification" ? "configure-verification" : "bootstrap", requestId: bootstrapId(item.request_id), ownerRepo: bootstrapOwner(item.owner_repo), state: String(item.state), revision: bootstrapTime(item.revision),
     sourceRevision: draft ? bootstrapTime(draft.revision) : null, sourceStartDigest: bootstrapDigest(item.source_start_digest),
     sessionId: item.session_id === null ? null : bootstrapId(item.session_id), sourceIntentRef: item.source_intent_ref === null ? null : bootstrapId(item.source_intent_ref),
     nextAction: bootstrapId(next.code), draft: draft ? { state: bootstrapId(draft.state), digest: bootstrapDigest(draft.digest), revision: bootstrapTime(draft.revision) } : null, sourceDelivery,

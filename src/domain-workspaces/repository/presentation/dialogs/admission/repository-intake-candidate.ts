@@ -1,6 +1,8 @@
 import type { WorkspaceIntakeCustodyPreparation } from "@/console-integration/workspace-intake/workspace-intake-live-types.ts";
 import type { RepositoryCustodyWorkflowResult } from "../../../live-runtime/repository-custody-live-types.ts";
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
+import { repositoryIntakeMissingFields, type RepositoryIntakeDraft } from "./repository-intake-guidance.ts";
+export type { RepositoryIntakeDraft } from "./repository-intake-guidance.ts";
 
 export function repositoryIntakeCustody(
   repository: RepositoryWorkspaceRecord | null,
@@ -16,21 +18,13 @@ export function repositoryIntakeCustody(
   return { target: { kind: "repo" as const, name }, requestId: result.request.request_id };
 }
 
-export type RepositoryIntakeDraft = {
-  repoClass: string; securityBinding: string; securityOwner: string; notes: string;
-  validationPosture: string; graphRole: string; catalogRefs: string; validationNotes: string;
-};
-
 export const emptyRepositoryIntakeDraft: RepositoryIntakeDraft = {
   repoClass: "", securityBinding: "", securityOwner: "", notes: "",
   validationPosture: "", graphRole: "", catalogRefs: "", validationNotes: "",
 };
 
 export function repositoryIntakeRecord(draft: RepositoryIntakeDraft): WorkspaceIntakeCustodyPreparation["requested_record"] | null {
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(draft.repoClass.trim()) ||
-      !["true", "false"].includes(draft.securityBinding) ||
-      (draft.securityBinding === "true" && !/^[a-z0-9][a-z0-9._-]*$/.test(draft.securityOwner.trim())) ||
-      !draft.notes.trim() || !draft.validationPosture || !draft.graphRole.trim() || !draft.validationNotes.trim()) return null;
+  if (repositoryIntakeMissingFields(draft).length) return null;
   return {
     kind: "repo", repo_class: draft.repoClass.trim(), requires_security_bindings: draft.securityBinding === "true",
     security_owner: draft.securityBinding === "true" ? draft.securityOwner.trim() : null,
@@ -38,7 +32,7 @@ export function repositoryIntakeRecord(draft: RepositoryIntakeDraft): WorkspaceI
     validation_behavior: {
       posture: draft.validationPosture, wgcf_graph_role: draft.graphRole.trim(),
       catalog_refs: draft.catalogRefs.split(",").map((ref) => ref.trim()).filter(Boolean),
-      notes: draft.validationNotes.trim(),
+      notes: draft.validationNotes.trim() || "Source-owner controls and source review are maintained by this repository. Application verification may be configured later; registration is not application acceptance.",
     },
   };
 }

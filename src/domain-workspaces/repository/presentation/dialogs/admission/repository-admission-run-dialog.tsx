@@ -30,12 +30,14 @@ import {
 } from "./repository-admission-view-model.ts";
 
 export function RepositoryAdmissionRunDialog({
+  executionAvailable,
   onBack,
   onClose,
   onRun,
   receipt,
   repository,
 }: {
+  executionAvailable: boolean;
   onBack: (repository: RepositoryWorkspaceRecord | null) => void;
   onClose: () => void;
   onRun: (repository: RepositoryWorkspaceRecord) => void;
@@ -43,6 +45,7 @@ export function RepositoryAdmissionRunDialog({
   repository: RepositoryWorkspaceRecord | null;
 }) {
   const canRun = Boolean(
+    executionAvailable &&
     repository &&
     repository.blockers.length === 0 &&
     repository.admissionState === "ready" &&
@@ -107,7 +110,7 @@ export function RepositoryAdmissionRunDialog({
             data-repository-admission-run="true"
             disabled={!canRun}
             onClick={() => {
-              onRun(activeRepository);
+              if (canRun) onRun(activeRepository);
             }}
           >
             Run Local Admission Review

@@ -19,16 +19,12 @@ import type { RepositoryWorkspaceSummaryMetric } from "../../read-model/reposito
 export function RepositoryControlOverviewPanel({
   canProvisionRepository,
   onOpenRepositoryRequestDraft,
-  onOpenProposalGates,
-  showProposalGates = false,
   requestSubmittedAt,
   summary,
   workspaceStatus,
 }: {
   canProvisionRepository: boolean;
   onOpenRepositoryRequestDraft: () => void;
-  onOpenProposalGates?: () => void;
-  showProposalGates?: boolean;
   requestSubmittedAt: string | null;
   summary: RepositoryWorkspaceSummaryMetric[];
   workspaceStatus: OperationSurfaceStatusModel;
@@ -38,7 +34,9 @@ export function RepositoryControlOverviewPanel({
       <TerasRecordControlSummaryPanel
         description={workspaceStatus.summary}
         kicker="Repository Summary"
-        metrics={summary}
+        metrics={summary.map(item => ({
+          ...item, label: item.id === "ready" ? "Ready to register" : item.id === "admitted" ? "Registered" : item.id === "blocked" ? "Needs attention" : item.label,
+        }))}
         statusButtonAttribute="data-repository-status-button"
         title="Repository posture"
         surfaceStatus={projectOperationSurfaceStatusModel(workspaceStatus)}
@@ -53,25 +51,21 @@ export function RepositoryControlOverviewPanel({
             onClick={onOpenRepositoryRequestDraft}
           >
             <Plus aria-hidden="true" size={14} />
-            Provision Repository
+            Create repository
           </TerasActionButton>
-          {showProposalGates ? <TerasActionButton emphasis="secondary" onClick={onOpenProposalGates}>
-            Proposal Gates
-          </TerasActionButton> : null}
           </TerasActionRow>
         }
         boundary={
           <>
-            OOS owns provisioning, WGCF owns readiness, and GitHub provides
-            provider truth. Workspace Intake and active inventory remain
-            separate governed actions.
+            Creation makes the repository available. Workspace registration is a
+            separate review when it needs to join managed workspace workflows.
           </>
         }
-        boundaryKicker="Mutation Boundary"
+        boundaryKicker="After creation"
         description={canProvisionRepository
-          ? "Governed organization-repository creation with exact provider readback and a terminal receipt."
+          ? "Create a GitHub organization repository for a new project."
           : "Repository provisioning is unavailable until its exact owner capability is executable."}
-        kicker="Repository Provisioning"
+        kicker="New repository"
         receipt={
           requestSubmittedAt
             ? {
@@ -87,7 +81,7 @@ export function RepositoryControlOverviewPanel({
               }
             : null
         }
-        title="Provision a repository"
+        title="Create a repository"
         tone="info"
       />
     </TerasRecordControlOverviewGrid>

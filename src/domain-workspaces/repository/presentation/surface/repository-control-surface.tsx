@@ -23,26 +23,19 @@ import {
   repositorySelectedActionLabel,
   repositorySelectedActionTitle,
 } from "../shared/repository-control-projection.ts";
-import { RepositoryControlDialogStack } from "./repository-control-dialog-stack.tsx";
-import { useRepositoryControlController } from "./use-repository-control-controller.ts";
+import type { RepositoryControlController } from "./use-repository-control-controller.ts";
 
 export function RepositoryControlSurface({
   entryIntent = null,
-  onOpenDeliveryCatalog,
+  controller,
 }: {
   entryIntent?: ConsoleSurfaceEntryIntent | null;
-  onOpenDeliveryCatalog?: (repositoryId: string) => void;
+  controller: RepositoryControlController;
 }) {
-  const controller = useRepositoryControlController({
-    entryIntent,
-    onOpenDeliveryCatalog,
-  });
   const selectedRepository = controller.selectedRepository;
   const overview =
     <RepositoryControlOverviewPanel
       canProvisionRepository={controller.overview.canProvisionRepository}
-      onOpenProposalGates={controller.canonicalGate.openDialog}
-      showProposalGates={controller.canonicalGate.available}
       onOpenRepositoryRequestDraft={controller.overview.onOpenRepositoryRequestDraft}
       requestSubmittedAt={controller.overview.requestSubmittedAt}
       summary={controller.overview.summary} workspaceStatus={controller.overview.workspaceStatus} />;
@@ -67,7 +60,6 @@ export function RepositoryControlSurface({
           </TerasEmptyState>
         }
       />
-      <RepositoryControlDialogStack controller={controller} />
       </>
     );
   }
@@ -128,10 +120,21 @@ export function RepositoryControlSurface({
         selected={
           <TerasSelectedPanel
             action={{
-              description: selectedRepository.nextAction,
-              kicker: "Required Action",
+              description: controller.intake.required
+                ? controller.intake.unavailableReason ?? "Review whether this repository should join the managed workspace, including its ownership and checks."
+                : selectedRepository.nextAction,
+              kicker: selectedRepository.blockers.length ? "Needs attention" : "Available actions",
               node: (<TerasActionRow>
-                <TerasActionButton
+                {controller.intake.required ? <>
+                  <TerasActionButton emphasis="primary"
+                    data-repository-selected-action="true" data-repository-intake-open="true"
+                    disabled={!controller.intake.canPrepare} onClick={controller.intake.open}>
+                    Review workspace registration
+                  </TerasActionButton>
+                  <TerasActionButton emphasis="secondary" onClick={controller.selectedRepositoryAction.open}>
+                    Inspect Repository
+                  </TerasActionButton>
+                </> : <TerasActionButton
                   data-repository-selected-action="true"
                   onClick={controller.selectedRepositoryAction.open}
                   emphasis="primary"
@@ -140,13 +143,10 @@ export function RepositoryControlSurface({
                     selectedRepository,
                     controller.selectedRepositoryCustodyResult,
                   )}
-                </TerasActionButton>
-                <TerasActionButton emphasis="secondary" disabled={!controller.intake.canPrepare}
-                  data-repository-intake-open="true" onClick={controller.intake.open}>
-                  Prepare Workspace Intake
-                </TerasActionButton>
+                </TerasActionButton>}
+                {controller.verification.available ? <TerasActionButton emphasis="secondary" onClick={controller.verification.show}>Application verification</TerasActionButton> : null}
               </TerasActionRow>),
-              title: repositorySelectedActionTitle(
+              title: controller.intake.required ? "Workspace registration" : selectedRepository.admissionState === "admitted" ? "Workspace registration complete" : repositorySelectedActionTitle(
                 selectedRepository,
                 controller.selectedRepositoryCustodyResult,
               ),
@@ -168,7 +168,6 @@ export function RepositoryControlSurface({
           "data-repository-selected-launcher": "true",
         }}
       />
-      <RepositoryControlDialogStack controller={controller} />
     </>
   );
 }

@@ -7,6 +7,7 @@ import styles from "./teras-patterns.module.css";
 import { TerasModalFoundation } from "./teras-modal-foundation";
 import { cx } from "./teras-utils";
 import { TerasLoadingState } from "./teras-loading-state";
+import { TerasActionRow } from "./teras-action";
 
 type TerasModalShellAttributes = Omit<HTMLAttributes<HTMLElement>, "children"> &
   Record<`data-${string}`, string | number | boolean | undefined>;
@@ -19,6 +20,7 @@ export function TerasModalShell({
   children,
   description,
   footer,
+  headerActions,
   kicker,
   modalAttributes,
   onClose,
@@ -34,6 +36,7 @@ export function TerasModalShell({
   children: ReactNode;
   description?: ReactNode;
   footer?: ReactNode;
+  headerActions?: ReactNode;
   height: "content" | "fill";
   kicker: string;
   modalAttributes?: TerasModalShellAttributes;
@@ -45,6 +48,11 @@ export function TerasModalShell({
   const titleId = useId();
   const descriptionId = useId();
   const { className: modalClassName, ...modalProps } = modalAttributes ?? {};
+  const closeControl = (
+    <button aria-label="Close modal" className={styles.closeButton} onClick={onClose} type="button">
+      <X aria-hidden="true" size={16} />
+    </button>
+  );
 
   return (
     <TerasModalFoundation
@@ -76,14 +84,7 @@ export function TerasModalShell({
               ) : null}
               {busy ? <TerasLoadingState inline label={busyLabel} /> : null}
             </div>
-            <button
-              aria-label="Close modal"
-              className={styles.closeButton}
-              onClick={onClose}
-              type="button"
-            >
-              <X aria-hidden="true" size={16} />
-            </button>
+            {headerActions ? <TerasActionRow>{headerActions}{closeControl}</TerasActionRow> : closeControl}
           </header>
           <div className={styles.modalBody}>{children}</div>
           {footer ? <footer className={styles.modalFooter}>{footer}</footer> : null}

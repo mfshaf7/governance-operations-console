@@ -5,10 +5,12 @@ import { assertWorkspaceInventoryLifecyclePreparation } from "../workspace-regis
 import { workspaceInventoryLifecyclePreparationFixture } from "../fixtures/workspace-registry.fixture";
 import { intakeOwnerSetup, type IntakeOwnerSetup } from "../model/workspace-intake-guidance";
 
-export function useIntakeOwnerSetup(record: WorkspaceRegistryRecord | null, fixtureMode: boolean) {
+export function useIntakeOwnerSetup(record: WorkspaceRegistryRecord | null, fixtureMode: boolean, repositoryName?: string) {
   const [state, setState] = useState<{ status: "idle" | "loading" | "current" | "preview" | "unavailable"; setup: IntakeOwnerSetup | null; error: string | null }>({ status: "idle", setup: null, error: null });
   const generation = useRef(0);
-  const name = record?.name ?? "";
+  // A repository entrant can reuse another active owner's recorded plan without
+  // inventing a Registry record for the entrant. The same bounded read applies.
+  const name = repositoryName ?? record?.name ?? "";
   const load = useCallback(async (): Promise<IntakeOwnerSetup | null> => {
     const sequence = ++generation.current;
     if (!name) { setState({ status: "idle", setup: null, error: null }); return null; }

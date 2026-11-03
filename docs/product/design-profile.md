@@ -22,6 +22,39 @@ single-domain Delivery clone.
 
 ## Shared Visual System
 
+### Repository Control batch-four preview
+
+Repository retains its shared compact-control overview, register and selected
+context. All five summary cards—Total, Ready to register, Registered, Needs
+attention and Retired—stay in one row at supported desktop widths, as the
+operator requested. **Requests** and **Repositories** use the shared segmented
+control in the modal header. The Requests attention count comes from the same
+owner snapshot as its list and confirmation dialog. Optional modal header actions
+extend Teras; callers without that option
+retain their existing composition. Summary cards use the existing five-column grid.
+
+Creation uses neutral full-width Repository, Workspace ownership and Approval
+sections with readable paired fields and one scrolling body. Owner result chrome
+appears only when a result or failure exists. Completed requests show original
+read-only facts and a compact result, with technical references disclosed on
+demand. The selected active repository shows registration complete and available
+inspection rather than a duplicate disabled Intake action. Draft switches use
+the existing discard guard. This is the first operator-review slice of the wider
+Repository repair batch, not full Repository operating acceptance.
+
+The registration repair keeps that composition. A live repository awaiting
+registration has one primary `Review workspace registration` action and secondary
+inspection. The details dialog uses the same registration action and reason when
+unavailable. Prototype-local admission controls appear only in explicitly
+disconnected demonstration mode; they do not compete with the live path.
+
+Registration keeps its content-sized form and shared fields. Purpose, Source
+validation, and Security responsibility group user decisions; metadata already known from custody
+is read-only. Repository type fills internal category/role, and existing shared
+Intake choice labels provide explanations. Advanced overrides and technical codes
+stay available without dominating the main task. Form errors name missing choices,
+owner-read failures retain input, and leaving edited details uses the shared guard.
+
 ### Primary Console activity controls (batch three preview)
 
 The primary Console retains its own visual treatment. Governance Activity actions
@@ -245,3 +278,36 @@ references in technical disclosure while retaining every exact value.
 Connected product records and protected owner workflow navigation reuse the same
 interface. Recorded evidence does not become executable workflow progress. Source
 health, product capability, release state and runtime observation remain distinct.
+
+
+### Repository request navigation (2026-11-03)
+
+Repository Control separates **Requests** from **Repositories**. Requests reads
+canonical Proposal repository requirements, not provisioning receipt history.
+Its attention count includes unresolved requirements and interrupted confirmation;
+resolved requests remain inspectable in history and do not contribute to attention.
+Loading, unavailable or stale source counts are unknown, never a successful zero.
+Retained unavailable metadata is read-only. Exact attention/Handoff links open the
+requested Proposal requirement; a missing target never silently selects another.
+The existing reviewed OOS confirmation binds the exact Proposal version and verified
+custody receipt. The Console does not auto-resolve requirements or change Disposition.
+
+
+Request fulfilment starts with the shared **Create new / Already created** method
+control. Only the selected method's fields are visible. The creation action and
+attachment selector are separate forms, with draft state preserved across method
+switches. Attachment uses a known repository or a GitHub URL, automatic provider
+identity lookup, explicit purpose acknowledgement and reviewed custody approval.
+After success, one associated result is read-only with notes and confirmation;
+multiple matching results use a selector. Owner unavailability stays explicit.
+
+### Deferred application verification
+
+Repository registration derives source-owner governance participation for an
+application; application test-plan prose stays optional. Source controls and
+application verification have separate status. Owner setup can begin with no
+application suite or marker. Active repositories expose **Application
+verification**, which loads the current reviewed plan and offers manual checks,
+existing test commands or both. Saving uses the existing exact-source review
+workflow, not direct profile mutation. Instructions never display as completed
+tests. Independent source controls are retained.

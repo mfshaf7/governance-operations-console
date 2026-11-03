@@ -1,3 +1,4 @@
+import { assertRepositoryProviderLookup } from "../live-runtime/repository-provider-lookup.ts";
 import { createHash } from "node:crypto";
 
 import {
@@ -54,6 +55,14 @@ export class RepositoryCustodyOosError extends Error {
     this.retryable = retryable;
     this.status = status;
   }
+}
+
+export async function lookupRepositoryProvider(owner: string, name: string, {env = process.env, fetchImpl = fetch}: {env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch} = {}) {
+  if (![owner,name].every(part => /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(part)) || name.toLowerCase().endsWith(".git")) throw new RepositoryCustodyOosError("Provide valid GitHub repository coordinates.","repository_provider_lookup_invalid",400);
+  const result = assertRepositoryProviderLookup(await repositoryCustodyOosRequest(resolveRepositoryCustodyOosConfig(env),
+    `/v1/repository-custody/provider-repository?${new URLSearchParams({owner,name})}`, {method:"GET"}, fetchImpl));
+  if (result.owner.toLowerCase() !== owner.toLowerCase() || result.name.toLowerCase() !== name.toLowerCase()) throw new RepositoryCustodyOosError("Repository lookup returned another repository.","repository_provider_identity_mismatch",502);
+  return result;
 }
 
 export async function linkExistingRepositoryCustody(
@@ -247,6 +256,7 @@ export function buildRepositoryCustodyRequest(
     {
       approval_note: intent.approvalNote.trim(),
       decision: "approve-link-existing",
+      ...(intent.proposalId ? {repository_request_ref:`repo-request://proposal/${intent.proposalId}`,created_for_request:true} : {}),
       operator_id: config.operatorId,
       request_id: intent.requestId,
       requested_at: intent.requestedAt,
@@ -281,7 +291,7 @@ export function buildRepositoryCustodyRequest(
       credential_binding_ref: config.credentialBindingRef,
     },
     correlation: {
-      correlation_id: intent.requestId,
+      correlation_id: intent.proposalId ? `repo-request://proposal/${intent.proposalId}` : intent.requestId,
       causation_id: null,
     },
     idempotency_key: intent.requestId,
@@ -311,6 +321,7 @@ export function buildRepositoryProvisionRequest(
     {
       approval_note: intent.approvalNote.trim(),
       decision: "approve-provision-new",
+      ...(intent.proposalId ? { repository_request_ref: `repo-request://proposal/${intent.proposalId}` } : {}),
       ...(intent.correctionOfRequestId ? { correction_of_request_id: intent.correctionOfRequestId } : {}),
       operator_id: config.operatorId,
       repository: {
@@ -354,7 +365,7 @@ export function buildRepositoryProvisionRequest(
       credential_binding_ref: config.credentialBindingRef,
     },
     correlation: {
-      correlation_id: intent.requestId,
+      correlation_id: intent.proposalId ? `repo-request://proposal/${intent.proposalId}` : intent.requestId,
       causation_id: intent.correctionOfRequestId ?? null,
     },
     idempotency_key: intent.requestId,
@@ -381,6 +392,7 @@ function assertRepositoryCustodyLinkIntent(
 ) {
   assertRepositoryCustodyRequestId(value.requestId);
   if (
+    (value.proposalId !== undefined && (!/^idea-[1-9][0-9]*$/.test(value.proposalId) || value.createdForRequest !== true)) ||
     !value.repositoryId.trim() ||
     !value.repositoryOwner.trim() ||
     !value.repositoryName.trim() ||
@@ -414,6 +426,7 @@ function assertRepositoryProvisionIntent(value: RepositoryProvisionIntent) {
     }
   }
   if (
+    (value.proposalId !== undefined && !/^idea-[1-9][0-9]*$/.test(value.proposalId)) ||
     !repositoryCoordinatePattern.test(value.repositoryOwner.trim()) ||
     !repositoryCoordinatePattern.test(value.repositoryName.trim()) ||
     value.repositoryName.trim().toLowerCase().endsWith(".git") ||

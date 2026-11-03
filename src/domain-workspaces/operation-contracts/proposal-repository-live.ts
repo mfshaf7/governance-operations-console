@@ -26,6 +26,7 @@ export type ProposalRepositoryGateRequest = Readonly<{
   title: string;
   recordRef: string;
   recordVersion: string;
+  sourceCurrent: boolean;
   resolution: ProposalRepositoryResolutionRecord | null;
   recovery: ProposalRepositoryResolutionRecord | null;
 }>;

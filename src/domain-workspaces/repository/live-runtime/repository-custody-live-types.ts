@@ -31,6 +31,8 @@ export type RepositoryProvisioningSettings = Readonly<{
 
 export type RepositoryCustodyLinkIntent = Readonly<{
   approvalNote: string;
+  proposalId?: string;
+  createdForRequest?: true;
   custodyKind: RepositoryCustodyKind;
   providerHost: string;
   providerRepositoryId: string;
@@ -45,6 +47,7 @@ export type RepositoryCustodyLinkIntent = Readonly<{
 export type RepositoryProvisionIntent = Readonly<{
   approvalNote: string;
   correctionOfRequestId?: string;
+  proposalId?: string;
   custodyKind: RepositoryCustodyKind;
   repositoryDescription: string;
   repositoryName: string;

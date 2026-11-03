@@ -17,10 +17,47 @@ actions.
 Repository is a focused control modal. It is not a Delivery fullscreen
 workspace and not a Proposal-style workflow ladder.
 
-Its main composition shares Proposal's summary/action overview, register and
-selected-record launcher. Gate-specific fields belong in the focused Repository
-gate dialog. Canonical Proposal navigation opens that dialog at the exact request;
-the existing action panel provides the general Proposal Gates entry.
+Repository Control has **Requests** and **Repositories** views. Repositories
+shares Proposal's summary/action overview, register and selected-record launcher.
+Requests has a register and selected context for canonical Proposal requirements.
+Confirmation fields belong in its focused request dialog. Canonical Proposal and
+Console attention navigation open that dialog at the exact request; repository
+creation contains only creation actions.
+
+The context panel distinguishes required work from available inspection. An
+active registered repository shows registration complete and does not offer a
+duplicate Intake action. A registration action explains that it reviews whether
+a created or linked repository joins the managed workspace, its ownership and
+checks; classification and active Inventory remain distinct owner decisions.
+Unavailable actions show their reason. Creation capability cannot represent the
+availability of custody, lifecycle or other independent owner operations.
+
+For a live repository ready to register, `Review workspace registration` is the
+primary action and repository inspection is secondary. The inspection dialog
+offers the same canonical registration path, with identical source and capability
+checks. If registration is unavailable, its reason remains visible; local
+admission is neither a fallback nor a competing path. Local admission launch and
+execution require explicitly disconnected preview mode, including when a previously
+opened dialog outlives a mode change.
+
+Registration uses Purpose, Testing and validation, and Security responsibility sections. Readable
+repository types derive existing category/role pairs; checks and security remain
+explicit choices. Shared Intake display labels replace raw validation codes.
+The form collects known custody metadata and retained creation descriptions,
+can read an active check owner's current plan through the existing bounded
+Registry preparation, and exposes reviewed overrides in Advanced settings.
+Limited profile role combinations and required direct-check bindings follow
+the Intake policy. Missing input is explained, drafts are guarded, and preparation
+preserves the separate classification/Inventory decisions. Owner-plan metadata
+is contextual evidence, not a successful test result or source-owner readiness.
+
+Repository creation uses grouped, full-width Repository, Workspace ownership
+and Approval sections. Supporting defaults and exact request/receipt references
+use technical disclosure. An idle result checklist must not compete with inputs.
+Retained completed requests use read-only original request and receipt facts,
+not new draft validation. Switching retained requests protects unsaved input,
+as do close and back actions. The existing correction, replay and original-request
+recovery semantics remain independent of this form layout.
 
 ## Ingress
 
@@ -202,7 +239,7 @@ Onboarding is a bounded multi-step workflow:
 
 The prototype-local admission review may retain a complete evidence receipt,
 but it must leave the repository's canonical admission state unchanged. Only
-the future owner-routed admission path may project a repository as admitted.
+current canonical Workspace Inventory may project a repository as admitted.
 The run-events panel must use events emitted by the local runtime; it must not
 manufacture waiting, ready, or completed log lines from current UI state.
 
@@ -283,3 +320,52 @@ Repository must not:
 - `../repository-custody-live-integration.md`
 - `../repository-provisioning-live-integration.md`
 - `../repository-lifecycle-live-integration.md`
+
+
+### Repository request navigation (2026-11-03)
+
+Repository Control separates **Requests** from **Repositories**. Requests reads
+canonical Proposal repository requirements, not provisioning receipt history.
+Its attention count includes unresolved requirements and interrupted confirmation;
+resolved requests remain inspectable in history and do not contribute to attention.
+Loading, unavailable or stale source counts are unknown, never a successful zero.
+Retained unavailable metadata is read-only. Exact attention/Handoff links open the
+requested Proposal requirement; a missing target never silently selects another.
+The existing reviewed OOS confirmation binds the exact Proposal version and verified
+custody receipt. The Console does not auto-resolve requirements or change Disposition.
+
+
+### Request fulfilment
+
+Proposal decides whether to reuse existing work's repository or request a
+repository for new work. The latter can be fulfilled in two reviewed ways:
+
+- **Create new** opens the existing approved provisioning form, with the
+  originating request filled automatically.
+- **Already created** selects a known repository or accepts its GitHub root URL.
+  A read-only OOS lookup resolves the immutable provider ID; the user never needs
+  to find or type that ID. The operator confirms it was created for this request,
+  reviews ownership, and approves the existing custody-link workflow. That
+  workflow independently rereads provider identity and produces an attachment
+  receipt; lookup metadata alone is not custody or request fulfilment.
+
+Both paths bind the exact request through immutable `correlation.correlation_id`.
+Standalone creation and unrelated receipts cannot directly confirm a request.
+An explicit reviewed attachment records a new association and receipt; it does
+not rewrite the original standalone or historical receipt. Provisioning
+corrections keep `causation_id` for the failed creation and preserve their origin.
+
+The form shows one method's fields at a time and preserves an attachment draft
+when switching methods. After success, the verified repository is shown for
+confirmation; a selector is needed only for multiple matching results. Final
+Proposal confirmation remains explicit. Interrupted historical confirmation
+keeps its exact original inputs and cannot silently select another repository.
+
+OOS rejects fresh confirmation with an unbound or foreign receipt. The live
+Proposal existing-owner selector uses current active Inventory with no fixture
+fallback. Disconnected-preview fixtures retain their explicit scope.
+
+Ingress inspection covers canonical Proposal API decisions and their adapter
+origins, standalone creation, existing linkage, and Prototype/Delivery resolved
+custody consumers. Only Proposal's decision currently feeds the live pending
+requirement queue. Downstream custody consumption is not a separate creator.

@@ -44,17 +44,6 @@ export function RepositoryWorkspaceRegisterTable({
       ),
     },
     {
-      header: "Owner",
-      intent: "secondary",
-      key: "owner",
-      render: (record) => (
-        <TerasRecordCellText
-          description={record.repoClass}
-          title={record.owner}
-        />
-      ),
-    },
-    {
       header: "Status",
       intent: "status",
       key: "status",
@@ -75,6 +64,7 @@ export function RepositoryWorkspaceRegisterTable({
             onInspectRepository(record);
           }}
           emphasis="secondary"
+          size="table-compact"
         >
           {repositoryRecordActionLabel(record)}
         </TerasActionButton>

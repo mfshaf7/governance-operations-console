@@ -1,5 +1,6 @@
 "use client";
 
+import { useProposalExistingRepositories } from "../../../../../operation-integrations/use-proposal-existing-repositories.ts";
 import { useRef, useState, type FormEvent } from "react";
 import { useDraftAdvisor } from "@/agent-console";
 
@@ -33,7 +34,6 @@ import { ProposalDispositionRoutePanel } from "./proposal-disposition-route-pane
 import {
   proposalAcceptedRouteTarget,
   proposalDispositionStepProjection,
-  proposalRegisteredRepoOptions,
 } from "./proposal-disposition-step-view-model.ts";
 
 export function ProposalDispositionStep({
@@ -59,6 +59,7 @@ export function ProposalDispositionStep({
   readOnly?: boolean;
   routeSelectionDraft: ProposalRouteSelectionDraft;
 }) {
+  const repositories = useProposalExistingRepositories();
   const decisionDraftRef = useRef(decisionDraft);
   const routeDraftRef = useRef(routeSelectionDraft);
   decisionDraftRef.current = decisionDraft;
@@ -71,7 +72,7 @@ export function ProposalDispositionStep({
     advisorStatusTitle,
     advisorStatusTone,
     advisorTranscript,
-    canApply,
+    canApply: draftCanApply,
     decisionDescription,
     decisionTitle,
     dispositionCompleted,
@@ -82,11 +83,14 @@ export function ProposalDispositionStep({
     selectedRepo,
     statusLabel,
   } = proposalDispositionStepProjection({
+    registeredRepositories: repositories.options,
     decisionDraft,
     proposal,
     readOnly,
     routeSelectionDraft,
   });
+  const canApply = draftCanApply && (!accepting || routeSelectionDraft.repoMode !== "existing" ||
+    (repositories.ready && repositories.options.some(repo => repo.value === routeSelectionDraft.repoRef)));
   const [advisorCollapsed, setAdvisorCollapsed] = useState(true);
   const decisionPanelCollapsed = !advisorCollapsed;
   const toggleAdvisorCollapsed = () =>
@@ -211,7 +215,7 @@ export function ProposalDispositionStep({
 
   function selectRegisteredRepo(repoRef: string) {
     const repo =
-      proposalRegisteredRepoOptions.find(
+      repositories.options.find(
         (option) => option.value === repoRef,
       ) ?? null;
 
@@ -297,6 +301,9 @@ export function ProposalDispositionStep({
             routeSelectionDraft={routeSelectionDraft}
             routeSupportsRepository={routeSupportsRepository}
             selectedRepo={selectedRepo}
+            registeredRepositories={repositories.options}
+            repositoriesCurrent={repositories.ready}
+            onRefreshRepositories={() => { void repositories.refresh().catch(() => undefined); }}
           />
         </TerasZone>
 
@@ -316,7 +323,7 @@ export function ProposalDispositionStep({
               decisionTitle={decisionTitle}
               dispositionCompleted={dispositionCompleted}
               dispositionTone={dispositionTone}
-              onApplyDraft={onApplyDraft}
+              onApplyDraft={() => { if (canApply) onApplyDraft(); }}
               onNotesChange={(notes) => updateDecisionDraft({ notes })}
               onSelectOutcome={selectOutcome}
               onToggleCollapsed={toggleAdvisorCollapsed}

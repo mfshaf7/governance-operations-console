@@ -7,6 +7,7 @@ import type {
 import {
   assertRepositoryCustodyRequestId,
   linkExistingRepositoryCustody,
+  lookupRepositoryProvider,
   listRepositoryCustodyResults,
   provisionRepository,
   readRepositoryCustodyResult,
@@ -26,6 +27,14 @@ export async function listRepositoryCustodyRequestsRoute(request: NextRequest) {
   } catch (error) {
     return repositoryCustodyErrorResponse(error);
   }
+}
+
+export async function lookupRepositoryProviderRoute(request: NextRequest) {
+  try {
+    const params = request.nextUrl.searchParams;
+    if ([...params.keys()].some(key => !["owner","name"].includes(key)) || params.getAll("owner").length !== 1 || params.getAll("name").length !== 1) throw invalidIntent();
+    return NextResponse.json(await lookupRepositoryProvider(params.get("owner")!,params.get("name")!), {headers:noStoreHeaders});
+  } catch(error) { return repositoryCustodyErrorResponse(error); }
 }
 
 export async function linkExistingRepositoryCustodyRoute(
@@ -97,6 +106,7 @@ function assertLinkIntent(value: unknown): RepositoryCustodyLinkIntent {
   }
   return {
     approvalNote: text(value.approvalNote),
+    ...(value.proposalId === undefined ? {} : {proposalId:text(value.proposalId),createdForRequest:attachmentPurpose(value.createdForRequest)}),
     custodyKind: text(value.custodyKind) as RepositoryCustodyLinkIntent["custodyKind"],
     providerHost: text(value.providerHost),
     providerRepositoryId: text(value.providerRepositoryId),
@@ -109,6 +119,11 @@ function assertLinkIntent(value: unknown): RepositoryCustodyLinkIntent {
   };
 }
 
+function attachmentPurpose(value: unknown): true {
+  if (value !== true) throw new RepositoryCustodyOosError("Confirm that this repository was created to fulfil the request.","repository_attachment_purpose_required",400);
+  return true;
+}
+
 function assertProvisionIntent(value: unknown): RepositoryProvisionIntent {
   if (!isRecord(value)) {
     throw invalidProvisionIntent();
@@ -118,6 +133,7 @@ function assertProvisionIntent(value: unknown): RepositoryProvisionIntent {
     ...(value.correctionOfRequestId === undefined ? {} : {
       correctionOfRequestId: assertRepositoryCustodyRequestId(value.correctionOfRequestId),
     }),
+    ...(value.proposalId === undefined ? {} : { proposalId: text(value.proposalId) }),
     custodyKind: text(value.custodyKind) as RepositoryProvisionIntent["custodyKind"],
     repositoryDescription: text(value.repositoryDescription),
     repositoryName: text(value.repositoryName),

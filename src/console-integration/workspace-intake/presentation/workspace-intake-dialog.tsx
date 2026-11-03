@@ -44,6 +44,7 @@ export function WorkspaceIntakeDialog({
   singleReview = false,
   onEditCandidate,
   onNewCandidate,
+  onRequestRecorded,
   onClose,
 }: {
   candidate: WorkspaceIntakeCandidate;
@@ -54,6 +55,7 @@ export function WorkspaceIntakeDialog({
   singleReview?: boolean;
   onEditCandidate?: () => void;
   onNewCandidate?: () => void;
+  onRequestRecorded?: (result: WorkspaceIntakeResult) => void;
   onClose: () => void;
 }) {
   const runtime = useWorkspaceIntakeLiveRuntime();
@@ -129,7 +131,7 @@ export function WorkspaceIntakeDialog({
     if (!reviewComplete || runtime.pending) return;
     await runtime
       .submit({ candidate: reviewedCandidate, decision, requestId })
-      .then(() => setActiveStep("result"))
+      .then(result => { onRequestRecorded?.(result); setActiveStep("result"); })
       .catch(() => undefined);
   }
 

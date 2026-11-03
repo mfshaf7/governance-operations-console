@@ -1,6 +1,6 @@
 // Human labels for the existing owner contract; these choices do not grant authority.
 export const validationApproaches = [
-  { value: "covered-by-owner-repo", label: "The owner repository runs its own tests", detail: "The repository maintains the checks. No new governance check is invoked by this registration." },
+  { value: "covered-by-owner-repo", label: "The repository maintains its source checks", detail: "The repository maintains source validation and review controls. Application checks can be configured later; registration does not run them." },
   { value: "profile-gated-external-owner", label: "An existing runtime profile runs registered checks", detail: "Reuse the selected repository's registered checks through its approved runtime profile." },
   { value: "runtime-consumer", label: "This item uses another service's validation", detail: "The validation service owns execution; this item consumes its results." },
   { value: "interface-contract-backed", label: "An interface contract defines the checks", detail: "Use the repository's existing contract checks to validate this interface." },

@@ -125,3 +125,22 @@ test("a known record-authority blocker is named safely, while unknown, malformed
     error => error.code === "repository_bootstrap_owner_rejected");
   assert.equal(cancelled, true);
 });
+
+test("an active owner reads its current unconfigured plan using Inventory authority without provider writes", async () => {
+  const selected = { ownerRepo: owner, custodyRequestId: "custody:fixture", evidenceProfile: null, applicationMarkers: [], withCi: false, nonce: "review:verification", operation: "configure-verification" };
+  const fetchImpl = async (_url, init) => {
+    const input = JSON.parse(init.body);
+    assert.equal(input.operation, "configure-verification"); assert.equal(input.evidence_profile, null); assert.deepEqual(input.application_markers, []);
+    const body = { schema_version: 1, workflow_id: "repository-owner-bootstrap-preparation", operation: "configure-verification", caller_id: config.callerId, operator_id: config.operatorId,
+      decision_ref: input.decision_ref, custody_request_id: input.custody_request_id, custody_receipt_digest: digest("custody"), plan: null,
+      owner_authority: { owner_repo: owner, classification: "active", inventory_posture: "active", intake_entry_ref: null,
+        inventory_entry_ref: { id: `repo:${owner}`, version: 1, digest: digest("inventory") }, source_bootstrap_eligible: false, verification_setup_eligible: true,
+        ordinary_source_eligible: true, model_writes_allowed: false, canonical_mutation: false, runtime_activation: false },
+      existing_owner_controls: { owner_repo: owner, evidence_profile: { schema_version: 1, owner_repo: owner, profile_id: "owner-source-controls", application_verification: { mode: "unconfigured", manual_checks: [] }, commands: [] } },
+      next_action: "configure-application-verification", authorization: "preparation-only", credential_issued: false, checkout_created: false, canonical_mutation: false, runtime_activation: false };
+    return Response.json({ ...body, preparation_digest: digest(body) });
+  };
+  const result = await prepareRepositoryBootstrap(selected, { config, fetchImpl });
+  assert.equal(result.plan, null); assert.equal(result.owner_authority.intake_entry_ref, null);
+  await assert.rejects(prepareRepositoryBootstrap({ ...selected, operation: "other" }, { config, fetchImpl }));
+});

@@ -355,3 +355,17 @@ function jsonResponse(body, status = 200) {
     status,
   });
 }
+
+test("request-specific creation binds exact requirement in canonical request and correction, while standalone stays independent",async()=>{
+ for(const proposalId of [undefined,"idea-851"]){
+  let request;
+  await provisionRepository({...intent(),...(proposalId?{proposalId}:{}),correctionOfRequestId:"repository-custody-request:failed-original"},{env,fetchImpl:async(_url,init)=>{
+   request=JSON.parse(init.body);return jsonResponse(provisioningResult(request),201);
+  }});
+  assert.equal(request.correlation.correlation_id,proposalId?"repo-request://proposal/idea-851":intent().requestId);
+  assert.equal(request.correlation.causation_id,"repository-custody-request:failed-original");
+ }
+ let calls=0;
+ await assert.rejects(provisionRepository({...intent(),proposalId:"unrelated-reference"},{env,fetchImpl:async()=>{calls++;throw Error("must not call")}}),{code:"repository_provisioning_intent_invalid"});
+ assert.equal(calls,0);
+});

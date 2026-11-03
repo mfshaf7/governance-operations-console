@@ -522,3 +522,16 @@ checks. Journal/source failure never becomes inferred initial state. Source-only
 changes await exact-source delta review and commissioning before live acceptance.
 Explicit disconnected design samples cannot submit, recover owner requests or
 return a successful publication receipt.
+
+## Repository verification maturity
+
+The existing source-review workflow supports later verification-only changes
+for exact current active source-only owners. It does not grant ordinary source
+authority to Proposed owners or bypass provider identity, human review,
+application acceptance or release gates. The Console reads the current owner
+profile first and preserves source, runtime and security checks; it cannot
+mutate the profile directly or obtain workflow-write rights for this operation.
+Manual instructions, automated plans and source-control success never count as
+passed application results. Public synthetic main-source qualification stays
+explicit. The [verification maturity delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-11-03-repository-verification-maturity.md)
+owns this change review; exact composed runtime acceptance remains separate.

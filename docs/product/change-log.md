@@ -1,5 +1,67 @@
 # Governance Operations Console Change Log
 
+## 2026-11-03 — Repository Control UI batch four
+
+Operator-approved maintenance follows the deep Repository inspection. Work stays
+in one unpublished Console landing unit, with one surface reviewed at a time.
+The scope covers the workspace, new and retained repository requests, admission
+and custody, lifecycle, history, Intake and owner setup. Conditional live paths
+must be reproduced before a source concern is called an operating defect.
+
+The first preview groups creation inputs into Repository, Workspace ownership
+and Approval sections. Results appear when owner evidence exists; completed
+requests are read-only and do not ask for another approval. Retained-request
+switches receive the same draft protection as closing a form. The header separates
+Requests from Repositories. Requests uses one native Proposal feed for its list,
+attention count and reviewed confirmation dialog. Resolved history (including
+implemented Proposals with retained receipts) stays outside the attention count.
+Unavailable or stale counts stay unknown; retained stale requests are read-only.
+Existing Console attention now routes repository requirements to the exact
+request rather than excluding them. No new alert service or automatic resolution
+is introduced. Current registered
+repositories show registration complete and available inspection actions instead
+of an unexplained required Intake button. Provisioning availability is labelled
+as creation availability, not as the health of every Repository mutation path.
+
+Teras supplies all visual chrome. Its modal shell gains an optional header-action
+slot; existing callers retain their layout. No canonical registration, provider,
+credential, approval or lifecycle authority changes in this presentation slice.
+Existing-repository ingress, unconfigured authorities and pre-inventory review
+remain explicit follow-up qualification within this batch, not silently enabled.
+Source, browser-state and conditional workflow proof plus operator review are
+required before publication.
+
+Request fulfilment separates **Create new** from **Already created** with the
+shared method control. Creation fills request origin automatically. Attachment
+selects known custody or resolves a GitHub URL through a bounded read-only OOS
+lookup, then requires explicit purpose and ownership approval. Both produce
+request-bound receipts; unrelated receipts cannot directly confirm a requirement.
+Drafts survive method switches; result review and final confirmation follow
+success. Original receipts and committed acknowledgement recovery remain intact.
+Proposal existing-owner choices use current active Inventory. OOS dependency
+enforcement and lookup land before the Console consumer; source/preview work is
+pending coordinated review and activation.
+
+The next preview repairs the live registration entry. A repository awaiting
+registration now leads to Workspace Intake from both the selected context and
+repository inspection. Missing capability or owner evidence explains the blocker
+while preserving inspection. Prototype-local admission launch and execution are
+restricted to explicitly disconnected preview mode. Registered repositories keep
+their existing inspection and lifecycle actions. The owner form redesign and
+lifecycle discussion remain subsequent surfaces; this entry repair neither
+submits classification nor enables an unconfigured authority.
+
+Registration details now reuse the Registry's guided form vocabulary. Repository
+types derive category/role metadata, custody supplies known identity and retained
+creation descriptions, and validation/security choices have readable labels and
+guidance. Registered-check approaches can read the selected active owner's actual
+plan and bindings through the existing bounded Registry preparation, with a fresh
+read before candidate preparation. Explicit manual bindings and custom roles stay
+available. Missing input, source failure, retained request navigation and draft
+protection are handled in the same form. Owner setup explains its classification
+prerequisite. This extends the same unpublished preview; it does not change owner
+authority, qualify new source audiences, run checks or submit a classification.
+
 ## 2026-11-01 — UI batch three remaining workspaces
 
 Governance Activity now uses its existing Console pill style for its event toggle,
@@ -1524,3 +1586,9 @@ fixed global200 discovery cutoff and preserves exact-original recovery.
 Changes remain uncommitted for coherent batch review. Local checks and isolated
 composed readback are separate from exact-source Security acceptance, Platform
 commissioning and live release evidence. No real release or runtime change occurs.
+
+Repository verification maturity: registration no longer demands an early app
+test description. New owner setup requests real source controls automatically.
+Active source-only repositories expose later verification setup using the same
+reviewed source workflow, with manual, automated and mixed plans. Existing
+profiles are read first; a saved plan grants no application acceptance.
