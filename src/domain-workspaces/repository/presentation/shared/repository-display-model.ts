@@ -44,7 +44,7 @@ function repositoryAdmissionStateFilterLabel(
 }
 
 export function repositoryRecordDescription(record: RepositoryWorkspaceRecord) {
-  return `${record.githubUrl} / ${record.routeSource}`;
+  return record.providerIdentity ? `${record.providerIdentity.host}/${record.providerIdentity.owner}` : record.githubUrl;
 }
 
 export function repositoryRecordStatusLabel(record: RepositoryWorkspaceRecord) {

@@ -1,4 +1,5 @@
 import {
+  TerasActionButton,
   TerasChoiceGroup,
   TerasFieldGrid,
   TerasEmptyState,
@@ -37,7 +38,7 @@ export function ProposalDispositionRoutePanel({
   routeHasRepositoryGate,
   routeSelectionDraft,
   routeSupportsRepository,
-  selectedRepo,
+  selectedRepo, registeredRepositories, repositoriesCurrent = true, onRefreshRepositories,
 }: {
   accepting: boolean;
   decisionDraft: ProposalDecisionDraft;
@@ -51,6 +52,9 @@ export function ProposalDispositionRoutePanel({
   routeSelectionDraft: ProposalRouteSelectionDraft;
   routeSupportsRepository: boolean;
   selectedRepo: ProposalRegisteredRepoOption | null;
+  registeredRepositories?: ProposalRegisteredRepoOption[];
+  repositoriesCurrent?: boolean;
+  onRefreshRepositories?: () => void;
 }) {
   const routePanelProjection =
     proposalDispositionRoutePanelProjection(accepting);
@@ -108,24 +112,25 @@ export function ProposalDispositionRoutePanel({
 
             {routeHasRepositoryGate &&
             routeSelectionDraft.repoMode === "existing" ? (
+              dispositionCompleted ? <TerasReadoutField label="Existing owner repository" value={routeSelectionDraft.repoRef} /> : <>
               <TerasSelectField
-                disabled={dispositionCompleted}
+                disabled={!repositoriesCurrent}
                 helper={
                   selectedRepo
                     ? `${selectedRepo.owner} / ${selectedRepo.value}`
-                    : "Select a registered owner repository."
+                    : repositoriesCurrent ? "Use an existing repository for this work. Reuse does not create a new-repository request." : "Current repository Inventory is unavailable. Refresh before selecting an owner."
                 }
                 label="Existing owner repo"
                 onValueChange={onRegisteredRepoSelect}
-                options={proposalRegisteredRepoSelectOptions()}
+                options={proposalRegisteredRepoSelectOptions(registeredRepositories)}
                 value={routeSelectionDraft.repoRef}
               />
+              {!repositoriesCurrent && onRefreshRepositories ? <TerasActionButton emphasis="secondary" onClick={onRefreshRepositories}>Refresh repository list</TerasActionButton> : null}
+              </>
             ) : routeHasRepositoryGate &&
               routeSelectionDraft.repoMode === "new" ? (
-              <TerasReadoutField
-                label="Repository request"
-                value={routeSelectionDraft.repoRef}
-              />
+              <TerasContentTray kicker="New repository request"
+                description="Accepting this Proposal creates a request in Repository Control. Create it there or attach one already created for that request, then confirm its result before handoff." />
             ) : (
               <TerasContentTray
                 description="This selected route does not require an owner repository reference before handoff review."

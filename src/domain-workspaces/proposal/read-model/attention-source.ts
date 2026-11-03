@@ -1,3 +1,4 @@
+import { projectCanonicalRepositoryGateRequests } from "../../operation-integrations/proposal-repository-live-projection.ts";
 import type {
   ConsoleAttentionCandidate,
   ConsoleAttentionFreshness,
@@ -34,9 +35,25 @@ export function projectProposalOwnerAttention(read: ConsoleOwnerRead | undefined
   return ownerAttentionSnapshot(registration, read, "workspace-proposals", (payload, observedAt) => {
     const snapshot = assertProposalLiveSnapshot(payload);
     if (snapshot.mode !== "live" || snapshot.status !== "current") throw new Error("Proposal unavailable");
+    const repositoryRequests = new Map(projectCanonicalRepositoryGateRequests(snapshot)
+      .filter(request => !request.resolution || request.recovery).map(request => [request.proposalId, request]));
     return projectProposalLiveRecords(snapshot.records)
-      .filter(record => !["done", "retired", "parked", "waiting-on-repository"].includes(record.status))
-      .map(record => proposalAttentionCandidate(record, observedAt, false));
+      .filter(record => repositoryRequests.has(record.id) || !["done", "retired", "parked", "waiting-on-repository"].includes(record.status))
+      .map(record => {
+        const request = repositoryRequests.get(record.id);
+        const candidate = proposalAttentionCandidate(record, observedAt, false);
+        if (!request) return candidate;
+        const move = "repository.resolve-proposal-gate";
+        return {...candidate, candidateId: `proposal:${record.id}:${move}`, dedupeKey: `${record.id}:${move}`,
+          attentionClass: request.recovery ? "recovery" as const : "required-action" as const,
+          reason: request.recovery ? "Repository confirmation was interrupted. Finish using the original receipt." : "This Proposal needs a verified repository before handoff can continue.",
+          requiredMove: {id: move, label: request.recovery ? "Finish repository confirmation" : "Review repository request"},
+          route: {...candidate.route, label: "Open Repository requests", entryIntent: {
+            mode: "resolve" as const, requiredMoveRef: move, subjectRef: record.id,
+            target: {id: "workbench:repository", kind: "workbench-domain" as const, surfaceLabel: "REPOSITORY"},
+          }},
+        };
+      });
   });
 }
 import { consoleAttentionSourceRegistrations } from "../../../console-integration/attention-source-registry.ts";

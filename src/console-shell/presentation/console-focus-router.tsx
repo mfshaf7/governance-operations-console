@@ -139,6 +139,9 @@ export function ConsoleFocusRouter({
                 subjectRef: repositoryId,
               })
             }
+            onOpenProposalSurface={(proposalId) =>
+              onOpenWorkbenchSurface(operationWorkbenchPathLabels.proposal, { mode: "review", requiredMoveRef: "proposal.source-review", subjectRef: proposalId })
+            }
             onOpenRepositorySurface={(proposalId) =>
               onOpenWorkbenchSurface(operationWorkbenchPathLabels.repository, {
                 mode: "resolve",

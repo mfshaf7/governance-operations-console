@@ -47,6 +47,7 @@ export function RepositoryGateResolutionDialog({
   const [draft, setDraft] = useState<RepositoryGateResolutionDraft>({
     ...repositoryGateResolutionDraftFromRepository(repository),
   });
+  const [canonicalBusy,setCanonicalBusy] = useState(false);
   const [canonicalDirty, setCanonicalDirty] = useState(false);
   const [closeGuardOpen, setCloseGuardOpen] = useState(false);
   const gateProjection = repositoryGateResolutionProjection({
@@ -55,16 +56,16 @@ export function RepositoryGateResolutionDialog({
   });
 
   if (canonical) {
-    const requestClose = () => canonicalDirty ? setCloseGuardOpen(true) : onClose();
-    return <><TerasModalShell bodyLayout="scroll" height="content" width="standard"
-      description="Resolve a recorded Proposal repository gate using retained owner custody evidence."
-      kicker="Repository Gate" onClose={requestClose} surfaceId="repository-gate-resolution"
-      footer={<TerasActionButton emphasis="secondary" onClick={requestClose}>Back to Register</TerasActionButton>}
-      title="Resolve Repository Gate">
-      <RepositoryProposalGatePanel {...canonical} onDirtyChange={setCanonicalDirty} />
+    const requestClose = () => canonicalBusy || canonical.runtime.pending ? undefined : canonicalDirty ? setCloseGuardOpen(true) : onClose();
+    return <><TerasModalShell busy={canonicalBusy || canonical.runtime.pending} busyLabel="Verifying the repository…" bodyLayout="scroll" height="content" width="standard"
+      description="Review the Proposal requirement and confirm its verified repository."
+      kicker="Repository request" onClose={requestClose} surfaceId="repository-gate-resolution"
+      footer={<TerasActionButton emphasis="secondary" disabled={canonicalBusy || canonical.runtime.pending} onClick={requestClose}>Back to Requests</TerasActionButton>}
+      title="Repository request">
+      <RepositoryProposalGatePanel {...canonical} onDirtyChange={setCanonicalDirty} onBusyChange={setCanonicalBusy} />
     </TerasModalShell>
-    <TerasDraftCloseGuardDialog open={closeGuardOpen} title="Close Repository Gate Draft?"
-      kicker="Repository Gate" description="Unrecorded resolution notes and custody selection will be discarded."
+    <TerasDraftCloseGuardDialog open={closeGuardOpen} title="Discard request changes?"
+      kicker="Repository request" description="Your unsubmitted repository details, approval and confirmation notes will be discarded."
       leaveLabel="Discard Draft" onKeepEditing={() => setCloseGuardOpen(false)} onLeave={onClose} />
     </>;
   }

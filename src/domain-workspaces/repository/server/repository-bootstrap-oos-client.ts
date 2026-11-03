@@ -5,6 +5,7 @@ import { acceptCurrentConsoleSourceProjection, consoleSourceProjectionHeaders } 
 import { bootstrapClosed as closed, bootstrapDigest, bootstrapId, bootstrapObject as object, bootstrapOwner, bootstrapTime, ownerBootstrapFiles, projectOwnerBootstrap } from "../live-runtime/repository-bootstrap-contract.ts";
 
 type Options = { config?: ConsoleOosOperatorConfiguration; fetchImpl?: typeof fetch; now?: () => Date };
+const ownerVerificationFiles = ["contracts/delivery-art-work-session/evidence-profile.json", "contracts/delivery-art-work-session/evidence-profile.schema.json", "contracts/delivery-art-work-session/source-bootstrap.json", "scripts/validate_owner.py"];
 const base = "/v1/repository-owner-bootstrap", requestPath = (id: string) => `${base}/requests/${encodeURIComponent(bootstrapId(id))}`;
 export class RepositoryBootstrapOosError extends Error {
   readonly code: string;
@@ -20,12 +21,14 @@ function canonical(value: unknown): string {
   return JSON.stringify(value);
 }
 function preparationInput(value: unknown, config: ConsoleOosOperatorConfiguration) {
-  const intent = closed(value, ["ownerRepo", "custodyRequestId", "evidenceProfile", "applicationMarkers", "withCi", "nonce"]);
+  const raw = object(value), operation = raw.operation ?? "bootstrap";
+  if (!["bootstrap", "configure-verification"].includes(String(operation))) throw new Error("Unknown owner setup operation.");
+  const intent = closed(value, ["ownerRepo", "custodyRequestId", "evidenceProfile", "applicationMarkers", "withCi", "nonce", ...(Object.hasOwn(raw, "operation") ? ["operation"] : [])]);
   const owner = bootstrapOwner(intent.ownerRepo); bootstrapId(intent.custodyRequestId); bootstrapId(intent.nonce);
-  if (typeof intent.withCi !== "boolean" || !Array.isArray(intent.applicationMarkers) || !intent.applicationMarkers.length || intent.applicationMarkers.length > 48 || JSON.stringify(intent).length > 60_000) throw new Error("Select bounded actual project validation and source markers.");
-  const profile = object(intent.evidenceProfile);
-  if (profile.owner_repo !== owner) throw new Error("The selected evidence profile belongs to another owner.");
-  return { owner_repo: owner, custody_request_id: intent.custodyRequestId, evidence_profile: profile, application_markers: intent.applicationMarkers,
+  if (typeof intent.withCi !== "boolean" || !Array.isArray(intent.applicationMarkers) || intent.applicationMarkers.length > 48 || JSON.stringify(intent).length > 60_000) throw new Error("Select bounded actual project validation and source markers.");
+  const profile = intent.evidenceProfile === null ? null : object(intent.evidenceProfile);
+  if (profile && profile.owner_repo !== owner) throw new Error("The selected evidence profile belongs to another owner.");
+  return { ...(operation === "configure-verification" ? { operation } : {}), owner_repo: owner, custody_request_id: intent.custodyRequestId, evidence_profile: profile, application_markers: intent.applicationMarkers,
     with_ci: intent.withCi, decision_ref: `console-bootstrap:${bootstrapCanonicalDigest({ operator: config.operatorId, intent }).slice(7, 55)}` };
 }
 function knownFields(value: unknown, fields: string[]) {
@@ -36,41 +39,48 @@ function knownFields(value: unknown, fields: string[]) {
 export async function prepareRepositoryBootstrap(value: unknown, options: Options = {}) {
   const config = options.config ?? resolveConsoleOosOperatorConfiguration(), input = preparationInput(value, config);
   const result = object(await request(`${base}/preparations`, input, { ...options, config }));
-  knownFields(result, ["schema_version", "workflow_id", "caller_id", "operator_id", "decision_ref", "custody_request_id", "custody_receipt_digest", "owner_authority", "plan", "existing_owner_controls", "next_action", "authorization", "credential_issued", "checkout_created", "canonical_mutation", "runtime_activation", "preparation_digest"]);
+  knownFields(result, ["operation", "schema_version", "workflow_id", "caller_id", "operator_id", "decision_ref", "custody_request_id", "custody_receipt_digest", "owner_authority", "plan", "existing_owner_controls", "next_action", "authorization", "credential_issued", "checkout_created", "canonical_mutation", "runtime_activation", "preparation_digest"]);
   const { preparation_digest: claimed, ...body } = result;
   if (result.schema_version !== 1 || result.workflow_id !== "repository-owner-bootstrap-preparation" || result.caller_id !== config.callerId || result.operator_id !== config.operatorId ||
-      result.custody_request_id !== input.custody_request_id || result.decision_ref !== input.decision_ref || result.authorization !== "preparation-only" ||
+      (result.operation ?? "bootstrap") !== (input.operation ?? "bootstrap") || result.custody_request_id !== input.custody_request_id || result.decision_ref !== input.decision_ref || result.authorization !== "preparation-only" ||
       ["credential_issued", "checkout_created", "canonical_mutation", "runtime_activation"].some(key => result[key] !== false) || bootstrapCanonicalDigest(body) !== bootstrapDigest(claimed)) throw new Error("Owner preparation does not bind its exact server-derived intent.");
   const authority = object(result.owner_authority);
-  knownFields(authority, ["owner_repo", "intake_entry_ref", "provider_repository", "classification", "inventory_posture", "custody_receipt_digest", "source_bootstrap_eligible", "ordinary_source_eligible", "model_writes_allowed", "canonical_mutation", "runtime_activation"]);
+  knownFields(authority, ["inventory_entry_ref", "verification_setup_eligible", "owner_repo", "intake_entry_ref", "provider_repository", "classification", "inventory_posture", "custody_receipt_digest", "source_bootstrap_eligible", "ordinary_source_eligible", "model_writes_allowed", "canonical_mutation", "runtime_activation"]);
   if (authority.intake_entry_ref) knownFields(authority.intake_entry_ref, ["id", "version", "digest"]);
   if (authority.provider_repository) knownFields(authority.provider_repository, ["provider", "provider_repository_id", "full_name"]);
-  if (authority.owner_repo !== input.owner_repo || !["proposed", "admitted"].includes(String(authority.classification)) || authority.inventory_posture !== null || authority.source_bootstrap_eligible !== true ||
-      ["ordinary_source_eligible", "model_writes_allowed", "canonical_mutation", "runtime_activation"].some(key => authority[key] !== false)) throw new Error("Owner setup requires current source-only proposed or admitted authority before Inventory.");
+  const active = input.operation === "configure-verification";
+  if (authority.owner_repo !== input.owner_repo || ["model_writes_allowed", "canonical_mutation", "runtime_activation"].some(key => authority[key] !== false)) throw new Error("Owner setup authority changed.");
+  if (active) {
+    if (authority.classification !== "active" || authority.inventory_posture !== "active" || authority.source_bootstrap_eligible !== false || authority.ordinary_source_eligible !== true || authority.verification_setup_eligible !== true || authority.intake_entry_ref !== null) throw new Error("Verification setup needs current active source-only authority.");
+    const ref = closed(authority.inventory_entry_ref, ["id", "version", "digest"]);
+    if (ref.id !== `repo:${input.owner_repo}` || !Number.isSafeInteger(ref.version) || Number(ref.version) < 1) throw new Error("Verification setup owner version is invalid.");
+    bootstrapDigest(ref.digest);
+  } else if (!["proposed", "admitted"].includes(String(authority.classification)) || authority.inventory_posture !== null || authority.source_bootstrap_eligible !== true || authority.ordinary_source_eligible !== false || authority.inventory_entry_ref !== undefined) throw new Error("Owner setup requires pre-Inventory source-only authority.");
   if (result.plan !== null) {
     const plan = object(result.plan), { plan_digest: claimedPlan, ...planBody } = plan;
-    knownFields(plan, ["schema_version", "workflow_id", "owner_repo", "provider_repository", "intake_entry_ref", "fetched_base", "template", "evidence_profile_digest", "application_markers", "ci_selected", "requires_workflow_permission", "source_change_required", "files", "model_invoked", "app_import", "canonical_mutation", "runtime_activation", "plan_digest"]);
+    knownFields(plan, ["operation", "inventory_entry_ref", "schema_version", "workflow_id", "owner_repo", "provider_repository", "intake_entry_ref", "fetched_base", "template", "evidence_profile_digest", "application_markers", "ci_selected", "requires_workflow_permission", "source_change_required", "files", "model_invoked", "app_import", "canonical_mutation", "runtime_activation", "plan_digest"]);
     if (plan.provider_repository) knownFields(plan.provider_repository, ["provider", "provider_repository_id", "full_name"]);
     if (plan.intake_entry_ref) knownFields(plan.intake_entry_ref, ["id", "version", "digest"]);
     if (plan.template) knownFields(plan.template, ["id", "owner_repo", "digest"]);
     if (plan.owner_repo !== input.owner_repo || plan.ci_selected !== input.with_ci || bootstrapCanonicalDigest(planBody) !== bootstrapDigest(claimedPlan) ||
-        ["model_invoked", "app_import", "canonical_mutation", "runtime_activation"].some(key => plan[key] !== false) || !Array.isArray(plan.files) || plan.files.length < ownerBootstrapFiles.length - 1 || plan.files.length > ownerBootstrapFiles.length) throw new Error("Trusted owner plan scope is invalid.");
+        ["model_invoked", "app_import", "canonical_mutation", "runtime_activation"].some(key => plan[key] !== false) || !Array.isArray(plan.files) || plan.files.length < (active ? 3 : ownerBootstrapFiles.length - 1) || plan.files.length > ownerBootstrapFiles.length) throw new Error("Trusted owner plan scope is invalid.");
     const paths = new Set<string>();
     for (const value of plan.files) {
       const file = closed(value, ["path", "action", "mode", "content", "expected_digest", "content_digest"]);
       if (typeof file.path !== "string" || !ownerBootstrapFiles.includes(file.path) || paths.has(file.path) || file.mode !== "100644" || !["create", "replace", "unchanged"].includes(String(file.action)) ||
-          (file.action === "replace" && (file.path !== "AGENTS.md" || !bootstrapDigest(file.expected_digest))) ||
+          (file.action === "replace" && ((active ? !ownerVerificationFiles.includes(file.path) : file.path !== "AGENTS.md") || !bootstrapDigest(file.expected_digest))) ||
           typeof file.content !== "string" || Buffer.byteLength(file.content) > 65_536 || `sha256:${createHash("sha256").update(file.content).digest("hex")}` !== bootstrapDigest(file.content_digest)) throw new Error("Owner plan escapes trusted finite regular files.");
       paths.add(file.path);
     }
+    if (active && ((plan.operation !== "configure-verification") || bootstrapCanonicalDigest(plan.inventory_entry_ref) !== bootstrapCanonicalDigest(authority.inventory_entry_ref) || plan.intake_entry_ref !== null || plan.requires_workflow_permission !== false || plan.ci_selected !== false || plan.files.some(value => { const f = object(value); return f.action !== "unchanged" && !ownerVerificationFiles.includes(String(f.path)); }))) throw new Error("Active verification exceeds its finite authority.");
     const expected = ownerBootstrapFiles.filter(path => input.with_ci || path !== ".github/workflows/validate.yaml").sort();
-    if ([...paths].sort().join("\0") !== expected.join("\0")) throw new Error("Inspect the complete finite owner-control plan.");
+    if (!active && [...paths].sort().join("\0") !== expected.join("\0")) throw new Error("Inspect the complete finite owner-control plan.");
   } else {
     const existing = knownFields(result.existing_owner_controls, ["status", "owner_repo", "fetched_base", "evidence_profile", "evidence_profile_digest", "source_change_required", "ci_present", "app_acceptance", "inventory_admission", "runtime_activation"]);
     if (existing.owner_repo !== input.owner_repo) throw new Error("Existing owner controls do not match this repository.");
-    const profile = closed(existing.evidence_profile, ["schema_version", "profile_id", "owner_repo", "commands"]);
+    const profile = knownFields(existing.evidence_profile, ["schema_version", "profile_id", "owner_repo", "commands", "application_verification"]);
     if (!Array.isArray(profile.commands) || profile.commands.length > 32) throw new Error("Existing owner profile is malformed.");
-    for (const check of profile.commands) knownFields(check, ["id", "kind", "name", "executable", "args", "fidelity", "conformance_binding", "timeout_seconds", "conformance_case_ids"]);
+    for (const check of profile.commands) knownFields(check, ["id", "kind", "name", "executable", "args", "fidelity", "conformance_binding", "timeout_seconds", "conformance_case_ids", "scope"]);
   }
   return result;
 }
@@ -109,7 +119,7 @@ export async function readRepositoryBootstrapDraft(id: string, options: Options 
   const change = object(raw.change_set);
   if (raw.schema_version !== 1 || raw.workflow_id !== "repository-owner-bootstrap-draft" || raw.request_id !== id || raw.revision !== current.sourceRevision || raw.digest !== current.draft?.digest || bootstrapCanonicalDigest(change) !== raw.digest || change.session_id !== current.sessionId || !Array.isArray(change.operations) || change.operations.length > ownerBootstrapFiles.length) throw new Error("Owner draft does not bind the actual current request and digest.");
   for (const value of change.operations) { const file = closed(value, ["action", "path", "content", "expected_digest"]);
-    if (!["create", "replace"].includes(String(file.action)) || (file.action === "create" ? file.expected_digest !== null : file.path !== "AGENTS.md" || !bootstrapDigest(file.expected_digest)) || typeof file.path !== "string" || !ownerBootstrapFiles.includes(file.path) || typeof file.content !== "string" || Buffer.byteLength(file.content) > 65_536) throw new Error("Owner draft escapes trusted control scope."); }
+    if (!["create", "replace"].includes(String(file.action)) || (file.action === "create" ? file.expected_digest !== null : (current.operation === "configure-verification" ? !ownerVerificationFiles.includes(String(file.path)) : file.path !== "AGENTS.md") || !bootstrapDigest(file.expected_digest)) || typeof file.path !== "string" || !(current.operation === "configure-verification" ? ownerVerificationFiles : ownerBootstrapFiles).includes(file.path) || typeof file.content !== "string" || Buffer.byteLength(file.content) > 65_536) throw new Error("Owner draft escapes trusted control scope."); }
   return raw;
 }
 export async function commandRepositoryBootstrap(id: string, value: unknown, options: Options = {}) {

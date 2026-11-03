@@ -16,10 +16,10 @@ export function repositoryRequestBoundaryMetadata(): TerasMetadataItem[] {
   ];
 }
 
-export function repositoryRequestDraftDirty(draft: RepositoryRequestDraft) {
+export function repositoryRequestDraftDirty(draft: RepositoryRequestDraft, baseline: RepositoryRequestDraft = emptyRepositoryRequestDraft) {
   return Object.entries(draft).some(
     ([key, value]) =>
-      value !== emptyRepositoryRequestDraft[key as keyof RepositoryRequestDraft],
+      value !== baseline[key as keyof RepositoryRequestDraft],
   );
 }
 
@@ -37,13 +37,14 @@ export function repositoryRequestDraftComplete(draft: RepositoryRequestDraft) {
 
 export function repositoryProvisionIntentFromDraft(
   draft: RepositoryRequestDraft,
-  request: { requestedAt: string; requestId: string; correctionOfRequestId?: string },
+  request: { requestedAt: string; requestId: string; correctionOfRequestId?: string; proposalId?: string },
 ): RepositoryProvisionIntent {
   if (!repositoryRequestDraftComplete(draft)) {
     throw new Error("Repository provisioning draft is incomplete.");
   }
   return {
     approvalNote: draft.approvalNote,
+    ...(request.proposalId ? { proposalId: request.proposalId } : {}),
     ...(request.correctionOfRequestId ? { correctionOfRequestId: request.correctionOfRequestId } : {}),
     custodyKind: draft.custodyKind,
     repositoryDescription: draft.purpose,
@@ -78,6 +79,13 @@ export function repositoryRequestDraftFromResult(result: RepositoryCustodyWorkfl
     visibility: result.request.provisioning.visibility,
     workspaceOwnerRef: result.request.requested_custody.workspace_owner_ref,
   };
+}
+
+export function repositoryRequestHistoryLabel(result: RepositoryCustodyWorkflowResult) {
+  const statuses = { succeeded: "Completed", failed: "Failed", denied: "Not approved", applying: "In progress" };
+  const state = statuses[result.status as keyof typeof statuses] ?? result.status;
+  const time = new Date(result.request.requested_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return `${result.request.target.owner}/${result.request.target.name} · ${state} · ${time}`;
 }
 
 export function repositoryProvisioningResultMetadata(

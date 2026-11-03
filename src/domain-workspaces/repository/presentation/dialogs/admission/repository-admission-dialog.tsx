@@ -32,6 +32,9 @@ import {
 } from "./repository-admission-posture.tsx";
 
 export function RepositoryAdmissionDialog({
+  localReviewAvailable,
+  registration,
+  onOpenRegistration,
   onClose,
   onOpenDeliveryCatalog,
   onOpenHistory,
@@ -40,6 +43,9 @@ export function RepositoryAdmissionDialog({
   receipt,
   repository,
 }: {
+  localReviewAvailable: boolean;
+  registration: { required: boolean; available: boolean; unavailableReason: string | null };
+  onOpenRegistration: (repository: RepositoryWorkspaceRecord) => void;
   onClose: () => void;
   onOpenDeliveryCatalog: (repository: RepositoryWorkspaceRecord) => void;
   onOpenHistory: (repository: RepositoryWorkspaceRecord) => void;
@@ -52,6 +58,7 @@ export function RepositoryAdmissionDialog({
     string | null
   >(null);
   const canStart = Boolean(
+    localReviewAvailable &&
     repository &&
     repository.blockers.length === 0 &&
     repository.admissionState === "ready" &&
@@ -118,22 +125,27 @@ export function RepositoryAdmissionDialog({
                   Manage Lifecycle
                 </TerasActionButton>
               </>
-            ) : (
+            ) : registration.required ? (
+              <TerasActionButton disabled={!registration.available}
+                data-repository-intake-open="true" onClick={() => onOpenRegistration(repository)}>
+                Review workspace registration
+              </TerasActionButton>
+            ) : localReviewAvailable ? (
               <TerasActionButton
                 disabled={!canStart}
                 onClick={() => {
-                  onStart(repository);
+                  if (canStart) onStart(repository);
                 }}
               >
                 Start Admission Review
               </TerasActionButton>
-            )}
+            ) : null}
           </>
         }
-        kicker={isAdmittedRecord ? "Repository Review" : "Repository Admission"}
+        kicker={isAdmittedRecord || !localReviewAvailable ? "Repository Review" : "Repository Admission"}
         onClose={closeAdmissionDialog}
         surfaceId="repository-admission"
-        title="Repository Admission"
+        title={localReviewAvailable ? "Repository Admission" : "Repository details"}
       >
         <TerasDetailGrid
           data-repository-admission-modal="true"
@@ -161,6 +173,8 @@ export function RepositoryAdmissionDialog({
           </TerasPanel>
 
           <TerasTrayStack align="start" spacing="loose">
+            {registration.required ? <TerasContentTray kicker="Workspace registration"
+              description={registration.unavailableReason ?? "Review whether this repository should join the managed workspace, including its ownership and checks."} /> : null}
             <TerasPanel frame="padded" treatment="rail" tone={repository.tone}>
               <TerasPanelHeader
                 actionsLayout="inline"

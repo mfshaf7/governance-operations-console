@@ -42,6 +42,7 @@ export function OperationWorkbenchHost({
   onClose,
   onOpenDeliveryCatalog,
   onOpenRepositorySurface,
+  onOpenProposalSurface,
   onOpenWorkspace,
   selected,
 }: {
@@ -50,6 +51,7 @@ export function OperationWorkbenchHost({
   onClose: () => void;
   onOpenDeliveryCatalog: (repositoryId: string) => void;
   onOpenRepositorySurface: (proposalId: string) => void;
+  onOpenProposalSurface: (proposalId: string) => void;
   onOpenWorkspace: (workspaceId: ConsoleWorkspaceId, entryIntent: ConsoleSurfaceEntryIntent) => void;
   selected: OperationWorkbenchSelectorEntry;
 }) {
@@ -80,6 +82,7 @@ export function OperationWorkbenchHost({
             entryIntent={entryIntent}
             onClose={onClose}
             onOpenDeliveryCatalog={onOpenDeliveryCatalog}
+            onOpenProposalSurface={onOpenProposalSurface}
           />
         </OperationWorkbench>
       );

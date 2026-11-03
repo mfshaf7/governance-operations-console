@@ -4,7 +4,7 @@ import { provisioningResult } from "./repository-provisioning-result.mjs";
 import { proposalCompletionRecord } from "./proposal-completion-fixture.mjs";
 
 // Synthetic owner responses for isolated UI inspection, never live authority.
-export async function repositoryUiFixture() {
+export async function repositoryUiFixture({proposalId="idea-851"} = {}) {
   const digest=`sha256:${"a".repeat(64)}`;
   const env={OOS_BASE_URL:"http://owner.test",OOS_CALLER_SECRET:"synthetic-test-only",GOVERNANCE_CONSOLE_OPERATOR_ID:"operator:synthetic",
     GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH:"/synthetic/session-projection.json",
@@ -14,7 +14,7 @@ export async function repositoryUiFixture() {
     REPOSITORY_CUSTODY_POLICY_PROFILE_URI:"https://policy.test/custody",REPOSITORY_CUSTODY_POLICY_PROFILE_DIGEST:digest,
     REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_URI:"https://binding.test/create",REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_DIGEST:digest,
     REPOSITORY_LIFECYCLE_POLICY_PROFILE_URI:"https://policy.test/lifecycle",REPOSITORY_LIFECYCLE_POLICY_PROFILE_DIGEST:digest};
-  const result=await provisionRepository({approvalNote:"Approve this exact synthetic repository.",custodyKind:"dedicated-owner-repo",
+  const result=await provisionRepository({...(proposalId ? {proposalId} : {}),approvalNote:"Approve this exact synthetic repository.",custodyKind:"dedicated-owner-repo",
     repositoryDescription:"Synthetic Repository UI inspection",repositoryName:"synthetic-source",repositoryOwner:"synthetic-workspace",
     requestedAt:"2026-06-21T08:00:00Z",requestId:"repository-custody-request:synthetic-ui",templateReviewed:true,
     visibility:"private",workspaceOwnerRef:"repo:synthetic-source"},{env,fetchImpl:async(_url,init)=>Response.json(provisioningResult(JSON.parse(init.body)))});

@@ -1,6 +1,7 @@
 import { TerasDraftCloseGuardDialog } from "@/teras";
 
 import { RepositoryAdmissionDialog } from "../dialogs/admission/repository-admission-dialog.tsx";
+import { RepositoryOwnerBootstrapDialog } from "../dialogs/admission/repository-owner-bootstrap-dialog.tsx";
 import { RepositoryIntakeDialog } from "../dialogs/admission/repository-intake-dialog.tsx";
 import { RepositoryAdmissionRunDialog } from "../dialogs/admission/repository-admission-run-dialog.tsx";
 import { RepositoryCustodyDialog } from "../dialogs/custody/repository-custody-dialog.tsx";
@@ -18,12 +19,16 @@ export function RepositoryControlDialogStack({
 }) {
   return (
     <>
+      {controller.verification.open ? <RepositoryOwnerBootstrapDialog ownerRepo={controller.verification.ownerRepo} custodyRequestId={controller.verification.custodyRequestId} operation="configure-verification" onClose={controller.verification.close} /> : null}
       {controller.intake.repository && controller.intake.custodyResult ? <RepositoryIntakeDialog
         key={controller.intake.custodyResult.request.request_id}
+        ownerRepositories={controller.intake.ownerRepositories} classification={controller.intake.classification}
         repository={controller.intake.repository} custodyResult={controller.intake.custodyResult}
         onClose={controller.intake.close} /> : null}
       <RepositoryRequestDialog
         canSubmit={controller.request.canSubmit}
+        proposalId={controller.request.proposalId}
+        proposalTitle={controller.request.proposalTitle}
         correction={controller.request.correction}
         resume={controller.request.resume}
         retainedRequests={controller.request.retainedRequests}
@@ -40,13 +45,13 @@ export function RepositoryControlDialogStack({
       />
 
       <TerasDraftCloseGuardDialog
-        description="This repository provisioning request has unsaved reviewed fields. Leaving will discard the current draft."
-        kicker="Repository Provisioning"
+        description={controller.request.guardDescription}
+        kicker="Unsaved changes"
         leaveLabel="Discard Draft"
         onKeepEditing={controller.request.keepEditing}
         onLeave={controller.request.discard}
         open={controller.request.closeGuardOpen}
-        title="Close Draft?"
+        title={controller.request.guardTitle}
       />
 
       <RepositoryDetailDialog
@@ -60,7 +65,9 @@ export function RepositoryControlDialogStack({
         onClose={controller.canonicalGate.close}
         onRecordResolution={controller.gateResolution.onRecordResolution}
         repository={null}
-        canonical={{subjectRef:controller.canonicalGate.subjectRef,
+        canonical={{subjectRef:controller.canonicalGate.subjectRef, runtime:controller.repositoryRequests,
+          onCreateRepository:controller.request.openForProposal, creationAvailable:controller.request.creationAvailable,
+          onAttachRepository:controller.proposalGate.attach, attachmentAvailable:controller.proposalGate.attachmentAvailable,
           custodyCurrent:controller.proposalGate.custodyCurrent,custodyResults:controller.proposalGate.custodyResults}} /> : null}
       <RepositoryGateResolutionDialog
         key={
@@ -72,6 +79,9 @@ export function RepositoryControlDialogStack({
         repository={controller.gateResolution.repository}
       />
       <RepositoryAdmissionDialog
+        localReviewAvailable={controller.admission.localReviewAvailable}
+        registration={controller.admission.registration}
+        onOpenRegistration={controller.admission.onOpenRegistration}
         onClose={controller.admission.close}
         onOpenDeliveryCatalog={controller.admission.onOpenDeliveryCatalog}
         onOpenHistory={controller.admission.onOpenHistory}
@@ -102,11 +112,12 @@ export function RepositoryControlDialogStack({
         repository={controller.history.repository}
       />
       <RepositoryAdmissionRunDialog
+        executionAvailable={controller.admissionRun.available}
         onBack={controller.admissionRun.onBack}
         onClose={controller.admissionRun.close}
         onRun={controller.admissionRun.onRun}
         receipt={controller.admissionRun.receipt}
-        repository={controller.admissionRun.repository}
+        repository={controller.admissionRun.available ? controller.admissionRun.repository : null}
       />
       <RepositoryLifecycleDialog
         executionAvailable={controller.lifecycle.executionAvailable}

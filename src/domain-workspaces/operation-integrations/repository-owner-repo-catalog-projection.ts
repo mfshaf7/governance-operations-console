@@ -17,3 +17,9 @@ export function repositoryOwnerRepoCatalogOptions(): OperationOwnerRepoCatalogOp
       valueKey: record.name,
     }));
 }
+
+// Live selection uses current Inventory only; the static catalogue above is for disconnected preview.
+export function repositoryCurrentOwnerRepoCatalogOptions(projection: import("../../workspace-continuity/workspace-continuity-types.ts").WorkspaceContinuityProjection | null) {
+  return (projection?.inventory ?? []).filter(record => record.kind === "repo" && record.posture === "active" && !record.retired_collection)
+    .map(record => ({label: record.name, owner: record.record_id, value: `repo://${record.name}`}));
+}
