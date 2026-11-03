@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { readRepositoryCustodyRegister } from "./repository-custody-live-readback.ts";
+import { readRepositoryCustodyRegister, RepositoryCustodyReadError } from "./repository-custody-live-readback.ts";
 
 import {
   assertRepositoryCustodyWorkflowResult,
@@ -28,6 +28,7 @@ export function useRepositoryCustodyLiveRuntime() {
   const [retainedResults, setRetainedResults] = useState<RepositoryCustodyWorkflowResult[]>([]);
   const [sourceStatus, setSourceStatus] = useState<"loading" | "current" | "offline">("loading");
   const [sourceError, setSourceError] = useState<string | null>(null);
+  const [sourceRetryable, setSourceRetryable] = useState(false);
   const refreshSequence = useRef(0);
   const [resultsByRepositoryId, setResultsByRepositoryId] = useState<
     Readonly<Record<string, RepositoryCustodyWorkflowResult>>
@@ -67,10 +68,12 @@ export function useRepositoryCustodyLiveRuntime() {
       setRetainedResults(records);
       setSourceStatus("current");
       setSourceError(null);
+      setSourceRetryable(false);
     } catch (error) {
       if (sequence !== refreshSequence.current) return;
       setSourceStatus("offline");
       setSourceError(error instanceof Error ? error.message : "Canonical Repository readback failed.");
+      setSourceRetryable(error instanceof RepositoryCustodyReadError && error.retryable);
     }
   }, []);
 
@@ -236,6 +239,7 @@ export function useRepositoryCustodyLiveRuntime() {
     refresh,
     sourceStatus,
     sourceError,
+    sourceRetryable,
     errorsByRepositoryId,
     link,
     pendingRepositoryId,

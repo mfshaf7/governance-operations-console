@@ -1,5 +1,56 @@
 # Governance Operations Console Change Log
 
+## 2026-11-03 — Repository Control follow-up preview
+
+Owner-repo maintenance resumes in the existing local preview lane, based on
+`375ecf5`. This is a pending batch, reviewed one surface at a time. Publication
+requires the operator's explicit batch approval; no source publication or live
+activation is part of this preview checkpoint.
+
+The first slice corrects Repository History and evidence posture. Creation and
+link receipts are labelled Recorded rather than presenting their original
+provider readback as current health. History separates Workspace registration,
+a fresh identity-bound GitHub lookup, and the last recorded lifecycle state.
+It reuses the existing read-only lookup when History opens or a failed read is retried;
+it does not scan the register or change lifecycle eligibility. Failed reads
+retain dated observations and receipts with explicit partial/unavailable labels.
+Latest receipt references follow completion time, independent of input order;
+duplicate receipt identities do not duplicate timeline entries. Live History
+does not imply that an absent prototype-local setup receipt means missing
+canonical registration. Technical references use shared disclosure and the
+aside scrolls independently at supported desktop sizes.
+
+Lifecycle review and draft protection, standalone existing-repository linking,
+and the remaining Owner Setup usability review remain pending. This slice
+does not enable an unconfigured authority or change approval requirements.
+
+Operator review removes the permanent refresh control. Temporary read failures
+replace the affected section with a centered failure message and Retry action;
+success restores the section and removes Retry. Setup and verification failures
+explain the missing prerequisite without a retry loop. A provider retry does not
+reload unrelated registration/history sources. Read-only lookup uses the
+existing OOS caller without demanding unused link/create authority references;
+OOS still enforces the separate metadata-only provider identity. Organization
+installation and bounded identity verification succeeded; managed credential
+consumption and renewal remain pending. This is not a completed live connection.
+
+The product backlog records guided provider onboarding and independent customer
+installation as an open requirement before customer release, with owner
+boundaries, unresolved identity/access choices and operating acceptance evidence.
+This records future work; it does not approve a broader access grant or begin
+another implementation initiative.
+
+The operator clarifies that automatic future-repository access and renewal are
+part of this repair, not deferred customer UI work. Platform extends the existing
+metadata identity producer and timer with an explicit account-wide mode; OOS
+enforces the configured account. Selected isolation remains available. A native
+account-wide proof read a private repository outside the previous single-repo
+selection and revoked its proof token. Source tests cover a later repository
+using unchanged credentials/configuration, renewal and interrupted delivery.
+Normal reviewed source activation and operating readback remain pending; this
+does not claim a newly created live repository was exercised or customer setup
+was completed.
+
 ## 2026-11-03 — Repository Control UI batch four
 
 Operator-approved maintenance follows the deep Repository inspection. Work stays

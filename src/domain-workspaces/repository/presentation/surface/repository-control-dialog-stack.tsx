@@ -100,12 +100,18 @@ export function RepositoryControlDialogStack({
         result={controller.custody.result}
       />
       <RepositoryHistoryDialog
+        providerRead={controller.history.providerRead}
+        onRetry={controller.history.retry}
+        onRetryProvider={controller.history.retryProvider}
+        refreshing={controller.history.refreshing}
         custodyResults={controller.history.custodyResults}
         custodySourceStatus={controller.history.custodySourceStatus}
         custodySourceError={controller.history.custodySourceError}
+        custodyRetryable={controller.history.custodyRetryable}
         liveMode={controller.history.liveMode}
         lifecycleSnapshot={controller.history.lifecycleSnapshot}
         lifecycleError={controller.history.lifecycleError}
+        lifecycleFailure={controller.history.lifecycleFailure}
         lifecycleAudit={controller.history.lifecycleAudit}
         onClose={controller.history.close}
         receipts={controller.history.receipts}

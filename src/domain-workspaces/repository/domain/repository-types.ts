@@ -110,6 +110,7 @@ export type RepositoryWorkspaceRecordBlocker = {
 };
 
 export type RepositoryWorkspacePostureGroup = {
+  statusLabel?: string;
   description: string;
   id: string;
   items: RepositoryWorkspacePostureItem[];
@@ -119,6 +120,7 @@ export type RepositoryWorkspacePostureGroup = {
 };
 
 export type RepositoryWorkspacePostureItem = {
+  statusLabel?: string;
   detail: string;
   label: string;
   state: RepositoryWorkspacePostureItemState;

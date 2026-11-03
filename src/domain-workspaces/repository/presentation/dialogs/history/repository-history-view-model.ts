@@ -11,6 +11,7 @@ import {
 } from "../../shared/repository-display-model.ts";
 
 export type RepositoryHistoryTimelineRow = {
+  id: string;
   detail: string;
   label: string;
   status: string;
@@ -23,19 +24,21 @@ export function repositoryHistoryTimelineRows(
   lifecycleAudit: RepositoryLifecycleAudit | null = null,
   custodyResults: RepositoryCustodyWorkflowResult[] = [],
 ): RepositoryHistoryTimelineRow[] {
-  return [
+  const rows: RepositoryHistoryTimelineRow[] = [
     ...custodyResults.filter(result => result.receipt && result.receipt_ref).map(result => ({
-      detail: `${result.provider_readback?.canonical_url ?? "Repository owner receipt"} · OOS custody history`,
-      label: result.request.action === "provision-new" ? "Repository Provisioning" : "Existing Repository Link",
-      status: result.status,
+      id: `custody:${result.receipt_ref!.digest}`,
+      detail: `${result.provider_readback?.canonical_url ?? "Provider receipt"} · recorded ${result.request.action === "provision-new" ? "creation" : "linking"} evidence`,
+      label: result.request.action === "provision-new" ? "Repository creation" : "Existing repository linked",
+      status: historyOutcomeLabel(result.status),
       timestamp: result.receipt!.completed_at,
       tone: result.status === "succeeded" ? "ok" as const : "danger" as const,
     })),
     ...receipts.map(repositoryReceiptTimelineRow),
     ...(lifecycleAudit?.history.map((item) => ({
-      detail: `OOS lifecycle receipt ${item.receipt_ref.digest.slice(-12)}.`,
+      id: `lifecycle:${item.receipt_ref.digest}`,
+      detail: `Recorded lifecycle action · receipt ${item.receipt_ref.digest.slice(-12)}`,
       label: repositoryLifecycleHistoryLabel(item.action),
-      status: item.outcome,
+      status: historyOutcomeLabel(item.outcome),
       timestamp: item.completed_at,
       tone:
         item.outcome === "succeeded"
@@ -44,24 +47,18 @@ export function repositoryHistoryTimelineRows(
             ? ("danger" as const)
             : ("muted" as const),
     })) ?? []),
-  ]
-    .sort(
-      (left, right) =>
-        left.timestamp.localeCompare(right.timestamp) ||
-        left.label.localeCompare(right.label),
-    );
+  ];
+  return [...new Map(rows.map(row => [row.id, row])).values()].sort((left, right) =>
+    Date.parse(left.timestamp) - Date.parse(right.timestamp) || left.id.localeCompare(right.id));
 }
 
 export function repositoryHistoryRecordFacts(
   repository: RepositoryWorkspaceRecord,
 ): TerasMetadataItem[] {
   return [
-    { label: "Record", value: repository.id },
-    { label: "Status", value: repositoryRecordStatusLabel(repository) },
+    { label: "Registration", value: repositoryRecordStatusLabel(repository) },
     { label: "Owner", value: repository.owner },
-    { label: "Lifecycle", value: repository.lifecycle },
-    { label: "Route Source", value: repository.routeSource },
-    { label: "Validation", value: repository.lastValidation },
+    { label: "Workspace lifecycle", value: repository.lifecycle },
   ];
 }
 
@@ -94,6 +91,7 @@ export function repositoryHistoryReceiptFacts(
   receipts: RepositoryRuntimeReceipt[],
   lifecycleAudit: RepositoryLifecycleAudit | null = null,
   custodyResults: RepositoryCustodyWorkflowResult[] = [],
+  includeLocal = true,
 ): TerasMetadataItem[] {
   const admissionReceipt = latestRepositoryReceipt(receipts, "admission");
   const gateReceipt = latestRepositoryReceipt(
@@ -104,7 +102,9 @@ export function repositoryHistoryReceiptFacts(
     receipts,
     "retirement-request",
   );
-  const latestCustodyResults = [...new Map(custodyResults.map(result => [result.request.action, result])).values()];
+  const sortedCustody = [...custodyResults].filter(result => result.receipt && result.receipt_ref).sort((a, b) =>
+    Date.parse(a.receipt!.completed_at) - Date.parse(b.receipt!.completed_at) || a.receipt_ref!.digest.localeCompare(b.receipt_ref!.digest));
+  const latestCustodyResults = [...new Map(sortedCustody.map(result => [result.request.action, result])).values()];
 
   return [
     ...latestCustodyResults.filter(result => result.receipt_ref).map(result => ({
@@ -112,20 +112,20 @@ export function repositoryHistoryReceiptFacts(
       title: result.receipt_ref!.uri,
       value: `${result.status} / ${result.receipt!.completed_at}`,
     })),
-    {
-      label: "Admission",
+    ...(includeLocal ? [{
+      label: "Local setup review",
       title: admissionReceipt?.receiptId,
       value: admissionReceipt
         ? repositoryReceiptReference(admissionReceipt)
-        : "No local admission receipt",
+        : "No local setup receipt",
     },
     {
-      label: "Gate Resolution",
+      label: "Local Proposal resolution",
       title: gateReceipt?.receiptId,
       value: gateReceipt
         ? repositoryReceiptReference(gateReceipt)
         : "No local gate receipt",
-    },
+    }] : []),
     {
       label: "Lifecycle",
       title: lifecycleAudit?.latest_terminal_receipt_ref?.uri,
@@ -133,20 +133,20 @@ export function repositoryHistoryReceiptFacts(
         lifecycleAudit?.latest_terminal_receipt_ref?.digest ??
         (retirementReceipt
           ? repositoryReceiptReference(retirementReceipt)
-          : "No OOS lifecycle receipt"),
+          : "No recorded lifecycle action"),
     },
     {
-      label: "Last Receipt",
+      label: "Last recorded action",
       value:
         repositoryHistoryTimelineRows(receipts, lifecycleAudit, custodyResults).at(-1)
-          ?.timestamp ?? "none",
+          ?.timestamp ?? "None loaded",
     },
     {
       label: "Source",
       value: lifecycleAudit || custodyResults.length
         ? "operator-orchestration-service"
         : receipts.length > 0
-          ? "local runtime"
+          ? "disconnected preview"
           : "source record",
     },
   ];
@@ -157,15 +157,15 @@ function repositoryLifecycleHistoryLabel(
 ) {
   switch (action) {
     case "transfer-workspace-custody":
-      return "Workspace Custody Transfer";
+      return "Workspace ownership transferred";
     case "archive-provider":
-      return "Provider Archive";
+      return "Provider repository archived";
     case "unarchive-provider":
-      return "Provider Unarchive";
+      return "Provider repository unarchived";
     case "retire-workspace-record":
-      return "Workspace Record Retirement";
+      return "Workspace record retired";
     case "restore-workspace-record":
-      return "Workspace Record Restore";
+      return "Workspace record restored";
   }
 }
 
@@ -179,24 +179,27 @@ function repositoryReceiptTimelineRow(
   switch (receipt.kind) {
     case "admission":
       return {
+        id: `local:${receipt.receiptId}`,
         detail: receipt.summary,
-        label: "Admission Review",
+        label: "Local setup review",
         status: receipt.resultState,
         timestamp: receipt.recordedAt,
         tone: "ok",
       };
     case "proposal-gate-resolution":
       return {
+        id: `local:${receipt.receiptId}`,
         detail: receipt.summary,
-        label: "Proposal Gate Resolution",
+        label: "Local Proposal resolution",
         status: receipt.resultState,
         timestamp: receipt.recordedAt,
         tone: "ok",
       };
     case "retirement-request":
       return {
+        id: `local:${receipt.receiptId}`,
         detail: receipt.summary,
-        label: "Retirement Request",
+        label: "Local retirement request",
         status: receipt.resultState,
         timestamp: receipt.recordedAt,
         tone: "warn",
@@ -213,7 +216,7 @@ function latestRepositoryReceipt<
   return [...receipts]
     .sort(
       (left, right) =>
-        right.recordedAt.localeCompare(left.recordedAt) ||
+        Date.parse(right.recordedAt) - Date.parse(left.recordedAt) ||
         right.receiptId.localeCompare(left.receiptId),
     )
     .find(
@@ -222,4 +225,8 @@ function latestRepositoryReceipt<
       ): receipt is Extract<RepositoryRuntimeReceipt, { kind: TKind }> =>
         receipt.kind === kind,
     );
+}
+
+function historyOutcomeLabel(value: string) {
+  return ({ succeeded: "Completed", failed: "Failed", denied: "Denied", cancelled: "Cancelled", applying: "In progress" } as Record<string, string>)[value] ?? value;
 }

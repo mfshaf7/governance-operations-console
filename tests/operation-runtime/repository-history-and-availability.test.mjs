@@ -14,11 +14,11 @@ test("Repository history retains all original identity-bound owner receipts with
   assert.equal(retained.length,2);
   const rows=repositoryHistoryTimelineRows([],null,retained);
   assert.equal(rows.length,2);assert.equal(rows[0].timestamp,earlier.receipt.completed_at);
-  assert.ok(rows.every(row=>row.label==="Repository Provisioning"));
+  assert.ok(rows.every(row=>row.label==="Repository creation"));
   const index=repositoryHistoryReceiptFacts([],null,retained);
   assert.equal(index.filter(f=>f.label==="Provisioning").length,1);
   assert.equal(index.find(f=>f.label==="Source").value,"operator-orchestration-service");
-  assert.equal(index.find(f=>f.label==="Admission").value,"No local admission receipt");
+  assert.equal(index.find(f=>f.label==="Local setup review").value,"No local setup receipt");
   assert.deepEqual(result,original);
 });
 

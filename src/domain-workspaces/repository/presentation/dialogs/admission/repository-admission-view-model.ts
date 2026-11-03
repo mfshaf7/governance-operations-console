@@ -18,6 +18,7 @@ export function repositoryBlockerDetail(
 export function repositoryPostureGroupStateLabel(
   group: RepositoryWorkspaceRecord["admissionPosture"][number],
 ) {
+  if (group.statusLabel) return group.statusLabel;
   const states = group.items.map((item) => item.state);
 
   if (states.includes("blocked")) {

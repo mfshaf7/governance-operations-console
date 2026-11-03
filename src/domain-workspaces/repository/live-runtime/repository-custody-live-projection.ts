@@ -103,36 +103,37 @@ function repositoryRecordFromCustodyResult(
   return {
     admissionPosture: [
       {
-        description: "OOS retained the exact create decision and provider readback.",
+        description: `Original ${provisioned ? "creation" : "linking"} evidence recorded ${result.receipt.completed_at}. It does not confirm current provider status.`,
         id: "provisioning",
         items: [
           {
             detail: `GitHub repository ${providerId} matches the approved coordinates.`,
             label: "Provider identity",
-            state: "clear",
-            tone: "ok",
+            state: "reference",
+            tone: "info",
             value: providerId,
           },
           {
             detail: provisioned
               ? "README, features, visibility, and merge policy match the approved baseline."
               : "Provider identity and lifecycle match the approved custody request.",
-            label: "Provider settings",
-            state: "clear",
-            tone: "ok",
+            label: "Settings at that time",
+            state: "reference",
+            tone: "info",
             value: "verified",
           },
           {
             detail: "The terminal OOS custody receipt is available for review.",
-            label: "Provisioning receipt",
-            state: "clear",
-            tone: "ok",
+            label: "Original receipt",
+            state: "reference",
+            tone: "info",
             value: result.receipt.receipt_id,
           },
         ],
-        kicker: "Provisioning",
-        title: "Provider Repository",
-        tone: "ok",
+        kicker: "Recorded evidence",
+        title: provisioned ? "Creation evidence" : "Linking evidence",
+        statusLabel: "Recorded",
+        tone: "info",
       },
       {
         description: "Provisioning does not admit the repository to workspace inventory.",

@@ -1,4 +1,5 @@
 import {test,expect} from "@playwright/test";
+import {providerLookupFor,lifecycleAuditFor} from "../support/repository-history-fixture.mjs";
 import {execFileSync} from "node:child_process";
 const fixtures=JSON.parse(execFileSync(process.execPath,["--experimental-strip-types","--disable-warning=MODULE_TYPELESS_PACKAGE_JSON","--input-type=module","-e",
  "import {repositoryUiFixture} from './tests/support/repository-ui-fixture.mjs'; process.stdout.write(JSON.stringify({own:await repositoryUiFixture(),other:await repositoryUiFixture({proposalId:'idea-852'}),standalone:await repositoryUiFixture({proposalId:null})}));"],{encoding:"utf8"}));
@@ -21,6 +22,7 @@ async function setup(page,{empty=false,lifecycle="unavailable",posture="active",
  await page.route("**/api/workspace-intake/requests?*",r=>r.fulfill({json:{schema_version:1,workflow_id:"workspace-intake",
   target:{kind:"repo",name:"synthetic-source",record_id:"repo:synthetic-source"},custody_request_id:f.result.request.request_id,
   revision:0,pending_request_count:0,updated_at:null,records:[],next_cursor:null}}));
+ await page.route("**/api/repositories/custody/provider-repository?*",r=>r.fulfill({json:providerLookupFor(f.result)}));
  await page.route("**/api/repositories/custody/requests*",r=>r.fulfill({json:{schema_version:1,mode:"live",status:"current",error:null,records:empty?[]:[f.result],next_cursor:null}}));
  const resolution={resolution_id:"resolution:test",custody_request_id:f.result.request.request_id,receipt_ref:"receipt://test",proposal_id:f.gate.projection.proposal_id,
   source_version:"version-16",repository_request_ref:`repo-request://proposal/${f.gate.projection.proposal_id}`,
@@ -129,10 +131,12 @@ test("retained identity-bound provisioning history reports unavailable lifecycle
  await page.getByRole("button",{name:"Review Repository",exact:true}).click();
  await page.getByRole("button",{name:"View History",exact:true}).click();
  const history=page.getByRole("dialog",{name:"Repository History",exact:true});
- await expect(history.getByText("Repository Provisioning",{exact:true})).toBeVisible();
- await expect(history.getByText("Lifecycle history is unavailable:",{exact:false})).toBeVisible();
+ await expect(history.getByText("Repository creation",{exact:true})).toBeVisible();
+ await expect(history.getByText("Some sources could not be confirmed.",{exact:false})).toBeVisible();
  await expect(history.getByText("No Repository receipts are recorded.",{exact:true})).toHaveCount(0);
   await expect(history.getByText("1 receipt · Partial history",{exact:true})).toBeVisible();
+ await expect(history.getByRole('button',{name:'Retry',exact:true})).toHaveCount(0);
+ await expect(history.getByRole('button',{name:'Refresh history',exact:true})).toHaveCount(0);
  for(const width of [1200,1440,1700,1920]){
   await page.setViewportSize({width,height:1000});
   const overflow=await history.evaluate(n=>({client:n.clientWidth,scroll:n.scrollWidth}));expect(overflow.scroll).toBeLessThanOrEqual(overflow.client+1);
@@ -199,8 +203,8 @@ test("Repository filters, details and posture inspection use the same selected o
  await expect(row).toBeVisible();await control.screenshot({path:test.info().outputPath("repository-control.png")});
  await row.getByRole("button",{name:"Review",exact:true}).click();
  const details=page.getByRole("dialog",{name:"Repository details",exact:true});await expect(details).toBeVisible();
- await details.getByRole("button",{name:"Open Provider Repository posture details",exact:true}).click();
- await expect(page.getByRole("dialog",{name:"Provider Repository",exact:true})).toBeVisible();
+ await details.getByRole("button",{name:"Open Creation evidence posture details",exact:true}).click();
+ await expect(page.getByRole("dialog",{name:"Creation evidence",exact:true})).toBeVisible();
  await page.keyboard.press("Escape");await expect(details).toBeVisible();expect(writes).toEqual([]);
 });
 
@@ -628,4 +632,98 @@ test('active repository verification loads existing controls and prepares manual
  expect(submitted[1].operation).toBe('configure-verification');
  expect(submitted[1].evidenceProfile.application_verification).toEqual({mode:'manual',manual_checks:[{id:'manual-1',action:'Add a task and refresh',expected_result:'The task remains visible'}]});
  expect(submitted[1].evidenceProfile.commands).toEqual(profile.commands);expect(writes).toEqual([]);
+});
+
+test('History has no permanent refresh and replaces a failed provider section with centered read-only retry',async({page})=>{
+ const {writes,result}=await setup(page);let lookups=0,pendingResolve;
+ await page.route('**/api/repositories/custody/provider-repository?*',async route=>{
+  lookups++;
+  if(lookups>1)await new Promise(resolve=>{pendingResolve=resolve});
+  if(lookups===2)return route.fulfill({status:503,json:{code:'repository_provider_unavailable',error:'Synthetic provider unavailable',retryable:true}});
+  return route.fulfill({json:providerLookupFor(result,'archived')});
+ });
+ await page.route('**/api/repositories/lifecycle/repositories/**',route=>route.fulfill({json:{mode:'live',status:'current',audit:lifecycleAuditFor(result,'active'),error:null,observedAt:'2026-06-21T10:00:00Z'}}));
+ await page.getByRole('button',{name:'Review Repository',exact:true}).click();
+ const details=page.getByRole('dialog',{name:'Repository details',exact:true});
+ await expect(details.getByRole('button',{name:'Open Creation evidence posture details',exact:true})).toContainText('Recorded');
+ await details.getByRole('button',{name:'View History',exact:true}).click();
+ const history=page.getByRole('dialog',{name:'Repository History',exact:true});
+ await expect(history.getByText('Archived',{exact:true})).toBeVisible();
+ await expect(history.getByText('Admitted',{exact:true}).first()).toBeVisible();
+ await expect(history.getByText('active',{exact:true}).last()).toBeVisible();
+ await expect(history.getByText('No local admission receipt',{exact:true})).toHaveCount(0);
+ await expect(history.getByRole('button',{name:'Refresh history',exact:true})).toHaveCount(0);
+ await expect(history.getByRole('button',{name:'Retry',exact:true})).toHaveCount(0);
+ await history.getByText('Technical details',{exact:true}).click();
+ await expect(history.getByText('No local setup receipt',{exact:true})).toHaveCount(0);
+ for(const width of [1280,1700]){
+  await page.setViewportSize({width,height:width===1280?800:1100});
+  expect(await history.evaluate(n=>n.scrollWidth<=n.clientWidth+1)).toBe(true);
+  await history.screenshot({path:test.info().outputPath(`history-${width}.png`)});
+ }
+ await history.getByRole('button',{name:'Close Repository history',exact:true}).click();
+ await page.getByRole('button',{name:'Review Repository',exact:true}).click();
+ await page.getByRole('button',{name:'View History',exact:true}).click();
+ await expect(history.getByText('Refreshing',{exact:true})).toBeVisible();
+ pendingResolve();
+ const failure=history.getByRole('status').filter({hasText:'GitHub status could not be loaded'});
+ await expect(failure.getByRole('button',{name:'Retry',exact:true})).toBeVisible();
+ await expect(history.getByText('Observed at',{exact:true})).toHaveCount(0);
+ await failure.screenshot({path:test.info().outputPath('provider-retry.png')});
+ await failure.getByRole('button',{name:'Retry',exact:true}).click();
+ await expect(history.getByText('Reading GitHub status…',{exact:true})).toBeVisible();
+ pendingResolve();
+ await expect(history.getByText('Archived',{exact:true})).toBeVisible();
+ await expect(history.getByRole('button',{name:'Retry',exact:true})).toHaveCount(0);
+ expect(lookups).toBe(3);expect(writes).toEqual([]);
+});
+
+test('a temporary History source failure replaces the section until Retry succeeds',async({page})=>{
+ const {writes,result}=await setup(page);let reads=0,finish;
+ await page.route('**/api/repositories/lifecycle/repositories/**',async route=>{
+  reads++;
+  if(reads>1)await new Promise(resolve=>{finish=resolve});
+  return reads===1?route.fulfill({status:502,json:{mode:'live',status:'offline',retryable:true,code:'repository_lifecycle_oos_unavailable',error:'Synthetic connection interrupted'}})
+   :route.fulfill({json:{mode:'live',status:'current',audit:lifecycleAuditFor(result),error:null,observedAt:'2026-06-21T10:00:00Z'}});
+ });
+ await page.getByRole('button',{name:'Review Repository',exact:true}).click();
+ await page.getByRole('button',{name:'View History',exact:true}).click();
+ const history=page.getByRole('dialog',{name:'Repository History',exact:true});
+ const failure=history.getByRole('status').filter({hasText:'History could not be loaded'});
+ await expect(failure.getByRole('button',{name:'Retry',exact:true})).toBeVisible();
+ await expect(history.getByRole('list',{name:'Repository receipt timeline'})).toHaveCount(0);
+ const parent=failure.locator('..'),button=failure.getByRole('button',{name:'Retry',exact:true});
+ const a=await parent.boundingBox(),b=await button.boundingBox();
+ expect(Math.abs((b.x+b.width/2)-(a.x+a.width/2))).toBeLessThan(4);
+ await history.screenshot({path:test.info().outputPath('history-retry.png')});
+ await button.click();
+ await expect(history.getByText('Reading repository history…',{exact:true})).toBeVisible();
+ await expect(history.getByRole('list',{name:'Repository receipt timeline'})).toHaveCount(0);
+ finish();
+ await expect(history.getByText('Repository creation',{exact:true})).toBeVisible();
+ await expect(history.getByRole('button',{name:'Retry',exact:true})).toHaveCount(0);
+ expect(reads).toBe(2);expect(writes).toEqual([]);
+});
+
+test('missing GitHub reader setup explains the failure without offering Retry',async({page})=>{
+ const {writes}=await setup(page);
+ await page.route('**/api/repositories/custody/provider-repository?*',route=>route.fulfill({status:503,json:{code:'repository_provider_not_configured',retryable:false,error:'The provider identity is not active'}}));
+ await page.getByRole('button',{name:'Review Repository',exact:true}).click();
+ await page.getByRole('button',{name:'View History',exact:true}).click();
+ const history=page.getByRole('dialog',{name:'Repository History',exact:true});
+ await expect(history.getByText('GitHub connection needs setup',{exact:true})).toBeVisible();
+ await expect(history.getByRole('button',{name:'Retry',exact:true})).toHaveCount(0);
+ await expect(history.getByRole('button',{name:'Refresh history',exact:true})).toHaveCount(0);
+ expect(writes).toEqual([]);
+});
+
+test('a repository in a different account explains the access boundary without offering Retry',async({page})=>{
+ const {writes}=await setup(page);
+ await page.route('**/api/repositories/custody/provider-repository?*',route=>route.fulfill({status:403,json:{code:'repository_provider_owner_not_admitted',retryable:false,error:'Outside the connected account'}}));
+ await page.getByRole('button',{name:'Review Repository',exact:true}).click();
+ await page.getByRole('button',{name:'View History',exact:true}).click();
+ const history=page.getByRole('dialog',{name:'Repository History',exact:true});
+ await expect(history.getByText('Different GitHub account',{exact:true})).toBeVisible();
+ await expect(history.getByRole('button',{name:'Retry',exact:true})).toHaveCount(0);
+ expect(writes).toEqual([]);
 });
