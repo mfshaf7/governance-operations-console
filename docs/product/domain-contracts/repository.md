@@ -258,10 +258,30 @@ receipt they reverse.
 The Review step records impact disposition when a blocking finding exists,
 requires an approval note, and requires explicit confirmation of the exact
 action. The Result step displays only validated OOS decision, execution,
-receipt, and audit truth. Repository History combines identity-bound custody
-and provisioning receipts, OOS lifecycle audit and local setup receipts with
-their original attribution. Unavailable owner reads remain explicit partial
-coverage, while previously loaded evidence stays inspectable.
+receipt, and audit truth. Live Repository History combines identity-bound
+custody and provisioning receipts with the OOS lifecycle audit, preserving
+their original attribution. Prototype-local setup receipts appear only in
+disconnected preview. Missing local setup evidence never describes the state
+of canonical Workspace registration. Unavailable owner reads remain explicit
+partial coverage, while previously loaded evidence stays inspectable.
+
+Creation/link receipts describe recorded actions, not current provider health.
+History displays Workspace registration separately from a read-only GitHub
+observation and the last recorded lifecycle state. Opening History or retrying
+a failed provider read reuses the existing bounded lookup for that single
+repository. The lookup must match the immutable provider repository ID before
+its status can describe the selected record. Lifecycle audit reads are stored
+state, not fresh provider probes. Earlier GitHub observations retain their
+timestamp during refresh or failure and are not labelled current. Neither
+observation changes admission, lifecycle action eligibility or owner authority.
+There is no permanent refresh control. A temporary load failure replaces the
+affected section body with a centered Retry state, then restores normal content
+after success. Setup, permission and identity verification failures explain the
+prerequisite instead of offering ineffective retries. A provider retry reloads
+only the provider section; a History retry reloads failed retryable history
+sources. Stored evidence is retained through both states. Timeline entries
+deduplicate receipt identities; latest-per-action references
+follow completion time rather than source array order.
 
 Disconnected preview is read-only. A configured live failure, missing initial
 OOS state, stale state, malformed result, or denied action remains explicit and

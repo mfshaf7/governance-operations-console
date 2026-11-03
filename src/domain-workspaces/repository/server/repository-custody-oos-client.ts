@@ -59,7 +59,9 @@ export class RepositoryCustodyOosError extends Error {
 
 export async function lookupRepositoryProvider(owner: string, name: string, {env = process.env, fetchImpl = fetch}: {env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch} = {}) {
   if (![owner,name].every(part => /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(part)) || name.toLowerCase().endsWith(".git")) throw new RepositoryCustodyOosError("Provide valid GitHub repository coordinates.","repository_provider_lookup_invalid",400);
-  const result = assertRepositoryProviderLookup(await repositoryCustodyOosRequest(resolveRepositoryCustodyOosConfig(env),
+  // This GET uses the existing OOS caller. A custody decision and credential
+  // binding belong to link/create commands, not to read-only provider lookup.
+  const result = assertRepositoryProviderLookup(await repositoryCustodyOosRequest(resolveConsoleOosOperatorConfiguration(env),
     `/v1/repository-custody/provider-repository?${new URLSearchParams({owner,name})}`, {method:"GET"}, fetchImpl));
   if (result.owner.toLowerCase() !== owner.toLowerCase() || result.name.toLowerCase() !== name.toLowerCase()) throw new RepositoryCustodyOosError("Repository lookup returned another repository.","repository_provider_identity_mismatch",502);
   return result;
@@ -579,7 +581,9 @@ async function repositoryCustodyOosRequest(
           : response.statusText || "OOS rejected the repository custody request.",
       typeof item.code === "string"
         ? item.code
-        : "repository_custody_oos_rejected",
+        : typeof item.error === "string" && typeof item.message === "string"
+          ? item.error
+          : "repository_custody_oos_rejected",
       response.status,
       { retryable: item.retryable === true },
     );

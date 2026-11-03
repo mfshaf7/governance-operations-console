@@ -68,7 +68,7 @@ export function RepositoryAdmissionPostureDialog({
               index={String(index + 1).padStart(2, "0")}
               key={`${group.id}-${item.label}`}
               label={item.label}
-              status={repositoryPostureItemStateLabel(item.state)}
+              status={item.statusLabel ?? repositoryPostureItemStateLabel(item.state)}
               treatment="rail"
             />
           ))}

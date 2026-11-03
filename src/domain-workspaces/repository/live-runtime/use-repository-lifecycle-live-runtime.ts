@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import {
   assertRepositoryLifecycleLiveSnapshot,
@@ -25,6 +25,8 @@ export class RepositoryLifecycleClientError extends Error {
 }
 
 export function useRepositoryLifecycleLiveRuntime() {
+  const readVersions = useRef(new Map<string, number>());
+  const [refreshingRepositoryIds, setRefreshingRepositoryIds] = useState<ReadonlySet<string>>(new Set());
   const [snapshotsByRepositoryId, setSnapshotsByRepositoryId] = useState<
     Readonly<Record<string, RepositoryLifecycleLiveSnapshot>>
   >({});
@@ -48,6 +50,9 @@ export function useRepositoryLifecycleLiveRuntime() {
       providerRepositoryId: string;
       repositoryId: string;
     }) => {
+      const version = (readVersions.current.get(repositoryId) ?? 0) + 1;
+      readVersions.current.set(repositoryId, version);
+      setRefreshingRepositoryIds(current => new Set([...current, repositoryId]));
       setErrorsByRepositoryId((current) => withoutKey(current, repositoryId));
       try {
         const response = await fetch(
@@ -57,6 +62,7 @@ export function useRepositoryLifecycleLiveRuntime() {
         const body: unknown = await response.json().catch(() => null);
         if (!response.ok) throw clientError(body);
         const snapshot = assertRepositoryLifecycleLiveSnapshot(body);
+        if (readVersions.current.get(repositoryId) !== version) return snapshot;
         setSnapshotsByRepositoryId((current) => ({
           ...current,
           [repositoryId]: snapshot,
@@ -64,11 +70,14 @@ export function useRepositoryLifecycleLiveRuntime() {
         return snapshot;
       } catch (error) {
         const failure = normalizeClientError(error);
+        if (readVersions.current.get(repositoryId) !== version) throw failure;
         setErrorsByRepositoryId((current) => ({
           ...current,
           [repositoryId]: failure,
         }));
         throw failure;
+      } finally {
+        if (readVersions.current.get(repositoryId) === version) setRefreshingRepositoryIds(current => { const next = new Set(current); next.delete(repositoryId); return next; });
       }
     },
     [],
@@ -153,6 +162,7 @@ export function useRepositoryLifecycleLiveRuntime() {
   );
 
   return {
+    refreshingRepositoryIds,
     errorsByRepositoryId,
     execute,
     pendingRepositoryId,

@@ -109,3 +109,30 @@ duplicate intake. Missing, invalid or failed current owner reads show admission
 unavailable and block intake without falling back to old receipt handoffs.
 Visible-page polling refreshes current inventory. Inventory admission alone
 proves neither runtime readiness nor Security acceptance; consult those owners.
+
+### Inspect Recorded Actions And GitHub Status
+
+Select the repository, open `Review Repository`, then `View History`.
+Creation and linking evidence retain the original provider readback and receipt;
+their `Recorded` label does not claim the provider is still in that state.
+History keeps three facts separate:
+
+- **Registration** comes from the loaded Workspace Inventory projection.
+- **GitHub status** comes from the existing read-only provider lookup when
+  History opens or a temporary failed lookup is retried. Its provider and immutable
+  repository ID must match the selected record. The observation time is shown.
+- **Lifecycle record** comes from the last stored OOS lifecycle state, with
+  its recorded time. Reading that audit does not probe GitHub again.
+
+The browser uses same-origin
+`GET /api/repositories/custody/provider-repository?owner=…&name=…`; OOS and
+Platform retain provider credential authority. This inspection creates no
+custody request and performs no lifecycle action or background register scan.
+If an owner read fails, retained receipts remain inspectable and History reports
+partial coverage. If the GitHub lookup fails, any earlier observation remains
+dated and marked retained, while current status is unavailable. A lookup for a
+different immutable repository identity cannot replace the observation.
+
+An active Workspace registration may coexist with an archived GitHub repository.
+Neither fact substitutes for the other. The History view does not require a
+prototype-local setup receipt or grant any new mutation authority.

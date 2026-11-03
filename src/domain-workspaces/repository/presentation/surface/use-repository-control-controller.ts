@@ -49,6 +49,8 @@ import {
   repositorySummaryFromRecords,
 } from "../shared/repository-control-projection.ts";
 import { useWorkspaceContinuityRuntime } from "../../../../workspace-continuity/live-runtime/use-workspace-continuity-runtime.ts";
+import { useRepositoryProviderObservations } from "../../live-runtime/use-repository-provider-observations.ts";
+import { projectRepositoryProviderObservations } from "../../live-runtime/repository-provider-observation.ts";
 import { projectRepositoryCurrentInventory } from "../../live-runtime/repository-inventory-live-projection.ts";
 import { useRepositoryCustodyLiveRuntime } from "../../live-runtime/use-repository-custody-live-runtime.ts";
 import { repositoryIntakeCustody } from "../dialogs/admission/repository-intake-candidate.ts";
@@ -133,6 +135,7 @@ export function useRepositoryControlController({
   );
   const canClassifyRepository = consoleRuntimeCapabilityExecutable(consoleRuntime, "workspace-intake", "mutation");
   const lifecycleRuntime = useRepositoryLifecycleLiveRuntime();
+  const providerObservations = useRepositoryProviderObservations();
   const proposalRequestRecords = useSyncExternalStore(
     subscribeProposalRepositoryRequestRecords,
     getProposalRepositoryRequestRecords,
@@ -169,10 +172,12 @@ export function useRepositoryControlController({
         provisionedRecords,
         custodyRuntime.resultsByRepositoryId,
       );
-      return primaryRecordIsolation.fixtureAllowed ? custodyRecords
+      const inventoryRecords = primaryRecordIsolation.fixtureAllowed ? custodyRecords
         : projectRepositoryCurrentInventory(custodyRecords, continuityRuntime.projection);
+      return primaryRecordIsolation.fixtureAllowed ? inventoryRecords : projectRepositoryProviderObservations(inventoryRecords, providerObservations.snapshots);
     },
     [
+      providerObservations.snapshots,
       custodyRuntime.provisioningResultsByRequestId,
       custodyRuntime.resultsByRepositoryId,
       recordProjections,
@@ -200,6 +205,7 @@ export function useRepositoryControlController({
     null,
   );
   const [canonicalGateOpen, setCanonicalGateOpen] = useState(false);
+  const [historyReloading, setHistoryReloading] = useState(false);
   const [canonicalGateSubject, setCanonicalGateSubject] = useState<string | undefined>();
   useEffect(() => {
     if (entryIntent?.requiredMoveRef === "repository.resolve-proposal-gate" && entryIntent.subjectRef) {
@@ -677,6 +683,7 @@ export function useRepositoryControlController({
     setInspectedRepositoryId(null);
     setLifecycleRepositoryId(null);
     setHistoryRepositoryId(record.id);
+    if (consoleRuntime.projection?.mode === "live") void providerObservations.refresh(record);
     if (record.providerIdentity) {
       void lifecycleRuntime
         .refresh({
@@ -818,12 +825,31 @@ export function useRepositoryControlController({
       repository: repositoryGateResolutionRepository,
     },
     history: {
+      providerRead: historyRepository ? providerObservations.snapshots[historyRepository.id] : undefined,
+      refreshing: historyReloading || Boolean(historyRepository && lifecycleRuntime.refreshingRepositoryIds.has(historyRepository.id)) || custodyRuntime.sourceStatus === "loading",
+      retryProvider: () => { if (historyRepository && consoleRuntime.projection?.mode === "live") void providerObservations.refresh(historyRepository); },
+      retry: async () => {
+        if (!historyRepository) return;
+        const pending: Promise<unknown>[] = [];
+        setHistoryReloading(true);
+        if (custodyRuntime.sourceStatus === "offline" && custodyRuntime.sourceRetryable) pending.push(custodyRuntime.refresh());
+        if (historyRepository.providerIdentity && lifecycleRuntime.errorsByRepositoryId[historyRepository.id]?.retryable) {
+          pending.push(lifecycleRuntime.refresh({
+            repositoryId: historyRepository.id,
+            provider: historyRepository.providerIdentity.provider,
+            providerRepositoryId: historyRepository.providerIdentity.repositoryId,
+          }));
+        }
+        try { await Promise.allSettled(pending); } finally { setHistoryReloading(false); }
+      },
       custodyResults: repositoryCustodyHistoryForRecord(historyRepository, allCustodyResults),
       custodySourceStatus: custodyRuntime.sourceStatus,
       custodySourceError: custodyRuntime.sourceError,
+      custodyRetryable: custodyRuntime.sourceRetryable,
       liveMode: consoleRuntime.projection?.mode === "live",
       lifecycleSnapshot: historyRepository ? lifecycleRuntime.snapshotsByRepositoryId[historyRepository.id] : undefined,
       lifecycleError: historyRepository ? lifecycleRuntime.errorsByRepositoryId[historyRepository.id]?.message : undefined,
+      lifecycleFailure: historyRepository ? lifecycleRuntime.errorsByRepositoryId[historyRepository.id] : undefined,
       lifecycleAudit: historyRepository
         ? lifecycleRuntime.snapshotsByRepositoryId[historyRepository.id]?.audit ??
           lifecycleRuntime.resultsByRepositoryId[historyRepository.id]?.audit ??

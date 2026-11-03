@@ -64,12 +64,19 @@ current and future product changes.
 15. `implementation-audit.md`
    - Current source alignment, operation ownership, integration boundaries,
      executable controls, and deliberate prototype limits.
-16. Graduated prototype-history records:
+16. Product backlog and retained prototype-history records:
    - `brief.md`
    - `design-profile.md`
    - `backlog.md`
    - `decision-log.md`
    - `change-log.md`
+
+## Customer Release Readiness
+
+Before final release planning or independent-installation qualification, review
+the open [provider onboarding requirement](backlog.md#before-customer-release-provider-onboarding).
+Successful operation in the developer workspace does not close customer setup,
+credential renewal or recovery qualification.
 
 ## Primary Console maintenance
 

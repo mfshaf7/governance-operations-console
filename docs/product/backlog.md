@@ -2,8 +2,102 @@
 
 Status: current active backlog.
 
-Use this file for near-term prototype work only. Architecture, visual, Teras,
-domain, and surface rules live in the normalized contract files.
+Use this file for product follow-ups and remaining local prototype work.
+Architecture, visual, Teras, domain, and surface rules live in the normalized
+contract files. Deferred follow-ups do not authorize implementation or replace
+the required work-home classification when delivery begins.
+
+## Before Customer Release: Provider Onboarding
+
+- Status: **open; required before the first customer release**.
+- Recorded: 2026-11-03, at the operator's request.
+- Planning owner: Governance Operations Console.
+- Implementation dependencies: Platform Engineering for installation-specific
+  configuration, secret custody, connection wiring and renewal; OOS for
+  authenticated provider adapters; Security Architecture for identity and
+  access-scope decisions.
+- Timing: revisit during release planning and independent-installation
+  qualification. This is a deferred product-readiness requirement, not another
+  ART item or an expansion of the current Repository UI repair.
+
+### Observed Gap
+
+The current GitHub connection requires technical operator assistance outside
+the Console. App visibility, installation account, repository selection and
+runtime credential consumption are separate prerequisites; an installation
+alone does not prove the connection works. The creating App's repository access
+does not automatically grant access to the separate metadata reader. Selected
+repository access therefore leaves a manual onboarding step for new private
+repositories that the current creation workflow does not handle.
+
+At discovery, the metadata-only identity producer enforced selected
+installations. That was our access policy, not a universal GitHub requirement.
+The operator subsequently approved reusable account metadata access and
+automatic renewal as part of the current maintenance repair. Its source and
+operating qualification remain distinct from the customer-facing setup below.
+Fixing
+this local deployment or verifying one identity does not qualify independent
+customer installation. A customer must not depend on the original developer's
+accounts, App identifiers, private files, preloaded Vault state or Codex help.
+
+### Required Customer Experience
+
+1. The core Console starts without optional external providers. Each affected
+   feature explains that its connection needs setup before an operation begins;
+   unrelated features remain usable.
+2. A discoverable connection setup flow explains purpose, required account or
+   administrator authority, permissions and repository scope in plain language.
+   It guides necessary provider-native authorization and returns to the Console.
+   Customers do not reconstruct setup from internal runbooks or edit runtime
+   environment variables for routine connection management.
+3. Setup proves the intended account, access scope and a real authorized read
+   before reporting Connected. App installation, credential delivery and
+   operating readiness remain distinct observations.
+4. Secrets stay in the installation's approved backend custody. Short-lived
+   credentials renew automatically; restart, expiry, revocation, installation
+   suspension and changed repository access produce clear status and recovery
+   actions without secret exposure or Codex/CLI intervention.
+5. Creating or linking another private repository has an explicit supported
+   access path. Access already covered by an approved grant is handled
+   automatically. Any additional provider approval is explained and reachable
+   from the workflow before it is needed; a failed lookup must not be the
+   customer's first notice of missing setup.
+6. Installation instructions and in-product help describe which connections
+   are optional, which features require them, and how to connect, inspect,
+   reconnect and disconnect them. Verify the same expectations for other
+   external integrations required by the supported release scope; do not assume
+   this GitHub finding proves their setup is complete or broken.
+
+### Decisions Required Before Implementation
+
+- Choose the identity model for independent installations: guided
+  customer-owned GitHub App registration or a product-owned App connection.
+  Ownership, callback/access paths, credential custody and any vendor-service
+  dependency must be explicit. The current developer-owned App is not the
+  customer onboarding design.
+- Design the customer-facing choice between the now-approved maintenance
+  direction of explicit account-wide metadata reading (no repository filter,
+  so future repositories are included) and selected-repository isolation.
+  Explain each scope and its onboarding consequences; do not widen access
+  automatically. Keep source-content and write privileges separate. Customer
+  identity registration and independent-installation acceptance remain open;
+  they must not be used to defer the active backend repair.
+- Reuse the existing Console, Platform and OOS connection boundaries; do not
+  assume this follow-up requires another service, control plane or installer.
+
+### Release Acceptance Evidence
+
+Qualify a fresh supported installation and a separate customer account or
+organization with no inherited developer credentials or private state. Show
+provider-free startup, guided authorization, actual connection verification,
+supported private-repository creation/linking and metadata inspection, access
+handling for the next repository, automatic renewal and restart recovery, and
+understandable revocation/reconnection behavior. Routine operation must be
+possible through the Console, with only explicitly documented provider-native
+administrator actions. Record the supported environment, limits and actual
+operating evidence; source tests or the existing developer installation alone
+cannot close this entry. Carry this open requirement into the final release
+readiness review and close it only with that evidence.
 
 ## Completed Local Prototype Outcomes
 

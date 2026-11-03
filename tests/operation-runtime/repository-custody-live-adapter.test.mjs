@@ -118,6 +118,13 @@ test("canonical Repository register survives reload through authenticated owner 
   );
 });
 
+test("Repository reads distinguish temporary connection failures from setup and invalid responses", async () => {
+  await assert.rejects(readRepositoryCustodyRegister(async () => { throw new TypeError('Connection lost'); }), error => error.retryable === true);
+  await assert.rejects(readRepositoryCustodyRegister(async () => jsonResponse({code:'repository_custody_oos_unavailable',retryable:true},502)), error => error.retryable === true);
+  await assert.rejects(readRepositoryCustodyRegister(async () => jsonResponse({code:'repository_custody_oos_not_configured',retryable:false},503)), error => error.retryable === false);
+  await assert.rejects(readRepositoryCustodyRegister(async () => jsonResponse({malformed:true})), error => error.retryable === false);
+});
+
 test("case:repository-custody-end-to-end-positive links, replays, reads, and projects exact authority evidence", async () => {
   const calls = [];
   let canonicalRequest;
