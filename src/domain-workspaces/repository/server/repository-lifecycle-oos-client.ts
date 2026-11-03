@@ -603,7 +603,8 @@ async function repositoryLifecycleOosRequest(
         ? failure.error
         : "repository_lifecycle_request_failed",
       response.status,
-      { retryable: response.status === 429 || response.status >= 500 },
+      { retryable: (response.status === 429 || response.status >= 500) &&
+        !["repository_lifecycle_runtime_not_configured", "repository_provider_not_configured"].includes(String(failure.error)) },
     );
   }
   if (!sourceExpectation) return body;

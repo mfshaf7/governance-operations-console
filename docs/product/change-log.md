@@ -2,6 +2,13 @@
 
 ## 2026-11-03 — Repository Control follow-up preview
 
+Native qualification found that OOS reports disabled lifecycle history as a
+configuration 503. Preserve its machine code and classify that setup response
+as nonretryable, so History keeps available creation/link receipts visible and
+explains the disabled lifecycle source. Transient provider failures retain the
+centered Retry behavior. The native account reader separately passed public and
+private repository reads, foreign-account denial and credential rotation.
+
 Owner-repo maintenance resumes in the existing local preview lane, based on
 `375ecf5`. This is a pending batch, reviewed one surface at a time. Publication
 requires the operator's explicit batch approval; no source publication or live

@@ -30,6 +30,24 @@ const env = {
     "https://platform-engineering.local/credential-bindings/github-app/repository-lifecycle",
 };
 
+test("case:repository-lifecycle-setup-failure keeps native configuration 503 distinct from transient unavailability", async () => {
+  for (const [code, retryable] of [
+    ["repository_lifecycle_runtime_not_configured", false],
+    ["repository_provider_not_configured", false],
+    ["repository_provider_unavailable", true],
+  ]) {
+    await assert.rejects(
+      readRepositoryLifecycleAudit(
+        { provider: "github", providerRepositoryId: "1317781281" },
+        { env, fetchImpl: async () => jsonResponse({ error: code, message: "The owner reports this read is unavailable." }, 503) },
+      ),
+      error => error instanceof RepositoryLifecycleOosError && error.status === 503 &&
+        error.code === code && error.retryable === retryable,
+      `${code} must preserve setup versus transient retry behavior`,
+    );
+  }
+});
+
 test("case:repository-lifecycle-console-positive applies, replays, reads, and projects exact OOS evidence", async () => {
   const calls = [];
   let request;
