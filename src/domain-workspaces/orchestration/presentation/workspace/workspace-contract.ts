@@ -16,6 +16,6 @@ export function getOrchestrationOperationWorkbenchContract(): OperationWorkbench
     readModel:
       "Structured Orchestration definition, admission, run, node, wait, blocker, failure, event, receipt, and workspace-status projections",
     sourceOfTruth:
-      "OOS catalog and aggregate projections after admission; executable source in implementation owner repos; contract-derived and synthetic fixtures before baseline",
+      "OOS catalog and aggregate projections after admission; executable source in implementation repositories; contract-derived and synthetic fixtures before baseline",
   };
 }

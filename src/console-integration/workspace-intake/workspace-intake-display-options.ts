@@ -20,7 +20,7 @@ export const graphRoles = [
   ["operator-workflow-source", "Operator workflow source"], ["dev-integration-profile", "Integration profile"],
 ].map(([value, label]) => ({ value, label }));
 export const deliveryTargets = [
-  { value: "owner-managed-source", label: "Source code maintained by its owner" },
+  { value: "owner-managed-source", label: "Source code maintained in its repository" },
   { value: "owner-repository-local-preview", label: "A local preview" },
   { value: "platform-integrated-runtime", label: "A platform-managed running application" },
   { value: "governed-prod", label: "A product with governed production releases" },

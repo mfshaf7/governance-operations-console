@@ -123,7 +123,7 @@ export function WorkspaceRegistrySurface({
               search={{
                 ariaLabel: `Search ${view}`,
                 onValueChange: setQuery,
-                placeholder: "Search name, identity, or owner...",
+                placeholder: "Search name, identity, or responsible repository...",
                 value: query,
               }}
             />
@@ -209,12 +209,12 @@ function RegistryRecordSelected({
           ),
           title: "Lifecycle control",
         }}
-        description={fixtureMode ? "Preview record; no inventory changes are submitted." : !actionsCurrent ? "Last reconciled record. Refresh Registry to confirm its current posture." : "Current inventory identity and ownership posture."}
+        description={fixtureMode ? "Preview record; no inventory changes are submitted." : !actionsCurrent ? "Last reconciled record. Refresh Registry to confirm its current posture." : "Current inventory identity and responsibility posture."}
         facts={[
           { label: "Type", value: record.kind },
           { label: "Version", value: String(record.version) },
           { label: "Maturity", value: record.maturity ?? "Not declared" },
-          { label: "Owners", value: record.owner_refs.join(", ") },
+          { label: "Responsible repositories", value: record.owner_refs.join(", ") },
         ]}
         kicker="Selected Record"
         selected
@@ -241,7 +241,7 @@ function RegistryRecordSelected({
           { label: "Readiness reference", value: record.last_mutation.readiness_ref ?? "Not recorded" },
           { label: "Sources", value: "Workspace Governance via WGCF and OOS" },
           { label: "Authority revision", value: snapshot.authority_revision },
-          { label: "Owner projection", value: snapshot.projected_at },
+          { label: "Source projection", value: snapshot.projected_at },
           { label: "Projection digest", value: snapshot.projection_digest },
         ]} />
       </TerasPanel>
@@ -273,7 +273,7 @@ function PromotionCandidateSelected({
         facts={[
           { label: "Type", value: candidate.target.kind },
           { label: "Version", value: String(candidate.intake_entry_ref.version) },
-          { label: "Owners", value: candidate.owner_refs.join(", ") },
+          { label: "Responsible repositories", value: candidate.owner_refs.join(", ") },
           { label: "Approvals", value: String(candidate.approval_refs.length) },
         ]}
         kicker="Selected Entrant"
@@ -317,7 +317,7 @@ function registryColumns(view: RegistryView) {
       },
     },
     {
-      header: "Owners",
+      header: "Responsible repositories",
       intent: "technical" as const,
       key: "owner",
       render: (entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) => entryOwners(entry).join(", ") || "Unassigned",

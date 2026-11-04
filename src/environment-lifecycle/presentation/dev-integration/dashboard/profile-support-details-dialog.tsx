@@ -30,7 +30,7 @@ export function ProfileSupportDetailsDialog({
       contentOverflow="auto"
       height="content"
       closeLabel="Close profile support details"
-      description={connected ? "Declared owner boundaries. Missing structured details are shown as not recorded." : "Design preview — repository, write, review and persistence boundaries from this sample profile."}
+      description={connected ? "Declared component boundaries. Missing structured details are shown as not recorded." : "Design preview — repository, write, review and persistence boundaries from this sample profile."}
       kicker={connected ? "Profile support" : "Preview profile support"}
       onClose={onClose}
       open={open}
@@ -135,7 +135,7 @@ export function ProfileSupportDetailsDialog({
           </>
         ) : null}
         {!profile.persistence && profile.runtime.stateModel === "persistent" ? <TerasContentTray kicker="Persistence contract">
-          <TerasReadoutField fit="content" label="Owner detail" value={profile.declaredPersistence ? Object.entries(profile.declaredPersistence).map(([key,value]) => `${key.replaceAll("_", " ")}: ${value ?? "Not recorded"}`).join("\n") : "Detailed persistence terms are not recorded as structured owner data. The profile is declared persistent; no reset authority follows from missing detail."}/>
+          <TerasReadoutField fit="content" label="Source detail" value={profile.declaredPersistence ? Object.entries(profile.declaredPersistence).map(([key,value]) => `${key.replaceAll("_", " ")}: ${value ?? "Not recorded"}`).join("\n") : "Detailed persistence terms are not recorded as structured source data. The profile is declared persistent; no reset authority follows from missing detail."}/>
         </TerasContentTray> : null}
       </TerasTrayStack>
     </TerasDialog>

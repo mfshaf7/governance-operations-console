@@ -144,7 +144,7 @@ export function getOrchestrationHomeViewModel(
       tone: runStateTone(event.state),
     })),
     ownerOptions: [
-      { label: "All owners", value: "all" },
+      { label: "All responsible components", value: "all" },
       ...uniqueValues(attention.map((item) => item.owner)).map((value) => ({
         label: value,
         value,

@@ -11,7 +11,7 @@ export function priorityMove(candidate: CommandCenterAttentionCandidate) {
 }
 export function priorityExplanation(candidate: CommandCenterAttentionCandidate) {
     if (candidate.requiredMove.label === "request-correction" && /source credential/i.test(candidate.reason)) {
-        return "Platform reports a failed source-credential operation. Review the original request and its required source version before retrying. The owner explanation is available in Source details.";
+        return "Platform reports a failed source-credential operation. Review the original request and its required source version before retrying. The source explanation is available in Source details.";
     }
     return candidate.reason;
 }

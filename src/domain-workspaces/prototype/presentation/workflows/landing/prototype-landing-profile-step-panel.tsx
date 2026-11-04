@@ -101,7 +101,7 @@ export function PrototypeLandingProfileStepPanel({
               />
               <TerasTextField
                 disabled={!landingDraftMutable}
-                label="Owner"
+                label="Responsible for prototype"
                 onValueChange={(value) => onDraftChange("owner", value)}
                 value={activeLandingDraft.owner}
               />

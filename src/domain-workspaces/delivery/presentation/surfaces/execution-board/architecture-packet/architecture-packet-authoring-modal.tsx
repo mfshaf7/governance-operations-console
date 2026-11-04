@@ -164,7 +164,7 @@ export function ArchitecturePacketAuthoringModal({
     <>
     <TerasModalShell busy={submitting} busyLabel="Processing architecture packet…"
       bodyLayout="scroll"
-      description="Prepare the architecture and conformance plan, validate the packet, then review and save it through the governed owner path."
+      description="Prepare the architecture and conformance plan, validate the packet, then review and save it through the governed workflow path."
       footer={
         <TerasActionButton disabled={submitting} emphasis="secondary" onClick={requestClose}>
           Back to Execution Board
@@ -273,7 +273,7 @@ export function ArchitecturePacketAuthoringModal({
           {persisted ? (
             <TerasPanel frame="padded" layout="header-body" tone="ok" treatment="state">
               <TerasPanelHeader
-                description="WGCF custody and OOS owner evidence now bind the accepted packet."
+                description="WGCF custody and OOS source evidence now bind the accepted packet."
                 kicker="Step 3"
                 statusLabel="Durable"
                 statusTone="ok"
@@ -291,7 +291,7 @@ export function ArchitecturePacketAuthoringModal({
               />
               <TerasNoteField
                 disabled={submitting}
-                label="OOS owner receipt"
+                label="OOS source receipt"
                 minimumHeight="short"
                 onValueChange={() => undefined}
                 readOnly
@@ -422,7 +422,7 @@ export function ArchitecturePacketAuthoringModal({
           {draftIssues.length > 1 ? (
             <TerasPanel frame="padded" layout="header-body" tone="warn" treatment="state">
               <TerasPanelHeader
-                description="Every missing ownership, topology, evidence, gate, and decision input remains visible before OOS is called."
+                description="Every missing responsibility, topology, evidence, gate, and decision input remains visible before OOS is called."
                 kicker="Input blockers"
                 title={`${draftIssues.length} issues remain`}
               />
@@ -446,7 +446,7 @@ export function ArchitecturePacketAuthoringModal({
       open={closeGuardOpen}
       title="Discard Architecture Packet edits?"
       kicker="Unsaved packet"
-      description="These edits have not been persisted. Leaving discards this draft; the current owner packet remains available."
+      description="These edits have not been persisted. Leaving discards this draft; the current source packet remains available."
       leaveLabel="Discard Draft"
       onKeepEditing={() => setCloseGuardOpen(false)}
       onLeave={onClose}

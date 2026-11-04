@@ -52,8 +52,8 @@ export function ProductPublicationChecksStep({
       </TerasWizardPanel>
       {ownerManifestFacts.length > 0 ? (
         <TerasWizardPanel
-          description="This exact owner-manifest binding proves publication evidence. It does not grant product access."
-          kicker="Owner Evidence"
+          description="This exact product-manifest binding proves publication evidence. It does not grant product access."
+          kicker="Source evidence"
           title="Manifest binding"
         >
           <TerasMetadataList columns={1} items={ownerManifestFacts} />

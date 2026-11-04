@@ -172,7 +172,7 @@ export function ProfileStageHandoffDock({
           columns={1}
           items={[
             {
-              label: "Owner",
+              label: "Implementation repository",
               value: handoff.ownerRepo,
             },
           ]}

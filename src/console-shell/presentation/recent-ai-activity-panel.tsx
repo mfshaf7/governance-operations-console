@@ -16,7 +16,7 @@ function activityTime(value: string, observedAt: string | null) {
 function displayPage(snapshot: AiActivitySnapshot) {
   const preview = selectRecentAiActivity({ ...snapshot, status: snapshot.status === "stale" ? "offline" : snapshot.status });
   return { examples: preview.examples, items: preview.examples ? preview.items : snapshot.items,
-    message: preview.examples ? preview.message : snapshot.error ?? (snapshot.status === "loading" ? "Checking AI activity…" : snapshot.status === "offline" ? "AI request history is unavailable." : snapshot.items.length ? "Recorded requests · latest owner observation" : "No recorded AI requests.") };
+    message: preview.examples ? preview.message : snapshot.error ?? (snapshot.status === "loading" ? "Checking AI activity…" : snapshot.status === "offline" ? "AI request history is unavailable." : snapshot.items.length ? "Recorded requests · latest source observation" : "No recorded AI requests.") };
 }
 function ActivityRow({ item, observedAt, selected, onClick }: { item: RecentAiActivity; observedAt: string | null; selected?: boolean; onClick: () => void }) {
   return <button aria-label={`Inspect activity: ${item.task}`} aria-pressed={selected} className={styles.runtimeRow} onClick={onClick} type="button">
@@ -53,11 +53,11 @@ export function RecentAiActivityPanel({ onOpenItem }: { onOpenItem?: (item: Rece
         : <p className={styles.activityCoverage} role={snapshot.error ? "status" : undefined}>{head.message}</p>}
       <div className={styles.runtimeList}>
         {head.items.length ? head.items.map(item => <ActivityRow key={item.id} item={item} observedAt={snapshot.observedAt} onClick={() => { setHistoryPage(null); setPageNumber(1); setSelectedId(item.id); setHistoryOpen(true); }} />)
-          : snapshot.status === "loading" ? null : <p className={styles.emptyRoster}>{snapshot.status === "offline" ? "Restore the owner connection or refresh History." : "Requests appear here after you ask an assistant."}</p>}
+          : snapshot.status === "loading" ? null : <p className={styles.emptyRoster}>{snapshot.status === "offline" ? "Restore the service connection or refresh History." : "Requests appear here after you ask an assistant."}</p>}
       </div>
     </section>
     <TerasDialog title="AI Activity" kicker="Agent Runtime" width="standard" height="content" contentOverflow="auto"
-      description={current.examples ? "Preview examples for layout review. These requests were not executed and have no owner receipts or linked records." : currentPage.coverage}
+      description={current.examples ? "Preview examples for layout review. These requests were not executed and have no source receipts or linked records." : currentPage.coverage}
       open={historyOpen} onClose={close}>
       <div className={styles.activityHistoryActions}>
         <p role="status">Page {pageNumber}{currentPage.status === "stale" ? " · retained observation" : ""}</p>
@@ -65,7 +65,7 @@ export function RecentAiActivityPanel({ onOpenItem }: { onOpenItem?: (item: Rece
         <TerasUtilityButton busy={loading} disabled={loading || !currentPage.nextCursor} onClick={() => void older()}>{loading ? "Loading earlier activity" : "Earlier activity"}</TerasUtilityButton>
       </div>
       {error ? <p className={styles.activityDescription} role="alert">{error}</p> : null}
-      {snapshot.error && historyPage ? <p className={styles.activityDescription} role="alert">Owner refresh is unavailable. This page retains its recorded observation.</p> : null}
+      {snapshot.error && historyPage ? <p className={styles.activityDescription} role="alert">Source refresh is unavailable. This page retains its recorded observation.</p> : null}
       <div aria-label="AI activity history" className={styles.activityHistoryList}>
         {current.items.length ? current.items.map(item => <ActivityRow key={item.id} item={item} observedAt={currentPage.observedAt} selected={selected?.id === item.id} onClick={() => setSelectedId(item.id)} />) : <p className={styles.emptyRoster}>{current.message}</p>}
       </div>

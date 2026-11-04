@@ -450,7 +450,7 @@ test("case:1261-positive shows the exact governed audience tuple and owner-manif
   assert.deepEqual(
     productPublicationOwnerManifestFacts(record).map((fact) => fact.label),
     [
-      "Owner Repository",
+      "Responsible repository",
       "Manifest Path",
       "Source Revision",
       "Manifest Revision",

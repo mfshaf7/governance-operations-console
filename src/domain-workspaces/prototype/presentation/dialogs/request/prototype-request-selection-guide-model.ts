@@ -154,7 +154,7 @@ function prototypeSourceHomeGuideDetail(value: PrototypeSourceHome) {
     case "existing-source":
       return "Use when the request starts from an existing source path.";
     case "future-owner-repo":
-      return "Use when the likely durable home is a future owner repo after movement.";
+      return "Use when the likely durable home is a future implementation repository after movement.";
   }
 }
 

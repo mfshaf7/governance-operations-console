@@ -184,7 +184,7 @@ export function ProductDashboardModal({
                   </TerasStatusPill>
                 }
                 actionsLayout="inline"
-                description="Open the verified primary product experience published by its owner."
+                description="Open the verified primary product experience published by its product component."
                 kicker="Product Access"
                 title={entry.experience.primaryTarget.label}
               />
@@ -299,9 +299,9 @@ function ProductDashboardTabContent({
           overflow="hidden"
         >
           <TerasPanelHeader
-            description="Canonical product classification, source identity, and accountable owners."
+            description="Canonical product classification, source identity, and responsible components."
             kicker="Product Record"
-            title="Profile and ownership"
+            title="Profile and responsibility"
           />
           <TerasContentRegion fill gap="normal" scroll>
             <TerasTrayStack columns={2}>
@@ -310,7 +310,7 @@ function ProductDashboardTabContent({
                   items={productDashboardProfileFacts(entry)}
                 />
               </TerasContentTray>
-              <TerasContentTray kicker="Ownership">
+              <TerasContentTray kicker="Responsibility">
                 <TerasMetadataList
                   items={productDashboardOwnershipFacts(entry)}
                 />
@@ -424,7 +424,7 @@ function ProductDashboardTabContent({
                     displayTimestamp={formatProductTimestamp(event.recorded_at)}
                     key={`${event.sequence}-${event.receipt_ref.digest}`}
                     label={`${event.action} · version ${event.publication_version}`}
-                    status="Owner receipt"
+                    status="Source receipt"
                     timestamp={event.recorded_at}
                     tone="info"
                   />
@@ -456,7 +456,7 @@ function productMaintenanceStateFacts(composition: ProductMaintenanceComposition
     { label: "Publication", value: composition.maintenance.publication.posture },
     { label: "Publication Version", value: String(composition.maintenance.publication.version) },
     { label: "Evidence", value: composition.maintenance.evidence_posture.state },
-    { label: "Owner Route", value: `${composition.maintenance.owner_route.repo}@${composition.maintenance.owner_route.revision}` },
+    { label: "Workflow route", value: `${composition.maintenance.owner_route.repo}@${composition.maintenance.owner_route.revision}` },
   ];
 }
 
@@ -465,7 +465,7 @@ function productMaintenanceHealthFacts(composition: ProductMaintenanceCompositio
     { label: "Availability", value: composition.health.availability.state },
     { label: "Freshness", value: composition.health.freshness },
     { label: "Issues", value: composition.health.issues.codes.join(", ") || "None" },
-    { label: "Runtime Owner", value: composition.health.runtimeOwner },
+    { label: "Runtime responsibility", value: composition.health.runtimeOwner },
     { label: "Recovery", value: composition.health.recovery.runbookRef },
   ];
 }

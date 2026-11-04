@@ -155,7 +155,7 @@ export function WorkspaceRegistryWorkspace({
       <TerasModalShell
         agentHost
         bodyLayout="fill"
-        description="Inspect canonical workspace inventory and promote approved entrants through the owning workflow service."
+        description="Inspect canonical workspace inventory and promote approved entrants through the responsible workflow service."
         height="fill"
         kicker="Workspace Governance"
         onClose={onClose}
@@ -199,7 +199,7 @@ export function WorkspaceRegistryWorkspace({
               metrics={[
                 { id: "records", label: "Records", value: snapshot ? String(snapshot.records.length) : "—" },
                 { id: "eligible", label: "Eligible", tone: "warn", value: snapshot ? String(snapshot.eligible_promotions.length) : "—" },
-                { id: "owners", label: "Owners", value: snapshot ? String(owners) : "—" },
+                { id: "owners", label: "Responsible repositories", value: snapshot ? String(owners) : "—" },
               ]}
               statuses={[
                 {
@@ -220,7 +220,7 @@ export function WorkspaceRegistryWorkspace({
                   detail: "Canonical authority",
                   facts: [],
                   id: "authority",
-                  label: "Owner",
+                  label: "Responsible repository",
                   stateLabel: snapshot ? "Governance" : "Not read",
                   tone: snapshot ? "ok" : "warn",
                 },

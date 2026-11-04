@@ -234,7 +234,7 @@ export function executionCloseoutReadinessRows(
     ["Missing evidence", counts.without_evidence],
     ["Weak evidence", counts.weak_evidence],
     ["Weak done narrative", counts.weak_done_narrative],
-    ["Missing owner", counts.without_owner],
+    ["Missing responsible repository", counts.without_owner],
   ] as const;
 }
 

@@ -1,3 +1,4 @@
+import { deliveryFieldDisplayLabel } from "../../../read-model/terms/copy.ts";
 import type {
   DeliveryCatalogItem,
   DeliveryCatalogValue,
@@ -58,7 +59,7 @@ export function CatalogValuesPanel({
       tone="warn"
     >
       <TerasPanelHeader
-        kicker={activeCatalog?.label ?? "Catalog"}
+        kicker={deliveryFieldDisplayLabel(activeCatalog?.label ?? "Catalog")}
         title="Current Values"
         description={
           activeCatalog

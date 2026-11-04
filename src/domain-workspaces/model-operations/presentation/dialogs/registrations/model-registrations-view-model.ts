@@ -14,7 +14,7 @@ export function modelBackendStatusMetadata(registry: ModelRegistry, backend: Mod
   return [
     { label: "Registration", value: backend?.registered ? "Registered" : "Not registered" },
     { label: "Backend health", value: backend?.registered ? providerHealthLabel(observation) : "Not checked",
-      detail: health ? "Checked " + new Date(health.checked_at).toLocaleTimeString() : "No current owner health observation" },
+      detail: health ? "Checked " + new Date(health.checked_at).toLocaleTimeString() : "No current service health observation" },
   ];
 }
 
@@ -54,7 +54,7 @@ export function modelRegistrationInspection(registry: ModelRegistry, modelId: st
   const summary: ModelInspectionRow[] = [
     { id: "success", label: "Last successful check",
       value: success ? (success.kind === "verification" ? "Verification" : "Request") + (recent ? " · recent" : " · stale") : observation ? "No result recorded" : "Not available",
-      detail: success ? new Date(success.at).toLocaleString() : observation ? "No timestamped success for this registration and account." : "No current owner observation.",
+      detail: success ? new Date(success.at).toLocaleString() : observation ? "No timestamped success for this registration and account." : "No current source observation.",
       tone: success && recent ? "info" : "muted" },
     { id: "content", label: "Model content", value: observedDigest
         ? model.model_digest ? contentChanged ? "Changed" : "Unchanged" : "No registered digest"
@@ -66,7 +66,7 @@ export function modelRegistrationInspection(registry: ModelRegistry, modelId: st
       detail: "The observed runtime differs from the registered version.", tone: "warn" as const }] : []),
     ...(observation?.code === "registration-changed" && !runtimeChanged && !contentChanged
       ? [{ id: "registration-change", label: "Registration changed", value: "Review needed",
-        detail: "The owner reports changed registration metadata.", tone: "warn" as const }] : []),
+        detail: "The model service reports changed registration metadata.", tone: "warn" as const }] : []),
   ];
   const technical: TerasMetadataItem[] = [
     { label: "Registered runtime", value: model.runtime_version ?? "Not supplied by provider" },

@@ -188,15 +188,15 @@ export function DeliveryIntakeSurface({
                 search={{
                   ariaLabel: "Search intake accepted sources",
                   onValueChange: setSearch,
-                  placeholder: "Search accepted source, owner, evidence...",
+                  placeholder: "Search accepted source, workspace, evidence...",
                   value: search,
                 }}
                 filters={[
                   {
-                    label: "Filter intake owner",
+                    label: "Filter source workspace",
                     onValueChange: setOwnerFilter,
                     options: ownerOptions.map((owner) => ({
-                      label: owner === "all" ? "All owners" : owner,
+                      label: owner === "all" ? "All source workspaces" : owner,
                       value: owner,
                     })),
                     value: ownerFilter,
@@ -217,7 +217,7 @@ export function DeliveryIntakeSurface({
           >
             {evidenceIssues.length ? <TerasList ariaLabel="Unverified Intake source evidence" frame="contained" scrollHeight="short">
               {evidenceIssues.map(issue=><TerasSignalItem key={issue.target_ref} tone="warn" label="Intake evidence unavailable" title={issue.target_ref} detail={issue.detail}
-                actions={<TerasActionButton emphasis="secondary" onClick={()=>setNativeHistoryId(`delivery-${issue.target_ref.split("/").at(-1)}`)}>Inspect owner history</TerasActionButton>}/>)}
+                actions={<TerasActionButton emphasis="secondary" onClick={()=>setNativeHistoryId(`delivery-${issue.target_ref.split("/").at(-1)}`)}>Inspect source history</TerasActionButton>}/>)}
             </TerasList> : null}
             {filteredSources.length > 0 ? (
               <DeliveryIntakeRegisterTable

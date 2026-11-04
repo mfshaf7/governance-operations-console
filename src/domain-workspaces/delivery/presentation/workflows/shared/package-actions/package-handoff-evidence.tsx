@@ -30,7 +30,7 @@ export function DeliveryWorkDesignHandoffEvidenceDialog({
     return (
       <TerasDialog contentOverflow="auto" height="content" width="standard" open
         kicker="Work Design Handoff" title="Canonical Evidence Unavailable" onClose={onClose}>
-        <TerasContentTray title="Owner evidence is not loaded">
+        <TerasContentTray title="Source evidence is not loaded">
           Wait for the configured runtime and canonical package identity. No local evidence is substituted.
         </TerasContentTray>
       </TerasDialog>

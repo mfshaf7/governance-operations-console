@@ -174,7 +174,7 @@ export function repositoryProvisioningChecks(
       tone: coordinatesReady ? ("ok" as const) : ("warn" as const),
     },
     {
-      detail: "Custody names the workspace owner for the new repository.",
+      detail: "Custody names the workspace repository for the new repository.",
       label: "Workspace custody",
       status: custodyReady ? "ready" : "required",
       tone: custodyReady ? ("ok" as const) : ("warn" as const),

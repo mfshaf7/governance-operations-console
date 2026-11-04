@@ -60,7 +60,7 @@ import {
   repositoryProvisionedRecordId,
   repositoryCustodyHistoryForRecord,
 } from "../../live-runtime/repository-custody-live-projection.ts";
-import type { RepositoryCustodyLinkIntent } from "../../live-runtime/repository-custody-live-types.ts";
+import type { RepositoryCustodyLinkIntent, RepositoryCustodyWorkflowResult } from "../../live-runtime/repository-custody-live-types.ts";
 import type {
   RepositoryLifecycleAction,
   RepositoryLifecycleCommandIntent,
@@ -134,6 +134,8 @@ export function useRepositoryControlController({
     "mutation",
   );
   const canClassifyRepository = consoleRuntimeCapabilityExecutable(consoleRuntime, "workspace-intake", "mutation");
+  const canPrepareRepositoryLink = custodyRuntime.sourceStatus === "current" && consoleRuntimeCapabilityExecutable(consoleRuntime, "repository-custody", "source");
+  const canLinkRepository = consoleRuntimeCapabilityExecutable(consoleRuntime, "repository-custody", "mutation");
   const lifecycleRuntime = useRepositoryLifecycleLiveRuntime();
   const providerObservations = useRepositoryProviderObservations();
   const proposalRequestRecords = useSyncExternalStore(
@@ -205,6 +207,7 @@ export function useRepositoryControlController({
     null,
   );
   const [canonicalGateOpen, setCanonicalGateOpen] = useState(false);
+  const [standaloneLinkOpen, setStandaloneLinkOpen] = useState(false);
   const [historyReloading, setHistoryReloading] = useState(false);
   const [canonicalGateSubject, setCanonicalGateSubject] = useState<string | undefined>();
   useEffect(() => {
@@ -387,7 +390,7 @@ export function useRepositoryControlController({
             {
               detail: currentOwnersAvailable
                 ? "Custody history is projected from OOS; current admission is reconciled with canonical Workspace inventory."
-                : custodyRuntime.sourceError ?? continuityRuntime.error?.message ?? "Current repository owner records are loading.",
+                : custodyRuntime.sourceError ?? continuityRuntime.error?.message ?? "Current repository source records are loading.",
               facts: [
                 { label: "Custody history", value: custodyRuntime.sourceStatus },
                 { label: "Current inventory", value: continuityRuntime.mode },
@@ -417,7 +420,7 @@ export function useRepositoryControlController({
           kicker: "Repository Status",
           statusLabel: currentOwnersAvailable ? "Canonical source current" : "Current admission unavailable",
           summary:
-            "Live mode shows only authoritative Repository results returned by owner workflows.",
+            "Live mode shows only authoritative Repository results returned by workflow services.",
           title: "Repository control status",
           tone: currentOwnersAvailable ? "ok" : "danger",
         };
@@ -762,6 +765,22 @@ export function useRepositoryControlController({
         ...Object.values(custodyRuntime.resultsByRepositoryId),
         ...Object.values(custodyRuntime.provisioningResultsByRequestId),
       ].map(result => [result.request.request_id,result])).values()],
+    },
+    standaloneLink: {
+      open: standaloneLinkOpen,
+      enabled: canPrepareRepositoryLink,
+      executionAvailable: canLinkRepository,
+      show: () => setStandaloneLinkOpen(true),
+      close: () => setStandaloneLinkOpen(false),
+      results: allCustodyResults,
+      link: custodyRuntime.link,
+      openRepository: (result: RepositoryCustodyWorkflowResult) => {
+        const id = repositoryProvisionedRecordId(result);
+        if (!id) return;
+        setSelectedRepositoryId(id);
+        setView("repositories");
+        setStandaloneLinkOpen(false);
+      },
     },
     custody: {
       close: () => setCustodyRepositoryId(null),

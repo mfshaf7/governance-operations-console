@@ -112,7 +112,7 @@ export function OwnerPublicationSurface({ runtime, state, products, productsErro
           <TerasActionButton emphasis="secondary" disabled={runtime.pending || previewMode} onClick={() => setRecoveryOpen(true)}>Find earlier request</TerasActionButton>
         </TerasActionRow>} />
       <TerasContentRegion fill gap="normal" scroll>
-        {previewMode ? <TerasContentTray kicker="Sample products" description="Review the interaction with example product information. Publishing is disabled; no catalog or owner data will change." /> : null}
+        {previewMode ? <TerasContentTray kicker="Sample products" description="Review the interaction with example product information. Publishing is disabled; no catalog or source data will change." /> : null}
         {live && !products && !productsError ? <TerasLoadingState label="Loading products for publication…" /> : !canLoad || !products ? <TerasContentTray kicker="Publication unavailable"
           description={productsError ?? (!live ? "This preview is not connected to the publication service. Product information and catalog changes are unavailable here." : "Product information is still loading. Choose a product when it becomes available.")} /> : <>
           <TerasFieldGrid columns={2}>
@@ -138,10 +138,10 @@ export function OwnerPublicationSurface({ runtime, state, products, productsErro
                 { label: "Product", value: selected?.name ?? productId },
                 { label: "Current listing", value: publicationPostureLabels[preparation.current.posture] },
                 { label: "Catalog version", value: String(preparation.current.version) },
-                { label: preparation.source_available ? "Source owners" : "Last request's source", value: preparation.owner_repos.join(", ") },
+                { label: preparation.source_available ? "Source repositories" : "Last request's source", value: preparation.owner_repos.join(", ") },
               ]} />
             {preparation.issues.length ? <TerasList frame="contained">{preparation.issues.map(issue => <TerasSignalItem key={issue.code}
-              label="Product information needed" title={selected?.name ?? "Selected product"} detail={`${issue.message} ${preparation.source_available ? "Source owners" : "Last request's source"}: ${preparation.owner_repos.join(", ")}.`} tone="warn" />)}</TerasList> : null}
+              label="Product information needed" title={selected?.name ?? "Selected product"} detail={`${issue.message} ${preparation.source_available ? "Source repositories" : "Last request's source"}: ${preparation.owner_repos.join(", ")}.`} tone="warn" />)}</TerasList> : null}
             {expired || sourceChanged ? <TerasContentTray kicker="Load current information" description="The product information is no longer current. Load it again before reviewing a change." /> : null}
             <TerasActionRow><TerasActionButton emphasis="secondary" disabled={locked} onClick={() => selectProduct(productId)}>Load current information</TerasActionButton></TerasActionRow>
             {preparation.recent_requests.length ? <TerasContentTray kicker="Latest requests for this product"
@@ -161,9 +161,9 @@ export function OwnerPublicationSurface({ runtime, state, products, productsErro
       </TerasContentRegion>
       <TerasActionRow layout="split"><TerasActionButton disabled={!ready || locked || !reason.trim() || !preparation?.available_actions.includes(action)} onClick={beginReview}>Review catalog change</TerasActionButton></TerasActionRow>
     </TerasPanel>
-    {review || result ? <TerasModalShell busy={runtime.pending} busyLabel="Contacting publication owner…" width="standard" height="content" bodyLayout="scroll" surfaceId="owner-publication-review"
+    {review || result ? <TerasModalShell busy={runtime.pending} busyLabel="Contacting publication service…" width="standard" height="content" bodyLayout="scroll" surfaceId="owner-publication-review"
       title={result ? "Catalog result" : "Review catalog change"} kicker="Product publication"
-      description={result ? "The recorded owner result for this exact request." : "Check the product, current listing and proposed change before approving."}
+      description={result ? "The recorded service result for this exact request." : "Check the product, current listing and proposed change before approving."}
       onClose={() => { if (!locked) { setReview(null); setResult(null); } }}
       footer={<TerasActionRow>
         <TerasActionButton emphasis="secondary" disabled={locked} onClick={() => { setReview(null); setResult(null); }}>{result ? "Back to Publication" : "Back to draft"}</TerasActionButton>
@@ -184,7 +184,7 @@ export function OwnerPublicationSurface({ runtime, state, products, productsErro
           <TerasPanel frame="padded" fit="content" treatment="neutral">
             <TerasTechnicalDetails summary="Source and request details" items={[
               { label: "Request reference", value: review.intent.request_id },
-              { label: "Source owner", value: review.intent.manifest_source.repo },
+              { label: "Source repository", value: review.intent.manifest_source.repo },
               { label: "Manifest path", value: review.intent.manifest_source.path },
               { label: "Source revision", value: review.intent.manifest_source.source_revision },
               { label: "Manifest revision", value: review.intent.manifest_source.manifest_revision },

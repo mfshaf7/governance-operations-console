@@ -114,7 +114,7 @@ export function usePrototypeControlController({
           lastRead: "unavailable",
           mutationGateway: "unavailable",
           project: "Workspace Prototype Studio",
-          recordSystem: "canonical owner projection",
+          recordSystem: "canonical source projection",
           registry: "unavailable",
         },
       }),
@@ -185,8 +185,8 @@ export function usePrototypeControlController({
   const entryResolution = entryIntent ? resolvePrototypeEntryRecord(readModel.records, entryIntent.subjectRef) : null;
   const entryError = (primaryRecordIsolation.fixtureAllowed || primaryRecordIsolation.liveAuthorityAllowed) && entryResolution && entryResolution.kind !== "ready"
     ? entryResolution.kind === "conflict"
-      ? "The requested Prototype matches conflicting owner records. Refresh owner records before continuing."
-      : "The requested Prototype is not present in current owner records. Refresh the source and reopen this handoff; another Prototype has not been selected."
+      ? "The requested Prototype matches conflicting source records. Refresh source records before continuing."
+      : "The requested Prototype is not present in current source records. Refresh the source and reopen this handoff; another Prototype has not been selected."
     : null;
   const filteredRecords = useMemo(
     () => filterPrototypeRecords(readModel.records, state.filters),
@@ -308,7 +308,7 @@ export function usePrototypeControlController({
           kicker: "Prototype Status",
           statusLabel: "Canonical source unavailable",
           summary:
-            "Live mode requires an owner-backed Prototype projection before records or record actions are shown.",
+            "Live mode requires an source-backed Prototype projection before records or record actions are shown.",
           title: "Prototype workspace status",
           tone: "danger",
         };
@@ -362,7 +362,7 @@ export function usePrototypeControlController({
     commandId: CommandId,
     input: PrototypeCommandInputById[CommandId],
   ) {
-    if (!primaryRecordIsolation.fixtureAllowed) throw new Error("Prototype-local commands are disabled in live mode; use the canonical owner workflow.");
+    if (!primaryRecordIsolation.fixtureAllowed) throw new Error("Prototype-local commands are disabled in live mode; use the canonical workflow service.");
     if (!runtimeCapabilities.canSubmit) {
       return null;
     }
@@ -580,7 +580,7 @@ export function usePrototypeControlController({
   async function maturityAction(action: "read" | "continue" | "cancel") {
     if (!activeRecord) throw new Error("Select a canonical Prototype record.");
     const projection = maturityRuntime.projectionsByRecordId[activeRecord.id];
-    if (!projection) throw new Error("No current owner Maturity request is available.");
+    if (!projection) throw new Error("No current Maturity request is available from the service.");
     const input = { record: activeRecord, input: projection.input, inputKey: projection.inputKey };
     try {
       if (action === "read") return await maturityRuntime.read(input, projection.result.request_id);

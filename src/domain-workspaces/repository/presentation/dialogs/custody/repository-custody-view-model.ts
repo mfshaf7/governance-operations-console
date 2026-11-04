@@ -47,7 +47,7 @@ export function repositoryCustodyResultProjection(
   if (result?.status === "succeeded") {
     return {
       description:
-        "OOS linked the immutable provider repository identity to the reviewed workspace owner and retained a terminal receipt.",
+        "OOS linked the immutable provider repository identity to the reviewed workspace repository and retained a terminal receipt.",
       statusLabel: result.replayed ? "Replayed" : "Linked",
       title: "Repository custody linked",
       tone: "ok" as const,
@@ -106,8 +106,8 @@ export function repositoryCustodyChecks(
       tone: identityReady ? ("ok" as const) : ("warn" as const),
     },
     {
-      detail: "Custody names the existing workspace owner record.",
-      label: "Workspace owner",
+      detail: "Custody names the existing workspace repository record.",
+      label: "Workspace repository",
       status: ownerReady ? "ready" : "required",
       tone: ownerReady ? ("ok" as const) : ("warn" as const),
     },

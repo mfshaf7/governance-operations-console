@@ -28,7 +28,7 @@ export function useIntakeOwnerSetup(record: WorkspaceRegistryRecord | null, fixt
       setState({ status: fixtureMode ? "preview" : "current", setup, error: null });
       return setup;
     } catch (error) {
-      if (sequence === generation.current) setState({ status: "unavailable", setup: null, error: error instanceof Error ? error.message : "Owner setup unavailable." });
+      if (sequence === generation.current) setState({ status: "unavailable", setup: null, error: error instanceof Error ? error.message : "Repository setup unavailable." });
       return null;
     }
   }, [name, fixtureMode, record]);

@@ -82,7 +82,7 @@ function operationLogFacts(
       value: operation.actorRef,
     },
     {
-      label: "Workflow owner",
+      label: "Workflow service",
       value: operation.workflowOwner,
     },
     {

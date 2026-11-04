@@ -123,7 +123,7 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
       // Source merge and the owner's final acknowledgement are separate facts.
       // Keep the existing resume surface reachable until that request finishes.
       const candidate = pendingMaturity.transition === "candidate-promotion";
-      base.currentMove = { id: pendingMaturity.transition, actionLabel: candidate ? "Open Candidate Promotion" : "Open Baseline Promotion", label: "Continue owner promotion", detail: "The retained owner request is still pending. Inspect its progress and complete its receipt/readback before moving on.", tone: "info" };
+      base.currentMove = { id: pendingMaturity.transition, actionLabel: candidate ? "Open Candidate Promotion" : "Open Baseline Promotion", label: "Continue promotion", detail: "The retained service request is still pending. Inspect its progress and complete its receipt/readback before moving on.", tone: "info" };
     } else if (base.lifecycle === "exploring" && base.landing.state === "landed" && base.currentMove.id === "landing") {
       base.currentMove = { id: "candidate-promotion", actionLabel: "Open Candidate Promotion", label: "Prepare candidate promotion", detail: "Canonical Studio Landing setup is accepted. Continue Candidate Promotion; no new Landing submission is required.", tone: "info" };
     } else if (base.lifecycle === "candidate" && ["landing", "candidate-promotion"].includes(base.currentMove.id)) {
@@ -131,7 +131,7 @@ export function projectCanonicalPrototypeWorkspace(value: unknown, observedAt: s
         ? { id: "baseline-promotion", actionLabel: "Open Baseline Promotion", label: "Review baseline evidence", detail: "Canonical Studio lifecycle is Candidate; inspect the separately owned baseline evidence.", tone: "info" }
         : { id: "preview-proof", actionLabel: "Open Preview Runtime", label: "Inspect preview evidence", detail: "Canonical Studio lifecycle is Candidate. Preview proof is not inferred from Landing or promotion.", tone: "info" };
     } else if (base.lifecycle === "baseline-approved" && ["landing", "candidate-promotion", "baseline-promotion", "preview-proof"].includes(base.currentMove.id)) {
-      base.currentMove = { id: "movement-request", actionLabel: "Open Movement Request", label: "Prepare owner-backed Delivery handoff", detail: "Canonical Studio lifecycle is Baseline approved; Delivery and custody retain their own gates.", tone: "info" };
+      base.currentMove = { id: "movement-request", actionLabel: "Open Movement Request", label: "Prepare source-backed Delivery handoff", detail: "Canonical Studio lifecycle is Baseline approved; Delivery and custody retain their own gates.", tone: "info" };
     }
     if (base.lifecycle === "graduated" || base.lifecycle === "retired") base.currentMove = { id: "archive", label: "Inspect retained source", actionLabel: "Open History", detail: "Canonical Studio lifecycle is terminal; mutation requires the owner's explicit reopen route.", tone: "muted" };
     else if (base.lifecycle === "graduating") base.currentMove = { id: "closeout-retirement", label: "Inspect source graduation", actionLabel: "Open Closeout", detail: "Continue the owner-backed graduation and custody handoff.", tone: "info" };

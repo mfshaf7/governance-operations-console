@@ -129,7 +129,7 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
   }
   return <><TerasModalShell busy={busy} busyLabel="Reading registration details…" bodyLayout="scroll" height="content" width="standard" title={target.kind === "product" ? "Product details" : "Component details"}
     kicker={target.name} surfaceId="workspace-registry-intake-preparation"
-    description={fixtureMode ? "Preview only. Explore the guided form and sample owner setup. Live registration is disabled." : "Describe the item and choose its responsible repositories. Current source bindings and validation context are collected automatically for review."}
+    description={fixtureMode ? "Preview only. Explore the guided form and sample repository setup. Live registration is disabled." : "Describe the item and choose its responsible repositories. Current source bindings and validation context are collected automatically for review."}
     onClose={() => requestLeave(onClose)} footer={<>
       <TerasActionButton emphasis="secondary" disabled={busy} onClick={() => requestLeave(onChangeTarget)}>Change item</TerasActionButton>
       <TerasActionButton disabled={fixtureMode || busy || !page || Boolean(page.pending_request_count) || inInventory}
@@ -144,7 +144,7 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
             <TerasSelectField label="What will be handed over?" helper="This describes the intended result. It does not activate hosting or grant release permission."
               value={customEndpoint ? "custom" : draft.endpoint} disabled={busy} options={[{label:"Choose a delivery target",value:""},...deliveryTargets,{label:"Another delivery target",value:"custom"}]}
               onValueChange={value => { setCustomEndpoint(value === "custom"); update("endpoint", value === "custom" ? "" : value); }} />
-            {customEndpoint ? <TerasTextField label="Delivery target" placeholder="Describe the intended endpoint or use its agreed owner-contract name." value={draft.endpoint} disabled={busy} onValueChange={value => update("endpoint", value)} /> : null}
+            {customEndpoint ? <TerasTextField label="Delivery target" placeholder="Describe the intended endpoint or use its agreed component-contract name." value={draft.endpoint} disabled={busy} onValueChange={value => update("endpoint", value)} /> : null}
           </> : <TerasSelectField label="What kind of component is this?" helper="The system uses this choice to fill its validation role."
             value={componentType} disabled={busy} onValueChange={selectComponentType}
             options={[{label:"Choose a component type",value:""},...componentTypes,{label:"Another kind of component",value:"custom"}]} />}
@@ -153,52 +153,52 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
             options={[{label:"No product association",value:""},...products.map(value=>({label:value,value}))]} /> : null}
         </TerasFieldStack>
       </TerasContentTray>
-      <TerasContentTray kicker="2. Responsibility" description="Choose repositories that own the work. These are ownership decisions, not requests for repository access.">
+      <TerasContentTray kicker="2. Responsibility" description="Choose repositories that own the work. These are responsibility decisions, not requests for repository access.">
         <TerasFieldStack spacing="normal">
           {target.kind === "product" ? <>
-            {ownerField("Platform owner", "platformOwner", "Owns hosting, deployment and environment decisions.")}
-            {ownerField("Runtime owner", "runtimeOwner", "Maintains and operates the delivered product.")}
-            <TerasContentTray kicker="Code owner repositories" description="Select the repositories responsible for the product's source code.">
-              <TerasList ariaLabel="Code owner repositories" frame="contained" scrollHeight="short">
+            {ownerField("Platform repository", "platformOwner", "Owns hosting, deployment and environment decisions.")}
+            {ownerField("Runtime repository", "runtimeOwner", "Maintains and operates the delivered product.")}
+            <TerasContentTray kicker="Source code repositories" description="Select the repositories responsible for the product's source code.">
+              <TerasList ariaLabel="Source code repositories" frame="contained" scrollHeight="short">
                 {owners.map(owner => { const selected=codeOwners.includes(owner); return <TerasSelectableRow key={owner} label={owner}
-                  ariaLabel={`${selected ? "Remove" : "Add"} source owner ${owner}`} selected={selected} disabled={busy} tone={selected ? "ok" : "muted"}
+                  ariaLabel={`${selected ? "Remove" : "Add"} source repository ${owner}`} selected={selected} disabled={busy} tone={selected ? "ok" : "muted"}
                   onSelect={()=>update("sourceOwners",(selected?codeOwners.filter(value=>value!==owner):[...codeOwners,owner]).join(","))} />; })}
               </TerasList>
             </TerasContentTray>
-          </> : ownerField("Owner repository", "ownerRepo", "Maintains this component and its source code.")}
-          {ownerField("Security owner", "securityOwner", "Owns the security review and security-related follow-up for this item.")}
+          </> : ownerField("Responsible repository", "ownerRepo", "Maintains this component and its source code.")}
+          {ownerField("Security repository", "securityOwner", "Owns the security review and security-related follow-up for this item.")}
         </TerasFieldStack>
       </TerasContentTray>
       <TerasContentTray kicker="3. Checks" description="Choose how quality will be checked. The system reads the repository's recorded plan and prepares its technical bindings.">
         <TerasFieldStack spacing="normal">
-          <TerasSelectField label="How will this item be checked?" helper={approach?.detail ?? "Choose the approach agreed with the responsible owner."}
+          <TerasSelectField label="How will this item be checked?" helper={approach?.detail ?? "Choose the approach agreed with the repository responsible for these checks."}
             value={draft.validationPosture} disabled={busy} options={[{label:"Choose a validation approach",value:""},...validationApproaches]}
             onValueChange={value=>{
               setDraft(current=>({...current,validationPosture:value,graphRole:roleOverridden?current.graphRole:derivedIntakeRole(target.kind,componentType,value)}));
               if (target.kind === "product" && (value === "proposed-profile-gated" || value === "build-admitted-profile-gated")) setAdvancedOpen(true);
             }} />
-          <TerasSelectField label="Repository with the validation plan" helper="Suggested from the code or component owner. Choose another repository when it owns the agreed checks."
+          <TerasSelectField label="Repository with the validation plan" helper="Suggested from the source code or component repository. Choose another repository when it maintains the agreed checks."
             value={validationSource} disabled={busy} options={ownerOptions} onValueChange={setValidationRepository} />
-          {ownerSetup.status === "loading" ? <TerasLoadingState inline label="Reading owner setup…" /> : null}
-          <TerasContentTray kicker="Collected automatically" title={ownerSetup.current ? fixtureMode ? "Sample owner setup" : "Owner setup loaded" : ownerSetup.status === "loading" ? "Reading owner setup…" : "Owner setup needed"}
+          {ownerSetup.status === "loading" ? <TerasLoadingState inline label="Reading repository setup…" /> : null}
+          <TerasContentTray kicker="Collected automatically" title={ownerSetup.current ? fixtureMode ? "Sample repository setup" : "Repository setup loaded" : ownerSetup.status === "loading" ? "Reading repository setup…" : "Repository setup needed"}
             description={ownerSetup.error ?? (ownerSetup.current ? "Validation context and source references will be attached for review. This is not proof that the new item passed its checks." : "Choose the repository responsible for the checks. Its current record is read automatically.")}
-            actions={<TerasActionButton emphasis="secondary" disabled={busy||!validationRecord||ownerSetup.status==="loading"} onClick={()=>void ownerSetup.load()}>Refresh owner setup</TerasActionButton>}>
-            <TerasMetadataList items={[{label:roleOverridden?"Role adjusted by operator":"Role filled from item type",value:roleLabel},{label:"Checks available from owner",value:ownerSetup.current?String(ownerSetup.setup?.catalogRefs.length??0):"Not read"}]} />
+            actions={<TerasActionButton emphasis="secondary" disabled={busy||!validationRecord||ownerSetup.status==="loading"} onClick={()=>void ownerSetup.load()}>Refresh repository setup</TerasActionButton>}>
+            <TerasMetadataList items={[{label:roleOverridden?"Role adjusted by operator":"Role filled from item type",value:roleLabel},{label:"Checks available from repository",value:ownerSetup.current?String(ownerSetup.setup?.catalogRefs.length??0):"Not read"}]} />
           </TerasContentTray>
-          <TerasNoteField label="Additional checks or limits (optional)" placeholder="Add anything specific to this item that the owner's recorded validation plan does not cover." value={draft.validationNotes} disabled={busy} onValueChange={value=>update("validationNotes",value)} />
-          <TerasNoteField label="Supporting links (optional)" placeholder="One reference per line. The owner-record reference is attached automatically." value={draft.evidence} disabled={busy} onValueChange={value=>update("evidence",value)} />
+          <TerasNoteField label="Additional checks or limits (optional)" placeholder="Add anything specific to this item that the repository’s recorded validation plan does not cover." value={draft.validationNotes} disabled={busy} onValueChange={value=>update("validationNotes",value)} />
+          <TerasNoteField label="Supporting links (optional)" placeholder="One reference per line. The source-record reference is attached automatically." value={draft.evidence} disabled={busy} onValueChange={value=>update("evidence",value)} />
           <TerasActionButton emphasis="secondary" onClick={()=>setAdvancedOpen(value=>!value)}>{advancedOpen?"Hide advanced validation settings":"Advanced validation settings"}</TerasActionButton>
-          {advancedOpen ? <TerasContentTray kicker="Advanced validation settings" description="Override derived metadata only when the owner has agreed a different binding. Canonical validation still decides whether it is allowed.">
+          {advancedOpen ? <TerasContentTray kicker="Advanced validation settings" description="Override derived metadata only when the responsible repository has an agreed different binding. Canonical validation still decides whether it is allowed.">
             <TerasFieldStack spacing="normal">
               {componentType==="custom"?<TerasTextField label="Component category" value={draft.componentClass} disabled={busy} onValueChange={value=>update("componentClass",value)} />:null}
-              <TerasSelectField label="Validation role override" helper="The normal role is derived from the item type; this is an explicit owner-defined exception."
+              <TerasSelectField label="Validation role override" helper="The normal role is derived from the item type; this is an explicit repository-defined exception."
                 value={draft.graphRole} disabled={busy} options={[{label:"Choose the agreed role",value:""},...graphRoles]} onValueChange={value=>{setRoleOverridden(true);update("graphRole",value);}} />
-              <TerasTextField label="Check binding overrides (optional)" placeholder="Exact existing catalog keys, comma-separated. Leave blank to use the recorded owner bindings when required."
+              <TerasTextField label="Check binding overrides (optional)" placeholder="Exact existing catalog keys, comma-separated. Leave blank to use the recorded repository bindings when required."
                 value={draft.catalogRefs} disabled={busy} onValueChange={value=>update("catalogRefs",value)} />
               {ownerSetup.current&&ownerSetup.setup?<TerasTechnicalDetails summary="Collected source details" items={[
-                {label:"Owner record",value:ownerSetup.setup.evidenceRef},{label:"Owner record version",value:String(ownerSetup.setup.version)},
-                {label:"Record digest",value:ownerSetup.setup.digest},{label:"Recorded owner checks",value:ownerSetup.setup.catalogRefs.join(", ")||"No direct checks recorded"},
-                {label:"Recorded owner plan",value:ownerSetup.setup.notes},{label:"Derived role",value:draft.graphRole},
+                {label:"Source record",value:ownerSetup.setup.evidenceRef},{label:"Source record version",value:String(ownerSetup.setup.version)},
+                {label:"Record digest",value:ownerSetup.setup.digest},{label:"Recorded repository checks",value:ownerSetup.setup.catalogRefs.join(", ")||"No direct checks recorded"},
+                {label:"Recorded repository plan",value:ownerSetup.setup.notes},{label:"Derived role",value:draft.graphRole},
               ]}/>:null}
             </TerasFieldStack>
           </TerasContentTray>:null}
@@ -206,7 +206,7 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
       </TerasContentTray>
       </> : null}
       <TerasContentTray kicker="Retained Intake requests"
-        description={fixtureMode ? "Preview only; no owner journal is loaded and no classification can be submitted." : page ? `${page.pending_request_count} pending request(s) across all pages. Reopen reads the original request without resubmitting.`
+        description={fixtureMode ? "Preview only; no service journal is loaded and no classification can be submitted." : page ? `${page.pending_request_count} pending request(s) across all pages. Reopen reads the original request without resubmitting.`
           : runtime.error?.message ?? "Reading the native journal. New classification requires a successful read."}
         actions={<TerasActionRow>
           <TerasActionButton emphasis="secondary" disabled={busy || fixtureMode} onClick={() => void runtime.listDirect(target.kind, target.name).catch(() => undefined)}>Refresh retained requests</TerasActionButton>

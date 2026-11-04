@@ -283,7 +283,7 @@ export function PrototypeLandingModal({
     if (step.id === "result" && liveResult) {
       return {
         ...step,
-        detail: liveRunComplete ? "Owner receipt recorded" : "Canonical owner progress",
+        detail: liveRunComplete ? "Source receipt recorded" : "Recorded workflow progress",
         stateLabel: landingRunStatus.label,
         tone: landingRunStatus.tone,
       };

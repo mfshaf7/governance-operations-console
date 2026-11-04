@@ -1,3 +1,4 @@
+import { deliveryFieldDisplayLabel } from "../../../read-model/terms/copy.ts";
 import type {
   DeliveryCatalogItem,
   DeliveryCatalogValue,
@@ -61,8 +62,8 @@ export function CatalogSelectorPanel({
               }
               detail={catalog.description}
               key={catalog.catalog_item_id}
-              label={catalog.label}
-              title={`${catalog.label}: ${catalog.description}`}
+              label={deliveryFieldDisplayLabel(catalog.label)}
+              title={`${deliveryFieldDisplayLabel(catalog.label)}: ${catalog.description}`}
               metricLabel="values"
               metricValue={valueCount}
               onClick={() => onSwitchCatalog(catalog.catalog_item_id)}

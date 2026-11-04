@@ -152,7 +152,7 @@ export function RepositoryCustodyDialog({
       >
         <TerasPanel frame="padded" fit="content" treatment="neutral">
           <TerasPanelHeader
-            description="Immutable provider identity and the workspace owner to place under custody."
+            description="Immutable provider identity and the workspace repository to place under custody."
             kicker="Link Request"
             title={repository.name}
           />
@@ -166,16 +166,16 @@ export function RepositoryCustodyDialog({
                   updateDraft({ custodyKind: value as RepositoryCustodyKind })
                 }
                 options={[
-                  { label: "Dedicated owner repo", value: "dedicated-owner-repo" },
-                  { label: "Shared owner repo", value: "shared-owner-repo" },
+                  { label: "Dedicated repository", value: "dedicated-owner-repo" },
+                  { label: "Shared repository", value: "shared-owner-repo" },
                   { label: "Incubation repo", value: "incubation-repo" },
                   { label: "External repo", value: "external-repo" },
                 ]}
                 value={draft.custodyKind}
               />
               <TerasTextField
-                aria-label="Workspace owner reference"
-                label="Workspace owner reference"
+                aria-label="Workspace repository"
+                label="Workspace repository"
                 onValueChange={(value) =>
                   updateDraft({ workspaceOwnerRef: value })
                 }
@@ -185,7 +185,7 @@ export function RepositoryCustodyDialog({
                 aria-label="Link approval note"
                 label="Approval note"
                 onValueChange={(value) => updateDraft({ approvalNote: value })}
-                placeholder="Record why this exact provider repository should be linked to the selected workspace owner."
+                placeholder="Record why this exact provider repository should be linked to the selected workspace repository."
                 value={draft.approvalNote}
               />
             </TerasFieldStack>

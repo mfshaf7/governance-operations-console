@@ -68,8 +68,8 @@ export function executionSelectedPackageMetadata({
       value: packageSummary.target_pi ?? "Not committed",
     },
     {
-      label: "Owner Repo",
-      value: details?.owner_repo ?? "Projected owner unavailable",
+      label: "Implementation repository",
+      value: details?.owner_repo ?? "Projected source unavailable",
     },
     {
       label: "Open Children",
@@ -102,7 +102,7 @@ export function executionPackageDetailsMetadata({
       value: packageSummary.target_pi ?? "Not committed",
     },
     {
-      label: "Owner Repo",
+      label: "Implementation repository",
       value: details?.owner_repo ?? "Unavailable",
     },
     {
@@ -128,7 +128,7 @@ export function executionPackageDetailsMetadata({
         value: packageSummary.active_blocker.statement,
       },
       {
-        label: "Blocker Owner",
+        label: "Resolution responsibility",
         value: packageSummary.active_blocker.owner,
       },
     );
@@ -141,7 +141,7 @@ export function executionActiveBlockerMetadata(
   blocker: DeliveryActiveBlockerProjection,
 ): TerasMetadataItem[] {
   return [
-    { label: "Owner", value: blocker.owner },
+    { label: "Resolution responsibility", value: blocker.owner },
     {
       label: "Decision Path",
       value: blocker.decision_path.replace("-", " "),
@@ -368,7 +368,7 @@ export function executionTreeDraftPlaceholder(node: ExecutionTreeDraftNode) {
     case "User story":
       return "Capture the user-visible outcome and acceptance evidence.";
     case "Task":
-      return "Capture the task action, owner cue, and proof expected.";
+      return "Capture the task action, responsible component, and proof expected.";
     case "Defect":
       return "Capture the defect, impact, and expected repair evidence.";
     case "Risk":

@@ -12,7 +12,7 @@ import {
   ConsoleSurfaceTagList,
   ConsoleSurfaceTwoZone,
 } from "../../console-surface-controls";
-import { projectOperatorIdentity } from "../../identity/operator-identity-projection";
+import { projectOperatorIdentity, operatorAuthorityDisplayLabel } from "../../identity/operator-identity-projection";
 import type { OperatorAccountController } from "./use-operator-account-controller";
 
 export function OperatorAccountAccessView({
@@ -53,7 +53,7 @@ export function OperatorAccountAccessView({
             </ConsoleSurfaceContentGroup>
             <ConsoleSurfaceContentGroup label="Named authority">
               <ConsoleSurfaceTagList
-                items={account.identity.access.authorities}
+                items={account.identity.access.authorities.map(operatorAuthorityDisplayLabel)}
               />
             </ConsoleSurfaceContentGroup>
           </ConsoleSurfaceStack>
@@ -62,7 +62,7 @@ export function OperatorAccountAccessView({
       support={
         <ConsoleSurfaceStack>
           <ConsoleSurfacePanel
-            description="Access changes require an admitted owner workflow."
+            description="Access changes require an approved access-management workflow."
             footer={
               <ConsoleSurfaceButton
                 disabled={requestCapability.state === "unavailable"}
@@ -80,7 +80,7 @@ export function OperatorAccountAccessView({
             <ConsoleSurfaceChecklist
               items={[
                 {
-                  detail: `Owned by ${requestCapability.owner}.`,
+                  detail: `Managed by ${requestCapability.owner}.`,
                   id: "access-request-adapter",
                   label: "Access-request adapter",
                   status: "UNAVAILABLE",

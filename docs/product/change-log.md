@@ -1,5 +1,108 @@
 # Governance Operations Console Change Log
 
+## 2026-11-04 — Repository batch release preparation
+
+The operator approved publishing the reviewed preview batch and configuring the
+backend link binding. This release includes Repository history, lifecycle draft
+protection, shared review/inspection content, Application verification navigation,
+standalone existing-repository linking and contextual responsibility wording.
+Earlier preview entries below record their state at review time. Full architecture,
+910 semantic tests, typecheck, production build, repository validation and dependency
+audit pass; focused browser and native read-only checks are retained privately.
+
+Platform supplies the separate reader approval reference under its own reviewed
+change. Exact source Security acceptance and accepted runtime activation precede
+any live operating claim. Remaining Repository setup usability work is a later
+reviewed surface, not implicitly completed by this release.
+
+## 2026-11-04 — Standalone existing-repository link preview
+
+Repository Control adds Link existing repository alongside creation, including
+when its register is empty. The existing attachment lookup/approval form also
+supports this standalone entry, omitting Proposal-specific intent and purpose
+acknowledgement. GitHub supplies immutable identity and visibility; prior known
+successful links open their existing record. Pending operations lock closing,
+unsent edits use the shared guard and retries retain their request identity.
+Completion exposes the retained receipt and normal record navigation, while
+registration remains separate. Backend custody/readiness authority is unchanged.
+This remains part of the unpublished UI preview batch.
+
+## 2026-11-04 — Application verification request navigation preview
+
+Application verification now names its purpose in the modal title and places
+the selected repository beneath it. Earlier setup and verification requests
+appear in a bounded Previous requests section after the current work, with
+readable types, statuses and update dates. Selected request IDs and service
+codes remain in Technical details. New-change buttons explain the draft they
+open; retained requests and all source-review controls keep their existing
+authority and request identity. Same unpublished preview batch.
+
+## 2026-11-04 — Clear responsibility terminology preview
+
+The operator approved a Console-wide wording pass before continuing Repository
+linking and setup usability. Ambiguous owner captions are replaced according to
+their actual repository, source workspace, executing component, workflow service
+or human follow-up meaning. This covers the primary Console, Repository,
+Registry/Intake, Delivery, Prototype, Portfolio, Model Operations, Orchestration,
+Lifecycle and environment surfaces, including form help and failure states.
+
+The existing UI batch and Landing Unit remain unpublished. Source keys,
+permission claims, Catalog identities, request shapes and immutable evidence
+retain their original values. Canonical Catalog/Refinement field names and the
+account authority use display-only aliases. The primary Repository procedure
+uses Workspace repository and Repository setup as its visible terms.
+
+## 2026-11-04 — Repository lifecycle review preview
+
+Operator-authorized owner-repo maintenance continues the unfinished Repository
+batch in one unpublished landing unit. The existing Action, Review and Result
+wizard and all five owner actions remain. Action guidance distinguishes GitHub
+archive from workspace retirement, restoration and workspace ownership transfer;
+none deletes repository files or transfers a GitHub account. Review uses the
+selected action's name, explains required notes, and keeps execution references
+in the shared technical disclosure.
+
+Unsent edits use the shared discard guard on close or History navigation. Back
+navigation retains input. Pending execution locks edits and exits; an
+unacknowledged request retains its original draft and retry identity. Submission
+requires current action eligibility, complete fields, configured owner execution
+and confirmation bound to the reviewed state. Editing input or receiving changed
+state invalidates confirmation. Source author preparation uses Agent Gary; the
+publication credential is revoked during operator preview review.
+
+The operator additionally approved the Repository review readability repair.
+Review and Inspect share identity-first content in their existing dialogs, with
+purpose shown once, a safe GitHub link and responsible workspace owner. Neutral
+Current status and Manage repository panels separate registration from GitHub
+observation and explain each existing workflow entry. Open Delivery Catalog
+replaces the opaque reconciliation label without changing its route. Original
+check inspectors and exact runtime, Security and source facts remain under
+Recorded evidence and technical details. Unavailable inventory remains unknown;
+no extra GitHub probe or execution capability is introduced.
+
+Operator visual review groups the repository name, purpose and both identity
+metadata fields inside one neutral panel beneath a distinct Repository details
+modal title. The underlined GitHub link has an external-link marker and opens a
+separate browser tab with opener isolation. Existing modal and panel primitives
+remain unchanged.
+
+Technical-detail inspection controls use the optional trailing action on the
+existing Teras metadata row. Inspect record is right-aligned, with its recorded
+result shown separately as a status pill. Non-action metadata rows retain their
+existing layout; no inspection, receipt or owner routing changes.
+
+The subsequent operator request concerns the content opened by Inspect record.
+Those read-only dialogs now lead with plain-language facts and scope, name the
+selected repository, and retain exact source fields in Technical details.
+Creation/linking records remain setup evidence; registration unknown stays
+unverified; GitHub observations retain current/earlier distinction and readable
+local timestamps. The parent layout and all owner actions remain unchanged.
+
+This is preview maintenance, not lifecycle commissioning. No owner authority,
+server configuration, provider credential or live execution is enabled. Standalone
+existing-repository linking and remaining Owner Setup review are later surfaces
+in this batch. Publication and live activation await operator batch approval.
+
 ## 2026-11-03 — Repository Control follow-up preview
 
 Native qualification found that OOS reports disabled lifecycle history as a

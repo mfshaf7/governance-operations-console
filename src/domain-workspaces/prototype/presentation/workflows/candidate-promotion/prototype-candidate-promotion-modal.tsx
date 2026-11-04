@@ -216,7 +216,7 @@ export function PrototypeCandidatePromotionModal({
       activeRecord,
       command.id,
       candidatePromotionInputFromDraft(draft),
-    ); } catch (error) { setSubmissionError(error instanceof Error ? error.message : "Candidate owner request failed."); }
+    ); } catch (error) { setSubmissionError(error instanceof Error ? error.message : "Candidate service request failed."); }
     finally { setSubmitting(false); }
   }
 
@@ -224,7 +224,7 @@ export function PrototypeCandidatePromotionModal({
     <>
       <TerasWizardModal busy={submitting || ownerProgress?.pending === true} busyLabel="Checking candidate promotion…"
         activeStepId={activeStep}
-        description={ownerProgress?.mode === "live" ? "Review the Candidate decision, then follow the OOS request through exact Studio review and merged owner readback." : "Promote an exploring prototype only after the objective, scope, boundaries, and local decision are explicit."}
+        description={ownerProgress?.mode === "live" ? "Review the Candidate decision, then follow the OOS request through exact Studio review and merged source readback." : "Promote an exploring prototype only after the objective, scope, boundaries, and local decision are explicit."}
         footer={
           <TerasWizardFooter
             apply={
@@ -317,7 +317,7 @@ export function PrototypeCandidatePromotionModal({
           issueTone={issueTone}
           onDraftChange={updateDraft}
           record={record}
-          reviewActionLabel={ownerProgress?.mode === "live" ? "Owner decision" : actionState.label}
+          reviewActionLabel={ownerProgress?.mode === "live" ? "Recorded decision" : actionState.label}
           reviewReady={reviewReady}
         />
       </TerasWizardModal>

@@ -15,7 +15,7 @@ export function PrototypeSourceAuthoringModal({ record, onClose }: { record: Pro
   if (!record) return null;
   const match = /^record:\/\/prototypes\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(record.sourceRef);
   return <TerasModalShell bodyLayout="scroll" height="fill" width="large" kicker="Prototype Authoring" title={`Author ${record.name}`} onClose={onClose} surfaceId="prototype-source-authoring"
-    description="Bounded app/design source or trusted Preview/Delivery metadata through the canonical owner. Preparation is not running Preview, Baseline approval or Delivery application.">
+    description="Bounded app/design source or trusted Preview/Delivery metadata through the Studio service. Preparation is not running Preview, Baseline approval or Delivery application.">
     {match ? <PrototypeSourceTool key={record.id} record={record} prototypeId={`prototype:${match[1]}`} /> : <TerasEmptyState>Complete canonical Studio Landing before source authoring. Fixtures and guessed source coordinates are not an authoring route.</TerasEmptyState>}
   </TerasModalShell>;
 }
@@ -60,7 +60,7 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
         { label: "Context packet", value: attempt?.context_packet_ref ?? "Not admitted" }, { label: "Model purpose", value: attempt?.model_profile_id ?? "Not invoked" },
         ...(attempt?.effective_model_selection ? [{ label: "Actual model", value: effectiveModelLabel(attempt.effective_model_selection) }] : []),
         ...(attempt?.owner_preparation ? [{ label: "Trusted Studio plan", value: attempt.owner_preparation.plan_digest }] : []),
-        ...(attempt?.failure ? [{ label: "Owner failure", value: attempt.failure }] : []),
+        ...(attempt?.failure ? [{ label: "Service failure", value: attempt.failure }] : []),
         ...Object.entries(current.source_delivery).map(([action, control]) => ({ label: `Source ${action}`, value: `${control.state}${control.failure ? ` / ${control.failure}` : ""} / ${control.command.command_id}` })),
       ]} /> : null}
       {!current || current.state === "succeeded" ? <>
@@ -84,7 +84,7 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
         <TerasActionRow>
           {current.session_id && realization && !current.source_request.owner_preparation ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => setEditorOpen(true)}>Edit or import source</TerasActionButton> : null}
           {!current.session_id || current.state === "source-authorization-required" ? <TerasActionButton disabled={runtime.pending || !sourceIntent} onClick={() => run("session")}>Start scoped source session</TerasActionButton> : null}
-          {realization && ["not-started", "failed", "cancelled", "accepted"].includes(realization.state) ? <TerasActionButton disabled={runtime.pending || !sourceIntent} onClick={() => run("generate")}>{current.source_request.owner_preparation ? state === "accepted" ? "Resume original owner preparation" : attempt ? "Prepare explicitly linked owner retry" : "Prepare trusted Studio owner draft" : state === "accepted" ? "Resume original generation" : attempt ? "Generate explicitly linked retry" : "Generate app/design draft"}</TerasActionButton> : null}
+          {realization && ["not-started", "failed", "cancelled", "accepted"].includes(realization.state) ? <TerasActionButton disabled={runtime.pending || !sourceIntent} onClick={() => run("generate")}>{current.source_request.owner_preparation ? state === "accepted" ? "Resume original source preparation" : attempt ? "Prepare explicitly linked service retry" : "Prepare trusted Studio draft" : state === "accepted" ? "Resume original generation" : attempt ? "Generate explicitly linked retry" : "Generate app/design draft"}</TerasActionButton> : null}
           {attempt?.change_set ? <TerasActionButton disabled={runtime.pending} emphasis="secondary" onClick={() => void runtime.inspectDraft()}>Inspect exact draft source text</TerasActionButton> : null}
           {state === "draft-ready" ? <TerasActionButton disabled={runtime.pending || !sourceIntent || !runtime.draft || runtime.draft.digest !== attempt?.change_set?.digest} onClick={() => run("accept")}>Accept inspected digest and create Gary source</TerasActionButton> : null}
           {state && ["applying", "apply-unknown"].includes(state) ? <TerasActionButton disabled={runtime.pending || !sourceIntent} onClick={() => run("recover")}>Recover the accepted source apply</TerasActionButton> : null}

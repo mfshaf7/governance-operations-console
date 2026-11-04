@@ -789,6 +789,25 @@
   text-transform: uppercase;
 }
 
+.terasMetadataItem[data-has-actions="true"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.75rem;
+  align-items: center;
+}
+
+.terasMetadataItem[data-has-actions="true"] > .terasMetadataLabel,
+.terasMetadataItem[data-has-actions="true"] > .terasMetadataValue,
+.terasMetadataItem[data-has-actions="true"] > .terasMetadataDetail {
+  grid-column: 1;
+}
+
+.terasMetadataActions {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+}
+
 .terasMetadataList[data-treatment="chip"] .terasMetadataLabel {
   color: rgba(255, 218, 148, 0.72);
   font-size: 0.48rem;

@@ -37,7 +37,7 @@ export function repositorySecurityBindingStatusLabel(
 ) {
   switch (status) {
     case "authority-owner":
-      return "Authority owner";
+      return "Approval authority";
     case "baseline-linked":
       return "Baseline linked";
     case "binding-required":

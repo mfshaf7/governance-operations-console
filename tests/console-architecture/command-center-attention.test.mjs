@@ -132,7 +132,7 @@ test("a stale source cannot retain an executable route", () => {
   assert.equal(projection.candidates[0].route.entryIntent, null);
   assert.match(
     projection.candidates[0].route.unavailableReason,
-    /refresh owner truth/i,
+    /refresh source state/i,
   );
 });
 

@@ -92,7 +92,7 @@ export function ProductPortfolioContinuitySurface({
       mode="register-selected"
       register={
         <TerasRegisterPanel
-          description="Product identity and lifecycle from Workspace Governance. Select a product to inspect its owners and readiness."
+          description="Product identity and lifecycle from Workspace Governance. Select a product to inspect responsibilities and readiness."
           filterBar={
             <TerasFilterBar
               filters={[
@@ -112,7 +112,7 @@ export function ProductPortfolioContinuitySurface({
                   onValueChange: setMaturity,
                   options: [
                     { label: "All maturity", value: "all" },
-                    { label: "Owner managed", value: "owner-managed" },
+                    { label: "Managed by product component", value: "owner-managed" },
                     { label: "Platform integrated", value: "platform-integrated" },
                     { label: "Fully governed", value: "fully-governed" },
                   ],
@@ -122,7 +122,7 @@ export function ProductPortfolioContinuitySurface({
               search={{
                 ariaLabel: "Search canonical managed products",
                 onValueChange: setQuery,
-                placeholder: "Search product, identity, or owner...",
+                placeholder: "Search product, identity, or repository...",
                 value: query,
               }}
             />
@@ -169,8 +169,8 @@ function ProductContinuitySelected({
     <TerasPanelStack fill="last" scroll>
       <TerasSelectedPanel
         action={{
-          description: "Continue lifecycle work in the canonical Workspace Registry owner surface.",
-          kicker: "Owner Route",
+          description: "Continue lifecycle work in the canonical Workspace Registry originating surface.",
+          kicker: "Workflow route",
           node: (
             <TerasActionButton onClick={() => onOpenRegistry(product)}>
               Open Registry Record
@@ -184,7 +184,7 @@ function ProductContinuitySelected({
           { label: "Version", value: String(product.record_version) },
           { label: "Lifecycle", value: product.lifecycle },
           { label: "Maturity", value: productContinuityMaturityLabel(product.maturity) },
-          { label: "Runtime owner", value: product.owners.runtime },
+          { label: "Runtime responsibility", value: product.owners.runtime },
           { label: "Endpoint", value: product.highest_real_endpoint },
         ]}
         kicker="Selected Managed Product"
@@ -199,19 +199,19 @@ function ProductContinuitySelected({
       />
       <TerasPanel fit="fill" frame="padded" layout="header-body" overflow="auto" treatment="neutral">
         <TerasPanelHeader
-          description="Ownership and publication readiness from the same product record. Expand the source details for exact references."
+          description="Responsibility and publication readiness from the same product record. Expand the source details for exact references."
           kicker="Product evidence"
           statusLabel={productContinuityReadinessLabel(product)}
           statusTone={readiness.control_state === "current" ? "info" : "warn"}
-          title="Ownership and readiness"
+          title="Responsibilities and readiness"
         />
         <TerasContentRegion fill scroll>
         <TerasMetadataList
           columns={1}
           items={[
-            { label: "Source owners", value: product.owners.source.join(", ") },
-            { label: "Platform owner", value: product.owners.platform },
-            { label: "Security owner", value: product.owners.security },
+            { label: "Source repositories", value: product.owners.source.join(", ") },
+            { label: "Platform responsibility", value: product.owners.platform },
+            { label: "Security responsibility", value: product.owners.security },
             { label: "Stage supported", value: product.stage_supported ? "Yes" : "No" },
             { label: "Governed production", value: product.governed_prod_promotion ? "Supported" : "Not supported" },
             { label: "Publication readiness", value: productContinuityReadinessLabel(product) },
@@ -248,7 +248,7 @@ const columns = [
     render: (item: WorkspaceContinuityProduct) => productContinuityMaturityLabel(item.maturity),
   },
   {
-    header: "Runtime owner",
+    header: "Runtime responsibility",
     intent: "secondary" as const,
     key: "owner",
     render: (item: WorkspaceContinuityProduct) => item.owners.runtime,

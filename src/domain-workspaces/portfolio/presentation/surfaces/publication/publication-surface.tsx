@@ -138,7 +138,7 @@ export function ProductPortfolioPublicationSurface({
                 search={{
                   ariaLabel: "Search Product Portfolio publication",
                   onValueChange: controller.setQuery,
-                  placeholder: "Search candidate, owner, packet, or state...",
+                  placeholder: "Search candidate, repository, packet, or state...",
                   value: controller.query,
                 }}
               />

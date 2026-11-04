@@ -42,7 +42,7 @@ export function repositoryGateProjectedRequestMetadata(
       value: repository.proposalGate?.repoRequestRef ?? repository.githubUrl,
     },
     { label: "Source", value: repository.routeSource },
-    { label: "Current Owner", value: repository.owner },
+    { label: "Current workspace repository", value: repository.owner },
   ];
 }
 
@@ -67,7 +67,7 @@ export function repositoryGateResolutionProjection({
 
   return {
     canRecord,
-    ownerDetail: ownerResolved ? draft.resolvedOwner.trim() : "owner needed",
+    ownerDetail: ownerResolved ? draft.resolvedOwner.trim() : "repository needed",
     ownerStatusLabel: ownerResolved ? "selected" : "needed",
     ownerTone: ownerResolved ? ("ok" as const) : ("warn" as const),
     receiptStatusLabel: canRecord ? "Ready" : "Incomplete",

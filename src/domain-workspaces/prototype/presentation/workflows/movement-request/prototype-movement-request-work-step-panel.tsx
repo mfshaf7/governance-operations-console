@@ -91,7 +91,7 @@ export function PrototypeMovementRequestStepPanel({
             />
             <TerasContentTray
               description="Generated from selected intent."
-              kicker="Target owner"
+              kicker="Target workspace"
               title={movementTarget.targetOwner}
             />
           </TerasFieldGrid>

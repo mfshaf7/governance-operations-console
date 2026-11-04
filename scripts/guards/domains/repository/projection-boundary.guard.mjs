@@ -187,8 +187,10 @@ export const guard = {
     assertIncludes(failures, lifecycleDialog, [
       "RepositoryLifecycleDialog",
       "TerasWizardModal",
-      "Apply Lifecycle Action",
-      "I confirm this exact lifecycle action",
+      "repositoryLifecycleActionLabels[draft.action]",
+      "Confirm repository lifecycle action",
+      "actionComplete && reviewComplete && confirmationCurrent",
+      "TerasDraftCloseGuardDialog",
       "View History",
     ]);
     assertIncludes(failures, historyDialog, ["lifecycleAudit"]);

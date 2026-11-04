@@ -192,7 +192,7 @@ export function orchestrationRunSelectedFacts(record: OrchestrationRunRecord) {
       value: currentNode?.label ?? "Awaiting scheduling",
     },
     {
-      label: "Node Owner",
+      label: "Execution component",
       value: currentNode?.owner ?? "Operator Orchestration Service",
     },
     {

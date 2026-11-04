@@ -47,6 +47,14 @@ export const repositoryLifecycleActionLabels: Record<
   "unarchive-provider": "Unarchive Provider Repository",
 };
 
+export const repositoryLifecycleActionDescriptions: Record<RepositoryLifecycleAction, string> = {
+  "archive-provider": "Make the GitHub repository read-only. Its files and workspace registration are kept.",
+  "unarchive-provider": "Make an archived GitHub repository writable again. Workspace registration is unchanged.",
+  "retire-workspace-record": "Retire the workspace record. The GitHub repository and its files are kept.",
+  "restore-workspace-record": "Restore a retired workspace record. This does not unarchive the GitHub repository.",
+  "transfer-workspace-custody": "Change the associated workspace repository record. This does not transfer the repository to another GitHub account.",
+};
+
 export function repositoryLifecycleState(
   repository: RepositoryWorkspaceRecord,
   snapshot?: RepositoryLifecycleLiveSnapshot,
@@ -159,8 +167,8 @@ export function repositoryLifecycleStateFacts(
   authoritative = true,
 ): TerasMetadataItem[] {
   return [
-    { label: "State Source", value: authoritative ? "Current OOS audit" : "Repository record; owner state not verified" },
-    { label: "Workspace Owner", value: state.workspace_owner_ref },
+    { label: "State Source", value: authoritative ? "Current OOS audit" : "Repository record; source state not verified" },
+    { label: "Workspace repository", value: state.workspace_owner_ref },
     { label: "Custody", value: state.custody_state },
     { label: "Provider", value: authoritative ? state.provider_lifecycle_state : "Not verified" },
     { label: "Workspace Record", value: authoritative ? state.workspace_record_state : "Not verified" },
@@ -174,16 +182,16 @@ export function repositoryLifecycleReviewFacts(
 ): TerasMetadataItem[] {
   return [
     { label: "Action", value: repositoryLifecycleActionLabels[action] },
-    { label: "Current Owner", value: state.workspace_owner_ref },
+    { label: "Current workspace repository", value: state.workspace_owner_ref },
     {
-      label: "Target Owner",
+      label: "New workspace repository",
       value:
         action === "transfer-workspace-custody"
           ? targetWorkspaceOwnerRef
           : "unchanged",
     },
     {
-      label: "Mutation Owner",
+      label: "Execution service",
       value: ["archive-provider", "unarchive-provider"].includes(action)
         ? "OOS provider adapter"
         : "OOS workspace lifecycle",

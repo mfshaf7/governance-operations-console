@@ -211,7 +211,7 @@ test("case:repository-lifecycle-source-provenance-positive keeps OOS authority s
   assert.match(serverSource, /x-oos-caller-secret/);
   assert.match(dialogSource, /TerasWizardModal/);
   assert.match(dialogSource, /Action[\s\S]*Review[\s\S]*Result/);
-  assert.match(dialogSource, /Apply Lifecycle Action/);
+  assert.match(dialogSource, /repositoryLifecycleActionLabels\[draft.action\]/);
   assert.doesNotMatch(stackSource, /RepositoryRetirementRequestDialog/);
 });
 

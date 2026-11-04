@@ -5,7 +5,7 @@ export function modelProfileRequestHistoryMetadata(request: ModelProfileRequestP
   return [...modelProfileRequestReceiptItems(request),
             { label: "Display name", value: request.request.profile_intent.display_name },
             { label: "Purpose", value: request.request.profile_intent.intended_purpose },
-            { label: "Requesting owner", value: request.request.profile_intent.requesting_owner },
+            { label: "Requesting repository", value: request.request.profile_intent.requesting_owner },
             { label: "Environments", value: request.request.profile_intent.requested_environments.join(", ") },
             { label: "Data classification", value: request.request.profile_intent.input_data_classification },
             { label: "Caller bindings", value: request.request.profile_intent.registered_callers.map(c => `${c.caller_id} = ${c.owner_repo}`).join("; ") },
@@ -18,7 +18,7 @@ export function modelProfileRequestHistoryMetadata(request: ModelProfileRequestP
 }
 
 export function modelProfileRequirementMetadata(r: Record<string, unknown>) {
-  return [{ label: "Requested change", value: String(r.summary ?? "Unavailable") }, { label: "Owner", value: String(r.owner_repo ?? "Unavailable") }, { label: "Next action", value: String(r.next_action ?? "Unavailable") }];
+  return [{ label: "Requested change", value: String(r.summary ?? "Unavailable") }, { label: "Responsible repository", value: String(r.owner_repo ?? "Unavailable") }, { label: "Next action", value: String(r.next_action ?? "Unavailable") }];
 }
 
 export function modelProfileFulfillmentMetadata(projection: ModelOperationsOperatingProjection) {

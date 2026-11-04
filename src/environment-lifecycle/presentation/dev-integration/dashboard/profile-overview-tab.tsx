@@ -69,7 +69,7 @@ export function ProfileOverviewStage({
         treatment="neutral"
       >
         <TerasPanelHeader
-          description="Runtime shape, write boundary, and review ownership."
+          description="Runtime shape, write boundary, and review responsibility."
           kicker="Runtime Contract"
           title="Declared support boundary"
         />
@@ -94,7 +94,7 @@ export function ProfileOverviewStage({
                 ],
             },
             {
-              label: "Security owner",
+              label: "Security responsibility",
               value: overview.securityOwner,
             },
           ]}
@@ -159,7 +159,7 @@ export function ProfileOverviewDock({
           description={
             overview.nextMove?.reason ??
             (profile.source.provenance === "authority-snapshot"
-              ? "The owner has not supplied next-action guidance."
+              ? "The source has not supplied next-action guidance."
               : "No required move is currently projected.")
           }
           kicker="Current Required Move"
@@ -170,7 +170,7 @@ export function ProfileOverviewDock({
             columns={1}
             items={[
               {
-                label: "Owner",
+                label: "Responsible component",
                 value: overview.nextMove.ownerRef,
               },
             ]}

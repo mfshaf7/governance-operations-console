@@ -36,7 +36,7 @@ export function proposalHubSelectedMetadata(
 ): TerasMetadataItem[] {
   return [
     { label: "Proposal", value: proposal.id },
-    { label: "Owner", value: proposal.owner },
+    { label: "Responsible workspace", value: proposal.owner },
     { label: "Route", value: proposal.routeTarget },
     {
       label: "Version",

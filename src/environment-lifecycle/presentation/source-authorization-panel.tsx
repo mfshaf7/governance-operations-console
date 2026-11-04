@@ -16,7 +16,7 @@ export function SourceAuthorizationPanel({ subject, sourceStartDigest, decision 
   useEffect(() => { onIntentChange(preparation?.authorization.state === "approved" ? preparation.intent_id : null); }, [preparation, onIntentChange]);
   const canPrepare = preparationAllowed && runtime.ready && (!preparation || preparation.authorization.state === "revoked");
   return <TerasPanel frame="padded" treatment="state" tone={runtime.error ? "danger" : "info"}>
-    <TerasPanelHeader busy={runtime.pending || continuePending} busyLabel="Reading source access…" kicker="Source Authorization" title={subject.kind === "repository-bootstrap" ? "Review the restricted owner-control scope" : "Review the exact ordinary-source scope"} description={runtime.error ?? "Approval permits bounded source actions and renewal only until this expiry. Terminal close revokes this scope. The browser and model never receive a token."} statusLabel={runtime.error ? "Unavailable" : !runtime.ready ? "Loading" : preparation?.authorization.state ?? "Not prepared"} />
+    <TerasPanelHeader busy={runtime.pending || continuePending} busyLabel="Reading source access…" kicker="Source Authorization" title={subject.kind === "repository-bootstrap" ? "Review the restricted repository-control scope" : "Review the exact ordinary-source scope"} description={runtime.error ?? "Approval permits bounded source actions and renewal only until this expiry. Terminal close revokes this scope. The browser and model never receive a token."} statusLabel={runtime.error ? "Unavailable" : !runtime.ready ? "Loading" : preparation?.authorization.state ?? "Not prepared"} />
     <TerasFieldStack spacing="normal">
       {scope ? <TerasMetadataList items={[
         { label: "Repository", value: scope.repository }, { label: "Branch / fetched base", value: `${scope.branch} / ${scope.fetched_base}` },
@@ -32,9 +32,9 @@ export function SourceAuthorizationPanel({ subject, sourceStartDigest, decision 
         { label: "Landing Unit", value: scope.landing_unit_id }, { label: "Human reviewer", value: scope.human_reviewer_id },
         { label: "Expiry", value: scope.expires_at }, { label: "Exact scope digest", value: preparation.source_intent_digest },
         { label: "Credential receipt", value: preparation.authorization.credential_receipt?.receipt_digest ?? "Not confirmed" },
-        { label: "Original owner operation", value: runtime.operation ? `${runtime.operation.operation_id} / ${runtime.operation.state}` : "Not dispatched" },
-        ...(runtime.operation ? [{ label: "Owner next action", value: `${runtime.operation.next_action.authority} / ${runtime.operation.next_action.code}` }] : []),
-        ...(runtime.operation?.provider_operation.failure ? [{ label: "Owner failure", value: runtime.operation.provider_operation.failure.code }] : []),
+        { label: "Original service operation", value: runtime.operation ? `${runtime.operation.operation_id} / ${runtime.operation.state}` : "Not dispatched" },
+        ...(runtime.operation ? [{ label: "Recorded next action", value: `${runtime.operation.next_action.authority} / ${runtime.operation.next_action.code}` }] : []),
+        ...(runtime.operation?.provider_operation.failure ? [{ label: "Service failure", value: runtime.operation.provider_operation.failure.code }] : []),
         ...(runtime.operation?.provider_operation.failure?.retry_after ? [{ label: "Retry no earlier than", value: runtime.operation.provider_operation.failure.retry_after }] : []),
       ]} /> : null}
       <TerasActionRow>

@@ -280,9 +280,9 @@ function RunControlFields({
           <TerasFieldGrid columns={2} spacing="compact">
             <TerasTextField
               disabled={disabled}
-              label="Deferral owner"
+              label="Follow-up responsibility"
               onValueChange={onOwnerChange}
-              placeholder="Owning team or operator"
+              placeholder="Responsible person or team"
               value={owner}
             />
             <TerasTextField

@@ -25,10 +25,10 @@ export function PrototypeDeliveryPreparationFields({ value, onChange, disabled }
       items={work[key]} maxItems={200} maxLength={10000} minItems={key === "excluded_scope" ? 0 : 1}
       itemLabel={index => `${key} ${index + 1}`} onItemsChange={items => onChange({ ...value, work: { ...work, [key]: items } })} />)}
     <TerasSelectField disabled={disabled} label="Resolved custody intent (not repository admission)" value={custody.classification} onValueChange={classification} options={[
-      { value: "new-repo-required", label: "Provisioned new repository" }, { value: "existing-repo", label: "Existing source owner" },
+      { value: "new-repo-required", label: "Provisioned new repository" }, { value: "existing-repo", label: "Existing source repository" },
       { value: "platform-internal", label: "Platform-internal, no repository required" }, { value: "non-source-work", label: "Non-source work, no repository required" },
-    ]} helper="Use the actual resolved custody. Packet preparation does not provision a repository, admit an owner or prove provider access." />
-    <TerasTextField disabled={disabled} label="Resolved owner" value={custody.owner} maxLength={512} onValueChange={owner => onChange({ ...value, custody: { ...custody, owner } })} />
+    ]} helper="Use the actual resolved custody. Packet preparation does not provision a repository, register its workspace record or prove provider access." />
+    <TerasTextField disabled={disabled} label="Associated workspace repository" value={custody.owner} maxLength={512} onValueChange={owner => onChange({ ...value, custody: { ...custody, owner } })} />
     {custody.source_ref !== null ? <TerasTextField disabled={disabled} label="Resolved source reference" value={custody.source_ref} maxLength={512} onValueChange={source_ref => {
       if (custody.source_ref !== null) onChange({ ...value, custody: { ...custody, source_ref } });
     }} /> : null}

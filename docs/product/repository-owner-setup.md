@@ -1,4 +1,4 @@
-# Repository owner setup
+# Repository setup
 
 This is the primary Console procedure for the staged trusted owner-control
 workflow. Source implementation is not operating activation. Exact composed
@@ -10,7 +10,7 @@ repositories on `main`, not private/client projects or arbitrary toolchains.
 
 1. Open the actual Repository's **Prepare Workspace Intake** surface after
    successful custody. Complete the existing `proposed` classification first.
-   Open **Prepare or recover repository owner controls** from that surface.
+   Open the **Repository setup** controls from that surface.
    OOS verifies current proposed or admitted source-only classification,
    absence from active/retired Inventory and exact canonical custody;
    page-local labels do not grant eligibility.
@@ -45,10 +45,21 @@ repositories on `main`, not private/client projects or arbitrary toolchains.
    accountable human, merge, then verify merged readback, credential revocation
    and owned-resource retirement. The durable canonical checkout is preserved.
 8. Return to the existing separate Intake admission, active Inventory and
-   Catalog workflows. Completed owner setup does not itself admit a repository,
+   Catalog workflows. Completed repository setup does not itself admit a repository,
    execute application tests, build the app or activate a runtime.
 
 ## Recovery and withdrawal
+
+For an active repository, open **Application verification** from Repository
+Control. The title names the task; the repository name appears underneath.
+Use **Load current plan** before changing manual checks or existing test
+commands. **Previous requests** lists both setup and verification requests by
+type, status and update time. **Open request** inspects or resumes the exact
+retained request; its ID and service details remain under **Technical details**.
+After a finished request, **Start new verification change** returns to the plan
+form while preserving that earlier request. Refresh requests rereads status;
+it does not create or execute a change. Completed request status describes the
+source workflow, not passed application tests.
 
 Refresh and reopen the original owner request after reload. Publication,
 review, merge, existing checkout and cancellation reuse their original retained

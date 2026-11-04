@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   TerasChoiceGroup,
   TerasContentTray,
+  TerasDraftCloseGuardDialog,
   TerasFieldStack,
   TerasList,
   TerasMetadataList,
@@ -12,6 +13,7 @@ import {
   TerasSelectableRow,
   TerasStatusItem,
   TerasTextField,
+  TerasTechnicalDetails,
   TerasTrayStack,
   TerasWizardFooter,
   TerasWizardModal,
@@ -30,6 +32,7 @@ import type { RepositoryLifecycleClientError } from "../../../live-runtime/use-r
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import {
   repositoryLifecycleActionLabels,
+  repositoryLifecycleActionDescriptions,
   repositoryLifecycleExecutionAvailable,
   repositoryLifecycleActionOptions,
   repositoryLifecycleResultFacts,
@@ -88,6 +91,10 @@ export function RepositoryLifecycleDialog({
     useState<RepositoryLifecycleStep>("action");
   const [requestId, setRequestId] = useState(createLifecycleRequestId);
   const [requestedAt, setRequestedAt] = useState(() => new Date().toISOString());
+  const [edited, setEdited] = useState(false);
+  const [leaveTarget, setLeaveTarget] = useState<"close" | "history" | null>(null);
+  const [confirmedState, setConfirmedState] = useState<string | null>(null);
+  const executing = useRef(false);
   const [draft, setDraft] = useState<LifecycleDraft>(() => ({
     action: initial,
     approvalNote: "",
@@ -112,9 +119,12 @@ export function RepositoryLifecycleDialog({
       draft.sourceOwnerAcceptanceNote.trim().length >= 12 &&
       draft.targetOwnerAcceptanceNote.trim().length >= 12);
   const actionComplete = selectedActionAvailable && transferComplete;
+  const blockingFindings = snapshot?.status === "current"
+    ? snapshot.audit?.impact_summary.blocking_finding_count ?? 0
+    : 0;
   const impactComplete =
-    draft.blockerDecision === "none" ||
-    draft.impactJustification.trim().length >= 12;
+    blockingFindings === 0 ||
+    (draft.blockerDecision !== "none" && draft.impactJustification.trim().length >= 12);
   const reviewComplete =
     draft.confirmed &&
     draft.approvalNote.trim().length >= 12 &&
@@ -125,6 +135,9 @@ export function RepositoryLifecycleDialog({
   const repositoryIdentity = repository.providerIdentity;
   const repositoryRecordId = repository.id;
   const liveActionAvailable = repositoryLifecycleExecutionAvailable(repository, snapshot, custodyResult, executionAvailable, Boolean(error));
+  const reviewState = JSON.stringify({ state, impact: snapshot?.audit?.impact_summary ?? null, custodyRequest: custodyResult?.request.request_id ?? null });
+  const confirmationCurrent = draft.confirmed && confirmedState === reviewState;
+  const canApply = actionComplete && reviewComplete && confirmationCurrent && liveActionAvailable && !pending;
   const steps = repositoryLifecycleSteps(activeStep, actionComplete, result);
   const statusTone = error ? "danger" : result
     ? repositoryLifecycleResultTone(result)
@@ -135,50 +148,73 @@ export function RepositoryLifecycleDialog({
     ? result.status
     : snapshot?.mode === "live"
       ? liveActionAvailable ? "Ready for review" : "Read-only"
-      : snapshot?.mode === "disconnected-preview" ? "Preview only" : "Loading owner state";
+      : snapshot?.mode === "disconnected-preview" ? "Preview only" : "Loading source state";
 
   function updateDraft(patch: Partial<LifecycleDraft>) {
+    if (pending || executing.current) return;
     if (result) {
       setRequestId(createLifecycleRequestId());
       setRequestedAt(new Date().toISOString());
     }
     setDraft((current) => ({ ...current, ...patch, confirmed: false }));
+    setConfirmedState(null);
+    setEdited(true);
+  }
+
+  function leave(target: "close" | "history") {
+    if (target === "history" && repository) onOpenHistory(repository);
+    else onClose();
+  }
+
+  function requestLeave(target: "close" | "history") {
+    if (pending || executing.current) return;
+    if (edited) setLeaveTarget(target);
+    else leave(target);
   }
 
   async function applyLifecycleAction() {
-    if (!reviewComplete || !liveActionAvailable || pending) return;
-    await onExecute({
-      action: draft.action,
-      approvalNote: draft.approvalNote,
-      impact: {
-        blockerDecision:
-          draft.blockerDecision === "none" ? null : draft.blockerDecision,
-        justification: draft.impactJustification,
-      },
-      provider: repositoryIdentity.provider,
-      providerRepositoryId: repositoryIdentity.repositoryId,
-      repositoryId: repositoryRecordId,
-      requestedAt,
-      requestId,
-      sourceCustodyRequestId: custodyResult?.request.request_id ?? null,
-      sourceOwnerAcceptanceNote: draft.sourceOwnerAcceptanceNote,
-      targetOwnerAcceptanceNote: draft.targetOwnerAcceptanceNote,
-      targetWorkspaceOwnerRef: draft.targetWorkspaceOwnerRef,
-    }).catch(() => undefined);
-    setActiveStep("result");
+    if (!canApply || executing.current) return;
+    executing.current = true;
+    try {
+      await onExecute({
+        action: draft.action,
+        approvalNote: draft.approvalNote,
+        impact: {
+          blockerDecision:
+            draft.blockerDecision === "none" ? null : draft.blockerDecision,
+          justification: draft.impactJustification,
+        },
+        provider: repositoryIdentity.provider,
+        providerRepositoryId: repositoryIdentity.repositoryId,
+        repositoryId: repositoryRecordId,
+        requestedAt,
+        requestId,
+        sourceCustodyRequestId: custodyResult?.request.request_id ?? null,
+        sourceOwnerAcceptanceNote: draft.sourceOwnerAcceptanceNote,
+        targetOwnerAcceptanceNote: draft.targetOwnerAcceptanceNote,
+        targetWorkspaceOwnerRef: draft.targetWorkspaceOwnerRef,
+      });
+      setEdited(false);
+      setActiveStep("result");
+    } catch {
+      // Keep the reviewed draft and retry identity when acknowledgement fails.
+      setActiveStep("result");
+    } finally {
+      executing.current = false;
+    }
   }
 
   return (
-    <TerasWizardModal busy={pending} busyLabel="Reading or applying repository change…"
+    <><TerasWizardModal busy={pending} busyLabel="Reading or applying repository change…"
       activeStepId={activeStep}
-      description="Review impact and apply one governed Repository lifecycle action through OOS."
+      description="Change workspace responsibility, archive on GitHub, or retire the workspace record. Files are never deleted here."
       footer={
         <TerasWizardFooter
           apply={
             activeStep === "review"
               ? {
-                  disabled: !reviewComplete || !liveActionAvailable || pending,
-                  label: pending ? "Applying..." : "Apply Lifecycle Action",
+                  disabled: !canApply,
+                  label: pending ? "Applying..." : repositoryLifecycleActionLabels[draft.action],
                   onClick: () => void applyLifecycleAction(),
                   tone:
                     ["archive-provider", "retire-workspace-record"].includes(
@@ -193,27 +229,30 @@ export function RepositoryLifecycleDialog({
             activeStep === "review"
               ? {
                   emphasis: "secondary",
+                  disabled: pending,
                   label: "Back",
                   onClick: () => setActiveStep("action"),
                 }
               : {
                   emphasis: "secondary",
+                  disabled: pending,
                   label: "Back to Register",
-                  onClick: onClose,
+                  onClick: () => requestLeave("close"),
                 }
           }
           finish={
             activeStep === "result"
               ? {
                   label: "View History",
-                  onClick: () => onOpenHistory(repository),
+                  disabled: pending,
+                  onClick: () => requestLeave("history"),
                 }
               : undefined
           }
           next={
             activeStep === "action"
               ? {
-                  disabled: !actionComplete,
+                  disabled: !actionComplete || pending,
                   label: "Review Action",
                   onClick: () => setActiveStep("review"),
                 }
@@ -222,8 +261,9 @@ export function RepositoryLifecycleDialog({
         />
       }
       kicker="Repository Lifecycle"
-      onClose={onClose}
+      onClose={() => requestLeave("close")}
       onStepSelect={(stepId) => {
+        if (pending || executing.current) return;
         if (
           stepId === "action" ||
           (stepId === "review" && actionComplete) ||
@@ -242,10 +282,10 @@ export function RepositoryLifecycleDialog({
       }}
       support={
         <TerasWizardPanel
-          description="Current lifecycle truth and execution availability."
+          description="Recorded state and whether this installation can apply changes."
           fit="fill"
           kicker="Lifecycle State"
-          title="Authoritative projection"
+          title="Repository state"
         >
           <TerasTrayStack spacing="loose">
             <TerasMetadataList items={repositoryLifecycleStateFacts(state, snapshot?.status === "current" && snapshot.mode === "live" && !error)} />
@@ -253,8 +293,10 @@ export function RepositoryLifecycleDialog({
               description={
                 error?.message ??
                 (snapshot?.mode === "live"
-                  ? "OOS will re-read current state before applying the selected action."
-                  : "Configure the approved OOS lifecycle boundary to enable actions.")
+                  ? liveActionAvailable
+                    ? "Current state will be checked again before applying your change."
+                    : "Inspection is available. Applying changes is not enabled or current source state could not be verified."
+                  : "Inspection is available. Repository lifecycle changes are not enabled on this installation.")
               }
               kicker={error ? "Runtime Error" : "Authority"}
             />
@@ -266,23 +308,26 @@ export function RepositoryLifecycleDialog({
     >
       {activeStep === "action" ? (
         <TerasWizardPanel
-          description="Choose one lifecycle boundary. Unavailable actions remain visible with their reason."
+          description="Choose what to change. Archiving on GitHub and retiring a workspace record are separate actions."
           kicker="Lifecycle Action"
           title="Select action"
         >
           <TerasTrayStack spacing="loose">
             <TerasChoiceGroup
               ariaLabel="Repository lifecycle action"
+              disabled={pending}
               frame="tray"
               label="Available actions"
               onSelect={(action) => updateDraft({ action })}
               options={actionOptions}
               selectedId={draft.action}
             />
+            <TerasContentTray kicker="What changes" description={repositoryLifecycleActionDescriptions[draft.action]} />
             {draft.action === "transfer-workspace-custody" ? (
               <TerasFieldStack spacing="loose">
                 <TerasTextField
-                  label="Target workspace owner"
+                  label="New workspace repository"
+                  disabled={pending}
                   onValueChange={(value) =>
                     updateDraft({ targetWorkspaceOwnerRef: value })
                   }
@@ -291,7 +336,9 @@ export function RepositoryLifecycleDialog({
                 />
                 <TerasNoteField
                   density="compact"
-                  label="Source owner acceptance"
+                  label="Approval to release responsibility"
+                  disabled={pending}
+                  placeholder="Record who approved releasing responsibility and why (at least 12 characters)."
                   minimumHeight="short"
                   onValueChange={(value) =>
                     updateDraft({ sourceOwnerAcceptanceNote: value })
@@ -300,7 +347,9 @@ export function RepositoryLifecycleDialog({
                 />
                 <TerasNoteField
                   density="compact"
-                  label="Target owner acceptance"
+                  label="Approval to accept responsibility"
+                  disabled={pending}
+                  placeholder="Record who accepted responsibility and why (at least 12 characters)."
                   minimumHeight="short"
                   onValueChange={(value) =>
                     updateDraft({ targetOwnerAcceptanceNote: value })
@@ -313,12 +362,13 @@ export function RepositoryLifecycleDialog({
         </TerasWizardPanel>
       ) : activeStep === "review" ? (
         <TerasWizardPanel
-          description="Confirm the target, record impact disposition when needed, and authorize this exact action."
+          description={repositoryLifecycleActionDescriptions[draft.action]}
           kicker="Review"
           title={repositoryLifecycleActionLabels[draft.action]}
         >
           <TerasTrayStack spacing="loose">
-            <TerasMetadataList
+            <TerasTechnicalDetails
+              summary="Workspace association and execution details"
               items={repositoryLifecycleReviewFacts(
                 draft.action,
                 state,
@@ -326,24 +376,29 @@ export function RepositoryLifecycleDialog({
               )}
             />
             <TerasFieldStack spacing="loose">
-              <TerasChoiceGroup
+              {blockingFindings > 0 ? <TerasChoiceGroup
                 ariaLabel="Impact disposition"
+                disabled={pending}
                 frame="tray"
-                label="Blocking impact"
+                label="How are blocking findings handled?"
                 onSelect={(blockerDecision) => updateDraft({ blockerDecision })}
                 options={[
-                  { id: "none", label: "No blocking finding", tone: "ok" },
+                  { id: "none", label: "Choose a response", tone: "muted" },
                   { id: "remove", label: "Remove blocker", tone: "warn" },
                   { id: "workaround", label: "Use workaround", tone: "warn" },
                   { id: "accept-risk", label: "Accept risk", tone: "danger" },
                   { id: "defer", label: "Defer action", tone: "muted" },
                 ]}
                 selectedId={draft.blockerDecision}
-              />
-              {draft.blockerDecision !== "none" ? (
+              /> : <TerasContentTray kicker="Impact check" description={snapshot?.status === "current"
+                ? "No blocking findings in the recorded assessment. Current impact will be checked again before applying."
+                : "Current impact will be checked before applying. A blocking finding requires a reviewed response before the change can proceed."} />}
+              {blockingFindings > 0 && draft.blockerDecision !== "none" ? (
                 <TerasNoteField
                   density="compact"
                   label="Impact justification"
+                  disabled={pending}
+                  placeholder="Explain the finding and your selected response (at least 12 characters)."
                   minimumHeight="short"
                   onValueChange={(value) =>
                     updateDraft({ impactJustification: value })
@@ -354,23 +409,28 @@ export function RepositoryLifecycleDialog({
               <TerasNoteField
                 density="compact"
                 label="Approval note"
+                disabled={pending}
+                placeholder="Explain why this repository change is appropriate (at least 12 characters)."
                 minimumHeight="short"
                 onValueChange={(value) => updateDraft({ approvalNote: value })}
                 value={draft.approvalNote}
               />
               <TerasSelectableRow
                 ariaLabel="Confirm repository lifecycle action"
-                detail="OOS will re-read authority and current state before mutation."
-                label="I confirm this exact lifecycle action"
-                onSelect={() =>
+                disabled={pending || !actionComplete}
+                detail="Changing the draft or its recorded state requires confirmation again."
+                label={`I confirm: ${repositoryLifecycleActionLabels[draft.action]}`}
+                onSelect={() => {
+                  setConfirmedState(reviewState);
+                  setEdited(true);
                   setDraft((current) => ({
                     ...current,
-                    confirmed: !current.confirmed,
-                  }))
-                }
-                selected={draft.confirmed}
-                status={draft.confirmed ? "confirmed" : "required"}
-                tone={draft.confirmed ? "ok" : "warn"}
+                    confirmed: !confirmationCurrent,
+                  }));
+                }}
+                selected={confirmationCurrent}
+                status={confirmationCurrent ? "confirmed" : "required"}
+                tone={confirmationCurrent ? "ok" : "warn"}
               />
             </TerasFieldStack>
           </TerasTrayStack>
@@ -408,6 +468,15 @@ export function RepositoryLifecycleDialog({
         </TerasWizardPanel>
       )}
     </TerasWizardModal>
+    <TerasDraftCloseGuardDialog
+      open={leaveTarget !== null}
+      title="Discard lifecycle draft?"
+      kicker="Unsent changes"
+      description="This draft has not been acknowledged. Keep editing, or discard the local draft. Any request already received by the workflow service remains in its history."
+      leaveLabel="Discard Draft"
+      onKeepEditing={() => setLeaveTarget(null)}
+      onLeave={() => { if (leaveTarget) leave(leaveTarget); }}
+    /></>
   );
 }
 

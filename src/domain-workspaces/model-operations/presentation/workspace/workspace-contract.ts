@@ -6,7 +6,7 @@ export function getModelOperationsOperationWorkbenchContract(): OperationWorkben
       "Platform Engineering model configuration, profile registry and governed AI access plane",
     domain: "model-operations",
     handoff:
-      "Submit verified operator intent through OOS for admitted model registration and workflow routing; retain owner progress, receipts, profile policy and caller eligibility.",
+      "Submit verified operator intent through OOS for admitted model registration and workflow routing; retain workflow progress, receipts, profile policy and caller eligibility.",
     localState:
       "Ephemeral settings drafts, selection, filters and non-authoritative request references; owner state is reread on recovery.",
     mutationBoundary: "OOS-coordinated operator requests; Platform owns configuration, verification and provider credentials.",

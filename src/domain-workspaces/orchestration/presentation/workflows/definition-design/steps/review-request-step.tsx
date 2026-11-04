@@ -45,7 +45,7 @@ export function DefinitionReviewRequestStep({
       }
       description={
         durable
-          ? "Review architecture, security, platform, owner-repo, validation, rollout, and work-home obligations before requesting implementation."
+          ? "Review architecture, security, platform, repository, validation, rollout, and work-home obligations before requesting implementation."
           : "Review the bounded execution decision before retaining this qualification outside the durable lifecycle."
       }
       kicker={durable ? "Implementation Review" : "Qualification Review"}

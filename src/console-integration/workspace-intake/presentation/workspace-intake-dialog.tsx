@@ -168,7 +168,7 @@ export function WorkspaceIntakeDialog({
             ]}
             selectedId={decision}
           />
-          <TerasContentTray kicker="Decision guidance" description={decision === "admitted" ? "Admitted requests entry into the governed workspace after the required owner checks and review. It does not activate a runtime." : decision === "proposed" ? "Proposed records the item for planning and review before admission." : decision === "out-of-scope" ? "Out of scope records that this item will not enter the governed workspace; ownership and validation metadata are excluded." : "Choose Proposed to record a plan, Admitted to request governed workspace entry, or Out of scope to record an exclusion."} />
+          <TerasContentTray kicker="Decision guidance" description={decision === "admitted" ? "Admitted requests entry into the governed workspace after the required checks and review. It does not activate a runtime." : decision === "proposed" ? "Proposed records the item for planning and review before admission." : decision === "out-of-scope" ? "Out of scope records that this item will not enter the governed workspace; responsibility and validation metadata are excluded." : "Choose Proposed to record a plan, Admitted to request governed workspace entry, or Out of scope to record an exclusion."} />
   </>;
 
 
@@ -180,7 +180,7 @@ export function WorkspaceIntakeDialog({
               ...(reviewedCandidate.requested_record.kind === "repo" ? [
                 { label: "Repository class", value: reviewedCandidate.requested_record.repo_class ?? "Not in scope" },
                 { label: "Security bindings", value: reviewedCandidate.requested_record.requires_security_bindings === null ? "Not in scope" : String(reviewedCandidate.requested_record.requires_security_bindings) },
-                { label: "Security owner", value: reviewedCandidate.requested_record.security_owner ?? "None" },
+                { label: "Security repository", value: reviewedCandidate.requested_record.security_owner ?? "None" },
                 { label: "Provider identity", value: reviewedCandidate.requested_record.provider_repository ? `${reviewedCandidate.requested_record.provider_repository.full_name} / ${reviewedCandidate.requested_record.provider_repository.provider_repository_id}` : "Legacy source" },
                 { label: "Validation posture", value: reviewedCandidate.requested_record.validation_behavior?.posture ?? "Not in scope" },
               ] : []),
@@ -193,17 +193,17 @@ export function WorkspaceIntakeDialog({
             ]}
           />
           {decisionRecord.kind !== "repo" ? <TerasContentTray kicker="Entrant metadata"
-            description={decision === "out-of-scope" ? "Ownership and validation metadata is excluded from an out-of-scope classification." : "Review the exact owner and validation metadata for this classification. Return to item details to correct it."}>
+            description={decision === "out-of-scope" ? "Responsibility and validation metadata is excluded from an out-of-scope classification." : "Review the responsible repositories and validation metadata for this classification. Return to item details to correct it."}>
             <TerasMetadataList columns={2} items={[
               ...(decisionRecord.kind === "product" ? [
-                { label: "Platform owner", value: decisionRecord.platform_owner ?? "Not in scope" },
-                { label: "Runtime owner", value: decisionRecord.runtime_owner ?? "Not in scope" },
-                { label: "Security owner", value: decisionRecord.security_owner ?? "Not in scope" },
-                { label: "Source owners", value: decisionRecord.source_owners.join(", ") || "Not in scope" },
+                { label: "Platform repository", value: decisionRecord.platform_owner ?? "Not in scope" },
+                { label: "Runtime repository", value: decisionRecord.runtime_owner ?? "Not in scope" },
+                { label: "Security repository", value: decisionRecord.security_owner ?? "Not in scope" },
+                { label: "Source repositories", value: decisionRecord.source_owners.join(", ") || "Not in scope" },
                 { label: "Delivery target", value: deliveryTargetLabel(decisionRecord.intended_endpoint) },
               ] : [
-                { label: "Owner repository", value: decisionRecord.owner_repo ?? "Not in scope" },
-                { label: "Security owner", value: decisionRecord.security_owner ?? "Not in scope" },
+                { label: "Responsible repository", value: decisionRecord.owner_repo ?? "Not in scope" },
+                { label: "Security repository", value: decisionRecord.security_owner ?? "Not in scope" },
                 { label: "Component class", value: decisionRecord.component_class ?? "Not in scope" },
                 { label: "Associated product", value: decisionRecord.product ?? "None" },
               ]),
@@ -213,7 +213,7 @@ export function WorkspaceIntakeDialog({
             ]} />
             <TerasTechnicalDetails summary="Purpose, validation and evidence" items={[
               { label: "Purpose and boundary", value: decisionRecord.notes },
-              { label: "Owner validation evidence", value: decisionRecord.validation_behavior?.notes ?? "Not in scope" },
+              { label: "Repository validation evidence", value: decisionRecord.validation_behavior?.notes ?? "Not in scope" },
               { label: "Source reference", value: reviewedCandidate.source.ref },
               { label: "Source digest", value: reviewedCandidate.source.digest },
               { label: "Validation posture code", value: decisionRecord.validation_behavior?.posture ?? "Not in scope" },
@@ -423,7 +423,7 @@ function WorkspaceIntakeSupport({
         <TerasMetadataList columns={1} items={[
           { label: "Source", value: candidate.source.class === "direct" ? "Operator registration" : candidate.source.class === "delivery" ? "Delivery closeout" : candidate.source.class === "prototype" ? "Prototype handoff" : "Repository custody" },
           { label: "Attached references", value: String(candidate.evidence_refs.length) },
-          { label: "Owner authority", value: preparation ? "Current source checked" : retained ? "Recorded original request" : "Not yet read" },
+          { label: "Source authority", value: preparation ? "Current source checked" : retained ? "Recorded original request" : "Not yet read" },
         ]} />
         <TerasTechnicalDetails summary="Source details" items={[
           { label: "Source reference", value: candidate.source.ref },
@@ -435,8 +435,8 @@ function WorkspaceIntakeSupport({
       </TerasWizardPanel>
       {result ? (
         <>
-        {result.readiness_findings?.length ? <TerasWizardPanel fit="content" kicker="Owner readiness findings"
-          title="Classification requires correction" description="Owner findings for this exact request. Follow the recorded next action before preparing another decision."
+        {result.readiness_findings?.length ? <TerasWizardPanel fit="content" kicker="Readiness findings"
+          title="Classification requires correction" description="Findings for this exact request. Follow the recorded next action before preparing another decision."
           tone="danger" treatment="rail">
           <TerasList frame="contained">
             {result.readiness_findings.map((finding, index) => <TerasSignalItem key={`${finding.code}:${index}`}

@@ -5,6 +5,7 @@ import { RepositoryOwnerBootstrapDialog } from "../dialogs/admission/repository-
 import { RepositoryIntakeDialog } from "../dialogs/admission/repository-intake-dialog.tsx";
 import { RepositoryAdmissionRunDialog } from "../dialogs/admission/repository-admission-run-dialog.tsx";
 import { RepositoryCustodyDialog } from "../dialogs/custody/repository-custody-dialog.tsx";
+import { RepositoryLinkExistingDialog } from "../dialogs/custody/repository-link-existing-dialog.tsx";
 import { RepositoryDetailDialog } from "../dialogs/details/repository-detail-dialog.tsx";
 import { RepositoryGateResolutionDialog } from "../dialogs/gate-resolution/repository-gate-resolution-dialog.tsx";
 import { RepositoryHistoryDialog } from "../dialogs/history/repository-history-dialog.tsx";
@@ -19,6 +20,9 @@ export function RepositoryControlDialogStack({
 }) {
   return (
     <>
+      {controller.standaloneLink.open ? <RepositoryLinkExistingDialog enabled={controller.standaloneLink.enabled} executionAvailable={controller.standaloneLink.executionAvailable}
+        results={controller.standaloneLink.results} onLink={controller.standaloneLink.link}
+        onOpenRepository={controller.standaloneLink.openRepository} onClose={controller.standaloneLink.close} /> : null}
       {controller.verification.open ? <RepositoryOwnerBootstrapDialog ownerRepo={controller.verification.ownerRepo} custodyRequestId={controller.verification.custodyRequestId} operation="configure-verification" onClose={controller.verification.close} /> : null}
       {controller.intake.repository && controller.intake.custodyResult ? <RepositoryIntakeDialog
         key={controller.intake.custodyResult.request.request_id}

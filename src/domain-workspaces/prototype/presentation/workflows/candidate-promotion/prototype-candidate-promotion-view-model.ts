@@ -405,7 +405,7 @@ export function candidatePromotionAdvisorTranscript({
     {
       id: `${record.id}-candidate-advisor-boundary`,
       role: "advisor" as const,
-      text: `Locked to ${record.id}. I can challenge objective, scope, evidence, ownership, and boundary readiness. I do not approve baseline, Movement, platform runtime, security posture, or production path.`,
+      text: `Locked to ${record.id}. I can challenge objective, scope, evidence, responsibility, and boundary readiness. I do not approve baseline, Movement, platform runtime, security posture, or production path.`,
     },
     {
       id: `${record.id}-candidate-advisor-readiness`,

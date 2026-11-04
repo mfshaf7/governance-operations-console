@@ -75,7 +75,7 @@ export function ProposalCaptureModal({
           aria-label="Proposal context"
           label="Context"
           onValueChange={onContextChange}
-          placeholder="Describe the problem, intended outcome, likely owner boundary, and why this belongs in Workspace Proposals."
+          placeholder="Describe the problem, intended outcome, responsibility boundary, and why this belongs in Workspace Proposals."
           value={context}
         />
         {error ? <p role="alert">{error}</p> : null}

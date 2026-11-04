@@ -55,7 +55,7 @@ export function intakeSelectedSourceFacts(
 
   return [
     { label: "Source Ref", value: source.source_ref },
-    { label: "Owner", value: source.owner },
+    { label: "Source workspace", value: source.owner },
     {
       label: "Source Custody",
       value: intakeSourceCustodyClassLabel(
@@ -204,7 +204,7 @@ export function intakeConsumeModalProjection(source: DeliveryIntakeSource) {
     ownerRouteDescription: canConsume
       ? "Child tree, execution readiness, source work, or closeout."
       : "Retry consume through OOS, or repair the source-to-Delivery backlink when a shell already exists.",
-    ownerRouteKicker: canConsume ? "Does Not Create" : "Owner Route",
+    ownerRouteKicker: canConsume ? "Does Not Create" : "Workflow route",
     statusLabel: canConsume ? "operator review" : source.status_label,
     statusTone: canConsume ? ("warn" as TerasTone) : source.tone,
     tone: canConsume ? ("warn" as TerasTone) : source.tone,
@@ -244,7 +244,7 @@ export function intakeSourceHandoffMetadata(
 ): TerasMetadataItem[] {
   return [
     { label: "Source Ref", value: source.source_ref },
-    { label: "Owner", value: source.owner },
+    { label: "Source workspace", value: source.owner },
     {
       label: "Delivery Ref",
       value: source.delivery_package_id ?? "Will be created on consume",
@@ -262,7 +262,7 @@ export function intakeConsumedHandoffMetadata(
 ): TerasMetadataItem[] {
   return [
     { label: "Source Ref", value: source.source_ref },
-    { label: "Owner", value: source.owner },
+    { label: "Source workspace", value: source.owner },
     {
       label: "Delivery Ref",
       value: source.delivery_package_id ?? "Not recorded",
@@ -284,7 +284,7 @@ export function intakeSourceCustodyMetadata(
         source.source_custody.classification,
       ),
     },
-    { label: "Owner", value: source.source_custody.owner },
+    { label: "Source workspace", value: source.source_custody.owner },
     {
       label: "Repo / Ref",
       value: source.source_custody.repo_ref ?? "Not required",
@@ -319,7 +319,7 @@ export function intakeReviewRequestReceiptMetadata(
   source: DeliveryIntakeSource,
 ): TerasMetadataItem[] {
   return [
-    { label: "Owner Route", value: source.owner },
+    { label: "Workflow route", value: source.owner },
     { label: "Source Ref", value: source.source_ref },
     { label: "Request Type", value: "Consume retry" },
     {

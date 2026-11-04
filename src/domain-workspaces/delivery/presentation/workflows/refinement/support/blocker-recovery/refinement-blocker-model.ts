@@ -71,11 +71,11 @@ export function refinementBlockerIssue(
         "A required Refinement readiness gate is still blocked.",
       blockedField
         ? `${blockedField.label} is blocked: ${blockedField.value}.`
-        : "A required metadata field has no accepted owner or source value.",
+        : "A required metadata field has no accepted responsible repository or source value.",
       "The package cannot apply metadata until the blocker owner or accepted risk decision is explicit.",
     ],
     recoveryAction:
-      "Repair the missing metadata owner in the source package or record an explicit keep-blocked or risk-acceptance decision. Refinement must not silently clear the blocked state.",
+      "Repair the missing responsible repository in the source package or record an explicit keep-blocked or risk-acceptance decision. Refinement must not silently clear the blocked state.",
     source: "package",
     summary:
       blockedGate?.detail ??
@@ -113,7 +113,7 @@ export function refinementBlockerRecoveryActions(
     {
       clearsBlocker: false,
       description:
-        "Inspect the blocked readiness gate, affected metadata field, and source package owner before choosing a recovery action.",
+        "Inspect the blocked readiness gate, affected metadata field, and responsible source repository before choosing a recovery action.",
       disabled: false,
       disposition: "workaround",
       evidenceLines: [
@@ -134,11 +134,11 @@ export function refinementBlockerRecoveryActions(
     {
       clearsBlocker: true,
       description:
-        "Use this after the missing owner, boundary, or required metadata value has been repaired in the source package.",
+        "Use this after the missing repository responsibility, boundary, or required metadata value has been repaired in the source package.",
       disabled: false,
       disposition: "remove",
       evidenceLines: [
-        "Required metadata owner or boundary value is present.",
+        "Required responsible repository or boundary value is present.",
         "Affected ART item and field match the applied Work Design handoff.",
         "Readiness gate can be reviewed again before Apply Refinement.",
       ],
@@ -155,7 +155,7 @@ export function refinementBlockerRecoveryActions(
     {
       clearsBlocker: false,
       description:
-        "Leave the package blocked while the owner, boundary, or required source value is repaired outside this Refinement session.",
+        "Leave the package blocked while the repository responsibility, boundary, or required source value is repaired outside this Refinement session.",
       disabled: false,
       disposition: "defer",
       evidenceLines: [
@@ -258,7 +258,7 @@ export function refinementBlockerResultProjection({
   return {
     dispositionCopy,
     problemClearanceValue: stillBlocked
-      ? "Metadata owner proof, keep-blocked decision, or accepted risk"
+      ? "Repository responsibility evidence, keep-blocked decision, or accepted risk"
       : matchingReceipt?.disposition === "accept-risk"
         ? "Risk acceptance recorded"
         : "Metadata repair receipt recorded",
@@ -348,7 +348,7 @@ export function refinementBlockerAdvisorResponse({
     `${recoveryAction.description} ${checkText}` +
     `Required proof: ${recoveryAction.evidenceLines.join("; ")}. ` +
     `Recovery result: ${recoveryAction.recoveryAction} ` +
-    `For ${deliveryPackage.source_ref}, make sure the note says which metadata owner or boundary proof is missing and what must be true before Refinement apply resumes. ` +
+    `For ${deliveryPackage.source_ref}, make sure the note says which responsible repository or boundary proof is missing and what must be true before Refinement apply resumes. ` +
     `Operator ask: ${promptHint}`
   );
 }

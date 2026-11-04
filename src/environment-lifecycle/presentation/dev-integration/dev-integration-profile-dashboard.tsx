@@ -130,7 +130,7 @@ export function DevIntegrationProfileDashboard({
     <>
       <TerasModalShell
         bodyLayout="fill"
-        description={connected ? sourceCurrent ? "Current owner profile contract. Runtime observations and handoff evidence retain their own source and freshness." : "Retained owner profile. Refresh current source before starting another action." : "Design preview — sample profile, runtime and stage-handoff observations. These are not current owner records."}
+        description={connected ? sourceCurrent ? "Current source profile contract. Runtime observations and handoff evidence retain their own source and freshness." : "Retained source profile. Refresh current source before starting another action." : "Design preview — sample profile, runtime and stage-handoff observations. These are not current source records."}
         footer={
           <TerasActionButton emphasis="secondary" onClick={onBack}>
             Back to Register
@@ -166,15 +166,15 @@ export function DevIntegrationProfileDashboard({
                   }
                   actionsLayout="inline"
                   description={profile.purpose}
-                  kicker={connected ? "Owner profile" : "Sample profile"}
-                  statusLabel={connected ? sourceCurrent ? "Owner record" : "Retained" : "Preview"}
+                  kicker={connected ? "Source profile" : "Sample profile"}
+                  statusLabel={connected ? sourceCurrent ? "Source record" : "Retained" : "Preview"}
                   statusTone="info"
                   title={profile.profileId}
                 />
                 <TerasMetadataList
                   items={[
                     {
-                      label: "Owner",
+                      label: "Implementation repository",
                       value: profile.ownerRepo,
                     },
                     {

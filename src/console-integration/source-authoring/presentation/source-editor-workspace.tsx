@@ -34,16 +34,16 @@ export function SourceEditorWorkspace({ target, onClose, onSaved, onReviewed }: 
             description={runtime.error ?? runtime.notice ?? "Ctrl/Cmd+S saves the private draft. Ctrl/Cmd+F searches the code editor. Tab indents; Escape then Tab moves keyboard focus out of the editor."} />
           {runtime.pending ? <TerasLoadingState inline={!!current} label={current ? "Reading or saving source…" : "Loading source workspace…"} skeleton="details" /> : null}
           {current && showDetails ? <TerasMetadataList items={[
-            { label: "Session", value: current.current.sessionId }, { label: "Source base", value: current.base }, { label: "Owner revision", value: current.current.revision },
+            { label: "Session", value: current.current.sessionId }, { label: "Source base", value: current.base }, { label: "Source revision", value: current.current.revision },
             { label: "Saved draft digest", value: current.draft?.digest ?? "No draft saved" },
-            { label: "Draft origin", value: current.draft?.provenance ? current.draft.provenance.origin === "operator-amended-model" ? "Operator amended model proposal; original model evidence does not attest these bytes" : `Operator / ${current.draft.provenance.inputOrigin}` : current.draft ? "Original proposal / owner evidence" : "Manual source work" },
+            { label: "Draft origin", value: current.draft?.provenance ? current.draft.provenance.origin === "operator-amended-model" ? "Operator amended model proposal; original model evidence does not attest these bytes" : `Operator / ${current.draft.provenance.inputOrigin}` : current.draft ? "Original proposal / source evidence" : "Manual source work" },
             { label: "Local changes", value: `${operations.length} operations / ${operations.reduce((n, row) => n + byteLength(row.content ?? ""), 0)} UTF-8 bytes` },
           ]} /> : null}
           <TerasActionRow>
             <TerasActionButton disabled={!runtime.editable || !operations.length || !runtime.dirty && !!current?.draft} onClick={save}>Save private draft</TerasActionButton>
             {runtime.uncertain ? <TerasActionButton disabled={runtime.pending} onClick={save}>Retry original save</TerasActionButton> : null}
             <TerasActionButton emphasis="secondary" disabled={runtime.pending || !!runtime.error || runtime.dirty || runtime.uncertain || !current?.draft || current.current.state !== "draft-ready"} onClick={() => current?.draft && onReviewed(current.draft)}>Mark saved digest inspected</TerasActionButton>
-            <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={requestReload}>Reload current owner draft</TerasActionButton>
+            <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={requestReload}>Reload saved source draft</TerasActionButton>
             <TerasActionButton emphasis="secondary" onClick={() => setShowDetails(!showDetails)}>{showDetails ? "Hide saved draft details" : "Show saved draft details"}</TerasActionButton>
             <TerasActionButton emphasis="secondary" disabled={!runtime.editable} onClick={() => setImportOpen(!importOpen)}>{importOpen ? "Hide import" : "Import files or folder"}</TerasActionButton>
           </TerasActionRow>
@@ -63,13 +63,13 @@ export function SourceEditorWorkspace({ target, onClose, onSaved, onReviewed }: 
                 {paths.length > 100 ? <TerasEmptyState>Showing the first 100 of {paths.length} matching paths. Refine the path search to open another file.</TerasEmptyState> : null}
                 <TerasTextField label="New relative file path" value={newPath} onValueChange={setNewPath} disabled={!runtime.editable} maxLength={240} />
                 <TerasActionButton emphasis="secondary" disabled={!runtime.editable || !newPath} onClick={() => void runtime.add(newPath)}>Add text file</TerasActionButton>
-                <TerasNoteField label={current.current.state === "draft-ready" ? "Original source objective (retained by owner)" : "Source objective"} minimumHeight="short" value={current.objective} onValueChange={runtime.setObjective} readOnly={!!target.objectiveReadOnly || current.current.state === "draft-ready" || !runtime.editable} maxLength={target.objectiveMax} />
+                <TerasNoteField label={current.current.state === "draft-ready" ? "Original source objective (retained by the service)" : "Source objective"} minimumHeight="short" value={current.objective} onValueChange={runtime.setObjective} readOnly={!!target.objectiveReadOnly || current.current.state === "draft-ready" || !runtime.editable} maxLength={target.objectiveMax} />
                 <TerasTextField label="Commit message for the saved draft" value={current.message} onValueChange={runtime.setMessage} maxLength={120} disabled={!runtime.editable} />
               </TerasFieldStack>
             </TerasPanel>
             <TerasPanel frame="padded" treatment="neutral">
               <TerasPanelHeader kicker={buffer?.deleted ? "Explicit deletion" : "Text source"} title={buffer?.path ?? "Select a file"}
-                description={buffer ? `${byteLength(buffer.content)} UTF-8 bytes${buffer.content.startsWith("\uFEFF") ? " / BOM preserved" : ""}. ${buffer.baseline === undefined ? "Original text is not available in this lifecycle; retained draft inspection only." : "Diff compares the exact owner base with this buffer."}` : "Open a source file, add a path or import text to begin."} />
+                description={buffer ? `${byteLength(buffer.content)} UTF-8 bytes${buffer.content.startsWith("\uFEFF") ? " / BOM preserved" : ""}. ${buffer.baseline === undefined ? "Original text is not available in this lifecycle; retained draft inspection only." : "Diff compares the recorded source base with this buffer."}` : "Open a source file, add a path or import text to begin."} />
               <TerasFieldStack spacing="normal">
                 <TerasActionRow>
                   <TerasSegmentedControl ariaLabel="Source view" value={mode} onValueChange={setMode} options={[{ value: "edit", label: "Edit text" }, { value: "diff", label: "Review diff" }]} />
@@ -84,7 +84,7 @@ export function SourceEditorWorkspace({ target, onClose, onSaved, onReviewed }: 
         </> : null}
       </TerasFieldStack>
     </TerasModalShell>
-    <TerasDraftCloseGuardDialog open={guard !== null} kicker="Unsaved source buffers" title="Discard local edits?" description="The owner keeps saved private drafts. Unsaved browser buffers and an uncertain save retry identity will be lost if you leave or reload. Keep editing to reconcile or save them first."
+    <TerasDraftCloseGuardDialog open={guard !== null} kicker="Unsaved source buffers" title="Discard local edits?" description="The source service keeps saved private drafts. Unsaved browser buffers and an uncertain save retry identity will be lost if you leave or reload. Keep editing to reconcile or save them first."
       leaveLabel={guard === "reload" ? "Discard buffers and reload" : "Discard buffers and close"} onKeepEditing={() => setGuard(null)} onLeave={() => {
         const action = guard; setGuard(null); if (action === "reload") void runtime.reload(); else onClose();
       }} />

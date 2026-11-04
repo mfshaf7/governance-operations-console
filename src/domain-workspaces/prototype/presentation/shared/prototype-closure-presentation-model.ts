@@ -36,10 +36,10 @@ export function prototypeDashboardRecord(
 export function prototypeClosureAuthorityFact(result: PrototypeClosureResult) {
   switch (result.action) {
     case "apply-delivery": return {
-      label: "Delivery target", value: result.resolved_authority?.target_delivery_ref ?? "Awaiting owner verification",
+      label: "Delivery target", value: result.resolved_authority?.target_delivery_ref ?? "Awaiting source verification",
     };
     case "graduate-source": return {
-      label: "Durable repository", value: result.resolved_authority?.durable_repo_ref ?? "Awaiting owner verification",
+      label: "Durable repository", value: result.resolved_authority?.durable_repo_ref ?? "Awaiting source verification",
     };
     case "retire-incubation": return {
       label: "Runtime cleanup", value: result.resolved_authority?.runtime_disposition_proof_ref ?? "Awaiting Platform proof",

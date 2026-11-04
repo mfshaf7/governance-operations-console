@@ -1,3 +1,4 @@
+import { deliveryFieldDisplayLabel } from "../../../read-model/terms/copy.ts";
 import type { TerasMetadataItem } from "@/teras";
 
 import type {
@@ -52,7 +53,7 @@ export function catalogCapabilityLabel(
     case "create":
       return "Create";
     case "owner_routed":
-      return "Owner route";
+      return "Workflow route";
     case "read_only":
       return "Read only";
     case "request":
@@ -69,11 +70,11 @@ export function catalogChangeRule(catalog: DeliveryCatalogItem | null) {
     case "create":
       return "Console can prepare a backend-created value draft.";
     case "owner_routed":
-      return "Change through the owner route; console only inspects usage here.";
+      return "Change through the workflow route; console only inspects usage here.";
     case "read_only":
       return "Read-only because this value set is owned by a policy, workflow, projection, or backing-system contract.";
     case "request":
-      return "Console can prepare a request; backend owner decides durable creation, update, or retirement.";
+      return "Console can prepare a request; backend service decides durable creation, update, or retirement.";
   }
 }
 
@@ -90,7 +91,7 @@ export function catalogPrimaryMutationActionLabel(
     case "request":
       return "Request Value";
     case "owner_routed":
-      return "Owner Route";
+      return "Workflow route";
     case "read_only":
       return "Read Only";
   }
@@ -105,10 +106,10 @@ export function catalogPrimaryMutationDisabledReason(
 
   if (catalog.console_capability === "owner_routed") {
     if (catalog.catalog_item_id === principalLookupCatalogId) {
-      return "Assignable principals are identity and project membership values. Request them through the identity/OpenProject owner route.";
+      return "Assignable principals are identity and project membership values. Request them through the identity/OpenProject workflow route.";
     }
 
-    return "This catalog must be changed through its owner route.";
+    return "This catalog must be changed through its workflow route.";
   }
 
   if (catalog.console_capability === "read_only") {
@@ -166,15 +167,15 @@ export function catalogMutationTitle(
   catalog: DeliveryCatalogItem | null,
   value: DeliveryCatalogValue | null,
 ) {
-  const subject = value?.label ?? catalog?.label ?? "Catalog Value";
+  const subject = value?.label ?? deliveryFieldDisplayLabel(catalog?.label ?? "Catalog Value");
 
   switch (mode) {
     case "add":
       if (catalog?.console_capability === "request") {
-        return `Request ${catalog.label} Value`;
+        return `Request ${deliveryFieldDisplayLabel(catalog.label)} Value`;
       }
 
-      return `Add ${catalog?.label ?? "Catalog"} Value`;
+      return `Add ${deliveryFieldDisplayLabel(catalog?.label ?? "Catalog")} Value`;
     case "edit":
       return `Edit ${subject}`;
     case "retire":
@@ -194,12 +195,12 @@ export function catalogMutationDescription(
   switch (mode) {
     case "add":
       if (catalog?.console_capability === "request") {
-        return "Prepare a prototype-local catalog request. The backend owner decides durable creation, update, or retirement.";
+        return "Prepare a prototype-local catalog request. The backend service decides durable creation, update, or retirement.";
       }
 
       return "Prepare a prototype-local catalog value. The real submit path must call the backend route shown below.";
     case "edit":
-      return "Prepare a prototype-local catalog value update. The backend owner remains the authority for durable mutation.";
+      return "Prepare a prototype-local catalog value update. The backend service remains the authority for durable mutation.";
     case "retire":
       if (catalogRetirementRequiresRequest(value ?? null)) {
         return "Prepare a retirement request. Existing package usage must be migrated or explicitly accepted before durable retirement, then projection must resync.";
@@ -245,7 +246,7 @@ export function catalogRetirementTableActionLabel(
   value: DeliveryCatalogValue | null,
 ) {
   if (catalog?.console_capability === "owner_routed") {
-    return "Owner Route";
+    return "Workflow route";
   }
 
   if (
@@ -355,9 +356,9 @@ export function catalogAuthorityMetadata(
       label: "Change Rule",
       value: catalogValueChangeRule(catalog, value),
     },
-    { label: "Backend Owner", value: catalog.create_authority },
+    { label: "Backend service", value: catalog.create_authority },
     { label: "Backend Route", value: catalog.backend_route },
-    { label: "Owner Route", value: catalog.owner_route },
+    { label: "Workflow route", value: catalog.owner_route },
   ];
 }
 

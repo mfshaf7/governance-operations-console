@@ -776,7 +776,7 @@ test("product operations and runtime states fail closed against their descriptor
           },
         },
     }),
-    /runtime lifecycle requires a capability, workflow owner, and coherent adapter/,
+    /runtime lifecycle requires a capability, workflow service, and coherent adapter/,
   );
 
   assert.throws(

@@ -110,7 +110,7 @@ export function ProductReleaseDashboard({
   return (
     <TerasModalShell
       bodyLayout="fill"
-      description={connected ? sourceCurrent ? "Owner-reported release support, runtime state and recorded evidence." : "Retained owner records. Refresh the Console source, or inspect current records in GitHub." : "Design preview — sample product, release and runtime records. Actions are simulated."}
+      description={connected ? sourceCurrent ? "Source-reported release support, runtime state and recorded evidence." : "Retained source records. Refresh the Console source, or inspect current records in GitHub." : "Design preview — sample product, release and runtime records. Actions are simulated."}
       footer={
         <TerasActionButton emphasis="secondary" onClick={onBack}>
           Back to Register
@@ -147,7 +147,7 @@ export function ProductReleaseDashboard({
                     tone: productTone,
                     value: dashboard.currentStep
                       ? dashboard.currentStep.label
-                      : connected ? "Owner records" : "Unavailable",
+                      : connected ? "Source records" : "Unavailable",
                   },
                 ]}
                 shape="line"
@@ -239,9 +239,9 @@ export function ProductReleaseDashboard({
                   dashboard.nextMove?.reason ??
                   (connected ? product.unavailableReason : "No product release move is currently required.")
                 }
-                kicker={connected ? "Owner route" : "Required Move"}
+                kicker={connected ? "Workflow route" : "Required Move"}
                 statusLabel={
-                  connected ? !sourceCurrent ? "Retained" : product.ownerWorkflows?.length ? "Owner workflow" : "Not supported" : dashboard.currentStep
+                  connected ? !sourceCurrent ? "Retained" : product.ownerWorkflows?.length ? "Release workflow" : "Not supported" : dashboard.currentStep
                     ? productReleaseStepPostureLabels[
                         dashboard.currentStep.posture
                       ]
@@ -249,7 +249,7 @@ export function ProductReleaseDashboard({
                 }
                 statusTone={productTone}
                 title={
-                  (connected && product.ownerWorkflows?.length ? "Protected owner route" : dashboard.nextMove?.label) ??
+                  (connected && product.ownerWorkflows?.length ? "Protected workflow route" : dashboard.nextMove?.label) ??
                   dashboard.currentStep?.label ??
                   (connected ? "No governed release path" : "No action required")
                 }
@@ -259,7 +259,7 @@ export function ProductReleaseDashboard({
                   columns={1}
                   items={[
                     {
-                      label: "Owner",
+                      label: "Responsible component",
                       value:
                         blockingRequirement?.blockedMove.ownerRef ??
                         currentPathItem?.operation?.workflowOwner ??
@@ -270,7 +270,7 @@ export function ProductReleaseDashboard({
                   topOffset="compact"
                 />
               ) : null}
-              {connected && product.ownerGuidanceUrl ? <TerasActionRow><TerasActionButton emphasis="secondary" onClick={()=>window.open(product.ownerGuidanceUrl,"_blank","noopener,noreferrer")}>Read owner guidance</TerasActionButton></TerasActionRow> : null}
+              {connected && product.ownerGuidanceUrl ? <TerasActionRow><TerasActionButton emphasis="secondary" onClick={()=>window.open(product.ownerGuidanceUrl,"_blank","noopener,noreferrer")}>Read workflow guidance</TerasActionButton></TerasActionRow> : null}
               {currentPathItem?.actionable ? (
                 <TerasActionRow spacing="normal">
                   <TerasActionButton
@@ -285,11 +285,11 @@ export function ProductReleaseDashboard({
             </TerasPanel>
 
             {connected ? <TerasPanel spacing="normal" fit="content" frame="padded" treatment="neutral">
-              <TerasPanelHeader kicker="Owner execution" title="Protected workflows" description={product.ownerWorkflows?.length ? "Submit through a commissioned Platform connection, or inspect the owner workflow in GitHub. Environment approval and source review remain required." : product.unavailableReason}/>
+              <TerasPanelHeader kicker="Workflow execution" title="Protected workflows" description={product.ownerWorkflows?.length ? "Submit through a commissioned Platform connection, or inspect the release workflow in GitHub. Environment approval and source review remain required." : product.unavailableReason}/>
               {ownerActions?.(() => setActiveTab("operations"))}
               {product.recordedRuntime ? <TerasMetadataList columns={1} items={[{label:"Recorded production state",value:formatProductReleaseStatus(product.recordedRuntime.state)},{label:"Recorded",value:product.recordedRuntime.recorded_at ? formatObservedAt(product.recordedRuntime.recorded_at) : "Not recorded"}]} topOffset="compact"/> : null}
               <TerasActionRow spacing="normal">{product.ownerWorkflows?.map(workflow=><TerasActionButton emphasis="secondary" key={workflow.id} onClick={()=>window.open(workflow.url,"_blank","noopener,noreferrer")}>{workflow.label}</TerasActionButton>)}</TerasActionRow>
-              <TerasTechnicalDetails summary="Execution and source details" items={[{label:"Console dispatch",value:product.ownerWorkflows?.some(workflow=>workflow.native?.available) ? "Commissioned for the available actions" : product.ownerWorkflows?.find(workflow=>workflow.native)?.native?.unavailable_reason ?? "Not commissioned"},{label:"Recorded runtime",value:"Owner source contract; not an observation of running resources"},{label:"Source version",value:product.source.version},...(product.ownerWorkflows??[]).map(workflow=>({label:workflow.label,value:workflow.url}))]}/>
+              <TerasTechnicalDetails summary="Execution and source details" items={[{label:"Console dispatch",value:product.ownerWorkflows?.some(workflow=>workflow.native?.available) ? "Commissioned for the available actions" : product.ownerWorkflows?.find(workflow=>workflow.native)?.native?.unavailable_reason ?? "Not commissioned"},{label:"Recorded runtime",value:"Source contract; not an observation of running resources"},{label:"Source version",value:product.source.version},...(product.ownerWorkflows??[]).map(workflow=>({label:workflow.label,value:workflow.url}))]}/>
               {!sourceCurrent ? <TerasEmptyState>Retained Console source. Review current source and inputs in GitHub before running its protected workflow.</TerasEmptyState> : null}
             </TerasPanel> : (            <TerasPanel spacing="normal"
               fit="content"
@@ -380,13 +380,13 @@ function ProductReleaseDashboardTabContent({
           treatment="neutral"
         >
           <TerasPanelHeader
-            description="Stable ownership, endpoint, authority, rollback, and evidence truth."
+            description="Stable responsibilities, endpoint, authority, rollback, and evidence."
             kicker="Release Contract"
             title="Product boundary"
           />
           <TerasTrayStack scroll>
             <TerasTrayStack columns={2}>
-              <TerasContentTray kicker="Ownership and endpoint">
+              <TerasContentTray kicker="Responsibilities and endpoint">
                 <TerasMetadataList
                   items={[
                     {
@@ -394,11 +394,11 @@ function ProductReleaseDashboardTabContent({
                       value: formatProductReleaseStatus(dashboard.overview.highestRealEndpoint),
                     },
                     {
-                      label: "Platform owner",
+                      label: "Platform responsibility",
                       value: dashboard.overview.platformOwner,
                     },
                     {
-                      label: "Security owner",
+                      label: "Security responsibility",
                       value: dashboard.overview.securityOwner,
                     },
                     {
@@ -421,7 +421,7 @@ function ProductReleaseDashboardTabContent({
                       value: dashboard.operatorRoute.label,
                     },
                     {
-                      label: "Route owner",
+                      label: "Responsible component",
                       value: dashboard.operatorRoute.ownerRef,
                     },
                   ]}
@@ -445,7 +445,7 @@ function ProductReleaseDashboardTabContent({
                   },
                 ]}
               />
-              <TerasTechnicalDetails summary="Owner source and evidence details" items={[
+              <TerasTechnicalDetails summary="Source and evidence details" items={[
                 {label:"Authority",value:dashboard.overview.source.source},
                 {label:"Registry record",value:dashboard.overview.source.ref},
                 {label:"Source version",value:dashboard.overview.source.version},
@@ -459,11 +459,11 @@ function ProductReleaseDashboardTabContent({
       );
     case "release-path":
       if(product.recordedEvidence)return <TerasPanel fit="fill" frame="padded" layout="header-body" overflow="hidden" treatment="neutral">
-        <TerasPanelHeader kicker="Release records" title="Recorded owner state" description="These are source records, not an executable workflow or proof of current environment health. Inspect each record for its candidate binding and evidence."/>
+        <TerasPanelHeader kicker="Release records" title="Recorded source state" description="These are source records, not an executable workflow or proof of current environment health. Inspect each record for its candidate binding and evidence."/>
         <TerasTrayStack scroll>{product.recordedEvidence.length ? product.recordedEvidence.map(record=><TerasContentTray key={record.id} kicker={record.label}>
           <TerasMetadataList items={[{label:"Recorded status",value:formatProductReleaseStatus(record.status)},{label:"Recorded",value:record.recorded_at ? formatObservedAt(record.recorded_at) : "Not recorded"}]}/>
           <TerasActionRow spacing="normal"><TerasActionButton emphasis="secondary" onClick={()=>window.open(record.url,"_blank","noopener,noreferrer")}>Inspect {record.label.toLowerCase()}</TerasActionButton></TerasActionRow>
-          <TerasTechnicalDetails summary="Candidate and evidence details" items={[{label:"Source bundle",value:record.source_bundle??"Not recorded"},{label:"Image digest",value:record.image_digest??"Not recorded"},{label:"Verification evidence",value:record.evidence_ref??"Not recorded"},{label:"Owner record",value:record.url}]}/>
+          <TerasTechnicalDetails summary="Candidate and evidence details" items={[{label:"Source bundle",value:record.source_bundle??"Not recorded"},{label:"Image digest",value:record.image_digest??"Not recorded"},{label:"Verification evidence",value:record.evidence_ref??"Not recorded"},{label:"Source record",value:record.url}]}/>
         </TerasContentTray>) : <TerasEmptyState>{product.unavailableReason}</TerasEmptyState>}</TerasTrayStack>
       </TerasPanel>;
       return (
@@ -488,7 +488,7 @@ function ProductReleaseDashboardTabContent({
             <TerasList ariaLabel="Governed product release path">
               {dashboard.releasePath.steps.map(({ step }, index) => (
                 <TerasStatusItem
-                  detail={product.recordedEvidence?.find(record=>record.id===step.id)?.recorded_at ? `Recorded ${formatObservedAt(product.recordedEvidence.find(record=>record.id===step.id)!.recorded_at!)}` : "Inspect the owner record for its exact evidence and candidate binding."}
+                  detail={product.recordedEvidence?.find(record=>record.id===step.id)?.recorded_at ? `Recorded ${formatObservedAt(product.recordedEvidence.find(record=>record.id===step.id)!.recorded_at!)}` : "Inspect the source record for its exact evidence and candidate binding."}
                   index={String(index + 1).padStart(2, "0")}
                   key={step.id}
                   label={step.label}

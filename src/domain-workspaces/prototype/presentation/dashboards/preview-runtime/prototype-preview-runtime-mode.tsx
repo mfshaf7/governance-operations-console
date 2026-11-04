@@ -90,7 +90,7 @@ export function PrototypePreviewRuntimeMode({
           actionsLayout="inline"
           description={
             ownerControlled
-              ? "Exact owner revision, loopback endpoint, and bounded command projected by Workspace Prototype Studio."
+              ? "Exact Studio revision, loopback endpoint, and bounded command projected by Workspace Prototype Studio."
               : "Launch command, working directory, and profile source used by the preview runtime."
           }
           kicker="Launch Context"

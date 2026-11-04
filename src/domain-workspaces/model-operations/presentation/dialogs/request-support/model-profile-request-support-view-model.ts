@@ -6,9 +6,9 @@ export function modelProfileRequestMetadata(
   capability: ModelProfileRequestCapability,
 ): TerasMetadataItem[] {
   return [
-    { label: "Backend Owner", value: capability.backendOwner },
-    { label: "Workflow Owner", value: capability.workflowOwner },
-    { label: "Security Owner", value: capability.securityOwner },
+    { label: "Backend service", value: capability.backendOwner },
+    { label: "Workflow service", value: capability.workflowOwner },
+    { label: "Security responsibility", value: capability.securityOwner },
     { label: "Availability", value: capability.availability },
   ];
 }

@@ -96,10 +96,10 @@ export function prototypeWorkspaceStatus(
         tone: "info",
       },
       {
-        detail: liveAuthority ? "Commands, review and receipts remain owner-backed. Each operation proves its own current readiness; this register is not execution approval." : "Prototype requests, workflow receipts, and preview proof remain prototype-local until a future backend command path is admitted.",
+        detail: liveAuthority ? "Commands, review and receipts remain source-backed. Each operation proves its own current readiness; this register is not execution approval." : "Prototype requests, workflow receipts, and preview proof remain prototype-local until a future backend command path is admitted.",
         facts: [
           { label: "Mutation", value: readModel.source.mutationGateway },
-          { label: "Receipt Scope", value: liveAuthority ? "durable owner receipts" : "local prototype session" },
+          { label: "Receipt Scope", value: liveAuthority ? "durable source receipts" : "local prototype session" },
           { label: "Backend Write", value: liveAuthority ? "owner-gated" : "not connected" },
           { label: "Durable Source", value: readModel.source.registry },
         ],
@@ -124,7 +124,7 @@ export function prototypeWorkspaceStatus(
       },
     ],
     kicker: "Prototype Status",
-    statusLabel: liveAuthority ? needsAttention ? "attention" : "owner data current" : needsAttention ? "attention" : "healthy",
+    statusLabel: liveAuthority ? needsAttention ? "attention" : "Source data current" : needsAttention ? "attention" : "healthy",
     summary: liveAuthority ? "Canonical Prototype records are current; each workflow retains its own readiness, review and authority." : needsAttention
       ? "Prototype-local record posture has explicit work requiring operator attention."
       : "Prototype-local record posture has no explicit blockers or returned movement requests.",

@@ -166,7 +166,7 @@ export function productSelectedPanelFacts(
   entry: ProductPortfolioEntry,
 ): TerasMetadataItem[] {
   return [
-    { label: "Owner", value: entry.ownership.productOwnerRef },
+    { label: "Product repository", value: entry.ownership.productOwnerRef },
     { label: "Form", value: productFormLabel(entry) },
     {
       label: "Segment",

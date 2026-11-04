@@ -163,7 +163,7 @@ export function deliveryPackageRegisterSelectedFacts(
           value: deliveryPackage.active_blocker.statement,
         },
         {
-          label: "Blocker Owner",
+          label: "Resolution responsibility",
           value: deliveryPackage.active_blocker.owner,
         },
         {

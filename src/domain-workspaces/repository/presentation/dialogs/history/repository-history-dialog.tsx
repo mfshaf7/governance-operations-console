@@ -51,7 +51,7 @@ export function RepositoryHistoryDialog({ lifecycleAudit, onClose, onRetry, onRe
     <TerasZoneLayout variant="main-aside">
       <TerasZone fit="fill">
         <TerasPanel frame="padded" treatment="neutral" fit="content" spacing="normal">
-          <TerasPanelHeader kicker="Repository" title={repository.name} description="Ownership and control boundaries from the loaded workspace record." />
+          <TerasPanelHeader kicker="Repository" title={repository.name} description="Responsibilities and control boundaries from the loaded workspace record." />
           <TerasMetadataList items={repositoryHistoryControlFacts(repository)} topOffset="compact" />
         </TerasPanel>
         <TerasPanel frame="padded" treatment="neutral" fit="fill" layout="header-body" spacing="normal">
@@ -77,7 +77,7 @@ export function RepositoryHistoryDialog({ lifecycleAudit, onClose, onRetry, onRe
             actions={<TerasStatusPill tone={provider.tone}>{provider.label}</TerasStatusPill>} />
           {providerRead?.loading ? <TerasLoadingState fill label="Reading GitHub status…" />
             : providerRead?.error ? <RepositoryReadFailure label={otherAccount ? "Different GitHub account" : providerNeedsSetup ? "GitHub connection needs setup" : "GitHub status could not be loaded"}
-              detail={otherAccount ? "This repository is outside the connected GitHub account. Access to its owning account must be configured." : providerRead.retryable ? "The connection failed. Try loading this section again." : providerNeedsSetup ? "The repository reader is not ready. Connection setup must be completed before status can load." : "The response could not be verified. The reader's access or returned repository identity needs attention."}
+              detail={otherAccount ? "This repository is outside the connected GitHub account. Access to its GitHub account must be configured." : providerRead.retryable ? "The connection failed. Try loading this section again." : providerNeedsSetup ? "The repository reader is not ready. Connection setup must be completed before status can load." : "The response could not be verified. The reader's access or returned repository identity needs attention."}
               onRetry={providerRead.retryable ? onRetryProvider : undefined} />
             : <TerasMetadataList topOffset="compact" items={[
               ...(provider.observedAt ? [{ label: "Observed at", value: provider.observedAt }] : []),

@@ -10,7 +10,7 @@ export function toGovernedProduct(item:GovernedProduct, projection:GovernedProdu
   rollback:{supported:false,contractRef:null},runtimeLifecycle:null,
   source:{provenance:"authority-snapshot",source:"workspace-governance",ref:`workspace-governance://products/${item.product_id}`,version:projection.source_version,observedAt:projection.observed_at},
   supportingEvidenceRefs:item.evidence.map(e=>e.url),unavailableReason:item.unavailable_reason,
-  operatorRoute:{label:"Read owner release guidance",ownerRef:item.platform_owner,ref:item.guidance_url},
+  operatorRoute:{label:"Read release guidance",ownerRef:item.platform_owner,ref:item.guidance_url},
   ownerWorkflows:item.workflows,ownerGuidanceUrl:item.guidance_url,recordedEvidence:item.evidence,recordedRuntime:item.runtime,
  };assertProductReleaseCapability(product);return product;
 }

@@ -51,7 +51,7 @@ export function PrototypeDashboardModal({
           <TerasPanelHeader kicker="Project overview" title={record.name} description={prototypeOverviewContext(record.summary, 200)}
             actionsLayout="inline" actions={<TerasStatusPill tone={lifecycle.tone}>{lifecycle.label}</TerasStatusPill>} />
           <TerasMetadataList shape="line" treatment="chip" wrap items={[
-            { label: "Owner", value: record.owner },
+            { label: "Responsible for prototype", value: record.owner },
             { label: "Visibility", value: prototypeVisibilityLabel(record.visibilityTier) },
           ]} />
           {currentActionAvailable ? <TerasContentTray kicker="Next required action">
@@ -63,7 +63,7 @@ export function PrototypeDashboardModal({
                 <span>{prototypeOverviewContext(record.currentMove.detail, 180)}</span>
               </TerasFieldStack>
             </TerasActionRow>
-          </TerasContentTray> : terminal ? <TerasEmptyState>{lifecycle.label}. History and owner receipts remain available.</TerasEmptyState> : null}
+          </TerasContentTray> : terminal ? <TerasEmptyState>{lifecycle.label}. History and source receipts remain available.</TerasEmptyState> : null}
           {record.summary.length > 200 ? <TerasActionRow layout="split" spacing="compact"><TerasActionButton size="table-compact" emphasis="secondary" onClick={() => setOpenArea("source")}>Full context</TerasActionButton></TerasActionRow> : null}
         </TerasPanel>
 
@@ -77,7 +77,7 @@ export function PrototypeDashboardModal({
           {record.openIssues.length ? <TerasRecordTable profile="register" density="normal" rows={record.openIssues} getRowId={issue => issue.id} columns={[
             { key: "issue", header: "Issue", intent: "primary", render: issue => issue.title },
             { key: "status", header: "Status", intent: "status", render: issue => <TerasStatusPill tone={issue.tone}>{issue.status}</TerasStatusPill> },
-            { key: "owner", header: "Owner", render: issue => issue.owner },
+            { key: "owner", header: "Resolve with", render: issue => issue.owner },
             { key: "fix", header: "Required fix", render: issue => issue.requiredFix },
           ]} /> : <TerasEmptyState>No open issues are listed.</TerasEmptyState>}
         </TerasPanel>

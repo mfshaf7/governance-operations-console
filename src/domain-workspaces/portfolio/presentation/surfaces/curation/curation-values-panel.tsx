@@ -56,7 +56,7 @@ export function ProductPortfolioCurationValuesPanel({
         search={{
           ariaLabel: "Search current product listings",
           onValueChange: onQueryChange,
-          placeholder: "Search product, id, owner, or scope...",
+          placeholder: "Search product, id, repository, or scope...",
           value: query,
         }}
       />

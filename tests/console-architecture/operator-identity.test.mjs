@@ -133,3 +133,14 @@ test("blank operator display names cannot be saved", () => {
   assert.equal(validation.valid, false);
   assert.match(validation.displayName, /at least two characters/);
 });
+
+
+test("friendly workspace authority wording preserves the canonical claim and does not grant trust", () => {
+  const identity = structuredClone(consoleOperatorAccountFixture.identity);
+  const before = structuredClone(identity);
+  const projection = projectOperatorIdentity(identity);
+  assert.equal(projection.authoritySummary, "Workspace approver");
+  assert.deepEqual(identity, before);
+  assert.deepEqual(identity.access.authorities, ["Workspace owner"]);
+  assert.equal(projection.trusted, false);
+});

@@ -29,10 +29,10 @@ export function ExecutionSourceRealizationPanel({ sessionId, sessionRevision, so
       <TerasMetadataList items={[
         { label: "Authority", value: current?.next_action.authority ?? "operator-orchestration-service" },
         { label: "Attempt", value: current?.attempt?.request_id ?? "Not started" },
-        { label: "Model profile", value: current?.attempt?.model?.profile_id ?? "Awaiting commissioned owner invocation" },
+        { label: "Model profile", value: current?.attempt?.model?.profile_id ?? "Awaiting commissioned service invocation" },
         ...(current?.attempt?.model?.effective_selection ? [{ label: "Actual model", value: effectiveModelLabel(current.attempt.model.effective_selection) }] : []),
         { label: "Context packet", value: current?.attempt?.context?.packet_ref ?? "Not yet admitted" },
-        ...(current?.attempt?.failure ? [{ label: "Owner failure", value: current.attempt.failure.code }] : []),
+        ...(current?.attempt?.failure ? [{ label: "Service failure", value: current.attempt.failure.code }] : []),
       ]} />
       {canStart ? <>
         <TerasNoteField label="Implementation objective" minimumHeight="short" value={objective} onValueChange={setObjective} />
@@ -60,7 +60,7 @@ export function ExecutionSourceRealizationPanel({ sessionId, sessionRevision, so
         <TerasActionButton disabled={runtime.pending || sourceIntentRef === null} onClick={() => run(() => runtime.command({ action: "recover", expectedRevision: current.revision, ...authorization }))}>Recover accepted source action</TerasActionButton> : null}
       {current?.attempt?.source_receipt ? <TerasMetadataList items={[
         { label: "Gary commit", value: current.attempt.source_receipt.head_commit },
-        { label: "Owner receipt", value: current.attempt.source_receipt.receipt_id },
+        { label: "Source receipt", value: current.attempt.source_receipt.receipt_id },
         { label: "Receipt digest", value: current.attempt.source_receipt.receipt_digest },
       ]} /> : null}
       <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => run(runtime.refresh)}>Refresh source realization</TerasActionButton>

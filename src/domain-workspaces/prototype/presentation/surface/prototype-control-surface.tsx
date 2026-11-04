@@ -99,7 +99,7 @@ export function PrototypeControlSurface({
                 search={{
                   ariaLabel: "Search prototype records",
                   onValueChange: controller.filters.onSearchChange,
-                  placeholder: "Search prototype, source, owner, issue...",
+                  placeholder: "Search prototype, source, responsibility, issue...",
                   value: controller.filters.search,
                 }}
               />

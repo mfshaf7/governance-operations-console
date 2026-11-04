@@ -81,7 +81,7 @@ export function projectLifecycleTransitionAttentionSnapshot(
 
   const freshness = snapshot.truncated ? "unverified" : "current";
   const source = {
-    authority: snapshot.sourceScope ? "Console composition of native OOS owner readbacks and journal" : "operator-orchestration-service",
+    authority: snapshot.sourceScope ? "Console composition of native OOS source readbacks and journal" : "operator-orchestration-service",
     freshness,
     mode: "source-projected" as const,
     observedAt: snapshot.observedAt,

@@ -112,15 +112,15 @@ export function ProposalDispositionRoutePanel({
 
             {routeHasRepositoryGate &&
             routeSelectionDraft.repoMode === "existing" ? (
-              dispositionCompleted ? <TerasReadoutField label="Existing owner repository" value={routeSelectionDraft.repoRef} /> : <>
+              dispositionCompleted ? <TerasReadoutField label="Existing responsible repository" value={routeSelectionDraft.repoRef} /> : <>
               <TerasSelectField
                 disabled={!repositoriesCurrent}
                 helper={
                   selectedRepo
                     ? `${selectedRepo.owner} / ${selectedRepo.value}`
-                    : repositoriesCurrent ? "Use an existing repository for this work. Reuse does not create a new-repository request." : "Current repository Inventory is unavailable. Refresh before selecting an owner."
+                    : repositoriesCurrent ? "Use an existing repository for this work. Reuse does not create a new-repository request." : "Current repository Inventory is unavailable. Refresh before selecting a repository."
                 }
-                label="Existing owner repo"
+                label="Existing implementation repository"
                 onValueChange={onRegisteredRepoSelect}
                 options={proposalRegisteredRepoSelectOptions(registeredRepositories)}
                 value={routeSelectionDraft.repoRef}
@@ -133,7 +133,7 @@ export function ProposalDispositionRoutePanel({
                 description="Accepting this Proposal creates a request in Repository Control. Create it there or attach one already created for that request, then confirm its result before handoff." />
             ) : (
               <TerasContentTray
-                description="This selected route does not require an owner repository reference before handoff review."
+                description="This selected route does not require an responsible repository reference before handoff review."
                 kicker="Repository Requirement"
               />
             )}

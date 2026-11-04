@@ -144,7 +144,7 @@ export function DefinitionDashboardModal({
                   overflow="hidden"
                 >
                   <TerasPanelHeader
-                    description="Select a node to inspect its bounded owner, dependencies, controls, and evidence references."
+                    description="Select a node to inspect its responsible component, dependencies, controls, and evidence references."
                     kicker="Execution Plan"
                     statusLabel={`${record.executionNodes.length} nodes`}
                     statusTone="info"
@@ -209,7 +209,7 @@ export function DefinitionDashboardModal({
 
               {onStartRun && record.source.mode === "live-authority" ? <TerasPanel spacing="normal" frame="padded" treatment="rail" fit="content" tone={canStart ? "ok" : "warn"}>
                 <TerasPanelHeader kicker="Admitted run" title="Run the reviewed validation"
-                  description={canStart ? "Review the current initiative source and explicitly approve a read-only run." : "Current owner admission and source freshness are required before starting."} />
+                  description={canStart ? "Review the current initiative source and explicitly approve a read-only run." : "Current service admission and source freshness are required before starting."} />
                 <TerasActionRow><TerasActionButton disabled={!canStart} onClick={onStartRun}>Start Run</TerasActionButton></TerasActionRow>
               </TerasPanel> : null}
               <TerasPanel frame="padded" treatment="neutral" fit="content">

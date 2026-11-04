@@ -138,12 +138,12 @@ export function ConsoleActivityPanel({
           <div>
             <p className={styles.description} role="status">
               Loaded history page {pageNumber + 1}. Search and filters apply to this page only. Outcomes describe individual events, not overall project completion.
-              {currentPage.truncated ? " Owner history is partial; this is not the complete audit history." : " No additional truncation reported for this page."}
+              {currentPage.truncated ? " Source history is partial; this is not the complete audit history." : " No additional truncation reported for this page."}
               {!includeRoutine ? " Routine evidence reads are hidden; choose All events to inspect them." : " All event types in this page are shown."}
             </p>
             <ConsoleSurfaceTechnicalDetails summary="Source coverage and limits"
               items={currentPage.sources.map(source => ({ label: source.label,
-                value: `${source.state}; ${source.truncated ? "additional records exist outside this source window" : "no source truncation reported"}. Owner: ${source.authority}. Source: ${source.sourceId}.`,
+                value: `${source.state}; ${source.truncated ? "additional records exist outside this source window" : "no source truncation reported"}. Responsible component: ${source.authority}. Source: ${source.sourceId}.`,
               }))} />
             {error ? <p role="alert" className={styles.description}>{error}</p> : null}
           </div>
@@ -328,7 +328,7 @@ function ActivityDetail({
         </div>
         <div>
           <dt>Evidence origin</dt>
-          <dd>{event.durability === "source-projected" ? "Owner projection (source-projected)" : humanize(event.durability)}</dd>
+          <dd>{event.durability === "source-projected" ? "Source projection (source-projected)" : humanize(event.durability)}</dd>
         </div>
       </dl>
 
@@ -366,20 +366,20 @@ function humanize(value: string) {
 }
 
 function activityDescription(snapshot: GovernanceActivitySnapshot) {
-  if (snapshot.observedAt === new Date(0).toISOString()) return "Loading activity from workflow and governance owners.";
+  if (snapshot.observedAt === new Date(0).toISOString()) return "Loading activity from workflow and governance services.";
   if (snapshot.mode === "disconnected-preview") {
     return "Disconnected preview of commands, receipts, state changes, blockers, and runtime changes.";
   }
   if (snapshot.status === "offline") {
-    return "Owner activity could not be refreshed. Any retained events are from the last received page, not a current observation.";
+    return "Source activity could not be refreshed. Any retained events are from the last received page, not a current observation.";
   }
   if (snapshot.status === "partial") {
     const unavailable = snapshot.sources
       .filter((source) => source.state !== "current" || source.truncated)
       .map((source) => source.label);
     return unavailable.length > 0
-      ? `Live owner activity is partial: ${unavailable.join(", ")}.`
-      : "Live owner activity is partial or truncated.";
+      ? `Live source activity is partial: ${unavailable.join(", ")}.`
+      : "Live source activity is partial or truncated.";
   }
-  return "Live commands, receipts, state changes, blockers, and runtime changes from their owning systems.";
+  return "Live commands, receipts, state changes, blockers, and runtime changes from their source systems.";
 }

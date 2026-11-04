@@ -26,7 +26,7 @@ export function ProfileRequestIntentStep({
 }) {
   return (
     <TerasWizardPanel
-      description="Identify the environment, accountable owner, and participating repositories."
+      description="Identify the environment, implementation repository, and participating repositories."
       kicker="Profile Intent"
       title="Request identity"
     >
@@ -39,7 +39,7 @@ export function ProfileRequestIntentStep({
             value={draft.profileId}
           />
           <TerasSelectField
-            label="Owning repository"
+            label="Implementation repository"
             onValueChange={(ownerRepo) =>
               onChange({
                 ownerRepo,
@@ -49,7 +49,7 @@ export function ProfileRequestIntentStep({
               })
             }
             options={[
-              { label: "Select owner", value: "" },
+              { label: "Select implementation repository", value: "" },
               ...devIntegrationRequestOptions.ownerRepos.map((value) => ({
                 label: value,
                 value,

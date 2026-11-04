@@ -1,5 +1,7 @@
 "use client";
 
+import { deliveryFieldDisplayLabel } from "../../../../../read-model/terms/copy.ts";
+
 import type { ReactNode } from "react";
 import { useState } from "react";
 
@@ -205,7 +207,7 @@ export function SharedMetadataEditor({
             actionsLayout="inline"
             kicker="Selected Metadata Field"
             statusTone={statusTone}
-            title={selectedGroup.field.label}
+            title={deliveryFieldDisplayLabel(selectedGroup.field.label)}
             description={refinementMetadataCollapsedValue({
               collapsed: editorCollapsed,
               value: refinementSharedMetadataEditorDescription({
@@ -228,7 +230,7 @@ export function SharedMetadataEditor({
                   }
                   description="Review item and current value mapping before shared apply."
                   kicker="Selected Set Review"
-                  title={`${selectedGroup.targets.length} items mapped to ${selectedGroup.field.label}`}
+                  title={`${selectedGroup.targets.length} items mapped to ${deliveryFieldDisplayLabel(selectedGroup.field.label)}`}
                 />
 
                 <MetadataValueControl
@@ -258,7 +260,7 @@ export function SharedMetadataEditor({
                       <MetadataFieldSelectorButton
                         detail={group.group.title}
                         key={group.identity}
-                        label={group.field.label}
+                        label={deliveryFieldDisplayLabel(group.field.label)}
                         onSelect={() =>
                           onSelectMetadataField(group.targets[0].key)
                         }
@@ -365,7 +367,7 @@ export function SharedMetadataEditor({
                   detail={sourceValueRow.detail}
                   key={`selected-${target.key}`}
                   label={target.group.title}
-                  meta={`${target.path.map((item) => item.kind).join(" / ")} / ${selectedGroup.field.label}`}
+                  meta={`${target.path.map((item) => item.kind).join(" / ")} / ${deliveryFieldDisplayLabel(selectedGroup.field.label)}`}
                   title={target.node.title}
                   tone={sourceValueRow.tone}
                 />

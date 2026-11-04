@@ -21,7 +21,7 @@ export function activityPresentation(event: ConsoleActivityEvent) {
         : /artifact[.\s_-]+registry[.\s_-]+persisted/i.test(event.action.label) ? "Evidence saved"
             : readableAction(event.action.label);
     const summary = uri
-        ? `${subjectType} has a recorded ${isRoutineActivityRead(event) ? "read" : "governance event"}. The event does not provide a project name. Inspect the original record for exact references and owner result.`
+        ? `${subjectType} has a recorded ${isRoutineActivityRead(event) ? "read" : "governance event"}. The event does not provide a project name. Inspect the original record for exact references and service result.`
         : event.summary;
     const category = /(?:[.\s_-])read$/i.test(event.action.label) && event.source.owner === "workspace-governance-control-fabric"
         ? "Evidence access" : /artifact[.\s_-]+registry[.\s_-]+persisted/i.test(event.action.label) ? "Evidence storage" : readableAction(event.category);

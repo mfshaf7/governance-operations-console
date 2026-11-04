@@ -36,7 +36,7 @@ export function prototypeDashboardStageCards(record: PrototypeRecord, mode: Prot
       id: "handoff", title: "Handoff", category: ["graduated", "retired"].includes(record.lifecycle) ? "Handoff history" : "Transition", ...prototypeMovementStatus(record),
       facts: [
         { label: "Target", value: record.movementRequest.targetHome },
-        { label: "Owner", value: record.movementRequest.targetOwner },
+        { label: "Responsible for prototype", value: record.movementRequest.targetOwner },
       ],
     },
   ];

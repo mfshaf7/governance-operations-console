@@ -26,7 +26,7 @@ export function projectProposalLifecycleOutcomes(payload: unknown): NativeLifecy
       recordedAt: event?.occurred_at ?? projection.updated_at,
       observationKind: "source-acknowledgement" as const,
       evidenceRefs: [projection.record_ref, ...(handoff.target_receipt_ref ? [handoff.target_receipt_ref] : [])],
-      detail: "Current Proposal owner readback reports the handoff applied. Original target receipt and journal validation/admission phases are not independently projected by this source acknowledgement.",
+      detail: "Current Proposal source readback reports the handoff applied. Original target receipt and journal validation/admission phases are not independently projected by this source acknowledgement.",
     }];
   });
 }

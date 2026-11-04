@@ -156,20 +156,20 @@ export function useCatalogControlState(
     ),
   );
   const repositoryLinkBlockedReason = !deliveryLinkTarget
-    ? "Open Catalog from an Execution Board Owner Repo action to link a work item."
+    ? "Open Catalog from an Execution Board Implementation repository action to link a work item."
     : liveRuntime.mode !== "live" || liveRuntime.projectionStatus !== "current"
       ? "Canonical Catalog truth is unavailable."
       : deliveryChangeRuntime.mode !== "live" ||
           deliveryChangeRuntime.projectionStatus !== "current"
         ? "Canonical Delivery change truth is unavailable."
         : !isOwnerRepoCatalog(activeCatalog)
-          ? "Select the Owner Repo Catalog."
+          ? "Select the Implementation repository Catalog."
           : !selectedValue
-            ? "Select an Owner Repo value."
+            ? "Select an Implementation repository value."
             : !selectedOwnerRepository
               ? "The Catalog value does not match an admitted Repository record."
               : !selectedOwnerRepositoryReadiness
-                ? "The selected Owner Repo has no current WGCF readiness receipt."
+                ? "The selected Implementation repository has no current WGCF readiness receipt."
                 : null;
   const mutationValue = mutationDraft?.valueId
     ? (catalogValues.find(
@@ -214,7 +214,7 @@ export function useCatalogControlState(
             return `${catalog.label}: ${planningFacetValueSummary(relatedValues)}`;
           })
           .join(" · ")
-      : "PI Planning Date is managed as a Target PI facet through the platform/OpenProject owner route.";
+      : "PI Planning Date is managed as a Target PI facet through the platform/OpenProject workflow route.";
   const canEditCatalogValue = useCallback(
     (value: DeliveryCatalogValue) =>
       canSubmit && canDraftCatalogValueMutation(activeCatalog, value, "edit"),

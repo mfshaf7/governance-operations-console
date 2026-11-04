@@ -13,6 +13,11 @@ async function open(page, { offline = false, view = "runtime" } = {}) {
     if (req.url().includes("/model-operations/runtime/")) ownerReads.push(req.url());
     return route.continue();
   });
+  // This is an explicit design-preview witness, even when the preview server
+  // has a real backend connection. Offline cases deliberately exercise live failure.
+  if (!offline) await page.route("**/api/console/capabilities", route => route.fulfill({ json: {
+    artifactType: "console-runtime-capability-projection", schemaVersion: 1, mode: "disconnected-preview", capabilities: [],
+  } }));
   if (offline) {
     await page.route("**/api/console/capabilities", route => route.fulfill({ json: {
       artifactType: "console-runtime-capability-projection", schemaVersion: 1, mode: "live", capabilities: [],
@@ -76,7 +81,7 @@ test("focused sample inspectors preserve saved effort and fallback without creat
   await registrations.getByRole("button", { name: "Back to Models & routing", exact: true }).click();
   await control.getByRole("button", { name: "Operation history", exact: true }).click();
   const history = page.getByRole("dialog", { name: "Model operation history", exact: true });
-  await expect(history.getByText("No owner operations are created in this read-only preview.", { exact: true })).toBeVisible();
+  await expect(history.getByText("No service operations are created in this read-only preview.", { exact: true })).toBeVisible();
   await expect(history.getByRole("button", { name: "Review restoration", exact: true })).toBeDisabled();
   await history.getByRole("button", { name: "Back to Models & routing", exact: true }).click();
   await expect(control.getByRole("button", { name: "API connections", exact: true })).toBeDisabled();
@@ -102,7 +107,7 @@ test("purpose-profile filtering, checks and evidence inspectors remain separate 
     await dashboard.getByRole("button", { name, exact: true }).click();
     const evidence = page.getByRole("dialog", { name: /Model Profile (Inspector|Check)/ });
     if (name === "Inspect Access Plane") {
-      await expect(evidence.getByText("Credential owner", { exact: true })).toBeVisible();
+      await expect(evidence.getByText("Credentials managed by", { exact: true })).toBeVisible();
       await expect(evidence.getByText("Access reason", { exact: true })).toBeVisible();
       await expect(evidence.getByText(/Live profile activation remains blocked until/)).toBeVisible();
     }

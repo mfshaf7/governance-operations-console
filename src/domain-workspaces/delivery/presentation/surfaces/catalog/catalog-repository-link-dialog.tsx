@@ -94,7 +94,7 @@ export function CatalogRepositoryLinkDialog({
       kicker="Repository / Catalog / Delivery"
       onClose={requestClose}
       surfaceId="delivery-repository-link"
-      title="Link Owner Repository"
+      title="Link implementation repository"
       width="standard"
     >
       <TerasTrayStack spacing="loose">
@@ -104,7 +104,7 @@ export function CatalogRepositoryLinkDialog({
               { label: "Delivery", value: target.packageLabel },
               { label: "Work Item", value: target.workItemId },
               {
-                label: "Owner Repo",
+                label: "Implementation repository",
                 value: repository?.valueKey ?? value?.value_key ?? "Unavailable",
               },
               {
@@ -160,7 +160,7 @@ export function CatalogRepositoryLinkDialog({
             label="Operator acceptance note"
             minimumHeight="short"
             onValueChange={onNoteChange}
-            placeholder="Why this repository is the reviewed owner for the selected work item"
+            placeholder="Why this repository is responsible for implementing the selected work item"
             value={note}
           />
         )}
@@ -180,7 +180,7 @@ export function CatalogRepositoryLinkDialog({
       </TerasTrayStack>
     </TerasModalShell>
     <TerasDraftCloseGuardDialog open={closeGuardOpen} title="Discard Repository link note?" kicker="Unsubmitted acceptance note"
-      description="The link has not been confirmed. Discarding removes this draft note; inspect the original owner result before retrying an uncertain request."
+      description="The link has not been confirmed. Discarding removes this draft note; inspect the original service result before retrying an uncertain request."
       leaveLabel="Discard Draft" onKeepEditing={() => setCloseGuardOpen(false)} onLeave={() => { setCloseGuardOpen(false); onNoteChange(""); onClose(); }} />
     </>
   );

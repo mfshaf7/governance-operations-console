@@ -15,7 +15,7 @@ export function projectRepositoryCurrentInventory(
     if (!projection || !ownerRef?.startsWith("repo:") || matches.length > 1) {
       const detail = !projection
         ? "Current Workspace inventory is unavailable. Custody history does not establish admission."
-        : "The custody owner does not bind one exact repository inventory identity.";
+        : "The workspace association does not match one exact repository inventory identity.";
       return {
         ...record,
         admissionState: "blocked",
@@ -61,8 +61,8 @@ export function projectRepositoryCurrentInventory(
         ? "Review the admitted repository and its history. Workspace intake is already complete."
         : "Review the existing Workspace Registry lifecycle record; do not prepare duplicate intake.",
       routeSource: `${record.routeSource} / current Workspace inventory`,
-      runtimeLane: { decision: "pending", detail: "Inventory admission does not establish runtime readiness. Consult the Platform owner record.", status: "platform-authority", tone: "info" },
-      securityBinding: { detail: "Inventory admission does not establish Security acceptance. Consult the Security owner record.", required: false, status: "not-evaluated", subject: false, tone: "info" },
+      runtimeLane: { decision: "pending", detail: "Inventory admission does not establish runtime readiness. Consult the Platform record.", status: "platform-authority", tone: "info" },
+      securityBinding: { detail: "Inventory admission does not establish Security acceptance. Consult the Security review record.", required: false, status: "not-evaluated", subject: false, tone: "info" },
       tone,
     } satisfies RepositoryWorkspaceRecord;
   });

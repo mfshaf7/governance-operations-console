@@ -80,7 +80,7 @@ export function OrchestrationDefinitionsSurface({
                 search={{
                   ariaLabel: "Search orchestration definitions",
                   onValueChange: controller.filters.onQueryChange,
-                  placeholder: "Search definition, source, owner, repo...",
+                  placeholder: "Search definition, source, component, repo...",
                   value: controller.filters.query,
                 }}
               />

@@ -162,7 +162,7 @@ export function CatalogMutationDialog({
     : catalogDraftLabelForStorage({ label });
   const ownerRepoError =
     linksOwnerRepo && !selectedOwnerRepo
-      ? "Select an admitted repository before preparing the Owner Repo request."
+      ? "Select an admitted repository before preparing the Implementation repository request."
       : null;
   const standardError =
     ownerRepoError ??
@@ -401,7 +401,7 @@ export function CatalogMutationDialog({
       </TerasTrayStack>
     </TerasModalShell>
     <TerasDraftCloseGuardDialog open={closeGuard !== null} title={closeGuard === "reload" ? "Reload Catalog draft?" : "Discard Catalog edits?"}
-      kicker="Unsaved Catalog draft" description="These changes have not been submitted. Discarding removes the browser edits; the owner values remain available."
+      kicker="Unsaved Catalog draft" description="These changes have not been submitted. Discarding removes the browser edits; the recorded catalog values remain available."
       leaveLabel={closeGuard === "reload" ? "Discard and Reload" : "Discard Draft"}
       onKeepEditing={() => setCloseGuard(null)} onLeave={() => {
         if (closeGuard === "reload") { initializedSource.current = null; setReload(value => value + 1); setCloseGuard(null); }

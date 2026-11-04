@@ -110,7 +110,7 @@ export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custod
         <TerasTechnicalDetails items={[
           { label: "Proposal source", value: `${request.proposalId} / ${request.recordVersion}` },
           { label: "Request", value: `repo-request://proposal/${request.proposalId}` },
-          ...(request.resolution ? [{ label: "Owner receipt", value: request.resolution.receipt_ref }] : []),
+          ...(request.resolution ? [{ label: "Source receipt", value: request.resolution.receipt_ref }] : []),
           ...(custody?.receipt_ref ? [{ label: "Reviewed custody receipt", value: custody.receipt_ref.uri },
             {label: "Provider repository", value: custody.provider_readback!.repository_identity.provider_repository_id}] : []),
         ]} />

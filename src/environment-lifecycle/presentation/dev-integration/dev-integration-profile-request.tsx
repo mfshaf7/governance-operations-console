@@ -182,12 +182,12 @@ export function DevIntegrationProfileRequest({
   if (live && (!options.ownerRepos.includes(draft.ownerRepo) || draft.participatingRepos.some(repo => !options.participatingRepos.includes(repo)) ||
     !options.laneClasses.some(option => option.value === draft.laneClass) || !options.runtimePlatforms.includes(draft.runtimePlatform) ||
     !options.runtimeStateModels.some(option => option.value === draft.runtimeStateModel)))
-    validationErrors.push("Review the current owner and runtime choices before submitting.");
+    validationErrors.push("Review the current implementation repository and runtime choices before submitting.");
   const reviewChecks = [
     profileRequestCheckItem(
       "intent-complete",
       "Profile intent",
-      "Identity, ownership, and participation are complete.",
+      "Identity, responsibility, and participation are complete.",
       intentComplete,
     ),
     profileRequestCheckItem(
@@ -382,7 +382,7 @@ export function DevIntegrationProfileRequest({
         <TerasPanelHeader
           description={
             reviewReady
-              ? live ? liveError ?? (reviewedSource !== live.sourceVersion || !live.current ? "Source changed or is unavailable. Review current source before submitting." : "The request will be recorded in Dev Integration for owner review; it will not admit or launch a profile.") : "The request can be recorded as prototype-local proposed truth."
+              ? live ? liveError ?? (reviewedSource !== live.sourceVersion || !live.current ? "Source changed or is unavailable. Review current source before submitting." : "The request will be recorded in Dev Integration for review by the responsible team; it will not admit or launch a profile.") : "The request can be recorded as prototype-local proposed truth."
               : validationErrors[0]
           }
           kicker="Final Check"
@@ -399,7 +399,7 @@ export function DevIntegrationProfileRequest({
               value: live ? "Dev Integration" : devIntegrationProfileRequestRoute.destinationLabel,
             },
             {
-              label: "Owner review",
+              label: "Implementation review",
               value: draft.ownerRepo,
             },
             {
@@ -436,7 +436,7 @@ export function DevIntegrationProfileRequest({
     <>
       <TerasWizardModal busy={submitting} busyLabel="Submitting profile request…"
         activeStepId={step}
-        description="Define a local environment contract for owner review. Submission does not admit or launch the profile."
+        description="Define a local environment contract for implementation review. Submission does not admit or launch the profile."
         footer={
           <TerasWizardFooter
             apply={

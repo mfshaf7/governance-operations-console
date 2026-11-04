@@ -2,34 +2,12 @@
 
 import { useState } from "react";
 
-import {
-  TerasActionButton,
-  TerasStatusItem,
-  TerasList,
-  TerasContentTray,
-  TerasDetailGrid,
-  TerasMetadataList,
-  TerasModalShell,
-  TerasPanel,
-  TerasPanelHeader,
-  TerasTrayStack,
-} from "@/teras";
+import { TerasActionButton, TerasContentTray, TerasModalShell } from "@/teras";
 
 import type { RepositoryAdmissionReceipt } from "../../../local-runtime/repository-runtime.ts";
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
-import {
-  repositoryAdmissionPosturePanelProjection,
-  repositoryBlockerDetail,
-  repositoryBlockerSeverityLabel,
-} from "./repository-admission-view-model.ts";
-import {
-  repositoryContextMetadata,
-  repositoryRecordStatusLabel,
-} from "../../shared/repository-display-model.ts";
-import {
-  RepositoryAdmissionPostureDialog,
-  RepositoryAdmissionPostureList,
-} from "./repository-admission-posture.tsx";
+import { RepositoryReviewContent } from "../details/repository-review-content.tsx";
+import { RepositoryAdmissionPostureDialog } from "./repository-admission-posture.tsx";
 
 export function RepositoryAdmissionDialog({
   localReviewAvailable,
@@ -67,7 +45,6 @@ export function RepositoryAdmissionDialog({
   const canManageLifecycle = Boolean(
     repository && repository.admissionState === "admitted",
   );
-  const isAdmittedRecord = repository?.admissionState === "admitted";
   const activePostureGroup =
     repository?.admissionPosture.find(
       (group) => group.id === activePostureGroupId,
@@ -82,16 +59,12 @@ export function RepositoryAdmissionDialog({
     return null;
   }
 
-  const postureProjection =
-    repositoryAdmissionPosturePanelProjection(repository);
-
   return (
     <>
       <TerasModalShell
         bodyLayout="scroll"
         height="content"
         width="standard"
-        description={repository.purpose}
         footer={
           <>
             <TerasActionButton
@@ -106,15 +79,29 @@ export function RepositoryAdmissionDialog({
             >
               View History
             </TerasActionButton>
+
+          </>
+        }
+        kicker={localReviewAvailable ? "Repository admission · local demonstration" : "Repository review"}
+        onClose={closeAdmissionDialog}
+        surfaceId="repository-admission"
+        title={localReviewAvailable ? "Repository Admission" : "Repository details"}
+      >
+        <div data-repository-admission-modal="true">
+          <RepositoryReviewContent repository={repository} onOpenGroup={setActivePostureGroupId}
+            actions={<>
             {canManageLifecycle ? (
               <>
+                <TerasContentTray kicker="Use in Delivery" description="Open Delivery’s repository catalog to add this repository or review its existing entry.">
                 <TerasActionButton
                   data-repository-catalog-reconcile="true"
                   onClick={() => onOpenDeliveryCatalog(repository)}
                   emphasis="secondary"
                 >
-                  Reconcile Delivery Catalog
+                  Open Delivery Catalog
                 </TerasActionButton>
+                </TerasContentTray>
+                <TerasContentTray kicker="Repository changes" description="Transfer responsibility, archive on GitHub, or retire the workspace record.">
                 <TerasActionButton
                   data-repository-lifecycle-open="true"
                   onClick={() => {
@@ -124,13 +111,17 @@ export function RepositoryAdmissionDialog({
                 >
                   Manage Lifecycle
                 </TerasActionButton>
+                </TerasContentTray>
               </>
             ) : registration.required ? (
+              <TerasContentTray kicker="Workspace registration" description={registration.unavailableReason ?? "Review workspace association and registration before adding this repository to the managed workspace."}>
               <TerasActionButton disabled={!registration.available}
                 data-repository-intake-open="true" onClick={() => onOpenRegistration(repository)}>
                 Review workspace registration
               </TerasActionButton>
+              </TerasContentTray>
             ) : localReviewAvailable ? (
+              <TerasContentTray kicker="Local demonstration" description="Run the preview admission review. This does not register a repository in the managed workspace.">
               <TerasActionButton
                 disabled={!canStart}
                 onClick={() => {
@@ -139,85 +130,15 @@ export function RepositoryAdmissionDialog({
               >
                 Start Admission Review
               </TerasActionButton>
-            ) : null}
-          </>
-        }
-        kicker={isAdmittedRecord || !localReviewAvailable ? "Repository Review" : "Repository Admission"}
-        onClose={closeAdmissionDialog}
-        surfaceId="repository-admission"
-        title={localReviewAvailable ? "Repository Admission" : "Repository details"}
-      >
-        <TerasDetailGrid
-          data-repository-admission-modal="true"
-          scrollGutter
-          variant="balanced"
-        >
-          <TerasPanel
-            frame="padded"
-            treatment="rail"
-            fit="content"
-            tone={postureProjection.tone}
-          >
-            <TerasPanelHeader
-              description={postureProjection.description}
-              kicker={postureProjection.kicker}
-              title={postureProjection.title}
-            />
-            <TerasTrayStack spacing="loose" topOffset="section">
-              <RepositoryAdmissionPostureList
-                activeGroupId={activePostureGroupId}
-                groups={repository.admissionPosture}
-                onOpenGroup={setActivePostureGroupId}
-              />
-            </TerasTrayStack>
-          </TerasPanel>
-
-          <TerasTrayStack align="start" spacing="loose">
-            {registration.required ? <TerasContentTray kicker="Workspace registration"
-              description={registration.unavailableReason ?? "Review whether this repository should join the managed workspace, including its ownership and checks."} /> : null}
-            <TerasPanel frame="padded" treatment="rail" tone={repository.tone}>
-              <TerasPanelHeader
-                actionsLayout="inline"
-                description={repository.purpose}
-                kicker="Repository Context"
-                statusLabel={repositoryRecordStatusLabel(repository)}
-                statusTone={repository.tone}
-                title={repository.name}
-              />
-              <TerasTrayStack spacing="loose" topOffset="section">
-                <TerasMetadataList
-                  items={repositoryContextMetadata(repository)}
-                />
-              </TerasTrayStack>
-            </TerasPanel>
-
-            {repository.blockers.length > 0 ? (
-              <TerasContentTray kicker="Blocking Issues">
-                <TerasList>
-                  {repository.blockers.map((blocker, index) => (
-                    <TerasStatusItem
-                      tone={blocker.severity === "blocked" ? "danger" : "warn"}
-                      detail={repositoryBlockerDetail(blocker)}
-                      index={String(index + 1).padStart(2, "0")}
-                      key={blocker.id}
-                      label={blocker.label}
-                      status={repositoryBlockerSeverityLabel(blocker.severity)}
-                    />
-                  ))}
-                </TerasList>
               </TerasContentTray>
-            ) : (
-              <TerasContentTray
-                description="No blocking repository issues are present in the current record."
-                kicker="Blocking Issues"
-              />
-            )}
-          </TerasTrayStack>
-        </TerasDetailGrid>
+            ) : <TerasContentTray kicker="Read-only inspection" description={repository.nextAction} />}
+            </>} />
+        </div>
       </TerasModalShell>
 
       <RepositoryAdmissionPostureDialog
         group={activePostureGroup}
+        repositoryName={repository.name}
         onClose={() => setActivePostureGroupId(null)}
       />
     </>

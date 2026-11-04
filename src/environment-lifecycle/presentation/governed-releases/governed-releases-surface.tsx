@@ -185,7 +185,7 @@ export function GovernedReleasesSurface({
                   ariaLabel: "Search governed products",
                   onValueChange: (query) =>
                     setFilters((current) => ({ ...current, query })),
-                  placeholder: "Search product, owner, or endpoint...",
+                  placeholder: "Search product, responsible component, or endpoint...",
                   value: filters.query,
                 }}
               />

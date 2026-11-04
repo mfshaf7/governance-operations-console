@@ -1,5 +1,7 @@
 "use client";
 
+import { deliveryFieldDisplayLabel } from "../../../../../read-model/terms/copy.ts";
+
 import type { ReactNode } from "react";
 
 import {
@@ -112,7 +114,7 @@ export function SelectedMetadataEditor({
           actionsLayout="inline"
           kicker="Selected Metadata Field"
           statusTone={statusTone}
-          title={field.label}
+          title={deliveryFieldDisplayLabel(field.label)}
           description={refinementMetadataCollapsedValue({
             collapsed: editorCollapsed,
             value: refinementSelectedMetadataEditorDescription({
@@ -165,7 +167,7 @@ export function SelectedMetadataEditor({
                     <MetadataFieldSelectorButton
                       detail={target.group.title}
                       key={target.key}
-                      label={target.field.label}
+                      label={deliveryFieldDisplayLabel(target.field.label)}
                       onSelect={() => onSelectMetadataField(target.key)}
                       selected={selectedMetadataFieldKey === target.key}
                       status={

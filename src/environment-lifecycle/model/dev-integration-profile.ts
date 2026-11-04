@@ -206,7 +206,7 @@ export function assertDevIntegrationProfile(
 
   if (!profile.participatingRepos.includes(profile.ownerRepo)) {
     throw new Error(
-      `${profile.profileId} participating repositories must include its owner.`,
+      `${profile.profileId} participating repositories must include its implementation repository.`,
     );
   }
 
@@ -223,7 +223,7 @@ export function assertDevIntegrationProfile(
     profile.expectedWrites.targets.some((target) => !target.trim())
   ) {
     throw new Error(
-      `${profile.profileId} profile identity, ownership, and write boundary must be complete and unique.`,
+      `${profile.profileId} profile identity, implementation responsibility, and write boundary must be complete and unique.`,
     );
   }
 

@@ -70,7 +70,7 @@ export function environmentLifecycleOperationRecovery(
   }
 
   if (operation.state === "failed") {
-    return `Retry through ${operation.workflowOwner}, or return the failure to that owner.`;
+    return `Retry through ${operation.workflowOwner}, or return the failure to the responsible component.`;
   }
 
   return "No recovery action is required.";

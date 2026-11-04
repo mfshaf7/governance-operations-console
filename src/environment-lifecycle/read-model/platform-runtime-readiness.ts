@@ -22,7 +22,7 @@ export type PlatformRuntimeReadiness = Readonly<{
 const refreshAction = {
   authority: "operator-orchestration-service",
   code: "refresh-owner-truth",
-  reason: "Refresh current OOS and Platform owner truth before attempting another action.",
+  reason: "Refresh current OOS and Platform responsibility truth before attempting another action.",
 } as const;
 
 export function projectPlatformRuntimeReadiness(
@@ -73,7 +73,7 @@ export function projectPlatformRuntimeReadiness(
   }
   if (latestOperation && new Set(["blocked", "failed"]).has(latestOperation.state)) {
     return projection("degraded", "Degraded", latestOperation.state === "failed" ? "danger" : "warn", "current", "retained", false, true,
-      "The latest durable operation needs the projected owner next action before this workspace is ready.",
+      "The latest durable operation needs the projected recorded next action before this workspace is ready.",
       latestOperation, nextAction);
   }
   return projection("ready", "Ready", "ok", "current", "current", true, true,

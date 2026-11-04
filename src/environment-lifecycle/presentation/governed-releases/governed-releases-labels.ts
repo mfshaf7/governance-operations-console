@@ -9,7 +9,7 @@ export const productReleaseMaturityLabels: Record<
   ProductReleaseMaturity,
   string
 > = {
-  "owner-managed": "Owner managed",
+  "owner-managed": "Managed by component",
   "fully-governed": "Fully governed",
   "platform-integrated": "Platform integrated",
 };

@@ -1,12 +1,11 @@
 "use client";
 
-import { TerasStatusItem, TerasList, TerasDialog } from "@/teras";
+import { TerasStatusItem, TerasList, TerasDialog, TerasMetadataList, TerasTechnicalDetails, TerasTrayStack, TerasContentTray } from "@/teras";
 
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import {
   repositoryAdmissionPostureDialogProjection,
   repositoryPostureGroupStateLabel,
-  repositoryPostureItemStateLabel,
 } from "./repository-admission-view-model.ts";
 
 export function RepositoryAdmissionPostureList({
@@ -41,9 +40,11 @@ export function RepositoryAdmissionPostureList({
 export function RepositoryAdmissionPostureDialog({
   group,
   onClose,
+  repositoryName,
 }: {
   group: RepositoryWorkspaceRecord["admissionPosture"][number] | null;
   onClose: () => void;
+  repositoryName?: string;
 }) {
   const dialogProjection = repositoryAdmissionPostureDialogProjection(group);
 
@@ -53,26 +54,18 @@ export function RepositoryAdmissionPostureDialog({
       height="content"
       width="standard"
       closeLabel={dialogProjection.closeLabel}
-      description={dialogProjection.description}
+      description={repositoryName ? `${repositoryName} · ${dialogProjection.description}` : dialogProjection.description}
       kicker={dialogProjection.kicker}
       onClose={onClose}
       open={Boolean(group)}
       title={dialogProjection.title}
     >
       {group ? (
-        <TerasList>
-          {group.items.map((item, index) => (
-            <TerasStatusItem
-              tone={item.tone}
-              detail={`${item.value}: ${item.detail}`}
-              index={String(index + 1).padStart(2, "0")}
-              key={`${group.id}-${item.label}`}
-              label={item.label}
-              status={item.statusLabel ?? repositoryPostureItemStateLabel(item.state)}
-              treatment="rail"
-            />
-          ))}
-        </TerasList>
+        <TerasTrayStack spacing="loose">
+          <TerasMetadataList shape="list" items={dialogProjection.facts} />
+          {dialogProjection.scope ? <TerasContentTray kicker="What this means" description={dialogProjection.scope} /> : null}
+          <TerasTechnicalDetails summary="Technical details" items={dialogProjection.technicalFacts} />
+        </TerasTrayStack>
       ) : null}
     </TerasDialog>
   );

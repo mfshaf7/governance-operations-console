@@ -382,11 +382,11 @@ export function DevIntegrationSurface({
                     value: filters.laneClass,
                   },
                   {
-                    label: "Owner",
+                    label: "Implementation repository",
                     onValueChange: (ownerRepo) =>
                       setFilters((current) => ({ ...current, ownerRepo })),
                     options: [
-                      { label: "All owners", value: "all" },
+                      { label: "All implementation repositories", value: "all" },
                       ...ownerOptions.map((owner) => ({
                         label: owner,
                         value: owner,
@@ -400,7 +400,7 @@ export function DevIntegrationSurface({
                   onValueChange: (query) =>
                     setFilters((current) => ({ ...current, query })),
                   placeholder:
-                    "Search profile, owner, purpose, or repository...",
+                    "Search profile, purpose, or implementation repository...",
                   value: filters.query,
                 }}
               />
@@ -444,7 +444,7 @@ export function DevIntegrationSurface({
                   Request Profile
                 </TerasActionButton>
               }
-              boundary="Submission records a proposed profile for owner review. It does not admit the profile or launch a runtime."
+              boundary="Submission records a proposed profile for implementation review. It does not admit the profile or launch a runtime."
               boundaryKicker="Request Boundary"
               description="Define a local integration profile and its runtime contract."
               kicker="Profile Ingress"
@@ -469,7 +469,7 @@ export function DevIntegrationSurface({
           onBack={() => setMode("register")}
           onCompleted={completeProfileRequest}
           onDirtyChange={onDirtyChange}
-          onRetryOperation={runtime?.retryOperation ?? (async () => {throw new Error("Use the original owner operation controls.");})}
+          onRetryOperation={runtime?.retryOperation ?? (async () => {throw new Error("Use the original service operation controls.");})}
           onSubmitted={handleRequestSubmitted}
           operations={runtime?.snapshot.operations ?? []}
           receipts={runtime?.snapshot.receipts ?? []}
@@ -484,8 +484,8 @@ export function DevIntegrationSurface({
           handoffControls={live?.controls(selectedProfile.profileId, "handoff")}
           onBack={() => setMode("register")}
           onOpenHistory={() => setMode("history")}
-          onRetryOperation={runtime?.retryOperation ?? (async () => {throw new Error("Use the original owner operation controls.");})}
-          onSubmitProfileAction={runtime?.submitProfileAction ?? (async () => {throw new Error("Use the native owner operation controls.");})}
+          onRetryOperation={runtime?.retryOperation ?? (async () => {throw new Error("Use the original service operation controls.");})}
+          onSubmitProfileAction={runtime?.submitProfileAction ?? (async () => {throw new Error("Use the native service operation controls.");})}
           operations={runtime?.snapshot.operations ?? []}
           profile={selectedProfile}
           receipts={runtime?.snapshot.receipts ?? []}
@@ -501,7 +501,7 @@ export function DevIntegrationSurface({
         />
       ) : null}
       {selectedProfile && mode === "history" && live ? <TerasDialog open title="Profile operation history"
-        kicker={selectedProfile.profileId} description="Loaded owner operations for this profile. This does not invent missing admission or lifetime audit events."
+        kicker={selectedProfile.profileId} description="Loaded service operations for this profile. This does not invent missing admission or lifetime audit events."
         width="large" height="fill" contentOverflow="auto" onClose={() => setMode("dashboard")}>{live.history(selectedProfile.profileId)}</TerasDialog> : null}
     </>
   );

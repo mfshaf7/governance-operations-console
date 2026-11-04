@@ -414,7 +414,7 @@ function LifecycleResultPanel({
             {result.history.map((event) => (
               <TerasTimelineItem
                 detail={null}
-                evidence={<TerasTechnicalDetails summary="Event details" items={[{label:"Sequence",value:String(event.sequence)},{label:"Owner status",value:event.status},...(event.details ? [{label:"Recorded details",value:JSON.stringify(event.details,null,2)}] : [])]}/>}
+                evidence={<TerasTechnicalDetails summary="Event details" items={[{label:"Sequence",value:String(event.sequence)},{label:"Source status",value:event.status},...(event.details ? [{label:"Recorded details",value:JSON.stringify(event.details,null,2)}] : [])]}/>}
                 displayTimestamp={registryTimestamp(event.at)}
                 key={`${event.sequence}-${event.status}`}
                 label={registryRequestStatus(event.status)}

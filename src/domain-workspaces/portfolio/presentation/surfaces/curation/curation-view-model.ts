@@ -209,7 +209,7 @@ export function productCurationContextFacts(
       tone: productAvailabilityTone(entry.runtime.availability),
       value: productAvailabilityLabel(entry.runtime.availability),
     },
-    { label: "Owner", value: entry.ownership.productOwnerRef },
+    { label: "Product repository", value: entry.ownership.productOwnerRef },
   ];
 }
 

@@ -232,7 +232,7 @@ export function PrototypeBaselinePromotionModal({
       activeRecord,
       command.id,
       baselinePromotionInputFromDraft(draft),
-    ); } catch (error) { setSubmissionError(error instanceof Error ? error.message : "Baseline owner request failed."); }
+    ); } catch (error) { setSubmissionError(error instanceof Error ? error.message : "Baseline service request failed."); }
     finally { setSubmitting(false); }
   }
 
@@ -240,7 +240,7 @@ export function PrototypeBaselinePromotionModal({
     <>
       <TerasWizardModal busy={submitting || ownerProgress?.pending === true} busyLabel="Checking baseline promotion…"
         activeStepId={activeStep}
-        description={ownerProgress?.mode === "live" ? "Review the Baseline decision and owner evidence, then follow exact Studio review and merged readback before preparing movement." : "Prepare a local Baseline Packet before Movement request preparation. Prototype records acceptance; Movement Control owns boundary movement."}
+        description={ownerProgress?.mode === "live" ? "Review the Baseline decision and source evidence, then follow exact Studio review and merged readback before preparing movement." : "Prepare a local Baseline Packet before Movement request preparation. Prototype records acceptance; Movement Control owns boundary movement."}
         footer={
           <TerasWizardFooter
             apply={

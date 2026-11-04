@@ -66,8 +66,8 @@ export function LifecycleTransitionSelected({
     (ownerRoute.kind === "unavailable"
       ? ownerRoute.message
       : item.nextAction
-        ? `${item.nextAction.ownerLabel} owns this move. Open the owning workspace to continue.`
-        : `Open the owning workspace to inspect the applied ${lifecycleTransitionDomainLabel(item.targetDomain)} record.`);
+        ? `${item.nextAction.ownerLabel} is responsible for this move. Open the responsible workspace to continue.`
+        : `Open the responsible workspace to inspect the applied ${lifecycleTransitionDomainLabel(item.targetDomain)} record.`);
 
   return (
     <TerasPanelStack fill="last" scroll>
@@ -95,8 +95,8 @@ export function LifecycleTransitionSelected({
         }}
         description={item.stateLabel === "Source reported"
           ? "The source reports this handoff as applied; independent target confirmation is not projected."
-          : item.stateLabel === "Owner confirmed"
-            ? "The Prototype owner confirmed graduation and references the Delivery handoff."
+          : item.stateLabel === "Source confirmed"
+            ? "The Prototype source confirmed graduation and references the Delivery handoff."
             : item.reasonDetail}
         facts={[
           {
@@ -124,7 +124,7 @@ export function LifecycleTransitionSelected({
         treatment="neutral"
       >
         <TerasPanelHeader
-          description="Newest recorded evidence first. Owner readbacks may contain fewer events than the original workflow."
+          description="Newest recorded evidence first. Source readbacks may contain fewer events than the original workflow."
           kicker="History"
           title="Evidence history"
         />

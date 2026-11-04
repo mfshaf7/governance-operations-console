@@ -77,7 +77,7 @@ export function OrchestrationHomeAttentionPanel({
             value: filters.condition,
           },
           {
-            label: "Filter attention by owner",
+            label: "Filter by responsible component",
             onValueChange: (owner) =>
               setFilters((current) => ({ ...current, owner })),
             options: viewModel.ownerOptions,

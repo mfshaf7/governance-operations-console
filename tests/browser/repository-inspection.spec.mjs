@@ -8,7 +8,7 @@ if(fixture.capabilities.mode!=="live")throw new Error("Repository UI fixture mus
 const base=process.env.CONSOLE_TEST_BASE_URL??"http://127.0.0.1:4317";
 test.use({viewport:{width:1700,height:1000},actionTimeout:15000});test.setTimeout(90000);
 
-async function setup(page,{empty=false,lifecycle="unavailable",posture="active",requests="pending",custodyOrigin="own",intakeAvailable=true,inventoryAvailable=true,runtimeMode="live",intakeOwners=false}={}){
+async function setup(page,{empty=false,lifecycle="unavailable",posture="active",requests="pending",custodyOrigin="own",intakeAvailable=true,inventoryAvailable=true,runtimeMode="live",intakeOwners=false,provisionAvailable=true,linkAvailable=true}={}){
  const f=structuredClone(fixtures[custodyOrigin]),writes=[];
  const existingOwner=structuredClone(f.continuity.inventory[0]);
  if(posture==="unregistered")f.continuity.inventory=[];
@@ -16,6 +16,8 @@ async function setup(page,{empty=false,lifecycle="unavailable",posture="active",
  if(intakeOwners)for(const name of ['example-checks','example-security'])f.continuity.inventory.push({...structuredClone(existingOwner),name,record_id:`repo:${name}`,lineage:{...existingOwner.lineage,source_ref:`repo:${name}`}});
  f.capabilities.mode=runtimeMode;
  if(!intakeAvailable)f.capabilities.capabilities.find(item=>item.id==="workspace-intake").mutation.state="unavailable";
+ if(!provisionAvailable)f.capabilities.capabilities.find(item=>item.id==="repository-provisioning").mutation.state="unavailable";
+ if(!linkAvailable)f.capabilities.capabilities.find(item=>item.id==="repository-custody").mutation.state="unavailable";
  await page.route("**/api/**",r=>["GET","HEAD","OPTIONS"].includes(r.request().method())?r.continue():(writes.push(r.request().url()),r.abort()));
  await page.route("**/api/console/capabilities",r=>r.fulfill({json:f.capabilities}));
  await page.route("**/api/workspace-continuity",r=>inventoryAvailable?r.fulfill({json:f.continuity}):r.fulfill({status:503,json:{error:"Synthetic inventory unavailable"}}));
@@ -154,7 +156,7 @@ for(const lifecycle of ["unavailable","not-initialized"])test(`lifecycle ${lifec
  await dialog.getByRole("button",{name:"Review Action",exact:true}).click();
  await dialog.getByRole("textbox",{name:"Approval note",exact:true}).fill("Reviewed this synthetic lifecycle action.");
  await dialog.getByRole("button",{name:"Confirm repository lifecycle action",exact:true}).click();
- const apply=dialog.getByRole("button",{name:"Apply Lifecycle Action",exact:true});
+ const apply=dialog.getByRole("button",{name:"Retire Workspace Record",exact:true});
  if(lifecycle==="unavailable")await expect(apply).toBeDisabled();else await expect(apply).toBeEnabled();
  expect(writes).toEqual([]);
 });
@@ -203,6 +205,7 @@ test("Repository filters, details and posture inspection use the same selected o
  await expect(row).toBeVisible();await control.screenshot({path:test.info().outputPath("repository-control.png")});
  await row.getByRole("button",{name:"Review",exact:true}).click();
  const details=page.getByRole("dialog",{name:"Repository details",exact:true});await expect(details).toBeVisible();
+ await details.getByText("Recorded evidence and technical details",{exact:true}).click();
  await details.getByRole("button",{name:"Open Creation evidence posture details",exact:true}).click();
  await expect(page.getByRole("dialog",{name:"Creation evidence",exact:true})).toBeVisible();
  await page.keyboard.press("Escape");await expect(details).toBeVisible();expect(writes).toEqual([]);
@@ -225,8 +228,8 @@ test("Proposal handoff navigation opens the exact canonical repository gate in i
 test("retired Repository details preserve read-only inspection and offer only the restore boundary",async({page})=>{
  const {writes}=await setup(page,{posture:"retired"});
  await page.getByRole("row").filter({hasText:"synthetic-source"}).getByRole("button",{name:"Inspect",exact:true}).click();
- const details=page.getByRole("dialog",{name:"synthetic-source",exact:true});
- await expect(details.getByText("Retired record posture",{exact:true})).toBeVisible();
+ const details=page.getByRole("dialog",{name:"Repository details",exact:true});
+ await expect(details.getByText("Retired",{exact:true})).toBeVisible();
  await details.getByRole("button",{name:"Manage Lifecycle",exact:true}).click();
  const lifecycle=page.getByRole("dialog",{name:"Repository Lifecycle",exact:true});
  await expect(lifecycle.getByRole("radio",{name:/^Restore Workspace Record/})).toBeEnabled();
@@ -381,7 +384,7 @@ test('Proposal reuse chooses current Inventory and new-repository choice explain
  const disposition=page.getByRole('dialog',{name:'Proposal Disposition',exact:true});
  await disposition.getByRole('radio',{name:'Accept',exact:true}).click();
  await disposition.getByRole('radio',{name:'Existing Repo',exact:true}).click();
- await disposition.getByRole('button',{name:'Existing owner repo',exact:true}).click();
+ await disposition.getByRole('button',{name:"Existing implementation repository",exact:true}).click();
  await expect(page.getByRole('option',{name:'synthetic-source / repo:synthetic-source',exact:true})).toBeVisible();
  await expect(page.getByRole('option')).toHaveCount(2);
  await page.keyboard.press('Escape');
@@ -402,6 +405,121 @@ function attachmentResponse(intent){
  return JSON.parse(execFileSync(process.execPath,['--experimental-strip-types','--disable-warning=MODULE_TYPELESS_PACKAGE_JSON','--input-type=module','-e',
   "import {attachmentFixture} from './tests/support/repository-attachment-fixture.mjs'; process.stdout.write(JSON.stringify(attachmentFixture(JSON.parse(process.argv[1]))));",JSON.stringify(intent)],{encoding:'utf8'}));
 }
+
+async function openStandaloneLink(page){
+ const control=page.getByRole('dialog',{name:'Repository Control',exact:true});
+ await control.getByRole('radio',{name:'Repositories',exact:true}).click();
+ await control.getByRole('button',{name:'Link existing repository',exact:true}).click();
+ return page.getByRole('dialog',{name:'Link existing repository',exact:true});
+}
+
+test('standalone link works from an empty register without creation access and retains the actual result',async({page},testInfo)=>{
+ const {writes}=await setup(page,{empty:true,requests:'none',provisionAvailable:false});
+ let submitted,linked,release;
+ await page.route('**/api/repositories/custody/provider-repository?*',r=>r.fulfill({json:lookupFixture}));
+ await page.route('**/api/repositories/custody/requests',async r=>{
+  if(r.request().method()==='POST'){
+   submitted=r.request().postDataJSON();linked=attachmentResponse(submitted);
+   await new Promise(resolve=>{release=resolve});return r.fulfill({json:linked});
+  }
+  return r.fulfill({json:{schema_version:1,mode:'live',status:'current',error:null,records:linked?[linked]:[],next_cursor:null}});
+ });
+ const control=page.getByRole('dialog',{name:'Repository Control',exact:true});
+ await expect(control.getByRole('button',{name:'Create repository',exact:true})).toBeDisabled();
+ const dialog=await openStandaloneLink(page);
+ await dialog.getByRole('textbox',{name:'GitHub repository URL',exact:true}).fill(lookupFixture.canonical_url);
+ await dialog.getByRole('button',{name:'Check repository',exact:true}).click();
+ await expect(dialog.getByText(lookupFixture.canonical_url,{exact:true})).toBeVisible();
+ await expect(dialog.getByRole('textbox',{name:'Workspace repository',exact:true})).toHaveValue('repo:manual-source');
+ await expect(dialog.getByRole('textbox',{name:/provider.*id/i})).toHaveCount(0);
+ await expect(dialog.getByRole('button',{name:'Confirm repository was created for this request',exact:true})).toHaveCount(0);
+ await dialog.getByRole('textbox',{name:'Link approval',exact:true}).fill('Link this existing source repository for the workspace.');
+ for(const width of [1280,1700]){
+  await page.setViewportSize({width,height:1000});
+  await dialog.screenshot({path:testInfo.outputPath(`standalone-link-${width}.png`)});
+ }
+ await dialog.getByRole('button',{name:'Verify and link repository',exact:true}).click();
+ await expect.poll(()=>Boolean(release)).toBe(true);
+ await expect(dialog.getByRole('button',{name:'Back to Repository',exact:true})).toBeDisabled();
+ await expect(dialog.getByRole('textbox',{name:'GitHub repository URL',exact:true})).toBeDisabled();
+ await page.keyboard.press('Escape');await expect(dialog).toBeVisible();release();
+ await expect(dialog.getByRole('heading',{name:'Repository linked',exact:true})).toBeVisible();
+ expect(submitted.providerRepositoryId).toBe(lookupFixture.provider_repository_id);
+ expect(submitted.repositoryName).toBe(lookupFixture.name);expect(submitted.repositoryOwner).toBe(lookupFixture.owner);
+ expect(submitted.proposalId).toBeUndefined();expect(submitted.createdForRequest).toBeUndefined();
+ await expect(dialog.getByText('Workspace registration is a separate review',{exact:false})).toBeVisible();
+ await dialog.getByRole('button',{name:'Open repository',exact:true}).click();
+ await expect(dialog).toHaveCount(0);await expect(control.getByRole('row').filter({hasText:'manual-source'})).toBeVisible();
+ expect(writes).toEqual([]);
+});
+
+test('standalone link preserves its draft and retries the same request identity after an unconfirmed result',async({page})=>{
+ const {writes}=await setup(page,{empty:true,requests:'none'});const submissions=[];
+ await page.route('**/api/repositories/custody/provider-repository?*',r=>r.fulfill({json:lookupFixture}));
+ await page.route('**/api/repositories/custody/requests',r=>{
+  if(r.request().method()!=='POST')return r.fallback();
+  const input=r.request().postDataJSON();submissions.push(input);
+  return submissions.length===1?r.fulfill({status:503,json:{mode:'live',status:'offline',code:'synthetic_link_unavailable',error:'Synthetic link unavailable',retryable:true}}):r.fulfill({json:attachmentResponse(input)});
+ });
+ const dialog=await openStandaloneLink(page);
+ await dialog.getByRole('textbox',{name:'GitHub repository URL',exact:true}).fill(lookupFixture.canonical_url);
+ await dialog.getByRole('button',{name:'Check repository',exact:true}).click();
+ await dialog.getByRole('textbox',{name:'Link approval',exact:true}).fill('Approve this exact existing repository link.');
+ await dialog.getByRole('button',{name:'Back to Repository',exact:true}).click();
+ const guard=page.getByRole('alertdialog',{name:'Discard repository link draft?',exact:true});await expect(guard).toBeVisible();
+ await guard.getByRole('button',{name:/Keep Editing/i}).click();
+ await expect(dialog.getByRole('textbox',{name:'Link approval',exact:true})).toHaveValue('Approve this exact existing repository link.');
+ await dialog.getByRole('button',{name:'Verify and link repository',exact:true}).click();
+ await expect(dialog.getByText('Synthetic link unavailable',{exact:true})).toBeVisible();
+ await dialog.getByRole('button',{name:'Verify and link repository',exact:true}).click();
+ await expect(dialog.getByRole('heading',{name:'Repository linked',exact:true})).toBeVisible();
+ expect(submissions).toHaveLength(2);expect(submissions[1]).toEqual(submissions[0]);expect(writes).toEqual([]);
+});
+
+test('standalone link rejects mismatched and archived lookups and invalidates an edited URL',async({page})=>{
+ const {writes}=await setup(page,{empty:true,requests:'none'});let lookups=0;
+ await page.route('**/api/repositories/custody/provider-repository?*',r=>r.fulfill({json:++lookups===1
+  ?{...lookupFixture,owner:'other-org',canonical_url:'https://github.com/other-org/manual-source'}
+  :{...lookupFixture,provider_lifecycle_state:'archived'}}));
+ const dialog=await openStandaloneLink(page);
+ await dialog.getByRole('textbox',{name:'GitHub repository URL',exact:true}).fill(lookupFixture.canonical_url);
+ await dialog.getByRole('button',{name:'Check repository',exact:true}).click();
+ await expect(dialog.getByText('The lookup returned another repository.',{exact:true})).toBeVisible();
+ await expect(dialog.getByRole('textbox',{name:'Link approval',exact:true})).toHaveCount(0);
+ await dialog.getByRole('button',{name:'Check repository',exact:true}).click();
+ await expect(dialog.getByText('Archived repositories cannot be linked.',{exact:false})).toBeVisible();
+ await dialog.getByRole('textbox',{name:'Link approval',exact:true}).fill('Link this existing source repository for the workspace.');
+ await expect(dialog.getByRole('button',{name:'Verify and link repository',exact:true})).toBeDisabled();
+ await dialog.getByRole('textbox',{name:'GitHub repository URL',exact:true}).fill('https://github.com/example-org/another-source');
+ await expect(dialog.getByRole('button',{name:'Verify and link repository',exact:true})).toHaveCount(0);
+ expect(writes).toEqual([]);
+});
+
+test('standalone link opens a known recorded repository without creating another link request',async({page})=>{
+ const {writes,result}=await setup(page,{requests:'none'});
+ const dialog=await openStandaloneLink(page);
+ await dialog.getByRole('textbox',{name:'GitHub repository URL',exact:true}).fill(result.provider_readback.canonical_url);
+ await dialog.getByRole('button',{name:'Check repository',exact:true}).click();
+ await expect(dialog.getByText('Already in Repository Control',{exact:true})).toBeVisible();
+ await expect(dialog.getByRole('textbox',{name:'Link approval',exact:true})).toHaveCount(0);
+ await dialog.getByRole('button',{name:'Open repository',exact:true}).click();
+ await expect(dialog).toHaveCount(0);
+ await expect(page.getByRole('dialog',{name:'Repository Control',exact:true}).getByRole('row').filter({hasText:'synthetic-source'})).toBeVisible();
+ expect(writes).toEqual([]);
+});
+
+test('standalone link allows lookup while missing approval authority blocks only submission',async({page})=>{
+ const {writes}=await setup(page,{empty:true,requests:'none',linkAvailable:false});
+ await page.route('**/api/repositories/custody/provider-repository?*',r=>r.fulfill({json:lookupFixture}));
+ const dialog=await openStandaloneLink(page);
+ await expect(dialog.getByText('The approval connection for linking existing repositories is not configured.',{exact:false})).toBeVisible();
+ await dialog.getByRole('textbox',{name:'GitHub repository URL',exact:true}).fill(lookupFixture.canonical_url);
+ await dialog.getByRole('button',{name:'Check repository',exact:true}).click();
+ await expect(dialog.getByText(lookupFixture.canonical_url,{exact:true})).toBeVisible();
+ await dialog.getByRole('textbox',{name:'Link approval',exact:true}).fill('Prepare this link while approval setup is unavailable.');
+ await expect(dialog.getByRole('button',{name:'Verify and link repository',exact:true})).toBeDisabled();
+ expect(writes).toEqual([]);
+});
 
 test('method choice keeps creation separate and preserves an attachment draft through switches and close guard',async({page})=>{
  const {writes,result}=await setup(page,{custodyOrigin:'standalone'});
@@ -435,7 +553,7 @@ test('manual repository URL resolves identity, requires purpose approval, attach
  await dialog.getByRole('textbox',{name:'GitHub repository URL',exact:true}).fill(lookupFixture.canonical_url);
  await dialog.getByRole('button',{name:'Check repository',exact:true}).click();
  await expect(dialog.getByText(lookupFixture.canonical_url,{exact:true})).toBeVisible();
- await expect(dialog.getByRole('textbox',{name:'Attachment workspace owner reference',exact:true})).toHaveValue('repo:manual-source');
+ await expect(dialog.getByRole('textbox',{name:"Attachment workspace repository",exact:true})).toHaveValue('repo:manual-source');
  await expect(dialog.getByRole('textbox',{name:/provider.*id/i})).toHaveCount(0);
  const approve=dialog.getByRole('button',{name:'Verify and attach repository',exact:true});
  await expect(approve).toBeDisabled();
@@ -504,7 +622,7 @@ test('registration uses readable choices, preserves an edited draft and binds ex
  const {form,result,writes}=await registrationForm(page);const submitted=[];
  await page.route('**/api/workspace-intake/preparations',r=>{submitted.push(r.request().postDataJSON());return r.fulfill({status:503,json:{error:'Synthetic registration source unavailable'}});});
  await expect(form.getByRole('textbox',{name:'What does this repository own?',exact:true})).toHaveValue(result.request.provisioning.description);
- await expect(form.getByRole('button',{name:'Review owner setup',exact:true})).toBeDisabled();
+ await expect(form.getByRole('button',{name:"Review repository setup",exact:true})).toBeDisabled();
  await form.getByRole('button',{name:'Review registration',exact:true}).click();
  await expect(form.getByRole('alert')).toContainText('Choose a repository type');expect(submitted).toEqual([]);
  await fillSourceRegistration(page,form);
@@ -617,7 +735,10 @@ test('active repository verification loads existing controls and prepares manual
  const control=page.getByRole('dialog',{name:'Repository Control',exact:true});
  await control.getByRole('button',{name:'Application verification',exact:true}).click();
  const form=page.locator('[data-surface-id="repository-owner-bootstrap"]');
- const dialog=page.getByRole('dialog').filter({has:page.getByRole('button',{name:'Load current plan',exact:true})});
+ const dialog=page.getByRole('dialog',{name:'Application verification',exact:true});
+ await expect(dialog.getByRole('heading',{name:'Application verification',exact:true})).toBeVisible();
+ await expect(dialog.locator('header').getByText('synthetic-source',{exact:true})).toBeVisible();
+ await expect(dialog.getByText('No previous setup or verification requests.',{exact:true})).toBeVisible();
  await dialog.getByRole('button',{name:'Load current plan',exact:true}).click();
  await expect(dialog.getByText(/Loaded owner-source-controls/)).toBeVisible();
  await dialog.getByRole('textbox',{name:'Check 1: action',exact:true}).fill('Add a task and refresh');
@@ -634,6 +755,42 @@ test('active repository verification loads existing controls and prepares manual
  expect(submitted[1].evidenceProfile.commands).toEqual(profile.commands);expect(writes).toEqual([]);
 });
 
+test('verification history separates readable requests from the form and keeps exact source identities inspectable',async({page},testInfo)=>{
+ const {writes}=await setup(page,{requests:'none'});
+ const previous={operation:'bootstrap',requestId:'bootstrap-request:earlier-setup',ownerRepo:'synthetic-source',state:'succeeded',revision:'2026-11-01T09:00:00Z',sourceRevision:null,
+  sourceStartDigest:`sha256:${'a'.repeat(64)}`,sessionId:null,sourceIntentRef:null,nextAction:'owner-bootstrap-completed',draft:null,sourceDelivery:{},existingCheckout:null,cancellation:null};
+ const verification={...previous,operation:'configure-verification',requestId:'bootstrap-request:earlier-verification',state:'cancelled',revision:'2026-11-02T09:00:00Z'};
+ const reads=[];
+ await page.route('**/api/repository-owner-bootstrap/requests?*',r=>r.fulfill({json:{mode:'live',projection:{records:[verification,previous],pendingRequest:null}}}));
+ await page.route('**/api/repository-owner-bootstrap/requests/*',r=>{
+  const id=decodeURIComponent(new URL(r.request().url()).pathname.split('/').at(-1));reads.push(id);
+  return r.fulfill({json:{mode:'live',projection:id===previous.requestId?previous:verification}});
+ });
+ await page.getByRole('dialog',{name:'Repository Control',exact:true}).getByRole('button',{name:'Application verification',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Application verification',exact:true});
+ const history=dialog.locator('section').filter({has:page.locator('p').getByText('Previous requests',{exact:true})}).last();
+ await expect(history.getByRole('button',{name:'Refresh requests',exact:true})).toBeVisible();
+ await expect(history.getByRole('listitem')).toHaveCount(2);
+ await expect(history.getByText('Completed',{exact:true})).toBeVisible();await expect(history.getByText('Cancelled',{exact:true})).toBeVisible();
+ await expect(history.getByText(previous.requestId,{exact:true})).toHaveCount(0);
+ const formPosition=await dialog.getByRole('button',{name:'Review verification change',exact:true}).boundingBox();
+ const historyPosition=await history.boundingBox();expect(historyPosition.y).toBeGreaterThan(formPosition.y);
+ await history.getByRole('button',{name:`Open repository setup request ${previous.requestId}`,exact:true}).click();
+ await expect(dialog.getByRole('heading',{name:'Repository setup',exact:true})).toBeVisible();
+ await expect(dialog.getByRole('button',{name:'Start new verification change',exact:true})).toBeVisible();
+ await expect(dialog.getByText(previous.requestId,{exact:true})).not.toBeVisible();
+ await dialog.getByText('Technical details',{exact:true}).click();
+ await expect(dialog.getByText(previous.requestId,{exact:true})).toBeVisible();
+ for(const width of [1280,1700]){
+  await page.setViewportSize({width,height:1000});
+  await dialog.screenshot({path:testInfo.outputPath(`verification-history-${width}.png`)});
+ }
+ await dialog.getByRole('button',{name:'Start new verification change',exact:true}).click();
+ await expect(dialog.getByRole('button',{name:'Load current plan',exact:true})).toBeVisible();
+ await expect(history.getByRole('listitem')).toHaveCount(2);
+ expect(reads).toEqual([previous.requestId]);expect(writes).toEqual([]);
+});
+
 test('History has no permanent refresh and replaces a failed provider section with centered read-only retry',async({page})=>{
  const {writes,result}=await setup(page);let lookups=0,pendingResolve;
  await page.route('**/api/repositories/custody/provider-repository?*',async route=>{
@@ -645,7 +802,9 @@ test('History has no permanent refresh and replaces a failed provider section wi
  await page.route('**/api/repositories/lifecycle/repositories/**',route=>route.fulfill({json:{mode:'live',status:'current',audit:lifecycleAuditFor(result,'active'),error:null,observedAt:'2026-06-21T10:00:00Z'}}));
  await page.getByRole('button',{name:'Review Repository',exact:true}).click();
  const details=page.getByRole('dialog',{name:'Repository details',exact:true});
- await expect(details.getByRole('button',{name:'Open Creation evidence posture details',exact:true})).toContainText('Recorded');
+ await details.getByText('Recorded evidence and technical details',{exact:true}).click();
+ await expect(details.getByRole('button',{name:'Open Creation evidence posture details',exact:true})).toHaveText('Inspect record');
+ await expect(details.locator('[data-has-actions="true"]').filter({has:page.getByRole('button',{name:'Open Creation evidence posture details',exact:true})}).getByText('Recorded',{exact:true})).toBeVisible();
  await details.getByRole('button',{name:'View History',exact:true}).click();
  const history=page.getByRole('dialog',{name:'Repository History',exact:true});
  await expect(history.getByText('Archived',{exact:true})).toBeVisible();
@@ -725,5 +884,224 @@ test('a repository in a different account explains the access boundary without o
  const history=page.getByRole('dialog',{name:'Repository History',exact:true});
  await expect(history.getByText('Different GitHub account',{exact:true})).toBeVisible();
  await expect(history.getByRole('button',{name:'Retry',exact:true})).toHaveCount(0);
+ expect(writes).toEqual([]);
+});
+
+
+test("lifecycle explains archive versus retirement and protects an unsent transfer draft on close", async ({page}) => {
+ const {writes}=await setup(page,{lifecycle:"not-initialized"});
+ await page.getByRole("button",{name:"Review Repository",exact:true}).click();
+ await page.getByRole("button",{name:"Manage Lifecycle",exact:true}).click();
+ const dialog=page.getByRole("dialog",{name:"Repository Lifecycle",exact:true});
+ await expect(dialog.getByText("Retire the workspace record. The GitHub repository and its files are kept.",{exact:true})).toBeVisible();
+ await dialog.getByRole("radio",{name:/^Archive Provider Repository/}).click();
+ await expect(dialog.getByText("Make the GitHub repository read-only. Its files and workspace registration are kept.",{exact:true})).toBeVisible();
+ await dialog.getByRole("radio",{name:/^Transfer Workspace Custody/}).click();
+ await dialog.getByRole("textbox",{name:"New workspace repository",exact:true}).fill("workspace-owner:example-product");
+ await expect(dialog.getByRole("button",{name:"Review Action",exact:true})).toBeDisabled();
+ await page.keyboard.press("Escape");
+ const guard=page.getByRole("alertdialog",{name:"Discard lifecycle draft?",exact:true});
+ await expect(guard).toBeVisible();
+ await guard.getByRole("button",{name:"Keep Editing",exact:true}).click();
+ await expect(dialog.getByRole("textbox",{name:"New workspace repository",exact:true})).toHaveValue("workspace-owner:example-product");
+ await dialog.getByRole("button",{name:"Back to Register",exact:true}).click();
+ await guard.getByRole("button",{name:"Discard Draft",exact:true}).click();
+ await expect(dialog).toHaveCount(0);
+ expect(writes).toEqual([]);
+});
+
+test("lifecycle review retains input on back, invalidates edited confirmation and fits supported widths", async ({page}) => {
+ const {writes}=await setup(page,{lifecycle:"not-initialized"});
+ await page.getByRole("button",{name:"Review Repository",exact:true}).click();
+ await page.getByRole("button",{name:"Manage Lifecycle",exact:true}).click();
+ const dialog=page.getByRole("dialog",{name:"Repository Lifecycle",exact:true});
+ await dialog.getByRole("button",{name:"Review Action",exact:true}).click();
+ const note=dialog.getByRole("textbox",{name:"Approval note",exact:true});
+ const confirm=dialog.getByRole("button",{name:"Confirm repository lifecycle action",exact:true});
+ const apply=dialog.getByRole("button",{name:"Retire Workspace Record",exact:true});
+ await expect(apply).toBeDisabled();
+ await expect(dialog.getByRole("radiogroup",{name:"Impact disposition",exact:true})).toHaveCount(0);
+ await note.fill("Retire this synthetic workspace record after ownership review.");
+ await confirm.click();await expect(apply).toBeEnabled();
+ await note.fill("Updated reason for retiring this synthetic workspace record.");
+ await expect(confirm).toHaveAttribute("aria-pressed","false");await expect(apply).toBeDisabled();
+ await confirm.click();await expect(apply).toBeEnabled();
+ await dialog.getByRole("button",{name:"Back",exact:true}).click();
+ await dialog.getByRole("button",{name:"Review Action",exact:true}).click();
+ await expect(note).toHaveValue("Updated reason for retiring this synthetic workspace record.");
+ for(const [width,height] of [[1280,720],[1700,1000]]) {
+  await page.setViewportSize({width,height});
+  await apply.scrollIntoViewIfNeeded();
+  expect(await dialog.evaluate(n=>n.scrollWidth<=n.clientWidth+1)).toBe(true);
+  const box=await apply.boundingBox();expect(box.y+box.height).toBeLessThanOrEqual(height+1);
+  await dialog.screenshot({path:test.info().outputPath(`lifecycle-review-${width}.png`)});
+ }
+ expect(writes).toEqual([]);
+});
+
+test("lifecycle pending action freezes edits and a failed acknowledgement retains its guarded draft", async ({page}) => {
+ const {writes}=await setup(page,{lifecycle:"not-initialized"});
+ let release;const commands=[];
+ await page.route("**/api/repositories/lifecycle/requests",async route=>{
+  commands.push(route.request().postDataJSON());
+  await new Promise(resolve=>{release=resolve});
+  return route.fulfill({status:503,json:{mode:"live",status:"offline",code:"repository_lifecycle_oos_unavailable",retryable:true,error:"Synthetic acknowledgement unavailable"}});
+ });
+ await page.getByRole("button",{name:"Review Repository",exact:true}).click();
+ await page.getByRole("button",{name:"Manage Lifecycle",exact:true}).click();
+ const dialog=page.getByRole("dialog",{name:"Repository Lifecycle",exact:true});
+ await dialog.getByRole("button",{name:"Review Action",exact:true}).click();
+ await dialog.getByRole("textbox",{name:"Approval note",exact:true}).fill("Retire only the synthetic workspace record; keep the GitHub repository.");
+ await dialog.getByRole("button",{name:"Confirm repository lifecycle action",exact:true}).click();
+ await dialog.getByRole("button",{name:"Retire Workspace Record",exact:true}).click();
+ await expect.poll(()=>commands.length).toBe(1);
+ await expect(dialog.getByRole("textbox",{name:"Approval note",exact:true})).toBeDisabled();
+ await page.keyboard.press("Escape");await expect(dialog).toBeVisible();
+ await expect(page.getByRole("alertdialog",{name:"Discard lifecycle draft?",exact:true})).toHaveCount(0);
+ release();
+ await expect(dialog.getByText("Synthetic acknowledgement unavailable",{exact:true}).first()).toBeVisible();
+ await dialog.getByRole("button",{name:"Back to Register",exact:true}).click();
+ const guard=page.getByRole("alertdialog",{name:"Discard lifecycle draft?",exact:true});await expect(guard).toBeVisible();
+ await guard.getByRole("button",{name:"Keep Editing",exact:true}).click();
+ expect(commands[0].action).toBe("retire-workspace-record");
+ expect(commands[0].approvalNote).toContain("keep the GitHub repository");
+ expect(commands).toHaveLength(1);expect(writes).toEqual([]);
+});
+
+
+test("lifecycle recorded blockers require a response and justification without changing owner authority", async ({page}) => {
+ const {writes,result}=await setup(page,{lifecycle:"not-initialized"});
+ const audit=lifecycleAuditFor(result);audit.impact_summary.blocking_finding_count=1;audit.impact_summary.finding_count=1;
+ await page.route("**/api/repositories/lifecycle/repositories/**",r=>r.fulfill({json:{mode:"live",status:"current",audit,error:null,observedAt:new Date().toISOString()}}));
+ await page.getByRole("button",{name:"Review Repository",exact:true}).click();
+ await page.getByRole("button",{name:"Manage Lifecycle",exact:true}).click();
+ const dialog=page.getByRole("dialog",{name:"Repository Lifecycle",exact:true});
+ await dialog.getByRole("button",{name:"Review Action",exact:true}).click();
+ await expect(dialog.getByRole("radiogroup",{name:"Impact disposition",exact:true})).toBeVisible();
+ await dialog.getByRole("textbox",{name:"Approval note",exact:true}).fill("Review this synthetic retirement after handling its recorded blocker.");
+ await dialog.getByRole("button",{name:"Confirm repository lifecycle action",exact:true}).click();
+ const apply=dialog.getByRole("button",{name:"Retire Workspace Record",exact:true});await expect(apply).toBeDisabled();
+ await dialog.getByRole("radio",{name:"Remove blocker",exact:true}).click();
+ await dialog.getByRole("textbox",{name:"Impact justification",exact:true}).fill("Confirm ownership handoff before retiring this synthetic record.");
+ await dialog.getByRole("button",{name:"Confirm repository lifecycle action",exact:true}).click();
+ await expect(apply).toBeEnabled();expect(writes).toEqual([]);
+});
+
+
+test("Repository review leads with identity, separates current status and explains its owner actions",async({page})=>{
+ const {writes,result}=await setup(page,{requests:"none"});
+ await page.getByRole("button",{name:"Review Repository",exact:true}).click();
+ const review=page.getByRole("dialog",{name:"Repository details",exact:true});
+ await expect(review.getByRole("heading",{name:"synthetic-source",exact:true})).toBeVisible();
+ await expect(review.getByText(result.request.provisioning.description,{exact:true})).toHaveCount(1);
+ const identity=review.locator("[data-repository-identity-panel]");
+ await expect(identity.getByRole("heading",{name:"synthetic-source",exact:true})).toBeVisible();
+ await expect(identity.getByText(result.request.provisioning.description,{exact:true})).toBeVisible();
+ await expect(identity.getByText("Workspace repository",{exact:true})).toBeVisible();
+ const link=identity.getByRole("link",{name:/^synthetic-workspace\/synthetic-source/});
+ await expect(link).toHaveAttribute("href",result.provider_readback.canonical_url);
+ await expect(link).toHaveAttribute("rel","noopener noreferrer");
+ await expect(link).toHaveAttribute("target","_blank");
+ await page.context().route(result.provider_readback.canonical_url,route=>route.fulfill({contentType:"text/html",body:"<title>Isolated GitHub link witness</title>"}));
+ const opened=page.context().waitForEvent("page");await link.click();const external=await opened;
+ await external.waitForLoadState("domcontentloaded");
+ expect(external.url()).toBe(result.provider_readback.canonical_url);
+ expect(await external.evaluate(()=>window.opener)).toBeNull();
+ await external.close();await expect(review).toBeVisible();
+ await expect(review.getByText("Registered",{exact:true})).toBeVisible();
+ await expect(review.getByText("Not checked",{exact:true}).first()).toBeVisible();
+ await expect(review.getByText("Platform authority",{exact:true})).not.toBeVisible();
+ await expect(review.getByText("Not evaluated",{exact:true})).not.toBeVisible();
+ await expect(review.getByText("Open Delivery’s repository catalog to add this repository or review its existing entry.",{exact:true})).toBeVisible();
+ await expect(review.getByRole("button",{name:"Open Delivery Catalog",exact:true})).toBeVisible();
+ await expect(review.getByRole("button",{name:"Manage Lifecycle",exact:true})).toBeVisible();
+ await expect(review.locator('[data-repository-review-content] [data-treatment="rail"]')).toHaveCount(0);
+ for(const [width,height] of [[1280,720],[1700,1000]]){
+  await page.setViewportSize({width,height});
+  await review.getByRole("button",{name:"Manage Lifecycle",exact:true}).scrollIntoViewIfNeeded();
+  expect(await review.evaluate(n=>n.scrollWidth<=n.clientWidth+1)).toBe(true);
+  const box=await review.getByRole("button",{name:"View History",exact:true}).boundingBox();expect(box.y+box.height).toBeLessThanOrEqual(height+1);
+  await review.screenshot({path:test.info().outputPath(`repository-review-${width}.png`)});
+ }
+ await review.getByText("Recorded evidence and technical details",{exact:true}).click();
+ await expect(review.getByText("Not evaluated",{exact:true})).toBeVisible();
+ const inspect=review.getByRole("button",{name:"Open Creation evidence posture details",exact:true});
+ const evidence=review.locator('[data-has-actions="true"]').filter({has:page.getByRole('button',{name:'Open Creation evidence posture details',exact:true})});
+ await expect(inspect).toHaveText("Inspect record");
+ await expect(evidence.getByText("Recorded",{exact:true})).toBeVisible();
+ for(const width of [1280,1700]){
+  await page.setViewportSize({width,height:1000});await inspect.scrollIntoViewIfNeeded();
+  const rowBox=await evidence.boundingBox(),buttonBox=await inspect.boundingBox();
+  const gap=rowBox.x+rowBox.width-buttonBox.x-buttonBox.width;
+  expect(gap).toBeGreaterThanOrEqual(0);expect(gap).toBeLessThan(14);
+  expect(await evidence.evaluate(n=>n.scrollWidth<=n.clientWidth+1)).toBe(true);
+  await evidence.screenshot({path:test.info().outputPath(`technical-action-${width}.png`)});
+ }
+ await inspect.click();
+ await expect(page.getByRole("dialog",{name:"Creation evidence",exact:true})).toBeVisible();
+ expect(writes).toEqual([]);
+});
+
+test("Repository review keeps unknown registration and unchecked GitHub separate without offering mutation",async({page})=>{
+ const {writes}=await setup(page,{requests:"none",inventoryAvailable:false});
+ await page.getByRole("row").filter({hasText:"synthetic-source"}).getByRole("button",{name:"Inspect",exact:true}).click();
+ const review=page.getByRole("dialog",{name:"Repository details",exact:true});
+ await expect(review.getByText("Unknown",{exact:true})).toBeVisible();
+ await expect(review.getByText("Not checked",{exact:true}).first()).toBeVisible();
+ await expect(review.getByText("Current workspace registration could not be verified.",{exact:true})).toBeVisible();
+ await expect(review.getByRole("button",{name:"Manage Lifecycle",exact:true})).toHaveCount(0);
+ await expect(review.getByRole("button",{name:"Review workspace registration",exact:true})).toHaveCount(0);
+ await expect(review.getByRole("button",{name:"View History",exact:true})).toBeEnabled();
+ expect(writes).toEqual([]);
+});
+
+
+test("Inspect record dialogs explain creation, workspace registration and GitHub without exposing raw references first",async({page})=>{
+ const {writes,result}=await setup(page,{requests:"none"});
+ await page.getByRole("button",{name:"Review Repository",exact:true}).click();
+ const review=page.getByRole("dialog",{name:"Repository details",exact:true});
+ await review.getByText("Recorded evidence and technical details",{exact:true}).click();
+ await review.getByRole("button",{name:"Open Creation evidence posture details",exact:true}).click();
+ const creation=page.getByRole("dialog",{name:"Creation evidence",exact:true});
+ await expect(creation.getByText("Repository identity",{exact:true})).toBeVisible();
+ await expect(creation.getByText("Verified at setup",{exact:true})).toBeVisible();
+ await expect(creation.getByText("Setup confirmation",{exact:true})).toBeVisible();
+ await expect(creation.getByText("This is setup evidence, not a current GitHub health check. Open History for a fresh check.",{exact:true})).toBeVisible();
+ const id=result.provider_readback.repository_identity.provider_repository_id;
+ await expect(creation.getByText(id,{exact:true})).not.toBeVisible();
+ for(const [width,height] of [[1280,720],[1700,1000]]){
+  await page.setViewportSize({width,height});
+  expect(await creation.evaluate(n=>n.scrollWidth<=n.clientWidth+1)).toBe(true);
+  await creation.screenshot({path:test.info().outputPath(`creation-record-${width}.png`)});
+ }
+ await creation.getByText("Technical details",{exact:true}).click();
+ await expect(creation.getByText(id,{exact:true})).toBeVisible();
+ await expect(creation.getByText(result.receipt.receipt_id,{exact:true})).toBeVisible();
+ await page.keyboard.press("Escape");await expect(review).toBeVisible();
+ await review.getByRole("button",{name:"Open Workspace Admission posture details",exact:true}).click();
+ const registration=page.getByRole("dialog",{name:"Workspace registration",exact:true});
+ await expect(registration.getByText("Registered",{exact:true})).toBeVisible();
+ await expect(registration.getByText("This repository is included in the managed workspace.",{exact:true})).toBeVisible();
+ await expect(registration.getByText("Authority revision",{exact:true})).not.toBeVisible();
+ await registration.screenshot({path:test.info().outputPath("registration-record.png")});
+ await page.keyboard.press("Escape");
+ await review.getByRole("button",{name:"Open Provider status posture details",exact:true}).click();
+ const github=page.getByRole("dialog",{name:"GitHub status",exact:true});
+ await expect(github.getByText("Not checked",{exact:true}).first()).toBeVisible();
+ await expect(github.getByText("No current GitHub check is available here. Open History to check it.",{exact:true})).toBeVisible();
+ await github.screenshot({path:test.info().outputPath("github-record.png")});
+ expect(writes).toEqual([]);
+});
+
+test("Inspect record does not turn unavailable workspace registration into missing registration",async({page})=>{
+ const {writes}=await setup(page,{requests:"none",inventoryAvailable:false});
+ await page.getByRole("row").filter({hasText:"synthetic-source"}).getByRole("button",{name:"Inspect",exact:true}).click();
+ const review=page.getByRole("dialog",{name:"Repository details",exact:true});
+ await review.getByText("Recorded evidence and technical details",{exact:true}).click();
+ await review.getByRole("button",{name:"Open Workspace Admission posture details",exact:true}).click();
+ const registration=page.getByRole("dialog",{name:"Workspace registration",exact:true});
+ await expect(registration.getByText("Not verified",{exact:true})).toBeVisible();
+ await expect(registration.getByText("Workspace registration could not be verified from this record.",{exact:true})).toBeVisible();
+ await expect(registration.getByText("Not registered",{exact:true})).toHaveCount(0);
  expect(writes).toEqual([]);
 });

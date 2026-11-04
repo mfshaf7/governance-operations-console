@@ -75,7 +75,7 @@ export function AgentRuntimePresenceDialog({
     <TerasDialog
       contentOverflow="auto"
       height="content"
-      description="Live runtime identity, ownership, activity, and model-profile linkage."
+      description="Live runtime identity, responsibility, activity, and model-profile linkage."
       kicker="Agent Runtime"
       onClose={onClose}
       open={open}
@@ -92,7 +92,7 @@ export function AgentRuntimePresenceDialog({
             tone: stateTone,
             value: agentRuntimeStateLabel[runtime.state],
           },
-          { label: "Owner Surface", value: runtime.ownerSurface },
+          { label: "Originating surface", value: runtime.ownerSurface },
           {
             label: "Interaction Mode",
             value: interactionModeLabel(runtime.interactionMode),

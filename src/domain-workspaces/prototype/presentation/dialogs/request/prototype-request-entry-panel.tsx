@@ -76,8 +76,8 @@ export function PrototypeRequestEntryPanel({
             value={draft.name}
           />
           <TerasTextField
-            aria-label="Owner"
-            label="Owner"
+            aria-label="Responsible for prototype"
+            label="Responsible for prototype"
             onValueChange={(value) => onDraftChange("owner", value)}
             placeholder="Prototype Studio"
             value={draft.owner}

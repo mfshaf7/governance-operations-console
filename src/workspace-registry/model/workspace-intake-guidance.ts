@@ -24,12 +24,12 @@ export type IntakeOwnerSetup = Readonly<{
 }>;
 export function intakeOwnerSetup(preparation: WorkspaceInventoryLifecyclePreparation, repository: string): IntakeOwnerSetup {
   if (preparation.target.kind !== "repo" || preparation.target.name !== repository || preparation.target.record_id !== `repo:${repository}` || preparation.expected_state.posture !== "active") {
-    throw new Error("The selected repository is no longer an active owner. Choose a current owner and refresh its setup.");
+    throw new Error("The selected repository is no longer active. Choose a current repository and refresh its setup.");
   }
   const behavior = preparation.current_record.validation_behavior;
-  if (!behavior || typeof behavior !== "object" || Array.isArray(behavior)) throw new Error("This repository has no recorded validation plan. Its owner must complete that record before it can be reused.");
+  if (!behavior || typeof behavior !== "object" || Array.isArray(behavior)) throw new Error("This repository has no recorded validation plan. Its maintainers must complete that record before it can be reused.");
   const value = behavior as Record<string, unknown>;
-  if (typeof value.notes !== "string" || !value.notes.trim() || !Array.isArray(value.catalog_refs) || value.catalog_refs.some(ref => typeof ref !== "string" || !ref.trim())) throw new Error("The repository's validation plan is incomplete. Ask its owner to correct it, then refresh.");
+  if (typeof value.notes !== "string" || !value.notes.trim() || !Array.isArray(value.catalog_refs) || value.catalog_refs.some(ref => typeof ref !== "string" || !ref.trim())) throw new Error("The repository’s validation plan is incomplete. Ask its maintainers to correct it, then refresh.");
   return { repository, revision: preparation.authority_revision, version: preparation.expected_state.record_version,
     digest: preparation.expected_state.record_digest,
     evidenceRef: `git://workspace-governance/${preparation.authority_revision}/contracts/repos.yaml#${repository}`,
@@ -44,7 +44,7 @@ export function guidedIntakeDraft(kind: DirectIntakeKind, draft: DirectIntakeDra
   const catalogRefs = draft.catalogRefs.trim() || (directCheckApproaches.has(draft.validationPosture) ? setup.catalogRefs.join(",") : "");
   if (directCheckApproaches.has(draft.validationPosture) && !catalogRefs) throw new Error("The selected repository has no registered checks for this approach. Choose the repository that owns those checks, or use repository-run tests.");
   return { ...draft, catalogRefs,
-    validationNotes: `Validation responsibility is linked to ${setup.repository}. Recorded owner plan: ${setup.notes}\nThis is contextual owner metadata, not proof that this new item passed its checks.${draft.validationNotes.trim() ? `\nAdditional checks and limits: ${draft.validationNotes.trim()}` : ""}`,
+    validationNotes: `Validation responsibility is linked to ${setup.repository}. Recorded owner plan: ${setup.notes}\nThis is contextual repository metadata, not proof that this new item passed its checks.${draft.validationNotes.trim() ? `\nAdditional checks and limits: ${draft.validationNotes.trim()}` : ""}`,
     evidence: [...new Set([setup.evidenceRef, ...draft.evidence.split(/\n/).map(ref => ref.trim()).filter(Boolean)])].join("\n"),
   };
 }

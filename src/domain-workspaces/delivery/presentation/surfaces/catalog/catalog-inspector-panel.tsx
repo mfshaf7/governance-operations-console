@@ -1,3 +1,4 @@
+import { deliveryFieldDisplayLabel } from "../../../read-model/terms/copy.ts";
 import type {
   DeliveryCatalogItem,
   DeliveryCatalogValue,
@@ -70,7 +71,7 @@ export function CatalogInspectorPanel({
       {selectedValue && activeCatalog ? (
         <>
           <TerasPanelHeader
-            kicker={activeCatalog.label}
+            kicker={deliveryFieldDisplayLabel(activeCatalog.label)}
             statusLabel={catalogLifecycleLabel(selectedValue.lifecycle_state)}
             statusTone={catalogLifecycleTone(selectedValue.lifecycle_state)}
             title={selectedValue.label}

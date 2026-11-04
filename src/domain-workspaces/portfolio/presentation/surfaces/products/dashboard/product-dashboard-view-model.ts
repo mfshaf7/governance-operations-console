@@ -68,7 +68,7 @@ export function productDashboardIdentityFacts(
         entry.classification.portfolioSegment,
       ),
     },
-    { label: "Owner", value: entry.ownership.productOwnerRef },
+    { label: "Product repository", value: entry.ownership.productOwnerRef },
   ];
 }
 
@@ -110,12 +110,12 @@ export function productDashboardOwnershipFacts(
   entry: ProductPortfolioEntry,
 ): TerasMetadataItem[] {
   return [
-    { label: "Product Owner", value: entry.ownership.productOwnerRef },
-    { label: "Runtime Owner", value: entry.ownership.runtimeOwnerRef },
-    { label: "Platform Owner", value: entry.ownership.platformOwnerRef },
-    { label: "Security Owner", value: entry.ownership.securityOwnerRef },
+    { label: "Product component", value: entry.ownership.productOwnerRef },
+    { label: "Runtime responsibility", value: entry.ownership.runtimeOwnerRef },
+    { label: "Platform responsibility", value: entry.ownership.platformOwnerRef },
+    { label: "Security responsibility", value: entry.ownership.securityOwnerRef },
     {
-      label: "Source Owners",
+      label: "Source repositories",
       value: entry.ownership.sourceOwnerRefs.join(", "),
     },
   ];

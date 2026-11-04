@@ -80,7 +80,7 @@ export function PrototypeBaselinePromotionStepPanel({
               onValueChange={(issueDisposition) =>
                 onDraftChange({ issueDisposition })
               }
-              placeholder="Fix before baseline, accept risk, defer, or block with owner."
+              placeholder="Fix before baseline, accept risk, defer, or keep blocked with a named responsible party."
               readOnly={!draftMutable}
               value={draft.issueDisposition}
             />

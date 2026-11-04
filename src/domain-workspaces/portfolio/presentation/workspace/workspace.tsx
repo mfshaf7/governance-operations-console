@@ -93,7 +93,7 @@ export function PortfolioWorkspace({
           onApplyListing={controller.applyListing}
         />
         ) : <TerasPanel frame="padded" fit="content" treatment="neutral"><TerasPanelHeader kicker="Listing settings" title="Manage listing through Publication"
-          description="Change listing and audience using the latest publication receipt and a committed product manifest. Product details remain in Registry; product access stays with its owner." />
+          description="Change listing and audience using the latest publication receipt and a committed product manifest. Product details remain in Registry; the product component controls access." />
           <TerasActionButton onClick={() => controller.setActiveSurfaceId("publication")}>Open Publication</TerasActionButton>
         </TerasPanel>
       )}

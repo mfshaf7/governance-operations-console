@@ -121,7 +121,7 @@ export type WorkspacePulseSnapshot = Readonly<{
 
 const signalDefinitions = {
   "active-operations": {
-    description: "Owner-issued actions and follow-ups in the attention projection.",
+    description: "Source-issued actions and follow-ups in the attention projection.",
     label: "Required actions",
   },
   "blocked-operations": {
@@ -272,7 +272,7 @@ function sourceCoverageSignal(
   if (loading.length > 0) {
     return {
       ...signalDefinitions["source-coverage"],
-      detail: `${loading.length} owner ${loading.length === 1 ? "read is" : "reads are"} still loading. Counts remain partial.`,
+      detail: `${loading.length} source ${loading.length === 1 ? "read is" : "reads are"} still loading. Counts remain partial.`,
       id: "source-coverage", projectionAuthority: input.projectionAuthority,
       projectionLabel, projectionMode: input.projectionMode, records: [], sourceSummary,
       stateLabel: "LOADING", tone: "info", value: `${representedCount}/${input.sources.length}`,
@@ -344,7 +344,7 @@ function postureFor(
   }
 
   if (sourceCoverage.stateLabel === "LOADING") {
-    return { detail: "Owner reads are still loading. No complete workspace state is asserted yet.",
+    return { detail: "Source reads are still loading. No complete workspace state is asserted yet.",
       id: "loading", label: "LOADING SOURCES", projectionAuthority: input.projectionAuthority,
       projectionLabel, projectionMode: input.projectionMode, sourceSummary, tone: "info" };
   }
@@ -365,7 +365,7 @@ function postureFor(
 
   if (blockedCount > 0) {
     return {
-      detail: `${blockedCount} retained ${blockedCount === 1 ? "operation needs" : "operations need"} owner attention. This is work status, not a Console-wide availability assessment.`,
+      detail: `${blockedCount} retained ${blockedCount === 1 ? "operation needs" : "operations need"} service attention. This is work status, not a Console-wide availability assessment.`,
       id: "blocked",
       label: "BLOCKED WORK",
       projectionAuthority: input.projectionAuthority,
@@ -604,5 +604,5 @@ function candidatePulseTiming(candidate: CommandCenterAttentionCandidate) {
   if (candidate.route.availability !== "available") {
     return "Route unavailable";
   }
-  return "Owner action available";
+  return "Service action available";
 }

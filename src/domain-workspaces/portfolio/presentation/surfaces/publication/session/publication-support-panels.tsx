@@ -181,7 +181,7 @@ function ProductPublicationChecksSupport({
             ? "All required source evidence is present."
             : listingOnly
               ? "Choose a permitted listing scope in Decision."
-              : "Repair missing source evidence with the named owner."
+              : "Repair missing source evidence with the responsible product repository."
         }
         fit="content"
         kicker="Resolution Route"
@@ -190,7 +190,7 @@ function ProductPublicationChecksSupport({
             ? "Ready for decision"
             : listingOnly
               ? "Portfolio correction"
-              : "Source-owner repair"
+              : "Source repair"
         }
       >
         {repairRequirement ? (
@@ -202,7 +202,7 @@ function ProductPublicationChecksSupport({
                   label: "Requirement",
                   value: productPublicationRequirementLabel(repairRequirement),
                 },
-                { label: "Owner", value: repairRequirement.ownerRef },
+                { label: "Product repository", value: repairRequirement.ownerRef },
               ]}
             />
             <TerasActionRow fill>
@@ -215,8 +215,8 @@ function ProductPublicationChecksSupport({
                 emphasis="primary"
               >
                 {repairRouteUnavailable
-                  ? "Owner Route Unavailable"
-                  : "Open Owner Route"}
+                  ? "Workflow route Unavailable"
+                  : "Open Workflow route"}
               </TerasActionButton>
             </TerasActionRow>
           </TerasTrayStack>

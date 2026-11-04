@@ -1,5 +1,7 @@
 "use client";
 
+import { deliveryFieldDisplayLabel } from "../../../../../read-model/terms/copy.ts";
+
 import {
   TerasSubjectCard,
   TerasActionButton,
@@ -132,7 +134,7 @@ export function RefinementReadinessReviewView({
                       label={row.groupTitle}
                       meta={row.nodeTitle}
                       statusLabel={row.statusLabel}
-                      title={row.fieldLabel}
+                      title={deliveryFieldDisplayLabel(row.fieldLabel)}
                       tone={row.tone}
                     />
                   ))}

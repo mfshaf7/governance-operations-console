@@ -89,7 +89,7 @@ test("selected definition facts preserve the complete register-to-dashboard cont
       "Source",
       "Version",
       "Classification",
-      "Execution Owner",
+      "Execution component",
       "Implementation Repo",
       "Lifecycle",
     ],
