@@ -4,6 +4,7 @@ import { agentContextSources, buildAgentWorkspaceContext, projectAgentOwnerSnaps
 import type { ConsoleWorkspaceId } from "../../console-architecture";
 import type { ConsoleOwnerReads } from "../../console-integration/live-attention";
 import { readRepositoryCustodyRegister } from "../../domain-workspaces/repository";
+import { readRepositoryRegistrationLookups } from "../../workspace-registry/workspace-repository-status";
 
 export function useAgentWorkspaceContext(workspaceId: ConsoleWorkspaceId | null) {
   const [snapshots, setSnapshots] = useState<AgentOwnerSnapshots>({});
@@ -29,6 +30,16 @@ export function useAgentWorkspaceContext(workspaceId: ConsoleWorkspaceId | null)
               const capturedAt = new Date().toISOString();
               setOwnerReads(current => ({ ...current, repositories: { state: "current", payload: records, capturedAt } }));
               setSnapshots(current => ({ ...current, repositories: projectAgentOwnerSnapshot("repositories", { mode: "live", status: "current", records }, capturedAt) }));
+            }
+            try {
+              const names = records.map(record => record.request.requested_custody.workspace_owner_ref)
+                .filter(value => value?.startsWith("repo:")).map(value => value!.slice(5));
+              const lookup = await readRepositoryRegistrationLookups(names, { fetchImpl: boundedFetch, signal: deadline });
+              // This read informs attention only; it is not an automatic model
+              // context source or permission to export private project records.
+              if (!stopped) setOwnerReads(current => ({ ...current, repositoryRegistrations: { state: "current", payload: lookup, capturedAt: new Date().toISOString() } }));
+            } catch {
+              if (!stopped) setOwnerReads(current => ({ ...current, repositoryRegistrations: { state: "unavailable", payload: null, capturedAt: new Date().toISOString() } }));
             }
             return;
           }

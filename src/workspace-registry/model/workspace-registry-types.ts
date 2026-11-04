@@ -1,3 +1,5 @@
+import type { InstanceRecordAuthority, InstanceIntakeReceipt } from "../../console-integration/workspace-intake/workspace-intake-live-types.ts";
+
 export type WorkspaceRegistryKind = "component" | "product" | "repo";
 
 export type WorkspaceRegistryTarget = Readonly<{
@@ -22,6 +24,8 @@ export type WorkspaceRegistryMutation = Readonly<{
 }>;
 
 export type WorkspaceRegistryRecord = Readonly<{
+  authority_kind?: "internal-instance-record";
+  canonical_authority?: InstanceRecordAuthority;
   id: string;
   kind: WorkspaceRegistryKind;
   lineage: WorkspaceRegistryLineage;
@@ -35,6 +39,8 @@ export type WorkspaceRegistryRecord = Readonly<{
 }>;
 
 export type WorkspaceRegistryCandidate = Readonly<{
+  authority_kind?: "internal-instance-record";
+  canonical_authority?: InstanceRecordAuthority;
   active_record: Readonly<{
     id: string;
     kind: WorkspaceRegistryKind;
@@ -51,7 +57,7 @@ export type WorkspaceRegistryCandidate = Readonly<{
   target: WorkspaceRegistryTarget;
 }>;
 
-export type WorkspaceRegistrySnapshot = Readonly<{
+export type WorkspaceRegistryLegacySnapshot = Readonly<{
   authority_revision: string;
   canonical_authority: Readonly<{
     branch: "main";
@@ -82,7 +88,8 @@ export type WorkspaceInventoryExpectedState = Readonly<{
   intake_register_digest: string;
 }>;
 
-export type WorkspaceInventoryPreparation = Readonly<{
+export type WorkspaceInventoryPreparation = InstanceInventoryPromotionPreparation | Readonly<{
+  authority_kind?: undefined;
   authority_revision: string;
   canonical_authority: Readonly<{
     branch: "main";
@@ -125,7 +132,7 @@ export type WorkspaceInventoryReview = Readonly<{
   url: string;
 }>;
 
-export type WorkspaceInventoryReceipt = Readonly<{
+export type WorkspaceInventoryReceipt = InstanceIntakeReceipt | Readonly<{
   artifact_type: "workspace-inventory-promotion-receipt";
   completed_at: string;
   outcome: "succeeded";
@@ -155,6 +162,9 @@ export type WorkspaceInventoryStatus =
   | "succeeded";
 
 export type WorkspaceInventoryResult = Readonly<{
+  authority_kind?: "internal-instance-record";
+  canonical_authority?: InstanceRecordAuthority;
+  cancel_allowed?: boolean;
   canonical_mutation: boolean;
   failure: Readonly<{
     code: string;
@@ -199,7 +209,8 @@ export type WorkspaceInventoryArtifactRef = Readonly<{
   id: string;
 }>;
 
-export type WorkspaceInventoryLifecyclePreparation = Readonly<{
+export type WorkspaceInventoryLifecyclePreparation = InstanceInventoryLifecyclePreparation | Readonly<{
+  authority_kind?: undefined;
   authority_revision: string;
   canonical_authority: Readonly<{
     branch: "main";
@@ -233,7 +244,7 @@ export type WorkspaceInventoryLifecycleSubmissionIntent = Readonly<{
   }>;
 }>;
 
-export type WorkspaceInventoryLifecycleRequest = Readonly<{
+export type WorkspaceInventoryLifecycleLegacyRequest = Readonly<{
   action: WorkspaceInventoryLifecycleAction;
   approval_refs: readonly string[];
   artifact_type: "workspace-inventory-lifecycle-request";
@@ -276,7 +287,7 @@ export type WorkspaceInventoryLifecycleReadinessEnvelope = Readonly<{
   readiness: WorkspaceInventoryLifecycleReadiness;
 }>;
 
-export type WorkspaceInventoryLifecycleReceipt = Readonly<{
+export type WorkspaceInventoryLifecycleLegacyReceipt = Readonly<{
   action: WorkspaceInventoryLifecycleAction;
   artifact_type: "workspace-inventory-lifecycle-receipt";
   completed_at: string;
@@ -295,7 +306,7 @@ export type WorkspaceInventoryLifecycleReceipt = Readonly<{
   target: WorkspaceRegistryTarget;
 }>;
 
-export type WorkspaceInventoryLifecycleReadback = Readonly<{
+export type WorkspaceInventoryLifecycleLegacyReadback = Readonly<{
   action: WorkspaceInventoryLifecycleAction;
   active_inventory_digest: string;
   artifact_type: "workspace-inventory-lifecycle-readback";
@@ -324,6 +335,9 @@ export type WorkspaceInventoryLifecycleMergedState = Readonly<{
 }>;
 
 export type WorkspaceInventoryLifecycleResult = Readonly<{
+  authority_kind?: "internal-instance-record";
+  canonical_authority?: InstanceRecordAuthority;
+  cancel_allowed?: boolean;
   canonical_mutation: boolean;
   execution_ref: string;
   failure: Readonly<{
@@ -353,3 +367,78 @@ export type WorkspaceInventoryLifecycleResult = Readonly<{
   status: WorkspaceInventoryStatus;
   workflow_id: "workspace-inventory-lifecycle";
 }>;
+
+
+export type InstanceRegistrySelection = Readonly<{ query: string; scope: "eligible" | "inventory" }>;
+export type InstanceRegistryPage = Readonly<{
+  schema_version: 1;
+  mode: "current";
+  artifact_type: "instance-repository-registry-page";
+  authority: Omit<InstanceRecordAuthority, "record_id">;
+  selection: InstanceRegistrySelection;
+  after: string | null;
+  next_after: string | null;
+  counts: Readonly<{
+    intake: Readonly<{ "out-of-scope": number; proposed: number; admitted: number }>;
+    inventory: Readonly<{ active: number; suspended: number; retired: number }>;
+  }>;
+  records: readonly WorkspaceRegistryRecord[];
+  eligible_promotions: readonly WorkspaceRegistryCandidate[];
+  projected_at: string;
+  projection_digest: string;
+}>;
+export type WorkspaceRegistryComposedSnapshot = Readonly<Omit<WorkspaceRegistryLegacySnapshot, "workflow_id" | "canonical_authority"> & {
+  workflow_id: "workspace-registry-view";
+  legacy_snapshot: WorkspaceRegistryLegacySnapshot;
+  instance_page: InstanceRegistryPage;
+  source_authorities: Readonly<{ legacy: WorkspaceRegistryLegacySnapshot["canonical_authority"]; instance: InstanceRegistryPage["authority"] }>;
+}>;
+export type WorkspaceRegistrySnapshot = WorkspaceRegistryLegacySnapshot | WorkspaceRegistryComposedSnapshot;
+export type InstanceInventoryPreparationBase = Readonly<{
+  schema_version: 1;
+  authority_kind: "internal-instance-record";
+  authority_revision: string;
+  canonical_authority: InstanceRecordAuthority;
+  canonical_mutation: false;
+  policy_ref: Readonly<{ repo: "workspace-governance"; revision: string; contract_digest: string }>;
+  target: WorkspaceRegistryTarget;
+  expected_state: Readonly<{ record_version: number; record_digest: string }>;
+  current_record: Readonly<Record<string, unknown>>;
+  latest_receipt_ref: Readonly<{ version: number; digest: string; action: string }>;
+}>;
+export type InstanceInventoryPromotionPreparation = InstanceInventoryPreparationBase & Readonly<{
+  workflow_id: "workspace-inventory-promotion";
+  intake_entry_ref: WorkspaceRegistryCandidate["intake_entry_ref"];
+  candidate: WorkspaceRegistryCandidate;
+}>;
+export type InstanceInventoryLifecyclePreparation = InstanceInventoryPreparationBase & Readonly<{
+  workflow_id: "workspace-inventory-lifecycle";
+  current_record: Readonly<Record<string, unknown> & { posture: WorkspaceRegistryRecord["posture"]; lifecycle: WorkspaceRegistryRecord["posture"] }>;
+}>;
+
+export type InstanceInventoryRequest = Readonly<{
+  schema_version: 1;
+  artifact_type: "instance-repository-inventory-request";
+  instance_id: string;
+  request_id: string;
+  requested_at: string;
+  operator_ref: string;
+  operator_acceptance: Readonly<{ state: "accepted"; operator_ref: string; recorded_at: string }>;
+  correlation_ref: string;
+  idempotency_key: string;
+  action: "promote" | WorkspaceInventoryLifecycleAction;
+  target: WorkspaceRegistryTarget;
+  expected_state: Readonly<{ record_version: number; record_digest: string }>;
+  requested_value: Readonly<Record<string, unknown>> | null;
+  prior_receipt_digest: string | null;
+  reason: string | null;
+  impact_acknowledgements: readonly string[];
+  approval_refs: readonly string[];
+  policy_ref: InstanceInventoryPreparationBase["policy_ref"];
+  request_digest: string;
+}>;
+export type InstanceInventoryLifecycleRequest = InstanceInventoryRequest & Readonly<{ action: WorkspaceInventoryLifecycleAction; reason: string }>;
+export type WorkspaceInventoryLifecycleRequest = WorkspaceInventoryLifecycleLegacyRequest | InstanceInventoryLifecycleRequest;
+export type WorkspaceInventoryLifecycleReceipt = WorkspaceInventoryLifecycleLegacyReceipt | InstanceIntakeReceipt;
+export type InstanceInventoryReadback = Readonly<{ record: Readonly<Record<string, unknown>>; receipt: InstanceIntakeReceipt }>;
+export type WorkspaceInventoryLifecycleReadback = WorkspaceInventoryLifecycleLegacyReadback | InstanceInventoryReadback;

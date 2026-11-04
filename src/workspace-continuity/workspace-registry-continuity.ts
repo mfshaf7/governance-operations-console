@@ -15,6 +15,14 @@ export function reconcileWorkspaceRegistryContinuity(
   projection: WorkspaceContinuityProjection,
   snapshot: WorkspaceRegistrySnapshot,
 ): WorkspaceRegistrySnapshot {
+  if (snapshot.workflow_id === "workspace-registry-view") {
+    reconcileWorkspaceRegistryContinuity(projection, snapshot.legacy_snapshot);
+    const legacyIds = new Set([...projection.inventory, ...projection.intake].map(row => row.record_id));
+    if (snapshot.instance_page.records.some(row => legacyIds.has(row.id)) || snapshot.instance_page.eligible_promotions.some(row => legacyIds.has(row.target.record_id))) {
+      invalid("Internal Registry and retained Git continuity claim the same identity.");
+    }
+    return snapshot;
+  }
   if (projection.authority.revision !== snapshot.authority_revision) {
     invalid("WGCF and OOS do not project the same Workspace Governance revision.");
   }

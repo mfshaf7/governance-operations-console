@@ -4,6 +4,7 @@ import test from "node:test";
 import { provisioningResult } from "../support/repository-provisioning-result.mjs";
 import { provisionRepository } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
 import { projectRepositoryProvisioningResults } from "../../src/domain-workspaces/repository/live-runtime/repository-custody-live-projection.ts";
+import { projectRepositoryOwnerAttention } from "../../src/domain-workspaces/repository/read-model/attention-source.ts";
 import { projectRepositoryCurrentInventory } from "../../src/domain-workspaces/repository/live-runtime/repository-inventory-live-projection.ts";
 import { repositorySelectedActionLabel, repositorySummaryFromRecords } from "../../src/domain-workspaces/repository/presentation/shared/repository-control-projection.ts";
 import { assertWorkspaceContinuityProjection } from "../../src/workspace-continuity/workspace-continuity-contract.ts";
@@ -102,3 +103,44 @@ async function custody() {
     fetchImpl: async (_url, init) => Response.json(provisioningResult(JSON.parse(init.body))),
   });
 }
+
+test("internal registration status drives Repo Control truth without claiming a Git inventory revision", async () => {
+  const history = projectRepositoryProvisioningResults([], { retained: await custody() });
+  const original = history[0], id = original.custody.workspaceOwnerRef;
+  const row = { record_id: id, version: 7, record_digest: digest, phase: "inventory", status: "active",
+    provider_repository: { provider: "github", provider_repository_id: original.providerIdentity.repositoryId,
+      full_name: `${original.providerIdentity.owner}/${original.providerIdentity.name}` } };
+  const lookup = { mode: "current", instanceId: "synthetic-installation", recordIds: [id], records: [row] };
+  const current = projectRepositoryCurrentInventory(history, inventory("active", []), lookup)[0];
+  assert.equal(current.admissionState, "admitted");
+  assert.equal(repositorySelectedActionLabel(current), "Review Repository");
+  assert.equal(current.admissionPosture.find(group => group.id === "admission").items[1].value, "v7");
+  assert.match(current.lastValidation, /internal record/);
+  for (const [status, expected] of [["suspended", "blocked"], ["retired", "retired"]]) {
+    assert.equal(projectRepositoryCurrentInventory(history, inventory("active", []), { ...lookup, records: [{ ...row, status }] })[0].admissionState, expected);
+  }
+  const proposed = projectRepositoryCurrentInventory(history, inventory("active", []), { ...lookup, records: [{ ...row, phase: "intake", status: "proposed" }] })[0];
+  assert.match(proposed.nextAction, /existing repository setup/);
+  const admitted = projectRepositoryCurrentInventory(history, inventory("active", []), { ...lookup, records: [{ ...row, phase: "intake", status: "admitted" }] })[0];
+  assert.match(admitted.nextAction, /promotion in Workspace Registry/);
+  assert.equal(projectRepositoryCurrentInventory(history, inventory("active", []), null)[0].admissionState, "blocked");
+  assert.equal(projectRepositoryCurrentInventory(history, inventory("active", []), { ...lookup, records: [] })[0].admissionState, "ready");
+  assert.equal(projectRepositoryCurrentInventory(history, inventory("active"), lookup)[0].admissionState, "blocked", "Overlapping authorities must not pick a winner");
+  assert.equal(projectRepositoryCurrentInventory(history, inventory("active", []), { ...lookup, records: [{ ...row, provider_repository: { ...row.provider_repository, provider_repository_id: "999" } }] })[0].admissionState, "blocked");
+});
+
+
+test("primary attention shares current internal registration and never reopens an already active owner", async () => {
+  const result = await custody(), capturedAt = new Date().toISOString();
+  const raw = projectRepositoryProvisioningResults([], { retained: result })[0], id = raw.custody.workspaceOwnerRef;
+  const lookup = { mode: "current", instanceId: "synthetic-installation", recordIds: [id], records: [{ record_id: id, version: 3,
+    record_digest: digest, phase: "inventory", status: "active", provider_repository: { provider: "github", provider_repository_id: raw.providerIdentity.repositoryId,
+      full_name: `${raw.providerIdentity.owner}/${raw.providerIdentity.name}` } }] };
+  const read = { state: "current", payload: [result], capturedAt }, continuity = { state: "current", payload: inventory("active", []), capturedAt };
+  const attention = projectRepositoryOwnerAttention(read, continuity, { state: "current", payload: lookup, capturedAt });
+  assert.equal(attention.source.freshness, "current"); assert.deepEqual(attention.candidates, []);
+  const loading = projectRepositoryOwnerAttention(read, continuity, null);
+  assert.equal(loading.source.freshness, "loading"); assert.deepEqual(loading.candidates, []);
+  const unavailable = projectRepositoryOwnerAttention(read, continuity, { state: "unavailable", payload: null, capturedAt });
+  assert.equal(unavailable.source.freshness, "unavailable"); assert.deepEqual(unavailable.candidates, []);
+});

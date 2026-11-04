@@ -1,5 +1,7 @@
 "use client";
 
+import { RepositoryDevelopmentScope } from "../../shared/repository-development-scope.tsx";
+
 import { useEffect, useRef, useState } from "react";
 import { TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldGrid, TerasFieldStack, TerasMetadataList,
   TerasNoteField, TerasSelectableRow, TerasSelectField, TerasTextField } from "@/teras";
@@ -93,6 +95,7 @@ export function RepositoryRequestAttachment({proposalId, results, enabled, attac
       {lookup ? <>
         <TerasMetadataList items={[{label:"Repository",value:lookup.canonical_url},{label:"Visibility",value:lookup.visibility},
           {label:"Provider state",value:lookup.provider_lifecycle_state}]} />
+        <RepositoryDevelopmentScope visibility={lookup.visibility} />
         {lookup.provider_lifecycle_state!=="active" ? <p role="status">Archived repositories cannot be linked. Restore it with the provider before retrying.</p> : null}
         {alreadyLinked ? <TerasContentTray kicker="Already in Repository Control" description="Open its record to review the current workspace status.">
           {onOpenExisting ? <TerasActionButton disabled={pending} onClick={() => onOpenExisting(alreadyLinked)}>Open repository</TerasActionButton> : null}

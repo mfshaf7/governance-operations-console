@@ -40,6 +40,47 @@ contract requires caller/operator equality.
 
 ## Live Behavior
 
+### Prototype incubation source home
+
+Prototype Disposition offers **Prototype Studio**, **Existing Repo** and **New
+Repo**. Studio is the recommended home for an uncertain idea: use its existing
+repository for experimental source without creating a separate project repository.
+Selecting Prototype from an empty/no-repository draft selects Studio; explicit
+existing/new choices are preserved. Only operator submission records the decision.
+
+Resolve Studio from current active Inventory, using canonical ref
+`repo://workspace-prototype-studio` and its actual label. Stale, missing or
+unavailable Inventory retains the draft but blocks recording, with refresh
+guidance. Configured live mode never borrows a synthetic catalogue. Studio's
+repository visibility applies to stored source.
+
+Emit the unchanged `existing-repo` / `existing` / `resolved` custody shape.
+No new repository request, source permission or non-source claim is created.
+Handoff continues the same reviewed target application; capture still precedes
+Landing. Landing prepares the Studio folder and separately accepts setup. A
+later product repository/source graduation remains a separate decision.
+
+Delivery retains **Not Required** for genuine non-source work. Prototype does
+not offer a new editable no-repository decision; its target requires a resolved
+source home. Historical decisions remain inspectable without rewriting and
+cannot authorize a new unsupported handoff. Only new-repository requests expose
+the request-specific Repository Control action. Existing selections proceed to
+handoff review.
+
+For a current accepted Prototype decision recorded without a source home, use
+**Open source-home decision** in Handoff, then **Change source home**. This starts
+an explicit unrecorded draft through the existing Disposition command, retaining
+the original history. The outcome remains accepted and the route remains
+Prototype. Review the prefilled change note, select the actual source home and
+explain the choice before recording. The normal source version, pending/draft guards and
+interrupted-command identity still apply. Completed/applied, stale or unrelated
+decisions cannot use this correction. Opening/editing the draft does not change
+canonical state or restart the source workflow; recording creates the new
+versioned decision and resets handoff preparation under existing owner rules.
+A no-repository decision does not project a fabricated repository-request reference.
+
+### Source and target commands
+
 1. The surface follows native25-record OOS pages to retain the complete global
    Proposal register, with an explicit8192-record bound. Page numbers advance
    by one; changed totals, missing records or repeated identities fail the
@@ -83,11 +124,11 @@ contract requires caller/operator equality.
     Proposal acknowledgement. Incomplete or malformed success evidence fails
     closed without a local receipt.
 
-The target-application source remains runtime-inactive until Security ART
-`#1235` accepts the exact Console candidate and Platform ART `#1236` commissions
-the exact OOS and Console revisions. The accepted architecture authority is
-`architecture-packet:delivery-1203-v1`; this source slice does not create a new
-trust boundary, activation decision, or runtime authority.
+Runtime availability requires current exact composed Security acceptance and
+Platform commissioning; source/UI proof alone does not activate the path.
+Architecture authority remains `architecture-packet:delivery-1203-v1`. The
+incubation choice reuses this boundary without a new credential, approval
+authority or runtime service.
 
 ## Local Validation
 

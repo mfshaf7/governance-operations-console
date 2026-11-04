@@ -5,6 +5,7 @@ import test from "node:test";
 
 import {
   assertPrototypeLandingResult,
+  assertPrototypeLandingSubmissionIntent,
 } from "../../src/domain-workspaces/prototype/live-runtime/prototype-landing-live-contract.ts";
 import { projectPrototypeLanding } from "../../src/domain-workspaces/prototype/live-runtime/prototype-landing-live-projection.ts";
 import { projectPrototypeEffectiveReadModel } from "../../src/domain-workspaces/prototype/local-runtime/prototype-effective-projection.ts";
@@ -584,3 +585,28 @@ function json(value, status = 200) {
 function source(relativePath) {
   return readFileSync(new URL(relativePath, import.meta.url), "utf8");
 }
+
+// Pure builders only: the inspection must not create or submit a real Landing.
+test("Landing rejects a changed source-home choice instead of silently creating Studio source", () => {
+  const record = landingRecord();
+  const draft = prototypeLandingDraftFromRecord(record);
+  const identity = { acceptedAt: "2026-09-07T12:00:00.000Z", requestId: "prototype-landing-request:client-review-portal:1" };
+  const intent = prototypeLandingSubmissionIntent({record,draft,draftKey:prototypeLandingDraftKey(draft)},identity,preparation());
+  for (const sourceHome of ["existing-source", "app-folder", "future-owner-repo"]) {
+    const changed = {...draft,sourceHome};
+    assert.throws(() => prototypeLandingSubmissionIntent({record,draft:changed,draftKey:prototypeLandingDraftKey(changed)},identity,preparation()), /source home differs/i);
+    assert.throws(() => assertPrototypeLandingSubmissionIntent({...intent,draft:changed}), /source home contradicts/i);
+  }
+});
+
+test("A documentation-only Studio project keeps Studio custody without requiring an application runtime", () => {
+  const record=landingRecord();
+  const draft={...prototypeLandingDraftFromRecord(record),sourceHome:"docs-only",basePlatform:"docs-only",previewNeed:"none"};
+  const intent=prototypeLandingSubmissionIntent({record,draft,draftKey:prototypeLandingDraftKey(draft)},
+    {acceptedAt:"2026-09-07T12:00:00.000Z",requestId:"prototype-landing-request:client-review-portal:1"},preparation());
+  const command=buildPrototypeLandingCommand(intent,preparation(),config.callerId);
+  assert.equal(command.request.source_plan.posture,"create-studio-source");
+  assert.equal(command.request.setup.scaffold_profile,"docs-only");
+  assert.equal(command.request.setup.preview_mode,"none");
+  assert.equal(command.plan.mutation_set.includes("preview-profile-draft"),false);
+});

@@ -6,6 +6,7 @@ import type { WorkspaceInventoryResult, WorkspaceRegistryCandidate, WorkspaceReg
 import { useInventoryRequestJournal } from "../live-runtime/use-inventory-request-journal";
 import { WorkspaceRegistryRequestJournal } from "./workspace-registry-request-journal";
 import { registryKindLabel, registryNextAction, registryRequestStatus, registryTimestamp } from "./workspace-registry-copy";
+import { sameRegistryJson } from "../workspace-registry-instance-contract";
 
 export function WorkspaceRegistryPromotionWorkflow({ candidate, target, fixtureMode, onClose, runtime }: {
   candidate: WorkspaceRegistryCandidate | null; target: WorkspaceRegistryTarget; fixtureMode: boolean;
@@ -20,7 +21,7 @@ export function WorkspaceRegistryPromotionWorkflow({ candidate, target, fixtureM
   const sourceReady = fixtureMode || Boolean(!localError && !runtime.error && candidate && runtime.preparation?.target.record_id === target.record_id &&
     runtime.preparation.intake_entry_ref.digest === candidate.intake_entry_ref.digest &&
     runtime.preparation.intake_entry_ref.version === candidate.intake_entry_ref.version &&
-    runtime.preparation.authority_revision === runtime.snapshot?.authority_revision);
+    (runtime.preparation.authority_kind === "internal-instance-record" ? sameRegistryJson(runtime.preparation.candidate, candidate) : runtime.preparation.authority_revision === runtime.snapshot?.authority_revision));
   const candidateKey = candidate ? `${target.record_id}:${candidate.candidate_digest}` : null;
 
   async function prepare() {
@@ -102,11 +103,11 @@ export function WorkspaceRegistryPromotionWorkflow({ candidate, target, fixtureM
 function PromotionResultPanel({result,pending,onCancel,onRead}:{result:WorkspaceInventoryResult|null;pending:boolean;onCancel:()=>void;onRead:()=>void}) {
  return <TerasContentTray kicker="Outcome" title={result ? undefined : "Choose a request"}>
   {result?<TerasTrayStack spacing="normal">
-    <TerasMetadataList columns={2} items={[{label:"Source review",value:result.review?`#${result.review.number}`:"Not opened"},{label:"Receipt",value:result.receipt?"Recorded":terminal(result.status)?"No receipt issued":"Not issued yet"}]}/>
+    <TerasMetadataList columns={2} items={[{label:"Source review",value:result.authority_kind === "internal-instance-record" ? "Operator approval recorded" : result.review?`#${result.review.number}`:"Not opened"},{label:"Receipt",value:result.receipt?"Recorded":terminal(result.status)?"No receipt issued":"Not issued yet"}]}/>
     {result.failure?<TerasContentTray kicker="Needs attention" description={result.failure.message}/>:null}
     <TerasTimeline ariaLabel="Workspace Inventory promotion history">{result.history.map(event=><TerasTimelineItem key={`${event.sequence}-${event.status}`} label={registryRequestStatus(event.status)} detail={null} status={null} displayTimestamp={registryTimestamp(event.at)} timestamp={event.at} tone={event.status==="succeeded"?"ok":event.status==="blocked"||event.status==="rejected"?"danger":"info"} evidence={<TerasTechnicalDetails summary="Event details" items={[{label:"Sequence",value:String(event.sequence)},{label:"Source status",value:event.status},...(event.details?[{label:"Recorded details",value:JSON.stringify(event.details,null,2)}]:[])]}/>}/>)}</TerasTimeline>
-    <TerasTechnicalDetails summary="Request and receipt details" items={[{label:"Request",value:result.request_id},{label:"Receipt",value:result.receipt?.receipt_id??"No receipt issued"},{label:"Next action code",value:result.next_action},{label:"Request revision",value:String(result.revision)}]}/>
-    <TerasActionRow><TerasActionButton emphasis="secondary" disabled={pending} onClick={onRead}>Refresh Original Request</TerasActionButton>{result.review?<TerasActionButton emphasis="secondary" onClick={()=>window.open(result.review!.url,"_blank","noopener,noreferrer")}>Open Review</TerasActionButton>:null}{!terminal(result.status)?<TerasActionButton emphasis="secondary" disabled={pending} onClick={onCancel}>Cancel Request</TerasActionButton>:null}</TerasActionRow>
+    <TerasTechnicalDetails summary="Request and receipt details" items={[{label:"Request",value:result.request_id},{label:"Receipt",value:result.receipt ? result.receipt.artifact_type === "instance-operational-record-receipt" ? result.receipt.receipt_digest : result.receipt.receipt_id : "No receipt issued"},{label:"Next action code",value:result.next_action},{label:"Request revision",value:String(result.revision)}]}/>
+    <TerasActionRow><TerasActionButton emphasis="secondary" disabled={pending} onClick={onRead}>Refresh Original Request</TerasActionButton>{result.review?<TerasActionButton emphasis="secondary" onClick={()=>window.open(result.review!.url,"_blank","noopener,noreferrer")}>Open Review</TerasActionButton>:null}{!terminal(result.status)&&result.cancel_allowed!==false?<TerasActionButton emphasis="secondary" disabled={pending} onClick={onCancel}>Cancel Request</TerasActionButton>:null}</TerasActionRow>
   </TerasTrayStack>:<TerasEmptyState>No request selected.</TerasEmptyState>}
  </TerasContentTray>;
 }

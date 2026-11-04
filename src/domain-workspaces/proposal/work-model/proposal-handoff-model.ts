@@ -49,6 +49,7 @@ export function proposalHandoffRepositoryGateLocked(
   routeSelectionDraft: ProposalRouteSelectionDraft,
   repositoryGateResolution?: ProposalRepositoryGateResolution | null,
 ) {
+  if (routeSelectionDraft.routeTarget === "Prototype" && routeSelectionDraft.repoMode === "not-required") return true;
   if (!proposalRouteSelectionHasRepositoryGate(routeSelectionDraft)) {
     return false;
   }

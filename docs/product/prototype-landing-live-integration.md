@@ -114,3 +114,14 @@ the packet has not been applied. Owner failure is not empty success.
 node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/operation-runtime/prototype-landing-live-adapter.test.mjs
 npm run check
 ```
+
+### Source-home coherence preview
+
+Landing displays the source home derived from the current canonical source
+posture as a readout. It does not offer an editable destination which the owner
+command would ignore. Studio custody and reference-only project source retain
+their distinct effects; source transfer remains a separate reviewed operation.
+Fresh drafts use the current source posture. New client/server submissions reject
+a contradictory source-home draft before owner effects. Existing retained
+requests, readback, history and original-command recovery are not rewritten.
+Documentation-only setup and no-preview choices remain available.

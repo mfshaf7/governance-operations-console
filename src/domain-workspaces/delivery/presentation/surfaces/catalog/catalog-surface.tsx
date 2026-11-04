@@ -85,6 +85,7 @@ export function DeliveryCatalogSurface({
         onSubmit={catalogState.submitCatalogDraft}
         open={Boolean(catalogState.mutationDraft)}
         ownerRepoOptions={catalogState.ownerRepoOptions}
+        repositorySearch={catalogState.repositorySearch}
         preferredOwnerRepoId={catalogState.preferredOwnerRepoId}
         planningFacetSummary={catalogState.mutationPlanningFacetSummary}
         targetPiValues={catalogState.targetPiValues}

@@ -4,7 +4,7 @@ import { provisioningResult } from "./repository-provisioning-result.mjs";
 import { proposalCompletionRecord } from "./proposal-completion-fixture.mjs";
 
 // Synthetic owner responses for isolated UI inspection, never live authority.
-export async function repositoryUiFixture({proposalId="idea-851"} = {}) {
+export async function repositoryUiFixture({proposalId="idea-851",visibility="private"} = {}) {
   const digest=`sha256:${"a".repeat(64)}`;
   const env={OOS_BASE_URL:"http://owner.test",OOS_CALLER_SECRET:"synthetic-test-only",GOVERNANCE_CONSOLE_OPERATOR_ID:"operator:synthetic",
     GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH:"/synthetic/session-projection.json",
@@ -17,7 +17,7 @@ export async function repositoryUiFixture({proposalId="idea-851"} = {}) {
   const result=await provisionRepository({...(proposalId ? {proposalId} : {}),approvalNote:"Approve this exact synthetic repository.",custodyKind:"dedicated-owner-repo",
     repositoryDescription:"Synthetic Repository UI inspection",repositoryName:"synthetic-source",repositoryOwner:"synthetic-workspace",
     requestedAt:"2026-06-21T08:00:00Z",requestId:"repository-custody-request:synthetic-ui",templateReviewed:true,
-    visibility:"private",workspaceOwnerRef:"repo:synthetic-source"},{env,fetchImpl:async(_url,init)=>Response.json(provisioningResult(JSON.parse(init.body)))});
+    visibility,workspaceOwnerRef:"repo:synthetic-source"},{env,fetchImpl:async(_url,init)=>Response.json(provisioningResult(JSON.parse(init.body)))});
   const revision="b".repeat(40);
   const continuity={artifact_type:"workspace-continuity-projection",schema_version:1,
     authority:{owner_repo:"workspace-governance",revision,file_digests:{"contracts/repos.yaml":digest}},

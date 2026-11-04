@@ -88,14 +88,15 @@ export function ProposalDispositionDecisionPanel({
               decisionDraft,
               dispositionCompleted,
             })}
-            readOnly={dispositionCompleted}
+            readOnly={dispositionCompleted || decisionDraft.sourceHomeCorrection}
             selectedId={decisionDraft.outcome}
           />
           <TerasNoteField
             fill
             label="Decision notes"
             onValueChange={onNotesChange}
-            placeholder="Record why this proposal should be accepted, rejected, or kept parked."
+            placeholder={decisionDraft.sourceHomeCorrection ? "Review or refine the source-home change note."
+              : "Record why this proposal should be accepted, rejected, or kept parked."}
             readOnly={dispositionCompleted}
             value={decisionDraft.notes}
           />

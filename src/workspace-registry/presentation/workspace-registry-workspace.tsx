@@ -20,6 +20,7 @@ import type {
   WorkspaceRegistryTarget,
   WorkspaceRegistryRecord,
   WorkspaceRegistrySnapshot,
+  WorkspaceRegistryCandidate,
 } from "../model/workspace-registry-types";
 import { WorkspaceRegistryLifecycleWorkflow } from "./workspace-registry-lifecycle-workflow";
 import { WorkspaceRegistryPromotionWorkflow } from "./workspace-registry-promotion-workflow";
@@ -44,13 +45,17 @@ export function WorkspaceRegistryWorkspace({
   const runtime = useWorkspaceRegistryLiveRuntime();
   const continuity = useWorkspaceContinuityRuntime();
   const [view, setView] = useState<RegistryView>("registry");
+  const [query, setQuery] = useState("");
+  const [pageHistory, setPageHistory] = useState<readonly (string | null)[]>([null]);
+  const after = pageHistory.at(-1) ?? null;
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [promotionTarget, setPromotionTarget] =
     useState<WorkspaceRegistryTarget | null>(null);
+  const reviewedPromotionCandidate = useRef<WorkspaceRegistryCandidate | null>(null);
   const [lifecycleRecord, setLifecycleRecord] =
     useState<WorkspaceRegistryRecord | null>(null);
   const retainedSnapshot = useRef<WorkspaceRegistrySnapshot | null>(null);
-  const refreshInFlight = useRef<Promise<boolean> | null>(null);
+  const refreshInFlight = useRef<{ key: string; promise: Promise<boolean> } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const appliedEntryIntentRef = useRef<string | null>(null);
   const reconciliation = useMemo(() => {
@@ -106,35 +111,39 @@ export function WorkspaceRegistryWorkspace({
   const snapshot = currentSnapshot ?? retainedSnapshot.current;
   const retained = Boolean(snapshot && !currentSnapshot);
   const availabilityError = reconciliation.error ?? continuity.error?.message ?? runtime.error?.message ?? null;
+  const scope = view === "registry" ? "inventory" : "eligible";
+  const instancePage = snapshot?.workflow_id === "workspace-registry-view" ? snapshot.instance_page : null;
+  const selectionCurrent = !instancePage || instancePage.selection.scope === scope && instancePage.selection.query === query.trim().toLowerCase() && instancePage.after === after;
   const owners = useMemo(
     () => new Set(snapshot?.records.flatMap((record) => record.owner_refs) ?? []).size,
     [snapshot],
   );
 
   const refresh = useCallback((): Promise<boolean> => {
-    if (refreshInFlight.current) return refreshInFlight.current;
+    const key = JSON.stringify([scope, query.trim().toLowerCase(), after]);
+    if (refreshInFlight.current) return refreshInFlight.current.key === key ? refreshInFlight.current.promise : refreshInFlight.current.promise.then(() => refresh());
     setRefreshing(true);
     const request = (async () => {
       try {
-        const [owner, inventory] = await Promise.allSettled([continuity.load(), runtime.load()]);
+        const [owner, inventory] = await Promise.allSettled([continuity.load(), runtime.load({ scope, query: query.trim().toLowerCase(), after })]);
         if (owner.status !== "fulfilled" || inventory.status !== "fulfilled") return false;
         try { reconcileWorkspaceRegistryContinuity(owner.value, inventory.value); return true; }
         catch { return false; }
       } finally { refreshInFlight.current = null; setRefreshing(false); }
     })();
-    refreshInFlight.current = request;
+    refreshInFlight.current = { key, promise: request };
     return request;
-  }, [continuity.load, runtime.load]);
+  }, [continuity.load, runtime.load, scope, query, after]);
 
   useEffect(() => {
     if (intakeOpen || promotionTarget || lifecycleRecord) return;
-    void refresh();
+    const initial = window.setTimeout(() => void refresh(), 250);
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible" && !intakeOpen && !promotionTarget && !lifecycleRecord) void refresh();
     }, 15_000);
     const visible = () => { if (document.visibilityState === "visible" && !intakeOpen && !promotionTarget && !lifecycleRecord) void refresh(); };
     document.addEventListener("visibilitychange", visible);
-    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", visible); };
+    return () => { window.clearTimeout(initial); window.clearInterval(timer); document.removeEventListener("visibilitychange", visible); };
   }, [refresh, intakeOpen, promotionTarget, lifecycleRecord]);
 
   useEffect(() => {
@@ -178,16 +187,16 @@ export function WorkspaceRegistryWorkspace({
               <TerasSurfaceNavButton
                 current={view === "registry"}
                 kicker="01"
-                meta={snapshot ? String(snapshot.records.length) : "—"}
-                onClick={() => setView("registry")}
+                meta={snapshot ? `${snapshot.records.length}${instancePage ? " shown" : ""}` : "—"}
+                onClick={() => { setView("registry"); setPageHistory([null]); }}
                 title="Registry"
                 tone="ok"
               />
               <TerasSurfaceNavButton
                 current={view === "eligible"}
                 kicker="02"
-                meta={snapshot ? String(snapshot.eligible_promotions.length) : "—"}
-                onClick={() => setView("eligible")}
+                meta={snapshot ? `${snapshot.eligible_promotions.length}${instancePage ? " shown" : ""}` : "—"}
+                onClick={() => { setView("eligible"); setPageHistory([null]); }}
                 title="Eligible"
                 tone="warn"
               />
@@ -197,13 +206,13 @@ export function WorkspaceRegistryWorkspace({
             <TerasSurfaceSummaryHeader
               ariaLabel="Workspace Registry summary"
               metrics={[
-                { id: "records", label: "Records", value: snapshot ? String(snapshot.records.length) : "—" },
-                { id: "eligible", label: "Eligible", tone: "warn", value: snapshot ? String(snapshot.eligible_promotions.length) : "—" },
-                { id: "owners", label: "Responsible repositories", value: snapshot ? String(owners) : "—" },
+                { id: "records", label: instancePage ? "Records shown" : "Records", value: snapshot ? String(snapshot.records.length) : "—" },
+                { id: "eligible", label: instancePage ? "Eligible shown" : "Eligible", tone: "warn", value: snapshot ? String(snapshot.eligible_promotions.length) : "—" },
+                { id: "owners", label: instancePage ? "Repositories shown" : "Responsible repositories", value: snapshot ? String(owners) : "—" },
               ]}
               statuses={[
                 {
-                  detail: "Reconciled Workspace Governance reads through WGCF and OOS",
+                  detail: instancePage ? "Retained Governance records and installation-private project records" : "Reconciled Workspace Governance reads through WGCF and OOS",
                   facts: [],
                   id: "source",
                   label: "Source",
@@ -232,13 +241,20 @@ export function WorkspaceRegistryWorkspace({
         >
           <WorkspaceRegistrySurface
             availabilityError={availabilityError}
-            actionsCurrent={liveActionExecutable && !retained && !refreshing}
+            actionsCurrent={liveActionExecutable && !retained && !refreshing && selectionCurrent}
             retained={retained}
             fixtureMode={fixtureMode}
             onLifecycle={setLifecycleRecord}
-            onPromote={candidate => setPromotionTarget(candidate.target)}
-            onPromotionHistory={record => setPromotionTarget({ kind: record.kind, name: record.name, record_id: record.id })}
+            onPromote={candidate => { reviewedPromotionCandidate.current = candidate; setPromotionTarget(candidate.target); }}
+            onPromotionHistory={record => { reviewedPromotionCandidate.current = null; setPromotionTarget({ kind: record.kind, name: record.name, record_id: record.id }); }}
             onRetry={() => void refresh()}
+            query={query}
+            onQueryChange={value => { setQuery(value); setPageHistory([null]); }}
+            pageCurrent={selectionCurrent}
+            pagePending={refreshing}
+            canPreviousPage={pageHistory.length > 1}
+            onPreviousPage={() => setPageHistory(current => current.slice(0, -1))}
+            onNextPage={() => { if (instancePage?.next_after) setPageHistory(current => [...current, instancePage.next_after]); }}
             snapshot={snapshot}
             view={view}
           />
@@ -249,11 +265,12 @@ export function WorkspaceRegistryWorkspace({
       {promotionTarget ? (
         <WorkspaceRegistryPromotionWorkflow
           key={promotionTarget.record_id}
-          candidate={snapshot?.eligible_promotions.find(candidate => candidate.target.record_id === promotionTarget.record_id) ?? null}
+          candidate={snapshot?.eligible_promotions.find(candidate => candidate.target.record_id === promotionTarget.record_id) ?? (runtime.result ? reviewedPromotionCandidate.current : null)}
           target={promotionTarget}
           fixtureMode={fixtureMode}
           onClose={() => {
             runtime.reset();
+            reviewedPromotionCandidate.current = null;
             setPromotionTarget(null);
           }}
           runtime={runtime}

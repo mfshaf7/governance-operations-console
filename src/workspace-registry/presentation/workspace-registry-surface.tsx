@@ -43,6 +43,13 @@ export function WorkspaceRegistrySurface({
   onRetry,
   snapshot,
   view,
+  query,
+  onQueryChange,
+  pageCurrent = true,
+  pagePending = false,
+  canPreviousPage = false,
+  onPreviousPage,
+  onNextPage,
 }: {
   availabilityError: string | null;
   actionsCurrent?: boolean;
@@ -54,11 +61,19 @@ export function WorkspaceRegistrySurface({
   onRetry: () => void;
   snapshot: WorkspaceRegistrySnapshot | null;
   view: RegistryView;
+  query: string;
+  onQueryChange: (value: string) => void;
+  pageCurrent?: boolean;
+  pagePending?: boolean;
+  canPreviousPage?: boolean;
+  onPreviousPage?: () => void;
+  onNextPage?: () => void;
 }) {
-  const [query, setQuery] = useState("");
   const [kind, setKind] = useState<KindFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const records = view === "registry" ? snapshot?.records ?? [] : snapshot?.eligible_promotions ?? [];
+  const availableRecords = view === "registry" ? snapshot?.records ?? [] : snapshot?.eligible_promotions ?? [];
+  const records = pageCurrent ? availableRecords : availableRecords.filter(row => row.authority_kind !== "internal-instance-record");
+  const instancePage = snapshot?.workflow_id === "workspace-registry-view" ? snapshot.instance_page : null;
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return records.filter((entry) => {
@@ -66,7 +81,7 @@ export function WorkspaceRegistrySurface({
       const owners = entryOwners(entry);
       return (
         (kind === "all" || target.kind === kind) &&
-        (!normalized || `${target.name} ${target.record_id} ${owners.join(" ")}`.toLowerCase().includes(normalized))
+        (entry.authority_kind === "internal-instance-record" || !normalized || `${target.name} ${target.record_id} ${owners.join(" ")}`.toLowerCase().includes(normalized))
       );
     });
   }, [kind, query, records]);
@@ -122,18 +137,18 @@ export function WorkspaceRegistrySurface({
               ]}
               search={{
                 ariaLabel: `Search ${view}`,
-                onValueChange: setQuery,
-                placeholder: "Search name, identity, or responsible repository...",
+                onValueChange: onQueryChange,
+                placeholder: instancePage ? "Search repository name or identity..." : "Search name, identity, or responsible repository...",
                 value: query,
               }}
             />
           }
           kicker={view === "registry" ? "Canonical Register" : "Promotion Register"}
-          statusLabel={`${filtered.length}/${records.length} shown`}
+          statusLabel={instancePage ? `${filtered.length} shown · ${Object.values(view === "registry" ? instancePage.counts.inventory : instancePage.counts.intake).reduce((total, count) => total + count, 0)} matching internal records` : `${filtered.length}/${records.length} shown`}
           statusTone={retained ? "warn" : fixtureMode ? "info" : "ok"}
           title={view === "registry" ? "Workspace inventory" : "Eligible entrants"}
         >
-          {filtered.length ? (
+          {!pageCurrent ? <TerasLoadingState fill label="Loading matching records…" /> : filtered.length ? (
             <TerasRecordTable
               columns={registryColumns(view)}
               fill
@@ -146,6 +161,10 @@ export function WorkspaceRegistrySurface({
           ) : (
             <TerasEmptyState fill>No record matches the current filters.</TerasEmptyState>
           )}
+          {instancePage ? <TerasActionRow>
+            <TerasActionButton emphasis="secondary" disabled={pagePending || !pageCurrent || !canPreviousPage} onClick={onPreviousPage}>Previous page</TerasActionButton>
+            <TerasActionButton emphasis="secondary" disabled={pagePending || !pageCurrent || !instancePage.next_after} onClick={onNextPage}>Next page</TerasActionButton>
+          </TerasActionRow> : null}
         </TerasRegisterPanel>
       }
       selected={
@@ -239,8 +258,8 @@ function RegistryRecordSelected({
           { label: "Mutation event", value: record.last_mutation.id },
           { label: "Request", value: record.last_mutation.request_ref ?? "No request recorded" },
           { label: "Readiness reference", value: record.last_mutation.readiness_ref ?? "Not recorded" },
-          { label: "Sources", value: "Workspace Governance via WGCF and OOS" },
-          { label: "Authority revision", value: snapshot.authority_revision },
+          { label: "Storage", value: record.authority_kind === "internal-instance-record" ? "Private installation storage" : "Workspace Governance Git repository" },
+          ...(record.canonical_authority ? [{ label: "Installation", value: record.canonical_authority.instance_id }] : [{ label: "Authority revision", value: snapshot.authority_revision }]),
           { label: "Source projection", value: snapshot.projected_at },
           { label: "Projection digest", value: snapshot.projection_digest },
         ]} />

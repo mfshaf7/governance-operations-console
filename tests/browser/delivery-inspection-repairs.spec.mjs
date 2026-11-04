@@ -1,5 +1,8 @@
 import { test, expect } from "../support/filled-surface-layout.mjs";
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
+const privateCatalogFixtures = JSON.parse(execFileSync(process.execPath, ["--experimental-strip-types", "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", "--input-type=module", "-e",
+  "import {repositoryCatalogRegistrySnapshot,repositoryCatalogProjection} from './tests/support/repository-catalog-fixture.mjs'; const pages={}; for(const query of ['', 'synthetic-private','synthetic']) pages[query]=await repositoryCatalogRegistrySnapshot({query,more:query===''}); process.stdout.write(JSON.stringify({pages,projection:repositoryCatalogProjection()}));"], { encoding: "utf8" }));
 const require = createRequire(import.meta.url);
 const { deliveryReadModel } = require("../../src/domain-workspaces/delivery/read-model/projections/root-projection.ts");
 const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:3320";
@@ -158,6 +161,48 @@ test("Work Design review action and Context Session advisor are reachable at 128
   await page.getByRole("button").filter({ hasText: "Context Session" }).last().click();
   const context = page.getByRole("dialog", { name: "Context Session", exact: true });
   await reachable(page, context.getByRole("button", { name: "run", exact:true }));
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+
+test("live Delivery searches current internal repository registration and keeps the form usable across search failures", async ({ page }) => {
+  const h = await deliveryHarness(page), reads = [];
+  let unavailable = false;
+  await page.route("**/api/delivery/catalog/projection", route => route.fulfill({ json: {
+    mode: "live", status: "current", observedAt: new Date().toISOString(), error: null, projection: privateCatalogFixtures.projection,
+  } }));
+  await page.route("**/api/workspace-registry?*", async route => {
+    const query = new URL(route.request().url()).searchParams.get("query") ?? "";
+    reads.push(query);
+    if (unavailable) return route.fulfill({ status: 503, json: { error: "Synthetic unavailable Registry" } });
+    return route.fulfill({ json: privateCatalogFixtures.pages[query] });
+  });
+  await page.route("**/api/workspace-registry/repository-status?*", route => route.fulfill({ json: { schema_version: 1, mode: "not-configured", projected_at: new Date().toISOString() } }));
+  await h.section("catalog");
+  await h.workspace.getByRole("button", { name: "Request Value", exact: true }).click();
+  const search = page.getByRole("textbox", { name: "Search registered repositories", exact: true });
+  await expect(search).toBeVisible();
+  const dialog = page.getByRole("dialog").last();
+  await expect(dialog.getByText("More repositories match. Refine the search to find another repository.", { exact: true })).toBeVisible();
+  await search.fill("synthetic-private");
+  const select = dialog.getByRole("button", { name: "Admitted Repository", exact: true });
+  await select.click();
+  await page.getByRole("option", { name: "synthetic-private", exact: true }).click();
+  await expect(select).toHaveText("synthetic-private");
+  const submit = dialog.getByRole("button", { name: "Draft Request", exact: true });
+  await expect(submit).toBeEnabled();
+  unavailable = true;
+  await search.fill("synthetic");
+  await expect(dialog.getByText("Repository list unavailable", { exact: true })).toBeVisible();
+  await expect(submit).toBeDisabled();
+  await expect(search).toHaveValue("synthetic");
+  unavailable = false;
+  await dialog.getByRole("button", { name: "Retry", exact: true }).click();
+  await select.click();
+  await page.getByRole("option", { name: "synthetic-private", exact: true }).click();
+  await expect(submit).toBeEnabled();
+  await expect(search).toHaveValue("synthetic");
+  await dialog.screenshot({ path: test.info().outputPath("internal-repository-catalog.png") });
+  expect(reads).toContain("synthetic-private");
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 

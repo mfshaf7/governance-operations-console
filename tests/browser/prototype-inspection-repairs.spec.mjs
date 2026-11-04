@@ -49,6 +49,22 @@ async function sourceHarness(page) {
   } };
 }
 
+test("Landing displays its authoritative source home without an ignored destination selector", async ({ page }, info) => {
+  const h = await sourceHarness(page);
+  await h.control.getByRole("row").filter({ hasText: "Client Review Portal Concept" }).click();
+  await h.control.getByRole("button", { name: "Open Landing", exact: true }).click();
+  const modal = page.getByRole("dialog", { name: "Prototype Landing", exact: true });
+  await modal.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(modal.getByRole("region", { name: "Source home", exact: true })).toContainText("Prototype Studio");
+  await expect(modal.getByRole("button", { name: "Source home", exact: true })).toHaveCount(0);
+  await expect(modal).toContainText("Source stays in Studio during incubation.");
+  for (const width of [1700, 1280]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await modal.screenshot({ path: info.outputPath(`landing-source-${width}.png`) });
+  }
+  expect(h.writes).toEqual([]);
+});
+
 for (const [name, action, title] of [
   ["Client Review Portal Concept", "Open Landing", "Prototype Landing"],
   ["Candidate Promotion Fixture", "Open Candidate Promotion", "Candidate Promotion"],

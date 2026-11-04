@@ -7,7 +7,7 @@ import {
   type ConsoleProductPublicationConfiguration,
 } from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { consoleMutationAttributionHeaders } from "../../../console-integration/identity/server/console-session-authorization.ts";
-import { readWorkspaceRegistry } from "../../../workspace-registry/server/workspace-registry-oos-client.ts";
+import { readLegacyWorkspaceRegistry } from "../../../workspace-registry/server/workspace-registry-oos-client.ts";
 import { assertProductPublicationPreparation } from "../live-runtime/product-publication-preparation.ts";
 import {
   assertGovernedProductPublicationIntent,
@@ -70,7 +70,7 @@ export async function submitGovernedProductPublication(
   let authorityRevision: string;
   try {
     authorityRevision = await (options.readAuthority ?? (async () =>
-      (await readWorkspaceRegistry({ config: configured, fetchImpl: options.fetchImpl })).authority_revision))();
+      (await readLegacyWorkspaceRegistry({ config: configured, fetchImpl: options.fetchImpl })).authority_revision))();
   } catch {
     throw new ProductPublicationOosError("Current canonical Registry authority is unavailable; no publication was submitted.", "product_publication_authority_unavailable", 503);
   }

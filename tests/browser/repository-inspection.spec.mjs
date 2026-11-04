@@ -1,3 +1,4 @@
+import { preparation as instancePreparation, result as instanceResult, bind as bindInstance } from "../support/instance-intake-fixture.mjs";
 import {test,expect} from "@playwright/test";
 import {providerLookupFor,lifecycleAuditFor} from "../support/repository-history-fixture.mjs";
 import {execFileSync} from "node:child_process";
@@ -8,7 +9,7 @@ if(fixture.capabilities.mode!=="live")throw new Error("Repository UI fixture mus
 const base=process.env.CONSOLE_TEST_BASE_URL??"http://127.0.0.1:4317";
 test.use({viewport:{width:1700,height:1000},actionTimeout:15000});test.setTimeout(90000);
 
-async function setup(page,{empty=false,lifecycle="unavailable",posture="active",requests="pending",custodyOrigin="own",intakeAvailable=true,inventoryAvailable=true,runtimeMode="live",intakeOwners=false,provisionAvailable=true,linkAvailable=true}={}){
+async function setup(page,{empty=false,lifecycle="unavailable",posture="active",requests="pending",custodyOrigin="own",intakeAvailable=true,inventoryAvailable=true,runtimeMode="live",intakeOwners=false,provisionAvailable=true,linkAvailable=true,internalRegistration=null}={}){
  const f=structuredClone(fixtures[custodyOrigin]),writes=[];
  const existingOwner=structuredClone(f.continuity.inventory[0]);
  if(posture==="unregistered")f.continuity.inventory=[];
@@ -20,6 +21,17 @@ async function setup(page,{empty=false,lifecycle="unavailable",posture="active",
  if(!linkAvailable)f.capabilities.capabilities.find(item=>item.id==="repository-custody").mutation.state="unavailable";
  await page.route("**/api/**",r=>["GET","HEAD","OPTIONS"].includes(r.request().method())?r.continue():(writes.push(r.request().url()),r.abort()));
  await page.route("**/api/console/capabilities",r=>r.fulfill({json:f.capabilities}));
+ await page.route("**/api/workspace-registry/repository-status?*",r=>{
+  if(internalRegistration==='unavailable')return r.fulfill({status:503,json:{error:'Synthetic registration unavailable'}});
+  if(!internalRegistration)return r.fulfill({json:{schema_version:1,mode:'not-configured',projected_at:new Date().toISOString()}});
+  const names=new URL(r.request().url()).searchParams.getAll('name');
+  const readback=f.result.provider_readback;
+  return r.fulfill({json:{schema_version:1,mode:'current',authority:{kind:'internal-instance-record',instance_id:'synthetic-installation'},
+   record_ids:names.map(name=>`repo:${name}`),records:[{record_id:'repo:synthetic-source',version:7,record_digest:`sha256:${'a'.repeat(64)}`,
+    phase:['proposed','admitted'].includes(internalRegistration)?'intake':'inventory',status:internalRegistration,
+    provider_repository:{provider:'github',provider_repository_id:readback.repository_identity.provider_repository_id,full_name:`${readback.canonical_owner}/${readback.canonical_name}`}}],
+   projected_at:new Date().toISOString(),projection_digest:`sha256:${'b'.repeat(64)}`}});
+ });
  await page.route("**/api/workspace-continuity",r=>inventoryAvailable?r.fulfill({json:f.continuity}):r.fulfill({status:503,json:{error:"Synthetic inventory unavailable"}}));
  await page.route("**/api/workspace-intake/requests?*",r=>r.fulfill({json:{schema_version:1,workflow_id:"workspace-intake",
   target:{kind:"repo",name:"synthetic-source",record_id:"repo:synthetic-source"},custody_request_id:f.result.request.request_id,
@@ -1103,5 +1115,58 @@ test("Inspect record does not turn unavailable workspace registration into missi
  await expect(registration.getByText("Not verified",{exact:true})).toBeVisible();
  await expect(registration.getByText("Workspace registration could not be verified from this record.",{exact:true})).toBeVisible();
  await expect(registration.getByText("Not registered",{exact:true})).toHaveCount(0);
+ expect(writes).toEqual([]);
+});
+
+
+test('internal registration keeps the existing review and receipt interface with cancellation only before the write attempt',async({page},info)=>{
+ const {form,result,writes}=await registrationForm(page);let accepted=null,command=null,continued=0;
+ await page.route('**/api/workspace-intake/preparations',r=>{
+  const input=r.request().postDataJSON(),prepared=instancePreparation();
+  prepared.target={kind:'repo',name:'synthetic-source',record_id:'repo:synthetic-source'};
+  prepared.canonical_authority.record_id=prepared.target.record_id;
+  prepared.custody_request_id=result.request.request_id;
+  const {candidate_digest:_digest,...candidate}=prepared.source_candidate;
+  candidate.target=prepared.target;candidate.requested_record={...input.repository_custody.requested_record,
+   provider_repository:{provider:'github',provider_repository_id:String(result.provider_readback.repository_identity.provider_repository_id),full_name:result.provider_readback.canonical_owner+'/'+result.provider_readback.canonical_name}};
+  prepared.source_candidate=bindInstance(candidate,'candidate_digest');
+  return r.fulfill({json:prepared});
+ });
+ await page.route('**/api/workspace-intake/requests',r=>{
+  const intent=r.request().postDataJSON(),prepared=intent.reviewed_preparation;
+  const request=bindInstance({schema_version:1,artifact_type:'instance-repository-intake-request',instance_id:prepared.canonical_authority.instance_id,
+   custody_request_id:prepared.custody_request_id,request_id:intent.request_id,requested_at:'2026-11-04T01:00:00.000Z',requester_ref:'synthetic-console',
+   source:intent.candidate.source,target:prepared.target,requested_record:intent.candidate.requested_record,requested_classification:intent.decision,
+   action:'add',owner_route:'workspace-governance',expected_state:prepared.expected_state,policy_ref:prepared.policy_ref,idempotency_key:intent.request_id+':v1'},'request_digest');
+  const decision=bindInstance({operator_acceptance:{operator_ref:'synthetic-console'},request_ref:{id:request.request_id,digest:request.request_digest}},'decision_digest');
+  command={request,decision};accepted=instanceResult(command);return r.fulfill({json:accepted});
+ });
+ await page.route('**/api/workspace-intake/requests/*/continue',r=>{continued++;return r.fulfill({json:instanceResult(command,'succeeded')});});
+ await fillSourceRegistration(page,form);await form.getByRole('button',{name:'Review registration',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Workspace Intake Classification',exact:true});
+ await dialog.getByRole('radio',{name:'Proposed',exact:true}).click();
+ await dialog.getByRole('button',{name:'Review Classification',exact:true}).click();
+ await dialog.getByRole('button',{name:'Confirm the Workspace Intake review',exact:true}).click();
+ await dialog.getByRole('button',{name:'Submit Classification',exact:true}).click();
+ await expect(dialog.getByRole('button',{name:'Cancel Request',exact:true})).toBeVisible();
+ await dialog.getByRole('button',{name:'Continue',exact:true}).click();
+ await expect(dialog.getByRole('button',{name:'Cancel Request',exact:true})).toHaveCount(0);
+ await expect(dialog.getByText('Classification Complete',{exact:true})).toBeVisible();
+ await expect(dialog.getByRole('button',{name:'Open Review',exact:true})).toHaveCount(0);
+ await dialog.screenshot({path:info.outputPath('internal-registration-completed.png')});
+ expect(accepted.authority_kind).toBe('internal-instance-record');expect(continued).toBe(1);expect(writes).toEqual([]);
+});
+
+
+test('internal repository registration controls admission and verification without a legacy Git row',async({page})=>{
+ const {writes}=await setup(page,{posture:'unregistered',internalRegistration:'active',requests:'none'});
+ const control=page.getByRole('dialog',{name:'Repository Control',exact:true});
+ await expect(control.getByRole('button',{name:'Review Repository',exact:true})).toBeEnabled();
+ await expect(control.getByRole('button',{name:'Application verification',exact:true})).toBeEnabled();
+ await expect(control.getByRole('button',{name:'Review workspace registration',exact:true})).toHaveCount(0);
+ await control.getByRole('button',{name:'Review Repository',exact:true}).click();
+ const details=page.getByRole('dialog',{name:'Repository details',exact:true});
+ await expect(details.getByText('Registered',{exact:true})).toBeVisible();
+ await details.screenshot({path:test.info().outputPath('internal-repository-details.png')});
  expect(writes).toEqual([]);
 });

@@ -17,7 +17,8 @@ export type WorkspaceIntakeExpectedState = Readonly<{
   register_digest: string;
 }>;
 
-export type WorkspaceIntakePreparation = Readonly<{
+export type WorkspaceIntakePreparation = InstanceIntakePreparation | Readonly<{
+  authority_kind?: "legacy-git";
   authority_revision: string;
   canonical_authority: Readonly<{
     branch: "main";
@@ -116,10 +117,7 @@ export type WorkspaceIntakeSubmissionIntent = Readonly<{
 
 export type WorkspaceIntakeHistoryEvent = Readonly<{
   at: string;
-  details: Readonly<{
-    merge_commit: string;
-    receipt_digest: string;
-  }> | null;
+  details: Readonly<Record<string, unknown>> | null;
   sequence: number;
   status: string;
 }>;
@@ -138,7 +136,7 @@ export type WorkspaceIntakeReview = Readonly<{
   url: string;
 }>;
 
-export type WorkspaceIntakeReceipt = Readonly<{
+export type WorkspaceIntakeReceipt = InstanceIntakeReceipt | Readonly<{
   artifact_type: "workspace-intake-receipt";
   canonical_authority: Readonly<{
     branch: string;
@@ -154,6 +152,9 @@ export type WorkspaceIntakeReceipt = Readonly<{
 }>;
 
 export type WorkspaceIntakeResult = Readonly<{
+  authority_kind?: "internal-instance-record";
+  canonical_authority?: InstanceRecordAuthority;
+  cancel_allowed?: boolean;
   readiness_findings?: readonly Readonly<{ code: string; message: string; severity: "blocking"; next_action: string }>[];
   canonical_mutation: boolean;
   failure: Readonly<{
@@ -195,6 +196,8 @@ export type WorkspaceIntakeClientError = Readonly<{
 }>;
 
 export type WorkspaceIntakeRetainedRequest = Readonly<{
+  authority_kind?: "internal-instance-record";
+  custody_request_id?: string;
   request_id: string;
   requested_at: string;
   updated_at: string;
@@ -215,4 +218,46 @@ export type WorkspaceIntakeRequestPage = Readonly<{
   updated_at: string | null;
   records: readonly WorkspaceIntakeRetainedRequest[];
   next_cursor: string | null;
+}>;
+
+export type InstanceRecordAuthority = Readonly<{
+  kind: "internal-instance-record";
+  instance_id: string;
+  record_id: string;
+}>;
+
+export type InstanceIntakePreparation = Readonly<{
+  authority_kind: "internal-instance-record";
+  authority_revision: string;
+  canonical_authority: InstanceRecordAuthority;
+  canonical_mutation: false;
+  custody_request_id: string;
+  expected_state: Readonly<{ record_digest: string | null; record_version: number | null }>;
+  policy_ref: Readonly<{ repo: "workspace-governance"; revision: string; contract_digest: string }>;
+  schema_version: 1;
+  source_candidate: WorkspaceIntakeSourceCandidate;
+  target: WorkspaceIntakeTarget;
+  workflow_id: "workspace-intake";
+}>;
+
+export type InstanceIntakeReceipt = Readonly<{
+  schema_version: 1;
+  artifact_type: "instance-operational-record-receipt";
+  authority: "internal-instance-record";
+  instance_id: string;
+  record_id: string;
+  version: number;
+  record_digest: string;
+  previous: Readonly<{ version: number | null; digest: string | null }>;
+  idempotency_key: string;
+  command_digest: string;
+  actor: string;
+  action: string;
+  accepted_at: string;
+  policy_ref: string;
+  decision_digest: string;
+  readiness_digest: string;
+  operator_ref: string;
+  receipt_digest: string;
+  ai_decision_id?: string;
 }>;

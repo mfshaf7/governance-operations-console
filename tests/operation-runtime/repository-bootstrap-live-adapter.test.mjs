@@ -109,6 +109,32 @@ test("provider failures and oversized responses never expose private diagnostics
   await assert.rejects(readRepositoryBootstrap(id, { config, fetchImpl: async () => new Response("x".repeat(1_048_577)) }), error => error.code === "repository_bootstrap_response_large");
 });
 
+test("native owner inspection accepts only its exact internal reference and a revoked read credential", async () => {
+  const selected = { ownerRepo: owner, custodyRequestId: "custody:fixture", evidenceProfile: null, applicationMarkers: [], withCi: false, nonce: "review:native", operation: "configure-verification" };
+  const fetchFor = mutate => async (_url, init) => {
+    const input = JSON.parse(init.body), entry = { id: `repo:${owner}`, version: 3, digest: digest("native-record") };
+    const body = { schema_version: 1, workflow_id: "repository-owner-bootstrap-preparation", operation: "configure-verification", caller_id: config.callerId, operator_id: config.operatorId,
+      decision_ref: input.decision_ref, custody_request_id: input.custody_request_id, custody_receipt_digest: digest("custody"), plan: null,
+      owner_authority: { owner_repo: owner, classification: "active", inventory_posture: "active", intake_entry_ref: null, inventory_entry_ref: entry,
+        canonical_authority: { kind: "internal-instance-record", instance_id: "synthetic-installation", record_id: entry.id }, record_ref: { version: entry.version, digest: entry.digest },
+        policy_ref: { repo: "workspace-governance", revision: "a".repeat(40), contract_digest: digest("native-policy") },
+        source_bootstrap_eligible: false, verification_setup_eligible: true, ordinary_source_eligible: true, model_writes_allowed: false, canonical_mutation: false, runtime_activation: false },
+      existing_owner_controls: { owner_repo: owner, evidence_profile: { schema_version: 1, owner_repo: owner, profile_id: "owner-source-controls", application_verification: { mode: "unconfigured", manual_checks: [] }, commands: [] } },
+      next_action: "configure-application-verification", authorization: "preparation-only", credential_issued: true,
+      read_authorization: { scope: "trusted-owner-controls", credential_revoked: true }, checkout_created: false, canonical_mutation: false, runtime_activation: false };
+    mutate?.(body);
+    return Response.json({ ...body, preparation_digest: digest(body) });
+  };
+  const current = await prepareRepositoryBootstrap(selected, { config, fetchImpl: fetchFor() });
+  assert.equal(current.credential_issued, true); assert.equal(current.read_authorization.credential_revoked, true);
+  assert.equal(current.checkout_created, false); assert.equal(current.canonical_mutation, false);
+  for (const mutate of [v => { v.read_authorization.credential_revoked = false; }, v => { delete v.read_authorization; },
+    v => { v.credential_issued = false; }, v => { v.owner_authority.record_ref.version++; },
+    v => { v.owner_authority.canonical_authority.record_id = "repo:another-owner"; }, v => { v.token = "must-not-return"; }]) {
+    await assert.rejects(prepareRepositoryBootstrap(selected, { config, fetchImpl: fetchFor(mutate) }));
+  }
+});
+
 test("a known record-authority blocker is named safely, while unknown, malformed and oversized owner errors stay opaque", async () => {
   await assert.rejects(readRepositoryBootstrap(id, { config, fetchImpl: async () => Response.json({
     error: "record_authority_unavailable", message: "private backend detail", details: { secret: "must-not-project" },

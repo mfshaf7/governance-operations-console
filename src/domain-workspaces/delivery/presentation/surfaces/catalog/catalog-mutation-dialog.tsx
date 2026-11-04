@@ -6,6 +6,8 @@ import {
   TerasActionButton,
   TerasDraftCloseGuardDialog,
   TerasEmptyState,
+  TerasContentTray,
+  TerasLoadingState,
   TerasFieldGrid,
   TerasMetadataList,
   TerasModalShell,
@@ -49,6 +51,7 @@ export function CatalogMutationDialog({
   onSubmit,
   open,
   ownerRepoOptions,
+  repositorySearch,
   preferredOwnerRepoId,
   planningFacetSummary,
   targetPiValues,
@@ -62,6 +65,7 @@ export function CatalogMutationDialog({
   onSubmit: (draft: CatalogMutationSubmit) => void | Promise<void>;
   open: boolean;
   ownerRepoOptions: OperationOwnerRepoCatalogOption[];
+  repositorySearch?: { query: string; loading: boolean; error: string | null; result: { more: boolean } | null; onQueryChange: (value: string) => void; refresh: () => void };
   preferredOwnerRepoId?: string | null;
   planningFacetSummary: string;
   targetPiValues: DeliveryCatalogValue[];
@@ -133,17 +137,17 @@ export function CatalogMutationDialog({
   const ownerRepoSelectOptions = useMemo(
     () =>
       ownerRepoSelectCandidates.length > 0
-        ? ownerRepoSelectCandidates.map((option) => ({
+        ? [...(repositorySearch ? [{ label: "Select a registered repository", value: "" }] : []), ...ownerRepoSelectCandidates.map((option) => ({
             label: option.label,
             value: option.id,
-          }))
+          }))]
         : [
             {
-              label: "No unlinked admitted repository available",
+              label: "No unlinked repository matches this search",
               value: "",
             },
           ],
-    [ownerRepoSelectCandidates],
+    [ownerRepoSelectCandidates, repositorySearch],
   );
   const selectedOwnerRepo =
     ownerRepoOptions.find((option) => option.id === selectedOwnerRepoId) ??
@@ -161,7 +165,7 @@ export function CatalogMutationDialog({
     ? selectedOwnerRepo.label
     : catalogDraftLabelForStorage({ label });
   const ownerRepoError =
-    linksOwnerRepo && !selectedOwnerRepo
+    linksOwnerRepo && (repositorySearch?.loading || repositorySearch?.error || !selectedOwnerRepo)
       ? "Select an admitted repository before preparing the Implementation repository request."
       : null;
   const standardError =
@@ -182,7 +186,8 @@ export function CatalogMutationDialog({
 
   useEffect(() => {
     if (!open) { initializedSource.current = null; baseline.current = null; return; }
-    const sourceKey = JSON.stringify([catalog, value, mode, ownerRepoSelectCandidates, preferredOwnerRepoId, targetPiOptions, planningWindowForTargetPi(catalogValues, value?.value_key ?? null)]);
+    if (linksOwnerRepo && repositorySearch && (repositorySearch.loading || repositorySearch.error)) return;
+    const sourceKey = JSON.stringify([catalog, value, mode, repositorySearch ? null : ownerRepoSelectCandidates, preferredOwnerRepoId, targetPiOptions, planningWindowForTargetPi(catalogValues, value?.value_key ?? null)]);
     if (initializedSource.current === sourceKey) return;
     if (initializedSource.current !== null && baseline.current !== draftRef.current) {
       setSourceChanged(true); return;
@@ -191,7 +196,7 @@ export function CatalogMutationDialog({
     setSourceChanged(false); setCloseGuard(null);
     const initialOwner = isOwnerRepoCatalog(catalog)
       ? (value ? ownerRepoOptions.find(option => option.valueKey === value.value_key) : null) ??
-        ownerRepoSelectCandidates.find(option => option.id === preferredOwnerRepoId) ?? ownerRepoSelectCandidates[0] ?? ownerRepoOptions[0]
+        ownerRepoSelectCandidates.find(option => option.id === preferredOwnerRepoId) ?? (repositorySearch ? null : ownerRepoSelectCandidates[0] ?? ownerRepoOptions[0])
       : null;
     const initialWindow = planningWindowForTargetPi(catalogValues, value?.value_key ?? null);
     baseline.current = JSON.stringify([catalogDraftLabel(catalog, value), value?.description ?? "", parentTargetPiValueKey(value) ?? targetPiOptions[0]?.value ?? "", initialOwner?.id ?? "", initialWindow.startDate, initialWindow.endDate]);
@@ -204,7 +209,7 @@ export function CatalogMutationDialog({
       const firstAvailableOwnerRepo =
         ownerRepoSelectCandidates.find(
           (option) => option.id === preferredOwnerRepoId,
-        ) ?? ownerRepoSelectCandidates[0] ?? ownerRepoOptions[0] ?? null;
+        ) ?? (repositorySearch ? null : ownerRepoSelectCandidates[0] ?? ownerRepoOptions[0]) ?? null;
 
       setSelectedOwnerRepoId(
         matchingOwnerRepo?.id ?? firstAvailableOwnerRepo?.id ?? "",
@@ -258,7 +263,7 @@ export function CatalogMutationDialog({
       description:
         selectedOwnerRepo?.description ??
         (description.trim() ||
-          "Prototype-local catalog value staged for backend submission."),
+          "Catalog value prepared for operator-reviewed submission."),
       label: storedLabel,
       linkedRepository: linksOwnerRepo ? selectedOwnerRepo : null,
       parentCatalogValueKey: requiresTargetPiLink
@@ -333,9 +338,15 @@ export function CatalogMutationDialog({
         ) : (
           <>
             {linksOwnerRepo ? (
+              <>
+              {repositorySearch ? <TerasTextField label="Search registered repositories" value={repositorySearch.query} disabled={submitting}
+                onValueChange={query => { setSelectedOwnerRepoId(""); repositorySearch.onQueryChange(query); }} /> : null}
+              {repositorySearch?.loading ? <TerasLoadingState label="Reading registered repositories…" /> : repositorySearch?.error ?
+                <TerasContentTray kicker="Repository list unavailable" description={repositorySearch.error}
+                  actions={<TerasActionButton emphasis="secondary" onClick={repositorySearch.refresh}>Retry</TerasActionButton>} /> : <>
               <TerasSelectField
                 disabled={submitting || ownerRepoSelectCandidates.length === 0}
-                helper="Select the repository admitted in Repository Control; Catalog links and syncs it as an owner_repo value."
+                helper={repositorySearch?.result?.more ? "More repositories match. Refine the search to find another repository." : "Select an active registration from Repository Control for use in Delivery."}
                 label="Admitted Repository"
                 onValueChange={setSelectedOwnerRepoId}
                 options={ownerRepoSelectOptions}
@@ -343,6 +354,8 @@ export function CatalogMutationDialog({
                 treatment="highlighted"
                 value={selectedOwnerRepoId}
               />
+              </>}
+              </>
             ) : (
               <TerasTextField
                 disabled={submitting}

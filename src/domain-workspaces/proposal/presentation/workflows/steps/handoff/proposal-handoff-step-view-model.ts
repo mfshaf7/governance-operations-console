@@ -8,6 +8,7 @@ import {
   proposalRouteSelectionRepoLabel,
   proposalRouteSelectionSourceCustody,
   proposalRouteSelectionSourceCustodyLabel,
+  proposalUsesPrototypeStudio,
   type ProposalRouteSelectionDraft,
 } from "../../../../work-model/proposal-disposition-model.ts";
 import {
@@ -61,7 +62,7 @@ export function proposalHandoffRepositoryGateMetadata({
 }): TerasMetadataItem[] {
   return [
     { label: "Proposal", value: proposalId },
-    { label: "Required Repo", value: repositoryGateRef },
+    { label: "Source home", value: repositoryGateRef },
     { label: "Current State", value: repositoryCueState },
     { label: "Required Action", value: repositoryCueAction },
   ];
@@ -142,7 +143,8 @@ export function proposalHandoffStepProjection({
   const repositoryGateRef =
     repositoryGateResolution?.resolvedRepoRef ||
     routeSelectionDraft.repoRef ||
-    (routeHasRepositoryGate ? "Not resolved" : "Not required");
+    (routeSelectionDraft.routeTarget === "Prototype" && routeSelectionDraft.repoMode === "not-required"
+      ? "No source home recorded" : routeHasRepositoryGate ? "Not resolved" : "Not required");
   const workflowBlocked = !workflowReady || sourceReviewBlocked;
   const handoffNotesReady =
     !workflowBlocked && !repositoryGateBlocked && normalizedNotes.length > 0;
@@ -203,33 +205,38 @@ export function proposalHandoffStepProjection({
           : handoffNotesReady
             ? "Record the review and dispatch a prototype-local packet to the selected route."
             : "Add handoff notes before applying the handoff.";
-  const repositoryCueTitle = !routeHasRepositoryGate
+  const studioIncubation = proposalUsesPrototypeStudio(routeSelectionDraft);
+  const prototypeWithoutHome = prototypeTarget && routeSelectionDraft.repoMode === "not-required";
+  const repositoryCueTitle = prototypeWithoutHome ? "Prototype source home missing"
+    : studioIncubation ? "Incubate in Prototype Studio" : !routeHasRepositoryGate
     ? "Repository not required"
     : repositoryGateBlocked
       ? "Resolve repository before handoff"
       : repositoryGateResolved
         ? "Repository gate resolved"
         : "Repository selected";
-  const repositoryCueBody = !routeHasRepositoryGate
+  const repositoryCueBody = prototypeWithoutHome ? "The recorded Prototype decision does not identify a source home. Review that decision before continuing; Prototype Studio can hold experimental source without a separate project repository."
+    : studioIncubation ? "The existing Studio repository holds this prototype during exploration. This handoff does not request a separate project repository; Landing and later source graduation remain separate actions."
+    : !routeHasRepositoryGate
     ? "This route does not require repository responsibility before handoff."
     : repositoryGateBlocked
       ? "The selected repository handling requires a repository decision before Proposal can apply this handoff."
       : repositoryGateResolved
         ? "Repository Control recorded the workspace association and repository reference. Handoff can now be applied from the gate panel."
         : "The selected responsible repository is available for handoff review.";
-  const repositoryCueState = !routeHasRepositoryGate
+  const repositoryCueState = prototypeWithoutHome ? "Blocked" : !routeHasRepositoryGate
     ? "Not required"
     : repositoryGateBlocked
       ? "Blocked"
       : repositoryGateResolved
         ? "Resolved"
         : "Selected";
-  const repositoryCueAction = !routeHasRepositoryGate
+  const repositoryCueAction = prototypeWithoutHome ? "Review the Proposal source-home decision" : !routeHasRepositoryGate
     ? "No repository action"
     : repositoryGateBlocked
       ? "Resolve in Repository Control"
       : "Review handoff";
-  const repositoryCueTone: TerasTone = !routeHasRepositoryGate
+  const repositoryCueTone: TerasTone = prototypeWithoutHome ? "warn" : !routeHasRepositoryGate
     ? "info"
     : repositoryGateBlocked
       ? "warn"

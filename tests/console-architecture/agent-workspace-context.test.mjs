@@ -64,3 +64,14 @@ test("maximum summary and reference bounds still fit the unchanged model-context
  assert.equal(evaluateAgentContextPolicy({ candidate, mode: "workspace" }).code, "cgg-required");
  assert.equal(parseAgentContextRequest({ candidate, mode: "workspace" }).mode, "workspace");
 });
+
+test("composed Registry context keeps native private identities and source details out of automatic model context", () => {
+  const now = new Date().toISOString();
+  const snapshot = projectAgentOwnerSnapshot("registry", { schema_version: 1, workflow_id: "workspace-registry-view",
+    legacy_snapshot: { workflow_id: "workspace-inventory-registry", authority_revision: "a".repeat(40), records: [] },
+    records: [{ id: "repo:secret-customer-project", name: "Secret customer project", description: "Private project purpose", source: "PRIVATE SOURCE CONTENT" }],
+    instance_page: { records: [{ name: "Secret customer project" }] } }, now);
+  assert.equal(snapshot.state, "current");
+  assert.match(snapshot.detail, /internal records connected/);
+  for (const privateText of ["secret-customer-project", "Secret customer project", "Private project purpose", "PRIVATE SOURCE CONTENT"]) assert.equal(JSON.stringify(snapshot).includes(privateText), false);
+});

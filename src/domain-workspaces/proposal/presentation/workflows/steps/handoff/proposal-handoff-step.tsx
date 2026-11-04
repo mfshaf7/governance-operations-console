@@ -11,6 +11,7 @@ import {
 import type { ProposalRepositoryGateResolution } from "../../../../../operation-integrations/proposal-repository-request-projection.ts";
 import type { ProposalHandoffDraft } from "../../../../work-model/proposal-handoff-model.ts";
 import type { ProposalRouteSelectionDraft } from "../../../../work-model/proposal-disposition-model.ts";
+import { proposalCanReviewSourceHome } from "../../../../work-model/proposal-disposition-model.ts";
 import type { ProposalWorkflowNavigationTarget } from "../../../../work-model/proposal-workflow-navigation.ts";
 import type { ProposalWorkflowStepProjection } from "../../../../work-model/proposal-workflow-step-model.ts";
 import type { ProposalTargetApplicationResult } from "../../../../live-runtime/proposal-live-types.ts";
@@ -145,6 +146,9 @@ export function ProposalHandoffStep({
               repositoryCueTone={repositoryCueTone}
               repositoryGateRef={repositoryGateRef}
               routeHasRepositoryGate={routeHasRepositoryGate}
+              hasRepositoryRequest={routeSelectionDraft.repoMode === "new"}
+              onReviewSourceHome={proposalCanReviewSourceHome(proposal, routeSelectionDraft)
+                ? () => onSelectStep("disposition") : undefined}
             />
           </TerasContentRegion>
         </TerasZone>

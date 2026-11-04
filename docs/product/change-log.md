@@ -1,5 +1,82 @@
 # Governance Operations Console Change Log
 
+## 2026-11-04 — Proposal Studio incubation preview
+
+Operator-authorized maintenance, Landing Unit decision `feature_single_landing_unit`,
+`maintenance-proposal-studio-incubation`. Extend the existing Proposal interface
+and reuse repository custody. Prototype offers an explicit Studio choice explaining
+that a dedicated project repository can wait. Resolve it from current active
+Inventory and use the existing/resolved command, without a new protocol enum,
+non-source claim, automatic repository creation or relaxed target check.
+
+The shared loading signal distinguishes pending repository verification from
+confirmed absence. Missing/stale Studio Inventory blocks recording and offers
+refresh. Existing/new
+choices and Delivery's no-repository path remain. Historical decisions keep their
+original values and read-only posture. Handoff explains incubation and offers
+Repository Control only for an actual request. Capture/Landing retain the existing
+Studio source home and separate acceptance. An active accepted Prototype decision
+with no source home can explicitly start a new local source-home draft, using the
+existing version-bound Disposition command. Keep the accepted route fixed, retain
+the original decision in History and make no source change before submission.
+Completed decisions remain read-only; absent source refs no longer appear as
+fabricated repository requests. No runtime, maturity, privacy, source
+graduation or publication is granted by this choice. Agent Gary prepares source;
+publication and live activation await operator batch review.
+
+The approved private-record extension now connects registration and Registry
+to the installation-bound operational record workflow. Registry composes the
+retained Git snapshot with a separate private metadata page; it does not claim
+private projects are present in public contracts. Search, counts and continuation
+use the bounded backend page. Existing product/component decisions keep their
+Git authority, and source-only registration does not confer shared validation
+or runtime responsibility.
+
+Native promotion and lifecycle reuse the current review forms, verify the exact
+project version/policy, and display the actual internal receipt without a fake
+PR or merge. Original-request lookup precedes a repeated submission; a lost
+reply cannot silently create a replacement command. Registration exposes an
+explicit read of the original request after an uncertain submission. Isolated
+browser proof and source checks cover these paths; private-file access and full
+operating qualification are still unfinished. This is unpublished batch source,
+not evidence that the live installation runs the new storage protocol.
+
+The operator also approved repairing the inspected Repository/Prototype route
+inconsistencies in this same unpublished maintenance unit: canonical Landing
+source-home presentation and submission consistency, early disclosure of the
+public-main setup boundary, owner-checked eligibility before editing application
+verification, and current setup instructions. Preserve private/internal creation
+and linkage as separate operations; do not change visibility, widen credentials
+or claim private-source authoring from those operations. Private-source and
+non-main adapter expansion needs its explicit authority checkpoint. Reuse the
+existing manual verification, non-source Delivery and source-control workflows
+for project-type checks, without another ART item or new workflow mechanism.
+
+The private-source extension now also reads compact current registration for up
+to 25 exact selected repositories per indexed query. Repo Control derives actual
+Intake/Inventory state and available verification from that source, preserves
+Git-backed owners, and blocks ambiguous/provider-mismatched/unconfirmed state.
+The primary attention queue uses the same registration lookup; it does not
+reopen admission from an old custody receipt. Status reads are not automatic
+model context. Source status failure cannot become empty registration. Native
+registration and legacy compatibility pass intercepted browser checks; all
+business writes are isolated. Publication and operating qualification remain
+pending.
+
+The native source candidate also passes ordinary manually authored source work
+in its installation-private managed checkout, with protected remote reads and
+Gary commit identity. Setup guidance now describes approved access rather than
+an unconditional public-only restriction; actual eligibility still comes from
+the service. The existing Delivery readiness consumer binds and reevaluates the
+same native admission. This does not activate the private route, migrate private
+Proposal/Studio/Catalog records or claim private Studio import support.
+
+Delivery's live repository picker also consumes bounded searched Registry pages
+and current selected registration. Static examples remain only in disconnected
+preview. Partial pages are explicit; failed, stale or conflicting reads cannot
+authorize a selection. Search changes do not reset unrelated draft content,
+and Repo Control supplies a canonical repository key for focused reconciliation.
+
 ## 2026-11-04 — Repository batch release preparation
 
 The operator approved publishing the reviewed preview batch and configuring the
@@ -1753,3 +1830,14 @@ test description. New owner setup requests real source controls automatically.
 Active source-only repositories expose later verification setup using the same
 reviewed source workflow, with manual, automated and mixed plans. Existing
 profiles are read first; a saved plan grants no application acceptance.
+
+
+### Unpublished private registration connection
+
+The existing Intake form and progress dialog now distinguish source-backed
+registration from internal installation records. Native requests bind policy,
+record version and current custody while retaining original provenance. Native
+receipts require exact content/readback and are displayed by their actual digest;
+no Git review or merge evidence is synthesized. Existing source workflows remain
+compatible. This is part of the retained preview batch, not live activation or
+completion of private source and Inventory qualification.

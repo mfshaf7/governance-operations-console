@@ -1,4 +1,5 @@
 import type { OperationTone } from "../../../../operation-contracts/operation-state.ts";
+import { prototypeLandingSourceReadout } from "./prototype-landing-source-model.ts";
 
 import type {
   PrototypeBasePlatform,
@@ -501,7 +502,7 @@ export function prototypeLandingDraftFromRecord(
     name: record.name,
     owner: record.owner,
     previewNeed: record.landing.previewNeed,
-    sourceHome: record.landing.sourceHome,
+    sourceHome: prototypeLandingSourceReadout(record).sourceHome,
     summary: record.summary,
     supportProfile: record.landing.supportProfile,
     supportRows: record.landing.supportRows,

@@ -116,8 +116,9 @@ export async function submitWorkspaceIntake(
     }
     let requestId: string;
     try {
-      requestId = decodeURIComponent(ref[1]);
-      if (encodeURIComponent(requestId) !== ref[1]) throw new Error();
+      requestId = intent.reviewed_preparation.authority_kind === "internal-instance-record"
+        ? intent.reviewed_preparation.custody_request_id : decodeURIComponent(ref[1]);
+      if (intent.reviewed_preparation.authority_kind !== "internal-instance-record" && encodeURIComponent(requestId) !== ref[1]) throw new Error();
     } catch {
       throw new WorkspaceIntakeContractError("Custody source request identity is invalid.");
     }
@@ -133,13 +134,16 @@ export async function submitWorkspaceIntake(
   }
   const config = options.config ?? resolveConfig();
   const command = buildCommand(intent, current, config.callerId, options.now?.() ?? new Date());
-  const body = await request(
-    "/v1/workspace-intake/requests",
-    { body: JSON.stringify(command), method: "POST" },
-    { ...options, config },
-  );
-  assertReturnedBinding(body, command);
-  return projectResult(body, intent.request_id);
+  try {
+    const body = await request(
+      "/v1/workspace-intake/requests", { body: JSON.stringify(command), method: "POST" }, { ...options, config },
+    );
+    assertReturnedBinding(body, command);
+    return projectResult(body, intent.request_id);
+  } catch (error) {
+    if (!(error instanceof WorkspaceIntakeOosError) || (!error.retryable && error.status < 500 && error.status !== 409)) throw error;
+    return recoverSubmittedIntake(command, { ...options, config }, error);
+  }
 }
 
 export async function readWorkspaceIntake(
@@ -208,7 +212,10 @@ function buildCommand(
   const request = bindDigest(
     {
       action: preparation.expected_state.record_version === null ? "add" : "update",
-      artifact_type: "workspace-intake-request",
+      artifact_type: preparation.authority_kind === "internal-instance-record" ? "instance-repository-intake-request" : "workspace-intake-request",
+      ...(preparation.authority_kind === "internal-instance-record" ? {
+        instance_id: preparation.canonical_authority.instance_id, custody_request_id: preparation.custody_request_id, policy_ref: preparation.policy_ref,
+      } : {}),
       expected_state: preparation.expected_state,
       idempotency_key: `${intent.request_id}:v1`,
       owner_route: "workspace-governance",
@@ -217,7 +224,7 @@ function buildCommand(
       requested_classification: intent.decision,
       requested_record: requestedRecord,
       requester_ref: callerId,
-      schema_version: 2,
+      schema_version: preparation.authority_kind === "internal-instance-record" ? 1 : 2,
       source: intent.candidate.source,
       target: preparation.target,
     },
@@ -270,6 +277,42 @@ function assertReturnedBinding(value: unknown, command: ReturnType<typeof buildC
     throw projectionError(
       new Error("OOS returned a different Workspace Intake command binding."),
     );
+  }
+}
+
+async function recoverSubmittedIntake(command: ReturnType<typeof buildCommand>, options: RequestOptions, originalError: WorkspaceIntakeOosError) {
+  const id = command.request.request_id;
+  let saved: unknown;
+  try {
+    saved = await request(`/v1/workspace-intake/requests/${encodeURIComponent(id)}`, { method: "GET" }, options, {
+      authority: "operator-orchestration-service", sourceOwner: "operator-orchestration-service", recordRef: `oos://workspace-intake/requests/${id}`,
+    });
+  } catch (error) {
+    if (error instanceof WorkspaceIntakeOosError && error.status === 404 && error.code === "workspace_intake_not_found") throw originalError;
+    throw new WorkspaceIntakeOosError("The submission outcome is unconfirmed. Check the original request when its connection returns.", "workspace_intake_submission_unconfirmed", 503, true);
+  }
+  // The owner retains the first command's server timestamps. A retry may have
+  // rebuilt those timestamps, but it may not change any reviewed semantics,
+  // operator acceptance, request identity or workflow context.
+  const semantic = (value: unknown) => {
+    if (!isRecord(value) || !isRecord(value.request) || !isRecord(value.decision) ||
+        !isRecord(value.decision.operator_acceptance) || !isRecord(value.decision.request_ref)) throw contractError("Original registration input is unavailable.");
+    const { requested_at: _at, request_digest: _digest, ...originalRequest } = value.request;
+    const { decided_at: _decided, decision_digest: _decisionDigest, operator_acceptance: acceptance, request_ref: reference, ...originalDecision } = value.decision;
+    const { recorded_at: _acceptedAt, ...originalAcceptance } = acceptance as Record<string, unknown>;
+    const { digest: _requestDigest, ...originalReference } = reference as Record<string, unknown>;
+    return { request: originalRequest, decision: { ...originalDecision, operator_acceptance: originalAcceptance, request_ref: originalReference },
+      session_ref: value.session_ref, execution_ref: value.execution_ref };
+  };
+  try {
+    const result = projectResult(saved, id);
+    if (canonicalDigest(semantic(saved)) !== canonicalDigest(semantic(command))) {
+      throw new WorkspaceIntakeOosError("This request identity belongs to different reviewed input. Open its original request before starting another.", "workspace_intake_idempotency_conflict", 409);
+    }
+    return result;
+  } catch (error) {
+    if (error instanceof WorkspaceIntakeOosError) throw error;
+    throw projectionError(error);
   }
 }
 
@@ -434,9 +477,54 @@ function projectPreparation(value: unknown) {
 
 function projectResult(value: unknown, requestId: string) {
   try {
-    return assertWorkspaceIntakeResult(value, requestId);
+    const result = assertWorkspaceIntakeResult(value, requestId);
+    if (result.authority_kind === "internal-instance-record") verifyInstanceResult(value, result);
+    return result;
   } catch (error) {
     throw projectionError(error);
+  }
+}
+
+function verifyInstanceResult(value: unknown, result: WorkspaceIntakeResult) {
+  if (!isRecord(value) || !isRecord(value.request) || !isRecord(value.decision) || !result.canonical_authority) {
+    throw contractError("Internal registration omitted its original reviewed command.");
+  }
+  const { request_digest: expectedRequest, ...request } = value.request;
+  const { decision_digest: expectedDecision, ...decision } = value.decision;
+  const authority = result.canonical_authority;
+  if (canonicalDigest(request) !== expectedRequest || canonicalDigest(decision) !== expectedDecision ||
+      request.artifact_type !== "instance-repository-intake-request" || request.schema_version !== 1 ||
+      request.request_id !== result.request_id || request.instance_id !== authority.instance_id ||
+      !isRecord(request.target) || request.target.record_id !== authority.record_id ||
+      !isRecord(decision.request_ref) || decision.request_ref.id !== result.request_id || decision.request_ref.digest !== expectedRequest) {
+    throw contractError("Internal registration command differs from its durable binding.");
+  }
+  if (!result.receipt || result.receipt.artifact_type !== "instance-operational-record-receipt") return;
+  const { receipt_digest: expectedReceipt, ...receipt } = result.receipt;
+  const readback = result.readback;
+  if (!isRecord(readback) || !isRecord(readback.record) || !isRecord(readback.record.record) ||
+      !isRecord(request.expected_state) || !isRecord(request.policy_ref) || !isRecord(decision.operator_acceptance)) {
+    throw contractError("Internal registration readback is incomplete.");
+  }
+  const entry = readback.record.record, mutation = entry.last_mutation;
+  const policyRef = `git://workspace-governance/${request.policy_ref.revision}/contracts/instance-operational-records.yaml@${request.policy_ref.contract_digest}`;
+  if (canonicalDigest(receipt) !== expectedReceipt || canonicalDigest(readback.receipt) !== canonicalDigest(result.receipt) ||
+      canonicalDigest(readback.record) !== receipt.record_digest || receipt.idempotency_key !== request.idempotency_key ||
+      receipt.decision_digest !== expectedDecision || receipt.operator_ref !== decision.operator_acceptance.operator_ref ||
+      receipt.policy_ref !== policyRef || receipt.action !== `intake.${request.action}` ||
+      receipt.version !== Number(request.expected_state.record_version ?? 0) + 1 ||
+      receipt.previous.version !== request.expected_state.record_version || receipt.previous.digest !== request.expected_state.record_digest ||
+      readback.record.phase !== "intake" || readback.record.status !== request.requested_classification ||
+      readback.record.owner_route !== request.owner_route || entry.id !== authority.record_id || entry.version !== receipt.version ||
+      canonicalDigest(entry.source) !== canonicalDigest(request.source) || !isRecord(mutation) ||
+      mutation.request_digest !== expectedRequest || mutation.decision_digest !== expectedDecision || mutation.idempotency_key !== request.idempotency_key) {
+    throw contractError("Internal registration receipt does not prove this exact reviewed record.");
+  }
+  if (!isRecord(request.requested_record)) throw contractError("Internal registration omitted its reviewed metadata.");
+  for (const [key, expected] of Object.entries(request.requested_record)) {
+    if (key !== "kind" && canonicalDigest(readback.record[key]) !== canonicalDigest(expected)) {
+      throw contractError("Stored registration metadata differs from the reviewed record.");
+    }
   }
 }
 

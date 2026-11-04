@@ -106,9 +106,9 @@ the returned projection version. Live OOS Handoff prepares a canonical target
 packet. For a Delivery route, the same operator action then calls the OOS
 Delivery application boundary with a stable application identity and the
 refreshed source version. The Console does not claim application until OOS
-returns a target record and durable receipt. Prototype application remains
-outside this adapter. Neither preparation nor Delivery application marks the
-Proposal implemented.
+returns a target record and durable receipt. Prototype uses the separate reviewed
+target-application path and requires its owner receipt. Neither target's
+application marks the Proposal implemented.
 
 If the Proposal source projection becomes stale, offline, or changes version
 while a local draft or receipt exists, the UI must show stale, conflict, or
@@ -228,6 +228,11 @@ Allowed route targets:
 - Parked
 
 Repository is never a route target; repository is a gate, not a route target.
+Prototype's explicit Studio choice uses current active Studio Inventory as
+existing/resolved custody. No dedicated repository or repository request is
+needed for incubation. Existing/new project repository choices remain; only
+Delivery offers an editable no-repository choice. Studio visibility and separate
+Landing/maturity/graduation boundaries apply. Historical decisions are not rewritten.
 Repository is a gate selected during
 Disposition and reviewed during Handoff. A proposal waiting on repository keeps
 its selected Delivery or Prototype route while Handoff remains blocked.

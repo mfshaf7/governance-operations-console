@@ -49,6 +49,7 @@ import {
   repositorySummaryFromRecords,
 } from "../shared/repository-control-projection.ts";
 import { useWorkspaceContinuityRuntime } from "../../../../workspace-continuity/live-runtime/use-workspace-continuity-runtime.ts";
+import { useRepositoryRegistrationStatus } from "../../../../workspace-registry/live-runtime/use-repository-registration-status.ts";
 import { useRepositoryProviderObservations } from "../../live-runtime/use-repository-provider-observations.ts";
 import { projectRepositoryProviderObservations } from "../../live-runtime/repository-provider-observation.ts";
 import { projectRepositoryCurrentInventory } from "../../live-runtime/repository-inventory-live-projection.ts";
@@ -164,6 +165,10 @@ export function useRepositoryControlController({
       sourceRecords,
     ],
   );
+  const registrationNames = Object.values(custodyRuntime.provisioningResultsByRequestId).map(result => result.request.requested_custody.workspace_owner_ref)
+    .concat(Object.values(custodyRuntime.resultsByRepositoryId).map(result => result.request.requested_custody.workspace_owner_ref))
+    .filter((value): value is string => typeof value === "string" && value.startsWith("repo:")).map(value => value.slice(5));
+  const registrationStatus = useRepositoryRegistrationStatus(registrationNames, !primaryRecordIsolation.fixtureAllowed && consoleRuntime.projection?.mode === "live");
   const records = useMemo(
     () => {
       const provisionedRecords = projectRepositoryProvisioningResults(
@@ -175,7 +180,7 @@ export function useRepositoryControlController({
         custodyRuntime.resultsByRepositoryId,
       );
       const inventoryRecords = primaryRecordIsolation.fixtureAllowed ? custodyRecords
-        : projectRepositoryCurrentInventory(custodyRecords, continuityRuntime.projection);
+        : projectRepositoryCurrentInventory(custodyRecords, continuityRuntime.projection, registrationStatus.value);
       return primaryRecordIsolation.fixtureAllowed ? inventoryRecords : projectRepositoryProviderObservations(inventoryRecords, providerObservations.snapshots);
     },
     [
@@ -184,6 +189,7 @@ export function useRepositoryControlController({
       custodyRuntime.resultsByRepositoryId,
       recordProjections,
       continuityRuntime.projection,
+      registrationStatus.value,
       primaryRecordIsolation.fixtureAllowed,
     ],
   );
@@ -368,7 +374,8 @@ export function useRepositoryControlController({
   const currentOwnersAvailable = custodyRuntime.sourceStatus === "current" && continuityRuntime.mode === "live";
   const localAdmissionAvailable = primaryRecordIsolation.fixtureAllowed && runtimeCapabilities.canSubmit;
   function workspaceRegistrationFor(record: RepositoryWorkspaceRecord | null | undefined) {
-    const required = !primaryRecordIsolation.fixtureAllowed && record?.admissionState === "ready";
+    const native = registrationStatus.value?.mode === "current" ? registrationStatus.value.records.find(row => row.record_id === record?.custody?.workspaceOwnerRef) : undefined;
+    const required = !primaryRecordIsolation.fixtureAllowed && record?.admissionState === "ready" && native?.status !== "admitted";
     const custody = allCustodyResults.find((result) => repositoryIntakeCustody(record ?? null, result));
     const unavailableReason = !currentOwnersAvailable
       ? "Workspace registration needs current repository and workspace records. Refresh when the connection is available."
@@ -394,6 +401,7 @@ export function useRepositoryControlController({
               facts: [
                 { label: "Custody history", value: custodyRuntime.sourceStatus },
                 { label: "Current inventory", value: continuityRuntime.mode },
+                { label: "Internal registrations", value: registrationStatus.error ? "unavailable" : registrationStatus.value?.mode === "current" ? "current" : registrationStatus.value?.mode === "not-configured" ? "not configured" : "loading" },
                 { label: "Fixture fallback", value: "disabled" },
               ],
               id: "source",
@@ -740,15 +748,18 @@ export function useRepositoryControlController({
       close: () => setVerificationOpen(false),
       ownerRepo: selectedRepositoryCustodyResult?.request.requested_custody.workspace_owner_ref?.replace(/^repo:/, "") ?? "",
       custodyRequestId: selectedRepositoryCustodyResult?.request.request_id ?? "",
-      available: Boolean(currentOwnersAvailable && selectedRepositoryCustodyResult?.status === "succeeded" &&
-        continuityRuntime.projection?.inventory.some(record => record.kind === "repo" && record.posture === "active" &&
-          record.record_id === selectedRepositoryCustodyResult.request.requested_custody.workspace_owner_ref)),
+      available: Boolean(currentOwnersAvailable && selectedRepository?.admissionState === "admitted" && selectedRepositoryCustodyResult?.status === "succeeded" &&
+        (continuityRuntime.projection?.inventory.some(record => record.kind === "repo" && record.posture === "active" &&
+          record.record_id === selectedRepositoryCustodyResult.request.requested_custody.workspace_owner_ref) ||
+          registrationStatus.value?.mode === "current" && registrationStatus.value.records.some(record => record.phase === "inventory" && record.status === "active" &&
+            record.record_id === selectedRepositoryCustodyResult.request.requested_custody.workspace_owner_ref))),
     },
     intake: {
       ownerRepositories: currentOwnersAvailable ? (continuityRuntime.projection?.inventory ?? [])
         .filter(record => record.kind === "repo" && record.posture === "active").map(record => record.name).sort() : [],
-      classification: currentOwnersAvailable ? continuityRuntime.projection?.intake.find(record =>
-        record.kind === "repo" && record.record_id === intakeCustodyResult?.request.requested_custody.workspace_owner_ref)?.status : undefined,
+      classification: currentOwnersAvailable ? (registrationStatus.value?.mode === "current" ? registrationStatus.value.records.find(record =>
+        record.phase === "intake" && record.record_id === intakeCustodyResult?.request.requested_custody.workspace_owner_ref)?.status as "out-of-scope" | "proposed" | "admitted" | undefined : undefined)
+        ?? continuityRuntime.projection?.intake.find(record => record.kind === "repo" && record.record_id === intakeCustodyResult?.request.requested_custody.workspace_owner_ref)?.status : undefined,
       canPrepare: selectedRegistration.available,
       required: selectedRegistration.required,
       unavailableReason: selectedRegistration.unavailableReason,
@@ -801,7 +812,7 @@ export function useRepositoryControlController({
       close: () => setAdmissionRepositoryId(null),
       onOpenDeliveryCatalog: (record: RepositoryWorkspaceRecord) => {
         setAdmissionRepositoryId(null);
-        onOpenDeliveryCatalog?.(record.id);
+        onOpenDeliveryCatalog?.(consoleRuntime.projection?.mode === "live" ? `repo:${record.name}` : record.id);
       },
       onOpenHistory: openRepositoryHistory,
       onOpenLifecycle: (record: RepositoryWorkspaceRecord) =>

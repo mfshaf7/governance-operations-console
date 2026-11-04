@@ -1,6 +1,7 @@
 export { validationApproaches, graphRoles, deliveryTargets } from "../../console-integration/workspace-intake/workspace-intake-display-options.ts";
 import type { DirectIntakeDraft, DirectIntakeKind } from "../../console-integration/workspace-intake/workspace-intake-direct-candidate.ts";
 import type { WorkspaceInventoryLifecyclePreparation } from "../model/workspace-registry-types.ts";
+import { inventoryPreparationPosture } from "./workspace-registry-lifecycle-state.ts";
 
 // Presentation of the existing intake-policy contract; the owner still validates requests.
 export const componentTypes = [
@@ -23,7 +24,8 @@ export type IntakeOwnerSetup = Readonly<{
   notes: string; catalogRefs: readonly string[];
 }>;
 export function intakeOwnerSetup(preparation: WorkspaceInventoryLifecyclePreparation, repository: string): IntakeOwnerSetup {
-  if (preparation.target.kind !== "repo" || preparation.target.name !== repository || preparation.target.record_id !== `repo:${repository}` || preparation.expected_state.posture !== "active") {
+  if (preparation.authority_kind === "internal-instance-record") throw new Error("This is a source-only project registration. Shared validation responsibility requires an existing Workspace Governance repository record.");
+  if (preparation.target.kind !== "repo" || preparation.target.name !== repository || preparation.target.record_id !== `repo:${repository}` || inventoryPreparationPosture(preparation) !== "active") {
     throw new Error("The selected repository is no longer active. Choose a current repository and refresh its setup.");
   }
   const behavior = preparation.current_record.validation_behavior;

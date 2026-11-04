@@ -74,6 +74,7 @@ import type {
   PrototypeLandingRunResult,
 } from "../../../live-runtime/prototype-landing-live-types.ts";
 import type { PrototypeLandingCommandInput } from "../../../work-model/workflows/landing/prototype-landing-model.ts";
+import { prototypeLandingSourceReadout } from "../../../work-model/workflows/landing/prototype-landing-source-model.ts";
 
 export function PrototypeLandingModal({
   liveProjection,
@@ -159,6 +160,7 @@ export function PrototypeLandingModal({
   }
 
   const activeRecord = record;
+  const sourceReadout = prototypeLandingSourceReadout(record);
   const activeLandingDraft =
     landingDraft ?? prototypeLandingDraftFromRecord(record);
   const activeLandingDraftKey = prototypeLandingDraftKey(activeLandingDraft);
@@ -461,6 +463,7 @@ export function PrototypeLandingModal({
     field: Field,
     value: PrototypeLandingDraft[Field],
   ) {
+    if (field === "sourceHome") return;
     setLandingRunResult(null);
     setLandingRunError(null);
     setLandingDraft((currentDraft) => {
@@ -619,6 +622,7 @@ export function PrototypeLandingModal({
             landingDraftMutable={landingDraftMutable}
             landingPlan={landingPlan}
             onDraftChange={updateLandingDraft}
+            sourceReadout={sourceReadout}
           />
         ) : (
           <PrototypeLandingRunStepPanel

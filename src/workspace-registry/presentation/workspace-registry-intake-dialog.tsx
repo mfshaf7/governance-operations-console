@@ -61,7 +61,8 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
   useEffect(() => {
     if (error || runtime.error) errorRef.current?.focus();
   }, [error, runtime.error]);
-  const owners = snapshot.records.filter(record => record.kind === "repo" && record.posture === "active").map(record => record.name);
+  const legacySnapshot = snapshot.workflow_id === "workspace-registry-view" ? snapshot.legacy_snapshot : snapshot;
+  const owners = legacySnapshot.records.filter(record => record.kind === "repo" && record.posture === "active").map(record => record.name);
   const products = snapshot.records.filter(record => record.kind === "product" && record.posture === "active").map(record => record.name);
   const inInventory = snapshot.records.some(record => record.kind === target.kind && record.name === target.name);
   const busy = runtime.pending || building;

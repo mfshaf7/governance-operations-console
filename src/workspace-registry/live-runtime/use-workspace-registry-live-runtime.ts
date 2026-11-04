@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import {
   assertWorkspaceInventoryLifecyclePreparation,
@@ -19,6 +19,7 @@ import type {
   WorkspaceRegistryRecord,
   WorkspaceRegistrySnapshot,
   WorkspaceRegistryTarget,
+  InstanceRegistrySelection,
 } from "../model/workspace-registry-types.ts";
 
 export class WorkspaceRegistryClientError extends Error {
@@ -47,17 +48,19 @@ export function useWorkspaceRegistryLiveRuntime() {
   const [error, setError] = useState<WorkspaceRegistryClientError | null>(null);
   const [pending, setPending] = useState(false);
 
-  const load = useCallback(async () => {
+  const selection = useRef<Partial<InstanceRegistrySelection> & { after?: string | null }>({});
+  const load = useCallback(async (nextSelection: Partial<InstanceRegistrySelection> & { after?: string | null } = selection.current) => {
     try {
       return await run(async () => {
         const next = assertWorkspaceRegistrySnapshot(
-          await jsonRequest("/api/workspace-registry", {
+          await jsonRequest(`/api/workspace-registry?${new URLSearchParams({ scope: nextSelection.scope ?? "inventory", query: nextSelection.query ?? "", ...(nextSelection.after ? { after: nextSelection.after } : {}) })}`, {
             cache: "no-store",
             method: "GET",
           }),
         );
         setMode("live");
         setSnapshot(next);
+        selection.current = nextSelection;
         return next;
       });
     } catch (caught) {
@@ -101,10 +104,7 @@ export function useWorkspaceRegistryLiveRuntime() {
             candidate,
             request_id: requestId,
             reviewed_preparation: preparation,
-            reviewed_projection: {
-              authority_revision: snapshot.authority_revision,
-              projection_digest: snapshot.projection_digest,
-            },
+            reviewed_projection: reviewedProjection(snapshot, preparation),
           }),
           headers: { "Content-Type": "application/json" },
           method: "POST",
@@ -164,10 +164,7 @@ export function useWorkspaceRegistryLiveRuntime() {
               request_id: requestId,
               requested_value: requestedValue,
               reviewed_preparation: lifecyclePreparation,
-              reviewed_projection: {
-                authority_revision: snapshot.authority_revision,
-                projection_digest: snapshot.projection_digest,
-              },
+              reviewed_projection: reviewedProjection(snapshot, lifecyclePreparation),
             }),
             headers: { "Content-Type": "application/json" },
             method: "POST",
@@ -337,6 +334,13 @@ function assertRecoveredTarget(actual: WorkspaceRegistryTarget, expected?: Works
   if (expected && (actual.kind !== expected.kind || actual.name !== expected.name || actual.record_id !== expected.record_id)) {
     throw new WorkspaceRegistryClientError("Original request does not belong to this selected Inventory target.", "workspace_inventory_recovery_target_mismatch");
   }
+}
+
+function reviewedProjection(snapshot: WorkspaceRegistrySnapshot, preparation: WorkspaceInventoryPreparation | WorkspaceInventoryLifecyclePreparation) {
+  const source = snapshot.workflow_id === "workspace-registry-view" ? snapshot.legacy_snapshot : snapshot;
+  return preparation.authority_kind === "internal-instance-record"
+    ? { authority_revision: preparation.authority_revision, projection_digest: snapshot.workflow_id === "workspace-registry-view" ? snapshot.instance_page.projection_digest : snapshot.projection_digest }
+    : { authority_revision: source.authority_revision, projection_digest: source.projection_digest };
 }
 
 async function jsonRequest(path: string, init: RequestInit) {

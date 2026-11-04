@@ -136,7 +136,7 @@ test("Repository workspace routes the exact admitted record into Catalog reconci
   assert.match(files[0], /delivery\.catalog\.repository-reconciliation/);
   assert.match(files[1], /onOpenDeliveryCatalog/);
   assert.match(files[2], /Open Delivery Catalog/);
-  assert.match(files[3], /onOpenDeliveryCatalog\?\.\(record\.id\)/);
+  assert.match(files[3], /onOpenDeliveryCatalog\?\.\(consoleRuntime\.projection\?\.mode === "live" \? `repo:\$\{record\.name\}` : record\.id\)/);
   assert.match(files[4], /surfaceId === "catalog"/);
   assert.match(files[5], /value_key === ownerRepository\.valueKey/);
   assert.match(files[5], /setMutationDraft\(\{ mode: "add", valueId: null \}\)/);

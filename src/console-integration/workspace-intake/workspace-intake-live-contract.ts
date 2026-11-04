@@ -1,3 +1,4 @@
+import { assertInstancePreparationFields, assertInstanceResult } from "./workspace-intake-instance-contract.ts";
 import type {
   WorkspaceIntakeCandidate,
   WorkspaceIntakeCustodyPreparation,
@@ -95,15 +96,20 @@ export function assertWorkspaceIntakeRequestPage(value: unknown, targetName: str
     const requestId = assertWorkspaceIntakeRequestId(entry.request_id);
     const projected = assertCustodySourceCandidate(entry.candidate, kind, targetName, `${kind}:${targetName}`, direct);
     const sourcePrefix = `oos://repository-custody/requests/${encodeURIComponent(custodyRequestId ?? "")}/intake/`;
-    if (Object.keys(entry).sort().join(",") !== "candidate,classification,request_id,requested_at,revision,status,updated_at" ||
+    const internal = entry.authority_kind === "internal-instance-record";
+    const expectedKeys = "candidate,classification,request_id,requested_at,revision,status,updated_at".split(",");
+    if (internal) expectedKeys.push("authority_kind", "custody_request_id");
+    const nativeCustody = internal && !direct && entry.custody_request_id === custodyRequestId &&
+      /^oos:\/\/repository-custody\/requests\/[^/]+\/intake\/[0-9a-f]{64}$/.test(projected.source.ref);
+    if (Object.keys(entry).sort().join(",") !== expectedKeys.sort().join(",") || (internal && !nativeCustody) ||
         ids.has(requestId) || !dateTime(entry.requested_at) || !dateTime(entry.updated_at) ||
         !workflowStatuses.has(String(entry.status)) || !decisions.has(String(entry.classification)) ||
         !Number.isSafeInteger(entry.revision) || Number(entry.revision) < 1 ||
-        (!direct && (!projected.source.ref.startsWith(sourcePrefix) || !/^[0-9a-f]{64}$/.test(projected.source.ref.slice(sourcePrefix.length))))) {
+        (!direct && !nativeCustody && (!projected.source.ref.startsWith(sourcePrefix) || !/^[0-9a-f]{64}$/.test(projected.source.ref.slice(sourcePrefix.length))))) {
       throw invalid("Retained Intake request has invalid or cross-custody metadata.");
     }
     ids.add(requestId);
-    return { request_id: requestId, requested_at: String(entry.requested_at), updated_at: String(entry.updated_at),
+    return { ...(internal ? { authority_kind: "internal-instance-record" as const, custody_request_id: String(entry.custody_request_id) } : {}), request_id: requestId, requested_at: String(entry.requested_at), updated_at: String(entry.updated_at),
       revision: Number(entry.revision), classification: entry.classification as WorkspaceIntakeRequestPage["records"][number]["classification"],
       status: entry.status as WorkspaceIntakeResult["status"], candidate: projected };
   });
@@ -216,7 +222,9 @@ export function assertWorkspaceIntakePreparation(
 ): WorkspaceIntakePreparation {
   const preparation = record(value, "preparation");
   const target = record(preparation.target, "preparation target");
-  const expected = assertExpectedState(preparation.expected_state);
+  const internal = preparation.authority_kind === "internal-instance-record";
+  const native = internal ? assertInstancePreparationFields(preparation, invalid) : null;
+  const expected = native?.expected_state ?? assertExpectedState(preparation.expected_state);
   const authority = record(
     preparation.canonical_authority,
     "canonical authority",
@@ -235,13 +243,18 @@ export function assertWorkspaceIntakePreparation(
     typeof target.name !== "string" ||
     !targetNamePattern.test(target.name) ||
     target.record_id !== `${kind}:${target.name}` ||
-    authority.repo !== "workspace-governance" ||
-    authority.path !== "contracts/intake-register.yaml" ||
-    authority.branch !== "main" ||
+    (internal ? kind !== "repo" || !sourceCandidate || native?.canonical_authority.record_id !== target.record_id :
+      (preparation.authority_kind !== undefined && preparation.authority_kind !== "legacy-git") ||
+      authority.repo !== "workspace-governance" || authority.path !== "contracts/intake-register.yaml" || authority.branch !== "main") ||
     preparation.canonical_mutation !== false
   ) {
     throw invalid("Workspace Intake preparation is not canonical read-only authority.");
   }
+  if (native && sourceCandidate) return {
+    authority_kind: "internal-instance-record", authority_revision: preparation.authority_revision,
+    ...native, canonical_mutation: false, schema_version: 1, source_candidate: sourceCandidate,
+    target: { kind, name: target.name as string, record_id: target.record_id as string }, workflow_id: "workspace-intake",
+  };
   return {
     authority_revision: preparation.authority_revision,
     canonical_authority: {
@@ -250,7 +263,7 @@ export function assertWorkspaceIntakePreparation(
       repo: "workspace-governance",
     },
     canonical_mutation: false,
-    expected_state: expected,
+    expected_state: expected as WorkspaceIntakeExpectedState,
     schema_version: 1,
     ...(sourceCandidate ? { source_candidate: sourceCandidate } : {}),
     target: {
@@ -312,6 +325,9 @@ export function assertWorkspaceIntakeResult(
     }
     return event as WorkspaceIntakeResult["history"][number];
   });
+  const internal = result.authority_kind === "internal-instance-record";
+  if (result.authority_kind !== undefined && !internal) throw invalid("Unknown registration authority.");
+  const native = internal ? assertInstanceResult(result, invalid) : null;
   const review = result.review === null ? null : record(result.review, "review");
   if (
     review &&
@@ -334,7 +350,7 @@ export function assertWorkspaceIntakeResult(
   }
   const receipt = result.receipt === null ? null : record(result.receipt, "receipt");
   if (
-    receipt &&
+    receipt && !internal &&
     (receipt.schema_version !== 2 ||
       receipt.artifact_type !== "workspace-intake-receipt" ||
       !text(receipt.receipt_id) ||
@@ -352,8 +368,7 @@ export function assertWorkspaceIntakeResult(
   if (
     result.status === "succeeded" &&
     (!receipt ||
-      receipt.phase !== "merged-authority" ||
-      receipt.outcome !== "succeeded" ||
+      (!internal && (receipt.phase !== "merged-authority" || receipt.outcome !== "succeeded")) ||
       !digestPattern.test(String(receipt.receipt_digest)) ||
       result.canonical_mutation !== true)
   ) {
@@ -411,6 +426,7 @@ export function assertWorkspaceIntakeResult(
     }
   }
   return {
+    ...(native ? { authority_kind: native.authority_kind, canonical_authority: native.canonical_authority, cancel_allowed: native.cancel_allowed } : {}),
     ...(findings === undefined ? {} : { readiness_findings: findings }),
     canonical_mutation: result.canonical_mutation,
     failure: failure as WorkspaceIntakeResult["failure"],

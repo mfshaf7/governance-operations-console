@@ -20,6 +20,9 @@ import { useDeliveryChangeLiveRuntime } from "../../../live-runtime/use-delivery
 import type { DeliveryChangeResult } from "../../../live-runtime/delivery-change-live-types.ts";
 
 import { repositoryOwnerRepoCatalogOptions } from "@/domain-workspaces/operation-integrations/repository-owner-repo-catalog-projection";
+import { useRepositoryCatalogChoices } from "../../../../../workspace-registry/live-runtime/use-repository-catalog-choices.ts";
+import { useRepositoryRegistrationStatus } from "../../../../../workspace-registry/live-runtime/use-repository-registration-status.ts";
+import { repositoryCurrentCatalogOption } from "../../../../../workspace-registry/repository-catalog-choices.ts";
 import {
   canDraftCatalogMutation,
   canDraftCatalogValueMutation,
@@ -62,11 +65,11 @@ export function useCatalogControlState(
       : liveRuntime.projectionStatus === "current" && liveRuntime.readModel
         ? liveRuntime.readModel
         : catalogUnavailableReadModel();
-  const canSubmit =
+  const canSubmit = !liveRuntime.loading && (
     liveRuntime.mode === "disconnected-preview"
       ? localRuntimeCapabilities.canSubmit
       : liveRuntime.projectionStatus === "current" &&
-        liveRuntime.readModel !== null;
+        liveRuntime.readModel !== null);
   const sourceKey = `${liveRuntime.mode}:${sourceCatalog.source_revision ?? sourceCatalog.generated_at}`;
   const [catalogValues, setCatalogValues] = useState(sourceCatalog.values);
   const catalogs = useMemo(
@@ -135,19 +138,18 @@ export function useCatalogControlState(
     () => planningFacetCatalogItems(sourceCatalog.items, activeCatalog),
     [activeCatalog, sourceCatalog.items],
   );
-  const ownerRepoOptions = useMemo(
-    () => repositoryOwnerRepoCatalogOptions(),
-    [],
-  );
   const selectedValue =
     visibleValues.find((value) => value.catalog_value_id === selectedValueId) ??
     visibleValues[0] ??
     null;
-  const selectedOwnerRepository = selectedValue
-    ? (ownerRepoOptions.find(
-        (option) => option.valueKey === selectedValue.value_key,
-      ) ?? null)
-    : null;
+  const repositories = useRepositoryCatalogChoices(liveRuntime.mode === "live" && (isOwnerRepoCatalog(activeCatalog) || Boolean(repositoryFocusId)),
+    repositoryFocusId?.startsWith("repo:") ? repositoryFocusId.slice(5) : "");
+  const selectedRegistration = useRepositoryRegistrationStatus(selectedValue ? [selectedValue.value_key] : [],
+    liveRuntime.mode === "live" && isOwnerRepoCatalog(activeCatalog) && Boolean(selectedValue));
+  const ownerRepoOptions = liveRuntime.loading ? [] : liveRuntime.mode === "disconnected-preview" ? repositoryOwnerRepoCatalogOptions() : repositories.result?.options ?? [];
+  const selectedOwnerRepository = liveRuntime.mode === "disconnected-preview"
+    ? ownerRepoOptions.find(option => option.valueKey === selectedValue?.value_key) ?? null
+    : repositoryCurrentCatalogOption(repositories.result?.snapshot ?? null, selectedValue?.value_key, selectedRegistration.value);
   const selectedOwnerRepositoryReadiness = catalogRepositoryReadiness(
     liveRuntime.projection?.values.find(
       (value) =>
@@ -227,10 +229,11 @@ export function useCatalogControlState(
   );
   const openAddDraft = useCallback(
     () => {
+      repositories.refresh();
       setMutationError(null);
       setMutationDraft({ mode: "add", valueId: null });
     },
-    [],
+    [repositories.refresh],
   );
   const openEditDraft = useCallback(
     (value: DeliveryCatalogValue) => {
@@ -491,6 +494,7 @@ export function useCatalogControlState(
     openRetireDraft,
     ownerRepoOptions,
     preferredOwnerRepoId: repositoryFocusId,
+    repositorySearch: liveRuntime.mode === "disconnected-preview" ? undefined : repositories,
     repositoryLink: {
       blockedReason: repositoryLinkBlockedReason,
       close: () => setRepositoryLinkOpen(false),

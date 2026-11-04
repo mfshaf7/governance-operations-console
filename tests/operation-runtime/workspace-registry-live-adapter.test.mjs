@@ -33,6 +33,9 @@ test("case:workspace-registry reads canonical records and submits a digest-bound
   let submitted;
   const fetchImpl = async (url, init) => {
     calls.push({ init, url: String(url) });
+    if (new URL(url).pathname === "/v1/workspace-inventory/instance-records") return canonicalSourceResponse({ schema_version: 1, mode: "not-configured", projected_at: "2026-11-04T01:00:00Z" }, {
+      recordRef: `oos://workspace-inventory/instance-records?${new URL(url).searchParams}`, sourceOwner: "operator-orchestration-service",
+    });
     if (new URL(url).searchParams.has("target_kind")) return journalResponse(url, init);
     if (String(url).endsWith("/registry")) {
       assertCanonicalSourceRequest(init);
@@ -109,6 +112,9 @@ test("case:workspace-registry fails closed on malformed registry and incomplete 
       config,
       fetchImpl: async (_url, init) => {
         assertCanonicalSourceRequest(init);
+        if (new URL(_url).pathname === "/v1/workspace-inventory/instance-records") return canonicalSourceResponse({ schema_version: 1, mode: "not-configured", projected_at: "2026-11-04T01:00:00Z" }, {
+          recordRef: `oos://workspace-inventory/instance-records?${new URL(_url).searchParams}`, sourceOwner: "operator-orchestration-service",
+        });
         return registryResponse({ records: [] });
       },
     }),

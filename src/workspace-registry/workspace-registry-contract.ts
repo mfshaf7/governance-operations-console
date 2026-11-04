@@ -5,6 +5,9 @@ import type {
   WorkspaceInventoryLifecycleExpectedState,
   WorkspaceInventoryLifecyclePreparation,
   WorkspaceInventoryLifecycleRequest,
+  WorkspaceInventoryLifecycleLegacyRequest,
+  WorkspaceInventoryLifecycleLegacyReadback,
+  WorkspaceInventoryLifecycleLegacyReceipt,
   WorkspaceInventoryLifecycleResult,
   WorkspaceInventoryLifecycleSubmissionIntent,
   WorkspaceInventoryPreparation,
@@ -17,6 +20,13 @@ import type {
   WorkspaceRegistrySnapshot,
   WorkspaceRegistryTarget,
 } from "./model/workspace-registry-types.ts";
+import { inventoryPreparationPosture, inventoryRestoreAvailable } from "./model/workspace-registry-lifecycle-state.ts";
+import {
+  assertComposedRegistrySnapshot, assertInstanceRegistryPage, assertInstancePromotionPreparation,
+  assertInstanceLifecyclePreparation, assertInstanceInventoryResult, instanceRegistryItemAuthority,
+} from "./workspace-registry-instance-contract.ts";
+
+const registryParsers = { record: assertWorkspaceRegistryRecord, candidate: assertWorkspaceRegistryCandidate };
 
 const commitPattern = /^[0-9a-f]{40}$/;
 const digestPattern = /^sha256:[0-9a-f]{64}$/;
@@ -106,6 +116,13 @@ export function assertWorkspaceRegistrySnapshot(
   value: unknown,
 ): WorkspaceRegistrySnapshot {
   const snapshot = record(value, "snapshot");
+  if (snapshot.workflow_id === "workspace-registry-view") {
+    const source = record(snapshot.legacy_snapshot, "retained Git Registry");
+    if (source.workflow_id !== "workspace-inventory-registry") throw invalid("Registry view requires its retained Git source projection.");
+    const legacy = assertWorkspaceRegistrySnapshot(source);
+    if (legacy.workflow_id !== "workspace-inventory-registry") throw invalid("Nested Registry views are invalid.");
+    return assertComposedRegistrySnapshot(snapshot, legacy, assertInstanceRegistryPage(snapshot.instance_page, registryParsers, invalid), invalid);
+  }
   const authority = record(snapshot.canonical_authority, "canonical authority");
   const paths = record(authority.inventory_paths, "inventory paths");
   if (
@@ -129,6 +146,7 @@ export function assertWorkspaceRegistrySnapshot(
   }
 
   const records = snapshot.records.map(assertWorkspaceRegistryRecord);
+  if (records.some(row => row.authority_kind !== undefined)) throw invalid("Git Registry cannot claim internal-record authority.");
   const recordIds = new Set(records.map((entry) => entry.id));
   if (recordIds.size !== records.length) {
     throw invalid("Workspace Registry contains duplicate active identities.");
@@ -136,6 +154,7 @@ export function assertWorkspaceRegistrySnapshot(
   const eligiblePromotions = snapshot.eligible_promotions.map(
     assertWorkspaceRegistryCandidate,
   );
+  if (eligiblePromotions.some(row => row.authority_kind !== undefined)) throw invalid("Git Registry cannot contain internal-record candidates.");
   if (
     eligiblePromotions.some((candidate) => recordIds.has(candidate.target.record_id))
   ) {
@@ -187,6 +206,7 @@ export function assertWorkspaceRegistryCandidate(
     throw invalid("Workspace Registry promotion candidate is incomplete.");
   }
   return {
+    ...instanceRegistryItemAuthority(candidate, target.record_id, invalid),
     active_record: {
       id: active.id as string,
       kind: active.kind as WorkspaceRegistryKind,
@@ -208,6 +228,7 @@ export function assertWorkspaceInventoryPreparation(
   value: unknown,
 ): WorkspaceInventoryPreparation {
   const preparation = record(value, "promotion preparation");
+  if (preparation.authority_kind !== undefined) return assertInstancePromotionPreparation(preparation, registryParsers, invalid);
   const authority = record(preparation.canonical_authority, "canonical authority");
   const expected = assertExpectedState(preparation.expected_state);
   const target = assertWorkspaceRegistryTarget(preparation.target);
@@ -300,6 +321,7 @@ export function assertWorkspaceInventoryResult(
   expectedRequestId?: string,
 ): WorkspaceInventoryResult {
   const result = record(value, "promotion result");
+  if (result.authority_kind !== undefined) return assertInstanceInventoryResult(result, "promotion", expectedRequestId, invalid);
   if (
     result.schema_version !== 1 ||
     result.workflow_id !== "workspace-inventory-promotion" ||
@@ -400,6 +422,7 @@ export function assertWorkspaceInventoryLifecyclePreparation(
   value: unknown,
 ): WorkspaceInventoryLifecyclePreparation {
   const preparation = record(value, "lifecycle preparation");
+  if (preparation.authority_kind !== undefined) return assertInstanceLifecyclePreparation(preparation, invalid);
   const target = assertWorkspaceRegistryTarget(preparation.target);
   const expected = assertLifecycleExpectedState(preparation.expected_state);
   const authority = record(preparation.canonical_authority, "canonical authority");
@@ -463,7 +486,7 @@ export function assertWorkspaceInventoryLifecycleSubmissionIntent(
     !commit(reviewed.authority_revision) ||
     !digest(reviewed.projection_digest) ||
     reviewed.authority_revision !== preparation.authority_revision ||
-    !lifecycleActionAllowed(action, preparation.expected_state.posture)
+    !lifecycleActionAllowed(action, inventoryPreparationPosture(preparation))
   ) {
     throw invalid("Workspace Inventory lifecycle intent is incomplete or unavailable.");
   }
@@ -471,12 +494,12 @@ export function assertWorkspaceInventoryLifecycleSubmissionIntent(
     action === "update"
       ? !isRecord(requestedValue) ||
         "record" in requestedValue ||
-        requestedValue.posture !== preparation.expected_state.posture
+        requestedValue.posture !== inventoryPreparationPosture(preparation)
       : requestedValue !== null
   ) {
     throw invalid("Workspace Inventory lifecycle requested value does not match the action.");
   }
-  if (action === "restore" && !preparation.latest_event_ref) {
+  if (action === "restore" && !inventoryRestoreAvailable(preparation)) {
     throw invalid("Workspace Inventory restoration requires the latest lifecycle event.");
   }
   return {
@@ -511,6 +534,7 @@ export function assertWorkspaceInventoryLifecycleResult(
   expectedRequestId?: string,
 ): WorkspaceInventoryLifecycleResult {
   const result = record(value, "lifecycle result");
+  if (result.authority_kind !== undefined) return assertInstanceInventoryResult(result, "lifecycle", expectedRequestId, invalid);
   if (
     result.schema_version !== 1 ||
     result.workflow_id !== "workspace-inventory-lifecycle" ||
@@ -636,7 +660,7 @@ export function sameWorkspaceInventoryPreparation(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function assertWorkspaceRegistryRecord(value: unknown): WorkspaceRegistryRecord {
+export function assertWorkspaceRegistryRecord(value: unknown): WorkspaceRegistryRecord {
   const item = record(value, "active record");
   const kind = item.kind as WorkspaceRegistryKind;
   const lineage = record(item.lineage, "record lineage");
@@ -669,6 +693,7 @@ function assertWorkspaceRegistryRecord(value: unknown): WorkspaceRegistryRecord 
     throw invalid("Workspace Registry active record is incomplete.");
   }
   return {
+    ...instanceRegistryItemAuthority(item, item.id as string, invalid),
     id: item.id as string,
     kind,
     last_mutation: {
@@ -719,7 +744,7 @@ function assertLifecycleExpectedState(
 function assertLifecycleRequest(
   value: unknown,
   expectedRequestId: string,
-): WorkspaceInventoryLifecycleRequest {
+): WorkspaceInventoryLifecycleLegacyRequest {
   const request = record(value, "lifecycle request");
   const action = request.action as WorkspaceInventoryLifecycleAction;
   const target = assertWorkspaceRegistryTarget(request.target);
@@ -867,7 +892,7 @@ function assertLifecycleReview(
 function assertLifecycleReadback(
   value: unknown,
   request: WorkspaceInventoryLifecycleRequest,
-): WorkspaceInventoryLifecycleResult["readback"] {
+): WorkspaceInventoryLifecycleLegacyReadback | null {
   if (value === null) return null;
   const readback = record(value, "lifecycle readback");
   const target = assertWorkspaceRegistryTarget(readback.target);
@@ -910,7 +935,7 @@ function assertLifecycleReadback(
 function assertLifecycleReceipt(
   value: unknown,
   request: WorkspaceInventoryLifecycleRequest,
-): WorkspaceInventoryLifecycleResult["receipt"] {
+): WorkspaceInventoryLifecycleLegacyReceipt | null {
   if (value === null) return null;
   const receipt = record(value, "lifecycle receipt");
   const target = assertWorkspaceRegistryTarget(receipt.target);
