@@ -32,7 +32,7 @@ const columns: Array<TerasRecordTableColumn<DevIntegrationRegisterRow>> = [
     ),
   },
   {
-    header: "Owner",
+    header: "Implementation repository",
     intent: "secondary",
     key: "owner",
     render: (profile) => (

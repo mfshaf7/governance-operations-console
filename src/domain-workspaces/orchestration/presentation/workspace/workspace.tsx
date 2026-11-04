@@ -126,7 +126,7 @@ export function OrchestrationWorkspace({
     </TerasModalShell>
     {runDialog ? <OrchestrationRunStartDialog mode={runDialog} runs={readModel.runs} onClose={() => setRunDialog(null)} onViewRuns={async (runId) => {
       const current = await refreshOwnerTruth();
-      if (current.mode !== "live" || current.status !== "current") throw new Error("The original run remains retained; its current owner list is unavailable.");
+      if (current.mode !== "live" || current.status !== "current") throw new Error("The original run remains retained; its current service list is unavailable.");
       if (runId) setFocusedRecord({ surfaceId: "runs", recordId: runId });
       setActiveSurfaceId("runs"); setRunDialog(null);
     }} /> : null}</>

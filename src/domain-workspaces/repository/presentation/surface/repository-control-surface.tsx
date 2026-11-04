@@ -36,6 +36,8 @@ export function RepositoryControlSurface({
   const overview =
     <RepositoryControlOverviewPanel
       canProvisionRepository={controller.overview.canProvisionRepository}
+      canLinkRepository={controller.standaloneLink.enabled}
+      onOpenExistingRepositoryLink={controller.standaloneLink.show}
       onOpenRepositoryRequestDraft={controller.overview.onOpenRepositoryRequestDraft}
       requestSubmittedAt={controller.overview.requestSubmittedAt}
       summary={controller.overview.summary} workspaceStatus={controller.overview.workspaceStatus} />;
@@ -50,8 +52,8 @@ export function RepositoryControlSurface({
         overview={overview}
         register={
           controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading repositories…" /> : <TerasEmptyState fill>
-            No canonical Repository records are available to select. Provision
-            a repository above when required; live mode never substitutes fixtures.
+            No repository records are available to select. Create a repository
+            or link an existing one using the actions above.
           </TerasEmptyState>
         }
         selected={
@@ -78,7 +80,7 @@ export function RepositoryControlSurface({
               "data-repository-register": "standard",
             }}
             density="compact-control"
-            description="Repository requests, ownership, admission status and retained history."
+            description="Repository requests, workspace association, admission status and retained history."
             filterBar={
               <TerasFilterBar
                 data-repository-filter-bar="true"
@@ -93,7 +95,7 @@ export function RepositoryControlSurface({
                 search={{
                   ariaLabel: "Search repositories",
                   onValueChange: controller.filters.onSearchChange,
-                  placeholder: "Search repository, owner, route, class...",
+                  placeholder: "Search repository, workspace association, route, class...",
                   value: controller.filters.search,
                 }}
               />
@@ -121,7 +123,7 @@ export function RepositoryControlSurface({
           <TerasSelectedPanel
             action={{
               description: controller.intake.required
-                ? controller.intake.unavailableReason ?? "Review whether this repository should join the managed workspace, including its ownership and checks."
+                ? controller.intake.unavailableReason ?? "Review whether this repository should join the managed workspace, including its responsibilities and checks."
                 : selectedRepository.nextAction,
               kicker: selectedRepository.blockers.length ? "Needs attention" : "Available actions",
               node: (<TerasActionRow>

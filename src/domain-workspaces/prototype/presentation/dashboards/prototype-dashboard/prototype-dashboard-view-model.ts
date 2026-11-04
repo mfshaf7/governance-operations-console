@@ -32,7 +32,7 @@ export type PrototypeDashboardStatusArea = {
 
 export function prototypeDashboardFacts(record: PrototypeRecord) {
   return [
-    { label: "Owner", value: record.owner },
+    { label: "Responsible for prototype", value: record.owner },
     {
       label: "Landing",
       value: prototypeLandingStatus(record).label,
@@ -74,7 +74,7 @@ export function prototypeDashboardCards(record: PrototypeRecord, previewOwnerMod
 
 export function prototypeDashboardPostureFacts(record: PrototypeRecord) {
   return [
-    { label: "Owner", value: record.owner },
+    { label: "Responsible for prototype", value: record.owner },
     {
       label: "Visibility",
       value: prototypeVisibilityLabel(record.visibilityTier),
@@ -96,7 +96,7 @@ export function prototypeDashboardMovementFacts(record: PrototypeRecord) {
     return [
       { label: "Lifecycle", value: prototypeLifecycleStatus(record).label },
       { label: "Current action", value: record.currentMove.actionLabel },
-      { label: "Evidence", value: "Inspect Closure history for the owner handoff and source custody receipts." },
+      { label: "Evidence", value: "Inspect Closure history for the source handoff and source custody receipts." },
     ];
   }
   return [
@@ -117,7 +117,7 @@ export function prototypeDashboardMovementFacts(record: PrototypeRecord) {
       value: record.movementRequest.targetLane,
     },
     {
-      label: "Target Owner",
+      label: "Target workspace",
       value: record.movementRequest.targetOwner,
     },
     {
@@ -167,7 +167,7 @@ export function prototypeDashboardAreas(
     },
     {
       badge: prototypeMovementStatus(record).label,
-      detail: prototypeIsTerminal(record) ? "Retained handoff history; this prototype has no pending incubation movement." : record.lifecycle === "graduating" ? "Delivery handoff and source graduation retain their own owner evidence." : "Movement target, reason, and current gate snapshot.",
+      detail: prototypeIsTerminal(record) ? "Retained handoff history; this prototype has no pending incubation movement." : record.lifecycle === "graduating" ? "Delivery handoff and source graduation retain their own source evidence." : "Movement target, reason, and current gate snapshot.",
       id: "movement",
       kicker: "Movement",
       title: prototypeIsTerminal(record) ? "Handoff History" : record.lifecycle === "graduating" ? "Source Graduation" : "Movement Request",

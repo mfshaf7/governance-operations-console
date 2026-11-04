@@ -18,9 +18,9 @@ export function connectionOperationMetadata(runtime: {
       { label: "Model selection", value: preset.catalogue_supported ? "Discover models, then explicitly verify a selection" : "Enter an exact model ID manually, then explicitly verify it" }] : []),
     { label: "Next", value: "Close this dialog to register the connection backend, verify a model and review routing." },
     ...(!runtime.fresh ? [{ label: "Current state", value: "Unavailable or stale; refresh before changing connections", tone: "warn" as const }] : []),
-    ...(runtime.error ? [{ label: "Owner response", value: runtime.error, tone: "warn" as const }] : []),
+    ...(runtime.error ? [{ label: "Service response", value: runtime.error, tone: "warn" as const }] : []),
     ...(runtime.originalId ? [{ label: "Original operation", value: runtime.originalId },
-      { label: "Operation result", value: runtime.receipt ? "Owner confirmed · revision " + runtime.receipt.revision : runtime.operation?.state ?? "Unconfirmed" }] : []),
+      { label: "Operation result", value: runtime.receipt ? "Source confirmed · revision " + runtime.receipt.revision : runtime.operation?.state ?? "Unconfirmed" }] : []),
     ...(runtime.receipt ? [{ label: "Receipt", value: runtime.receipt.receipt_digest }] : []),
   ];
 }

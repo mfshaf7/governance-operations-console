@@ -3,7 +3,7 @@
 ## Purpose
 
 This is the primary Console instruction surface for linking one existing
-provider repository to an existing workspace owner record. The Console owns
+provider repository to a declared workspace repository reference. The Console owns
 operator review and strict projection. OOS owns orchestration and receipts,
 WGCF owns readiness, and Platform Engineering owns provider credentials and
 provider runtime composition.
@@ -13,13 +13,15 @@ the repository into other workspace systems.
 
 ## Preconditions
 
-The action is available only when the Repository record supplies:
+The action requires verified GitHub details, a workspace association and
+explicit operator approval. Provider details come from the selected record or
+the existing server-side lookup:
 
 - provider `github` and host `github.com`
 - the positive decimal GitHub repository ID
 - canonical owner and repository name
 - an unrecorded workspace custody target
-- the workspace owner reference to link
+- the Workspace repository reference to link (`workspace_owner_ref` in the API)
 - an explicit operator approval note
 
 Repository names and URLs are display context. The immutable provider
@@ -56,9 +58,14 @@ identities, and polls only while visible. Reloading the browser does not erase
 retained successful custody or provisioning records. Missing or malformed
 owner truth leaves the source offline without fixture fallback.
 
-1. Select a Repository record with immutable provider identity and choose
-   `Link Existing Repository`.
-2. Review the custody kind and workspace owner reference, then record the
+1. In Repository Control's **Repositories** view, choose **Link existing
+   repository** under **Add a repository**. This also works with an empty
+   register and does not need a Proposal request or repository-creation access.
+   Enter the GitHub root URL and choose **Check repository**. The existing
+   configured GitHub connection supplies the immutable ID, canonical account,
+   name and visibility. A selected unlinked record can also use its existing
+   **Link Existing Repository** action.
+2. Review Repository use and Workspace repository, then record the
    approval note.
 3. The Console server creates one canonical, digest-bound `link-existing`
    request and submits it to OOS.
@@ -72,6 +79,27 @@ owner truth leaves the source offline without fixture fallback.
 7. Success reports custody as linked. Workspace Intake, active inventory,
    Delivery Catalog, product admission, and provisioning remain separate
    actions named by the receipt.
+
+The standalone form uses the same lookup/approval form as Proposal attachment,
+without Proposal fulfilment fields or decisions. The workspace reference is
+filled from the GitHub name (lowercase for a new standalone link); change it
+only to associate a different workspace record. Archived targets stay blocked
+by the existing link/readback contract. A known successful creation or link
+offers **Open repository**, not another linking submission; current inventory
+and lifecycle remain visible in that record's normal review.
+
+Pending reads/submission lock the form and close controls. Unsent edits use the
+shared draft-close guard. A retry keeps the request identity and timestamp;
+changed intent gets a new identity. Completion shows the original receipt and
+offers **Open repository**. Loading/history outages do not manufacture a local
+link or a registration decision.
+
+Lookup and approval are independent capabilities. A configured metadata reader
+allows opening the form and checking GitHub details even when link approval is
+not configured. The form explains that condition and keeps submission disabled;
+it never substitutes provisioning authority or treats lookup success as a link.
+Both custody credential-binding reference variables above must be supplied by
+the approved Platform composition before real linking is operational.
 
 ## Failure Behavior
 

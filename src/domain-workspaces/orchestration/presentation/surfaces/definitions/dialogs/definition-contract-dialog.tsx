@@ -54,7 +54,7 @@ export function DefinitionContractDialog({
       ) : null}
       {inspector === "failure-controls" ? (
         <><FailureAndControlsDetail record={record} />
-        {record.contractDetails ? <TerasTechnicalDetails summary="Exact owner contract" items={record.contractDetails} /> : null}</>
+        {record.contractDetails ? <TerasTechnicalDetails summary="Execution component contract" items={record.contractDetails} /> : null}</>
       ) : null}
       {inspector === "evidence-security" ? (
         <EvidenceAndSecurityDetail record={record} />
@@ -73,7 +73,7 @@ function ExecutionNodeDetail({ node }: { node: OrchestrationDefinitionNode }) {
             label: "Type",
             value: orchestrationDefinitionNodeTypeLabel(node.type),
           },
-          { label: "Owner", value: node.owner },
+          { label: "Responsible component", value: node.owner },
           { label: "Adapter", value: node.adapter },
           { label: "Timeout", value: node.timeout },
           { label: "Optional", value: node.optional ? "yes" : "no" },
@@ -129,7 +129,7 @@ function AdmissionCheckDetail({
             tone: check.tone,
             value: orchestrationAdmissionStateLabel(check.state),
           },
-          { label: "Owner", value: check.owner },
+          { label: "Responsible component", value: check.owner },
         ]}
       />
       <TerasReadoutField
@@ -257,11 +257,11 @@ function contractDialogDescription({
   node: OrchestrationDefinitionNode | null;
 }) {
   if (node) {
-    return "Execution ownership, inputs, outputs, controls, and evidence references for the selected node.";
+    return "Execution responsibility, inputs, outputs, controls, and evidence references for the selected node.";
   }
 
   if (admissionCheck) {
-    return "The current admission finding, owner, and available evidence references.";
+    return "The current admission finding, responsible component, and available evidence references.";
   }
 
   switch (inspector) {

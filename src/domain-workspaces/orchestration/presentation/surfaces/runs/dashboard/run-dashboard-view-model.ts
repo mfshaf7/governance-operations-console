@@ -62,7 +62,7 @@ export function orchestrationRunConditionProjection(
         record,
         [
           {
-            label: "Scheduling Owner",
+            label: "Scheduling service",
             value: "Operator Orchestration Service",
           },
           {
@@ -77,7 +77,7 @@ export function orchestrationRunConditionProjection(
         "The current node is executing against the immutable source request.",
         record,
         [
-          { label: "Node Owner", value: currentNode?.owner ?? "Not projected" },
+          { label: "Execution component", value: currentNode?.owner ?? "Not projected" },
           { label: "Attempt", value: String(currentNode?.attempt ?? 0) },
           {
             label: "Started",
@@ -94,7 +94,7 @@ export function orchestrationRunConditionProjection(
         record,
         [
           { label: "Wait Kind", value: record.wait?.kind ?? "Not projected" },
-          { label: "Owner", value: record.wait?.owner ?? "Not projected" },
+          { label: "Waiting on", value: record.wait?.owner ?? "Not projected" },
           {
             label: "Expected Reference",
             value: record.wait?.expectedRef ?? "Not projected",
@@ -113,7 +113,7 @@ export function orchestrationRunConditionProjection(
         record.blocker?.detail ?? "The run is blocked.",
         record,
         [
-          { label: "Owner", value: record.blocker?.owner ?? "Not projected" },
+          { label: "Resolution responsibility", value: record.blocker?.owner ?? "Not projected" },
           {
             label: "Remediation",
             value: record.blocker?.remediation ?? "Correct at source",
@@ -132,7 +132,7 @@ export function orchestrationRunConditionProjection(
         record.failure?.detail ?? "The run failed.",
         record,
         [
-          { label: "Owner", value: record.failure?.owner ?? "Not projected" },
+          { label: "Responsible component", value: record.failure?.owner ?? "Not projected" },
           {
             label: "Retry",
             value: record.retry.available
@@ -148,7 +148,7 @@ export function orchestrationRunConditionProjection(
     case "completed":
       return condition(
         record.receipt?.verified ? "Verified result" : "Completed · receipt unavailable",
-        record.receipt?.verified ? "The recorded receipt confirms this run's result." : "The owner reports completion, but this projection has no verified final receipt.",
+        record.receipt?.verified ? "The recorded receipt confirms this run's result." : "The service reports completion, but this projection has no verified final receipt.",
         record,
         [
           {

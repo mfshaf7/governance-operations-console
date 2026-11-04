@@ -274,7 +274,7 @@ export function assertProductReleaseCapability(
       !productExecutionAdapterIsValid(product.runtimeLifecycle.adapter))
   ) {
     throw new Error(
-      `${product.productId} runtime lifecycle requires a capability, workflow owner, and coherent adapter.`,
+      `${product.productId} runtime lifecycle requires a capability, workflow service, and coherent adapter.`,
     );
   }
 

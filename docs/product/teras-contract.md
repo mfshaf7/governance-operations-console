@@ -568,6 +568,11 @@ as structured `items` arrays, not JSX fact children. Domain JSX should receive
 those arrays from a typed view-model/helper function rather than constructing
 `items={[...]}` or raw `.map(...)` metadata rows in the render path.
 
+Metadata items may supply optional trailing `actions`. Teras keeps the label,
+value and detail in the left column and aligns the action at the far right.
+Rows without actions retain their existing layout. An inspection action uses
+an action-only label; the result remains a separate value or status pill.
+
 `TerasTechnicalDetails` uses a native disclosure with existing workspace
 metadata cards and a bounded scrolling body. It preserves keyboard-native
 expansion and exact reference wrapping. Current health, warnings and required

@@ -51,7 +51,7 @@ export function createDefinitionAdvisorTurn({
           } require recoverable coordination beyond one bounded command.`
         : suggestedClassification === "conditional"
           ? "The operation can remain synchronous while the recorded reevaluation condition stays false."
-          : "The operation has one bounded owner, no durable waits, and no restart-safe recovery requirement.";
+          : "The operation has one responsible component, no durable waits, and no restart-safe recovery requirement.";
 
     return {
       patch: {
@@ -99,7 +99,7 @@ function definitionSectionAdvisorTurn(
             `Coordinate ${draft.identityOwnership.title || "the backend operation"} through explicit owners, immutable inputs, and a verified terminal receipt.`,
         },
         response:
-          "I prepared a bounded purpose statement. It does not change owner or repository authority.",
+          "I prepared a bounded purpose statement. It does not change component or repository authority.",
       };
     case "trigger-result":
       return {
@@ -147,7 +147,7 @@ function definitionSectionAdvisorTurn(
             "Retry only transient unavailable, timeout, throttling, and server failures; block contract, authority, validation, or ambiguous-effect failures.",
         },
         response:
-          "I prepared a bounded retry policy. Confirm the actual activity timeouts and owner-specific failure classes.",
+          "I prepared a bounded retry policy. Confirm the actual activity timeouts and component-specific failure classes.",
       };
     case "evidence-security":
       return {

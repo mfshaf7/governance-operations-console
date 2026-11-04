@@ -33,7 +33,7 @@ export function ProviderConnectionsDialog({ open, onClose, runtime, registry, ch
   const close = () => { setApiKey(""); setConfirmation(null); onClose(); };
   const act = (action: ConnectionAction) => { if (item) { setApiKey(""); void runtime.submit(action, { connection_id: item.connection_id }); } };
   return <>
-    <TerasDialog busy={runtime.pending} busyLabel="Contacting connection owner…" open={open} onClose={close} kicker="Models & routing" title="API connections"
+    <TerasDialog busy={runtime.pending} busyLabel="Contacting connection service…" open={open} onClose={close} kicker="Models & routing" title="API connections"
       description={experimentalLabel + ". Keys are sent only on your explicit action. They are never saved in the browser or sent to advisors."}
       width="standard" height="content" contentOverflow="auto">
       <TerasFieldStack>
@@ -58,7 +58,7 @@ export function ProviderConnectionsDialog({ open, onClose, runtime, registry, ch
             <TerasActionButton emphasis="secondary" disabled={blocked || models.length > 0 || item.state === "removing"} onClick={() => setConfirmation("connection.remove")}>Remove connection</TerasActionButton>
           </TerasActionRow>
           {item.pending_operation ? <TerasActionRow><TerasActionButton emphasis="secondary" disabled={runtime.pending}
-            onClick={() => void runtime.check(item.pending_operation!)}>Check pending owner operation</TerasActionButton></TerasActionRow> : null}
+            onClick={() => void runtime.check(item.pending_operation!)}>Check pending service operation</TerasActionButton></TerasActionRow> : null}
         </>}
         <TerasMetadataList shape="list" items={connectionOperationMetadata(runtime, preset)} />
         <TerasActionRow>

@@ -354,7 +354,7 @@ export function workDesignDesignHubProjection({
             label: "Recorded",
             value: blockerDispositionReceiptRecordedAt ?? "local receipt",
           },
-          { label: "Owner", value: "Design Hub" },
+          { label: "Responsible workspace", value: "Design Hub" },
         ]
       : [
           { label: "Source", value: deliveryPackage.source_ref },
@@ -367,7 +367,7 @@ export function workDesignDesignHubProjection({
             value:
               activeBlockerIssue?.recoveryAction ?? "Open Blocker Recovery",
           },
-          { label: "Owner", value: "Design Hub" },
+          { label: "Responsible workspace", value: "Design Hub" },
         ]
     : workDesignClosed
       ? [

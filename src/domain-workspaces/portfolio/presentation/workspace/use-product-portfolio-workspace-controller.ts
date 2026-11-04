@@ -269,7 +269,7 @@ export function useProductPortfolioWorkspaceController({
   ) {
     if (publicationLiveRuntime.error) {
       throw new Error(
-        `Product Publication owner path is unavailable: ${publicationLiveRuntime.error}`,
+        `Product Publication service path is unavailable: ${publicationLiveRuntime.error}`,
       );
     }
     if (publicationLiveRuntime.mode === null) {

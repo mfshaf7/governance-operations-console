@@ -7,7 +7,7 @@ import { assertCompletionContext, completionEvidence, itemPiReview, type ItemPiR
 const emptyEvidence: ItemCompletionEvidence = { completion_summary: "", changed_surfaces: "", test_result_evidence: "", validation_evidence: "", completion_note: "" };
 const fields: { key: keyof ItemCompletionEvidence; label: string; placeholder: string }[] = [
   { key: "completion_summary", label: "Completion summary", placeholder: "Describe the actual completed non-source outcome as a short paragraph, not bullets." },
-  { key: "changed_surfaces", label: "Changed outcomes and owner evidence", placeholder: "- Product admission: describe the actual change and owner evidence. Use flat bullets; code-format or link paths and receipt URIs. Source files are not required." },
+  { key: "changed_surfaces", label: "Changed outcomes and source evidence", placeholder: "- Product admission: describe the actual change and source evidence. Use flat bullets; code-format or link paths and receipt URIs. Source files are not required." },
   { key: "test_result_evidence", label: "Test result evidence", placeholder: "- PASS: Actual operating proof, or - NOT APPLICABLE: reason." },
   { key: "validation_evidence", label: "Validation evidence", placeholder: "- PASS: Canonical readback and actual receipt references." },
   { key: "completion_note", label: "Completion note (optional)", placeholder: "Optional operator note." },
@@ -132,13 +132,13 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
           description="OOS remains the work-state, readiness and narrative authority. No branch, source credential or source packet is created here." />
         {context ? <TerasMetadataList columns={2} items={[
           { label: "Record", value: context.record_ref }, { label: "Status", value: context.status },
-          { label: "Owner", value: context.owner_repo ?? "Not declared" }, { label: "Open descendants", value: String(context.open_descendant_count) },
+          { label: "Implementation repository", value: context.owner_repo ?? "Not declared" }, { label: "Open descendants", value: String(context.open_descendant_count) },
           { label: "Source session", value: context.source_session_active ? "Use its existing lifecycle" : "None" },
           { label: "Stored completion evidence", value: context.completion_evidence_valid ? "Valid" : "Not yet confirmed" },
         ]} /> : null}
       </TerasPanel>
       {outcome ? <TerasList frame="contained"><TerasSignalItem label="Canonical result" title={outcome} detail={context?.record_ref ?? "Read the original target."} tone="ok" /></TerasList> : null}
-      {context?.blocking_reasons.length ? <TerasList frame="contained">{context.blocking_reasons.map(reason => <TerasSignalItem key={reason} label="Owner prerequisite" title="Completion unavailable" detail={reason} tone="warn" />)}</TerasList> : null}
+      {context?.blocking_reasons.length ? <TerasList frame="contained">{context.blocking_reasons.map(reason => <TerasSignalItem key={reason} label="Service prerequisite" title="Completion unavailable" detail={reason} tone="warn" />)}</TerasList> : null}
       {context?.pi_review && context.status !== "done" ? <TerasPanel frame="padded" fit="content" treatment="neutral">
         <TerasPanelHeader kicker="Earned objective review" title="Record the actual PI outcome" description="Review the completed outcome and evidence. OOS records actual value and its native review outcome; this does not complete the objective." />
         <TerasMetadataList columns={2} items={[
@@ -171,16 +171,16 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
           onValueChange={value => { setConfirmed(false); setEvidence(current => ({ ...current, [field.key]: value })); }} />)}
         <TerasChoiceGroup label="Operator review" ariaLabel="Non-source completion acceptance" frame="tray" selectedId={confirmed ? "confirmed" : "unconfirmed"}
           disabled={pending || uncertain}
-          options={[{ label: "Review required", id: "unconfirmed", tone: "warn" }, { label: "I confirm this is completed non-source work with actual owner evidence", id: "confirmed", tone: "ok" }]}
+          options={[{ label: "Review required", id: "unconfirmed", tone: "warn" }, { label: "I confirm this is completed non-source work with actual source evidence", id: "confirmed", tone: "ok" }]}
           onSelect={value => setConfirmed(value === "confirmed")} />
       </> : null}
       {uncertain ? <TerasList frame="contained"><TerasSignalItem label="Original target retained" title="Read before another write"
         detail="The outcome is not confirmed. Read this same work item; no replacement completion is submitted automatically." tone="warn" /></TerasList> : null}
-      {error ? <TerasList frame="contained"><TerasSignalItem label="Completion unavailable" title="Owner operation stopped" detail={error} tone="danger" /></TerasList> : null}
+      {error ? <TerasList frame="contained"><TerasSignalItem label="Completion unavailable" title="Service operation stopped" detail={error} tone="danger" /></TerasList> : null}
     </TerasFieldStack>
   </TerasModalShell>
   <TerasDraftCloseGuardDialog open={closeGuardOpen} title="Leave completion draft?" kicker="Unapplied evidence"
-    description={uncertain ? "An owner result is not confirmed. Keep the draft and read the original target before retrying; leaving discards these browser inputs." : "This evidence has not been recorded. Leaving discards the draft; the owner record is unchanged."}
+    description={uncertain ? "An service result is not confirmed. Keep the draft and read the original target before retrying; leaving discards these browser inputs." : "This evidence has not been recorded. Leaving discards the draft; the source record is unchanged."}
     leaveLabel="Discard Draft" onKeepEditing={() => setCloseGuardOpen(false)} onLeave={onClose} />
   </>;
 }

@@ -84,7 +84,7 @@ export function ModelRegistrationsDialog({
         overview={<TerasPanel data-model-backend-context="true" frame="padded" treatment="neutral" spacing="compact">
           <TerasPanelHeader kicker="Backend connection" title="Selected backend"
             description="Choose the connection whose models you want to manage."
-            statusLabel={runtime.preview ? "Sample · read-only" : runtime.fresh ? "Revision " + registry.configuration.revision : "Owner unavailable"}
+            statusLabel={runtime.preview ? "Sample · read-only" : runtime.fresh ? "Revision " + registry.configuration.revision : "Source unavailable"}
             statusTone={runtime.fresh || runtime.preview ? "info" : "warn"} />
           <TerasSelectField label="Admitted backend" disabled={changesBlocked || !runtime.fresh && !runtime.preview}
             value={backend?.backend_id ?? ""}
@@ -138,7 +138,7 @@ export function ModelRegistrationsDialog({
       <TerasFieldStack>
         <TerasMetadataList shape="line" wrap items={modelBackendMetadata(registry, backend)} />
         {runtime.preview ? <TerasEmptyState>Read-only sample preview. Discovery and registration are disabled.</TerasEmptyState>
-          : !runtime.fresh ? <TerasEmptyState>The model owner is unavailable. Refresh owner state before registering a model.</TerasEmptyState>
+          : !runtime.fresh ? <TerasEmptyState>The model service is unavailable. Refresh source state before registering a model.</TerasEmptyState>
           : !backend?.registered ? <TerasEmptyState>Register this backend before discovering or verifying models.</TerasEmptyState> : null}
         {backend?.catalogue_supported === false
           ? <TerasTextField label="Exact model ID" value={candidate} onValueChange={setCandidate}

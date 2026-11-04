@@ -22,6 +22,6 @@ export function prototypeClosureLifecycleOutcome(record: PrototypeRecord, closur
     targetRef: acceptedTarget ? String(acceptedTarget.subject_ref) : authority?.target_delivery_ref ?? null,
     receiptRef: deliveryReceipt, recordedAt: closure.receipt.recorded_at,
     observationKind: "owner-confirmation", evidenceRefs: [closure.receipt.receipt_id, deliveryReceipt],
-    detail: "Retained Prototype Closure confirms graduation and references the accepted native Delivery application. This is the owner confirmation time; original target application time and unprojected journal controls are not inferred.",
+    detail: "Retained Prototype Closure confirms graduation and references the accepted native Delivery application. This is the source confirmation time; original target application time and unprojected journal controls are not inferred.",
   }];
 }

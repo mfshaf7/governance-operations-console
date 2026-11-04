@@ -90,7 +90,7 @@ test("selected run facts preserve source, definition, progress, business, effect
       "Source",
       "Definition",
       "Current Node",
-      "Node Owner",
+      "Execution component",
       "Effect Posture",
       "Run State",
     ],

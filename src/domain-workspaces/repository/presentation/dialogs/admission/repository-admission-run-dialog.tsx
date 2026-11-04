@@ -77,7 +77,7 @@ export function RepositoryAdmissionRunDialog({
       "Repository Admission Run Events",
       `Repository: ${activeRepository.name}`,
       `Record: ${activeRepository.id}`,
-      `Owner: ${activeRepository.owner}`,
+      `Responsible component: ${activeRepository.owner}`,
       `Receipt: ${receipt?.receiptId ?? "Not recorded"}`,
       "",
       ...admissionLogRows.map(

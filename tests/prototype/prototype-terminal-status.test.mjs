@@ -64,7 +64,7 @@ test("only an active approved baseline counts as ready to move; history stays re
   assert.equal(stats.blocked, 0);
   assert.equal(stats.graduated, 1);
   assert.equal(stats.graduating, 1);
-  assert.equal(prototypeWorkspaceStatus(model, stats, true).statusLabel, "owner data current");
+  assert.equal(prototypeWorkspaceStatus(model, stats, true).statusLabel, "Source data current");
   assert.equal(past.baseline.state, "ready-for-movement");
   assert.equal(getSelectedPrototypeRecord(model, null).id, "prototype-graduating");
   assert.equal(getSelectedPrototypeRecord(model, past.id), past);

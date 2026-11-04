@@ -22,7 +22,7 @@ export function OwnerPublicationPreview({ entries, runtime, state }: {
       if (!products.some(product => product.product_id === productId)) throw new Error("Select an example product.");
       return preparePreviewPublication(entries, productId);
     },
-    async read(): Promise<never> { throw new Error("Owner request recovery is unavailable in design preview."); },
+    async read(): Promise<never> { throw new Error("Service request recovery is unavailable in design preview."); },
     async submit(): Promise<never> { throw new Error("Publishing is disabled in design preview."); },
     async refreshMode() { return { mode: "disconnected-preview" as const, reason_code: "design_preview" }; },
   };

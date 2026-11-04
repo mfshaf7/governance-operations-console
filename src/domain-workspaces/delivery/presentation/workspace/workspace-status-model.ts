@@ -132,7 +132,7 @@ export function deliveryWorkspaceComponentStatuses(
         },
         {
           label: "Apply Authority",
-          value: canonicalInventory ? "selected workflow; explicit owner checks" : "future OOS-mediated",
+          value: canonicalInventory ? "selected workflow; explicit source checks" : "future OOS-mediated",
         },
         {
           label: "Workflow Role",

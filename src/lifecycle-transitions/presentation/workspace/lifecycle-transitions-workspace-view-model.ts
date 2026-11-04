@@ -61,7 +61,7 @@ export function lifecycleTransitionWorkspaceStatus(
       detail: route.description,
       facts: [
         {
-          label: "Next owners",
+          label: "Next responsible components",
           value: String(route.nextOwnerCount),
         },
         {
@@ -81,9 +81,9 @@ export function lifecycleTransitionWorkspaceStatus(
     const current = runtimePosture.status === "current";
     statuses.push({
       detail: runtimePosture.sourceScope
-        ? runtimePosture.error ?? "Retained journal records and current native owner readbacks. Source-reported outcomes are labelled; original target receipts and unprojected controls are not inferred. This is not a complete historical journal."
+        ? runtimePosture.error ?? "Retained journal records and current native source readbacks. Source-reported outcomes are labelled; original target receipts and unprojected controls are not inferred. This is not a complete historical journal."
         : runtimePosture.truncated
-        ? "The bounded owner projection has more records than this page."
+        ? "The bounded source projection has more records than this page."
         : preview
           ? "Disconnected preview uses synthetic lifecycle fixtures."
           : current

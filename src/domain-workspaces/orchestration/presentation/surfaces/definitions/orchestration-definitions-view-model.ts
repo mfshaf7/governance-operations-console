@@ -169,7 +169,7 @@ export function orchestrationDefinitionSelectedFacts(
       label: "Classification",
       value: orchestrationDefinitionClassificationLabel(record.classification),
     },
-    { label: "Execution Owner", value: record.executionOwner },
+    { label: "Execution component", value: record.executionOwner },
     { label: "Implementation Repo", value: record.implementationRepo },
     {
       label: "Lifecycle",
@@ -184,8 +184,8 @@ export function orchestrationDefinitionDashboardFacts(
   return [
     { label: "Version", value: orchestrationDefinitionVersionLabel(record) },
     { label: "Source Domain", value: record.sourceDomain },
-    { label: "Business Owner", value: record.businessOwner },
-    { label: "Execution Owner", value: record.executionOwner },
+    { label: "Responsible workspace", value: record.businessOwner },
+    { label: "Execution component", value: record.executionOwner },
     { label: "Source Mode", value: definitionSourceModeLabel(record) },
   ];
 }

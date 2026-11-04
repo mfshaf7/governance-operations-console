@@ -16,7 +16,7 @@ export const platformSubjectLabel = (ref: string) => ref.replace(/^(profile|prod
 export function platformActionContext(action: PlatformOperationAction): string | null {
   if (action.startsWith("agent-source.")) return "Use the project's Source authoring workflow. Source access must be bound to its repository, approved intent and source session.";
   if (action === "dev-integration.reset") return "Use the profile's reset workflow to review its retained data and declared reset inputs.";
-  if (action === "dev-integration.request-profile") return "A profile request needs its owner, purpose and runtime contract. This catalog action does not provide that form.";
+  if (action === "dev-integration.request-profile") return "A profile request needs its implementation repository, purpose and runtime contract. This catalog action does not provide that form.";
   if (action === "governed-release.execute-step" || action === "governed-release.change-runtime-lifecycle") return "Open the product's action form to supply its declared inputs and review the change.";
   return null;
 }

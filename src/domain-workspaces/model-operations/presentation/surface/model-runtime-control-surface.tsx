@@ -28,9 +28,9 @@ import { providerPresets } from "../../work-model/provider-connections-contract.
 type Runtime = ReturnType<typeof useModelRuntime>;
 type Props = { onDirtyChange?: (dirty: boolean) => void };
 const operationLabels: Record<ModelRuntimeOperation["state"], string> = {
-  queued: "Queued", running: "Owner verification in progress", "awaiting-account": "Account sign-in needed",
-  retryable: "Retry available", unknown: "Completion unconfirmed", blocked: "Owner evidence needs review",
-  completed: "Confirmed by owner", cancelled: "Cancelled", rejected: "Request rejected",
+  queued: "Queued", running: "Source verification in progress", "awaiting-account": "Account sign-in needed",
+  retryable: "Retry available", unknown: "Completion unconfirmed", blocked: "Source evidence needs review",
+  completed: "Confirmed by service", cancelled: "Cancelled", rejected: "Request rejected",
 };
 const actionLabels: Record<ModelAction, string> = {
   "backend.register": "Register backend", "backend.remove": "Remove backend", "model.register": "Verify model",
@@ -103,7 +103,7 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
   if (!registry || !config) return <TerasPanelStack fill="first"><TerasPanel spacing="normal" layout="header-body-footer" frame="padded" treatment="neutral" fit="fill">
     <TerasPanelHeader kicker="Models & routing" title="Runtime model configuration" statusLabel={runtime.error ? "Unavailable" : "Loading"} statusTone={runtime.error ? "warn" : "info"} />
     {runtime.error ? <TerasEmptyState fill>{runtime.error}</TerasEmptyState> : <TerasLoadingState fill label="Loading models and routing…" />}
-    <TerasActionRow><TerasActionButton emphasis="secondary" onClick={() => void runtime.refresh().catch(() => undefined)}>Refresh owner state</TerasActionButton></TerasActionRow>
+    <TerasActionRow><TerasActionButton emphasis="secondary" onClick={() => void runtime.refresh().catch(() => undefined)}>Refresh source state</TerasActionButton></TerasActionRow>
   </TerasPanel>{runtime.selectedId || runtime.records.length ? <ModelRuntimeActivity runtime={runtime} /> : null}</TerasPanelStack>;
   return <>
     <TerasRecordControlLayout composition="compact-control" mode="overview-register-selected" data-model-runtime-control="true"
@@ -168,7 +168,7 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
             </> : null}
             {moved ? <TerasMetadataList shape="list" items={modelRoutingConflictMetadata()} /> : null}
             <TerasActionRow>
-              <TerasActionButton disabled={runtime.pending || runtime.preview} emphasis="secondary" onClick={() => void runtime.refresh().catch(() => undefined)}>Refresh owner state</TerasActionButton>
+              <TerasActionButton disabled={runtime.pending || runtime.preview} emphasis="secondary" onClick={() => void runtime.refresh().catch(() => undefined)}>Refresh source state</TerasActionButton>
               <TerasActionButton disabled={blocked || !dirty || Boolean(issue) || moved || editRevision === null} onClick={async () => {
                 if (!config || editRevision === null) return;
                 if (await send("routing.save", routingInput(config, scope, mode, route), editRevision)) setDirty(false);
@@ -192,7 +192,7 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
           </TerasFieldStack>
     </TerasDialog>
     <ProviderConnectionsDialog open={connectionsOpen} onClose={() => setConnectionsOpen(false)} runtime={connections} registry={registry} changesBlocked={dirty || runtime.pending || outstanding || !runtime.fresh} />
-    <TerasDraftCloseGuardDialog kicker="Routing draft" title="Discard unsaved changes?" description="The owner configuration will remain the saved source of truth."
+    <TerasDraftCloseGuardDialog kicker="Routing draft" title="Discard unsaved changes?" description="The repository configuration will remain the saved source of truth."
       open={nextScope !== null || reloadGuard || closeRouting} keepEditingLabel="Keep editing" leaveLabel="Discard draft"
       onKeepEditing={() => { setNextScope(null); setReloadGuard(false); setCloseRouting(false); }} onLeave={() => { setDirty(false); if (nextScope) setScope(nextScope); setNextScope(null); setReloadGuard(false); if (closeRouting) setDialog(null); setCloseRouting(false); }} />
     <TerasDraftCloseGuardDialog kicker="Configuration history" title="Restore revision settings?" description={"Revision " + restore?.revision + " will be restored as a new configuration revision."}
@@ -204,10 +204,10 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
 function ModelRuntimeActivity({ runtime }: { runtime: Runtime }) {
   const operation = runtime.operation, login = operation?.account_login;
   return <TerasPanel frame="padded" treatment="neutral" overflow="auto" spacing="compact">
-    <TerasPanelHeader busy={runtime.pending || runtime.refreshing || runtime.readingMore} busyLabel="Reading model operations…" kicker="Owner activity" title={operation ? actionLabels[operation.request.action] : "Operation progress"} statusLabel={operation ? operationLabels[operation.state] : runtime.selectedId ? "Unconfirmed" : "No operation selected"}
+    <TerasPanelHeader busy={runtime.pending || runtime.refreshing || runtime.readingMore} busyLabel="Reading model operations…" kicker="Source activity" title={operation ? actionLabels[operation.request.action] : "Operation progress"} statusLabel={operation ? operationLabels[operation.state] : runtime.selectedId ? "Unconfirmed" : "No operation selected"}
       statusTone={operation?.state === "completed" ? "ok" : runtime.error || operation && ["unknown", "blocked", "rejected"].includes(operation.state) ? "warn" : "info"} />
     <TerasFieldStack>
-      {!runtime.selectedId && runtime.records.length === 0 ? <TerasEmptyState>{runtime.preview ? "No owner operations are created in this read-only preview." : runtime.fresh ? "No retained owner operations were returned." : "Owner operation history is unavailable."}</TerasEmptyState> : null}
+      {!runtime.selectedId && runtime.records.length === 0 ? <TerasEmptyState>{runtime.preview ? "No service operations are created in this read-only preview." : runtime.fresh ? "No retained service operations were returned." : "Service operation history is unavailable."}</TerasEmptyState> : null}
       {runtime.error ? <TerasMetadataList shape="list" items={modelOwnerErrorMetadata(runtime.error)} /> : null}
       {operation ? <TerasMetadataList shape="list" items={modelOperationMetadata(operation)} /> : runtime.selectedId && !runtime.error ? <TerasLoadingState label="Loading original model operation…" skeleton="details" /> : null}
       <TerasActionRow>
@@ -219,10 +219,10 @@ function ModelRuntimeActivity({ runtime }: { runtime: Runtime }) {
         {operation && terminalModelStates.has(operation.state) || runtime.selectedId && runtime.lookupMissing ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={runtime.clearSelection}>Clear selection</TerasActionButton> : null}
       </TerasActionRow>
       <TerasSelectField label="Request history" value={runtime.selectedId ?? ""} disabled={runtime.pending || Boolean(operation && !terminalModelStates.has(operation.state))}
-        options={[{ value: "", label: "Select an owner record" }, ...runtime.records.map(item => ({ value: item.request_id, label: actionLabels[item.request.action] + " · " +
+        options={[{ value: "", label: "Select an source record" }, ...runtime.records.map(item => ({ value: item.request_id, label: actionLabels[item.request.action] + " · " +
           String(item.request.input.model ?? item.request.input.backend_id ?? "settings") + " · " + operationLabels[item.state] + " · " + item.request_id.slice(-8) }))]}
         onValueChange={id => { if (id) void runtime.selectOperation(id); }} />
-      {runtime.cursor ? <TerasActionRow><TerasActionButton busy={runtime.readingMore} emphasis="secondary" onClick={() => void runtime.loadMore()}>Load more owner records</TerasActionButton></TerasActionRow> : null}
+      {runtime.cursor ? <TerasActionRow><TerasActionButton busy={runtime.readingMore} emphasis="secondary" onClick={() => void runtime.loadMore()}>Load more source records</TerasActionButton></TerasActionRow> : null}
     </TerasFieldStack>
   </TerasPanel>;
 }

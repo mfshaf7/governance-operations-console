@@ -108,7 +108,7 @@ test("Recovery picker reads the retained identity and exposes owner control hist
   await page.getByRole("option").filter({ hasText: "Validation readiness run" }).click();
   await expect(recovery.getByLabel("Original run reference", { exact: true })).toHaveValue("run:synthetic");
   await recovery.getByRole("button", { name: "Read original run", exact: true }).click();
-  await expect(recovery).toContainText("Owner state");
+  await expect(recovery).toContainText("Source state");
   await recovery.getByRole("button", { name: "View Run", exact: true }).click();
   await h.workspace.getByRole("button", { name: "Open Run Dashboard", exact: true }).click();
   await page.getByRole("button", { name: "Open Receipts", exact: true }).click();

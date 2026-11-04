@@ -61,7 +61,7 @@ export function projectLiveModelOperationsReadModel(
         {
           detail: "The Console verified the exact Platform source projection and merged source revision.",
           facts: [
-            { label: "Owner", value: "platform-engineering" },
+            { label: "Responsible repository", value: "platform-engineering" },
             { label: "Revision", value: sourceVersion },
             { label: "Digest", value: text(projection.digest) },
           ],

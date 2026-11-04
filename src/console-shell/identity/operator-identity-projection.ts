@@ -157,6 +157,11 @@ function postureDisplay(posture: OperatorIdentityPosture) {
   return display[posture];
 }
 
+// This is display wording; the verified authority claim remains unchanged.
+export function operatorAuthorityDisplayLabel(authority: string) {
+  return authority === "Workspace owner" ? "Workspace approver" : authority;
+}
+
 export function projectOperatorIdentity(
   snapshot: OperatorIdentitySnapshot,
 ): OperatorIdentityProjection {
@@ -167,7 +172,7 @@ export function projectOperatorIdentity(
     authenticationLabel:
       authenticationLabels[snapshot.session.authenticationState],
     authoritySummary:
-      snapshot.access.authorities.join(" / ") || "No authority reported",
+      snapshot.access.authorities.map(operatorAuthorityDisplayLabel).join(" / ") || "No authority reported",
     environmentLabel: snapshot.access.environment || "Unavailable",
     expiresAtLabel: formatOperatorIdentityTimestamp(
       snapshot.session.expiresAt,

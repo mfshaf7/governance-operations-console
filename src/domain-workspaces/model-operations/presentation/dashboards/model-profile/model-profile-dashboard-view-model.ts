@@ -20,5 +20,5 @@ export function modelProfileDashboardFacts(
 export function modelRequiredMoveMetadata(
   requiredMove: ModelRequiredMoveProjection,
 ): TerasMetadataItem[] {
-  return [{ label: "Owner", value: requiredMove.owner }];
+  return [{ label: "Responsible component", value: requiredMove.owner }];
 }

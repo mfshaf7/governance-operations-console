@@ -155,7 +155,7 @@ function IdentityOwnershipEditor({
       </TerasFieldGrid>
       <TerasFieldGrid>
         <TerasTextField
-          label="Business owner"
+          label="Responsible workspace"
           onValueChange={(businessOwner) =>
             editDraft((next) => {
               next.identityOwnership.businessOwner = businessOwner;
@@ -164,7 +164,7 @@ function IdentityOwnershipEditor({
           value={identity.businessOwner}
         />
         <TerasTextField
-          label="Execution owner"
+          label="Execution component"
           onValueChange={(executionOwner) =>
             editDraft((next) => {
               next.identityOwnership.executionOwner = executionOwner;
@@ -174,7 +174,7 @@ function IdentityOwnershipEditor({
         />
       </TerasFieldGrid>
       <TerasTextField
-        label="Implementation owner repo"
+        label="Implementation repository"
         onValueChange={(implementationRepo) =>
           editDraft((next) => {
             next.identityOwnership.implementationRepo = implementationRepo;
@@ -183,10 +183,10 @@ function IdentityOwnershipEditor({
         value={identity.implementationRepo}
       />
       <TerasTextListField
-        description="List the component owners that execute individual nodes."
-        itemLabel={(index) => `Execution owner ${index + 1}`}
+        description="List the responsible components that execute individual nodes."
+        itemLabel={(index) => `Execution source ${index + 1}`}
         items={identity.executionNodeOwners}
-        label="Execution-node owners"
+        label="Execution components"
         maxItems={8}
         minItems={1}
         onItemsChange={(executionNodeOwners) =>
@@ -194,7 +194,7 @@ function IdentityOwnershipEditor({
             next.identityOwnership.executionNodeOwners = executionNodeOwners;
           })
         }
-        placeholder="Owner component or service"
+        placeholder="Responsible component or service"
         visibleItems={3}
       />
     </TerasFieldStack>
@@ -394,7 +394,7 @@ function ExecutionPlanEditor({
             </TerasActionButton>
           </TerasActionRow>
         }
-        description="Select one bounded node and define its owner, adapter, dependencies, and execution controls."
+        description="Select one bounded node and define its responsible component, adapter, dependencies, and execution controls."
         kicker="Execution Node"
         title="Node editor"
       >
@@ -445,7 +445,7 @@ function ExecutionPlanEditor({
                   value={selectedNode.type}
                 />
                 <TerasTextField
-                  label="Execution owner"
+                  label="Execution component"
                   onValueChange={(owner) =>
                     editNode((node) => {
                       node.owner = owner;

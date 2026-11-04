@@ -99,7 +99,7 @@ function advisorNarrativeValue({
   sourceValue: string;
 }) {
   if (fieldLabel === "Definition of Ready") {
-    return `Ready when ${deliveryPackageName} stories have owner, execution classification, acceptance criteria, and dependency notes confirmed against the applied Work Design handoff.`;
+    return `Ready when ${deliveryPackageName} stories have implementation responsibility, execution classification, acceptance criteria, and dependency notes confirmed against the applied Work Design handoff.`;
   }
 
   if (sourceValue && sourceValue !== "Missing") {

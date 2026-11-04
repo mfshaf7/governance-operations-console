@@ -74,13 +74,13 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
   const ownerReceipt = original?.aggregate_receipt && typeof original.aggregate_receipt === "object"
     ? original.aggregate_receipt as Record<string, unknown> : null;
   return <>
-    <TerasModalShell busy={pending} busyLabel="Contacting workflow owner…" title={mode === "recover" ? "Recover original run" : "Start validation readiness run"} kicker="Orchestration" surfaceId="orchestration-run-start"
+    <TerasModalShell busy={pending} busyLabel="Contacting workflow service…" title={mode === "recover" ? "Recover original run" : "Start validation readiness run"} kicker="Orchestration" surfaceId="orchestration-run-start"
       width="large" height="content" bodyLayout="scroll" onClose={close}
       description="Review an initiative source and explicitly approve the admitted read-only WGCF validation. OOS owns admission, execution and receipts."
       footer={<>
         <TerasActionButton emphasis="secondary" disabled={pending} onClick={close}>Back to workspace</TerasActionButton>
         {receipt || original ? <TerasActionButton disabled={pending} onClick={() => { setPending(true); void onViewRuns(original?.run_id ?? (frozen ? originalOrchestrationRunId(frozen.requestId) : undefined)).catch(cause => setError(message(cause))).finally(() => setPending(false)); }}>View Run</TerasActionButton> : mode === "start" ?
-          <TerasActionButton busy={pending} disabled={pending || (!frozen && (!source?.startAllowed || !approved || !purpose.trim()))} onClick={() => void start()}>{pending ? "Contacting owner" : frozen ? "Retry original start" : "Start reviewed run"}</TerasActionButton> : null}
+          <TerasActionButton busy={pending} disabled={pending || (!frozen && (!source?.startAllowed || !approved || !purpose.trim()))} onClick={() => void start()}>{pending ? "Contacting service" : frozen ? "Retry original start" : "Start reviewed run"}</TerasActionButton> : null}
       </>}>
       <TerasFieldStack spacing="normal">
         {mode === "start" ? <TerasPanel frame="padded" treatment="neutral">
@@ -98,7 +98,7 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
           <TerasPanelHeader kicker="Explicit operator decision" title={source.title}
             description={source.startAllowed ? "Approval binds this exact source and purpose for fifteen minutes. Admission is not completion." : source.blockers.join(" ")} />
           <TerasMetadataList items={[{ label: "Record", value: source.recordRef }, { label: "Source version", value: source.sourceVersion },
-            { label: "Owner projection", value: source.projectionRef }, { label: "Definition", value: "Validation readiness run v1" }]} />
+            { label: "Source projection", value: source.projectionRef }, { label: "Definition", value: "Validation readiness run v1" }]} />
           <TerasChoiceGroup label="Run approval" ariaLabel="Read-only run approval" frame="tray" selectedId={approved ? "approved" : "review"}
             disabled={locked || !source.startAllowed} options={[{ id: "review", label: "Review required", tone: "warn" },
               { id: "approved", label: "I approve this read-only run for the reviewed source and purpose", tone: "ok" }]}
@@ -108,9 +108,9 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
           { label: "Original run", value: originalOrchestrationRunId(frozen.requestId) }]} /> : null}
         {receipt ? <TerasPanel frame="padded" treatment="rail" tone="ok"><TerasPanelHeader kicker="OOS acknowledgement"
           title={receipt.duplicate ? "Original run recovered" : "Run admitted"}
-          description={receipt.state ? `Owner state: ${receipt.state}.` : "No run projection is available yet. Read the original run as the worker becomes available."} /></TerasPanel> : null}
+          description={receipt.state ? `Source state: ${receipt.state}.` : "No run projection is available yet. Read the original run as the worker becomes available."} /></TerasPanel> : null}
         <TerasPanel frame="padded" treatment="neutral">
-          <TerasPanelHeader title="Recover the original run" kicker="Owner readback" description="Use the same reference after an interrupted response or reload. Reading never creates another run." />
+          <TerasPanelHeader title="Recover the original run" kicker="Source readback" description="Use the same reference after an interrupted response or reload. Reading never creates another run." />
           {runs.length ? <TerasSelectField label="Choose a retained run" value={runs.some(run => run.runId === originalRef) ? originalRef : ""}
             disabled={pending || Boolean(frozen)} onValueChange={value => { setOriginalRef(value); setOriginal(null); setError(null); }}
             options={[{ label: "Select a run, or enter its reference below", value: "" }, ...runs.map(run => ({ value: run.runId, label: `${orchestrationRunTitle(run)} · ${orchestrationRunStateLabel(run.state)} · ${formatOrchestrationRunTimestamp(run.createdAt)}` }))]} /> : null}
@@ -118,7 +118,7 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
             <TerasTextField label="Original run reference" value={originalRef} disabled={pending || Boolean(frozen)}
               onValueChange={value => { setOriginalRef(value); setOriginal(null); }} />
             <TerasActionButton emphasis="secondary" disabled={pending || !originalRef.trim()} onClick={() => void readOriginal()}>Read original run</TerasActionButton>
-            {original ? <TerasMetadataList items={[{ label: "Run", value: original.run_id }, { label: "Owner state", value: original.state },
+            {original ? <TerasMetadataList items={[{ label: "Run", value: original.run_id }, { label: "Source state", value: original.state },
               { label: "Original request", value: original.request_id }, { label: "Receipt", value: typeof ownerReceipt?.receipt_id === "string" ? ownerReceipt.receipt_id : "No aggregate receipt yet" }]} /> : null}
           </TerasFieldStack>
         </TerasPanel>
@@ -126,8 +126,8 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
       </TerasFieldStack>
     </TerasModalShell>
     <TerasDraftCloseGuardDialog open={leaveRequested} kicker="Original run" title="Leave this run request?"
-      description="Leaving does not cancel an admitted run or resolve an unknown response. Keep its original reference and recover from owner truth."
+      description="Leaving does not cancel an admitted run or resolve an unknown response. Keep its original reference and recover from source state."
       onKeepEditing={() => setLeaveRequested(false)} onLeave={() => { setLeaveRequested(false); onClose(); }} />
   </>;
 }
-function message(cause: unknown) { return cause instanceof Error ? cause.message : "Owner truth is unavailable."; }
+function message(cause: unknown) { return cause instanceof Error ? cause.message : "Source state is unavailable."; }

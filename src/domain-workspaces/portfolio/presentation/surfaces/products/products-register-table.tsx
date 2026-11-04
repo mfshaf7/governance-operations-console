@@ -37,7 +37,7 @@ export function ProductPortfolioProductsRegisterTable({
       render: (entry) => (
         <TerasRecordCellText
           description={`${entry.identity.productId} / ${productFormLabel(entry)}`}
-          meta={`Owner / ${entry.ownership.productOwnerRef}`}
+          meta={`Product repository / ${entry.ownership.productOwnerRef}`}
           title={entry.identity.displayName}
           variant="value-stack"
         />

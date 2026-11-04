@@ -10,7 +10,7 @@ export function modelRoutingConflictMetadata(): TerasMetadataItem[] {
   return [{ label: "Configuration changed", value: "Reload and review the current settings before saving.", tone: "warn" }];
 }
 export function modelOwnerErrorMetadata(error: string): TerasMetadataItem[] {
-  return [{ label: "Owner response", value: error, tone: "warn" }];
+  return [{ label: "Service response", value: error, tone: "warn" }];
 }
 export function modelOperationMetadata(operation: ModelRuntimeOperation): TerasMetadataItem[] {
   const login = operation.account_login;
@@ -32,8 +32,8 @@ export function modelRouteHealthLabel(registry: ModelRegistry, task: string) {
 }
 
 export function modelRuntimeSummaryStatus(fresh: boolean, preview: boolean, error: string | null, revision: number): TerasSurfaceStatusModel {
-  const detail = preview ? "Read-only design samples. No provider, account, request or receipt is simulated as current owner state."
-    : error ?? "Configuration was read from the model owner. Model and account health remain separate checks.";
+  const detail = preview ? "Read-only design samples. No provider, account, request or receipt is simulated as current source state."
+    : error ?? "Configuration was read from the model service. Model and account health remain separate checks.";
   const stateLabel = preview ? "Sample" : fresh ? "Current" : "Unavailable";
   const tone = preview || fresh ? "info" as const : "warn" as const;
   return { ariaLabel: "Model configuration status", kicker: "Model configuration", title: "Configuration source", summary: detail, statusLabel: stateLabel, tone,

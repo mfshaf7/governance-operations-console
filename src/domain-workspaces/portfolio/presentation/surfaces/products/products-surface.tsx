@@ -109,7 +109,7 @@ export function ProductPortfolioProductsSurface({
               search={{
                 ariaLabel: "Search Product Portfolio",
                 onValueChange: setQuery,
-                placeholder: "Search product, owner, id, or tag...",
+                placeholder: "Search product, repository, id, or tag...",
                 value: query,
               }}
             />

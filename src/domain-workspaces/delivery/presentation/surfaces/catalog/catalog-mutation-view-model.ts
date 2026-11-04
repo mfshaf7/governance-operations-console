@@ -74,8 +74,8 @@ export function catalogRetirementMetadata({
       value: catalog?.backend_route ?? "No route selected",
     },
     {
-      label: "Backend Owner",
-      value: catalog?.create_authority ?? "No owner selected",
+      label: "Backend service",
+      value: catalog?.create_authority ?? "No repository selected",
     },
   ];
 }
@@ -107,8 +107,8 @@ export function catalogDraftPreviewMetadata({
       value: catalog?.backend_route ?? "No route selected",
     },
     {
-      label: "Backend Owner",
-      value: catalog?.create_authority ?? "No owner selected",
+      label: "Backend service",
+      value: catalog?.create_authority ?? "No repository selected",
     },
     ...(linkedRepository
       ? [

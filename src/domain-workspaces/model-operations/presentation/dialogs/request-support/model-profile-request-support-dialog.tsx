@@ -24,7 +24,7 @@ export function ModelProfileRequestSupportDialog({
     <TerasDialog
       contentOverflow="auto"
       height="content"
-      description="The live request path extends OOS, Platform, and Security authority without giving the Console profile or registry ownership."
+      description="The live request path uses OOS, Platform, and Security authority. The Console does not control profiles or the registry."
       kicker="Model Operations"
       onClose={onClose}
       open={open}

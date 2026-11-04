@@ -161,7 +161,7 @@ export function ExecutionWorkSessionModal({
       title="Governed Work Session"
       width="large"
     >
-      {sourceChanged ? <TerasEmptyState>The owner decision changed while you were editing. Your draft is retained; reload the current decision before starting work.
+      {sourceChanged ? <TerasEmptyState>The recorded decision changed while you were editing. Your draft is retained; reload the current decision before starting work.
         <TerasActionButton disabled={submitting} emphasis="secondary" onClick={() => setCloseGuard("reload")}>Reload current decision</TerasActionButton>
       </TerasEmptyState> : null}
       <TerasZoneLayout variant="main-aside">
@@ -307,7 +307,7 @@ export function ExecutionWorkSessionModal({
                     <TerasFieldStack spacing="normal">
                       <TerasTextField
                   disabled={submitting}
-                        label="Owner repo"
+                        label="Implementation repository"
                         onValueChange={(value) =>
                           updateArchitectureLocation(setDecision, "repo", value)
                         }
@@ -573,7 +573,7 @@ export function ExecutionWorkSessionModal({
       </TerasZoneLayout>
     </TerasModalShell>
     <TerasDraftCloseGuardDialog open={closeGuard !== null} title={closeGuard === "reload" ? "Reload work-session decision?" : "Discard work-session edits?"}
-      kicker="Unsubmitted source decision" description="These decision edits have not started a work session. Discarding removes the local edits; the owner decision remains available."
+      kicker="Unsubmitted source decision" description="These decision edits have not started a work session. Discarding removes the local edits; the recorded decision remains available."
       leaveLabel={closeGuard === "reload" ? "Discard and Reload" : "Discard Draft"}
       onKeepEditing={() => setCloseGuard(null)} onLeave={() => { if (closeGuard === "reload") loadDecision(); else onClose(); }} />
     </>

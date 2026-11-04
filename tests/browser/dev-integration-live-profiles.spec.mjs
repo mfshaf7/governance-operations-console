@@ -37,7 +37,7 @@ async function reviewRequest(page,w) {
  await w.getByRole('button',{name:'Request Profile',exact:true}).click();
  const form=page.getByRole('dialog',{name:'Dev Integration Profile Request',exact:true});
  await form.getByRole('textbox',{name:'Profile ID',exact:true}).fill('new-owner-runtime');
- await form.getByLabel('Owning repository',{exact:true}).click();await page.getByRole('option',{name:'owner',exact:true}).click();
+ await form.getByLabel("Implementation repository",{exact:true}).click();await page.getByRole('option',{name:'owner',exact:true}).click();
  await form.getByRole('textbox',{name:'Operational purpose',exact:true}).fill('A browser-only request contract exercise.');
  await form.getByRole('button',{name:'Next',exact:true}).click();await form.getByRole('button',{name:'Review Request',exact:true}).click();
  await expect(form).toContainText('OOS-owned profile request');await expect(form).not.toContainText('Workspace Proposals');return form;

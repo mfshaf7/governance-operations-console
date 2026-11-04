@@ -10,9 +10,9 @@ export async function readOlderActivityPage(snapshot: GovernanceActivitySnapshot
         const response = await fetchImpl(`/api/governance-activity?${query}`, { cache: "no-store", signal });
         const page = await response.json() as GovernanceActivitySnapshot;
         if (!response.ok || page.mode !== "live" || page.status === "offline" || !Array.isArray(page.events) || !Array.isArray(page.sources) || page.events.length > 100)
-            throw new Error("Older owner history is unavailable. The current page is retained; retry the same page.");
+            throw new Error("Older source history is unavailable. The current page is retained; retry the same page.");
         if ((page.continuations ?? []).some(next => next.owner === continuation.owner && next.cursor === continuation.cursor))
-            throw new Error("Owner history did not advance; the current page is retained.");
+            throw new Error("Source history did not advance; the current page is retained.");
         return page;
     }));
     const events = new Map<string, GovernanceActivitySnapshot["events"][number]>();
@@ -20,7 +20,7 @@ export async function readOlderActivityPage(snapshot: GovernanceActivitySnapshot
         for (const event of page.events) {
             const previous = events.get(event.eventId);
             if (previous && JSON.stringify(previous) !== JSON.stringify(event))
-                throw new Error("Conflicting owner history identity; the current page is retained.");
+                throw new Error("Conflicting source history identity; the current page is retained.");
             events.set(event.eventId, event);
         }
     return { mode: "live", observedAt: pages.map(page => page.observedAt).sort().at(-1)!, status: pages.some(page => page.status !== "current") ? "partial" : "current", truncated: pages.some(page => page.truncated), error: null,

@@ -124,7 +124,7 @@ export const deliveryActionDefinitions: Record<
   },
   "sync-owner-repo": {
     action_type: "sync-owner-repo",
-    default_label: "Catalog Owner Repo",
+    default_label: "Catalog implementation repository",
     description:
       "Open the manual Catalog add/link/sync path for an admitted repository value.",
     mutable: true,

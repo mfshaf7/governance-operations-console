@@ -170,7 +170,7 @@ function routeForFreshness(
       entryIntent: null,
       externalHref: null,
       label: candidate.route.label,
-      unavailableReason: `Source projection is ${candidate.source.freshness}; refresh owner truth before routing.`,
+      unavailableReason: `Source projection is ${candidate.source.freshness}; refresh source state before routing.`,
     },
   };
 }

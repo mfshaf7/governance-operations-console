@@ -30,7 +30,7 @@ export function ProductReleaseActionReviewStep({
   return (
     <TerasPanelStack fill="last" scroll>
       <TerasWizardPanel
-        description="Confirm the canonical step, owner, and required capability."
+        description="Confirm the canonical step, responsible component, and required capability."
         fit="content"
         kicker="Request Context"
         title="Release boundary"
@@ -47,7 +47,7 @@ export function ProductReleaseActionReviewStep({
               ),
             },
             {
-              label: "Workflow owner",
+              label: "Workflow service",
               value: operation.workflowOwner,
             },
             {

@@ -39,7 +39,7 @@ export const modelOperationsWorkspaceStatus: OperationSurfaceStatusModel = {
         "No admitted OOS request API, review projection, fulfillment command, or reconciliation receipt exists for profile changes.",
       facts: [
         { label: "Request API", value: "not implemented" },
-        { label: "Workflow owner", value: "OOS after admission" },
+        { label: "Workflow service", value: "OOS after admission" },
         { label: "Registry mutation", value: "Platform Engineering only" },
       ],
       id: "request-path",

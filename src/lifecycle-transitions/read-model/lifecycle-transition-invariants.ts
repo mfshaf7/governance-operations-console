@@ -71,7 +71,7 @@ export function assertLifecycleTransitionSourcePacket(
     packet.authority.role !== "source-domain" ||
     packet.authority.ownerRef !== route.intentOwnerRef
   ) {
-    throw new Error(`${packet.transitionId} has an invalid intent owner.`);
+    throw new Error(`${packet.transitionId} has an invalid responsible component for the intent.`);
   }
 
   if (
@@ -194,19 +194,19 @@ export function assertLifecycleTransitionArtifactAuthority(
           "validation-authority",
         ].includes(authority.role)
       ) {
-        throw new Error(`${artifact.artifactId} has an invalid gate owner.`);
+        throw new Error(`${artifact.artifactId} has an invalid responsible component for the gate.`);
       }
       return;
     case "source-correction-returned":
       if (
         !["target-domain", "validation-authority"].includes(authority.role)
       ) {
-        throw new Error(`${artifact.artifactId} has an invalid return owner.`);
+        throw new Error(`${artifact.artifactId} has an invalid return responsibility.`);
       }
       return;
     case "transition-deferred":
       if (authority.role !== "decision-authority") {
-        throw new Error(`${artifact.artifactId} has an invalid defer owner.`);
+        throw new Error(`${artifact.artifactId} has an invalid follow-up responsibility.`);
       }
       return;
     case "transition-cancelled":

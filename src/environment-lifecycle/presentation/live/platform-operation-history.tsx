@@ -35,7 +35,7 @@ export function PlatformOperationHistory({ onControl, onRead, operations, contro
       if (active && !busy && !document.hidden) {
         busy = true;
         try { await onRead(selectedId); }
-        catch { if (active) setError("Original owner progress could not be refreshed. Existing evidence is retained; inspect the original workflow or refresh again."); }
+        catch { if (active) setError("Original operation progress could not be refreshed. Existing evidence is retained; inspect the original workflow or refresh again."); }
         finally { busy = false; }
       }
       if (active) timer = setTimeout(tick, 15_000);
@@ -52,8 +52,8 @@ export function PlatformOperationHistory({ onControl, onRead, operations, contro
     const current = operations.find(item => item.operation_id === operationId);
     if (pending || !controlsAvailable || !current || !(action === "cancel" ? current.provider_operation.cancel_available : current.provider_operation.retryable)) return;
     setPending(true); setError(null);
-    try { await onControl(operationId,action, action === "cancel" ? "Cancel this exact retained operation without assuming rollback." : "Retry this exact retained operation after reviewing its current owner state."); setCancelId(null); }
-    catch(caught) {setError(caught instanceof Error ? caught.message : "The owner could not confirm this control. Refresh the original operation before retrying.");}
+    try { await onControl(operationId,action, action === "cancel" ? "Cancel this exact retained operation without assuming rollback." : "Retry this exact retained operation after reviewing its current source state."); setCancelId(null); }
+    catch(caught) {setError(caught instanceof Error ? caught.message : "The service could not confirm this control. Refresh the original operation before retrying.");}
     finally {setPending(false);}
   }
   async function read() {
@@ -64,7 +64,7 @@ export function PlatformOperationHistory({ onControl, onRead, operations, contro
   const close = () => {if(!pending){setSelectedId(null);setError(null);}};
   return <>
     <TerasPanel spacing="normal" fit="content" frame="padded" treatment="neutral">
-      <TerasPanelHeader busy={pending} busyLabel="Reading operation history…" kicker="Recorded operations" title="Operation history" description="Inspect an original operation, its owner events and receipt. These are loaded records, not a complete lifetime total."
+      <TerasPanelHeader busy={pending} busyLabel="Reading operation history…" kicker="Recorded operations" title="Operation history" description="Inspect an original operation, its recorded events and receipt. These are loaded records, not a complete lifetime total."
         statusLabel={`${Math.min(visible,operations.length)} of ${operations.length} loaded`} statusTone="info"/>
       {loading && !sorted.length ? <TerasLoadingState label="Loading operation history…" /> : sorted.length ? <TerasList frame="contained">{sorted.slice(0,visible).map(operation => <TerasSignalItem key={operation.operation_id} ariaLabel={`Inspect operation ${operation.operation_id}`} actionLabel="Inspect operation" onSelect={() => {setSelectedId(operation.operation_id);setError(null);}}
         label={platformSubjectLabel(operation.command.subject.ref)} title={`${platformActionLabel(operation.command.action)} · ${operationStateLabel(operation.state)}`}
@@ -81,18 +81,18 @@ export function PlatformOperationHistory({ onControl, onRead, operations, contro
         <TerasMetadataList columns={2} items={[{label:"Requested",value:operationTime(selected.created_at)},{label:"Updated",value:operationTime(selected.updated_at)},{label:"Receipt",value:selected.provider_operation.receipt ? "Recorded" : "Not issued"},{label:"Effect",value:selected.provider_operation.receipt?.effect ?? "Not confirmed"}]}/>
         <TerasContentTray kicker="Next action" description={selected.next_action.reason}/>
         {selected.provider_operation.release_workflow ? <>
-          <TerasMetadataList items={[{label:"Owner workflow",value:selected.provider_operation.release_workflow.workflow_id},{label:"Recorded release progress",value:selected.provider_operation.release_workflow.phase.replaceAll("-"," ")},{label:"Desired source state",value:selected.provider_operation.release_workflow.desired_state_verified ? "Verified" : "Not yet verified"}]}/>
-          <TerasContentTray description={selected.state === "blocked" ? "Owner readback needs attention. Workflow links and progress below retain the original recorded evidence; refresh to confirm current state." : "Source completion and observed runtime health are separate. Environment approval and source merge stay in GitHub."}/>
+          <TerasMetadataList items={[{label:"Workflow service",value:selected.provider_operation.release_workflow.workflow_id},{label:"Recorded release progress",value:selected.provider_operation.release_workflow.phase.replaceAll("-"," ")},{label:"Desired source state",value:selected.provider_operation.release_workflow.desired_state_verified ? "Verified" : "Not yet verified"}]}/>
+          <TerasContentTray description={selected.state === "blocked" ? "Source readback needs attention. Workflow links and progress below retain the original recorded evidence; refresh to confirm current state." : "Source completion and observed runtime health are separate. Environment approval and source merge stay in GitHub."}/>
           <TerasActionRow>
             {selected.provider_operation.release_workflow.run_url ? <TerasActionButton emphasis="secondary" onClick={()=>window.open(selected.provider_operation.release_workflow!.run_url!,"_blank","noopener,noreferrer")}>Open original workflow</TerasActionButton> : null}
             {selected.provider_operation.release_workflow.pull_request_url ? <TerasActionButton emphasis="secondary" onClick={()=>window.open(selected.provider_operation.release_workflow!.pull_request_url!,"_blank","noopener,noreferrer")}>Open source review</TerasActionButton> : selected.provider_operation.release_workflow.branch ? <TerasActionButton emphasis="secondary" onClick={()=>window.open(`https://github.com/mfshaf7/platform-engineering/compare/main...${selected.provider_operation.release_workflow!.branch}?expand=1`,"_blank","noopener,noreferrer")}>Inspect retained source branch</TerasActionButton> : null}
           </TerasActionRow>
         </> : null}
-        {selected.provider_operation.failure ? <TerasStatusItem label="Owner failure" status="Failed" detail={selected.provider_operation.failure.detail} tone="danger"/> : null}
-        {selected.provider_operation.blocker ? <TerasStatusItem label="Blocker" status="Owner action needed" detail={selected.provider_operation.blocker.reason} tone="warn"/> : null}
+        {selected.provider_operation.failure ? <TerasStatusItem label="Service failure" status="Failed" detail={selected.provider_operation.failure.detail} tone="danger"/> : null}
+        {selected.provider_operation.blocker ? <TerasStatusItem label="Blocker" status="Service action needed" detail={selected.provider_operation.blocker.reason} tone="warn"/> : null}
         <TerasTimeline ariaLabel="Operation event history">{selected.provider_operation.events.map(event => <TerasTimelineItem key={event.event_id} label={event.summary} detail={null} status={operationStateLabel(event.state)} displayTimestamp={operationTime(event.occurred_at)} timestamp={event.occurred_at} tone={operationTone(event.state)}
           evidence={<TerasTechnicalDetails summary="Event details" items={[{label:"Event",value:event.event_id},{label:"Sequence",value:String(event.sequence)}]}/>}/>)}</TerasTimeline>
-        <TerasTechnicalDetails summary="Operation and receipt details" items={[{label:"Operation",value:selected.operation_id},{label:"Subject",value:selected.command.subject.ref},{label:"Owner next action",value:`${selected.next_action.authority}: ${selected.next_action.code}`},{label:"Reviewed source",value:selected.command.subject.expected_source_version},{label:"Receipt",value:selected.provider_operation.receipt?.receipt_ref ?? "Not issued"},{label:"Safe log reference",value:selected.provider_operation.safe_log_ref ?? "Not supplied"},{label:"Original command",value:JSON.stringify(selected.command,null,2)},{label:"Owner receipt",value:JSON.stringify(selected.provider_operation.receipt,null,2)}]}/>
+        <TerasTechnicalDetails summary="Operation and receipt details" items={[{label:"Operation",value:selected.operation_id},{label:"Subject",value:selected.command.subject.ref},{label:"Recorded next action",value:`${selected.next_action.authority}: ${selected.next_action.code}`},{label:"Reviewed source",value:selected.command.subject.expected_source_version},{label:"Receipt",value:selected.provider_operation.receipt?.receipt_ref ?? "Not issued"},{label:"Safe log reference",value:selected.provider_operation.safe_log_ref ?? "Not supplied"},{label:"Original command",value:JSON.stringify(selected.command,null,2)},{label:"Source receipt",value:JSON.stringify(selected.provider_operation.receipt,null,2)}]}/>
         <TerasActionRow>
           {onRead ? <TerasActionButton emphasis="secondary" disabled={pending} onClick={() => void read()}>Refresh original operation</TerasActionButton> : null}
           {selected.provider_operation.retryable ? <TerasActionButton disabled={pending || !controlsAvailable} onClick={() => void control(selected.operation_id,"retry")}>Retry operation</TerasActionButton> : null}
@@ -101,7 +101,7 @@ export function PlatformOperationHistory({ onControl, onRead, operations, contro
       </TerasFieldStack> : <TerasEmptyState>The original operation is unavailable in the loaded history.</TerasEmptyState>}
     </TerasDialog>
     <TerasDialog open={Boolean(cancelId)} onClose={() => {if(!pending)setCancelId(null);}} closeDisabled={pending} contentOverflow="auto" height="content" width="compact" role="alertdialog" kicker="Cancel original operation" title="Cancel this operation?"
-      description={cancelling?.provider_operation.cancel_available ? "Cancellation stops future work. Effects already recorded by the owner are retained; cancellation does not prove rollback." : "The operation changed and cancellation is no longer available. Refresh its details."}
+      description={cancelling?.provider_operation.cancel_available ? "Cancellation stops future work. Effects already recorded by the service are retained; cancellation does not prove rollback." : "The operation changed and cancellation is no longer available. Refresh its details."}
       actions={<><TerasActionButton emphasis="secondary" disabled={pending} onClick={() => setCancelId(null)}>Back</TerasActionButton><TerasActionButton tone="danger" disabled={pending || !controlsAvailable || !cancelling?.provider_operation.cancel_available} onClick={() => {if(cancelling)void control(cancelling.operation_id,"cancel");}}>Confirm cancellation</TerasActionButton></>}>
       {cancelling ? <TerasMetadataList items={[{label:"Profile",value:platformSubjectLabel(cancelling.command.subject.ref)},{label:"Action",value:platformActionLabel(cancelling.command.action)}]}/> : null}
     </TerasDialog>

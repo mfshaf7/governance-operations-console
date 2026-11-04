@@ -185,10 +185,10 @@ function ProfileIntentStep({
       <TerasFieldStack spacing="loose">
         <TerasFieldGrid spacing="loose">
           <TerasTextField disabled={disabled} label="Display name" value={draft.displayName} onValueChange={(value) => onUpdateDraft("displayName", value)} />
-          <TerasTextField disabled={disabled} label="Requesting owner repo" value={draft.ownerRepo} onValueChange={(value) => onUpdateDraft("ownerRepo", value)} />
+          <TerasTextField disabled={disabled} label="Requesting repository" value={draft.ownerRepo} onValueChange={(value) => onUpdateDraft("ownerRepo", value)} />
         </TerasFieldGrid>
         <TerasNoteField disabled={disabled} label="Intended purpose" value={draft.purpose} onValueChange={(value) => onUpdateDraft("purpose", value)} />
-        <TerasTextField disabled={disabled} label="Registered callers" placeholder="caller-id=owner-repo, another-caller=owner-repo" value={draft.registeredCallers} onValueChange={(value) => onUpdateDraft("registeredCallers", value)} />
+        <TerasTextField disabled={disabled} label="Registered callers" placeholder="caller-id=repository, another-caller=repository" value={draft.registeredCallers} onValueChange={(value) => onUpdateDraft("registeredCallers", value)} />
         <TerasFieldGrid spacing="loose">
           <TerasSelectField
             label="Environment"
@@ -246,7 +246,7 @@ function ProfileReviewStep({
 }) {
   const checks = [
     ["Gateway", "Required", "OOS routes fulfillment to Platform; the Console never selects a provider route."],
-    ["Identity", "Required", "Every registered caller remains bound to its owner and governed profile."],
+    ["Identity", "Required", "Every registered caller remains bound to its responsible repository and governed profile."],
     ["Audit", "Required", "OOS and Platform receipts must reconcile before completion."],
     ["Security", "Required", "Security acceptance remains mandatory before activation."],
   ] as const;

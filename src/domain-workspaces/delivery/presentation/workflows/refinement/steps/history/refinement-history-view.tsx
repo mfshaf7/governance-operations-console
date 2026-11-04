@@ -109,7 +109,7 @@ export function RefinementHistoryView({
             <TerasStatItem
               detail="Work Design source receipt carried into Refinement."
               label="Source Receipt"
-              value={packet?.handoff.source_work_design_receipt_id ?? "No current packet; inspect original owner history"}
+              value={packet?.handoff.source_work_design_receipt_id ?? "No current packet; inspect original source history"}
             />
             <TerasStatItem
               detail="Bounded OOS routes staged by the apply plan."

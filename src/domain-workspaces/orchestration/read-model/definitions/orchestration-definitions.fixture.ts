@@ -245,7 +245,7 @@ export const orchestrationDefinitionRecords: OrchestrationDefinitionRecord[] = [
     implementationRepo: "operator-orchestration-service",
     lifecycle: "candidate",
     purpose:
-      "Evaluate future recoverable repository onboarding across non-atomic owner boundaries.",
+      "Evaluate future recoverable repository onboarding across non-atomic component boundaries.",
     qualification: {
       decidedAt: null,
       decidedBy: null,

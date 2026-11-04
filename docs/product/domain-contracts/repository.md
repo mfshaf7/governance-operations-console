@@ -178,6 +178,45 @@ Repository Control uses:
 The selected panel follows the compact control selected-panel pattern used by
 Proposal and Repository. It fits content and ends with a bottom-right action.
 
+### Repository review
+
+Review and Inspect use the same domain-owned content composition inside their
+existing dialogs. A distinct Repository details dialog title sits above one
+neutral identity panel containing the repository name, its source purpose once,
+GitHub repository and responsible workspace owner. The HTTPS GitHub link is
+visibly underlined and opens in a separate browser tab with no opener access.
+Current workspace registration and the existing
+identity-bound GitHub observation remain separate facts; registration never
+implies provider health, deployment readiness or Security approval. Unavailable
+inventory is unknown, not unregistered. Retired records remain inspectable.
+
+Neutral Current status and Manage repository panels use existing Teras patterns.
+Manage repository retains the standard header with Repository actions as its
+kicker; its controls are optional operations.
+Each owner action sits beside its purpose and retains its existing eligibility
+and callback. Open Delivery Catalog navigates the exact existing Catalog
+reconciliation route; Manage Lifecycle opens the existing guarded lifecycle
+workflow. Registration, local demonstration and blocked-request actions retain
+their separate boundaries. History and return navigation remain in the footer.
+
+Recorded checks, original inspection dialogs, runtime/Security information and
+exact source references remain under Recorded evidence and technical details.
+The modal does not issue an extra provider probe or manufacture new readiness
+from historical receipts. Evidence rows use the optional trailing Teras metadata
+action: Inspect record aligns at the far right, while the result is a separate
+status pill. Styling remains in Teras; no domain CSS, new primitive or owner
+authority is introduced.
+
+Inspect record opens the existing read-only record dialog. Its standard header
+names the record and selected repository. Creation/linking evidence explains
+setup identity, checks and confirmation; workspace registration distinguishes
+registered, retired, suspended and unverified source; GitHub inspection separates
+the latest check from retained observations. Readable metadata and a short scope
+explanation replace raw-reference status rows. Original descriptions, exact
+values, receipt IDs, revisions and timestamps remain in Technical details.
+Other record groups retain their original checks through the same composition.
+These dialogs do not run checks or change the parent review's authority.
+
 ## Source Structure
 
 Repository uses the Operation Workbench `compact-control` profile.
@@ -256,8 +295,18 @@ delete the provider repository. Unarchive and restore bind the exact successful
 receipt they reverse.
 
 The Review step records impact disposition when a blocking finding exists,
+shows the response fields only for recorded blocking findings, and explains
+that current impact is checked again before applying. It
 requires an approval note, and requires explicit confirmation of the exact
-action. The Result step displays only validated OOS decision, execution,
+action. The existing wizard explains each action's effect, including the
+difference between GitHub archive and workspace retirement. The apply button
+names the selected action. Unsent edits are protected by the shared discard
+guard on close and History navigation; Back retains input. Pending execution
+disables edits and exits. A missing acknowledgement retains the reviewed draft
+and retry identity. Confirmation is bound to the reviewed owner state and
+custody request; changed input or state requires confirmation again. Submission
+also rechecks action eligibility and current execution availability.
+The Result step displays only validated OOS decision, execution,
 receipt, and audit truth. Live Repository History combines identity-bound
 custody and provisioning receipts with the OOS lifecycle audit, preserving
 their original attribution. Prototype-local setup receipts appear only in

@@ -1,5 +1,7 @@
 "use client";
 
+import { deliveryFieldDisplayLabel } from "../../../../../read-model/terms/copy.ts";
+
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useDraftAdvisor } from "@/agent-console";
@@ -176,9 +178,9 @@ export function RefinementMetadataAdvisor({
               onChange: setAdvisorPrompt,
               onSubmit: submitAdvisorPrompt,
               placeholder: selectedSharedMetadataGroup
-                ? `Ask about shared ${selectedSharedMetadataGroup.field.label}...`
+                ? `Ask about shared ${deliveryFieldDisplayLabel(selectedSharedMetadataGroup.field.label)}...`
                 : selectedTarget
-                  ? `Ask about ${selectedTarget.field.label}...`
+                  ? `Ask about ${deliveryFieldDisplayLabel(selectedTarget.field.label)}...`
                   : "Ask about the selected metadata field...",
               rows: 1,
               value: advisorPrompt,

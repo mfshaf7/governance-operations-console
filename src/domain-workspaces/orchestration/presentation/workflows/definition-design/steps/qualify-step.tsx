@@ -60,7 +60,7 @@ const durabilitySignals: Array<{
     label: "Correlated history",
   },
   {
-    detail: "The operation crosses non-atomic effect owners.",
+    detail: "The operation crosses non-atomic effect components.",
     field: "nonAtomicEffects",
     label: "Non-atomic effects",
   },
@@ -107,13 +107,13 @@ export function DefinitionQualifyStep({
             value={draft.title}
           />
           <TerasTextField
-            label="Execution owner"
+            label="Execution component"
             onValueChange={(executionOwner) =>
               editQualification((next) => {
                 next.executionOwner = executionOwner;
               })
             }
-            placeholder="Accountable backend owner"
+            placeholder="Responsible backend service"
             value={draft.executionOwner}
           />
         </TerasFieldGrid>
@@ -126,7 +126,7 @@ export function DefinitionQualifyStep({
                 next.sourceDomain = sourceDomain;
               })
             }
-            placeholder="Owning operation or product domain"
+            placeholder="Responsible operation or product workspace"
             value={draft.sourceDomain}
           />
           <TerasTextField

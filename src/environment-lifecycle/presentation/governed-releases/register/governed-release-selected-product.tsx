@@ -77,14 +77,14 @@ export function GovernedReleaseSelectedProduct({
                 label: "Maturity",
                 value: productReleaseMaturityLabels[product.maturity],
               },
-              { label: "Platform owner", value: product.platformOwner },
+              { label: "Platform responsibility", value: product.platformOwner },
               {
                 label: "Highest endpoint",
                 value: formatProductReleaseStatus(product.highestRealEndpoint),
               },
               {
                 label: product.ownerGuidanceUrl ? "Runtime controls" : "Runtime lifecycle",
-                value: product.ownerGuidanceUrl ? product.ownerWorkflows?.some(w=>w.id==="runtime") ? "Owner workflow" : "Not supported" : product.runtimeLifecycle ? "Available" : "Unavailable",
+                value: product.ownerGuidanceUrl ? product.ownerWorkflows?.some(w=>w.id==="runtime") ? "Workflow service" : "Not supported" : product.runtimeLifecycle ? "Available" : "Unavailable",
               },
             ]
           : []

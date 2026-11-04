@@ -26,7 +26,7 @@ export function DefinitionVersionHistoryDialog({
   return (
     <TerasDialog
       contentOverflow="hidden"
-      description={record.source.mode === "live-authority" ? "Versions supplied by the owner catalog. This catalog provides its current version, not a complete historical archive." : "Immutable definition versions retained by the current family projection."}
+      description={record.source.mode === "live-authority" ? "Versions supplied by the source catalog. This catalog provides its current version, not a complete historical archive." : "Immutable definition versions retained by the current family projection."}
       height="fill"
       kicker="Definition Archive"
       onClose={onClose}

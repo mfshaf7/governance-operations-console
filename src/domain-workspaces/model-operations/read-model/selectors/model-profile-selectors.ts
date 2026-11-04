@@ -169,7 +169,7 @@ export function modelProfileChecks(
           value: profile.accessPlane.activationAllowed ? "allowed" : "blocked",
         },
         { label: "Audit sink", value: profile.accessPlane.auditSinkStatus },
-        { label: "Credential owner", value: profile.accessPlane.credentialOwner },
+        { label: "Credentials managed by", value: profile.accessPlane.credentialOwner },
         { label: "Access reason", value: profile.accessPlane.reason },
       ],
       id: "access-plane",

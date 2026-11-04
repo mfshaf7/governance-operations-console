@@ -10,6 +10,20 @@ import type {
 export type DeliverySurfaceId =
   "audit-trail" | "execution-board" | "intake" | "refinement" | "work-design";
 
+// Friendly captions only. Keep backend field names and request keys intact.
+export function deliveryFieldDisplayLabel(label: string) {
+  switch (label) {
+    case "Owner Repo":
+    case "Owner repo":
+    case "Owner repository": return "Implementation repository";
+    case "Blocker Owner": return "Resolution responsibility";
+    case "Security Owner": return "Security responsibility";
+    case "Platform Owner": return "Platform responsibility";
+    case "Runtime Owner": return "Runtime responsibility";
+    default: return label;
+  }
+}
+
 export type DeliverySurfaceTerm = {
   description: string;
   label: string;
@@ -141,7 +155,7 @@ export const deliveryActionTerms: Record<
   "sync-owner-repo": {
     description:
       "Open the manual Catalog add/link/sync path for an admitted repository value.",
-    label: "Catalog Owner Repo",
+    label: "Catalog Implementation repository",
   },
   "view-art-tree": {
     description: "Inspect package hierarchy without mutating ART.",

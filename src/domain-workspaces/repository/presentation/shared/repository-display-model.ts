@@ -102,7 +102,7 @@ export function repositoryContextMetadata(
   repository: RepositoryWorkspaceRecord,
 ): TerasMetadataItem[] {
   return [
-    { label: "Owner", value: repository.owner },
+    { label: "Workspace repository", value: repository.owner },
     { label: "Class", value: repository.repoClass },
     { label: "Lifecycle", value: repository.lifecycle },
     {

@@ -208,7 +208,7 @@ export function prototypePreviewPacketEligibilityRows(
     {
       detail:
         "Preview Runtime supplies evidence only; Baseline Promotion owns assembly.",
-      label: "Packet owner",
+      label: "Packet source",
       status: "Baseline Promotion",
       tone: record.preview.lastProofRef ? "info" : "muted",
     },

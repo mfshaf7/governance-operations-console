@@ -50,7 +50,7 @@ export function assertEnvironmentLifecycleNextMove(
       !nextMove.reason.trim())
   ) {
     throw new Error(
-      "Environment Lifecycle next move must identify its action, label, owner, and reason.",
+      "Environment Lifecycle next move must identify its action, label, responsible component, and reason.",
     );
   }
 }

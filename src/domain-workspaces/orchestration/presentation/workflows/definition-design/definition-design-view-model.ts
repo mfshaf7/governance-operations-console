@@ -17,7 +17,7 @@ export const definitionDesignSectionOptions: Array<{
   label: string;
   value: Exclude<OrchestrationDefinitionDesignSection, "qualification">;
 }> = [
-  { label: "Identity And Ownership", value: "identity-ownership" },
+  { label: "Identity and responsibility", value: "identity-ownership" },
   { label: "Trigger And Result", value: "trigger-result" },
   { label: "Execution Plan", value: "execution-plan" },
   { label: "Failure And Controls", value: "failure-controls" },
@@ -259,7 +259,7 @@ export function qualificationCheckRows(
       fields: ["trigger", "completionCondition", "executionOwner"],
       id: "qualification-result",
       label: "Trigger And Result",
-      readyDetail: "Trigger, owner, and completion are explicit.",
+      readyDetail: "Trigger, responsibility, and completion are explicit.",
     },
     {
       fields: ["classification", "rationale", "reevaluationCondition"],

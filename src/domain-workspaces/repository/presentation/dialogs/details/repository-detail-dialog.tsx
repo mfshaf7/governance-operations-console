@@ -2,34 +2,13 @@
 
 import { useState } from "react";
 
-import {
-  TerasStatusItem,
-  TerasList,
-  TerasDetailGrid,
-  TerasDialog,
-  TerasActionButton,
-  TerasContentTray,
-  TerasMetadataList,
-  TerasPanel,
-  TerasPanelHeader,
-  TerasTrayStack,
-} from "@/teras";
+import { TerasDialog, TerasActionButton, TerasContentTray } from "@/teras";
 
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import { repositoryCanResolveProposalGate } from "../../shared/repository-control-projection.ts";
-import {
-  repositoryBlockerDetail,
-  repositoryBlockerSeverityLabel,
-} from "../admission/repository-admission-view-model.ts";
 import { repositoryDetailDialogProjection } from "./repository-detail-view-model.ts";
-import {
-  repositoryContextMetadata,
-  repositoryRecordStatusLabel,
-} from "../../shared/repository-display-model.ts";
-import {
-  RepositoryAdmissionPostureDialog,
-  RepositoryAdmissionPostureList,
-} from "../admission/repository-admission-posture.tsx";
+import { RepositoryAdmissionPostureDialog } from "../admission/repository-admission-posture.tsx";
+import { RepositoryReviewContent } from "./repository-review-content.tsx";
 
 export function RepositoryDetailDialog({
   onClose,
@@ -78,118 +57,51 @@ export function RepositoryDetailDialog({
               >
                 View History
               </TerasActionButton>
+
+            </>
+          ) : undefined
+        }
+        closeLabel={detailProjection.closeLabel}
+        description={detailProjection.description}
+        kicker="Repository review"
+        onClose={closeDetailDialog}
+        open={Boolean(repository)}
+        title={detailProjection.title}
+      >
+        {repository ? (
+          <div data-repository-detail-modal="true">
+            <RepositoryReviewContent repository={repository} onOpenGroup={setActivePostureGroupId}
+              actions={<>
               {isRetiredRecord && repository.providerIdentity ? (
+                <TerasContentTray kicker="Restore workspace record" description="Review restoring the retired workspace record. Restoring it does not unarchive the GitHub repository.">
                 <TerasActionButton
                   data-repository-lifecycle-open="true"
                   onClick={() => onOpenLifecycle(repository)}
                 >
                   Manage Lifecycle
                 </TerasActionButton>
+                </TerasContentTray>
               ) : null}
               {isBlockedRecord && canResolveProposalGate ? (
+                <TerasContentTray kicker="Repository request" description="Review the repository association requested by the linked Proposal.">
                 <TerasActionButton
                   data-repository-gate-resolution-open="true"
                   onClick={() => onResolveProposalGate(repository)}
                 >
-                  Resolve Repository Gate
+                  Resolve repository request
                 </TerasActionButton>
-              ) : null}
-            </>
-          ) : undefined
-        }
-        closeLabel={detailProjection.closeLabel}
-        description={detailProjection.description}
-        kicker="Repository Record"
-        onClose={closeDetailDialog}
-        open={Boolean(repository)}
-        title={detailProjection.title}
-      >
-        {repository ? (
-          <TerasDetailGrid
-            data-repository-detail-modal="true"
-            scrollGutter
-            variant="balanced"
-          >
-            <TerasTrayStack align="start" spacing="loose">
-              <TerasPanel
-                frame="padded"
-                treatment="rail"
-                tone={detailProjection.postureTone}
-              >
-                <TerasPanelHeader
-                  description="Repository admission posture from the current control record."
-                  kicker={detailProjection.postureKicker}
-                  title={detailProjection.postureTitle}
-                />
-                <TerasTrayStack spacing="loose" topOffset="section">
-                  <RepositoryAdmissionPostureList
-                    activeGroupId={activePostureGroupId}
-                    groups={repository.admissionPosture}
-                    onOpenGroup={setActivePostureGroupId}
-                  />
-                </TerasTrayStack>
-              </TerasPanel>
-              {isRetiredRecord ? (
-                <TerasContentTray
-                  description="This workspace record is retired. The governed lifecycle action can restore it from the receipt being reversed."
-                  kicker="Retirement Handling"
-                />
-              ) : null}
-            </TerasTrayStack>
-
-            <TerasTrayStack align="start" spacing="loose">
-              <TerasPanel
-                frame="padded"
-                treatment="rail"
-                tone={detailProjection.repositoryTone}
-              >
-                <TerasPanelHeader
-                  actionsLayout="inline"
-                  description={repository.purpose}
-                  kicker="Repository Context"
-                  statusLabel={repositoryRecordStatusLabel(repository)}
-                  statusTone={detailProjection.repositoryTone}
-                  title={repository.name}
-                />
-                <TerasTrayStack spacing="loose" topOffset="section">
-                  <TerasMetadataList
-                    items={repositoryContextMetadata(repository)}
-                  />
-                </TerasTrayStack>
-              </TerasPanel>
-
-              {repository.blockers.length > 0 ? (
-                <TerasContentTray kicker="Blocking Issues">
-                  <TerasList>
-                    {repository.blockers.map((blocker, index) => (
-                      <TerasStatusItem
-                        tone={
-                          blocker.severity === "blocked" ? "danger" : "warn"
-                        }
-                        detail={repositoryBlockerDetail(blocker)}
-                        index={String(index + 1).padStart(2, "0")}
-                        key={blocker.id}
-                        label={blocker.label}
-                        status={repositoryBlockerSeverityLabel(
-                          blocker.severity,
-                        )}
-                      />
-                    ))}
-                  </TerasList>
                 </TerasContentTray>
-              ) : !isBlockedRecord && !isRetiredRecord ? (
-                <TerasContentTray
-                  description="No repository blocker is listed for this record."
-                  kicker="Blocking Issues"
-                />
               ) : null}
-            </TerasTrayStack>
-          </TerasDetailGrid>
+              {!(isRetiredRecord && repository.providerIdentity) && !(isBlockedRecord && canResolveProposalGate)
+                ? <TerasContentTray kicker="Read-only inspection" description={repository.nextAction} /> : null}
+              </>} />
+          </div>
         ) : null}
       </TerasDialog>
 
       <RepositoryAdmissionPostureDialog
         group={activePostureGroup}
+        repositoryName={repository?.name}
         onClose={() => setActivePostureGroupId(null)}
       />
     </>

@@ -115,7 +115,7 @@ export function ModelProfileRequestHistoryDialog({ open, onClose, initialRequest
             </TerasFieldGrid> : null}
             {action === "request-changes" ? <>
               {requirements.map((requirement, index) => <TerasFieldGrid columns={3} key={requirement.requirement_id}>
-                {([['summary', 'Required change'], ['owner_repo', 'Change owner'], ['next_action', 'Next move']] as const).map(([field, label]) => <TerasTextField key={field} label={`${label} ${index + 1}`} disabled={locked} value={requirement[field]} maxLength={field === "owner_repo" ? 128 : 1000} onValueChange={value => setRequirements(rows => rows.map((r, i) => i === index ? { ...r, [field]: value } : r))} />)}
+                {([['summary', 'Required change'], ['owner_repo', 'Repository responsible for change'], ['next_action', 'Next move']] as const).map(([field, label]) => <TerasTextField key={field} label={`${label} ${index + 1}`} disabled={locked} value={requirement[field]} maxLength={field === "owner_repo" ? 128 : 1000} onValueChange={value => setRequirements(rows => rows.map((r, i) => i === index ? { ...r, [field]: value } : r))} />)}
               </TerasFieldGrid>)}
               <TerasActionButton disabled={locked || requirements.length >= 32} emphasis="secondary" onClick={() => setRequirements(rows => [...rows, newRequirement()])}>Add requested change</TerasActionButton>
             </> : null}
@@ -133,6 +133,6 @@ export function ModelProfileRequestHistoryDialog({ open, onClose, initialRequest
       onClose={() => setRevisionOpen(false)} onRecover={() => { setRevisionOpen(false); if (selected) void loadOriginal(selected.request_id); }}
       onStepChange={setRevisionStep} onUpdateDraft={(key, value) => setRevisionDraft(current => ({ ...current, [key]: value }))}
       onSubmit={async () => { try { const result = await execute(frozen ?? reviewedCommand(revisionDraft)); setRevisionResult(result); setRevisionStep("receipt"); } catch (cause) { setRevisionOpen(false); throw cause; } }} />
-    <TerasDraftCloseGuardDialog open={leaveRequested} kicker="Original request" title="Leave this review?" description="The original request and any accepted owner action remain recorded. Leaving does not cancel an unknown outcome. Recover the same request when returning." onKeepEditing={() => setLeaveRequested(false)} onLeave={() => { setLeaveRequested(false); onClose(); }} />
+    <TerasDraftCloseGuardDialog open={leaveRequested} kicker="Original request" title="Leave this review?" description="The original request and any accepted service action remain recorded. Leaving does not cancel an unknown outcome. Recover the same request when returning." onKeepEditing={() => setLeaveRequested(false)} onLeave={() => { setLeaveRequested(false); onClose(); }} />
   </>;
 }

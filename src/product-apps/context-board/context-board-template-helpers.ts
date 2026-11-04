@@ -271,7 +271,7 @@ export function contextBoardUmlRelationshipCopy(
         label: "Composition",
         startTip: "filled-diamond",
         stroke: "solid",
-        title: "Strong whole-to-part composition with a filled diamond at the owner side",
+        title: "Strong whole-to-part composition with a filled diamond at the containing-class end",
         tone: "purple",
       };
     case "dependency":

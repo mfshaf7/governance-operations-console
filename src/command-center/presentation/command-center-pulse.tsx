@@ -365,7 +365,7 @@ function PulseRecordList({
                 <strong>{source.label}</strong>
                 <small>
                   {source.mode === "synthetic"
-                    ? `Fixture owner: ${source.authority} · Live authority: ${source.intendedAuthority}`
+                    ? `Preview source: ${source.authority} · Live authority: ${source.intendedAuthority}`
                     : `Authority: ${source.authority}`}
                 </small>
                 <span>{source.reference}</span>

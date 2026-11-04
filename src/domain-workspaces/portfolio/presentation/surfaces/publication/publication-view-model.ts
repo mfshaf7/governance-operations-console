@@ -157,7 +157,7 @@ export function productPublicationSelectedFacts(
       label: "Product Form",
       value: productFormValueLabel(packet.classification.productForm),
     },
-    { label: "Product Owner", value: packet.owners.productOwnerRef },
+    { label: "Product component", value: packet.owners.productOwnerRef },
     {
       label: "Requested Scope",
       value: productListingScopeLabel(packet.listing.requestedScope),
@@ -173,7 +173,7 @@ export function productPublicationSelectedFacts(
     facts.push(
       { label: "Current Posture", value: titleCase(governed.currentPosture) },
       {
-        label: "Owner Manifest",
+        label: "Product manifest",
         value: `${governed.manifestSource.repo}/${governed.manifestSource.path}`,
       },
     );
@@ -189,7 +189,7 @@ export function productPublicationActionModel(
     case "captured":
       return {
         description:
-          "Review source-backed requirements, choose the publication outcome, and record the owner receipt when connected or a local receipt in disconnected preview.",
+          "Review source-backed requirements, choose the publication outcome, and record the source receipt when connected or a local receipt in disconnected preview.",
         label: "Review Publication",
         title: "Publication review",
       };

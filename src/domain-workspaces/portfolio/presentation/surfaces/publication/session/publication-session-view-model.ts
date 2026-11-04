@@ -236,7 +236,7 @@ export function productPublicationSessionSteps({
       connectsToNext: false,
       detail: receipt
         ? receipt.authorityEvidence
-          ? "Authoritative OOS owner receipt is available."
+          ? "Authoritative OOS source receipt is available."
           : "Disconnected-preview decision receipt is available."
         : "Available after the decision is applied.",
       id: "result",
@@ -417,7 +417,7 @@ export function productPublicationOwnerManifestFacts(
   if (!source) return [];
 
   return [
-    { label: "Owner Repository", value: source.repo },
+    { label: "Responsible repository", value: source.repo },
     { label: "Manifest Path", value: source.path },
     { label: "Source Revision", value: source.sourceRevision },
     { label: "Manifest Revision", value: source.manifestRevision },
@@ -432,7 +432,7 @@ export function productPublicationResultFacts(
     { label: "Result", value: productPublicationResultLabel(receipt) },
     { label: "Product ID", value: receipt.productId },
     { label: "Packet", value: receipt.packetId },
-    { label: "Decision Owner", value: receipt.decision.decidedByRef },
+    { label: "Decision authority", value: receipt.decision.decidedByRef },
     { label: "Recorded", value: formatPublicationTimestamp(receipt.recordedAt) },
     { label: "Receipt", value: receipt.receiptId },
   ];
@@ -479,7 +479,7 @@ export function productPublicationResultFacts(
         value: governedPublicationValueLabel(target.access_class),
       },
       {
-        label: "Owner Manifest",
+        label: "Product manifest",
         value: `${manifest.repo}/${manifest.path}`,
       },
       {
@@ -491,7 +491,7 @@ export function productPublicationResultFacts(
         value: manifest.manifestDigest,
       },
       {
-        label: "Owner Receipt",
+        label: "Source receipt",
         value: receipt.authorityEvidence.ownerReceiptRef,
       },
       {

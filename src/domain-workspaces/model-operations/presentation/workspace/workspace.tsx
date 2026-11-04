@@ -34,7 +34,7 @@ export function ModelOperationsWorkspace({
     >
       <ModelOperationsControlSurface onDirtyChange={setDirty} />
     </TerasModalShell>
-    <TerasDraftCloseGuardDialog kicker="Routing draft" title="Discard unsaved routing changes?" description="Submitted operations remain recoverable from their owner records."
+    <TerasDraftCloseGuardDialog kicker="Routing draft" title="Discard unsaved routing changes?" description="Submitted operations remain recoverable from their source records."
       open={closeGuard} keepEditingLabel="Keep editing" leaveLabel="Discard draft and close" onKeepEditing={() => setCloseGuard(false)} onLeave={onClose} />
     </>
   );

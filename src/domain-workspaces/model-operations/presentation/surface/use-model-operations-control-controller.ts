@@ -42,7 +42,7 @@ export function useModelOperationsControlController() {
     }) ??
     unavailableModelOperationsReadModel(
       liveRuntime.snapshot?.error ??
-        "Model Operations owner truth is still loading.",
+        "Model Operations source state is still loading.",
     );
   const [search, setSearch] = useState("");
   const [lifecycle, setLifecycle] =

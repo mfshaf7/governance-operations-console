@@ -113,7 +113,7 @@ export function LifecycleTransitionsWorkspaceSurface({
               search={{
                 ariaLabel: "Search lifecycle transitions",
                 onValueChange: setQuery,
-                placeholder: "Search source, transition, owner, or target...",
+                placeholder: "Search source, transition, responsible component, or target...",
                 value: query,
               }}
             />
@@ -132,7 +132,7 @@ export function LifecycleTransitionsWorkspaceSurface({
           ) : (
             <TerasEmptyState fill>
               {runtimePosture?.mode === "live" && runtimePosture.status !== "current"
-                ? "Handoff records are unavailable. Waiting for a current owner read."
+                ? "Handoff records are unavailable. Waiting for a current source read."
                 : runtimePosture?.truncated && route.totalCount === 0
                   ? "No handoff is available from the sources currently read. Coverage is incomplete."
                   : "No transition matches the current search and filter."}

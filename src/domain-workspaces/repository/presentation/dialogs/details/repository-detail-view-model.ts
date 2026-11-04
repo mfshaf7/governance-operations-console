@@ -11,12 +11,12 @@ export function repositoryDetailDialogProjection(
     closeLabel: repository
       ? `Close ${repository.name} repository details`
       : "Close repository details",
-    description: repository?.purpose ?? "",
+    description: undefined,
     postureKicker: isRetiredRecord ? "Retirement Posture" : "Admission Posture",
     postureSelected: repository?.admissionState === "ready",
     postureTitle: isRetiredRecord ? "Retired record posture" : "Control checks",
     postureTone: isRetiredRecord ? ("muted" as const) : repositoryTone,
     repositoryTone,
-    title: repository?.name ?? "Repository",
+    title: "Repository details",
   };
 }

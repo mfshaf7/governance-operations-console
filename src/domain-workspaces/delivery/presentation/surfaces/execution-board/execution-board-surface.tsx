@@ -707,7 +707,7 @@ export function DeliveryExecutionBoard({
       <ExecutionSelectedPackagePanel
         readOnly={readOnly}
         onInspectHistory={model.source_truth === "OpenProject-backed OOS" ? () => setHistoryOpen(true) : undefined}
-        historyDetail={ownerHistory.loading?"Reading selected-item history…":ownerHistory.error??ownerHistory.projection?.activity?.detail??"Only the currently loaded evidence is shown. Open Original Owner Evidence for item activity and coverage."}
+        historyDetail={ownerHistory.loading?"Reading selected-item history…":ownerHistory.error??ownerHistory.projection?.activity?.detail??"Only the currently loaded evidence is shown. Open Original Source evidence for item activity and coverage."}
         onInspectCloseout={!readOnly && model.source_truth === "OpenProject-backed OOS"
           ? () => setCloseoutOpen(true) : undefined}
         onEditCanonicalTree={

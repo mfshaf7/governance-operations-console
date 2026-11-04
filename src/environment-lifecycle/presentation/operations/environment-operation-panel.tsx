@@ -210,7 +210,7 @@ export function EnvironmentOperationPanel({
                 ...(latestOperation.state === "failed"
                   ? [
                       {
-                        label: "Failure owner",
+                        label: "Failure responsibility",
                         value: latestOperation.workflowOwner,
                       },
                       {
@@ -281,7 +281,7 @@ export function EnvironmentOperationPanel({
                   value: latestOperation.actorRef,
                 },
                 {
-                  label: "Workflow owner",
+                  label: "Workflow service",
                   value: latestOperation.workflowOwner,
                 },
                 {

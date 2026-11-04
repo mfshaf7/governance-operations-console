@@ -1,15 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasContentTray, TerasDraftCloseGuardDialog, TerasFieldStack, TerasMetadataList, TerasModalShell, TerasNoteField, TerasSelectField, TerasTextField } from "@/teras";
+import { TerasActionButton, TerasActionRow, TerasContentTray, TerasDraftCloseGuardDialog, TerasFieldStack, TerasList, TerasMetadataList, TerasModalShell, TerasNoteField, TerasSelectField, TerasSignalItem, TerasTechnicalDetails, TerasTextField } from "@/teras";
 import { SourceAuthorizationPanel } from "../../../../../environment-lifecycle/presentation/source-authorization-panel.tsx";
 import type { OwnerBootstrapSummary } from "../../../live-runtime/repository-bootstrap-contract.ts";
 
 type Check = { original?: Record<string, unknown>; kind: string; name: string; executable: string; args: string; fidelity: string; binding: string; cases: string; timeout: string };
 const emptyCheck = (): Check => ({ kind: "", name: "", executable: "", args: "", fidelity: "", binding: "", cases: "", timeout: "120" });
+const requestType = (record: OwnerBootstrapSummary) => record.operation === "configure-verification" ? "Application verification" : "Repository setup";
+const requestState = (record: OwnerBootstrapSummary) => ({ prepared: "Ready to begin", "existing-controls-inspected": "Controls checked", "source-work": "In progress", "source-created": "Changes prepared", succeeded: "Completed", cancelled: "Cancelled" })[record.state] ?? record.state;
 const base = "/api/repository-owner-bootstrap", options = (values: string[]) => [{ value: "", label: "Select explicitly" }, ...values.map(value => ({ value, label: value }))];
 async function api(path: string, input?: unknown): Promise<unknown> {
   const response = await fetch(path, { cache: "no-store", ...(input === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }) });
-  const body = await response.json(); if (!response.ok || body.mode !== "live" || body.error) throw new Error(body.error ?? "Owner setup is unavailable."); return body.projection;
+  const body = await response.json(); if (!response.ok || body.mode !== "live" || body.error) throw new Error(body.error ?? "Repository setup is unavailable."); return body.projection;
 }
 export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, operation = "bootstrap", onClose }: { ownerRepo: string; custodyRequestId: string; operation?: "bootstrap" | "configure-verification"; onClose: () => void }) {
   const [records, setRecords] = useState<OwnerBootstrapSummary[] | null>(null), [current, setCurrent] = useState<OwnerBootstrapSummary | null>(null);
@@ -26,7 +28,7 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, op
   const acceptedCreate = useRef<Record<string, unknown> | null>(null);
   async function run(operation: () => Promise<void>) {
     if (lock.current) return; lock.current = true; setPending(true); setError(null);
-    try { await operation(); } catch (error) { if (mounted.current) setError(error instanceof Error ? error.message : "Owner setup is unavailable."); }
+    try { await operation(); } catch (error) { if (mounted.current) setError(error instanceof Error ? error.message : "Repository setup is unavailable."); }
     finally { lock.current = false; if (mounted.current) setPending(false); }
   }
   async function refresh() {
@@ -46,7 +48,7 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, op
   async function inspectCurrent() {
     const result = await api(`${base}/preparations`, inspection()) as Record<string, unknown>;
     const controls = result.existing_owner_controls as { evidence_profile?: Record<string, unknown> } | undefined;
-    if (!controls?.evidence_profile) throw new Error("The active owner's reviewed verification profile could not be read.");
+    if (!controls?.evidence_profile) throw new Error("The active repository’s reviewed verification profile could not be read.");
     if (mounted.current) {
       const profile = controls.evidence_profile, verification = profile.application_verification as { mode?: string; manual_checks?: { action: string; expected_result: string }[] } | undefined;
       setExistingProfile(profile); invalidate(); setEdited(false);
@@ -101,19 +103,22 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, op
   };
   const next = current ? actionFor[current.nextAction] : null;
   const files = ((draft?.change_set as { operations?: { path: string; content: string }[] } | undefined)?.operations ?? (plan?.files as { path: string; content: string }[] | undefined) ?? []);
-  return <><TerasModalShell busy={pending} busyLabel="Reading or updating owner setup…" width="standard" height="content" bodyLayout="scroll" kicker={active ? "Application verification" : "Repository setup"} title={ownerRepo} surfaceId="repository-owner-bootstrap"
-    description={active ? "Configure how application behavior will be verified. Review and merge the exact source change; saving a plan does not mean it has passed." : "Prepare source-review controls so development can begin. You do not need application tests or a test plan yet."}
+  return <><TerasModalShell busy={pending} busyLabel="Reading or updating repository setup…" width="standard" height="content" bodyLayout="scroll" kicker="Repository" title={active ? "Application verification" : "Repository setup"} surfaceId="repository-owner-bootstrap"
+    description={<><strong>{ownerRepo}</strong><br />{active ? "Configure how application behavior will be verified. Review and merge the exact source change; saving a plan does not mean it has passed." : "Prepare source-review controls so development can begin. You do not need application tests or a test plan yet."}</>}
     onClose={requestClose} footer={<TerasActionButton emphasis="secondary" disabled={pending} onClick={requestClose}>Back to Repository</TerasActionButton>}>
     <TerasFieldStack spacing="loose">
-      {error ? <TerasContentTray kicker="Owner action not confirmed" description={error} /> : null}
-      <TerasActionRow><TerasActionButton disabled={pending} onClick={() => void run(refresh)}>Refresh original owner requests</TerasActionButton>
-        {records?.map(record => <TerasActionButton key={record.requestId} disabled={pending} emphasis="secondary" onClick={() => void run(async () => { setCurrent(await api(`${base}/requests/${encodeURIComponent(record.requestId)}`) as OwnerBootstrapSummary); setDraft(null); setSourceIntent(null); })}>{record.requestId} / {record.state}</TerasActionButton>)}</TerasActionRow>
-      {current ? <TerasMetadataList items={[{ label: "Original request", value: current.requestId }, { label: "State / OOS next action", value: `${current.state} / ${current.nextAction}` },
-        { label: "Application / admission / runtime", value: "Not granted by this workflow" }, ...Object.entries(current.sourceDelivery).map(([action, control]) => ({ label: action, value: `${control.state} / ${control.command.command_id}` }))]} /> : null}
-      {terminal && !pendingOwner ? <TerasActionButton disabled={pending} emphasis="secondary" onClick={() => { setCurrent(null); setDraft(null); invalidate(); }}>Prepare genuinely new owner inspection (terminal request stays unchanged)</TerasActionButton> : null}
+      {error ? <TerasContentTray kicker="Service action not confirmed" description={error} /> : null}
+      {current ? <TerasContentTray kicker="Selected request" title={requestType(current)}>
+        <TerasMetadataList items={[{ label: "Status", value: requestState(current) }, { label: "Last updated", value: new Date(current.revision).toLocaleString() }]} />
+        <TerasTechnicalDetails items={[{ label: "Request ID", value: current.requestId }, { label: "Service state", value: current.state }, { label: "Next service action", value: current.nextAction },
+          ...Object.entries(current.sourceDelivery).map(([action, control]) => ({ label: action, value: `${control.state} / ${control.command.command_id}` }))]} />
+      </TerasContentTray> : null}
+      {terminal && !pendingOwner ? <TerasContentTray kicker="New change" description="The selected request is finished. It remains available in Previous requests.">
+        <TerasActionButton disabled={pending} onClick={() => { setCurrent(null); setDraft(null); invalidate(); }}>{active ? "Start new verification change" : "Start new setup review"}</TerasActionButton>
+      </TerasContentTray> : null}
       {!current && records !== null && !pendingOwner ? <>
         {active ? <>
-          <TerasContentTray kicker="Current plan" description={existingProfile ? `Loaded ${String(existingProfile.profile_id)}. Application verification: ${String((existingProfile.application_verification as {mode?: string} | undefined)?.mode ?? "existing owner plan")}. Source and operating controls are preserved; saving this plan records no passed tests.` : "Read the repository's current plan before changing application checks. Independent controls stay intact."}
+          <TerasContentTray kicker="Current plan" description={existingProfile ? `Loaded ${String(existingProfile.profile_id)}. Application verification: ${String((existingProfile.application_verification as {mode?: string} | undefined)?.mode ?? "existing repository plan")}. Source and operating controls are preserved; saving this plan records no passed tests.` : "Read the repository's current plan before changing application checks. Independent controls stay intact."}
             actions={<TerasActionButton disabled={pending} emphasis="secondary" onClick={() => void run(inspectCurrent)}>Load current plan</TerasActionButton>} />
           <TerasSelectField label="How will you verify application behavior?" value={verificationMode} onValueChange={value => { invalidate(); setVerificationMode(value); }}
             options={[{ value: "manual", label: "By using the application" }, { value: "automated", label: "Run existing automated tests" }, { value: "mixed", label: "Both manual checks and automated tests" }]} />
@@ -138,7 +143,7 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, op
         </TerasContentTray>}
         <TerasActionButton disabled={pending || !canPrepare} onClick={() => void run(prepare)}>{active ? "Review verification change" : "Review source controls"}</TerasActionButton>
         {prepared ? <>
-          <TerasMetadataList items={[{ label: "Reviewed preparation digest", value: String(prepared.result.preparation_digest) }, { label: "Source effect", value: plan ? "Finite trusted owner files only; no model invocation" : "Existing controls; no source change, token or dummy PR" }]} />
+          <TerasMetadataList items={[{ label: "Reviewed preparation digest", value: String(prepared.result.preparation_digest) }, { label: "Source effect", value: plan ? "Finite trusted repository files only; no model invocation" : "Existing controls; no source change, token or dummy PR" }]} />
           {plan?.requires_workflow_permission === true ? <TerasSelectField label="Separate approval to write this exact CI workflow" value={workflowApproved ? "approved" : ""} onValueChange={value => { acceptedCreate.current = null; setWorkflowApproved(value === "approved"); }} options={[{ value: "", label: "Not approved" }, { value: "approved", label: "Approve the exact displayed workflow file" }]} /> : null}
           <TerasActionButton disabled={pending || Boolean(plan?.requires_workflow_permission && !workflowApproved)} onClick={() => void run(create)}>Accept this preparation and retain one original request</TerasActionButton>
         </> : null}
@@ -156,6 +161,14 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, op
         </> : null}
       </> : null}
       {files.map(file => <TerasNoteField key={file.path} label={`Inert source: ${file.path}`} readOnly value={file.content} onValueChange={() => undefined} minimumHeight="medium" />)}
+      <TerasContentTray kicker="Previous requests" description={records === null ? pending ? "Loading previous requests…" : "Previous requests could not be loaded." : records.length ? "Open an earlier setup or verification request to inspect its status or continue unfinished work." : "No previous setup or verification requests."}
+        actions={<TerasActionButton disabled={pending} emphasis="secondary" onClick={() => void run(refresh)}>Refresh requests</TerasActionButton>}>
+        {records?.length ? <TerasList frame="contained" scrollHeight="short">
+          {records.map(record => <TerasSignalItem key={record.requestId} label={requestType(record)} title={requestState(record)} detail={`Updated ${new Date(record.revision).toLocaleString()}`}
+            {...(pending ? { statusLabel: "Reading" } : { actionLabel: "Open request", ariaLabel: `Open ${requestType(record).toLowerCase()} request ${record.requestId}`, onSelect: () => void run(async () => { setCurrent(await api(`${base}/requests/${encodeURIComponent(record.requestId)}`) as OwnerBootstrapSummary); setDraft(null); setSourceIntent(null); }) })}
+            tone={record.state === "succeeded" ? "ok" : record.state === "cancelled" ? "muted" : "info"} />)}
+        </TerasList> : null}
+      </TerasContentTray>
     </TerasFieldStack>
   </TerasModalShell><TerasDraftCloseGuardDialog open={leaveOpen} title="Discard verification draft?" kicker="Unsaved changes" description="This plan has not been submitted. Keep editing, or discard this draft and return to the repository." leaveLabel="Discard Draft" onKeepEditing={() => setLeaveOpen(false)} onLeave={onClose} /></>;
 }

@@ -22,6 +22,53 @@ single-domain Delivery clone.
 
 ## Shared Visual System
 
+### Clear responsibility terminology
+
+Operator-approved Console wording distinguishes the entity being referenced:
+
+| Meaning | Display wording |
+| --- | --- |
+| GitHub repository namespace | GitHub account or organization |
+| Repository identity associated with workspace custody | Workspace repository |
+| Delivery source repository and its Catalog field | Implementation repository |
+| Repository review controls and verification preparation | Repository setup |
+| Repository supplying validation or Security records | Repository with the checks; Security repository |
+| Component executing an operation | Execution component or workflow service |
+| Component or person responsible for a blocker | Resolution responsibility |
+| Human follow-up assignment | Responsible person or team |
+
+Forms, registers, modal headings, filters, statuses, loading/error guidance and
+read-only inspectors use the appropriate contextual term. Repository references
+must not be presented as a question asking for a person. Exact original evidence,
+field keys, permission claims and protocol identifiers remain unchanged.
+Delivery renders the canonical Owner Repo field as Implementation repository;
+it never rewrites the source field or mutation key. The primary account display
+uses Workspace approver for the existing Workspace owner authority claim;
+the verified claim, role checks and trust posture retain their exact values.
+No translation grants access, admission, approval or execution capability.
+
+### Repository review readability preview
+
+The operator approved reorganizing Review Repository around identity, current
+status, recorded evidence and understandable actions. A distinct Repository
+details modal title sits above one neutral identity panel grouping repository
+name, purpose and the GitHub/owner metadata. The GitHub link uses the existing blue information tone, underlining and
+an external-link marker and opens in a separate tab. Purpose appears once.
+Neutral paired status/action panels
+replace competing green panels. Registration and GitHub observation have
+separate labels and retain unavailable/retained state. Original checks and
+runtime/Security references use shared technical disclosure, with the existing
+record inspectors still available. Action explanations sit beside the controls;
+History and return remain in the footer. Review and Inspect share this domain
+composition while retaining their original eligibility and owner routes. This
+extends the unpublished Repository batch, with preview review before publication.
+
+Record inspection dialogs retain their standard modal header and use readable
+metadata facts plus a brief explanation of scope. Technical details preserve
+the original references. The selected repository is named in the description;
+the parent review layout remains as reviewed. Evidence rows keep right-aligned
+Inspect record buttons and separate result pills.
+
 ### Repository Control batch-four preview
 
 Repository retains its shared compact-control overview, register and selected
@@ -301,6 +348,16 @@ identity lookup, explicit purpose acknowledgement and reviewed custody approval.
 After success, one associated result is read-only with notes and confirmation;
 multiple matching results use a selector. Owner unavailability stays explicit.
 
+### Adding repositories
+
+Repository Control's Add a repository panel offers separate **Create repository**
+and **Link existing repository** entries. Standalone linking reuses the Proposal
+attachment form's verified lookup and explicit approval, without a Proposal
+association or fulfilment confirmation. It works before any record exists;
+creation and linking retain independent capability gates. Known prior links
+open the existing record. Success, pending lock, draft guard and retry identity
+remain inside the existing modal and Teras patterns; no new wizard is added.
+
 ### Deferred application verification
 
 Repository registration derives source-owner governance participation for an
@@ -311,3 +368,13 @@ verification**, which loads the current reviewed plan and offers manual checks,
 existing test commands or both. Saving uses the existing exact-source review
 workflow, not direct profile mutation. Instructions never display as completed
 tests. Independent source controls are retained.
+
+The dialog title names the job: **Application verification** (or **Repository
+setup** for initial controls), with the selected repository beneath it. The
+current form or selected request precedes a bounded **Previous requests** list.
+History rows distinguish setup from verification, readable status and update
+time; request IDs and service action codes belong in Technical details. Opening
+a retained request preserves its original identity. A finished request offers
+**Start new verification change** or **Start new setup review** without altering
+the original result. A completed source request never represents passed
+application checks.

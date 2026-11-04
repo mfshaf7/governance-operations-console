@@ -219,7 +219,7 @@ function SourceDetailsDialog({
                 label: "Authority",
                 value: candidate.source.authority,
               },
-              { label: "Owner explanation", value: candidate.reason },
+              { label: "Source explanation", value: candidate.reason },
               {
                 label: "Source mode",
                 value: formatToken(candidate.source.mode),
@@ -241,7 +241,7 @@ function SourceDetailsDialog({
                 label: "Projected",
                 value: formatTimestamp(candidate.source.projectedAt),
               },
-              { label: "Record last changed", value: candidate.subject.updatedAt ? formatTimestamp(candidate.subject.updatedAt) : "Not provided by owner" },
+              { label: "Record last changed", value: candidate.subject.updatedAt ? formatTimestamp(candidate.subject.updatedAt) : "Not supplied by the source" },
               {
                 label: "Subject ref",
                 value: candidate.subject.ref,
@@ -251,7 +251,7 @@ function SourceDetailsDialog({
                 value: candidate.requiredMove.id,
               },
               {
-                label: "Owner ref",
+                label: "Source reference",
                 value: candidate.owner.ref,
               },
               {
@@ -324,7 +324,7 @@ function PriorityDetail({
           <ConsoleSurfaceTechnicalDetails
             items={[
               {
-                label: "Owner",
+                label: "Responsible component",
                 value: candidate.owner.label,
               },
               {
@@ -337,7 +337,7 @@ function PriorityDetail({
                 tone: attentionTone(candidate),
                 value: sourcePostureLabel(candidate.source.freshness),
               },
-              { label: "Record last changed", value: candidate.subject.updatedAt ? formatTimestamp(candidate.subject.updatedAt) : "Not provided by owner" },
+              { label: "Record last changed", value: candidate.subject.updatedAt ? formatTimestamp(candidate.subject.updatedAt) : "Not supplied by the source" },
               {
                 label: "Subject ref",
                 value: candidate.subject.ref,
@@ -375,7 +375,7 @@ function PriorityDetail({
         </>
       ) : (
         <ConsoleSurfaceEmptyState
-          detail="Select an owner-projected move from the attention queue."
+          detail="Select an source-projected move from the attention queue."
           title="No selected priority"
         />
       )}
@@ -443,7 +443,7 @@ export function CommandCenterFocus({
         <div className={styles.headerCopy}>
           <p>Command Center Focus</p>
           <h2>Operator priority</h2>
-          <span>Prioritized actions from connected workflow owners. Source details retain the original owner facts.</span>
+          <span>Prioritized actions from connected workflow services. Source details retain the original facts.</span>
         </div>
         <div className={styles.projectionPosture} data-tone={sourceTone}>
           <span className={styles.toneDot} data-tone={sourceTone}>
@@ -480,7 +480,7 @@ export function CommandCenterFocus({
               <p>Needs attention</p>
               <h3>{filteredCandidates.length} matching priorities</h3>
               <span>
-                Ordered by urgency, observation freshness and responsible owner.
+                Ordered by urgency, observation freshness and responsible component.
               </span>
             </div>
             <span className={styles.visibleCount}>

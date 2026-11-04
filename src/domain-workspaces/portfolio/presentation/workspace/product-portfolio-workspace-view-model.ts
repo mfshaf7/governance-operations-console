@@ -230,13 +230,13 @@ export function productPortfolioWorkspaceStatuses(
       detail: continuity.fixtureMode ? "Explicit design preview. Publishing is disabled." : "Product identity is read from the canonical Registry." },
     { id: "publication", label: "Setup", state: continuity.fixtureMode ? "local" : continuity.publicationMode === "live" ? "current" : "offline",
       facts: [{ label: "Mode", value: continuity.fixtureMode ? "Preview" : continuity.publicationMode === "live" ? "Configured" : "Unavailable" }],
-      detail: "Configuration status only. Owner information and the current receipt are checked after selecting a product; readiness is checked on submission." },
+      detail: "Configuration status only. Source information and the current receipt are checked after selecting a product; readiness is checked on submission." },
   ];
   if (!continuity.fixtureMode && surfaceId !== "products") return [
     { id: "source-mode", label: "Source mode", state: continuity.publicationMode === "live" ? "current" : "offline",
-      facts: [{ label: "Mode", value: "Owner-backed" }], detail: "Native owner requests and receipts; preview records are not admitted." },
-    { id: "publication", label: "Publication owner path", state: continuity.publicationMode === "live" ? "current" : "offline",
-      facts: [{ label: "Mode", value: continuity.publicationMode ?? "unavailable" }], detail: "Each action uses the current OOS/WGCF binding and actual owner evidence." },
+      facts: [{ label: "Mode", value: "Owner-backed" }], detail: "Native service requests and receipts; preview records are not admitted." },
+    { id: "publication", label: "Publication service path", state: continuity.publicationMode === "live" ? "current" : "offline",
+      facts: [{ label: "Mode", value: continuity.publicationMode ?? "unavailable" }], detail: "Each action uses the current OOS/WGCF binding and actual source evidence." },
   ];
   if (surfaceId === "products" && !continuity.fixtureMode) {
     const projection = continuity.projection;
@@ -312,7 +312,7 @@ export function productPortfolioWorkspaceStatuses(
     },
     {
       detail: runtimeAttention
-        ? "One or more product runtime observations require owner attention."
+        ? "One or more product runtime observations require service attention."
         : "No projected runtime observation currently requires attention.",
       facts: [
         {

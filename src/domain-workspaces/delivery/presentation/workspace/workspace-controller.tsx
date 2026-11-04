@@ -245,7 +245,7 @@ function DeliveryWorkspaceUnavailable({
       footer={<TerasActionButton emphasis="secondary" onClick={() => void onRetry()}>Refresh canonical records</TerasActionButton>}
     >
       {loading ? <TerasLoadingState fill label="Loading Delivery workspace…" detail="Reading projects and their current workflow state." />
-        : <TerasEmptyState fill>Canonical Delivery records are unavailable. Restore the OOS owner projection before continuing Delivery work.</TerasEmptyState>}
+        : <TerasEmptyState fill>Canonical Delivery records are unavailable. Restore the OOS source projection before continuing Delivery work.</TerasEmptyState>}
     </TerasModalShell>
   );
 }

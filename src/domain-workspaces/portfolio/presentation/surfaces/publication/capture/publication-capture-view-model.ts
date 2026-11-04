@@ -47,7 +47,7 @@ export function productPublicationCaptureSourceFacts(
       label: "Product Form",
       value: productFormValueLabel(packet.classification.productForm),
     },
-    { label: "Product Owner", value: packet.owners.productOwnerRef },
+    { label: "Product component", value: packet.owners.productOwnerRef },
     {
       label: "Requested Scope",
       value: productListingScopeLabel(packet.listing.requestedScope),

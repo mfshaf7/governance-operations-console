@@ -18,12 +18,16 @@ import type { RepositoryWorkspaceSummaryMetric } from "../../read-model/reposito
 
 export function RepositoryControlOverviewPanel({
   canProvisionRepository,
+  canLinkRepository,
+  onOpenExistingRepositoryLink,
   onOpenRepositoryRequestDraft,
   requestSubmittedAt,
   summary,
   workspaceStatus,
 }: {
   canProvisionRepository: boolean;
+  canLinkRepository: boolean;
+  onOpenExistingRepositoryLink: () => void;
   onOpenRepositoryRequestDraft: () => void;
   requestSubmittedAt: string | null;
   summary: RepositoryWorkspaceSummaryMetric[];
@@ -53,19 +57,20 @@ export function RepositoryControlOverviewPanel({
             <Plus aria-hidden="true" size={14} />
             Create repository
           </TerasActionButton>
+          <TerasActionButton emphasis="secondary" disabled={!canLinkRepository} onClick={onOpenExistingRepositoryLink}>
+            Link existing repository
+          </TerasActionButton>
           </TerasActionRow>
         }
         boundary={
           <>
-            Creation makes the repository available. Workspace registration is a
+            Creating or linking makes the repository available here. Workspace registration is a
             separate review when it needs to join managed workspace workflows.
           </>
         }
-        boundaryKicker="After creation"
-        description={canProvisionRepository
-          ? "Create a GitHub organization repository for a new project."
-          : "Repository provisioning is unavailable until its exact owner capability is executable."}
-        kicker="New repository"
+        boundaryKicker="Workspace registration"
+        description="Create a GitHub repository, or connect one you already have."
+        kicker="Repository actions"
         receipt={
           requestSubmittedAt
             ? {
@@ -81,7 +86,7 @@ export function RepositoryControlOverviewPanel({
               }
             : null
         }
-        title="Create a repository"
+        title="Add a repository"
         tone="info"
       />
     </TerasRecordControlOverviewGrid>

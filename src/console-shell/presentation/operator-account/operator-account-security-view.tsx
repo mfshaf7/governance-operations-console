@@ -59,7 +59,7 @@ export function OperatorAccountSecurityView({
                 tone: identity.tone,
               },
               {
-                detail: `Owned by ${account.capabilities.manageAuthentication.owner}.`,
+                detail: `Managed by ${account.capabilities.manageAuthentication.owner}.`,
                 id: "authentication-adapter",
                 label: "Federated identity adapter",
                 status: "UNAVAILABLE",

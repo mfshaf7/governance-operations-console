@@ -51,7 +51,7 @@ export function DevIntegrationSelectedProfile({
       meta={
         profile
           ? [
-              { label: "Owner", value: profile.ownerRepo },
+              { label: "Implementation repository", value: profile.ownerRepo },
               {
                 label: "Lane",
                 value: devIntegrationLaneLabels[profile.laneClass],

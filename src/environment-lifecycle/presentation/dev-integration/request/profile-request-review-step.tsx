@@ -40,7 +40,7 @@ export function ProfileRequestReviewStep({
           columns={3}
           items={[
             { label: "Profile ID", value: draft.profileId },
-            { label: "Owner", value: draft.ownerRepo },
+            { label: "Implementation repository", value: draft.ownerRepo },
             { label: "Purpose", value: draft.purpose },
             {
               label: "Lane",

@@ -9,6 +9,7 @@ type TerasMetadataTreatment = "card" | "chip";
 type TerasMetadataAccent = "none" | "rail";
 type TerasMetadataTopOffset = "compact" | "none" | "normal";
 export type TerasMetadataItem = {
+  actions?: ReactNode;
   detail?: ReactNode;
   label: ReactNode;
   title?: string;
@@ -56,6 +57,7 @@ export function TerasMetadataList({
       {items.map((item, index) => (
         <div
           className={styles.terasMetadataItem}
+          data-has-actions={item.actions ? "true" : undefined}
           data-tone={item.tone}
           key={terasMetadataItemKey(item, index)}
           title={item.title}
@@ -65,6 +67,7 @@ export function TerasMetadataList({
           {item.detail ? (
             <small className={styles.terasMetadataDetail}>{item.detail}</small>
           ) : null}
+          {item.actions ? <div className={styles.terasMetadataActions}>{item.actions}</div> : null}
         </div>
       ))}
     </div>

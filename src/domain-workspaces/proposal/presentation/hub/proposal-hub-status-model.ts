@@ -79,7 +79,7 @@ export function proposalHubStatusProjection({
       description: retired
         ? "This proposal already moved to Delivery. The linked initiative was retired; retirement is not implementation evidence. No new route is required."
         : unavailable
-          ? "The recorded Delivery link is retained, but its current outcome is unavailable. No new route is required; refresh the linked owner status."
+          ? "The recorded Delivery link is retained, but its current outcome is unavailable. No new route is required; refresh the linked source status."
           : closeoutPending
             ? "The linked Delivery work is done. The Proposal still says accepted; source closeout is pending. No new route is required."
             : link && link.status !== "done"
@@ -189,7 +189,7 @@ export function proposalHubStatusProjection({
           label: "Resolved Repo",
           value: repositoryGateResolution.resolvedRepoRef,
         },
-        { label: "Owner", value: repositoryGateResolution.resolvedOwner },
+        { label: "Responsible workspace", value: repositoryGateResolution.resolvedOwner },
         ...baseFacts,
       ],
       pillLabel: "Resolved",

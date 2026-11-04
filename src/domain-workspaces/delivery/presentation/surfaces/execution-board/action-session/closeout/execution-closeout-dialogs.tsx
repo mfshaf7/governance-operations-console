@@ -179,7 +179,7 @@ export function ExecutionCloseoutImpactDialog({
               value={existing.registryRef}
             />
             <TerasTextField
-              label="Product owner ref"
+              label="Product repository reference"
               onValueChange={(value) => updateExisting("productOwnerRef", value)}
               placeholder="repo://product-owner"
               value={existing.productOwnerRef}
@@ -232,13 +232,13 @@ export function ExecutionCloseoutImpactDialog({
               value={entrant.candidateVersion}
             />
             <TerasTextField
-              label="Source owner ref"
+              label="Source repository reference"
               onValueChange={(value) => updateEntrant("sourceOwnerRef", value)}
               placeholder="repo://source-owner"
               value={entrant.sourceOwnerRef}
             />
             <TerasTextField
-              label="Security owner"
+              label="Security responsibility"
               onValueChange={(value) => updateEntrant("securityOwner", value)}
               placeholder="security-architecture"
               value={entrant.securityOwner}
@@ -275,22 +275,22 @@ export function ExecutionCloseoutImpactDialog({
                   value={entrant.intendedEndpoint}
                 />
                 <TerasTextField
-                  label="Platform owner"
+                  label="Platform responsibility"
                   onValueChange={(value) => updateEntrant("platformOwner", value)}
                   placeholder="platform-engineering"
                   value={entrant.platformOwner}
                 />
                 <TerasTextField
-                  label="Runtime owner"
+                  label="Runtime responsibility"
                   onValueChange={(value) => updateEntrant("runtimeOwner", value)}
-                  placeholder="Owning runtime"
+                  placeholder="Responsible runtime component"
                   value={entrant.runtimeOwner}
                 />
               </TerasFieldGrid>
               <TerasTextListField
                 items={entrant.sourceOwners}
-                itemLabel={(index) => `Source owner ${index + 1}`}
-                label="Source owners"
+                itemLabel={(index) => `Source source ${index + 1}`}
+                label="Source repositories"
                 minItems={1}
                 onItemsChange={(items) => updateEntrant("sourceOwners", items)}
                 placeholder="repo://source-owner"
@@ -307,7 +307,7 @@ export function ExecutionCloseoutImpactDialog({
                 value={entrant.componentClass}
               />
               <TerasTextField
-                label="Owner repo"
+                label="Implementation repository"
                 onValueChange={(value) => updateEntrant("ownerRepo", value)}
                 placeholder="component-owner-repo"
                 value={entrant.ownerRepo}

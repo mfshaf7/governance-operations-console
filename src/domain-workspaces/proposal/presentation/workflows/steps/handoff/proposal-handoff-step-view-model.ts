@@ -98,7 +98,7 @@ export function proposalHandoffRouteStateMetadata({
         ? "Resolved repo"
         : proposalRouteSelectionRepoModeLabel(routeSelectionDraft.repoMode),
     },
-    { label: "Owner Repo", value: repositoryGateOwner },
+    { label: "Implementation repository", value: repositoryGateOwner },
   ];
 }
 
@@ -211,12 +211,12 @@ export function proposalHandoffStepProjection({
         ? "Repository gate resolved"
         : "Repository selected";
   const repositoryCueBody = !routeHasRepositoryGate
-    ? "This route does not require repository ownership before handoff."
+    ? "This route does not require repository responsibility before handoff."
     : repositoryGateBlocked
       ? "The selected repository handling requires a repository decision before Proposal can apply this handoff."
       : repositoryGateResolved
-        ? "Repository Control recorded the owner and repository reference. Handoff can now be applied from the gate panel."
-        : "The selected owner repository is available for handoff review.";
+        ? "Repository Control recorded the workspace association and repository reference. Handoff can now be applied from the gate panel."
+        : "The selected responsible repository is available for handoff review.";
   const repositoryCueState = !routeHasRepositoryGate
     ? "Not required"
     : repositoryGateBlocked

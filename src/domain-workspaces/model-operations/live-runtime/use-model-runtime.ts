@@ -19,7 +19,7 @@ async function request(path: string, body?: unknown) {
   const value: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const row = value && typeof value === "object" ? modelRecord(value) : {};
-    throw Object.assign(new Error(typeof row.error === "string" ? row.error : "The model owner could not confirm this request."), { status: response.status });
+    throw Object.assign(new Error(typeof row.error === "string" ? row.error : "The model service could not confirm this request."), { status: response.status });
   }
   return value;
 }
@@ -50,7 +50,7 @@ export function useModelRuntime() {
     if (dataMode !== "live") {
       setRegistry(dataMode === "disconnected-preview" ? modelRuntimePreviewRegistry() : null);
       setFresh(false);
-      setError(dataMode === "invalid" ? "Model owner configuration is unavailable." : null);
+      setError(dataMode === "invalid" ? "Model service configuration is unavailable." : null);
       return null;
     }
     refreshReads.current++; setRefreshing(true);

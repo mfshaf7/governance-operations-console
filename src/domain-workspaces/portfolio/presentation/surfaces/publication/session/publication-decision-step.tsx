@@ -46,7 +46,7 @@ export function ProductPublicationDecisionStep({
           {validation.allowed ? "Ready" : "Needs decision"}
         </TerasStatusPill>
       }
-      description="Choose one controlled publication outcome. Portfolio records the exact audience tuple within the verified access contract; the product owner still enforces access."
+      description="Choose one controlled publication outcome. Portfolio records the exact audience tuple within the verified access contract; the product component still enforces access."
       kicker="Publication Work"
       title="Publication Decision"
     >

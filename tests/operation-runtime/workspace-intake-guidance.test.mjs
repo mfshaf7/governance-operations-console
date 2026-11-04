@@ -20,8 +20,8 @@ test("registered check bindings are collected only for the selected check approa
  assert.throws(()=>guidedIntakeDraft("product",{...draft,validationPosture:"interface-contract-backed"},{...setup,catalogRefs:[]}),/no registered checks/);
 });
 test("owner lookup rejects a different repository, retired owner and malformed plan without pretending there are no checks",()=>{
- assert.throws(()=>intakeOwnerSetup(preparation,"another-repository"),/no longer an active owner/);
- assert.throws(()=>intakeOwnerSetup({...preparation,expected_state:{...preparation.expected_state,posture:"retired"}},record.name),/no longer an active owner/);
+ assert.throws(()=>intakeOwnerSetup(preparation,"another-repository"),/no longer active/);
+ assert.throws(()=>intakeOwnerSetup({...preparation,expected_state:{...preparation.expected_state,posture:"retired"}},record.name),/no longer active/);
  assert.throws(()=>intakeOwnerSetup({...preparation,current_record:{...preparation.current_record,validation_behavior:null}},record.name),/no recorded validation plan/);
 });
 test("role derivation follows type and approach changes and never reuses a proposed role after changing back",()=>{

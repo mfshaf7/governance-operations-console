@@ -138,7 +138,7 @@ export function RepositoryGateResolutionDialog({
                 tone={gateProjection.ownerTone}
                 detail={gateProjection.ownerDetail}
                 index="02"
-                label="Owner repo"
+                label="Workspace repository"
                 status={gateProjection.ownerStatusLabel}
               />
               <TerasStatusItem
@@ -169,8 +169,8 @@ export function RepositoryGateResolutionDialog({
           <TerasTrayStack spacing="loose" topOffset="section">
             <TerasFieldStack spacing="loose">
               <TerasSelectField
-                aria-label="Owner repository"
-                label="Owner repository"
+                aria-label="Workspace repository"
+                label="Workspace repository"
                 onValueChange={(value) => {
                   const selection = repositoryGateResolutionOption(value);
 
@@ -180,7 +180,7 @@ export function RepositoryGateResolutionDialog({
                   });
                 }}
                 options={[
-                  { label: "Select admitted owner repo", value: "" },
+                  { label: "Select admitted implementation repository", value: "" },
                   ...repositoryGateResolutionOptions(),
                 ]}
                 value={draft.resolvedRepoRef}
@@ -189,7 +189,7 @@ export function RepositoryGateResolutionDialog({
                 aria-label="Resolution notes"
                 label="Resolution notes"
                 onValueChange={(value) => updateDraft({ notes: value })}
-                placeholder="Record why this owner repo resolves the Proposal repository gate."
+                placeholder="Record why this implementation repository resolves the Proposal repository gate."
                 value={draft.notes}
               />
             </TerasFieldStack>

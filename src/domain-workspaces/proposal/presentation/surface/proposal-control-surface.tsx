@@ -77,7 +77,7 @@ export function ProposalControlSurface({
                 search={{
                   ariaLabel: "Search proposals",
                   onValueChange: controller.filters.onSearchChange,
-                  placeholder: "Search proposal, route, repo gate, owner...",
+                  placeholder: "Search proposal, route, repo gate, workspace...",
                   value: controller.filters.search,
                 }}
               />

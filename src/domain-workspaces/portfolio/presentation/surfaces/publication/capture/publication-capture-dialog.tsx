@@ -53,7 +53,7 @@ export function ProductPublicationCaptureDialog({
   return (
     <TerasModalShell
       bodyLayout="scroll"
-      description="Select one product-owner packet and place it in the Publication register."
+      description="Select one product registration packet and place it in the Publication register."
       footer={
         <>
           <TerasActionButton busy={applying}
@@ -91,7 +91,7 @@ export function ProductPublicationCaptureDialog({
             </TerasStatusPill>
           }
           actionsLayout="inline"
-          description="Only active Workspace products with a structured owner packet can enter this capture path."
+          description="Only active Workspace products with a structured source packet can enter this capture path."
           kicker="Publication Packets"
           title="Choose a product"
         />

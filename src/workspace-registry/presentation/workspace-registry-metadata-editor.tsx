@@ -13,17 +13,17 @@ export function WorkspaceRegistryMetadataEditor({ value, disabled, repositories,
   const validation = record?.validation_behavior && typeof record.validation_behavior === "object" && !Array.isArray(record.validation_behavior)
     ? record.validation_behavior as Record<string, unknown> : null;
   function update(key: string, next: unknown) { if (record) onChange(JSON.stringify({ ...record, [key]: next }, null, 2)); }
-  const ownerFields = [["platform_owner", "Platform owner repository"], ["runtime_owner", "Runtime owner repository"],
-    ["security_owner", "Security owner repository"], ["owner_repo", "Owner repository"]];
+  const ownerFields = [["platform_owner", "Platform repository"], ["runtime_owner", "Runtime repository"],
+    ["security_owner", "Security repository"], ["owner_repo", "Responsible repository"]];
   const scalarFields = [["notes", "Purpose and boundary"], ["component_class", "Component type"]];
   const sourceOwners = Array.isArray(record?.source_owners) && record.source_owners.every(item => typeof item === "string") ? record.source_owners as string[] : null;
   const listFields = [["owns", "Responsibilities"], ["must_not_own", "Responsibility limits"]];
   return <TerasFieldStack spacing="compact">
     {ownerFields.map(([key, label]) => typeof record?.[key] === "string" ? <TerasSelectField key={key} label={label} disabled={disabled} value={record[key] as string}
       options={[...new Set([record[key] as string, ...repositories])].map(name => ({label:name,value:name}))} onValueChange={next => update(key, next)}/> : null)}
-    {sourceOwners ? <TerasContentTray kicker="Source owner repositories">
-      <TerasActionRow>{sourceOwners.map(name => <TerasActionButton key={name} aria-label={`Remove source owner ${name}`} emphasis="secondary" disabled={disabled} onClick={() => update("source_owners", sourceOwners.filter(item => item !== name))}>{name} ×</TerasActionButton>)}</TerasActionRow>
-      <TerasSelectField label="Add source owner" disabled={disabled} value="" options={[{label:"Choose a repository",value:""},...repositories.filter(name => !sourceOwners.includes(name)).map(name => ({label:name,value:name}))]}
+    {sourceOwners ? <TerasContentTray kicker="Source repositories">
+      <TerasActionRow>{sourceOwners.map(name => <TerasActionButton key={name} aria-label={`Remove source repository ${name}`} emphasis="secondary" disabled={disabled} onClick={() => update("source_owners", sourceOwners.filter(item => item !== name))}>{name} ×</TerasActionButton>)}</TerasActionRow>
+      <TerasSelectField label="Add source repository" disabled={disabled} value="" options={[{label:"Choose a repository",value:""},...repositories.filter(name => !sourceOwners.includes(name)).map(name => ({label:name,value:name}))]}
         onValueChange={name => {if(name) update("source_owners", [...sourceOwners,name]);}}/>
     </TerasContentTray> : null}
     {scalarFields.map(([key, label]) => typeof record?.[key] === "string" ? <TerasTextField key={key} label={label} disabled={disabled} value={record[key] as string} onValueChange={next => update(key, next)}/> : null)}

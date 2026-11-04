@@ -54,7 +54,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
   const effectiveDraft = withOwnerChecks(draft, needsCatalog && !manualChecks && checks.current ? checks.setup : null);
   const issues = repositoryIntakeMissingFields(effectiveDraft);
   if (needsCatalog && !manualChecks && !checks.current) {
-    issues.push(checkOwner ? "Wait for the selected owner's check plan, or refresh it." : "Choose the repository that owns the registered checks.");
+    issues.push(checkOwner ? "Wait for the selected repository’s check plan, or refresh it." : "Choose the repository that owns the registered checks.");
   }
   const formState = JSON.stringify({ draft, repositoryType, checkOwner, manualChecks, customSecurityOwner });
   const dirty = recordedFormState !== null ? formState !== recordedFormState
@@ -87,14 +87,14 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
       // Re-read selected check bindings before preparing; stale cached values
       // never silently become a manual override or successful owner plan.
       const setup = needsCatalog && !manualChecks ? await checks.load() : null;
-      if (needsCatalog && !manualChecks && !setup) throw new Error("The selected owner's check plan could not be read. Your draft is kept; refresh the plan to continue.");
+      if (needsCatalog && !manualChecks && !setup) throw new Error("The selected repository’s check plan could not be read. Your draft is kept; refresh the plan to continue.");
       const resolved = withOwnerChecks(draft, setup);
       const requestedRecord = repositoryIntakeRecord(resolved);
       if (!requestedRecord) throw new Error(repositoryIntakeMissingFields(resolved).join(" "));
       const selection = { request_id: custody.requestId, requested_record: requestedRecord };
       const preparation = await runtime.prepare({ target: custody.target }, selection);
       const source = preparation.source_candidate;
-      if (!source || source.requested_record.kind !== "repo") throw new Error("The owner did not return a registration candidate for this repository. Your draft is kept.");
+      if (!source || source.requested_record.kind !== "repo") throw new Error("The registration service did not return a candidate for this repository. Your draft is kept.");
       setReview({ custody: selection, candidate: {
         label: repository.name, target: { kind: source.target.kind, name: source.target.name },
         source: source.source, requested_record: source.requested_record, evidence_refs: source.evidence_refs,
@@ -131,7 +131,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
           {repositoryType === "custom" ? <TerasTextField label="Repository category" placeholder="Use the agreed category name, such as product-source. Lowercase letters, numbers and hyphens."
             value={draft.repoClass} disabled={busy} onValueChange={value => update("repoClass", value)} /> : null}
           <TerasNoteField label="What does this repository own?" minimumHeight="medium" value={draft.notes} disabled={busy}
-            placeholder="For example: Owns the client portal source and tests. Hosting, shared services and security policies belong to their existing owners."
+            placeholder="For example: Maintains the client portal source and tests. Hosting, shared services and security policies remain with their responsible components."
             onValueChange={value => update("notes", value)} />
         </TerasFieldStack>
       </TerasContentTray>
@@ -148,12 +148,12 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
             }} />
           {needsCatalog && !manualChecks ? <>
             <TerasSelectField label="Which repository owns the registered checks?" value={checkOwner} disabled={busy}
-              helper="Reads the selected owner's recorded check IDs and plan automatically. No check is created or run."
-              options={[{ label: "Choose the check owner", value: "" }, ...ownerRepositories.map(value => ({ label: value, value }))]}
+              helper="Reads the selected repository’s recorded check IDs and plan automatically. No check is created or run."
+              options={[{ label: "Choose the repository with the checks", value: "" }, ...ownerRepositories.map(value => ({ label: value, value }))]}
               onValueChange={value => { setPreparationError(null); setCheckOwner(value); }} />
             {checks.current && checks.setup ? <TerasContentTray kicker="Recorded check plan" description={checks.setup.notes} /> : null}
             {checkOwner ? <TerasContentTray kicker={checks.status === "loading" ? "Reading check plan" : checks.error ? "Check plan unavailable" : "Check bindings"}
-              description={checks.error ?? (checks.status === "loading" ? "Reading the selected owner's current plan…" : checks.setup?.catalogRefs.length ? `${checks.setup.catalogRefs.length} registered check binding(s) collected.` : "This owner has no registered checks for this approach. Choose another owner or use repository-run tests.")}
+              description={checks.error ?? (checks.status === "loading" ? "Reading the selected repository’s current plan…" : checks.setup?.catalogRefs.length ? `${checks.setup.catalogRefs.length} registered check binding(s) collected.` : "This repository has no registered checks for this approach. Choose another repository or use repository-run tests.")}
               actions={<TerasActionButton emphasis="secondary" disabled={busy || checks.status === "loading"} onClick={() => { setPreparationError(null); void checks.load(); }}>Refresh check plan</TerasActionButton>} /> : null}
           </> : null}
           <TerasNoteField label={needsCatalog && !manualChecks ? "Additional check notes (optional)" : "Source-check notes (optional for repository-owned controls)"}
@@ -162,7 +162,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
             onValueChange={value => update("validationNotes", value)} />
         </TerasFieldStack>
       </TerasContentTray>
-      <TerasContentTray kicker="3. Security responsibility" description="A security binding is an explicit link to controls maintained by a security owner. It is separate from repository visibility or ordinary security review.">
+      <TerasContentTray kicker="3. Security responsibility" description="A security binding is an explicit link to controls maintained by a security responsibility. It is separate from repository visibility or ordinary security review.">
         <TerasFieldStack spacing="normal">
           <TerasSelectField label="Does the agreed design require a security binding?" value={draft.securityBinding} disabled={busy}
             helper="Choose Yes only when that requirement is part of the security design. This selection grants no access or credentials."
@@ -170,34 +170,34 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
             onValueChange={value => update("securityBinding", value)} />
           {draft.securityBinding === "true" ? <>
             <TerasSelectField label="Which repository owns the security binding?" value={customSecurityOwner ? "custom" : draft.securityOwner} disabled={busy}
-              helper="Select the responsible owner. Security-bound registration needs its separate reviewed owner change."
-              options={[{ label: "Choose a security owner", value: "" }, ...ownerRepositories.map(value => ({ label: value, value })), { label: "An owner outside this list", value: "custom" }]}
+              helper="Select the repository responsible for security. Security-bound registration needs its separate reviewed repository change."
+              options={[{ label: "Choose a security responsibility", value: "" }, ...ownerRepositories.map(value => ({ label: value, value })), { label: "A repository outside this list", value: "custom" }]}
               onValueChange={value => { setCustomSecurityOwner(value === "custom"); update("securityOwner", value === "custom" ? "" : value); }} />
-            {customSecurityOwner ? <TerasTextField label="Security owner repository name" placeholder="The agreed repository short name, for example security-architecture."
+            {customSecurityOwner ? <TerasTextField label="Security repository name" placeholder="The agreed repository short name, for example security-architecture."
               value={draft.securityOwner} disabled={busy} onValueChange={value => update("securityOwner", value)} /> : null}
           </> : null}
         </TerasFieldStack>
       </TerasContentTray>
       <TerasActionRow><TerasActionButton emphasis="secondary" disabled={busy} onClick={() => setAdvancedOpen(open => !open)}>{advancedOpen ? "Hide advanced settings" : "Advanced settings"}</TerasActionButton></TerasActionRow>
-      {advancedOpen ? <TerasContentTray kicker="Advanced settings" description="Override derived metadata only for an agreed owner configuration. Canonical validation still checks every choice.">
+      {advancedOpen ? <TerasContentTray kicker="Advanced settings" description="Override derived metadata only for an agreed repository configuration. Canonical validation still checks every choice.">
         <TerasFieldStack spacing="normal">
           <TerasSelectField label="Validation role" value={draft.graphRole} disabled={busy}
             helper="Normally filled from the repository type. Proposed and implementation-only profiles support only the roles shown here."
             options={[{ label: "Choose a validation role", value: "" }, ...repositoryIntakeRoles(draft.validationPosture)]}
             onValueChange={value => update("graphRole", value)} />
           {needsCatalog ? <TerasSelectField label="Registered check bindings" value={manualChecks ? "manual" : "owner"} disabled={busy}
-            helper="Use the owner's recorded plan when available. Manual IDs must already exist in the validation catalog."
-            options={[{ value: "owner", label: "Collect from the selected owner" }, { value: "manual", label: "Use explicitly reviewed check IDs" }]}
+            helper="Use the repository’s recorded plan when available. Manual IDs must already exist in the validation catalog."
+            options={[{ value: "owner", label: "Collect from the selected repository" }, { value: "manual", label: "Use explicitly reviewed check IDs" }]}
             onValueChange={value => setManualChecks(value === "manual")} /> : null}
           {manualChecks || !needsCatalog ? <TerasTextField label="Registered check IDs (optional unless this approach invokes checks)" value={draft.catalogRefs} disabled={busy}
             placeholder="Existing catalog IDs, separated by commas. Do not enter test commands or invent IDs."
             onValueChange={value => update("catalogRefs", value)} /> : null}
         </TerasFieldStack>
       </TerasContentTray> : null}
-      <TerasContentTray kicker="Owner setup" description={ownerSetupAvailable
-        ? "A proposed or admitted classification is recorded. Owner setup can inspect the repository's review controls and planned checks before active registration."
-        : "Owner setup needs a recorded Proposed or Admitted classification. Review the classification first; setup does not need to be completed to propose this repository."}
-        actions={<TerasActionButton emphasis="secondary" disabled={!custody || busy || !ownerSetupAvailable} onClick={() => setOwnerSetup(true)}>Review owner setup</TerasActionButton>} />
+      <TerasContentTray kicker="Repository setup" description={ownerSetupAvailable
+        ? "A proposed or admitted classification is recorded. Repository setup can inspect the repository's review controls and planned checks before active registration."
+        : "Repository setup needs a recorded Proposed or Admitted classification. Review the classification first; setup does not need to be completed to propose this repository."}
+        actions={<TerasActionButton emphasis="secondary" disabled={!custody || busy || !ownerSetupAvailable} onClick={() => setOwnerSetup(true)}>Review repository setup</TerasActionButton>} />
       <TerasContentTray kicker="Previous registration requests"
         description={runtime.requestPage ? runtime.requestPage.pending_request_count
           ? "A registration request is still pending. Open it below before starting another."
@@ -222,7 +222,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
         { label: "Validation approach", value: draft.validationPosture || "Not selected" },
         { label: "Validation role", value: draft.graphRole || "Not selected" },
         { label: "Registered check IDs", value: effectiveDraft.catalogRefs || "No direct checks selected" },
-        ...(checks.current && checks.setup ? [{ label: "Check owner source", value: checks.setup.evidenceRef }] : []),
+        ...(checks.current && checks.setup ? [{ label: "Check repository source", value: checks.setup.evidenceRef }] : []),
         ...(runtime.requestPage?.records ?? []).map(entry => ({ label: "Original registration request", value: entry.request_id })),
       ]} />
       {(attempted && issues.length > 0) || preparationError || runtime.error || !custody ? <div ref={errorRef} tabIndex={-1} role="alert">

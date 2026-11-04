@@ -52,7 +52,7 @@ export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange
       {view === "runtime" ? <ModelRuntimeControlSurface onDirtyChange={reportDirty} /> : <ModelProfileControlSurface />}
     </TerasFieldStack>
     </TerasContentFrame>
-    <TerasDraftCloseGuardDialog kicker="Routing draft" title="Discard unsaved routing changes?" description="Saved routing remains with the model owner."
+    <TerasDraftCloseGuardDialog kicker="Routing draft" title="Discard unsaved routing changes?" description="Saved routing remains with the model service."
       open={nextView !== null} keepEditingLabel="Keep editing" leaveLabel="Discard draft" onKeepEditing={() => setNextView(null)}
       onLeave={() => { reportDirty(false); if (nextView) setView(nextView); setNextView(null); }} />
   </>;

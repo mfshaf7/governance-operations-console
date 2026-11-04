@@ -37,7 +37,7 @@ export const proposalWorkspaceScenarios: ProposalWorkspaceScenario[] = [
         detail:
           "Portfolio registration owns existing-item posture requests; Proposal should not route this directly.",
         id: "owner-route",
-        label: "Owner-routed",
+        label: "Workflow-routed",
         observedAt: "2026-06-21 08:20",
         owner: "Workspace Proposals",
         source: {

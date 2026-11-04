@@ -280,7 +280,7 @@ test("closeout Result remains pending and all impact branches retain nonoverlapp
       await impact.getByRole("button",{name:"Entrant kind",exact:true}).click();await page.getByRole("option",{name:kind,exact:true}).click();
       await reachable(page,impact.getByRole("textbox",{name:"Validation notes",exact:true}));
       if(kind==="Product") {
-        const owners=impact.getByRole("textbox",{name:"Source owner 1",exact:true});
+        const owners=impact.getByRole("textbox",{name:"Source repository 1",exact:true});
         const next=impact.getByRole("textbox",{name:"Validation posture",exact:true});
         const a=await owners.boundingBox(),b=await next.boundingBox();expect(b.y).toBeGreaterThanOrEqual(a.y+a.height);
       }

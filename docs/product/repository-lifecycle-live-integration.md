@@ -56,7 +56,12 @@ reversal receipt selection remain on the server.
    owner acceptance and the target owner reference.
 3. Review current state, target impact, and mutation owner.
 4. Record a blocking-impact disposition only when one exists, provide the
-   approval note, and explicitly confirm the exact action.
+   approval note, and explicitly confirm the exact action. The action button
+   names the change. Editing the input or receiving changed owner state requires
+   confirmation again. Back retains input; closing an unsent draft asks whether
+   to discard it. Pending execution disables edits and exits. A failed
+   acknowledgement preserves the draft and original retry identity; discarding
+   local input does not cancel a request already received by OOS.
 5. The Console server re-reads OOS audit state. If no lifecycle audit exists,
    only an exact successful OOS custody result may initialize the first action.
 6. OOS evaluates, applies, reads back, and returns a terminal result or an

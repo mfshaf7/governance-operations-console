@@ -43,6 +43,6 @@ export function composeLifecycleTransitionSnapshot(journal: LifecycleTransitionL
   rows.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.transitionId.localeCompare(b.transitionId));
   return { mode: "live", sourceScope: "owner-readbacks-and-journal", status: currentJournal || native.length ? "current" : "offline", observedAt: new Date().toISOString(), transitions: rows,
     truncated: Boolean(journal?.truncated || !currentJournal || missing.length),
-    error: missing.length || !currentJournal ? "Partial coordination coverage: one or more current journal/native owner reads are unavailable. Native readbacks are not a complete historical journal." : null,
+    error: missing.length || !currentJournal ? "Partial coordination coverage: one or more current journal/native source reads are unavailable. Native readbacks are not a complete historical journal." : null,
   };
 }

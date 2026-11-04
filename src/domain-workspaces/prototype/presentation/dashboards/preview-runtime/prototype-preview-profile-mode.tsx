@@ -132,7 +132,7 @@ export function PrototypePreviewProfileModeDock({
         ]} />
         <TerasContentTray kicker="Edit boundary">
           {ownerControlled
-            ? "Profile changes belong in Workspace Prototype Studio. The Console renders the exact owner projection and cannot replace it with a local draft."
+            ? "Profile changes belong in Workspace Prototype Studio. The Console renders the exact source projection and cannot replace it with a local draft."
             : "Profile edits are explicit and prototype-local. Runtime uses the saved profile shown on the left until a new draft is confirmed."}
         </TerasContentTray>
         <TerasActionRow spacing="normal">

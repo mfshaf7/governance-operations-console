@@ -39,7 +39,7 @@ export function proposalRouteContextMetadata(
   proposal: ProposalWorkspaceScenario,
 ): TerasMetadataItem[] {
   return [
-    { label: "Route Owner", value: proposal.owner },
+    { label: "Responsible component", value: proposal.owner },
     {
       label: "Current State",
       value: proposalScenarioStatusLabel(proposal.status),
@@ -54,7 +54,7 @@ export function proposalRepositoryGateMetadata(
     { label: "Mode", value: proposal.repoGate.mode },
     { label: "State", value: proposal.repoGate.state },
     {
-      label: "Owner",
+      label: "Responsible workspace",
       value: proposal.repoGate.owner ?? "Not required",
     },
     {

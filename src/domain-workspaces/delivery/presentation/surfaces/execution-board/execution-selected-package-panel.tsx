@@ -107,7 +107,7 @@ export function ExecutionSelectedPackagePanel({
       ) : null}
 
       <TerasInspectionSection title="Primary Move">
-        {readOnly ? <TerasEmptyState>History is read-only. Inspect the full ART tree and original owner evidence; this view cannot restart or change work.</TerasEmptyState> : primaryAction ? (
+        {readOnly ? <TerasEmptyState>History is read-only. Inspect the full ART tree and original source evidence; this view cannot restart or change work.</TerasEmptyState> : primaryAction ? (
           <TerasList frame="contained">
             <TerasSignalItem
               actions={
@@ -133,7 +133,7 @@ export function ExecutionSelectedPackagePanel({
       </TerasInspectionSection>
 
       <TerasInspectionSection title="Supporting Actions">
-        {onInspectHistory ? <TerasActionButton emphasis="secondary" onClick={onInspectHistory}>Original Owner Evidence</TerasActionButton> : null}
+        {onInspectHistory ? <TerasActionButton emphasis="secondary" onClick={onInspectHistory}>Original source evidence</TerasActionButton> : null}
         {onInspectCloseout ? (
           <TerasActionButton emphasis="secondary" onClick={onInspectCloseout}>
             Inspect Closeout

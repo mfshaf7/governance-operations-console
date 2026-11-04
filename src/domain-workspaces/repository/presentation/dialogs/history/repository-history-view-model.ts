@@ -57,7 +57,7 @@ export function repositoryHistoryRecordFacts(
 ): TerasMetadataItem[] {
   return [
     { label: "Registration", value: repositoryRecordStatusLabel(repository) },
-    { label: "Owner", value: repository.owner },
+    { label: "Workspace repository", value: repository.owner },
     { label: "Workspace lifecycle", value: repository.lifecycle },
   ];
 }
@@ -157,7 +157,7 @@ function repositoryLifecycleHistoryLabel(
 ) {
   switch (action) {
     case "transfer-workspace-custody":
-      return "Workspace ownership transferred";
+      return "Workspace responsibility transferred";
     case "archive-provider":
       return "Provider repository archived";
     case "unarchive-provider":

@@ -161,7 +161,7 @@ export function ProductPublicationSessionModal({
     <>
       <TerasWizardModal
         activeStepId={activeStep}
-        description="Review source-backed product requirements and record either a disconnected-preview result or the exact OOS owner receipt for a governed action."
+        description="Review source-backed product requirements and record either a disconnected-preview result or the exact OOS source receipt for a governed action."
         footer={
           <TerasWizardFooter
             apply={

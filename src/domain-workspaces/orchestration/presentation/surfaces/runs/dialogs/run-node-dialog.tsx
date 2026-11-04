@@ -71,7 +71,7 @@ export function RunNodeDialog({
       <TerasMetadataList
         items={[
           { label: "Node ID", value: node.id },
-          { label: "Owner", value: node.owner },
+          { label: "Responsible component", value: node.owner },
           { label: "Type", value: node.type },
           {
             label: "State",

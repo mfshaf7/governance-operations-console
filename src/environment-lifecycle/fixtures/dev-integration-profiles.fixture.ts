@@ -226,7 +226,7 @@ export const devIntegrationProfileScenarioFixtures = [
     lifecycle: "proposed",
     nextMove: {
       actionId: "owner-review",
-      label: "Confirm profile ownership",
+      label: "Confirm profile responsibility",
       ownerRef: "workspace-prototype-studio",
       reason: "The profile request exists but has not been build-admitted.",
     },

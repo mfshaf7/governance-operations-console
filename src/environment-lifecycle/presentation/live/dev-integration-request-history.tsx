@@ -20,7 +20,7 @@ export function DevIntegrationRequestHistory({ runtime }: {
         ariaLabel={`Inspect profile request ${row.request_id}`} actionLabel="Inspect request" label={row.request.profileId}
         title="Request recorded"
         detail={operationTime(row.created_at)} tone={row.state === "recorded" ? "info" : "warn"} onSelect={() => {select(row.request_id);setError(null);}}/>)}</TerasList>
-        : <TerasEmptyState>{runtime.historyCurrent ? "No profile requests are loaded for this operator." : "The request owner could not be read. No empty-history claim can be made."}</TerasEmptyState>}
+        : <TerasEmptyState>{runtime.historyCurrent ? "No profile requests are loaded for this operator." : "The request service could not be read. No empty-history claim can be made."}</TerasEmptyState>}
       {runtime.pendingId() && !runtime.requests.some(row => row.request_id === runtime.pendingId()) ? <TerasStatusItem label="Unconfirmed submission"
         status="Read original" detail={`Request ${runtime.pendingId()} has no confirmed response.`} tone="warn"/> : null}
       <TerasActionRow>
@@ -37,7 +37,7 @@ export function DevIntegrationRequestHistory({ runtime }: {
         </>}>
       {selected ? <><TerasMetadataList columns={2} items={[{label:"State",value:"Request recorded"},
         {label:"Admission",value:selected.admission.state === "registered" ? selected.admission.lifecycle ?? "Unknown" : selected.admission.state === "not-registered" ? "Pending registration" : selected.admission.state === "different-request" ? "A different request is registered" : selected.admission.state === "not-checked" ? "Not checked" : "Unavailable"},
-        {label:"Readback",value:selected.readback},{label:"Requested",value:operationTime(selected.created_at)},{label:"Owner",value:selected.request.ownerRepo}]}/>
+        {label:"Readback",value:selected.readback},{label:"Requested",value:operationTime(selected.created_at)},{label:"Implementation repository",value:selected.request.ownerRepo}]}/>
         {error ? <TerasStatusItem label="Readback" status="Unavailable" detail={error} tone="warn"/> : null}
         <TerasTechnicalDetails summary="Original request details" items={[{label:"Request",value:selected.request_id},{label:"Attributed operator",value:selected.operator_id},
           {label:"Request record",value:selected.request_ref},{label:"Registry source",value:selected.expected_source_version},{label:"Intent digest",value:selected.intent_digest},

@@ -48,7 +48,7 @@ export function RepositoryRequestDialog({
     title={result ? "Repository request" : "Create a repository"}
     description={result
       ? "Inspect the original request and its recorded result."
-      : "Choose the repository details, review ownership and approve creation."}
+      : "Choose the repository details, review workspace association and approve creation."}
     surfaceId="repository-request" onClose={onClose}
     footer={<>
       <TerasActionButton emphasis="secondary" onClick={onClose}>{completed ? "Close" : "Back to Repository"}</TerasActionButton>
@@ -74,7 +74,7 @@ export function RepositoryRequestDialog({
           description={result.request.action === "provision-new" ? result.request.provisioning.description : undefined} />
         <TerasTrayStack topOffset="section" spacing="normal">
           <TerasMetadataList items={[
-            { label: "Requested workspace owner", value: result.request.requested_custody.workspace_owner_ref },
+            { label: "Requested workspace repository", value: result.request.requested_custody.workspace_owner_ref },
             ...(result.request.action === "provision-new" ? [{ label: "Requested visibility", value: result.request.provisioning.visibility }] : []),
           ]} />
           {resume ? <TerasContentTray description="Continue this same request using its retained approval. A new repository request will not be created." /> : null}
@@ -104,17 +104,17 @@ export function RepositoryRequestDialog({
           </TerasTrayStack>
         </TerasPanel>
         <TerasPanel frame="padded" treatment="neutral" fit="content">
-          <TerasPanelHeader kicker="Workspace ownership" title="Who is responsible?"
-            description="The owner reference follows the repository name. Change it when another workspace owner is responsible." />
+          <TerasPanelHeader kicker="Workspace link" title="Workspace repository"
+            description="The workspace reference follows the repository name. Change it to associate this GitHub repository with a different workspace record." />
           <TerasTrayStack spacing="loose" topOffset="section">
             <TerasFieldGrid spacing="loose">
-              <TerasTextField label="Workspace owner reference" aria-label="Workspace owner reference" required
+              <TerasTextField label="Workspace repository" aria-label="Workspace repository" required
                 value={draft.workspaceOwnerRef} disabled={pending} placeholder="repo:client-dashboard"
                 onValueChange={value => onUpdateDraft("workspaceOwnerRef", value)} />
-              <TerasSelectField label="Ownership type" ariaLabel="Ownership type" value={draft.custodyKind}
+              <TerasSelectField label="Repository use" ariaLabel="Repository use" value={draft.custodyKind}
                 disabled={pending} onValueChange={value => onUpdateDraft("custodyKind", value)}
-                options={[{ label: "Dedicated owner repository", value: "dedicated-owner-repo" },
-                  { label: "Shared owner repository", value: "shared-owner-repo" },
+                options={[{ label: "Dedicated repository", value: "dedicated-owner-repo" },
+                  { label: "Shared repository", value: "shared-owner-repo" },
                   { label: "Incubation repository", value: "incubation-repo" },
                   { label: "External repository", value: "external-repo" }]} />
             </TerasFieldGrid>

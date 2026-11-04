@@ -271,7 +271,7 @@ export function buildLifecycleTransitionOverviewItem(
     applicationRunRef: transition.application.runRef,
     attentionDetail: transitionAttentionDetail(transition),
     history: transition.history
-      .map(artifact => ({ ...buildLifecycleTransitionHistoryItem(artifact), ...(transition.nativeEvidence ? { label: transition.nativeEvidence.kind === "source-acknowledgement" ? "Source handoff readback" : "Native owner confirmation" } : {}) }))
+      .map(artifact => ({ ...buildLifecycleTransitionHistoryItem(artifact), ...(transition.nativeEvidence ? { label: transition.nativeEvidence.kind === "source-acknowledgement" ? "Source handoff readback" : "Direct source confirmation" } : {}) }))
       .sort((left, right) => right.recordedAt.localeCompare(left.recordedAt)),
     nextAction: transition.nextAction
       ? {
@@ -307,7 +307,7 @@ export function buildLifecycleTransitionOverviewItem(
     sourceRecordId: transition.source.recordId,
     sourceVersion: transition.source.sourceVersion,
     state: transition.state,
-    stateLabel: transition.nativeEvidence ? transition.nativeEvidence.kind === "source-acknowledgement" ? "Source reported" : "Owner confirmed" : stateLabels[transition.state],
+    stateLabel: transition.nativeEvidence ? transition.nativeEvidence.kind === "source-acknowledgement" ? "Source reported" : "Source confirmed" : stateLabels[transition.state],
     targetDomain: transition.target.domain,
     targetHomeRef: transition.target.homeRef,
     targetRecordRef,

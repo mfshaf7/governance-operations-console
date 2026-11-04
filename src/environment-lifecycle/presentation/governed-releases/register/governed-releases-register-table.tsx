@@ -38,7 +38,7 @@ const columns: Array<TerasRecordTableColumn<GovernedReleaseRegisterRow>> = [
     ),
   },
   {
-    header: "Platform owner",
+    header: "Platform responsibility",
     intent: "secondary",
     key: "owner",
     render: (product) => (

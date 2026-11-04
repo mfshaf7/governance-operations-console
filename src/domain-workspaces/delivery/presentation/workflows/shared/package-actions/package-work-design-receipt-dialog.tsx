@@ -17,7 +17,7 @@ export function CanonicalWorkDesignReceiptDialog({
   const [showDesign, setShowDesign] = useState(false);
   const runtime = useWorkDesignLiveRuntime(deliveryPackage);
   let error = runtime.projectionError ?? (runtime.mode === "disconnected-preview"
-    ? "The Work Design owner route reports disconnected preview; canonical handoff evidence is unavailable."
+    ? "The Work Design workflow route reports disconnected preview; canonical handoff evidence is unavailable."
     : null);
   let application = null;
   if (runtime.mode === "live" && runtime.projectionStatus === "current" && runtime.projection) {
