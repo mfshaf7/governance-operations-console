@@ -63,6 +63,7 @@ export function WorkspaceIntakeDialog({
   const [decision, setDecision] =
     useState<IntakeDecisionSelection>("unselected");
   const [confirmed, setConfirmed] = useState(false);
+  const [submissionAttempted, setSubmissionAttempted] = useState(false);
   const [requestId, setRequestId] = useState(() => initialRequestId ?? createRequestId());
 
   const selectedCustody = useMemo(() => {
@@ -129,6 +130,7 @@ export function WorkspaceIntakeDialog({
 
   async function submit() {
     if (!reviewComplete || runtime.pending) return;
+    setSubmissionAttempted(true);
     await runtime
       .submit({ candidate: reviewedCandidate, decision, requestId })
       .then(result => { onRequestRecorded?.(result); setActiveStep("result"); })
@@ -138,13 +140,17 @@ export function WorkspaceIntakeDialog({
   function startCorrection() {
     if (initialRequestId) { onNewCandidate?.(); return; }
     runtime.reset();
+    setSubmissionAttempted(false);
     setRequestId(createRequestId());
     setConfirmed(false);
     setActiveStep("decision");
     void runtime.prepare(candidate, selectedCustody).catch(() => undefined);
   }
 
-  const decisionControls = <>
+  const submissionRecovery = submissionAttempted && !result && runtime.error ? <TerasActionButton emphasis="secondary" disabled={runtime.pending}
+    onClick={() => void runtime.read(requestId).then(original => { onRequestRecorded?.(original); setActiveStep("result"); }).catch(() => undefined)}>Check Original Request</TerasActionButton> : null;
+
+  const decisionControls = <>{submissionRecovery}
 <TerasChoiceGroup<IntakeDecisionSelection>
             ariaLabel="Workspace classification"
             disabled={runtime.pending}
@@ -255,12 +261,12 @@ export function WorkspaceIntakeDialog({
             <TerasContentTray description={result.status === "succeeded" ? "The registration is recorded. Active inventory promotion remains a separate action." : "Your request is recorded. Follow its next action; submission is not completion."}/>
             <TerasMetadataList items={[{label:"Status",value:result.status.replaceAll("-"," ")},{label:"Next action",value:result.next_action.replaceAll("-"," ")}]}/>
             {result.readiness_findings?.length ? <TerasList frame="contained">{result.readiness_findings.map((finding,index)=><TerasSignalItem key={index} label="Readiness finding" title={finding.message} detail={finding.next_action.replaceAll("-"," ")} tone="danger"/>)}</TerasList> : null}
-            <TerasTechnicalDetails summary="Request and receipt details" items={[{label:"Request",value:result.request_id},{label:"Revision",value:String(result.revision)},{label:"Receipt",value:result.receipt?.receipt_id ?? "Not issued"},{label:"Request history",value:JSON.stringify(result.history,null,2)}]}/>
+            <TerasTechnicalDetails summary="Request and receipt details" items={[{label:"Request",value:result.request_id},{label:"Revision",value:String(result.revision)},{label:"Receipt",value:receiptReference(result) ?? "Not issued"},{label:"Request history",value:JSON.stringify(result.history,null,2)}]}/>
             <TerasActionRow>
               <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={()=>void runtime.read(requestId).catch(()=>undefined)}>Refresh Original Request</TerasActionButton>
               {result.review ? <TerasActionButton emphasis="secondary" onClick={()=>window.open(result.review?.url,"_blank","noopener,noreferrer")}>Open Review</TerasActionButton> : null}
               {["continue","restore-dependency-and-retry","review-and-merge"].includes(result.next_action) || result.status === "review-required" ? <TerasActionButton disabled={runtime.pending} onClick={()=>void runtime.continueRequest(requestId).catch(()=>undefined)}>{result.status === "review-required" ? "Check Review" : "Continue"}</TerasActionButton> : null}
-              {result.status === "review-required" ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={()=>void runtime.cancel(requestId).catch(()=>undefined)}>Cancel Request</TerasActionButton> : null}
+              {(result.status === "review-required" || result.cancel_allowed === true) ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={()=>void runtime.cancel(requestId).catch(()=>undefined)}>Cancel Request</TerasActionButton> : null}
               {result.next_action === "submit-corrected-request" ? <TerasActionButton disabled={runtime.pending} onClick={startCorrection}>Correct Request</TerasActionButton> : null}
             </TerasActionRow>
           </> : runtime.pending ? <TerasLoadingState label="Reading original request…" skeleton="details" /> : <TerasEmptyState>No request outcome is available.</TerasEmptyState>}
@@ -448,9 +454,10 @@ function WorkspaceIntakeSupport({
             result.next_action === "continue" ||
             result.next_action === "restore-dependency-and-retry"
               ? (
-                  <TerasActionButton disabled={pending} onClick={onContinue}>
-                    Continue
-                  </TerasActionButton>
+                  <TerasActionRow>
+                    <TerasActionButton disabled={pending} onClick={onContinue}>Continue</TerasActionButton>
+                    {result.cancel_allowed === true ? <TerasActionButton emphasis="secondary" disabled={pending} onClick={onCancel}>Cancel Request</TerasActionButton> : null}
+                  </TerasActionRow>
                 )
               : result.next_action === "review-and-merge" && result.review ? (
                   <TerasActionButton
@@ -464,7 +471,7 @@ function WorkspaceIntakeSupport({
                   </TerasActionButton>
                 ) : undefined
           }
-          description="OOS owns durable progress. Canonical mutation is true only after reviewed merge and readback."
+          description={result.authority_kind === "internal-instance-record" ? "Registration completes after its record and receipt are confirmed in this installation." : "OOS owns durable progress. Canonical mutation is true only after reviewed merge and readback."}
           fit="content"
           kicker="Current Move"
           title={result.next_action.replaceAll("-", " ")}
@@ -533,7 +540,7 @@ function WorkspaceIntakeResultPanel({
               { label: "Request", value: result.request_id },
               { label: "Revision", value: String(result.revision) },
               { label: "Canonical Mutation", value: result.canonical_mutation ? "Proven" : "Not claimed" },
-              { label: "Receipt", value: result.receipt?.receipt_id ?? "Pending" },
+              { label: "Receipt", value: receiptReference(result) ?? "Pending" },
             ]}
           />
           <TerasList frame="contained" scrollHeight="short">
@@ -565,4 +572,9 @@ function resultTone(result: WorkspaceIntakeResult | null) {
   if (result.status === "rejected") return "danger" as const;
   if (result.status === "requires-action") return "warn" as const;
   return "info" as const;
+}
+
+function receiptReference(result: WorkspaceIntakeResult) {
+  const receipt = result.receipt;
+  return receipt?.artifact_type === "instance-operational-record-receipt" ? receipt.receipt_digest : receipt?.receipt_id;
 }

@@ -131,7 +131,8 @@ test("the Console foundation carries a synthetic product through every catalogue
 
     const resumedPacket = await routeAcceptedProposal({
       proposal: parked,
-      repoMode: "not-required",
+      repoMode: "existing",
+      studio: true,
       routeTarget: "Prototype",
     });
     assert.equal(resumedPacket.packet.targetDomain, "prototype");
@@ -152,8 +153,9 @@ test("the Console foundation carries a synthetic product through every catalogue
 
     const routeCases = [
       {
-        id: "proposal-prototype-no-repository",
-        repoMode: "not-required",
+        id: "proposal-prototype-studio-incubation",
+        repoMode: "existing",
+        studio: true,
         routeTarget: "Prototype",
       },
       {
@@ -193,6 +195,7 @@ test("the Console foundation carries a synthetic product through every catalogue
         proposal,
         repoMode: routeCase.repoMode,
         routeTarget: routeCase.routeTarget,
+        studio: routeCase.studio,
       });
 
       assert.equal(packet.packet.targetDomain, routeCase.routeTarget.toLowerCase());
@@ -1358,8 +1361,12 @@ async function applyProposalDisposition(proposal, { outcome, route }) {
   });
 }
 
-async function routeAcceptedProposal({ proposal, repoMode, routeTarget }) {
+async function routeAcceptedProposal({ proposal, repoMode, routeTarget, studio = false }) {
   const route = proposalRoute({ proposal, repoMode, routeTarget });
+  if (studio) {
+    route.repoOwner = "workspace-prototype-studio";
+    route.repoRef = "repo://workspace-prototype-studio";
+  }
   assert.equal(proposalRouteSelectionComplete(route), true);
   await applyProposalDisposition(proposal, {
     outcome: "accepted",

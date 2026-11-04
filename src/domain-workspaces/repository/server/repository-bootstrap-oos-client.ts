@@ -39,13 +39,26 @@ function knownFields(value: unknown, fields: string[]) {
 export async function prepareRepositoryBootstrap(value: unknown, options: Options = {}) {
   const config = options.config ?? resolveConsoleOosOperatorConfiguration(), input = preparationInput(value, config);
   const result = object(await request(`${base}/preparations`, input, { ...options, config }));
-  knownFields(result, ["operation", "schema_version", "workflow_id", "caller_id", "operator_id", "decision_ref", "custody_request_id", "custody_receipt_digest", "owner_authority", "plan", "existing_owner_controls", "next_action", "authorization", "credential_issued", "checkout_created", "canonical_mutation", "runtime_activation", "preparation_digest"]);
+  knownFields(result, ["operation", "schema_version", "workflow_id", "caller_id", "operator_id", "decision_ref", "custody_request_id", "custody_receipt_digest", "owner_authority", "plan", "existing_owner_controls", "next_action", "authorization", "credential_issued", "read_authorization", "checkout_created", "canonical_mutation", "runtime_activation", "preparation_digest"]);
   const { preparation_digest: claimed, ...body } = result;
   if (result.schema_version !== 1 || result.workflow_id !== "repository-owner-bootstrap-preparation" || result.caller_id !== config.callerId || result.operator_id !== config.operatorId ||
       (result.operation ?? "bootstrap") !== (input.operation ?? "bootstrap") || result.custody_request_id !== input.custody_request_id || result.decision_ref !== input.decision_ref || result.authorization !== "preparation-only" ||
-      ["credential_issued", "checkout_created", "canonical_mutation", "runtime_activation"].some(key => result[key] !== false) || bootstrapCanonicalDigest(body) !== bootstrapDigest(claimed)) throw new Error("Owner preparation does not bind its exact server-derived intent.");
+      ["checkout_created", "canonical_mutation", "runtime_activation"].some(key => result[key] !== false) || bootstrapCanonicalDigest(body) !== bootstrapDigest(claimed)) throw new Error("Owner preparation does not bind its exact server-derived intent.");
   const authority = object(result.owner_authority);
-  knownFields(authority, ["inventory_entry_ref", "verification_setup_eligible", "owner_repo", "intake_entry_ref", "provider_repository", "classification", "inventory_posture", "custody_receipt_digest", "source_bootstrap_eligible", "ordinary_source_eligible", "model_writes_allowed", "canonical_mutation", "runtime_activation"]);
+  knownFields(authority, ["inventory_entry_ref", "verification_setup_eligible", "canonical_authority", "record_ref", "policy_ref", "owner_repo", "intake_entry_ref", "provider_repository", "classification", "inventory_posture", "custody_receipt_digest", "source_bootstrap_eligible", "ordinary_source_eligible", "model_writes_allowed", "canonical_mutation", "runtime_activation"]);
+  if (authority.canonical_authority !== undefined) {
+    const native = closed(authority.canonical_authority, ["kind", "instance_id", "record_id"]);
+    const reference = closed(authority.record_ref, ["version", "digest"]), policy = closed(authority.policy_ref, ["repo", "revision", "contract_digest"]);
+    const access = closed(result.read_authorization, ["scope", "credential_revoked"]);
+    const entry = object(authority.inventory_entry_ref ?? authority.intake_entry_ref);
+    if (native.kind !== "internal-instance-record" || typeof native.instance_id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(native.instance_id) ||
+        native.record_id !== `repo:${input.owner_repo}` || !Number.isSafeInteger(reference.version) || Number(reference.version) < 1 ||
+        reference.version !== entry.version || reference.digest !== entry.digest || policy.repo !== "workspace-governance" || !/^[0-9a-f]{40}$/.test(String(policy.revision)) ||
+        access.scope !== "trusted-owner-controls" || access.credential_revoked !== true || result.credential_issued !== true) throw new Error("Private inspection must bind the current internal owner and its revoked read credential.");
+    bootstrapDigest(reference.digest); bootstrapDigest(policy.contract_digest);
+  } else if (result.credential_issued !== false || result.read_authorization !== undefined || authority.record_ref !== undefined || authority.policy_ref !== undefined) {
+    throw new Error("Legacy preparation cannot claim a private source credential.");
+  }
   if (authority.intake_entry_ref) knownFields(authority.intake_entry_ref, ["id", "version", "digest"]);
   if (authority.provider_repository) knownFields(authority.provider_repository, ["provider", "provider_repository_id", "full_name"]);
   const active = input.operation === "configure-verification";

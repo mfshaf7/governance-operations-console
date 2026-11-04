@@ -2,6 +2,24 @@
 
 Status: graduated baseline design profile.
 
+### Proposal Studio incubation preview
+
+Post-baseline maintenance reuses Disposition's choice group, source panel,
+guidance tray and shared fields. Studio is the first Prototype source-home choice,
+with concise guidance that a separate product repository can wait. Its selected
+tray explains incubation, real Inventory availability and source visibility.
+No extra wizard or duplicated repository form. Delivery retains its choices;
+Handoff uses the same meaning and shows request navigation only for actual requests.
+
+Repository/Prototype coherence maintenance replaces Landing's ignored source-home
+selector with the authoritative source readout and scope explanation. Existing
+source and reference-only postures stay available through their admitted ingress;
+Landing does not silently transfer custody. Repository creation, attachment and
+registration disclose the current source-setup limits while preserving visibility.
+Application-check editing starts only after the existing owner preparation read
+confirms eligibility. Loading, denied and transient-failure states precede the
+editable form; original pending work and its recovery identities are retained.
+
 This file originated as the Prototype Studio design profile. The active visual
 and structural rules live in the normalized contract set:
 

@@ -9,7 +9,7 @@ import type {
 import type {
   GovernedProductPublicationResult,
 } from "../live-runtime/product-publication-live-types.ts";
-import { readWorkspaceRegistry } from "../../../workspace-registry/server/workspace-registry-oos-client.ts";
+import { readLegacyWorkspaceRegistry } from "../../../workspace-registry/server/workspace-registry-oos-client.ts";
 import { readProductHealthProjection } from "./product-health-platform-adapter.ts";
 import { readGovernedProductPublication } from "./product-publication-oos-client.ts";
 
@@ -41,7 +41,7 @@ export async function readProductMaintenanceComposition(requestId: string) {
   const [publication, health, registry] = await Promise.all([
     readGovernedProductPublication(requestId, { config }),
     readProductHealthProjection({ config }),
-    readWorkspaceRegistry({ config }),
+    readLegacyWorkspaceRegistry({ config }),
   ]);
   return compose(publication, health.projection, health.projectionDigest, registry);
 }
@@ -50,7 +50,7 @@ function compose(
   result: GovernedProductPublicationResult,
   healthProjection: Awaited<ReturnType<typeof readProductHealthProjection>>["projection"],
   healthProjectionDigest: string,
-  registry: Awaited<ReturnType<typeof readWorkspaceRegistry>>,
+  registry: Awaited<ReturnType<typeof readLegacyWorkspaceRegistry>>,
 ): ProductMaintenanceComposition {
   const maintenance = result.maintenance_projection;
   const health = healthProjection.products.find(

@@ -6,6 +6,7 @@ import {
   TerasContentRegion,
   TerasContentTray,
   TerasNoteField,
+  TerasLoadingState,
   TerasPanel,
   TerasPanelHeader,
   TerasReadoutField,
@@ -15,9 +16,10 @@ import {
 import type {
   ProposalDecisionDraft,
   ProposalRouteSelectionDraft,
-  ProposalRouteSelectionRepoMode,
+  ProposalRepositoryChoice,
   ProposalRouteSelectionTarget,
 } from "../../../../work-model/proposal-disposition-model.ts";
+import { proposalUsesPrototypeStudio, prototypeStudioRepositoryRef } from "../../../../work-model/proposal-disposition-model.ts";
 import {
   proposalDispositionRepoModeChoiceOptions,
   proposalDispositionRouteChoiceOptions,
@@ -38,13 +40,13 @@ export function ProposalDispositionRoutePanel({
   routeHasRepositoryGate,
   routeSelectionDraft,
   routeSupportsRepository,
-  selectedRepo, registeredRepositories, repositoriesCurrent = true, onRefreshRepositories,
+  selectedRepo, registeredRepositories, repositoriesCurrent = true, repositoriesLoading = false, onRefreshRepositories,
 }: {
   accepting: boolean;
   decisionDraft: ProposalDecisionDraft;
   dispositionCompleted: boolean;
   onRegisteredRepoSelect: (repoRef: string) => void;
-  onRepoModeSelect: (repoMode: ProposalRouteSelectionRepoMode) => void;
+  onRepoModeSelect: (repoMode: ProposalRepositoryChoice) => void;
   onRouteDraftPatch: (patch: Partial<ProposalRouteSelectionDraft>) => void;
   onRouteTargetSelect: (routeTarget: ProposalRouteSelectionTarget) => void;
   historicalRouteMissing?: boolean;
@@ -54,10 +56,12 @@ export function ProposalDispositionRoutePanel({
   selectedRepo: ProposalRegisteredRepoOption | null;
   registeredRepositories?: ProposalRegisteredRepoOption[];
   repositoriesCurrent?: boolean;
+  repositoriesLoading?: boolean;
   onRefreshRepositories?: () => void;
 }) {
   const routePanelProjection =
     proposalDispositionRoutePanelProjection(accepting);
+  const studio = proposalUsesPrototypeStudio(routeSelectionDraft);
 
   return (
     <TerasPanel
@@ -68,7 +72,10 @@ export function ProposalDispositionRoutePanel({
       tone="info"
     >
       <TerasPanelHeader
-        description={historicalRouteMissing ? "The completed source has no retained route details." : routePanelProjection.description}
+        description={historicalRouteMissing ? "The completed source has no retained route details."
+          : accepting && routeSelectionDraft.routeTarget === "Prototype"
+            ? "Choose where to incubate this idea. Prototype Studio holds experimental source without a separate project repository."
+            : routePanelProjection.description}
         kicker="Disposition Route"
         title={historicalRouteMissing ? "Historical route" : routePanelProjection.title}
       />
@@ -89,13 +96,13 @@ export function ProposalDispositionRoutePanel({
                   dispositionCompleted,
                   routeSelectionDraft,
                 })}
-                readOnly={dispositionCompleted}
+                readOnly={dispositionCompleted || decisionDraft.sourceHomeCorrection}
                 selectedId={routeSelectionDraft.routeTarget}
               />
               <TerasChoiceGroup
                 ariaLabel="Proposal repository requirement"
                 frame="tray"
-                label="Repository requirement"
+                label={routeSelectionDraft.routeTarget === "Prototype" ? "Prototype source home" : "Repository requirement"}
                 onSelect={onRepoModeSelect}
                 options={proposalDispositionRepoModeChoiceOptions({
                   dispositionCompleted,
@@ -104,13 +111,18 @@ export function ProposalDispositionRoutePanel({
                 readOnly={dispositionCompleted || !routeSupportsRepository}
                 selectedId={
                   routeSupportsRepository
-                    ? routeSelectionDraft.repoMode
+                    ? studio ? "studio" : routeSelectionDraft.repoMode
                     : "not-required"
                 }
               />
             </TerasFieldGrid>
 
-            {routeHasRepositoryGate &&
+            {studio && repositoriesLoading && !dispositionCompleted ? <TerasLoadingState inline label="Checking repository list…" /> : studio ? <TerasContentTray kicker="Incubate in Prototype Studio"
+              description={dispositionCompleted ? "The recorded source home is Prototype Studio. This choice did not request a separate project repository."
+                : repositoriesCurrent && selectedRepo ? "Explore in Studio's existing repository. A dedicated product repository can wait until the idea progresses. Studio's repository visibility applies to the source stored there."
+                : "Prototype Studio is not available in the current repository list. Refresh the list before recording this choice; no repository is created automatically."}
+              actions={!dispositionCompleted && (!repositoriesCurrent || !selectedRepo) && onRefreshRepositories
+                ? <TerasActionButton emphasis="secondary" onClick={onRefreshRepositories}>Refresh repository list</TerasActionButton> : undefined} /> : routeHasRepositoryGate &&
             routeSelectionDraft.repoMode === "existing" ? (
               dispositionCompleted ? <TerasReadoutField label="Existing responsible repository" value={routeSelectionDraft.repoRef} /> : <>
               <TerasSelectField
@@ -122,7 +134,8 @@ export function ProposalDispositionRoutePanel({
                 }
                 label="Existing implementation repository"
                 onValueChange={onRegisteredRepoSelect}
-                options={proposalRegisteredRepoSelectOptions(registeredRepositories)}
+                options={proposalRegisteredRepoSelectOptions(routeSelectionDraft.routeTarget === "Prototype"
+                  ? registeredRepositories?.filter(repo => repo.value !== prototypeStudioRepositoryRef) : registeredRepositories)}
                 value={routeSelectionDraft.repoRef}
               />
               {!repositoriesCurrent && onRefreshRepositories ? <TerasActionButton emphasis="secondary" onClick={onRefreshRepositories}>Refresh repository list</TerasActionButton> : null}
@@ -133,7 +146,9 @@ export function ProposalDispositionRoutePanel({
                 description="Accepting this Proposal creates a request in Repository Control. Create it there or attach one already created for that request, then confirm its result before handoff." />
             ) : (
               <TerasContentTray
-                description="This selected route does not require an responsible repository reference before handoff review."
+                description={routeSelectionDraft.routeTarget === "Prototype"
+                  ? "Choose Prototype Studio or another repository before handoff. The recorded no-repository choice does not identify an incubation source home."
+                  : "This work does not require a repository before handoff review."}
                 kicker="Repository Requirement"
               />
             )}

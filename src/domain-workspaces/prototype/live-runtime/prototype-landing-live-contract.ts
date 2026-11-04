@@ -8,6 +8,7 @@ import type {
   PrototypeLandingSourcePreparation,
   PrototypeLandingSubmissionIntent,
 } from "./prototype-landing-live-types.ts";
+import { prototypeLandingSourceHomeMatches } from "../work-model/workflows/landing/prototype-landing-source-model.ts";
 
 const commitPattern = /^[0-9a-f]{40}$/;
 const digestPattern = /^sha256:[0-9a-f]{64}$/;
@@ -167,6 +168,10 @@ export function assertPrototypeLandingSubmissionIntent(
     "tooling",
     "visibility",
   ]);
+  if (!prototypeLandingSourceHomeMatches(draft.sourceHome as PrototypeLandingSubmissionIntent["draft"]["sourceHome"],
+    source.posture as PrototypeLandingSubmissionIntent["source"]["posture"])) {
+    throw invalid("Landing source home contradicts its source authority. Reload the record before a new submission.");
+  }
   const supportStates = new Set([
     "blocked",
     "needed",

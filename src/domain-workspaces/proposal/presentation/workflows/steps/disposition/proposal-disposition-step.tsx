@@ -1,11 +1,13 @@
 "use client";
 
 import { useProposalExistingRepositories } from "../../../../../operation-integrations/use-proposal-existing-repositories.ts";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useDraftAdvisor } from "@/agent-console";
 
 import {
   TerasAdvisorPanel,
+  TerasActionButton,
+  TerasContentTray,
   TerasContentFrame,
   TerasEmptyState,
   TerasPanelStack,
@@ -17,10 +19,13 @@ import {
 import {
   proposalRepositoryRequestRef,
   proposalRouteSelectionSupportsRepository,
+  proposalStudioSelection,
+  proposalUsesPrototypeStudio,
+  proposalCanReviewSourceHome,
+  type ProposalRepositoryChoice,
   type ProposalDecisionDraft,
   type ProposalDecisionOutcome,
   type ProposalRouteSelectionDraft,
-  type ProposalRouteSelectionRepoMode,
   type ProposalRouteSelectionTarget,
 } from "../../../../work-model/proposal-disposition-model.ts";
 import type { ProposalWorkflowNavigationTarget } from "../../../../work-model/proposal-workflow-navigation.ts";
@@ -91,6 +96,16 @@ export function ProposalDispositionStep({
   });
   const canApply = draftCanApply && (!accepting || routeSelectionDraft.repoMode !== "existing" ||
     (repositories.ready && repositories.options.some(repo => repo.value === routeSelectionDraft.repoRef)));
+  useEffect(() => {
+    const current = routeDraftRef.current;
+    if (dispositionCompleted || !accepting || !repositories.ready ||
+        !proposalUsesPrototypeStudio(current) || current.repoOwner) return;
+    const selected = proposalStudioSelection(repositories.options);
+    if (!selected.repoOwner) return;
+    const next = { ...current, ...selected };
+    routeDraftRef.current = next;
+    onChangeRouteSelectionDraft(next);
+  }, [accepting, dispositionCompleted, repositories.ready, repositories.options, onChangeRouteSelectionDraft]);
   const [advisorCollapsed, setAdvisorCollapsed] = useState(true);
   const decisionPanelCollapsed = !advisorCollapsed;
   const toggleAdvisorCollapsed = () =>
@@ -119,7 +134,7 @@ export function ProposalDispositionStep({
   }
 
   function selectOutcome(outcome: ProposalDecisionOutcome) {
-    if (dispositionCompleted) {
+    if (dispositionCompleted || decisionDraft.sourceHomeCorrection) {
       return;
     }
 
@@ -165,6 +180,12 @@ export function ProposalDispositionStep({
   }
 
   function selectRouteTarget(routeTarget: ProposalRouteSelectionTarget) {
+    if (decisionDraft.sourceHomeCorrection) return;
+    if (routeTarget === "Prototype" && (routeSelectionDraft.repoMode === "not-required" ||
+        (routeSelectionDraft.repoMode === "existing" && !routeSelectionDraft.repoRef))) {
+      updateRouteSelectionDraft({ routeTarget, ...proposalStudioSelection(repositories.ready ? repositories.options : []) });
+      return;
+    }
     if (!proposalRouteSelectionSupportsRepository(routeTarget)) {
       updateRouteSelectionDraft({
         repoMode: "not-required",
@@ -192,7 +213,12 @@ export function ProposalDispositionStep({
     });
   }
 
-  function selectRepoMode(repoMode: ProposalRouteSelectionRepoMode) {
+  function selectRepoMode(repoMode: ProposalRepositoryChoice) {
+    if (repoMode === "studio") {
+      updateRouteSelectionDraft(proposalStudioSelection(repositories.ready ? repositories.options : []));
+      return;
+    }
+    if (routeSelectionDraft.routeTarget === "Prototype" && repoMode === "not-required") return;
     if (!routeSupportsRepository || repoMode === "not-required") {
       updateRouteSelectionDraft({
         repoMode: "not-required",
@@ -207,7 +233,7 @@ export function ProposalDispositionStep({
       repoOwner:
         repoMode === "new"
           ? "Repository Operation"
-          : routeSelectionDraft.repoOwner,
+          : "",
       repoRef:
         repoMode === "new" ? proposalRepositoryRequestRef(proposal.id) : "",
     });
@@ -223,6 +249,18 @@ export function ProposalDispositionStep({
       repoOwner: repo?.label ?? "",
       repoRef: repo?.value ?? "",
     });
+  }
+
+  function startSourceHomeCorrection() {
+    if (!dispositionCompleted || !proposalCanReviewSourceHome(proposal, routeDraftRef.current)) return;
+    // New local decision, submitted later through the unchanged version-bound
+    // Disposition command. Canonical receipts and source history remain intact.
+    onChangeDecisionDraft({ ...decisionDraftRef.current, appliedAt: undefined,
+      appliedReceiptId: undefined,
+      notes: "Review the source home for this accepted Prototype proposal. Preserve the original decision in History.",
+      sourceHomeCorrection: true, outcome: "accepted" });
+    onChangeRouteSelectionDraft({ ...routeDraftRef.current, appliedAt: undefined,
+      appliedReceiptId: undefined, rationale: "", ...proposalStudioSelection(repositories.ready ? repositories.options : []) });
   }
 
   const advisor = useDraftAdvisor({
@@ -288,6 +326,13 @@ export function ProposalDispositionStep({
               title: proposal.title,
             }}
           />
+          {dispositionCompleted && proposalCanReviewSourceHome(proposal, routeSelectionDraft) ? <TerasContentTray
+            kicker="Prototype source home missing"
+            description="This accepted decision has no source home. Review a new source-home decision; the original remains in History and nothing changes until you record the new decision."
+            actions={<TerasActionButton onClick={startSourceHomeCorrection}>Change source home</TerasActionButton>} /> : null}
+          {decisionDraft.sourceHomeCorrection && !dispositionCompleted ? <TerasContentTray
+            kicker="Source-home change draft"
+            description="Review the source home and explain your choice. The accepted Prototype outcome stays the same; the original decision remains in History. Nothing is recorded until submission." /> : null}
           <ProposalDispositionRoutePanel
             accepting={accepting}
             historicalRouteMissing={proposalWorkflowClosed(proposal) && !routeSelectionDraft.appliedAt}
@@ -303,6 +348,7 @@ export function ProposalDispositionStep({
             selectedRepo={selectedRepo}
             registeredRepositories={repositories.options}
             repositoriesCurrent={repositories.ready}
+            repositoriesLoading={repositories.loading}
             onRefreshRepositories={() => { void repositories.refresh().catch(() => undefined); }}
           />
         </TerasZone>

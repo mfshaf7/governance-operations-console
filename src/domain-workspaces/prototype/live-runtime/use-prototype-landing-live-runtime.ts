@@ -5,9 +5,9 @@ import { prototypeOwnerProgressIsNewer } from "./prototype-workspace-live-projec
 
 import type {
   PrototypeRecord,
-  PrototypeSourceHome,
 } from "../read-model/prototype-workspace-read-model.ts";
 import type { PrototypeLandingDraft } from "../work-model/workflows/landing/prototype-landing-model.ts";
+import { prototypeLandingSourceHomeMatches, prototypeLandingSourcePosture } from "../work-model/workflows/landing/prototype-landing-source-model.ts";
 import {
   assertPrototypeLandingPreparation,
   assertPrototypeLandingResult,
@@ -21,7 +21,6 @@ import type {
   PrototypeLandingPreparation,
   PrototypeLandingRunInput,
   PrototypeLandingSourceIntent,
-  PrototypeLandingSourcePosture,
   PrototypeLandingSubmissionIntent,
 } from "./prototype-landing-live-types.ts";
 
@@ -144,6 +143,10 @@ export function prototypeLandingSubmissionIntent(
   identity: RequestIdentity,
   preparation: PrototypeLandingPreparation,
 ): PrototypeLandingSubmissionIntent {
+  const source = prototypeLandingSourceIntent(input.record);
+  if (!prototypeLandingSourceHomeMatches(input.draft.sourceHome, source.posture)) {
+    throw new Error("The Landing source home differs from the current source authority. Reload the record before reviewing Landing again.");
+  }
   const prototypeId = `prototype:${prototypeSlug(input.record)}`;
   const ingress = prototypeLandingIngress(input.record.ingress);
   return {
@@ -153,7 +156,7 @@ export function prototypeLandingSubmissionIntent(
     prototype_id: prototypeId,
     request_id: identity.requestId,
     reviewed_preparation: preparation,
-    source: prototypeLandingSourceIntent(input.record),
+    source,
     suggestions: {
       name: input.record.name || null,
       objective: input.record.summary || null,
@@ -166,7 +169,7 @@ export function prototypeLandingSourceIntent(
   record: PrototypeRecord,
 ): PrototypeLandingSourceIntent {
   const evidence = record.sourceEvidence;
-  const posture = evidence?.posture ?? sourcePosture(record.landing.sourceHome);
+  const posture = evidence?.posture ?? prototypeLandingSourcePosture(record.landing.sourceHome);
   const intent = {
     authority: evidence?.authority ?? ingressAuthority(record),
     imported_content_digest: evidence?.importedContentDigest ?? null,
@@ -195,21 +198,6 @@ export function prototypeLandingSourceIntent(
     );
   }
   return intent;
-}
-
-function sourcePosture(sourceHome: PrototypeSourceHome): PrototypeLandingSourcePosture {
-  switch (sourceHome) {
-    case "new-prototype-folder":
-    case "docs-only":
-      return "create-studio-source";
-    case "existing-source":
-      return "reference-dedicated-owner-source";
-    case "future-owner-repo":
-      return "reference-dedicated-owner-source";
-    case "app-folder":
-    case "console-domain-module":
-      return "reference-shared-owner-source";
-  }
 }
 
 function ingressAuthority(record: PrototypeRecord) {

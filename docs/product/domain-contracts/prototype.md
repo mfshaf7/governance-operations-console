@@ -104,6 +104,16 @@ owner, objective/summary, source home, preview need, data mode, mutation
 boundary, visibility, support profile, and setup assumptions are suggestions
 or defaults until Landing records them as Prototype metadata.
 
+The current live Landing adapter derives its actual source posture from the
+selected source authority. Its source-home control is a readout of that scope,
+not a free destination selector: changing a display value cannot transfer source
+or supply an existing repository's missing immutable identity. Admitted Studio,
+imported and reference-only ingress retain their distinct owner effects. New
+submissions must reject a source-home draft inconsistent with that source
+posture. Base platform, documentation-only work and no-preview choices remain
+independent editable setup decisions. Existing retained owner requests and
+their recovery evidence keep their original identity.
+
 Every new prototype must pass through a Landing workflow before normal lifecycle
 work starts. Landing does not force a final project type. It records the support
 profile needed for the prototype to land cleanly, then keeps missing, unknown,

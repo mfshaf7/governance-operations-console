@@ -180,8 +180,35 @@ workspace-layout checks; this entry does not bypass those dependencies.
 ## Completion Truth
 
 An accepted HTTP response means acknowledgement only. A prepared branch or
-open review is not canonical mutation. Completion requires `succeeded`,
+open review is not canonical mutation. For existing Git-backed requests, completion requires `succeeded`,
 `canonical_mutation: true`, and a `merged-authority` receipt from OOS.
+
+## Internal repository registration — unpublished
+
+The existing classification form also supports the installation-private record
+route for new custody-backed source-only repositories. OOS selects authority;
+the browser cannot choose a storage backend or installation. Preparation binds
+the current record version/digest, current policy and current custody selector.
+The original source stays unchanged if a later custody request is selected.
+No Git register digest is invented for an internal record.
+
+The server builds the native request and the existing explicit operator decision,
+rereads the reviewed preparation, and rejects changed policy, identity or state
+before submission. The form and separate progress dialog remain the same. Older
+Git-backed requests retain their own review, history and merged receipt.
+
+Internal completion requires a verified installation-bound storage receipt and
+exact original record readback. The Console verifies the command, receipt and
+record digests and their policy, operator, metadata and version bindings before
+projecting success. An accepted response remains acknowledgement. There is no
+source review or merge for operational data. Project code retains its normal
+source review controls. Cancellation is shown only before the first write
+attempt; after an uncertain response, Continue resolves the original request.
+
+This source is uncommitted and disabled in the live composition. Isolated
+adapter proof does not qualify private source setup, Inventory promotion, or
+all-system migration. Those depend on the matching owner implementations,
+Security acceptance and later explicitly authorized batch publication.
 
 Direct Registry registration uses the ordinary Workspace Intake dialog shape,
 with classification, normalized metadata and explicit acceptance in one scrolling

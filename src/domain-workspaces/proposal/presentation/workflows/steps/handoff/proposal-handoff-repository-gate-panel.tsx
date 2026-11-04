@@ -20,6 +20,8 @@ export function ProposalHandoffRepositoryGatePanel({
   repositoryCueTone,
   repositoryGateRef,
   routeHasRepositoryGate,
+  hasRepositoryRequest,
+  onReviewSourceHome,
 }: {
   onOpenRepositorySurface?: (proposalId: string) => void;
   proposalId: string;
@@ -32,9 +34,13 @@ export function ProposalHandoffRepositoryGatePanel({
   repositoryCueTone: TerasTone;
   repositoryGateRef: string;
   routeHasRepositoryGate: boolean;
+  hasRepositoryRequest: boolean;
+  onReviewSourceHome?: () => void;
 }) {
   const repositoryAction =
-    routeHasRepositoryGate && onOpenRepositorySurface ? (
+    onReviewSourceHome ? <TerasActionButton emphasis="primary" onClick={onReviewSourceHome}>
+      Open source-home decision
+    </TerasActionButton> : routeHasRepositoryGate && hasRepositoryRequest && onOpenRepositorySurface ? (
       <TerasActionButton
         data-proposal-open-repository-control-action="true"
         emphasis={repositoryCueActionEmphasis}

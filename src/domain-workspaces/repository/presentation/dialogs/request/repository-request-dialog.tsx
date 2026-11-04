@@ -11,6 +11,7 @@ import type { RepositoryCustodyWorkflowResult } from "../../../live-runtime/repo
 import type { RepositoryRequestDraft } from "../../../work-model/request/repository-request-model.ts";
 import { repositoryProvisioningChecks, repositoryRequestHistoryLabel } from "./repository-request-view-model.ts";
 import { RepositoryRequestResult } from "./repository-request-result.tsx";
+import { RepositoryDevelopmentScope } from "../../shared/repository-development-scope.tsx";
 
 export function RepositoryRequestDialog({
   canSubmit, correction = false, resume = false, retainedRequests = [],
@@ -101,6 +102,7 @@ export function RepositoryRequestDialog({
               value={draft.visibility} disabled={pending} onValueChange={value => onUpdateDraft("visibility", value)}
               options={[{ label: "Private", value: "private" }, { label: "Internal", value: "internal" }, { label: "Public", value: "public" }]}
               helper="Private limits access to authorized collaborators. Organization policy and account permissions determine available visibility." />
+            <RepositoryDevelopmentScope visibility={draft.visibility} />
           </TerasTrayStack>
         </TerasPanel>
         <TerasPanel frame="padded" treatment="neutral" fit="content">

@@ -7,6 +7,7 @@ import type { ProposalWorkflowSourceStampedDraft } from "./proposal-source-proje
 export type ProposalDecisionOutcome = "accepted" | "parked" | "rejected";
 
 export type ProposalDecisionDraft = ProposalWorkflowSourceStampedDraft & {
+  sourceHomeCorrection?: boolean;
   advisorDraft?: string;
   advisorPrompt?: string;
   notes: string;
@@ -17,6 +18,28 @@ export type ProposalDecisionDraft = ProposalWorkflowSourceStampedDraft & {
 export type ProposalRouteSelectionTarget = "Delivery" | "Parked" | "Prototype";
 export type ProposalRouteSelectionRepoMode =
   "existing" | "new" | "not-required";
+
+// Presentation only: owner commands keep the existing/resolved custody shape.
+export type ProposalRepositoryChoice = ProposalRouteSelectionRepoMode | "studio";
+export const prototypeStudioRepositoryRef = "repo://workspace-prototype-studio";
+
+export function proposalUsesPrototypeStudio(draft: ProposalRouteSelectionDraft) {
+  return draft.routeTarget === "Prototype" && draft.repoMode === "existing" &&
+    draft.repoRef === prototypeStudioRepositoryRef;
+}
+
+export function proposalStudioSelection(repositories: readonly { label: string; value: string }[]) {
+  const studio = repositories.find(repo => repo.value === prototypeStudioRepositoryRef);
+  return { repoMode: "existing" as const, repoRef: prototypeStudioRepositoryRef,
+    repoOwner: studio?.label ?? "" };
+}
+
+export function proposalCanReviewSourceHome(proposal: ProposalWorkspaceScenario, draft: ProposalRouteSelectionDraft) {
+  return proposal.sourceStatus === "accepted" && proposal.projectionState === "current" &&
+    proposal.status !== "done" && proposal.status !== "retired" && proposal.routeTarget === "Prototype" &&
+    proposal.repoGate.mode === "not-required" && draft.routeTarget === "Prototype" && draft.repoMode === "not-required" &&
+    (!draft.sourceRecordVersion || draft.sourceRecordVersion === proposal.recordVersion);
+}
 
 const proposalRouteSelectionTargets = [
   "Delivery",
@@ -142,6 +165,7 @@ export function proposalRouteSelectionNeedsRepositoryResolution(
 export function proposalRouteSelectionComplete(
   draft: ProposalRouteSelectionDraft,
 ) {
+  if (draft.routeTarget === "Prototype" && draft.repoMode === "not-required") return false;
   if (
     !proposalRouteSelectionTargetValid(draft.routeTarget) ||
     !draft.rationale.trim()
@@ -181,6 +205,7 @@ export function proposalRouteSelectionTone(
 export function proposalRouteSelectionRepoLabel(
   draft: ProposalRouteSelectionDraft,
 ) {
+  if (proposalUsesPrototypeStudio(draft)) return "Studio selected";
   if (!proposalRouteSelectionHasRepositoryGate(draft)) {
     return "No Repo";
   }

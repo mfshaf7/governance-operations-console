@@ -5,6 +5,7 @@ import {
   TerasFieldStack,
   TerasList,
   TerasSelectField,
+  TerasReadoutField,
   TerasStatusPill,
   TerasTrayStack,
   TerasWizardPanel,
@@ -23,7 +24,6 @@ import {
   prototypeRequestDataModeOptions,
   prototypeRequestMutationBoundaryOptions,
   prototypeRequestPreviewNeedOptions,
-  prototypeRequestSourceHomeOptions,
   prototypeRequestVisibilityOptions,
 } from "../../../work-model/entry/prototype-request-model.ts";
 import type { PrototypeLandingDraftChangeHandler } from "./prototype-landing-types.ts";
@@ -33,11 +33,13 @@ export function PrototypeLandingSetupPlanStepPanel({
   landingDraftMutable,
   landingPlan,
   onDraftChange,
+  sourceReadout,
 }: {
   activeLandingDraft: PrototypeLandingDraft;
   landingDraftMutable: boolean;
   landingPlan: PrototypeLandingPlan;
   onDraftChange: PrototypeLandingDraftChangeHandler;
+  sourceReadout: { label: string; detail: string };
 }) {
   return (
     <TerasWizardPanel
@@ -54,21 +56,8 @@ export function PrototypeLandingSetupPlanStepPanel({
     >
       <TerasFieldStack spacing="loose">
         <TerasFieldGrid columns={2} spacing="compact">
-          <TerasContentTray kicker="Base Setup" title="Studio and preview">
-            <TerasSelectField
-              ariaLabel="Source home"
-              disabled={!landingDraftMutable}
-              helper="Where source, docs, or custody notes start."
-              label="Source home"
-              onValueChange={(value) =>
-                onDraftChange(
-                  "sourceHome",
-                  value as PrototypeLandingDraft["sourceHome"],
-                )
-              }
-              options={prototypeRequestSourceHomeOptions}
-              value={activeLandingDraft.sourceHome}
-            />
+          <TerasContentTray kicker="Base Setup" title="Source and preview" description={sourceReadout.detail}>
+            <TerasReadoutField label="Source home" value={sourceReadout.label} />
             <TerasSelectField
               ariaLabel="Preview need"
               disabled={!landingDraftMutable}

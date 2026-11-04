@@ -77,7 +77,7 @@ test("case:1270-regression maintenance projection is read-only and cannot reuse 
 
   assert.doesNotMatch(route, /export async function POST/);
   assert.doesNotMatch(service, /submitGovernedProductPublication|manifest_source|structuredClone/);
-  assert.match(service, /readWorkspaceRegistry/);
+  assert.match(service, /readLegacyWorkspaceRegistry/);
 });
 
 async function evidenceFixture(context) {

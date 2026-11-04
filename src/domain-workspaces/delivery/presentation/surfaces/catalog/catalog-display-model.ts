@@ -195,12 +195,12 @@ export function catalogMutationDescription(
   switch (mode) {
     case "add":
       if (catalog?.console_capability === "request") {
-        return "Prepare a prototype-local catalog request. The backend service decides durable creation, update, or retirement.";
+        return "Review the Catalog request. A durable change requires backend acceptance and confirmed readback.";
       }
 
-      return "Prepare a prototype-local catalog value. The real submit path must call the backend route shown below.";
+      return "Review the new Catalog value. A durable change requires backend acceptance and confirmed readback.";
     case "edit":
-      return "Prepare a prototype-local catalog value update. The backend service remains the authority for durable mutation.";
+      return "Review the Catalog update. A durable change requires backend acceptance and confirmed readback.";
     case "retire":
       if (catalogRetirementRequiresRequest(value ?? null)) {
         return "Prepare a retirement request. Existing package usage must be migrated or explicitly accepted before durable retirement, then projection must resync.";

@@ -1,5 +1,39 @@
 # Workspace Registry Live Integration
 
+## Internal project records — unpublished extension
+
+The approved extension stores public and private source-project registrations
+in installation-private operational storage under Governance policy. It is not
+activated by this source work. Legacy records, reviews and pending requests
+retain their Git authority; no automatic migration or public metadata export
+occurs.
+
+The server composes a Registry view from the original Git projection and a
+separate authenticated OOS `/v1/workspace-inventory/instance-records` page.
+The view preserves both source authorities rather than giving private records
+a fictitious Git revision. WGCF continuity reconciles only the retained Git
+snapshot and denies overlapping native identities. Product/component publication
+continues to read the original Git source directly.
+
+Internal records are searched and counted in the database, with at most 25
+entries per page and explicit continuation. Summary counts identify displayed
+entries, and unavailable reads cannot become an empty successful registry or a
+public-Git fallback. Shared validation responsibility remains a separate
+Governance decision; source-only registration does not grant it.
+
+Promotion and lifecycle keep the existing review interface. Native commands
+bind the exact selected project version/digest, current policy and operator
+acceptance. They do not depend on an unrelated whole-register Git digest.
+Restoration binds the latest real suspension/retirement receipt. Results expose
+the actual internal receipt, without a fabricated PR, merge or Git event.
+Read the original request before retrying submission; preserve its server
+timestamps and request identity. Once a write has been attempted, cancellation
+is unavailable until the original outcome is resolved.
+
+Private source-file access and complete operating qualification remain pending.
+Isolated source/browser proof does not authorize live activation or establish
+that every native-source consumer is operational.
+
 ## Boundary
 
 Workspace Registry is the Console control surface for canonical active
@@ -21,7 +55,8 @@ The Console server:
   before enabling Registry actions
 - requests a current promotion preparation for the selected entrant
 - requests current inventory and append-only history bindings for lifecycle work
-- re-reads registry and preparation before submission
+- re-reads the relevant authority and preparation before submission; retained
+  Git commands additionally compare their original Registry projection
 - rejects changed authority revisions, projection digests, candidate or record
   digests, versions, posture, or expected state
 - constructs digest-bound promotion and lifecycle commands with admitted caller

@@ -60,7 +60,7 @@ export function useCommandCenterAttention({
       : "live";
     const sources = (runtimeMode === "live" ? [
       projectProposalOwnerAttention(ownerReads.proposals),
-      projectRepositoryOwnerAttention(ownerReads.repositories, ownerReads.continuity),
+      projectRepositoryOwnerAttention(ownerReads.repositories, ownerReads.continuity, ownerReads.repositoryRegistrations ?? null),
       projectDeliveryOwnerAttention(ownerReads.delivery),
       projectPrototypeOwnerAttention(ownerReads.prototypes),
       projectPortfolioOwnerAttention(ownerReads.continuity),

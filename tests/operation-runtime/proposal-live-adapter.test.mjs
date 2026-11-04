@@ -30,6 +30,30 @@ const env = {
   OOS_CALLER_ID: "governance-operations-console",
   OOS_CALLER_SECRET: "test-only-secret",
 };
+
+test("Studio incubation submits the existing/resolved owner command; unsupported Prototype no-source input never reaches OOS", async () => {
+  const request={commandId:"proposal-command:idea-851:disposition:studio",proposalId:"idea-851",
+    source:{projectionState:"current",recordRef:"openproject://work_packages/851",recordVersion:"version-17",status:"triaged"},
+    payload:{step:"disposition",decision:{outcome:"accepted",notes:"Explore in Studio.",advisorDraft:"",advisorPrompt:""},
+      route:{routeTarget:"Prototype",rationale:"Use the existing incubation repository.",repoMode:"existing",repoOwner:"workspace-prototype-studio",repoRef:"repo://workspace-prototype-studio"}}};
+  let calls=0;
+  const result=await applyProposalCommand(request,{env,fetchImpl:async(url,init)=>{
+    calls++;assert.equal(new URL(url).pathname,"/v1/proposals/idea-851/commands");
+    const body=JSON.parse(init.body);
+    assert.deepEqual(body.command.route.source_custody,{classification:"existing-repo",owner:"workspace-prototype-studio",
+      rationale:"The selected route uses an existing owner repository.",repository_gate_state:"resolved",repository_mode:"existing",source_ref:"repo://workspace-prototype-studio"});
+    const output=proposalCommandResult();output.command_id=request.commandId;
+    output.projection={...output.projection,status:"accepted",route:body.command.route};
+    output.event={...output.event,command_id:request.commandId,event_type:"disposition-recorded",status_before:"triaged",status_after:"accepted"};
+    output.history.events=[output.event];
+    return jsonResponse(output,201);
+  }});
+  assert.equal(result.projection.route.source_custody.source_ref,request.payload.route.repoRef);
+  assert.equal(calls,1);
+  const invalid=structuredClone(request);invalid.payload.route={...invalid.payload.route,repoMode:"not-required",repoOwner:"",repoRef:""};
+  await assert.rejects(applyProposalCommand(invalid,{env,fetchImpl:async()=>{throw new Error("Unsupported source choice reached OOS");}}),
+    error=>error instanceof ProposalOosError && error.code==="proposal_prototype_source_home_required");
+});
 const handoffRef19 = "proposal-handoff:idea-851:version-19";
 const handoffRef21 = "proposal-handoff:idea-851:version-21";
 

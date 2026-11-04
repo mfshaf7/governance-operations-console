@@ -16,6 +16,7 @@ import { repositoryIntakeCustody, repositoryIntakeRecord, type RepositoryIntakeD
 import { repositoryIntakeDraftFromCustody, repositoryIntakeMissingFields, repositoryIntakeRequiresCatalog,
   repositoryIntakeRoles, repositoryIntakeTypeDraft, repositoryIntakeTypes } from "./repository-intake-guidance.ts";
 import { RepositoryOwnerBootstrapDialog } from "./repository-owner-bootstrap-dialog.tsx";
+import { RepositoryDevelopmentScope } from "../../shared/repository-development-scope.tsx";
 
 function withOwnerChecks(draft: RepositoryIntakeDraft, setup: IntakeOwnerSetup | null): RepositoryIntakeDraft {
   if (!setup) return draft;
@@ -117,6 +118,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
       </TerasActionButton>
     </>}>
     <TerasFieldStack spacing="loose">
+      <RepositoryDevelopmentScope visibility={custodyResult.provider_readback?.visibility} />
       <TerasContentTray kicker="Repository" description="Collected from the completed creation or attachment. You do not need to enter provider IDs or request references.">
         <TerasMetadataList items={[
           { label: "Repository", value: repository.githubUrl },

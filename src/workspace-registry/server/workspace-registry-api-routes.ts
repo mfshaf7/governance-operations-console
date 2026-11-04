@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { repositoryStatusNames } from "../workspace-repository-status.ts";
 
 import {
   assertWorkspaceInventoryLifecycleRequestId,
@@ -16,6 +17,7 @@ import {
   readWorkspaceInventoryLifecycle,
   readWorkspaceInventoryPromotion,
   readWorkspaceRegistry,
+  readRepositoryRegistrationStatus,
   readWorkspaceInventoryRequestJournal,
   submitWorkspaceInventoryLifecycle,
   submitWorkspaceInventoryPromotion,
@@ -24,6 +26,16 @@ import {
 } from "./workspace-registry-oos-client.ts";
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
+
+export async function readRepositoryRegistrationStatusRoute(request: NextRequest) {
+  return execute(async () => {
+    requireConfigured();
+    if ([...request.nextUrl.searchParams.keys()].some(key => key !== "name")) throw new WorkspaceRegistryContractError("Select exact repository names.");
+    const names = request.nextUrl.searchParams.getAll("name");
+    try { repositoryStatusNames(names); } catch { throw new WorkspaceRegistryContractError("Select at most 25 exact ordered repository names."); }
+    return readRepositoryRegistrationStatus(names);
+  });
+}
 
 export async function listWorkspaceInventoryRoute(request: NextRequest, family: "promotion" | "lifecycle") {
   return execute(async () => {
@@ -39,10 +51,14 @@ export async function listWorkspaceInventoryRoute(request: NextRequest, family: 
   });
 }
 
-export async function readWorkspaceRegistryRoute() {
+export async function readWorkspaceRegistryRoute(request?: NextRequest) {
   return execute(async () => {
     requireConfigured();
-    return readWorkspaceRegistry();
+    const query = request?.nextUrl.searchParams ?? new URLSearchParams();
+    const keys = [...query.keys()], scope = query.get("scope") ?? "inventory", search = query.get("query") ?? "", after = query.get("after");
+    if (new Set(keys).size !== keys.length || keys.some(key => !["scope", "query", "after"].includes(key)) ||
+        !["inventory", "eligible"].includes(scope) || search.length > 128 || (after !== null && !/^repo:[a-z0-9][a-z0-9._-]{0,185}$/.test(after))) throw new WorkspaceRegistryContractError("Select one bounded Registry page.");
+    return readWorkspaceRegistry({ selection: { scope: scope as "inventory" | "eligible", query: search.trim().toLowerCase(), after } });
   });
 }
 

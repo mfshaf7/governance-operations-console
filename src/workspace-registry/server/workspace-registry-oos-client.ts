@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { assertRepositoryRegistrationLookup, repositoryStatusNames } from "../workspace-repository-status.ts";
 
 import {
   consoleOosModeSelected,
@@ -35,8 +36,15 @@ import type {
   WorkspaceInventoryPreparation,
   WorkspaceInventorySubmissionIntent,
   WorkspaceRegistrySnapshot,
+  WorkspaceRegistryLegacySnapshot,
+  InstanceRegistrySelection,
+  InstanceInventoryRequest,
   WorkspaceRegistryTarget,
 } from "../model/workspace-registry-types.ts";
+import { assertWorkspaceRegistryRecord, assertWorkspaceRegistryCandidate } from "../workspace-registry-contract.ts";
+import { assertInstanceRegistryPage } from "../workspace-registry-instance-contract.ts";
+import { inventoryPreparationPosture } from "../model/workspace-registry-lifecycle-state.ts";
+import { buildInstanceInventoryCommand, sameInstanceInventoryInput, verifyInstanceInventoryResult, verifyInstanceInventoryPreparation } from "./workspace-registry-instance-proof.ts";
 
 import { assertInventoryRequestJournal, inventoryJournalEndpoint,
   type InventoryRequestFamily } from "../workspace-registry-request-journal.ts";
@@ -50,6 +58,7 @@ type RequestOptions = Readonly<{
   config?: WorkspaceRegistryOosConfig;
   fetchImpl?: typeof fetch;
   now?: () => Date;
+  selection?: Partial<InstanceRegistrySelection> & Readonly<{ after?: string | null }>;
 }>;
 
 export class WorkspaceRegistryOosError extends Error {
@@ -89,10 +98,57 @@ async function requireNoOriginalPending(family: InventoryRequestFamily, target: 
   );
 }
 
+export async function readRepositoryRegistrationStatus(names: string[], options: RequestOptions = {}) {
+  repositoryStatusNames(names);
+  const query = new URLSearchParams(names.map(name => ["name", name]));
+  const body = await request(`/v1/workspace-inventory/repository-status?${query}`, { method: "GET" }, options, {
+    authority: "operator-orchestration-service", sourceOwner: "operator-orchestration-service", recordRef: `oos://workspace-inventory/repository-status?${query}`,
+  });
+  try {
+    const checked = assertRepositoryRegistrationLookup(body, names);
+    if (checked.mode === "current") {
+      const { projection_digest, ...content } = body as Record<string, unknown>;
+      if (canonicalDigest(content) !== projection_digest) throw contractError("Repository registration status content changed.");
+    }
+  } catch (error) { throw projectionError(error); }
+  return body;
+}
+
 export async function readWorkspaceRegistry(
   options: RequestOptions = {},
 ): Promise<WorkspaceRegistrySnapshot> {
-  return projectSnapshot(
+  const query = new URLSearchParams({ scope: options.selection?.scope ?? "inventory", query: options.selection?.query ?? "" });
+  if (options.selection?.after) query.set("after", options.selection.after);
+  const [legacy, body] = await Promise.all([
+    readLegacyWorkspaceRegistry(options),
+    request(`/v1/workspace-inventory/instance-records?${query}`, { method: "GET" }, options, {
+      authority: "operator-orchestration-service", sourceOwner: "operator-orchestration-service",
+      recordRef: `oos://workspace-inventory/instance-records?${query}`,
+    }),
+  ]);
+  if (isRecord(body) && body.schema_version === 1 && body.mode === "not-configured" &&
+      Object.keys(body).sort().join(",") === "mode,projected_at,schema_version" && typeof body.projected_at === "string" && !Number.isNaN(Date.parse(body.projected_at))) return legacy;
+  try {
+    const page = assertInstanceRegistryPage(body, { record: assertWorkspaceRegistryRecord, candidate: assertWorkspaceRegistryCandidate }, contractError);
+    const { projection_digest, ...content } = page;
+    if (canonicalDigest(content) !== projection_digest || page.selection.scope !== query.get("scope") || page.selection.query !== query.get("query")?.trim().toLowerCase() || page.after !== (options.selection?.after ?? null)) throw contractError("Internal Registry page changed its exact selection or content binding.");
+    for (const candidate of page.eligible_promotions) {
+      const { candidate_digest, ...value } = candidate;
+      if (canonicalDigest(value) !== candidate_digest) throw contractError("Internal Registry candidate digest does not match its content.");
+    }
+    const view = { schema_version: 1, workflow_id: "workspace-registry-view", canonical_mutation: false,
+      authority_revision: legacy.authority_revision, source_authorities: { legacy: legacy.canonical_authority, instance: page.authority },
+      legacy_snapshot: legacy, instance_page: page, records: [...legacy.records, ...page.records],
+      eligible_promotions: [...legacy.eligible_promotions, ...page.eligible_promotions], projected_at: (options.now?.() ?? new Date()).toISOString(),
+      projection_id: `workspace-registry-view:${canonicalDigest([legacy.projection_digest, page.projection_digest])}` };
+    return projectSnapshot(bindDigest(view, "projection_digest"));
+  } catch (error) { throw projectionError(error); }
+}
+
+// Product and component decisions still belong to the retained Git contracts.
+// Their callers must not depend on a private source-project listing page.
+export async function readLegacyWorkspaceRegistry(options: RequestOptions = {}): Promise<WorkspaceRegistryLegacySnapshot> {
+  const snapshot = projectSnapshot(
     await request(
       "/v1/workspace-inventory/registry",
       { method: "GET" },
@@ -104,6 +160,8 @@ export async function readWorkspaceRegistry(
       },
     ),
   );
+  if (snapshot.workflow_id !== "workspace-inventory-registry") throw projectionError(new Error("The retained Git Registry changed authority."));
+  return snapshot;
 }
 
 export async function prepareWorkspaceInventoryPromotion(
@@ -123,16 +181,19 @@ export async function prepareWorkspaceInventoryLifecycle(
   target: WorkspaceRegistryTarget,
   options: RequestOptions = {},
 ): Promise<WorkspaceInventoryLifecyclePreparation> {
-  return assertWorkspaceInventoryLifecyclePreparation(
-    await request(
+  const body = await request(
       "/v1/workspace-inventory/lifecycle/preparations",
       {
         body: JSON.stringify({ target: { kind: target.kind, name: target.name } }),
         method: "POST",
       },
       options,
-    ),
-  );
+    );
+  try {
+    const preparation = assertWorkspaceInventoryLifecyclePreparation(body);
+    verifyInstanceInventoryPreparation(body, canonicalDigest);
+    return preparation;
+  } catch (error) { throw projectionError(error); }
 }
 
 export async function submitWorkspaceInventoryLifecycle(
@@ -140,8 +201,19 @@ export async function submitWorkspaceInventoryLifecycle(
   options: RequestOptions = {},
 ) {
   const intent = assertWorkspaceInventoryLifecycleSubmissionIntent(value);
+  if (intent.reviewed_preparation.authority_kind === "internal-instance-record") {
+    const preparation = intent.reviewed_preparation;
+    const config = options.config ?? resolveConfig();
+    const command = buildInstanceInventoryCommand({ preparation, requestId: intent.request_id, action: intent.action,
+      requestedValue: intent.requested_value, approvalRefs: intent.approval_refs, impactAcknowledgements: intent.impact_acknowledgements,
+      reason: intent.reason, callerId: config.callerId, now: options.now?.() ?? new Date() }, canonicalDigest);
+    return submitNativeInventory("lifecycle", command, async () => {
+      const fresh = await prepareWorkspaceInventoryLifecycle(preparation.target, options);
+      if (!sameWorkspaceInventoryLifecyclePreparation(preparation, fresh)) throw new WorkspaceRegistryOosError("Inventory changed after review. Refresh before applying the action.", "workspace_inventory_lifecycle_preparation_stale", 409);
+    }, { ...options, config });
+  }
   await requireNoOriginalPending("lifecycle", intent.reviewed_preparation.target, options);
-  const currentSnapshot = await readWorkspaceRegistry(options);
+  const currentSnapshot = await readLegacyWorkspaceRegistry(options);
   const currentRecord = currentSnapshot.records.find(
     (record) => record.id === intent.reviewed_preparation.target.record_id,
   );
@@ -153,7 +225,7 @@ export async function submitWorkspaceInventoryLifecycle(
     ) ||
     currentRecord.version !== intent.reviewed_preparation.expected_state.record_version ||
     currentRecord.record_digest !== intent.reviewed_preparation.expected_state.record_digest ||
-    currentRecord.posture !== intent.reviewed_preparation.expected_state.posture
+    currentRecord.posture !== inventoryPreparationPosture(intent.reviewed_preparation)
   ) {
     throw new WorkspaceRegistryOosError(
       "Workspace Registry authority changed after lifecycle review. Refresh before applying the action.",
@@ -165,6 +237,7 @@ export async function submitWorkspaceInventoryLifecycle(
     intent.reviewed_preparation.target,
     options,
   );
+  if (currentPreparation.authority_kind !== undefined) throw new WorkspaceRegistryOosError("Inventory storage authority changed after review.", "workspace_inventory_lifecycle_preparation_stale", 409);
   if (
     !sameWorkspaceInventoryLifecyclePreparation(
       intent.reviewed_preparation,
@@ -190,7 +263,7 @@ export async function submitWorkspaceInventoryLifecycle(
     { ...options, config },
   );
   assertReturnedBinding(response, command);
-  return assertWorkspaceInventoryLifecycleResult(response, intent.request_id);
+  return projectLifecycleResult(response, intent.request_id);
 }
 
 export async function readWorkspaceInventoryLifecycle(
@@ -198,7 +271,7 @@ export async function readWorkspaceInventoryLifecycle(
   options: RequestOptions = {},
 ) {
   const id = assertWorkspaceInventoryLifecycleRequestId(requestId);
-  return assertWorkspaceInventoryLifecycleResult(
+  return projectLifecycleResult(
     await request(
       `/v1/workspace-inventory/lifecycle/requests/${encodeURIComponent(id)}`,
       { method: "GET" },
@@ -232,8 +305,19 @@ export async function submitWorkspaceInventoryPromotion(
   options: RequestOptions = {},
 ) {
   const intent = assertWorkspaceInventorySubmissionIntent(value);
+  if (intent.reviewed_preparation.authority_kind === "internal-instance-record") {
+    const preparation = intent.reviewed_preparation, config = options.config ?? resolveConfig();
+    if (canonicalDigest(preparation.candidate) !== canonicalDigest(intent.candidate)) throw contractError("Promotion input differs from the reviewed original candidate.");
+    const command = buildInstanceInventoryCommand({ preparation, requestId: intent.request_id, action: "promote",
+      requestedValue: intent.candidate.active_record.value, approvalRefs: intent.candidate.approval_refs,
+      impactAcknowledgements: [], reason: null, callerId: config.callerId, now: options.now?.() ?? new Date() }, canonicalDigest);
+    return submitNativeInventory("promotion", command, async () => {
+      const fresh = await prepareWorkspaceInventoryPromotion(preparation.target, options);
+      if (!sameWorkspaceInventoryPreparation(preparation, fresh)) throw new WorkspaceRegistryOosError("Inventory changed after review. Refresh before promotion.", "workspace_inventory_preparation_stale", 409);
+    }, { ...options, config });
+  }
   await requireNoOriginalPending("promotion", intent.candidate.target, options);
-  const currentSnapshot = await readWorkspaceRegistry(options);
+  const currentSnapshot = await readLegacyWorkspaceRegistry(options);
   const currentCandidate = currentSnapshot.eligible_promotions.find(
     (candidate) => candidate.target.record_id === intent.candidate.target.record_id,
   );
@@ -335,7 +419,7 @@ async function commandWorkspaceInventoryLifecycle(
   options: RequestOptions,
 ) {
   const id = assertWorkspaceInventoryLifecycleRequestId(requestId);
-  return assertWorkspaceInventoryLifecycleResult(
+  return projectLifecycleResult(
     await request(
       `/v1/workspace-inventory/lifecycle/requests/${encodeURIComponent(id)}/${action}`,
       { body: "{}", method: "POST" },
@@ -394,7 +478,7 @@ function buildLifecycleCommand(
       impact_acknowledgements: intent.impact_acknowledgements,
       operator_ref: callerId,
       prior_event_ref:
-        intent.action === "restore" ? preparation.latest_event_ref : null,
+        intent.action === "restore" && preparation.authority_kind !== "internal-instance-record" ? preparation.latest_event_ref : null,
       reason: intent.reason,
       request_id: intent.request_id,
       requested_at: now.toISOString(),
@@ -605,7 +689,9 @@ function projectSnapshot(value: unknown) {
 
 function projectPreparation(value: unknown) {
   try {
-    return assertWorkspaceInventoryPreparation(value);
+    const preparation = assertWorkspaceInventoryPreparation(value);
+    verifyInstanceInventoryPreparation(value, canonicalDigest);
+    return preparation;
   } catch (error) {
     throw projectionError(error);
   }
@@ -613,9 +699,57 @@ function projectPreparation(value: unknown) {
 
 function projectResult(value: unknown, requestId: string) {
   try {
-    return assertWorkspaceInventoryResult(value, requestId);
+    const result = assertWorkspaceInventoryResult(value, requestId);
+    verifyInstanceInventoryResult(value, canonicalDigest);
+    return result;
   } catch (error) {
     throw projectionError(error);
+  }
+}
+
+function projectLifecycleResult(value: unknown, requestId: string) {
+  try {
+    const result = assertWorkspaceInventoryLifecycleResult(value, requestId);
+    verifyInstanceInventoryResult(value, canonicalDigest);
+    return result;
+  } catch (error) { throw projectionError(error); }
+}
+
+async function submitNativeInventory<F extends "promotion" | "lifecycle">(
+  family: F, command: Readonly<{ request: InstanceInventoryRequest; session_ref: string; execution_ref: string }>,
+  requireFreshPreparation: () => Promise<void>, options: RequestOptions,
+) {
+  const path = family === "promotion" ? "/v1/workspace-inventory/promotions" : "/v1/workspace-inventory/lifecycle/requests";
+  const project = (body: unknown) => family === "promotion" ? projectResult(body, command.request.request_id) : projectLifecycleResult(body, command.request.request_id);
+  const original = async () => {
+    try {
+      const body = await request(`${path}/${encodeURIComponent(command.request.request_id)}`, { method: "GET" }, options, {
+        authority: "operator-orchestration-service", sourceOwner: "workspace-governance", recordRef: `oos://${path.slice(4)}/${command.request.request_id}`,
+      });
+      const result = project(body);
+      if (result.authority_kind !== "internal-instance-record" || !sameInstanceInventoryInput(body, command, canonicalDigest)) throw new WorkspaceRegistryOosError("This request belongs to different accepted input. Open its original history.", "workspace_inventory_idempotency_conflict", 409);
+      return result;
+    } catch (error) {
+      if (error instanceof WorkspaceRegistryOosError && error.status === 404 && error.code === (family === "promotion" ? "workspace_inventory_not_found" : "workspace_inventory_lifecycle_not_found")) return null;
+      throw error;
+    }
+  };
+  const retained = await original();
+  if (retained) return retained;
+  await requireNoOriginalPending(family, command.request.target, options);
+  await requireFreshPreparation();
+  try {
+    const response = await request(path, { method: "POST", body: JSON.stringify(command) }, options);
+    assertReturnedBinding(response, command);
+    return project(response);
+  } catch (error) {
+    if (!(error instanceof WorkspaceRegistryOosError) || (!error.retryable && error.status < 500 && error.status !== 409)) throw error;
+    try { const saved = await original(); if (saved) return saved; }
+    catch (readError) {
+      if (readError instanceof WorkspaceRegistryOosError && readError.status === 409) throw readError;
+      throw new WorkspaceRegistryOosError("Submission is unconfirmed. Reopen the original request when its connection returns.", "workspace_inventory_submission_unconfirmed", 503, true);
+    }
+    throw error;
   }
 }
 

@@ -40,8 +40,11 @@ export function projectAgentOwnerSnapshot(source: AgentContextSource, value: unk
     detail = `${list(body.inventory).length} inventory entries; ${list(body.intake).length} intake entries; ${products.length} products (${tally(products, "posture")}). Products: ${products.slice(0, 3).map(p => label(object(p).name)).join(", ")}`;
     sourceRevision = revision(object(body.authority).revision);
   } else if (source === "registry") {
-    if (body.workflow_id !== "workspace-inventory-registry" || !revision(body.authority_revision)) throw new Error("Registry not current");
-    const rows = list(body.records); detail = `${rows.length} Registry entries (${tally(rows, "posture")}); ${examples(rows, "id", "name")}`; sourceRevision = revision(body.authority_revision);
+    const legacy = body.workflow_id === "workspace-registry-view" ? object(body.legacy_snapshot) : body;
+    if (legacy.workflow_id !== "workspace-inventory-registry" || !revision(legacy.authority_revision)) throw new Error("Registry not current");
+    // Native project identities/descriptions are for operator inspection, not
+    // automatic model context. Retain the public legacy summary separately.
+    const rows = list(legacy.records); detail = `${rows.length} ${body.workflow_id === "workspace-registry-view" ? "legacy Registry" : "Registry"} entries (${tally(rows, "posture")}); ${examples(rows, "id", "name")}${body.workflow_id === "workspace-registry-view" ? "; internal records connected, private details excluded" : ""}`; sourceRevision = revision(legacy.authority_revision);
   } else if (source === "repositories") {
     if (body.mode !== "live" || body.status !== "current") throw new Error("Repository not current");
     const rows = list(body.records); detail = `${rows.length} retained repository operations (${tally(rows, "status")}); current inventory and exact provider readback remain separate`;

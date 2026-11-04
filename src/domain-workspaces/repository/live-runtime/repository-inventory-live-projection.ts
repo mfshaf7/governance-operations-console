@@ -1,21 +1,29 @@
 import type { WorkspaceContinuityProjection } from "../../../workspace-continuity/workspace-continuity-types.ts";
 import type { RepositoryWorkspaceRecord } from "../domain/repository-types.ts";
+import type { RepositoryRegistrationLookup } from "../../../workspace-registry/workspace-repository-status.ts";
 
 // Custody receipts describe the completed provider action. Only current canonical
 // inventory can establish whether its exact approved workspace owner is admitted.
 export function projectRepositoryCurrentInventory(
   records: readonly RepositoryWorkspaceRecord[],
   projection: WorkspaceContinuityProjection | null,
+  registrations?: RepositoryRegistrationLookup | null,
 ): RepositoryWorkspaceRecord[] {
   return records.map((record): RepositoryWorkspaceRecord => {
     const ownerRef = record.custody?.workspaceOwnerRef;
     const matches = projection?.inventory.filter(
       (item) => item.kind === "repo" && item.record_id === ownerRef,
     ) ?? [];
-    if (!projection || !ownerRef?.startsWith("repo:") || matches.length > 1) {
+    const native = registrations?.mode === "current" ? registrations.records.find(row => row.record_id === ownerRef) : undefined;
+    const provider = record.providerIdentity;
+    const identityChanged = Boolean(native && (!provider || native.provider_repository.provider_repository_id !== provider.repositoryId ||
+      native.provider_repository.full_name !== `${provider.owner}/${provider.name}`));
+    const unconfirmed = !matches.length && registrations !== undefined && (registrations === null || registrations.mode === "current" && !registrations.recordIds.includes(ownerRef ?? ""));
+    if (!projection || !ownerRef?.startsWith("repo:") || matches.length > 1 || native && matches.length > 0 || identityChanged || unconfirmed) {
       const detail = !projection
         ? "Current Workspace inventory is unavailable. Custody history does not establish admission."
-        : "The workspace association does not match one exact repository inventory identity.";
+        : unconfirmed ? "Current repository registration has not been verified. Refresh before preparing another intake."
+          : "The workspace association does not match one exact repository inventory identity.";
       return {
         ...record,
         admissionState: "blocked",
@@ -34,7 +42,15 @@ export function projectRepositoryCurrentInventory(
         tone: "danger",
       };
     }
-    const current = matches[0];
+    if (native?.phase === "intake") {
+      const detail = `This repository already has an internal ${native.status} registration at version ${native.version}.`;
+      return { ...record, admissionState: native.status === "out-of-scope" ? "blocked" : "ready",
+        admissionPosture: [...historyPosture(record), { id: "admission", kicker: "Registration", title: "Workspace Registration", tone: "info",
+          description: detail, items: [{ label: "Classification", value: native.status, detail, tone: "info", state: "reference" }] }],
+        nextAction: native.status === "admitted" ? "Review promotion in Workspace Registry. Registration is already complete."
+          : "Continue the existing repository setup and classification; do not create a duplicate registration." };
+    }
+    const current = native ? { record_id: native.record_id, record_version: native.version, posture: native.status, lifecycle: native.status } : matches[0];
     if (!current) return record;
     const retired = current.posture === "retired";
     const active = current.posture === "active";
@@ -47,7 +63,7 @@ export function projectRepositoryCurrentInventory(
         description: "Current inventory supersedes the admission handoff in the historical custody receipt.",
         id: "admission",
         items: [{ label: "Workspace inventory", detail, state: retired ? "retired" : active ? "clear" : "blocked", tone, value: current.posture },
-          { label: "Authority revision", detail: "Workspace Governance canonical inventory projected through WGCF.", state: "reference", tone: "info", value: projection.authority.revision }],
+          { label: native ? "Internal registration" : "Authority revision", detail: native ? "Installation-private operational record." : "Workspace Governance canonical inventory projected through WGCF.", state: "reference", tone: "info", value: native ? `v${native.version}` : projection.authority.revision }],
         kicker: "Admission", title: "Workspace Admission", tone,
       }],
       blockers: active || retired ? record.blockers : [...record.blockers, {
@@ -56,7 +72,7 @@ export function projectRepositoryCurrentInventory(
         severity: "blocked", sourceRef: `workspace-continuity://inventory/${current.record_id}`,
       }],
       lifecycle: current.lifecycle,
-      lastValidation: `${record.lastValidation} / inventory ${projection.authority.revision} v${current.record_version}`,
+      lastValidation: `${record.lastValidation} / inventory ${native ? "internal record" : projection.authority.revision} v${current.record_version}`,
       nextAction: active
         ? "Review the admitted repository and its history. Workspace intake is already complete."
         : "Review the existing Workspace Registry lifecycle record; do not prepare duplicate intake.",

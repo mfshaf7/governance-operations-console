@@ -1,9 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { createRequire } from "node:module";
+import { page as nativePageFixture, promotionPreparation as nativePromotionPreparation, nativeResult as nativeInventoryResult, config as nativeConfig, digest as nativeDigest, bind as nativeBind, at as nativeAt } from "../support/instance-inventory-fixture.mjs";
 const require = createRequire(import.meta.url);
 const { workspaceRegistryFixture, workspaceInventoryResultFixture, workspaceInventoryLifecyclePreparationFixture } = require("../../src/workspace-registry/fixtures/workspace-registry.fixture.ts");
 const { assertWorkspaceContinuityProjection } = require("../../src/workspace-continuity/workspace-continuity-contract.ts");
 const { reconcileWorkspaceRegistryContinuity } = require("../../src/workspace-continuity/workspace-registry-continuity.ts");
+const { buildInstanceInventoryCommand } = require("../../src/workspace-registry/server/workspace-registry-instance-proof.ts");
 const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:3320";
 if (new URL(base).port === "3317") throw new Error("Use the isolated preview, never the live Console.");
 test.setTimeout(90000);
@@ -197,4 +199,69 @@ test('Explicit promotion opens a separate acknowledgement and never claims an ac
 
 test('Unconfirmed promotion keeps original-request recovery in the separate feedback dialog',async({page})=>{
  const h=await setup(page,{promotion:true,submitPromotion:'unavailable'});await h.workspace.getByRole('button',{name:/Eligible/}).click();await h.workspace.getByRole('button',{name:'Review Promotion',exact:true}).click();await page.getByRole('dialog',{name:'Review Promotion',exact:true}).getByRole('button',{name:'Add to Registry',exact:true}).click();const d=page.getByRole('dialog',{name:'Submission needs attention',exact:true});await expect(d).toBeVisible();await expect(d).toContainText('No confirmed outcome is available');await expect(d.getByRole('button',{name:'Refresh original requests',exact:true})).toBeEnabled();await expect(d.getByRole('button',{name:'Add to Registry',exact:true})).toHaveCount(0);expect(h.writes).toHaveLength(1);expect(h.errors).toEqual([]);
+});
+
+test("internal project promotion preserves the existing review interface and shows its actual private-storage receipt", async ({ page }, testInfo) => {
+  const h = await setup(page), prepared = nativePromotionPreparation();
+  let command = null, current = null;
+  const submissions = [], selections = [];
+  await page.route("**/api/workspace-registry**", async route => {
+    const request = route.request(), url = new URL(request.url()), path = url.pathname;
+    if (path === "/api/workspace-registry") {
+      const scope = url.searchParams.get("scope") ?? "inventory", query = url.searchParams.get("query") ?? "";
+      selections.push({ scope, query, after: url.searchParams.get("after") });
+      const internal = nativePageFixture(scope, scope === "inventory" ? current : null);
+      if (scope === "eligible" && current || query && !prepared.target.record_id.includes(query)) {
+        internal.records = []; internal.eligible_promotions = [];
+        internal.counts = { intake: { "out-of-scope": 0, proposed: 0, admitted: 0 }, inventory: { active: 0, suspended: 0, retired: 0 } };
+      }
+      const { projection_digest: _old, ...body } = internal, instancePage = nativeBind(body, "projection_digest");
+      return route.fulfill({ json: nativeBind({ schema_version: 1, workflow_id: "workspace-registry-view", canonical_mutation: false,
+        authority_revision: snapshot.authority_revision, legacy_snapshot: snapshot, instance_page: instancePage,
+        source_authorities: { legacy: snapshot.canonical_authority, instance: instancePage.authority },
+        records: [...snapshot.records, ...instancePage.records], eligible_promotions: [...snapshot.eligible_promotions, ...instancePage.eligible_promotions],
+        projected_at: nativeAt, projection_id: "synthetic-internal-registry-preview" }, "projection_digest") });
+    }
+    if (path === "/api/workspace-registry/preparations" && request.postDataJSON().target.record_id === prepared.target.record_id) return route.fulfill({ json: prepared });
+    if (path === "/api/workspace-registry/promotions" && request.method() === "GET" && url.searchParams.get("target_name") === prepared.target.name) return route.fulfill({ json: {
+      schema_version: 1, workflow_id: "workspace-inventory-promotion", canonical_mutation: false, target: prepared.target,
+      revision: 0, pending_request_count: 0, updated_at: null, records: [], next_cursor: null } });
+    if (path === "/api/workspace-registry/promotions" && request.method() === "POST") {
+      const input = request.postDataJSON(); submissions.push(input);
+      expect(input.reviewed_preparation.authority_kind).toBe("internal-instance-record");
+      expect(input.candidate).toEqual(prepared.candidate);
+      command = buildInstanceInventoryCommand({ preparation: prepared, requestId: input.request_id, action: "promote",
+        requestedValue: input.candidate.active_record.value, approvalRefs: input.candidate.approval_refs,
+        impactAcknowledgements: [], reason: null, callerId: nativeConfig.callerId, now: new Date(nativeAt) }, nativeDigest);
+      return route.fulfill({ json: nativeInventoryResult(command) });
+    }
+    if (command && path.endsWith("/continue")) {
+      const completed = nativeInventoryResult(command, "succeeded"); current = completed.readback;
+      return route.fulfill({ json: completed });
+    }
+    return route.fallback();
+  });
+  await h.workspace.getByRole("button", { name: "Refresh Registry", exact: true }).click();
+  await h.workspace.getByRole("button", { name: /Eligible/ }).click();
+  const row = h.workspace.locator("tbody tr").filter({ hasText: prepared.target.name });
+  await expect(row).toBeVisible(); await row.click();
+  await h.workspace.getByRole("button", { name: "Review Promotion", exact: true }).click();
+  const review = page.getByRole("dialog", { name: "Review Promotion", exact: true });
+  await expect(review.getByRole("button", { name: "Add to Registry", exact: true })).toBeEnabled();
+  await review.getByRole("button", { name: "Add to Registry", exact: true }).click();
+  const accepted = page.getByRole("dialog", { name: "Promotion submitted", exact: true });
+  await expect(accepted).toContainText("Operator approval recorded");
+  expect(current).toBeNull();
+  await accepted.getByRole("button", { name: "Continue Request", exact: true }).click();
+  await expect(page.getByText("Item added to Registry", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Back to Registry", exact: true }).click();
+  await h.workspace.getByRole("button", { name: /01.*Registry|Registry.*shown/ }).click();
+  const recorded = h.workspace.locator("tbody tr").filter({ hasText: prepared.target.name });
+  await expect(recorded).toBeVisible(); await recorded.click();
+  await h.workspace.getByText("Record details", { exact: true }).click();
+  await expect(h.workspace).toContainText("Private installation storage");
+  expect(submissions).toHaveLength(1);
+  expect(selections.some(selection => selection.scope === "eligible")).toBe(true);
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath("internal-registry-promoted.png"), fullPage: true });
 });

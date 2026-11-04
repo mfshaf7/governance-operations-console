@@ -9,6 +9,8 @@ import {
   proposalRouteSelectionRepoModeLabel,
   proposalRouteSelectionSupportsRepository,
   proposalRouteSelectionTone,
+  proposalUsesPrototypeStudio,
+  type ProposalRepositoryChoice,
   type ProposalDecisionDraft,
   type ProposalDecisionOutcome,
   type ProposalRouteSelectionDraft,
@@ -97,10 +99,17 @@ export function proposalDispositionRepoModeChoiceOptions({
   dispositionCompleted: boolean;
   routeSelectionDraft: ProposalRouteSelectionDraft;
 }) {
-  return proposalDispositionRepoModeOptions.map((option) => ({
+  const options: ProposalDispositionChoiceOption<ProposalRepositoryChoice>[] =
+    routeSelectionDraft.routeTarget === "Prototype"
+      ? [{ id: "studio", label: "Prototype Studio", tone: "info" },
+          ...proposalDispositionRepoModeOptions.filter(option => option.id !== "not-required" ||
+            (dispositionCompleted && routeSelectionDraft.repoMode === "not-required"))]
+      : proposalDispositionRepoModeOptions;
+  const selected = proposalUsesPrototypeStudio(routeSelectionDraft) ? "studio" : routeSelectionDraft.repoMode;
+  return options.map((option) => ({
     ...option,
     confirmed:
-      dispositionCompleted && routeSelectionDraft.repoMode === option.id,
+      dispositionCompleted && selected === option.id,
   }));
 }
 
@@ -204,12 +213,14 @@ export function proposalDispositionStepProjection({
         : "Complete Required Fields";
   const advisorDraft = decisionDraft.advisorDraft ?? "";
   const advisorPrompt = decisionDraft.advisorPrompt ?? "";
-  const decisionDescription = proposalWorkflowClosed(proposal)
+  const decisionDescription = decisionDraft.sourceHomeCorrection && !dispositionCompleted
+    ? "Record a new source-home decision. The original remains in History."
+    : proposalWorkflowClosed(proposal)
     ? "Read the recorded decision. This Proposal workflow is closed."
     : sourceParkedRevisit
       ? "Choose whether to accept, reject, or keep this proposal parked. Decision notes are required."
       : "Choose the proposal outcome and record the required decision notes.";
-  const decisionTitle = dispositionRecorded
+  const decisionTitle = decisionDraft.sourceHomeCorrection && !dispositionCompleted ? "Review source-home change" : dispositionRecorded
     ? "Receipt Recorded"
     : dispositionReadModelReadOnly
       ? "Disposition Complete"

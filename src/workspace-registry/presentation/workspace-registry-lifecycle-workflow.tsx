@@ -41,6 +41,7 @@ import { useInventoryRequestJournal } from "../live-runtime/use-inventory-reques
 import { WorkspaceRegistryMetadataEditor } from "./workspace-registry-metadata-editor";
 import { registryKindLabel, registryNextAction, registryRequestStatus, registryTimestamp } from "./workspace-registry-copy";
 import { WorkspaceRegistryRequestJournal } from "./workspace-registry-request-journal";
+import { inventoryPreparationPosture } from "../model/workspace-registry-lifecycle-state";
 
 type LifecycleStep = "configure" | "result" | "review";
 
@@ -79,7 +80,7 @@ export function WorkspaceRegistryLifecycleWorkflow({
   );
   const availablePreparation = fixtureMode ? fixturePreparation : runtime.lifecyclePreparation;
   const preparation = availablePreparation?.target.record_id === record.id ? availablePreparation : null;
-  const currentPosture = preparation?.expected_state.posture ?? record.posture;
+  const currentPosture = preparation ? inventoryPreparationPosture(preparation) : record.posture;
   const currentVersion = preparation?.expected_state.record_version ?? record.version;
   const result = runtime.lifecycleResult;
   const initialMetadata = useMemo(() => {
@@ -104,10 +105,10 @@ export function WorkspaceRegistryLifecycleWorkflow({
   );
   const registryRecord = runtime.snapshot?.records.find(item => item.id === record.id);
   const sourceCurrent = fixtureMode || Boolean(preparation && runtime.mode === "live" &&
-    runtime.snapshot?.authority_revision === preparation.authority_revision &&
+    (preparation.authority_kind === "internal-instance-record" ? registryRecord?.canonical_authority?.instance_id === preparation.canonical_authority.instance_id : runtime.snapshot?.authority_revision === preparation.authority_revision) &&
     registryRecord?.version === preparation.expected_state.record_version &&
     registryRecord?.record_digest === preparation.expected_state.record_digest &&
-    registryRecord?.posture === preparation.expected_state.posture);
+    registryRecord?.posture === inventoryPreparationPosture(preparation));
   const configured = Boolean(
     preparation && sourceCurrent && preparation.target.record_id === record.id &&
       workspaceInventoryLifecycleActionOptions(currentPosture).some(option => option.id === action && !option.disabled) &&
@@ -146,8 +147,8 @@ export function WorkspaceRegistryLifecycleWorkflow({
   useEffect(() => {
     if (!preparation) return;
     setMetadataValue(initialMetadata);
-    setAction(current => workspaceInventoryLifecycleActionOptions(preparation.expected_state.posture)
-      .some(option => option.id === current && !option.disabled) ? current : defaultWorkspaceInventoryLifecycleAction(preparation.expected_state.posture));
+    setAction(current => workspaceInventoryLifecycleActionOptions(inventoryPreparationPosture(preparation))
+      .some(option => option.id === current && !option.disabled) ? current : defaultWorkspaceInventoryLifecycleAction(inventoryPreparationPosture(preparation)));
     setReviewConfirmed(false);
     setImpactConfirmed(false);
     setStep("configure");
@@ -391,9 +392,9 @@ function LifecycleResultPanel({
             items={[
               { label: "Action", value: workspaceInventoryLifecycleActionLabels[result.request.action] },
 
-              { label: "Review", value: result.review ? `#${result.review.number}` : "Not opened" },
+              { label: "Review", value: result.authority_kind === "internal-instance-record" ? "Operator approval recorded" : result.review ? `#${result.review.number}` : "Not opened" },
               { label: "Receipt", value: result.receipt ? "Recorded" : terminal(result.status) ? "No receipt issued" : "Not issued yet" },
-              { label: "Inventory change", value: result.merged_state ? "Recorded" : "Not merged" },
+              { label: "Inventory change", value: result.authority_kind === "internal-instance-record" ? result.canonical_mutation ? "Recorded" : "Not recorded" : result.merged_state ? "Recorded" : "Not merged" },
 
             ]}
           />
@@ -426,8 +427,8 @@ function LifecycleResultPanel({
           </TerasTimeline>
           {result.failure ? <TerasContentTray kicker="Needs attention" description={result.failure.message}/> : null}
           <TerasTechnicalDetails summary="Request and receipt details" items={[
-            {label:"Request",value:result.request_id},{label:"Receipt",value:result.receipt?.receipt_id ?? "No receipt issued"},
-            {label:"Inventory history event",value:result.merged_state?.history_event_ref.id ?? "Not merged"},
+            {label:"Request",value:result.request_id},{label:"Receipt",value:result.receipt ? result.receipt.artifact_type === "instance-operational-record-receipt" ? result.receipt.receipt_digest : result.receipt.receipt_id : "No receipt issued"},
+            {label:"Inventory history event",value:result.receipt?.artifact_type === "instance-operational-record-receipt" ? `Version ${result.receipt.version}` : result.merged_state?.history_event_ref.id ?? "Not merged"},
             {label:"Request revision",value:String(result.revision)},{label:"Next action code",value:result.next_action},
           ]}/>
           {(
@@ -441,7 +442,7 @@ function LifecycleResultPanel({
                   Open Review
                 </TerasActionButton>
               ) : null}
-              {!terminal(result.status) ? (
+              {!terminal(result.status) && result.cancel_allowed !== false ? (
                 <TerasActionButton emphasis="secondary" disabled={pending} onClick={onCancel}>
                   Cancel Request
                 </TerasActionButton>
@@ -466,7 +467,7 @@ function parseRequestedValue(
     if (!isRecord(value) || "record" in value) {
       return { error: "Provide one record value without the managed record envelope.", valid: false, value: null };
     }
-    if (value.posture !== preparation.expected_state.posture) {
+    if (value.posture !== inventoryPreparationPosture(preparation)) {
       return { error: "Metadata updates must preserve the current posture.", valid: false, value: null };
     }
     return { error: null, valid: true, value };

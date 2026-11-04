@@ -228,9 +228,11 @@ test("case:workspace-intake-conflict-and-replay preserve one command identity", 
   await assert.rejects(
     submitWorkspaceIntake(intent(reviewed), {
       ...options,
-      fetchImpl: async (url) =>
+      fetchImpl: async (url, init) =>
         String(url).endsWith("/preparations")
           ? json(reviewed)
+          : init.method === "GET"
+            ? json({ code: "workspace_intake_not_found", message: "No retained request." }, 404)
           : json({ code: "workspace_intake_idempotency_conflict", message: "Identity conflict." }, 409),
     }),
     (error) =>

@@ -192,7 +192,8 @@ export function projectProposalCanonicalDrafts(
         repoOwner: route.source_custody.owner ?? "Repository Operation",
         repoRef:
           route.source_custody.source_ref ??
-          `repo-request://proposal/${proposalId.replace(/^idea-/, "idea-")}`,
+          (route.source_custody.repository_mode === "new"
+            ? `repo-request://proposal/${proposalId.replace(/^idea-/, "idea-")}` : ""),
         routeTarget: route.target === "delivery" ? "Delivery" : "Prototype",
         savedAt: dispositionEvent?.occurred_at ?? record.projection.updated_at,
       };

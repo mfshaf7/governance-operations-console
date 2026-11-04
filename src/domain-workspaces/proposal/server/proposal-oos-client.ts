@@ -497,6 +497,10 @@ function proposalOosRoute(
   >,
 ): ProposalOosRoute {
   const target = route.routeTarget === "Delivery" ? "delivery" : "prototype";
+  if (target === "prototype" && route.repoMode === "not-required") {
+    throw new ProposalOosError("Choose Prototype Studio or another repository for this prototype's source.",
+      "proposal_prototype_source_home_required", 400);
+  }
   if (route.repoMode === "existing") {
     return {
       rationale: route.rationale,
