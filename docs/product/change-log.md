@@ -1,5 +1,26 @@
 # Governance Operations Console Change Log
 
+## 2026-11-05 — Private registration command recovery
+
+Operator-authorized maintenance, Landing Unit decision `feature_single_landing_unit`,
+`maintenance-private-registration-command-wait`. Reuse the existing bounded
+source-action budget for Intake and Registry commands: reads remain twelve
+seconds, while source-verifying commands may take up to two minutes. An actual
+deadline reports an unconfirmed original request rather than declaring the
+service unreachable or its accepted workflow stopped. No automatic replacement
+command or relaxed source check is introduced.
+
+Registry also preserves the actual OOS HttpError `error` code, alongside the
+retained `code` envelope. Only the exact family-specific missing-request code
+permits fresh native promotion or lifecycle submission; unknown absence, denied
+access and unavailable authority still block. Tests use the actual owner error
+shape for native fresh submission and original replay, and cover unrelated
+absence, both transport budgets and deadline versus disconnection handling.
+
+This correction changes Console transport and explanation only. OOS retains
+operator approval, immutable requests, native receipts and canonical mutation.
+It introduces no new permission, storage authority or backend workflow.
+
 ## 2026-11-04 — Proposal Studio incubation preview
 
 Operator-authorized maintenance, Landing Unit decision `feature_single_landing_unit`,

@@ -31,7 +31,8 @@ import type {
   WorkspaceIntakeCustodyPreparation,
 } from "../workspace-intake-live-types.ts";
 
-const timeoutMs = 12_000;
+const readTimeoutMs = 12_000;
+const commandTimeoutMs = 120_000;
 const maxResponseBytes = 1_048_576;
 
 type WorkspaceIntakeOosConfig = ConsoleOosConnection;
@@ -357,9 +358,15 @@ async function request(
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
       },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: AbortSignal.timeout(init.method === "GET" ? readTimeoutMs : commandTimeoutMs),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new WorkspaceIntakeOosError(
+        "Workspace Intake is taking longer than expected. Reopen the original request to check its result before trying again.",
+        "workspace_intake_oos_timeout", 504, true,
+      );
+    }
     throw new WorkspaceIntakeOosError(
       "Workspace Intake could not reach OOS.",
       "workspace_intake_oos_unavailable",
@@ -393,7 +400,8 @@ async function request(
         : typeof source.error === "string"
           ? source.error
           : "OOS rejected the Workspace Intake operation.",
-      typeof source.code === "string" ? source.code : "workspace_intake_oos_rejected",
+      typeof source.code === "string" ? source.code
+        : typeof source.error === "string" ? source.error : "workspace_intake_oos_rejected",
       response.status,
       source.retryable === true,
     );

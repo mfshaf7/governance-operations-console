@@ -14,7 +14,7 @@ function sourcePage(url, value) {
 function registry(value = workspaceRegistryFixture) {
   return canonicalSourceResponse(value, { recordRef: "repo://workspace-governance/contracts/inventory", sourceOwner: "workspace-governance", sourceRevision: value.authority_revision });
 }
-function harness(prepared = promotionPreparation(), previous) {
+function harness(prepared = promotionPreparation(), previous, { errorField = "error", missingCode = null } = {}) {
   let command = null, posts = 0, reads = 0;
   const family = prepared.workflow_id === "workspace-inventory-promotion" ? "promotion" : "lifecycle";
   const root = family === "promotion" ? "/v1/workspace-inventory/promotions" : "/v1/workspace-inventory/lifecycle/requests";
@@ -26,7 +26,7 @@ function harness(prepared = promotionPreparation(), previous) {
     if (path.endsWith("/preparations")) return Response.json(prepared);
     if (init.method === "GET") {
       reads++;
-      if (!command) return Response.json({ code: family === "promotion" ? "workspace_inventory_not_found" : "workspace_inventory_lifecycle_not_found", message: "No original request" }, { status: 404 });
+      if (!command) return Response.json({ [errorField]: missingCode ?? (family === "promotion" ? "workspace_inventory_not_found" : "workspace_inventory_lifecycle_not_found"), message: "No original request", details: null }, { status: 404 });
       return canonicalSourceResponse(nativeResult(command, "accepted", previous), { recordRef: `oos://${decodeURIComponent(path.slice(4))}`, sourceOwner: "workspace-governance" });
     }
     if (path.endsWith("/continue")) return Response.json(nativeResult(command, "succeeded", previous));
@@ -79,6 +79,16 @@ test("native promotion uses exact reviewed project state and internal receipt wi
   const retry = await submitWorkspaceInventoryPromotion(intent, { ...h.options, now: () => new Date("2026-11-04T01:05:00Z") });
   assert.equal(retry.request_id, submitted.request_id);
   assert.equal(h.posts, 1);
+});
+
+test("native original lookup retains code-envelope compatibility and denies unrelated absence errors before any write", async () => {
+  const compatible = harness(promotionPreparation(), undefined, { errorField: "code" });
+  await submitWorkspaceInventoryPromotion(promotionIntent(), compatible.options);
+  assert.equal(compatible.posts, 1);
+  const unrelated = harness(promotionPreparation(), undefined, { missingCode: "different_authority_not_found" });
+  await assert.rejects(submitWorkspaceInventoryPromotion(promotionIntent(), unrelated.options),
+    error => error.code === "different_authority_not_found" && error.status === 404);
+  assert.equal(unrelated.posts, 0, "Only the exact owner/family absence may permit a fresh submission");
 });
 
 test("native lifecycle preserves current identity and restores only against the latest actual receipt", async () => {

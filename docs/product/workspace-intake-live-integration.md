@@ -183,7 +183,7 @@ An accepted HTTP response means acknowledgement only. A prepared branch or
 open review is not canonical mutation. For existing Git-backed requests, completion requires `succeeded`,
 `canonical_mutation: true`, and a `merged-authority` receipt from OOS.
 
-## Internal repository registration — unpublished
+## Internal repository registration
 
 The existing classification form also supports the installation-private record
 route for new custody-backed source-only repositories. OOS selects authority;
@@ -205,10 +205,15 @@ source review or merge for operational data. Project code retains its normal
 source review controls. Cancellation is shown only before the first write
 attempt; after an uncertain response, Continue resolves the original request.
 
-This source is uncommitted and disabled in the live composition. Isolated
-adapter proof does not qualify private source setup, Inventory promotion, or
-all-system migration. Those depend on the matching owner implementations,
-Security acceptance and later explicitly authorized batch publication.
+Source verification can take longer than a normal read. Commands retain a
+bounded two-minute deadline; ordinary reads retain twelve seconds. If that
+deadline expires, the service may still complete the original operation. Reopen
+its original request and inspect the result before submitting another decision.
+
+Availability follows the installation's exact accepted composition and operating
+receipts. Isolated adapter proof alone does not qualify private source setup,
+Inventory promotion or all-system migration. Those retain their matching owner,
+Security and operating-evidence requirements.
 
 Direct Registry registration uses the ordinary Workspace Intake dialog shape,
 with classification, normalized metadata and explicit acceptance in one scrolling
