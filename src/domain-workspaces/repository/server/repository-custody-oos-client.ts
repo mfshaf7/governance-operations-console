@@ -1,4 +1,6 @@
 import { assertRepositoryProviderLookup } from "../live-runtime/repository-provider-lookup.ts";
+import { repositoryWorkspaceName, repositoryWorkspaceReferenceHelp } from "../domain/repository-workspace-reference.ts";
+import { assertRepositoryConnections } from "../live-runtime/repository-connections.ts";
 import { createHash } from "node:crypto";
 
 import {
@@ -67,6 +69,25 @@ export async function lookupRepositoryProvider(owner: string, name: string, {env
   return result;
 }
 
+export async function readRepositoryConnections({env = process.env, fetchImpl = fetch}: {env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch} = {}) {
+  let config;
+  try { config = resolveConsoleOosOperatorConfiguration(env); }
+  catch { throw new RepositoryCustodyOosError("The GitHub connection service is not configured.", "repository_custody_oos_not_configured", 503); }
+  return assertRepositoryConnections(await repositoryCustodyOosRequest(config,
+    "/v1/repository-custody/connections", {method: "GET"}, fetchImpl));
+}
+
+async function connectedConfig(owner: string, role: "metadata" | "provisioning", env: NodeJS.ProcessEnv, fetchImpl: typeof fetch) {
+  configuredArtifactRef(env, {digestName: "REPOSITORY_CUSTODY_POLICY_PROFILE_DIGEST", uriName: "REPOSITORY_CUSTODY_POLICY_PROFILE_URI", label: "repository custody policy profile"});
+  const connections = await readRepositoryConnections({env, fetchImpl});
+  const selected = connections.connections.find(item => item.account.toLowerCase() === owner.trim().toLowerCase());
+  const reference = selected?.credential_bindings[role];
+  if (!selected || !selected.capabilities[role] || !reference) throw new RepositoryCustodyOosError(
+    "Connect this GitHub account for the requested operation before submitting.", "repository_connection_not_ready", 409);
+  const config = resolveRepositoryCustodyOosConfig(env, role === "provisioning" ? "provisioning" : "custody", reference);
+  return {config, selected};
+}
+
 export async function linkExistingRepositoryCustody(
   intent: RepositoryCustodyLinkIntent,
   {
@@ -74,7 +95,8 @@ export async function linkExistingRepositoryCustody(
     fetchImpl = fetch,
   }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
 ): Promise<RepositoryCustodyWorkflowResult> {
-  const config = resolveRepositoryCustodyOosConfig(env);
+  assertRepositoryCustodyLinkIntent(intent);
+  const {config} = await connectedConfig(intent.repositoryOwner, "metadata", env, fetchImpl);
   const request = buildRepositoryCustodyRequest(intent, config);
   const result = assertRepositoryCustodyWorkflowResult(
     await repositoryCustodyOosRequest(
@@ -109,8 +131,11 @@ export async function provisionRepository(
     fetchImpl = fetch,
   }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
 ): Promise<RepositoryCustodyWorkflowResult> {
-  const config = resolveRepositoryCustodyOosConfig(env, "provisioning");
-  const request = buildRepositoryProvisionRequest(intent, config);
+  assertRepositoryProvisionIntent(intent);
+  const {config, selected} = await connectedConfig(intent.repositoryOwner, "provisioning", env, fetchImpl);
+  if (selected.account_type === "personal" && intent.visibility === "internal") throw new RepositoryCustodyOosError(
+    "Personal GitHub accounts support Private or Public repositories.", "repository_visibility_not_supported", 400);
+  const request = buildRepositoryProvisionRequest(intent, config, selected.account_type);
   const result = assertRepositoryCustodyWorkflowResult(
     await repositoryCustodyOosRequest(
       config,
@@ -150,7 +175,7 @@ export async function readRepositoryCustodyResult(
   } = {},
 ): Promise<RepositoryCustodyWorkflowResult> {
   assertRepositoryCustodyRequestId(requestId);
-  const config = resolveRepositoryCustodyOosConfig(env, credentialKind);
+  const config = resolveConsoleOosOperatorConfiguration(env);
   const result = assertRepositoryCustodyWorkflowResult(
     await repositoryCustodyOosRequest(
       config,
@@ -179,15 +204,16 @@ export async function resumeRepositoryProvisioning(
   requestId: string,
   { env = process.env, fetchImpl = fetch }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
 ): Promise<RepositoryCustodyWorkflowResult> {
-  const config = resolveRepositoryCustodyOosConfig(env, "provisioning");
   const retained = await readRepositoryCustodyResult(requestId, { env, fetchImpl, credentialKind: "provisioning" });
+  const {config, selected} = await connectedConfig(retained.request.target.owner, "provisioning", env, fetchImpl);
   const operatorRef = artifactReference(`console://operators/${encodeURIComponent(config.operatorId)}`,
     { operator_id: config.operatorId });
   if (retained.request.action !== "provision-new" ||
       (!retained.retryable && retained.status !== "applying") ||
       canonicalStringify(retained.request.operator_ref) !== canonicalStringify(operatorRef) ||
       canonicalStringify(retained.request.authority.policy_profile_ref) !== canonicalStringify(config.policyProfileRef) ||
-      retained.request.authority.credential_binding_ref.uri !== config.credentialBindingRef.uri) {
+      canonicalStringify(retained.request.authority.credential_binding_ref) !== canonicalStringify(config.credentialBindingRef) ||
+      retained.request.target.owner_scope !== selected.account_type) {
     throw new RepositoryCustodyOosError("The retained request cannot be resumed under the current operator and authority.",
       "repository_provisioning_resume_denied", 409);
   }
@@ -203,15 +229,28 @@ export async function resumeRepositoryProvisioning(
 
 export async function listRepositoryCustodyResults(
   cursor: string | null = null,
-  { env = process.env, fetchImpl = fetch }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+  { env = process.env, fetchImpl = fetch, view, providerRepositoryId, proposalId }: {
+    env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; view?: "register" | "requests";
+    providerRepositoryId?: string; proposalId?: string;
+  } = {},
 ): Promise<{ schema_version: 1; records: RepositoryCustodyWorkflowResult[]; next_cursor: string | null }> {
   if (cursor !== null && !/^[a-f0-9]{64}$/.test(cursor)) {
     throw new RepositoryCustodyOosError("Repository custody cursor is invalid.", "repository_custody_page_invalid", 400);
   }
+  if (view !== undefined && !["register", "requests"].includes(view) ||
+      providerRepositoryId !== undefined && !/^[1-9][0-9]*$/.test(providerRepositoryId) ||
+      proposalId !== undefined && !/^idea-[1-9][0-9]*$/.test(proposalId)) {
+    throw new RepositoryCustodyOosError("Repository selection is invalid.", "repository_custody_page_invalid", 400);
+  }
+  const query = new URLSearchParams();
+  if (cursor) query.set("cursor", cursor);
+  if (view) query.set("view", view);
+  if (providerRepositoryId) query.set("provider_repository_id", providerRepositoryId);
+  if (proposalId) query.set("proposal_id", proposalId);
   const config = resolveConsoleOosOperatorConfiguration(env);
   const value = await repositoryCustodyOosRequest(
     config,
-    `/v1/repository-custody/requests${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+    `/v1/repository-custody/requests${query.size ? `?${query}` : ""}`,
     { method: "GET" },
     fetchImpl,
     {
@@ -307,6 +346,7 @@ export function buildRepositoryCustodyRequest(
 export function buildRepositoryProvisionRequest(
   intent: RepositoryProvisionIntent,
   config: RepositoryCustodyOosConfig,
+  ownerScope: "personal" | "organization" = "organization",
 ): RepositoryProvisionRequest {
   assertRepositoryProvisionIntent(intent);
   const executionToken = canonicalDigest({ request_id: intent.requestId }).slice(
@@ -352,7 +392,7 @@ export function buildRepositoryProvisionRequest(
       provider: "github" as const,
       provider_host: "github.com" as const,
       owner: intent.repositoryOwner.trim(),
-      owner_scope: "organization" as const,
+      owner_scope: ownerScope,
       name: intent.repositoryName.trim(),
       provider_repository_id: null,
     },
@@ -392,6 +432,7 @@ export function assertRepositoryCustodyRequestId(value: unknown) {
 function assertRepositoryCustodyLinkIntent(
   value: RepositoryCustodyLinkIntent,
 ) {
+  assertWorkspaceReference(value.workspaceOwnerRef);
   assertRepositoryCustodyRequestId(value.requestId);
   if (
     (value.proposalId !== undefined && (!/^idea-[1-9][0-9]*$/.test(value.proposalId) || value.createdForRequest !== true)) ||
@@ -419,6 +460,7 @@ function assertRepositoryCustodyLinkIntent(
 }
 
 function assertRepositoryProvisionIntent(value: RepositoryProvisionIntent) {
+  assertWorkspaceReference(value.workspaceOwnerRef);
   assertRepositoryCustodyRequestId(value.requestId);
   if (value.correctionOfRequestId !== undefined) {
     assertRepositoryCustodyRequestId(value.correctionOfRequestId);
@@ -454,6 +496,11 @@ function assertRepositoryProvisionIntent(value: RepositoryProvisionIntent) {
   }
 }
 
+function assertWorkspaceReference(value: string) {
+  if (!repositoryWorkspaceName(value)) throw new RepositoryCustodyOosError(
+    repositoryWorkspaceReferenceHelp, "repository_workspace_reference_invalid", 400);
+}
+
 function repositoryProvisioningSettings(
   intent: RepositoryProvisionIntent,
 ): RepositoryProvisioningSettings {
@@ -479,13 +526,14 @@ function repositoryProvisioningSettings(
 function resolveRepositoryCustodyOosConfig(
   env: NodeJS.ProcessEnv,
   credentialKind: "custody" | "provisioning" = "custody",
+  connectedBinding?: RepositoryCustodyArtifactRef,
 ): RepositoryCustodyOosConfig {
   const policyProfileRef = configuredArtifactRef(env, {
     digestName: "REPOSITORY_CUSTODY_POLICY_PROFILE_DIGEST",
     label: "repository custody policy profile",
     uriName: "REPOSITORY_CUSTODY_POLICY_PROFILE_URI",
   });
-  const credentialBindingRef = configuredArtifactRef(env, {
+  const credentialBindingRef = connectedBinding ?? configuredArtifactRef(env, {
     digestName:
       credentialKind === "provisioning"
         ? "REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_DIGEST"

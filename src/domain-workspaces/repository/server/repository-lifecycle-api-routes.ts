@@ -105,6 +105,7 @@ function lifecycleIntent(value: unknown): RepositoryLifecycleCommandIntent {
     },
     provider: text(input.provider) as "github",
     providerRepositoryId: text(input.providerRepositoryId),
+    ...(input.repositoryOwner === undefined ? {} : {repositoryOwner: text(input.repositoryOwner)}),
     repositoryId: text(input.repositoryId),
     requestedAt: text(input.requestedAt),
     requestId: text(input.requestId),

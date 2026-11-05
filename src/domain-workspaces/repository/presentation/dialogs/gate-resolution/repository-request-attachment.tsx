@@ -1,24 +1,31 @@
 "use client";
 
 import { RepositoryDevelopmentScope } from "../../shared/repository-development-scope.tsx";
+import { repositoryDefaultWorkspaceReference } from "../../../work-model/request/repository-request-model.ts";
+import {repositoryWorkspaceName} from "../../../domain/repository-workspace-reference.ts";
+import {isRepositoryUse} from "../../../domain/repository-use.ts";
+import {RepositoryAssociationFields} from "../../shared/repository-association-fields.tsx";
 
 import { useEffect, useRef, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldGrid, TerasFieldStack, TerasMetadataList,
+import { TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack, TerasMetadataList,
   TerasNoteField, TerasSelectableRow, TerasSelectField, TerasTextField } from "@/teras";
 import { assertRepositoryProviderLookup, repositoryCoordinatesFromUrl, type RepositoryProviderLookup } from "../../../live-runtime/repository-provider-lookup.ts";
 import type { RepositoryCustodyLinkIntent, RepositoryCustodyKind, RepositoryCustodyWorkflowResult } from "../../../live-runtime/repository-custody-live-types.ts";
 
-export function RepositoryRequestAttachment({proposalId, results, enabled, attachmentAvailable, onAttach, onDirtyChange, onBusyChange, onAttached, onOpenExisting}: {
+export function RepositoryRequestAttachment({proposalId, results, enabled, attachmentAvailable, onAttach, onDirtyChange, onBusyChange, onAttached, onOpenExisting, onFindByProvider, preview = false, previewLookup}: {
   proposalId?: string; results: RepositoryCustodyWorkflowResult[]; enabled: boolean; attachmentAvailable: boolean;
   onAttach: (intent: RepositoryCustodyLinkIntent) => Promise<RepositoryCustodyWorkflowResult>;
   onDirtyChange: (dirty: boolean) => void; onBusyChange: (busy: boolean) => void;
   onAttached: (notes: string, result: RepositoryCustodyWorkflowResult) => void;
   onOpenExisting?: (result: RepositoryCustodyWorkflowResult) => void;
+  onFindByProvider?: (providerId: string) => Promise<RepositoryCustodyWorkflowResult[]>;
+  preview?: boolean; previewLookup?: RepositoryProviderLookup;
 }) {
   const [selectedId,setSelectedId] = useState("");
-  const [url,setUrl] = useState("");
-  const [lookup,setLookup] = useState<RepositoryProviderLookup | null>(null);
-  const [owner,setOwner] = useState("");
+  const [url,setUrl] = useState(preview ? previewLookup?.canonical_url ?? "" : "");
+  const [lookup,setLookup] = useState<RepositoryProviderLookup | null>(preview ? previewLookup ?? null : null);
+  const defaultPreviewReference = previewLookup ? repositoryDefaultWorkspaceReference(previewLookup.owner,previewLookup.name) : "";
+  const [owner,setOwner] = useState(preview ? defaultPreviewReference : "");
   const [custodyKind,setCustodyKind] = useState<RepositoryCustodyKind>("dedicated-owner-repo");
   const [approval,setApproval] = useState("");
   const [acknowledged,setAcknowledged] = useState(false);
@@ -27,7 +34,7 @@ export function RepositoryRequestAttachment({proposalId, results, enabled, attac
   const [result,setResult] = useState<RepositoryCustodyWorkflowResult | null>(null);
   const submitting = useRef(false);
   const identity = useRef<{signature: string; requestId: string; requestedAt: string} | null>(null);
-  const dirty = Boolean(selectedId || url || approval || acknowledged);
+  const dirty = Boolean(selectedId || (!preview && url) || approval || acknowledged || preview && (owner !== defaultPreviewReference || custodyKind !== "dedicated-owner-repo"));
   useEffect(() => {onDirtyChange(dirty);},[dirty,onDirtyChange]);
   useEffect(() => {onBusyChange(pending);},[pending,onBusyChange]);
   useEffect(() => () => {onDirtyChange(false);onBusyChange(false);},[onDirtyChange,onBusyChange]);
@@ -38,12 +45,13 @@ export function RepositoryRequestAttachment({proposalId, results, enabled, attac
   const readOnly = !enabled || pending;
   function select(value: string) {
     setSelectedId(value);setError(null);setResult(null);setAcknowledged(false);
-    const record = known.find(row => row.request.request_id === value)?.provider_readback;
+    const original = known.find(row => row.request.request_id === value);
+    const record = original?.provider_readback;
     const next: RepositoryProviderLookup | null = record && record.provider_lifecycle_state !== "unavailable" ? {schema_version:1 as const,provider:"github" as const,provider_host:"github.com" as const,
       provider_repository_id:record.repository_identity.provider_repository_id, owner:record.canonical_owner,name:record.canonical_name,
       canonical_url:record.canonical_url,visibility:record.visibility,provider_lifecycle_state:record.provider_lifecycle_state,
       observed_at:record.observed_at} : null;
-    setLookup(next);setOwner(next ? `repo:${next.name}` : "");
+    setLookup(next);setOwner(original?.request.requested_custody.workspace_owner_ref ?? (next ? repositoryDefaultWorkspaceReference(next.owner, next.name) : ""));
   }
   async function check() {
     if (readOnly || submitting.current) return;
@@ -56,11 +64,13 @@ export function RepositoryRequestAttachment({proposalId, results, enabled, attac
       if (!response.ok) throw new Error(body && typeof body === "object" && "error" in body ? String(body.error) : "Repository verification is unavailable.");
       const next=assertRepositoryProviderLookup(body);
       if(next.owner.toLowerCase()!==coordinates.owner.toLowerCase()||next.name.toLowerCase()!==coordinates.name.toLowerCase())throw new Error("The lookup returned another repository.");
-      setLookup(next);setOwner(`repo:${proposalId ? next.name : next.name.toLowerCase()}`);
+      const matches = onFindByProvider ? await onFindByProvider(next.provider_repository_id) : known;
+      const existing = matches.find(row => row.provider_readback?.repository_identity.provider_repository_id === next.provider_repository_id);
+      setLookup(next);setOwner(existing?.request.requested_custody.workspace_owner_ref ?? repositoryDefaultWorkspaceReference(next.owner, next.name));
     }catch(failure){setError(failure instanceof Error && ["TimeoutError","AbortError"].includes(failure.name)?"Repository lookup timed out. Check the connection and try again.":failure instanceof Error?failure.message:"Repository verification failed.");}
     finally{submitting.current=false;setPending(false);}
   }
-  const canAttach = Boolean(enabled && attachmentAvailable && !pending && !alreadyLinked && lookup?.provider_lifecycle_state === "active" && owner.trim() && (!proposalId || acknowledged) && approval.trim().length>=12);
+  const canAttach = Boolean(isRepositoryUse(custodyKind) && !preview && enabled && attachmentAvailable && !pending && !alreadyLinked && lookup?.provider_lifecycle_state === "active" && repositoryWorkspaceName(owner) && (!proposalId || acknowledged) && approval.trim().length>=12);
   async function attach() {
     if (!canAttach || !lookup || submitting.current) return;
     submitting.current=true;setPending(true);setError(null);
@@ -80,34 +90,31 @@ export function RepositoryRequestAttachment({proposalId, results, enabled, attac
   return <TerasContentTray kicker={proposalId ? "Already created" : "Existing repository"} title={proposalId ? "Attach a repository to this request" : "Repository to link"}
     description={proposalId ? "Select a known repository or enter its GitHub URL. Attachment verifies its identity and records your approval; it does not create a repository." : "Enter a GitHub repository URL. The Console retrieves its identity and visibility through your configured GitHub connection."}>
     <TerasFieldStack spacing="loose">
-      {!proposalId && !enabled ? <p role="status">Repository data is currently unavailable. Your draft is preserved until the connection recovers.</p> : null}
-      {!attachmentAvailable ? <p role="status">{proposalId ? "Repository linking is unavailable until its service connection and approval capability are ready. Your draft is preserved." : "The approval connection for linking existing repositories is not configured. You can check repository details and prepare the draft; linking stays disabled."}</p> : null}
+      {preview ? <TerasContentTray kicker="Preview only" description="This is a sample repository. You can review the form; GitHub lookup and linking are disabled." /> : null}
+      {!preview && !proposalId && !enabled ? <p role="status">Repository data is currently unavailable. Your draft is preserved until the connection recovers.</p> : null}
+      {!preview && !attachmentAvailable ? <p role="status">{proposalId ? "Repository linking is unavailable until its service connection and approval capability are ready. Your draft is preserved." : "The approval connection for linking existing repositories is not configured. You can check repository details and prepare the draft; linking stays disabled."}</p> : null}
       {proposalId && known.length ? <TerasSelectField label="Repository to attach" aria-label="Repository to attach" disabled={readOnly} value={selectedId} onValueChange={select}
         options={[{label:"Select a known repository",value:""},...known.map(row=>({label:row.provider_readback!.canonical_url,value:row.request.request_id})),
           {label:"Enter a GitHub repository URL",value:"manual"}]} /> : null}
       {manual ? <>
-        <TerasTextField label="GitHub repository URL" aria-label="GitHub repository URL" value={url} disabled={readOnly}
+        <TerasTextField label="GitHub repository URL" aria-label="GitHub repository URL" value={url} disabled={readOnly} readOnly={preview}
           placeholder="https://github.com/organization/repository" onValueChange={value=>{setUrl(value);setLookup(null);setAcknowledged(false);setError(null);}} />
-        <TerasActionRow><TerasActionButton emphasis="secondary" disabled={readOnly || !url.trim()} onClick={()=>void check()}>Check repository</TerasActionButton></TerasActionRow>
+        <TerasActionRow><TerasActionButton emphasis="secondary" disabled={preview || readOnly || !url.trim()} onClick={()=>void check()}>Check repository</TerasActionButton></TerasActionRow>
       </> : null}
       {error ? <p role="alert">{error}</p> : null}
       {pending ? <p role="status">Checking the repository or recording the approved link…</p> : null}
       {lookup ? <>
         <TerasMetadataList items={[{label:"Repository",value:lookup.canonical_url},{label:"Visibility",value:lookup.visibility},
-          {label:"Provider state",value:lookup.provider_lifecycle_state}]} />
+          {label:"Provider state",value:preview ? "Sample only" : lookup.provider_lifecycle_state}]} />
         <RepositoryDevelopmentScope visibility={lookup.visibility} />
         {lookup.provider_lifecycle_state!=="active" ? <p role="status">Archived repositories cannot be linked. Restore it with the provider before retrying.</p> : null}
         {alreadyLinked ? <TerasContentTray kicker="Already in Repository Control" description="Open its record to review the current workspace status.">
           {onOpenExisting ? <TerasActionButton disabled={pending} onClick={() => onOpenExisting(alreadyLinked)}>Open repository</TerasActionButton> : null}
         </TerasContentTray> : <>
-        <TerasContentTray kicker="Workspace link" description="The workspace reference is filled from the repository name. Change it only to associate this GitHub repository with another workspace record.">
-        <TerasFieldGrid><TerasTextField label="Workspace repository" aria-label={proposalId ? "Attachment workspace repository" : "Workspace repository"} value={owner} disabled={readOnly}
-          onValueChange={value=>{setOwner(value);setResult(null);}} />
-          <TerasSelectField label="Repository use" aria-label={proposalId ? "Attachment repository use" : "Repository use"} value={custodyKind} disabled={readOnly}
-            onValueChange={value=>{setCustodyKind(value);setResult(null);}} options={[
-              {label:"Dedicated repository",value:"dedicated-owner-repo"},{label:"Shared repository",value:"shared-owner-repo"},
-              {label:"Incubation repository",value:"incubation-repo"},{label:"External repository",value:"external-repo"}]} />
-        </TerasFieldGrid>
+        <TerasContentTray kicker="Workspace" title="Repository use" description="Choose how this existing source is maintained. Its workspace identifier is prepared automatically; known repositories keep their existing identifier.">
+        <RepositoryAssociationFields kind={custodyKind} reference={owner} disabled={readOnly}
+          referenceLabel={proposalId ? "Attachment workspace repository" : "Workspace repository"}
+          onKindChange={value=>{setCustodyKind(value);setResult(null);}} onReferenceChange={value=>{setOwner(value);setResult(null);}} />
         </TerasContentTray>
         {proposalId ? <TerasSelectableRow ariaLabel="Confirm repository was created for this request" label="This repository was created for this request"
           detail="For a repository already serving existing work, use the earlier Proposal reuse choice. Attachment checks the provider again before recording a receipt."

@@ -131,20 +131,20 @@ test("actual panel renders loading/offline controls and retained Prototype/Boots
   const container = ({ children }) => React.createElement("section", null, children);
   const teras = { TerasActionButton: ({ children, disabled }) => React.createElement("button", { disabled }, children),
     TerasActionRow: container, TerasFieldStack: container, TerasPanel: container,
-    TerasMetadataList: () => null, TerasPanelHeader: ({ statusLabel }) => React.createElement("span", null, statusLabel) };
+    TerasTechnicalDetails: () => null, TerasLoadingState: container, TerasContentTray: container, TerasMetadataList: () => null, TerasPanelHeader: ({ statusLabel }) => React.createElement("span", null, statusLabel) };
   const { SourceAuthorizationPanel } = compile(panelPath, { "@/teras": teras,
     "../live-runtime/use-source-authorization.ts": { useSourceAuthorization: () => runtime } });
   const render = kind => renderToStaticMarkup(React.createElement(SourceAuthorizationPanel, { subject: selector(kind), sourceStartDigest: sourceStart, onIntentChange() {} }));
-  assert.match(render("prototype"), /Loading/); assert.doesNotMatch(render("prototype"), /Prepare source scope/);
+  assert.match(render("prototype"), /Loading/); assert.doesNotMatch(render("prototype"), /Prepare source access/);
   runtime = { ...runtime, pending: false, error: "Unavailable" };
-  assert.match(render("prototype"), /Unavailable/); assert.doesNotMatch(render("prototype"), /Prepare source scope/);
+  assert.match(render("prototype"), /Unavailable/); assert.doesNotMatch(render("prototype"), /Prepare source access/);
   runtime = { ...runtime, error: null, ready: true };
-  assert.match(render("prototype"), /Prepare source scope/);
+  assert.match(render("prototype"), /Prepare source access/);
   for (const kind of ["prototype", "repository-bootstrap"]) {
     const old = scope(kind, "old", "revoked", "2030-10-20T10:00:00.000Z");
     runtime = { ...runtime, preparation: old, candidates: [old] };
-    assert.match(render(kind), /Recover original source-intent:old \/ revoked/);
-    assert.match(render(kind), /Prepare explicit successor scope/);
+    assert.match(render(kind), /Access closed/);
+    assert.match(render(kind), /Prepare replacement access/);
   }
 });
 
@@ -156,7 +156,7 @@ test("approved source continuation uses the selected intent and keeps revocation
   const container = ({ children }) => React.createElement("section", null, children);
   const teras = { TerasActionButton: props => { buttons.push(props); return React.createElement("button", { disabled: props.disabled }, props.children); },
     TerasActionRow: container, TerasFieldStack: container, TerasPanel: container,
-    TerasMetadataList: () => null, TerasPanelHeader: () => null };
+    TerasTechnicalDetails: () => null, TerasLoadingState: container, TerasContentTray: container, TerasMetadataList: () => null, TerasPanelHeader: () => null };
   const { SourceAuthorizationPanel } = compile(panelPath, { "@/teras": teras,
     "../live-runtime/use-source-authorization.ts": { useSourceAuthorization: () => runtime } });
   const calls = [], callback = async intent => { calls.push(intent); };
@@ -175,7 +175,7 @@ test("approved source continuation uses the selected intent and keeps revocation
   assert.deepEqual(calls, ["source-intent:old", "source-intent:newer"]);
 
   render({ continuePending: true }); assert.equal(continuation().disabled, true);
-  assert.equal(buttons.find(button => button.children === "Stop and revoke this exact scope").disabled, false);
+  assert.equal(buttons.find(button => button.children === "Stop source access").disabled, false);
   runtime.pending = true; render(); assert.equal(continuation().disabled, true);
   runtime.pending = false;
   assert.doesNotMatch(render({ onContinueApprovedScope: undefined }), /Continue Approved Source Access/);
@@ -186,3 +186,32 @@ test("approved source continuation uses the selected intent and keeps revocation
     assert.doesNotMatch(render(), /Continue Approved Source Access/, state);
   }
 });
+
+for (const action of ['prepare', 'issue', 'revoke']) {
+  test(`interrupted ${action} shows its waiting state, requires a read and retains the exact original request`, async t => {
+    const original = scope('repository-bootstrap', 'old', 'prepared', '2030-10-20T10:00:00.000Z');
+    const posts = [], budgets = []; let rejectPost, attempt = 0;
+    const signal = AbortSignal.timeout.bind(AbortSignal);
+    t.mock.method(AbortSignal, 'timeout', ms => { budgets.push(ms); return signal(ms); });
+    t.mock.method(globalThis, 'fetch', async (_path, init) => {
+      if (init?.method !== 'POST') return response(action === 'prepare' ? [] : [original]);
+      posts.push(JSON.parse(init.body));
+      if (++attempt === 1) return new Promise((_resolve, reject) => { rejectPost = reject; });
+      return response(original);
+    });
+    const app = mount(selector('repository-bootstrap')); await tick();
+    const execute = () => action === 'prepare' ? app.current().prepare() : app.current().command(action);
+    const inFlight = execute(); await tick();
+    assert.equal(app.current().pending, true); assert.equal(app.current().pendingAction, action);
+    await execute(); assert.equal(posts.length, 1);
+    rejectPost(new DOMException('Timed out', 'TimeoutError')); await inFlight; await tick();
+    assert.equal(app.current().pending, false); assert.equal(app.current().ready, false);
+    assert.equal(app.current().needsRefresh, true); assert.match(app.current().error, /response was interrupted/);
+    await execute(); assert.equal(posts.length, 1); // no repeat before canonical read
+    await app.current().refresh(); await tick();
+    assert.equal(app.current().ready, true);
+    await execute(); await tick();
+    assert.equal(posts.length, 2); assert.deepEqual(posts[1], posts[0]);
+    assert.ok(budgets.includes(15_000)); assert.ok(budgets.includes(135_000));
+  });
+}

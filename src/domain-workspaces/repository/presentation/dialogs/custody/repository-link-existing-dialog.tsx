@@ -4,14 +4,18 @@ import { useCallback, useState } from "react";
 import { TerasActionButton, TerasContentTray, TerasDraftCloseGuardDialog, TerasFieldStack, TerasMetadataList, TerasModalShell, TerasTechnicalDetails } from "@/teras";
 import type { RepositoryCustodyLinkIntent, RepositoryCustodyWorkflowResult } from "../../../live-runtime/repository-custody-live-types.ts";
 import { RepositoryRequestAttachment } from "../gate-resolution/repository-request-attachment.tsx";
+import type {RepositoryProviderLookup} from "../../../live-runtime/repository-provider-lookup.ts";
 
-export function RepositoryLinkExistingDialog({ enabled, executionAvailable, results, onLink, onOpenRepository, onClose }: {
+export function RepositoryLinkExistingDialog({ enabled, executionAvailable, results, onLink, onOpenRepository, onContinueOnboarding, onClose, onFindByProvider, preview = false, previewLookup }: {
   enabled: boolean;
   executionAvailable: boolean;
   results: RepositoryCustodyWorkflowResult[];
   onLink: (intent: RepositoryCustodyLinkIntent) => Promise<RepositoryCustodyWorkflowResult>;
   onOpenRepository: (result: RepositoryCustodyWorkflowResult) => void;
+  onContinueOnboarding?: (result: RepositoryCustodyWorkflowResult) => void;
   onClose: () => void;
+  onFindByProvider?: (providerId: string) => Promise<RepositoryCustodyWorkflowResult[]>;
+  preview?: boolean; previewLookup?: RepositoryProviderLookup;
 }) {
   const [dirty, setDirty] = useState(false), [pending, setPending] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -28,7 +32,8 @@ export function RepositoryLinkExistingDialog({ enabled, executionAvailable, resu
     surfaceId="repository-link-existing" onClose={requestClose}
     footer={<>
       <TerasActionButton emphasis="secondary" disabled={pending} onClick={requestClose}>Back to Repository</TerasActionButton>
-      {result ? <TerasActionButton onClick={() => onOpenRepository(result)}>Open repository</TerasActionButton> : null}
+      {result && onContinueOnboarding ? <TerasActionButton onClick={() => onContinueOnboarding(result)}>Continue onboarding in Registry</TerasActionButton> : null}
+      {result ? <TerasActionButton emphasis="secondary" onClick={() => onOpenRepository(result)}>Open repository</TerasActionButton> : null}
     </>}>
     <TerasFieldStack spacing="loose">
       {result ? <TerasContentTray kicker="Link completed" title="Repository linked"
@@ -42,7 +47,7 @@ export function RepositoryLinkExistingDialog({ enabled, executionAvailable, resu
           { label: "Receipt", value: result.receipt?.receipt_id ?? "Unavailable" },
         ]} />
       </TerasContentTray> : <RepositoryRequestAttachment enabled={enabled} attachmentAvailable={executionAvailable}
-        results={results} onAttach={onLink} onDirtyChange={setDirty} onBusyChange={setPending}
+        results={results} preview={preview} previewLookup={previewLookup} onFindByProvider={onFindByProvider} onAttach={onLink} onDirtyChange={setDirty} onBusyChange={setPending}
         onAttached={linked} onOpenExisting={onOpenRepository} />}
     </TerasFieldStack>
   </TerasModalShell><TerasDraftCloseGuardDialog open={leaveOpen} kicker="Unsaved changes" title="Discard repository link draft?"

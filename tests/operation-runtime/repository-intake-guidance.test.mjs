@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {repositoryIntakeDraftFromCustody,repositoryIntakeMissingFields,repositoryIntakeRequiresCatalog,repositoryIntakeRoles,repositoryIntakeTypeDraft,repositoryIntakeTypes} from '../../src/domain-workspaces/repository/presentation/dialogs/admission/repository-intake-guidance.ts';
+import {repositoryIntakeDraftFromCustody,repositoryIntakeMissingFields,repositoryIntakeRequiresCatalog,repositoryIntakeRoles,repositoryIntakeTypeDraft,repositoryIntakeTypes,repositoryIntakeRecordedDraft} from '../../src/domain-workspaces/repository/presentation/dialogs/admission/repository-intake-guidance.ts';
 import {emptyRepositoryIntakeDraft,repositoryIntakeRecord} from '../../src/domain-workspaces/repository/presentation/dialogs/admission/repository-intake-candidate.ts';
 const source={...emptyRepositoryIntakeDraft,repoClass:'product-source',graphRole:'product-runtime-source',notes:'Owns source and tests; shared runtime belongs to its existing owner.',validationPosture:'covered-by-owner-repo',validationNotes:'Run application behavior tests and source validation.',securityBinding:'false'};
 
@@ -35,7 +35,7 @@ test('direct check approaches need real bindings, and limited profiles enforce t
  assert.equal(repositoryIntakeRecord({...source,graphRole:'unknown'}),null);
 });
 test('errors name the missing user decision while security-bound and custom categories remain explicit',()=>{
- assert.ok(repositoryIntakeMissingFields(emptyRepositoryIntakeDraft).some(text=>text.includes('security binding')));
+ assert.ok(repositoryIntakeMissingFields(emptyRepositoryIntakeDraft).some(text=>text.includes('security repository')));
  assert.equal(repositoryIntakeRecord({...source,securityBinding:''}),null);
  assert.equal(repositoryIntakeRecord({...source,securityBinding:'true'}),null);
  assert.equal(repositoryIntakeRecord({...source,repoClass:'another-owner-class',securityBinding:'true',securityOwner:'security-architecture'}).security_owner,'security-architecture');
@@ -48,4 +48,14 @@ test('repository-owned source registration derives governance notes without aski
  const record=repositoryIntakeRecord(draft);
  assert.match(record.validation_behavior.notes,/Application verification may be configured later/);
  assert.match(record.validation_behavior.notes,/not application acceptance/);
+});
+
+test('completed recorded answers round-trip specialist settings without inferring security or rewriting checks',()=>{
+ const original={...source,repoClass:'custom-source',validationPosture:'interface-contract-backed',catalogRefs:'contract-one,contract-two',securityBinding:'true',securityOwner:'example--security'};
+ const record=repositoryIntakeRecord(original),restored=repositoryIntakeRecordedDraft(record);
+ assert.deepEqual(restored,{draft:original,type:'custom'});
+ assert.deepEqual(repositoryIntakeRecord(restored.draft),record);
+ assert.equal(repositoryIntakeRecordedDraft({...record,requires_security_bindings:null}),null);
+ assert.equal(repositoryIntakeRecordedDraft({kind:'product'}),null);
+ assert.equal(repositoryIntakeRecordedDraft({...record,validation_behavior:undefined}),null);
 });

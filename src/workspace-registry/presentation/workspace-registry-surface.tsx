@@ -332,7 +332,8 @@ function registryColumns(view: RegistryView) {
       key: "record",
       render: (entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) => {
         const target = entryTarget(entry);
-        return <TerasRecordCellText meta={target.kind === "repo" ? "Repository" : target.kind === "product" ? "Product" : "Component"} title={target.name} />;
+        return <TerasRecordCellText meta={target.kind === "repo" ? "Repository" : target.kind === "product" ? "Product" : "Component"}
+          description={entry.provider_repository?.full_name} title={target.name} />;
       },
     },
     {

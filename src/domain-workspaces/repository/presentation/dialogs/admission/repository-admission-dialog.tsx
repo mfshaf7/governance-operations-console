@@ -4,44 +4,30 @@ import { useState } from "react";
 
 import { TerasActionButton, TerasContentTray, TerasModalShell } from "@/teras";
 
-import type { RepositoryAdmissionReceipt } from "../../../local-runtime/repository-runtime.ts";
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import { RepositoryReviewContent } from "../details/repository-review-content.tsx";
 import { RepositoryAdmissionPostureDialog } from "./repository-admission-posture.tsx";
 
 export function RepositoryAdmissionDialog({
-  localReviewAvailable,
   registration,
   onOpenRegistration,
   onClose,
   onOpenDeliveryCatalog,
   onOpenHistory,
   onOpenLifecycle,
-  onStart,
-  receipt,
   repository,
 }: {
-  localReviewAvailable: boolean;
   registration: { required: boolean; available: boolean; unavailableReason: string | null };
   onOpenRegistration: (repository: RepositoryWorkspaceRecord) => void;
   onClose: () => void;
   onOpenDeliveryCatalog: (repository: RepositoryWorkspaceRecord) => void;
   onOpenHistory: (repository: RepositoryWorkspaceRecord) => void;
   onOpenLifecycle: (repository: RepositoryWorkspaceRecord) => void;
-  onStart: (repository: RepositoryWorkspaceRecord) => void;
-  receipt?: RepositoryAdmissionReceipt;
   repository: RepositoryWorkspaceRecord | null;
 }) {
   const [activePostureGroupId, setActivePostureGroupId] = useState<
     string | null
   >(null);
-  const canStart = Boolean(
-    localReviewAvailable &&
-    repository &&
-    repository.blockers.length === 0 &&
-    repository.admissionState === "ready" &&
-    !receipt,
-  );
   const canManageLifecycle = Boolean(
     repository && repository.admissionState === "admitted",
   );
@@ -82,10 +68,10 @@ export function RepositoryAdmissionDialog({
 
           </>
         }
-        kicker={localReviewAvailable ? "Repository admission · local demonstration" : "Repository review"}
+        kicker="Repository review"
         onClose={closeAdmissionDialog}
         surfaceId="repository-admission"
-        title={localReviewAvailable ? "Repository Admission" : "Repository details"}
+        title="Repository details"
       >
         <div data-repository-admission-modal="true">
           <RepositoryReviewContent repository={repository} onOpenGroup={setActivePostureGroupId}
@@ -117,18 +103,7 @@ export function RepositoryAdmissionDialog({
               <TerasContentTray kicker="Workspace registration" description={registration.unavailableReason ?? "Review workspace association and registration before adding this repository to the managed workspace."}>
               <TerasActionButton disabled={!registration.available}
                 data-repository-intake-open="true" onClick={() => onOpenRegistration(repository)}>
-                Review workspace registration
-              </TerasActionButton>
-              </TerasContentTray>
-            ) : localReviewAvailable ? (
-              <TerasContentTray kicker="Local demonstration" description="Run the preview admission review. This does not register a repository in the managed workspace.">
-              <TerasActionButton
-                disabled={!canStart}
-                onClick={() => {
-                  if (canStart) onStart(repository);
-                }}
-              >
-                Start Admission Review
+                Continue onboarding in Registry
               </TerasActionButton>
               </TerasContentTray>
             ) : <TerasContentTray kicker="Read-only inspection" description={repository.nextAction} />}

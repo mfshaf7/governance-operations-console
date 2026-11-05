@@ -42,6 +42,18 @@ accounts, App identifiers, private files, preloaded Vault state or Codex help.
 
 ### Required Customer Experience
 
+Post-install onboarding must ask which GitHub destinations the user wants:
+personal accounts, organizations, or both. These are connection choices, not
+permanent company/solo installation modes. Verify each account through its
+provider-native authorization, allow multiple connections in the same trusted
+installation, and let the user choose a default. A single eligible destination
+is automatic; several use **Create under** selection. Users can add or remove
+connections and change the default later. Keep one installation-private
+Registry with qualified account labels and filters. Never request an
+organization login on every repository form when a verified connection already
+provides it. This requirement remains open until packaged onboarding and fresh
+installation evidence satisfy the acceptance below.
+
 1. The core Console starts without optional external providers. Each affected
    feature explains that its connection needs setup before an operation begins;
    unrelated features remain usable.

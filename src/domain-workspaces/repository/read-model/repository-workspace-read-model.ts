@@ -1,6 +1,8 @@
 import { repositoryWorkspaceFixture } from "./fixtures/repository-workspace.fixture.ts";
 import type { RepositoryWorkspaceReadModel } from "../domain/repository-types.ts";
 
+export { repositoryConnectionsFixture, repositoryLinkPreviewFixture } from "./fixtures/repository-connections.fixture.ts";
+
 export type {
   RepositoryAdmissionState,
   RepositoryWorkspacePostureGroup,

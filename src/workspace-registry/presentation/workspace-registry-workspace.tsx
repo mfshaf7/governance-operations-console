@@ -49,6 +49,7 @@ export function WorkspaceRegistryWorkspace({
   const [pageHistory, setPageHistory] = useState<readonly (string | null)[]>([null]);
   const after = pageHistory.at(-1) ?? null;
   const [intakeOpen, setIntakeOpen] = useState(false);
+  const [intakeProviderId, setIntakeProviderId] = useState<string | null>(null);
   const [promotionTarget, setPromotionTarget] =
     useState<WorkspaceRegistryTarget | null>(null);
   const reviewedPromotionCandidate = useRef<WorkspaceRegistryCandidate | null>(null);
@@ -148,6 +149,11 @@ export function WorkspaceRegistryWorkspace({
 
   useEffect(() => {
     if (!entryIntent || !snapshot) return;
+    if (entryIntent.requiredMoveRef === "workspace-registry.repository-onboarding" && /^[1-9][0-9]*$/.test(entryIntent.subjectRef)) {
+      const key = `${entryIntent.subjectRef}:${entryIntent.requiredMoveRef}`;
+      if (appliedEntryIntentRef.current !== key) { appliedEntryIntentRef.current = key; setIntakeProviderId(entryIntent.subjectRef); setIntakeOpen(true); }
+      return;
+    }
     const entryKey = `${entryIntent.subjectRef}:${entryIntent.requiredMoveRef}`;
     if (appliedEntryIntentRef.current === entryKey) return;
     const record = snapshot.records.find(
@@ -183,7 +189,7 @@ export function WorkspaceRegistryWorkspace({
               <TerasActionButton busy={refreshing} emphasis="secondary" disabled={refreshing || runtime.pending}
                 onClick={() => void refresh()}>{refreshing ? "Refreshing…" : "Refresh Registry"}</TerasActionButton>
               <TerasActionButton disabled={!snapshot || refreshing || (!fixtureMode && (!liveActionExecutable || retained))}
-                onClick={() => setIntakeOpen(true)}>Workspace Intake</TerasActionButton>
+                onClick={() => { setIntakeProviderId(null); setIntakeOpen(true); }}>Onboard workspace item</TerasActionButton>
               <TerasSurfaceNavButton
                 current={view === "registry"}
                 kicker="01"
@@ -260,7 +266,8 @@ export function WorkspaceRegistryWorkspace({
           />
         </TerasFullscreenSurfaceFrame>
       </TerasModalShell>
-      {intakeOpen && snapshot && (fixtureMode || (liveActionExecutable && !retained)) ? <WorkspaceRegistryIntakeDialog snapshot={snapshot} fixtureMode={fixtureMode}
+      {intakeOpen && snapshot && (fixtureMode || (liveActionExecutable && !retained)) ? <WorkspaceRegistryIntakeDialog key={intakeProviderId ?? "new-onboarding"} snapshot={snapshot} fixtureMode={fixtureMode} initialProviderId={intakeProviderId}
+        onActivateRepository={(name, route) => { setIntakeOpen(false); setView(route === "lifecycle" ? "registry" : "eligible"); setQuery(name); setPageHistory([null]); }}
         onClose={() => { setIntakeOpen(false); void refresh(); }} /> : null}
       {promotionTarget ? (
         <WorkspaceRegistryPromotionWorkflow

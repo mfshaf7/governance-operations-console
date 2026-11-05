@@ -2,8 +2,6 @@ import { TerasDraftCloseGuardDialog } from "@/teras";
 
 import { RepositoryAdmissionDialog } from "../dialogs/admission/repository-admission-dialog.tsx";
 import { RepositoryOwnerBootstrapDialog } from "../dialogs/admission/repository-owner-bootstrap-dialog.tsx";
-import { RepositoryIntakeDialog } from "../dialogs/admission/repository-intake-dialog.tsx";
-import { RepositoryAdmissionRunDialog } from "../dialogs/admission/repository-admission-run-dialog.tsx";
 import { RepositoryCustodyDialog } from "../dialogs/custody/repository-custody-dialog.tsx";
 import { RepositoryLinkExistingDialog } from "../dialogs/custody/repository-link-existing-dialog.tsx";
 import { RepositoryDetailDialog } from "../dialogs/details/repository-detail-dialog.tsx";
@@ -21,16 +19,17 @@ export function RepositoryControlDialogStack({
   return (
     <>
       {controller.standaloneLink.open ? <RepositoryLinkExistingDialog enabled={controller.standaloneLink.enabled} executionAvailable={controller.standaloneLink.executionAvailable}
+        preview={controller.standaloneLink.preview} previewLookup={controller.standaloneLink.previewLookup}
+        onContinueOnboarding={controller.standaloneLink.continueOnboarding}
+        onFindByProvider={controller.standaloneLink.findByProvider}
         results={controller.standaloneLink.results} onLink={controller.standaloneLink.link}
         onOpenRepository={controller.standaloneLink.openRepository} onClose={controller.standaloneLink.close} /> : null}
       {controller.verification.open ? <RepositoryOwnerBootstrapDialog ownerRepo={controller.verification.ownerRepo} custodyRequestId={controller.verification.custodyRequestId} operation="configure-verification" onClose={controller.verification.close} /> : null}
-      {controller.intake.repository && controller.intake.custodyResult ? <RepositoryIntakeDialog
-        key={controller.intake.custodyResult.request.request_id}
-        ownerRepositories={controller.intake.ownerRepositories} classification={controller.intake.classification}
-        repository={controller.intake.repository} custodyResult={controller.intake.custodyResult}
-        onClose={controller.intake.close} /> : null}
       <RepositoryRequestDialog
+        onContinueOnboarding={controller.request.continueOnboarding}
         canSubmit={controller.request.canSubmit}
+        historyPage={controller.request.historyPage}
+        preview={controller.request.preview}
         proposalId={controller.request.proposalId}
         proposalTitle={controller.request.proposalTitle}
         correction={controller.request.correction}
@@ -39,6 +38,10 @@ export function RepositoryControlDialogStack({
         selectedRequestId={controller.request.selectedRequestId}
         onSelectRetained={controller.request.onSelectRetained}
         draft={controller.request.draft}
+        connections={controller.request.connections}
+        connectionsLoading={controller.request.connectionsLoading}
+        connectionsError={controller.request.connectionsError}
+        onRetryConnections={controller.request.onRetryConnections}
         error={controller.request.error}
         onClose={controller.request.close}
         onSubmit={controller.request.onSubmit}
@@ -72,7 +75,8 @@ export function RepositoryControlDialogStack({
         canonical={{subjectRef:controller.canonicalGate.subjectRef, runtime:controller.repositoryRequests,
           onCreateRepository:controller.request.openForProposal, creationAvailable:controller.request.creationAvailable,
           onAttachRepository:controller.proposalGate.attach, attachmentAvailable:controller.proposalGate.attachmentAvailable,
-          custodyCurrent:controller.proposalGate.custodyCurrent,custodyResults:controller.proposalGate.custodyResults}} /> : null}
+          custodyCurrent:controller.proposalGate.custodyCurrent,custodyResults:controller.proposalGate.custodyResults,
+          onFindByProvider:controller.proposalGate.findByProvider, historyPage:controller.proposalGate.historyPage}} /> : null}
       <RepositoryGateResolutionDialog
         key={
           controller.gateResolution.repository?.id ??
@@ -83,15 +87,12 @@ export function RepositoryControlDialogStack({
         repository={controller.gateResolution.repository}
       />
       <RepositoryAdmissionDialog
-        localReviewAvailable={controller.admission.localReviewAvailable}
         registration={controller.admission.registration}
         onOpenRegistration={controller.admission.onOpenRegistration}
         onClose={controller.admission.close}
         onOpenDeliveryCatalog={controller.admission.onOpenDeliveryCatalog}
         onOpenHistory={controller.admission.onOpenHistory}
         onOpenLifecycle={controller.admission.onOpenLifecycle}
-        onStart={controller.admission.onStart}
-        receipt={controller.admission.receipt}
         repository={controller.admission.repository}
       />
       <RepositoryCustodyDialog
@@ -104,6 +105,7 @@ export function RepositoryControlDialogStack({
         result={controller.custody.result}
       />
       <RepositoryHistoryDialog
+        historyPage={controller.history.page}
         providerRead={controller.history.providerRead}
         onRetry={controller.history.retry}
         onRetryProvider={controller.history.retryProvider}
@@ -120,14 +122,6 @@ export function RepositoryControlDialogStack({
         onClose={controller.history.close}
         receipts={controller.history.receipts}
         repository={controller.history.repository}
-      />
-      <RepositoryAdmissionRunDialog
-        executionAvailable={controller.admissionRun.available}
-        onBack={controller.admissionRun.onBack}
-        onClose={controller.admissionRun.close}
-        onRun={controller.admissionRun.onRun}
-        receipt={controller.admissionRun.receipt}
-        repository={controller.admissionRun.available ? controller.admissionRun.repository : null}
       />
       <RepositoryLifecycleDialog
         executionAvailable={controller.lifecycle.executionAvailable}

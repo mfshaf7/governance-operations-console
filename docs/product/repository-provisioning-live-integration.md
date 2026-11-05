@@ -3,7 +3,7 @@
 ## Purpose
 
 This is the primary Console instruction surface for provisioning one new
-GitHub organization repository through the governed OOS workflow. The Console
+GitHub repository in a connected personal account or organization through OOS. The Console
 owns operator review and strict result projection. OOS owns orchestration and
 receipts, WGCF owns readiness evaluation, and Platform Engineering owns GitHub
 App credentials and provider runtime composition.
@@ -12,13 +12,20 @@ Provisioning creates provider source custody. It does not classify the
 repository through Workspace Intake, add it to active inventory, link Delivery
 Catalog metadata, admit a product, or complete Repository onboarding.
 
+Primary coordinated procedure: [Repository onboarding](repository-onboarding.md).
+Repository Control performs provider creation; Registry coordinates the subsequent
+workspace review, source setup and activation.
+
 ## Operator Flow
 
 1. Choose `Create repository` from Repository Control. `Proposal requests` in
    the workspace header is the separate existing Proposal dependency workflow.
-2. Complete Repository details and Workspace ownership. The workspace owner
-   reference follows the typed repository name until deliberately overridden;
-   review it and the ownership type before submission.
+2. Choose **Create under** when several GitHub accounts are connected; one
+   eligible destination is automatic. Complete Repository details and Workspace
+   association. New workspace references include account and name until
+   deliberately overridden; existing aliases are preserved. Follow the
+   [account routing procedure](repository-account-routing.md) for connection,
+   visibility, default-selection and recovery semantics.
 3. Review the defaults in Approval and record the approval note. The creation
    form has one scrolling body; an idle result checklist does not occupy half
    the available input space.
@@ -27,7 +34,7 @@ Catalog metadata, admit a product, or complete Repository onboarding.
 5. Inspect the OOS result, provider operation, readback, and terminal receipt.
 6. On success, inspect current workspace registration. An already active
    registered repository needs no new Intake. Otherwise, use the separate
-   `Review workspace registration` action when the repository should join the
+   `Continue onboarding in Registry` action when the repository should join the
    managed workspace. `Inspect Repository` opens the retained details and offers
    the same registration action. Preparation reads this exact repository's custody
    and existing Intake requests; it does not submit a classification decision.
@@ -40,7 +47,8 @@ never offered as an alternative or fallback for live workspace registration.
 
 ### Registration details
 
-`Review workspace registration` opens `Register repository`. Provider coordinates,
+`Continue onboarding in Registry` opens Workspace Registry for the exact verified
+repository. **Continue onboarding** opens **Repository onboarding details**. Provider coordinates,
 the workspace name and the custody reference are collected from the selected
 successful result. A creation description is reused as editable purpose text;
 linked repositories without a retained description require that explanation.
@@ -116,7 +124,7 @@ secrets, arbitrary GitHub hosts, or repository feature and merge-policy values.
 The Console requests:
 
 - provider `github` at host `github.com`
-- organization ownership
+- a verified connected personal account or organization
 - an initial README
 - Issues enabled
 - Projects, Wiki, and Discussions disabled
@@ -139,8 +147,8 @@ Provide these values through the Platform-owned runtime environment. Never use
 | `GOVERNANCE_CONSOLE_OPERATOR_ID` | yes | Accountable operator identity used in the approval artifact. |
 | `REPOSITORY_CUSTODY_POLICY_PROFILE_URI` | yes | Current provisioning-policy reference. |
 | `REPOSITORY_CUSTODY_POLICY_PROFILE_DIGEST` | yes | Digest binding for the policy. |
-| `REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_URI` | yes | Platform-owned GitHub App credential-binding reference. |
-| `REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_DIGEST` | yes | Digest binding for the GitHub App credential receipt. |
+| `REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_URI` | legacy only | Retained engineering binding; new commands resolve the selected account through OOS. |
+| `REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_DIGEST` | legacy only | Retained digest; new commands use the selected account's verified binding. |
 | `OOS_CALLER_ID` | no | Defaults to `governance-operations-console`. |
 
 The browser calls only same-origin

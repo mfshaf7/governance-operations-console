@@ -10,6 +10,9 @@ export function useSourceAuthorization(subject: SourceAuthorizationSelector, sou
   const [operation, setOperation] = useState<PlatformOperationRecord | null>(null);
   const [candidates, setCandidates] = useState<SourceAuthorizationPreparation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pendingAction, setPendingAction] = useState<"prepare" | "issue" | "revoke" | null>(null);
+  const [needsRefresh, setNeedsRefresh] = useState(false);
+  const retained = useRef(new Map<string, Record<string, unknown>>());
   const loadingRef = useRef(true), readyKey = useRef<string | null>(null), completedKey = useRef<string | null>(null);
   const selectedIntent = useRef<string | null>(null), refreshVersion = useRef(0);
   const selected = useRef({ subject, sourceStartDigest, decision, boundIntentRef }); selected.current = { subject, sourceStartDigest, decision, boundIntentRef };
@@ -37,7 +40,7 @@ export function useSourceAuthorization(subject: SourceAuthorizationSelector, sou
       const selectedId = current?.intent_id;
       let ownerOperation: PlatformOperationRecord | null = null;
       if (ref && current) {
-        const response = await fetch(`/api/environment-operations/${encodeURIComponent(ref)}`, { cache: "no-store" });
+        const response = await fetch(`/api/environment-operations/${encodeURIComponent(ref)}`, { cache: "no-store", signal: AbortSignal.timeout(15_000) });
         if (!response.ok) throw new Error("The original source operation is unavailable.");
         ownerOperation = assertPlatformOperationRecord(await response.json());
         const input = ownerOperation.command.input.source_intent as { intent_id?: string } | undefined;
@@ -46,37 +49,48 @@ export function useSourceAuthorization(subject: SourceAuthorizationSelector, sou
         if (current.intent_id !== selectedId) throw new Error("The selected source authorization changed during reconciliation.");
         if (selection.sourceStartDigest && current.source_intent.source_start_digest !== selection.sourceStartDigest) throw new Error("The source-start binding changed during reconciliation.");
       }
-      if (activeKey.current === expectedKey && version === refreshVersion.current) { readyKey.current = expectedKey; setPreparation(current); setOperation(ownerOperation); setCandidates(sameSubject); setError(null); }
+      if (activeKey.current === expectedKey && version === refreshVersion.current) { readyKey.current = expectedKey; setPreparation(current); setOperation(ownerOperation); setCandidates(sameSubject); setError(null); setNeedsRefresh(false); }
     } catch { if (activeKey.current === expectedKey && version === refreshVersion.current) { setPreparation(null); setOperation(null); setCandidates([]); setError("Canonical source authorizations are unavailable; no ambient credential is used."); } }
     finally { if (activeKey.current === expectedKey && version === refreshVersion.current) { completedKey.current = expectedKey; loadingRef.current = false; setLoading(false); } }
   }, []);
-  useEffect(() => { pinnedDigest.current = null; selectedIntent.current = null; readyKey.current = null; setPreparation(null); setOperation(null); setCandidates([]); setError(null); void refresh(); }, [key, refresh]);
-  async function run(operation: () => Promise<unknown>) {
-    if (inFlight.current || loadingRef.current || readyKey.current !== activeKey.current) return; inFlight.current = true; const expectedKey = activeKey.current; setPending(true); setError(null);
+  useEffect(() => { pinnedDigest.current = null; selectedIntent.current = null; readyKey.current = null; setPreparation(null); setOperation(null); setCandidates([]); setError(null); setNeedsRefresh(false); setPending(false); setPendingAction(null); void refresh(); }, [key, refresh]);
+  async function run(action: "prepare" | "issue" | "revoke", operation: () => Promise<unknown>) {
+    if (inFlight.current || loadingRef.current || needsRefresh || readyKey.current !== activeKey.current) return; inFlight.current = true; const expectedKey = activeKey.current; setPending(true); setPendingAction(action); setError(null);
     try { const result = assertSourceAuthorizationPreparation(await operation()); if (activeKey.current === expectedKey) { pinnedDigest.current = result.source_intent.source_start_digest; selectedIntent.current = result.intent_id; setPreparation(result); setOperation(null); await refresh(); } }
-    catch (error) { if (activeKey.current === expectedKey) setError(error instanceof Error ? error.message : "Source authorization was not confirmed."); }
-    finally { inFlight.current = false; setPending(false); }
+    catch (error) { if (activeKey.current === expectedKey) { readyKey.current = null; setError(error instanceof Error ? error.message : "Source authorization was not confirmed."); setNeedsRefresh(true); } }
+    finally { inFlight.current = false; if (activeKey.current === expectedKey) { setPending(false); setPendingAction(null); } }
   }
-  const ready = readyKey.current === key && !loading && !error;
+  const ready = readyKey.current === key && !loading && !error && !needsRefresh;
   return { preparation: ready ? preparation : null, operation: ready ? operation : null, candidates: ready ? candidates : [], error,
-    ready, pending: pending || loading || completedKey.current !== key, refresh,
+    ready, pending: pending || loading || completedKey.current !== key, pendingAction, needsRefresh, refresh,
     select: (value: SourceAuthorizationPreparation) => {
       if (inFlight.current || loadingRef.current || !ready || !candidates.some(candidate => candidate.intent_id === value.intent_id)) return;
       pinnedDigest.current = value.source_intent.source_start_digest; selectedIntent.current = value.intent_id; setPreparation(value); setOperation(null); void refresh();
     },
-    prepare: () => run(() => {
+    prepare: () => run("prepare", () => {
       if (preparation && preparation.authorization.state !== "revoked") throw new Error("Select a fully revoked predecessor before preparing a successor scope.");
-      return request(base, { preparationId: `console-source:${crypto.randomUUID()}`, subject: selected.current.subject, decision: selected.current.decision,
-        expiresAt: new Date(Date.now() + 4 * 3600_000).toISOString(), supersedesIntentDigest: preparation?.source_intent_digest ?? null });
+      const requestKey = `${activeKey.current}:prepare:${preparation?.intent_id ?? "new"}`;
+      const input = retained.current.get(requestKey) ?? { preparationId: `console-source:${crypto.randomUUID()}`, subject: selected.current.subject, decision: selected.current.decision,
+        expiresAt: new Date(Date.now() + 4 * 3600_000).toISOString(), supersedesIntentDigest: preparation?.source_intent_digest ?? null };
+      retained.current.set(requestKey, input);
+      return request(base, input);
     }),
-    command: (action: "issue" | "revoke") => run(() => {
+    command: (action: "issue" | "revoke") => run(action, () => {
       if (!preparation) throw new Error("Prepare and review an exact source scope first.");
-      return request(`${base}/${encodeURIComponent(preparation.intent_id)}`, { action, commandId: `source-approval:${crypto.randomUUID()}`, requestedAt: new Date().toISOString(), expectedIntentDigest: preparation.source_intent_digest });
+      const requestKey = `${preparation.intent_id}:${action}`;
+      const input = retained.current.get(requestKey) ?? { action, commandId: `source-approval:${crypto.randomUUID()}`, requestedAt: new Date().toISOString(), expectedIntentDigest: preparation.source_intent_digest };
+      retained.current.set(requestKey, input);
+      return request(`${base}/${encodeURIComponent(preparation.intent_id)}`, input);
     }),
   };
 }
 function stableJson(value: unknown): string { if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`; if (value && typeof value === "object") return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableJson((value as Record<string, unknown>)[key])}`).join(",")}}`; return JSON.stringify(value); }
 async function request(path: string, value?: unknown): Promise<unknown> {
-  const response = await fetch(path, { cache: "no-store", ...(value === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value) }) });
-  const body = await response.json(); if (!response.ok || body.mode !== "live" || body.error) throw new Error(body.error ?? "Source authority did not confirm this operation."); return body.projection;
+  try {
+    const response = await fetch(path, { cache: "no-store", signal: AbortSignal.timeout(value === undefined ? 15_000 : 135_000), ...(value === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value) }) });
+    const body = await response.json(); if (!response.ok || body.mode !== "live" || body.error) throw new Error(body.error ?? "Source access was not confirmed. Check its recorded status before continuing."); return body.projection;
+  } catch (error) {
+    if (error instanceof Error && error.name !== "TypeError" && error.name !== "TimeoutError" && error.name !== "AbortError") throw error;
+    throw new Error(value === undefined ? "Source access could not be loaded. Retry loading its status." : "The response was interrupted. Access may still be changing. Check the original access request before continuing.");
+  }
 }

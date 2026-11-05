@@ -8,7 +8,7 @@ import {
 } from "../../src/domain-workspaces/repository/live-runtime/repository-custody-live-contract.ts";
 import { projectRepositoryCustodyResults } from "../../src/domain-workspaces/repository/live-runtime/repository-custody-live-projection.ts";
 import {
-  linkExistingRepositoryCustody,
+  linkExistingRepositoryCustody as linkExistingRepositoryCustodyNative,
   listRepositoryCustodyResults,
   readRepositoryCustodyResult,
   RepositoryCustodyOosError,
@@ -21,6 +21,9 @@ import {
 } from "../support/console-source-projection.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
+import {withRepositoryConnections} from '../support/repository-connections-fetch.mjs';
+const linkExistingRepositoryCustody = (intent, options) => linkExistingRepositoryCustodyNative(intent, {...options,
+  fetchImpl:withRepositoryConnections(options.fetchImpl, options.env, intent.repositoryOwner)});
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:console-owner",
   OOS_BASE_URL: "http://127.0.0.1:8080",
@@ -98,7 +101,7 @@ test("canonical Repository register survives reload through authenticated owner 
   assert.equal(listed.records[0].request.request_id, request.request_id);
   const fetchImpl = async () => jsonResponse({ ...page, mode: "live", status: "current", error: null });
   for (let reload = 0; reload < 2; reload += 1) {
-    const records = await readRepositoryCustodyRegister(fetchImpl);
+    const {records} = await readRepositoryCustodyRegister(fetchImpl);
     const projected = projectRepositoryCustodyResults([], { [records[0].request.request_id]: records[0] });
     assert.equal(projected[0].providerIdentity.repositoryId, result.provider_readback.repository_identity.provider_repository_id);
     assert.equal(projected[0].custody.state, "linked");
@@ -113,7 +116,7 @@ test("canonical Repository register survives reload through authenticated owner 
   await assert.rejects(
     readRepositoryCustodyRegister(async () => jsonResponse({
       schema_version: 1, records: [], next_cursor: cursor, mode: "live", status: "current",
-    })),
+    }), {cursor}),
     /did not advance/,
   );
 });

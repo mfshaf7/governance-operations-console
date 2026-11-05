@@ -156,7 +156,7 @@ export function assertRepositoryCustodyRequest(
   string(target.owner, "repository owner");
   string(target.name, "repository name");
   if (request.action === "provision-new") {
-    exact(target.owner_scope, "organization", "repository owner scope");
+    if (!["personal", "organization"].includes(String(target.owner_scope))) invalid("repository owner scope");
     exact(target.provider_repository_id, null, "new provider repository identity");
     assertProvisioningSettings(request.provisioning, "provisioning settings");
   } else {
@@ -289,7 +289,7 @@ function assertDecision(
     const expected: RepositoryApprovedProvisioning = {
       name: request.target.name,
       owner: request.target.owner,
-      owner_scope: "organization",
+      owner_scope: request.target.owner_scope,
       provider: "github",
       provider_host: "github.com",
       settings: request.provisioning,
@@ -411,7 +411,7 @@ function assertProviderReadback(
       readback.applied_provisioning,
       "Applied provisioning",
     );
-    exact(applied.owner_scope, "organization", "applied owner scope");
+    exact(applied.owner_scope, request.target.owner_scope, "applied owner scope");
     exact(
       applied.initialization_state,
       "initialized",
@@ -522,7 +522,7 @@ function assertApprovedProvisioning(value: unknown) {
   const approved = record(value, "Approved provisioning");
   exact(approved.provider, "github", "approved provider");
   exact(approved.provider_host, "github.com", "approved provider host");
-  exact(approved.owner_scope, "organization", "approved owner scope");
+  if (!["personal", "organization"].includes(String(approved.owner_scope))) invalid("approved owner scope");
   string(approved.owner, "approved owner");
   string(approved.name, "approved name");
   assertProvisioningSettings(approved.settings, "approved settings");

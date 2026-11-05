@@ -38,7 +38,7 @@ export function repositorySelectedActionLabel(
   }
 
   if (repositoryIsAdmissionReady(record)) {
-    return "Review Admission";
+    return "Review Repository";
   }
 
   if (repositoryIsAdmitted(record)) {

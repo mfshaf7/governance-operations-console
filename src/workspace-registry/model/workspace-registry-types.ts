@@ -24,6 +24,7 @@ export type WorkspaceRegistryMutation = Readonly<{
 }>;
 
 export type WorkspaceRegistryRecord = Readonly<{
+  provider_repository?: Readonly<{provider: "github"; provider_repository_id: string; full_name: string}>;
   authority_kind?: "internal-instance-record";
   canonical_authority?: InstanceRecordAuthority;
   id: string;
@@ -39,6 +40,7 @@ export type WorkspaceRegistryRecord = Readonly<{
 }>;
 
 export type WorkspaceRegistryCandidate = Readonly<{
+  provider_repository?: Readonly<{provider: "github"; provider_repository_id: string; full_name: string}>;
   authority_kind?: "internal-instance-record";
   canonical_authority?: InstanceRecordAuthority;
   active_record: Readonly<{

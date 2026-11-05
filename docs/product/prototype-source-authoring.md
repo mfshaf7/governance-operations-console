@@ -22,7 +22,7 @@ Passing tests or seeing an authoring button does not qualify a product journey.
 2. Refresh retained requests first. Select an existing request to resume it;
    create a new bounded objective only for genuinely new source work. OOS
    verifies the actual Landing, registry/source snapshot and eligible custody.
-3. Prepare source scope. Review the exact repository/provider/installation,
+3. **Prepare source access** in the **Source access** panel. Review the exact repository/provider/installation,
    branch, fetched base, Landing Unit, subject/operator, reviewer and expiry.
    Explicitly approve that digest. This permits bounded source actions and
    within-scope renewal only until the displayed deadline, not a new App grant.
@@ -52,7 +52,7 @@ owner failure/next action and uncertainty deadline. Reconcile that same
 operation; do not replace a possibly issued credential. Reads never renew.
 Canonical authorization loading and failed/offline reads disable preparation;
 they are not an empty authorization list. Refresh when unavailable. Use the
-retained **Recover original** scope action to select the exact intent and state;
+retained **Open access request** action to select the exact intent and state;
 the selected intent remains selected while its owner operation is reconciled,
 even when a newer unapproved preparation exists. Selection grants no approval.
 Prepare a successor only after the selected predecessor is confirmed revoked,

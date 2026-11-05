@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { provisioningResult } from "../support/repository-provisioning-result.mjs";
-import { provisionRepository } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
+import { provisionRepository as provisionRepositoryNative } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
+import {withRepositoryConnections} from '../support/repository-connections-fetch.mjs';
+const provisionRepository = (intent, options) => provisionRepositoryNative(intent, {...options,
+  fetchImpl:withRepositoryConnections(options.fetchImpl, options.env, intent.repositoryOwner)});
 import { projectRepositoryProvisioningResults } from "../../src/domain-workspaces/repository/live-runtime/repository-custody-live-projection.ts";
 import { projectRepositoryOwnerAttention } from "../../src/domain-workspaces/repository/read-model/attention-source.ts";
 import { projectRepositoryCurrentInventory } from "../../src/domain-workspaces/repository/live-runtime/repository-inventory-live-projection.ts";
@@ -17,7 +20,7 @@ test("current exact inventory overrides an old successful provisioning handoff t
   const retained = structuredClone(result);
   const history = projectRepositoryProvisioningResults([], { retained: result });
   assert.equal(history[0].admissionState, "ready");
-  assert.equal(repositorySelectedActionLabel(history[0]), "Review Admission");
+  assert.equal(repositorySelectedActionLabel(history[0]), "Review Repository");
   const current = projectRepositoryCurrentInventory(history, inventory("active"));
   assert.equal(current[0].admissionState, "admitted");
   assert.equal(current[0].lifecycle, "source-only");

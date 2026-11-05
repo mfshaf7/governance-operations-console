@@ -45,10 +45,6 @@ export type RepositoryProposalGateResolutionReceipt =
 
 export type RepositoryRuntimeCommand =
   | {
-      kind: "record-admission";
-      record: RepositoryWorkspaceRecord;
-    }
-  | {
       kind: "resolve-proposal-gate";
       notes: string;
       proposalId: string;

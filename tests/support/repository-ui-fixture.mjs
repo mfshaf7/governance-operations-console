@@ -1,10 +1,13 @@
-import { provisionRepository } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
+import { provisionRepository as provisionRepositoryNative } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
+import {withRepositoryConnections} from './repository-connections-fetch.mjs';
+const provisionRepository = (intent, options) => provisionRepositoryNative(intent, {...options,
+  fetchImpl:withRepositoryConnections(options.fetchImpl, options.env, intent.repositoryOwner)});
 import { projectConsoleRuntimeCapabilities } from "../../src/console-integration/configuration/console-runtime-configuration.ts";
 import { provisioningResult } from "./repository-provisioning-result.mjs";
 import { proposalCompletionRecord } from "./proposal-completion-fixture.mjs";
 
 // Synthetic owner responses for isolated UI inspection, never live authority.
-export async function repositoryUiFixture({proposalId="idea-851",visibility="private"} = {}) {
+export async function repositoryUiFixture({proposalId="idea-851",visibility="private",repositoryName="synthetic-source",providerRepositoryId="1350916928",workspaceName=repositoryName} = {}) {
   const digest=`sha256:${"a".repeat(64)}`;
   const env={OOS_BASE_URL:"http://owner.test",OOS_CALLER_SECRET:"synthetic-test-only",GOVERNANCE_CONSOLE_OPERATOR_ID:"operator:synthetic",
     GOVERNANCE_CONSOLE_SESSION_PROJECTION_PATH:"/synthetic/session-projection.json",
@@ -15,17 +18,23 @@ export async function repositoryUiFixture({proposalId="idea-851",visibility="pri
     REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_URI:"https://binding.test/create",REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_DIGEST:digest,
     REPOSITORY_LIFECYCLE_POLICY_PROFILE_URI:"https://policy.test/lifecycle",REPOSITORY_LIFECYCLE_POLICY_PROFILE_DIGEST:digest};
   const result=await provisionRepository({...(proposalId ? {proposalId} : {}),approvalNote:"Approve this exact synthetic repository.",custodyKind:"dedicated-owner-repo",
-    repositoryDescription:"Synthetic Repository UI inspection",repositoryName:"synthetic-source",repositoryOwner:"synthetic-workspace",
-    requestedAt:"2026-06-21T08:00:00Z",requestId:"repository-custody-request:synthetic-ui",templateReviewed:true,
-    visibility,workspaceOwnerRef:"repo:synthetic-source"},{env,fetchImpl:async(_url,init)=>Response.json(provisioningResult(JSON.parse(init.body)))});
+    repositoryDescription:"Synthetic Repository UI inspection",repositoryName,repositoryOwner:"synthetic-workspace",
+    requestedAt:"2026-06-21T08:00:00Z",requestId:`repository-custody-request:synthetic-ui${repositoryName==="synthetic-source"?"":`-${repositoryName}`}`,templateReviewed:true,
+    visibility,workspaceOwnerRef:`repo:${workspaceName}`},{env,fetchImpl:async(_url,init)=>{
+      const response=provisioningResult(JSON.parse(init.body));
+      response.provider_readback.repository_identity.provider_repository_id=providerRepositoryId;
+      response.receipt.repository_identity.provider_repository_id=providerRepositoryId;
+      response.provider_operation.provider_repository_id=providerRepositoryId;
+      return Response.json(response);
+    }});
   const revision="b".repeat(40);
   const continuity={artifact_type:"workspace-continuity-projection",schema_version:1,
     authority:{owner_repo:"workspace-governance",revision,file_digests:{"contracts/repos.yaml":digest}},
     authority_boundary:{canonical_registry:"workspace-governance",mutation_authority:"none",readiness_projection:"workspace-governance-control-fabric",
       terminal_publication_authority:"operator-orchestration-service",workflow_authority:"operator-orchestration-service"},
     projection_digest:digest,projection_id:`workspace-continuity-projection:${digest.slice(7)}`,projection_state:"current",intake:[],products:[],
-    inventory:[{kind:"repo",name:"synthetic-source",record_id:"repo:synthetic-source",record_version:2,record_digest:digest,posture:"active",lifecycle:"source-only",retired_collection:false,
-      lineage:{intake_entry_version:1,source:"workspace-intake",source_digest:digest,source_ref:"repo:synthetic-source"},
+    inventory:[{kind:"repo",name:workspaceName,record_id:`repo:${workspaceName}`,record_version:2,record_digest:digest,posture:"active",lifecycle:"source-only",retired_collection:false,
+      lineage:{intake_entry_version:1,source:"workspace-intake",source_digest:digest,source_ref:`repo:${workspaceName}`},
       last_mutation:{action:"promote",applied_at:"2026-06-21T09:00:00Z",id:"mutation:synthetic",idempotency_key:"synthetic",readiness_digest:digest,readiness_ref:"readiness://synthetic",request_digest:digest,request_ref:"request://synthetic"}}]};
   const gate=proposalCompletionRecord({status:"accepted",title:"Synthetic pending repository gate",route:{target:"prototype",rationale:"Prototype source requires custody.",
     source_custody:{classification:"new-repo-required",repository_mode:"new",repository_gate_state:"pending",owner:null,source_ref:null,rationale:"Provision the source repository."}}});

@@ -47,7 +47,7 @@ export function projectAgentOwnerSnapshot(source: AgentContextSource, value: unk
     const rows = list(legacy.records); detail = `${rows.length} ${body.workflow_id === "workspace-registry-view" ? "legacy Registry" : "Registry"} entries (${tally(rows, "posture")}); ${examples(rows, "id", "name")}${body.workflow_id === "workspace-registry-view" ? "; internal records connected, private details excluded" : ""}`; sourceRevision = revision(legacy.authority_revision);
   } else if (source === "repositories") {
     if (body.mode !== "live" || body.status !== "current") throw new Error("Repository not current");
-    const rows = list(body.records); detail = `${rows.length} retained repository operations (${tally(rows, "status")}); current inventory and exact provider readback remain separate`;
+    const rows = list(body.records); detail = `${rows.length} recorded repositories; current inventory and exact provider readback remain separate`;
   } else if (source === "models") {
     const configuration = object(body.configuration); const settings = object(configuration.configuration);
     const selected = object(object(settings.default).primary);

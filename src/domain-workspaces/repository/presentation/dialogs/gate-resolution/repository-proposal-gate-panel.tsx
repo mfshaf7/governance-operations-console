@@ -1,6 +1,7 @@
 "use client";
 
 import { RepositoryRequestAttachment } from "./repository-request-attachment.tsx";
+import {RepositoryPageControls, type RepositoryPageControl} from "../../shared/repository-page-controls.tsx";
 import { repositoryCreationForProposal, repositoryFulfilmentForProposal, repositoryAttachmentProposalId } from "../../../../operation-integrations/proposal-repository-custody.ts";
 import { useEffect, useState } from "react";
 import { TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack, TerasMetadataList, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSelectField, TerasSegmentedControl, TerasTechnicalDetails, TerasTrayStack } from "@/teras";
@@ -8,7 +9,9 @@ import type { useProposalRepositoryGateRuntime } from "../../../../operation-int
 import { repositoryRequestStateLabel } from "../../../../operation-integrations/proposal-repository-live-projection.ts";
 import type { RepositoryCustodyWorkflowResult, RepositoryCustodyLinkIntent } from "../../../live-runtime/repository-custody-live-types.ts";
 
-export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custodyCurrent, onDirtyChange, runtime, onCreateRepository, creationAvailable = false, onAttachRepository, attachmentAvailable = false, onBusyChange }: {
+export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custodyCurrent, onDirtyChange, runtime, onCreateRepository, creationAvailable = false, onAttachRepository, attachmentAvailable = false, onBusyChange, onFindByProvider, historyPage }: {
+  onFindByProvider?: (providerId: string) => Promise<RepositoryCustodyWorkflowResult[]>;
+  historyPage?: RepositoryPageControl;
   onCreateRepository?: (proposalId: string) => void; creationAvailable?: boolean;
   onAttachRepository?: (intent: RepositoryCustodyLinkIntent) => Promise<RepositoryCustodyWorkflowResult>; attachmentAvailable?: boolean;
   onBusyChange?: (busy: boolean) => void;
@@ -60,6 +63,7 @@ export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custod
       statusLabel={runtime.pending ? "Recording" : !current ? runtime.status === "loading" ? "Loading" : "Read-only" : request ? resolved ? repositoryRequestStateLabel(request) : readyToConfirm ? "Ready to confirm" : custodyCurrent ? creationStatus : "Results unavailable" : "Unavailable"}
       statusTone={resolved ? "ok" : "warn"} />
     <TerasTrayStack spacing="loose" topOffset="section">
+      <RepositoryPageControls page={historyPage} label="requests" />
       {runtime.error ? <p role="alert">{runtime.error}</p> : null}
       {!current ? <><p role="status">{request ? "This retained request is read-only. Refresh its source before confirming." :
         target ? "The requested Proposal requirement is not available. Refresh its source or return to Requests." :
@@ -83,7 +87,7 @@ export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custod
               onClick={() => onCreateRepository(request.proposalId)}>{creation ? "Review repository creation" : "Create repository for this request"}</TerasActionButton></TerasActionRow> : null}
           </TerasContentTray> : null}
           {onAttachRepository ? <div hidden={method!=="attach"}><RepositoryRequestAttachment key={request.proposalId}
-            proposalId={request.proposalId} results={custodyResults.filter(result=>{
+            onFindByProvider={onFindByProvider} proposalId={request.proposalId} results={custodyResults.filter(result=>{
               const origin=repositoryAttachmentProposalId(result);
               return (!origin || origin===request.proposalId) && !runtime.requests.some(other=>other.proposalId!==request.proposalId && other.resolution?.custody_request_id===result.request.request_id);
             })} enabled={current && custodyCurrent && !runtime.pending} attachmentAvailable={attachmentAvailable} onAttach={onAttachRepository}

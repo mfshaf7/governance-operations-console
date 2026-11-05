@@ -1,13 +1,17 @@
 import {test,expect} from "@playwright/test";
 import {execFileSync} from "node:child_process";
+import {createRequire} from "node:module";
+import {page as nativePage, bind as nativeBind, promotionPreparation} from "../support/instance-inventory-fixture.mjs";
+const nativeRepoName=promotionPreparation().target.name;
+const {workspaceRegistryFixture}=createRequire(import.meta.url)("../../src/workspace-registry/fixtures/workspace-registry.fixture.ts");
 import {proposalCompletionRecord,proposalCompletionRoute} from "../support/proposal-completion-fixture.mjs";
 
 const fixture=JSON.parse(execFileSync(process.execPath,["--experimental-strip-types","--disable-warning=MODULE_TYPELESS_PACKAGE_JSON","--input-type=module","-e",
   "import {repositoryUiFixture} from './tests/support/repository-ui-fixture.mjs';process.stdout.write(JSON.stringify(await repositoryUiFixture()));"],{encoding:"utf8"}));
 const base=process.env.CONSOLE_TEST_BASE_URL??"http://127.0.0.1:4317";
-test.use({viewport:{width:1700,height:1000}});test.setTimeout(120000);
+test.use({viewport:{width:1700,height:1000},actionTimeout:15000});test.setTimeout(120000);
 
-async function open(page,{missing=false,unavailable=false,historical=false,handoff=false,correction=false,prepared=false,delayed=false}={}) {
+async function open(page,{missing=false,unavailable=false,historical=false,handoff=false,correction=false,prepared=false,delayed=false,native=false}={}) {
   const f=structuredClone(fixture),writes=[];
   const item=f.continuity.inventory[0];
   f.continuity.inventory=[...(missing?[]:["workspace-prototype-studio"]),"example-project"].map(name=>({...structuredClone(item),name,record_id:`repo:${name}`,lineage:{...item.lineage,source_ref:`repo:${name}`}}));
@@ -15,6 +19,9 @@ async function open(page,{missing=false,unavailable=false,historical=false,hando
     ...(prepared ? {handoff:{state:"ready",packet_ref:"proposal-handoff:idea-851:version-17",target_receipt_ref:null,target_record_ref:null}} : {}),
     route:historical||correction?{...proposalCompletionRoute("prototype"),source_custody:{classification:"non-source-work",repository_mode:"not-required",repository_gate_state:"not-required",owner:"prototype",source_ref:null,rationale:"Historical source posture"}}
       :handoff?{...proposalCompletionRoute("prototype"),source_custody:{...proposalCompletionRoute("prototype").source_custody,owner:"workspace-prototype-studio",source_ref:"repo://workspace-prototype-studio"}}:null});
+  const registry=structuredClone(workspaceRegistryFixture);
+  registry.authority_revision=f.continuity.authority.revision;registry.eligible_promotions=[];
+  registry.records=f.continuity.inventory.map(row=>({id:row.record_id,name:row.name,kind:row.kind,version:row.record_version,record_digest:row.record_digest,posture:row.posture,maturity:null,owner_refs:[row.name],lineage:row.lineage,last_mutation:{action:row.last_mutation.action,applied_at:row.last_mutation.applied_at,id:row.last_mutation.id,readiness_ref:row.last_mutation.readiness_ref,request_ref:row.last_mutation.request_ref}}));
   let fail=unavailable,releaseList;
   const listGate=delayed?new Promise(resolve=>{releaseList=resolve;}):Promise.resolve();
   await page.route("**/api/**",async r=>{
@@ -25,6 +32,16 @@ async function open(page,{missing=false,unavailable=false,historical=false,hando
     }
     if(path==="/api/console/capabilities")return r.fulfill({json:f.capabilities});
     if(path==="/api/workspace-continuity"){await listGate;return fail?r.fulfill({status:503,json:{error:"Synthetic Inventory unavailable"}}):r.fulfill({json:f.continuity});}
+    if(path==="/api/workspace-registry"){
+      await listGate;if(fail)return r.fulfill({status:503,json:{error:"Synthetic Registry unavailable"}});
+      if(!native)return r.fulfill({json:registry});
+      const item=f.continuity.inventory[0],query=new URL(req.url()).searchParams.get('query')??'';
+      const internalPage= nativePage('inventory',{receipt:{version:2,record_digest:`sha256:${'d'.repeat(64)}`},record:{posture:'active',record:{lineage:{...item.lineage,source_ref:'repo:synthetic-project',intake_entry_version:1},last_mutation:item.last_mutation}}});
+      internalPage.selection.query=query;if(!nativeRepoName.includes(query)){internalPage.records=[];internalPage.counts.inventory.active=0;}
+      const {projection_digest:_old,...unsigned}=internalPage;
+      const instance_page=nativeBind(unsigned,'projection_digest');
+      return r.fulfill({json:{schema_version:1,workflow_id:'workspace-registry-view',canonical_mutation:false,authority_revision:registry.authority_revision,projection_id:'workspace-registry:synthetic-native',source_authorities:{legacy:registry.canonical_authority,instance:instance_page.authority},legacy_snapshot:registry,instance_page,records:[...registry.records,...instance_page.records],eligible_promotions:[],projected_at:new Date().toISOString(),projection_digest:`sha256:${'f'.repeat(64)}`}});
+    }
     if(path==="/api/proposals")return r.fulfill({json:{mode:"live",status:"current",error:null,observedAt:new Date().toISOString(),records:[record]}});
     return r.abort();
   });
@@ -154,4 +171,21 @@ test('Studio source verification shows loading until Inventory responds, without
   await expect(dialog).toContainText("Explore in Studio's existing repository.");
   await expect(dialog.getByText('Checking repository list…',{exact:true})).toHaveCount(0);
   expect(writes).toEqual([]);
+});
+
+
+test('Proposal reuse searches current internal Registry repositories and sends their exact canonical owner',async({page})=>{
+ const {dialog,writes}=await open(page,{native:true});
+ await dialog.getByRole('radiogroup',{name:'Proposal route target',exact:true}).getByRole('radio',{name:'Delivery',exact:true}).click();
+ await dialog.getByRole('radiogroup',{name:'Proposal repository requirement',exact:true}).getByRole('radio',{name:'Existing Repo',exact:true}).click();
+ await dialog.getByRole('textbox',{name:'Search onboarded repositories',exact:true}).fill('synthetic');
+ await dialog.getByRole('button',{name:'Existing implementation repository',exact:true}).click();
+ await page.getByRole('option',{name:new RegExp(nativeRepoName)}).click();
+ await dialog.getByRole('textbox',{name:'Decision notes',exact:true}).fill('Use this onboarded internal source repository for Delivery.');
+ await dialog.getByLabel('Route rationale',{exact:true}).fill('Keep internal source under its current registered identity.');
+ await dialog.locator('[data-proposal-disposition-primary-action="true"]').click();
+ await expect.poll(()=>writes.filter(x=>x.path.includes('/commands')).length).toBe(1);
+ const request=writes.find(x=>x.path.includes('/commands'));
+ expect(request.body.payload.route.repoOwner).toBe(nativeRepoName);
+ expect(request.body.payload.route.repoRef).toBe(`repo://${nativeRepoName}`);
 });

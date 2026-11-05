@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {repositoryWorkspaceName} from "../../../domain/repository-workspace-reference.ts";
+import {isRepositoryUse} from "../../../domain/repository-use.ts";
+import {RepositoryAssociationFields} from "../../shared/repository-association-fields.tsx";
 
 import {
   TerasActionButton,
@@ -12,9 +15,7 @@ import {
   TerasNoteField,
   TerasPanel,
   TerasPanelHeader,
-  TerasSelectField,
   TerasStatusItem,
-  TerasTextField,
   TerasTrayStack,
 } from "@/teras";
 
@@ -80,9 +81,9 @@ export function RepositoryCustodyDialog({
   if (!repository || !repository.providerIdentity) return null;
 
   const canSubmit =
-    !pending &&
+    isRepositoryUse(draft.custodyKind) && !pending &&
     draft.approvalNote.trim().length >= 12 &&
-    Boolean(draft.workspaceOwnerRef.trim()) &&
+    Boolean(repositoryWorkspaceName(draft.workspaceOwnerRef)) &&
     (result?.status !== "succeeded") &&
     (!result || result.retryable || changedAfterResult);
   const actionLabel = pending
@@ -159,28 +160,8 @@ export function RepositoryCustodyDialog({
           <TerasTrayStack spacing="loose" topOffset="section">
             <TerasMetadataList items={repositoryCustodyProviderMetadata(repository)} />
             <TerasFieldStack spacing="loose">
-              <TerasSelectField
-                aria-label="Custody kind"
-                label="Custody kind"
-                onValueChange={(value) =>
-                  updateDraft({ custodyKind: value as RepositoryCustodyKind })
-                }
-                options={[
-                  { label: "Dedicated repository", value: "dedicated-owner-repo" },
-                  { label: "Shared repository", value: "shared-owner-repo" },
-                  { label: "Incubation repo", value: "incubation-repo" },
-                  { label: "External repo", value: "external-repo" },
-                ]}
-                value={draft.custodyKind}
-              />
-              <TerasTextField
-                aria-label="Workspace repository"
-                label="Workspace repository"
-                onValueChange={(value) =>
-                  updateDraft({ workspaceOwnerRef: value })
-                }
-                value={draft.workspaceOwnerRef}
-              />
+              <RepositoryAssociationFields kind={draft.custodyKind} reference={draft.workspaceOwnerRef} disabled={pending}
+                onKindChange={value => updateDraft({custodyKind:value})} onReferenceChange={value => updateDraft({workspaceOwnerRef:value})} />
               <TerasNoteField
                 aria-label="Link approval note"
                 label="Approval note"

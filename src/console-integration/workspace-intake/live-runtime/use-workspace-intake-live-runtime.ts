@@ -181,10 +181,17 @@ export function useWorkspaceIntakeLiveRuntime() {
 }
 
 async function jsonRequest(path: string, init: RequestInit) {
-  const response = await fetch(path, init);
-  const body: unknown = await response.json().catch(() => null);
-  if (!response.ok) throw clientError(body);
-  return body;
+  try {
+    const response = await fetch(path, {...init, signal: AbortSignal.timeout(init.method === "GET" ? 15_000 : 135_000)});
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok) throw clientError(body);
+    return body;
+  } catch (error) {
+    if (error instanceof WorkspaceIntakeClientError) throw error;
+    throw new WorkspaceIntakeClientError(init.method === "GET" || path.endsWith("/preparations")
+      ? "The service did not respond. Your draft is kept; retry loading this section."
+      : "The response was interrupted. The service may still be working. Check the original request before submitting again.", "workspace_intake_transport_interrupted", true);
+  }
 }
 
 function clientError(value: unknown) {

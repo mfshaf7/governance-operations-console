@@ -8,13 +8,16 @@ repositories on `main`, not private/client projects or arbitrary toolchains.
 
 ## Operator path after commissioning
 
-1. Open the actual repository's **Review workspace registration** surface after
-   successful custody. Complete the existing `proposed` classification first.
-   Open the **Repository setup** controls from that surface.
+1. Open **Workspace Registry → Onboard workspace item → Repository**, or use
+   **Continue onboarding in Registry** from the created/linked repository.
+   Complete the existing proposed registration decision, then open **Review
+   repository setup** from its onboarding details. See the coordinated
+   [Repository onboarding](repository-onboarding.md) procedure.
    OOS verifies current proposed or admitted source-only classification,
    absence from active/retired Inventory and exact canonical custody;
    page-local labels do not grant eligibility.
-2. Refresh retained requests. An original pending request is recovered even
+2. The dialog loads retained requests and the current verification plan when
+   applicable. An original pending request is recovered even
    when it is outside the bounded history page. Resume it rather than creating
    another branch or request after a lost acknowledgement.
 3. For genuinely new setup, review the source controls and the explicit optional-CI
@@ -28,7 +31,9 @@ repositories on `main`, not private/client projects or arbitrary toolchains.
    Existing README and independent owner controls are preserved. Optional CI
    requires a separate explicit approval for the exact displayed workflow,
    plus the actual App/installation permission. Accept the exact preparation
-   digest to retain one immutable request.
+   contents with **Confirm setup request** (or **Confirm verification change**)
+   to retain one immutable request. The preparation digest stays available in
+   **Technical details**.
 5. Complete existing controls use the non-source canonical checkout action: no
    source-write credential, source branch or dummy PR. Legacy public reads issue
    no read token; native private checkout reports its scoped read token and
@@ -40,11 +45,15 @@ repositories on `main`, not private/client projects or arbitrary toolchains.
    valid profiles and independent controls are preserved. Incomplete independent
    review policy blocks rather than being overwritten. Optional bootstrap CI
    does not waive the existing active-Inventory PR-control requirement.
-6. A source plan uses the existing Source Authorization panel with its distinct
+6. A source plan uses the existing **Source access** panel with its distinct
    `trusted-owner-bootstrap` purpose. Inspect finite paths, plan/template
    digests, exact current Intake binding, actual provider identity and expiry.
-   Approve that exact scope, then start the owner-control session.
-7. Inspect the current source draft and explicitly accept its exact digest.
+   **Prepare source access**, review the displayed repository, branch, allowed
+   files, reviewer, workflow permission and expiry, then **Approve source access**.
+   Provider identity and binding digests remain in **Technical details**.
+   Continue with **Start repository setup** after approval is confirmed.
+7. **Review proposed files**, then **Accept reviewed files**. This accepts only
+   the inspected contents bound to their exact digest.
    Validate/publish through Gary, approve the exact retained PR head as the
    accountable human, merge, then verify merged readback, credential revocation
    and owned-resource retirement. The durable canonical checkout is preserved.
@@ -53,6 +62,23 @@ repositories on `main`, not private/client projects or arbitrary toolchains.
    execute application tests, build the app or activate a runtime.
 
 ## Recovery and withdrawal
+
+The modal header and selected action show what is happening while the service
+responds. A result appears after a confirmed response; the selected request and
+its next action describe the durable workflow state. Publication, review and merge
+can still need further reconciliation; a returned status is not a claim that
+application tests passed. The retained pull request opens separately for review.
+
+Browser waits are bounded to 15 seconds for each read and 135 seconds for each
+command response, allowing the owner's 12-second read and 120-second command
+budgets plus transport time. Ending a browser wait does not cancel work already
+accepted by the service. An interrupted command shows **Outcome not confirmed**
+and blocks further changes until **Check original request** succeeds. Draft
+fields and the original request ID, approval, command and timestamp are retained
+in the current dialog for retry. Reopening recovers the service's retained request;
+it does not create a replacement. If source-access approval or closure is
+interrupted, use **Check original access request** before continuing. A failed
+read offers a local retry instead of implying there are no requests.
 
 For an active repository, open **Application verification** from Repository
 Control. The title names the task; the repository name appears underneath.
@@ -73,7 +99,8 @@ review, merge, existing checkout and cancellation reuse their original retained
 command and timestamp. Unknown source application uses accepted-source recovery,
 not another draft. Terminal requests stay terminal.
 
-Before source is committed, explicit reasoned cancellation stops unissued
+**Withdraw request** opens an inline reason field rather than interrupting the
+primary setup action. Before source is committed, explicit reasoned cancellation stops unissued
 preparations without inventing a provider revoke, revokes approved/uncertain
 access through Platform, and retires only proven pristine source resources.
 Unavailable authority is not evidence that no credential exists. Unknown

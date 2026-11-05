@@ -1,4 +1,5 @@
 import type { WorkspaceIntakeCustodyPreparation } from "@/console-integration/workspace-intake/workspace-intake-live-types.ts";
+import { repositoryWorkspaceName } from "../../../domain/repository-workspace-reference.ts";
 import type { RepositoryCustodyWorkflowResult } from "../../../live-runtime/repository-custody-live-types.ts";
 import type { RepositoryWorkspaceRecord } from "../../../read-model/repository-workspace-read-model.ts";
 import { repositoryIntakeMissingFields, type RepositoryIntakeDraft } from "./repository-intake-guidance.ts";
@@ -8,7 +9,7 @@ export function repositoryIntakeCustody(
   repository: RepositoryWorkspaceRecord | null,
   result?: RepositoryCustodyWorkflowResult,
 ) {
-  const name = /^repo:([a-z0-9][a-z0-9._-]*)$/.exec(result?.request.requested_custody.workspace_owner_ref ?? "")?.[1];
+  const name = repositoryWorkspaceName(result?.request.requested_custody.workspace_owner_ref);
   const provider = result?.provider_readback;
   if (!repository?.providerIdentity || !name || result?.status !== "succeeded" ||
       result.receipt?.outcome !== "succeeded" || !provider || provider.provider_lifecycle_state !== "active" ||

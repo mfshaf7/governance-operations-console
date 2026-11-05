@@ -5,7 +5,7 @@ import test from "node:test";
 import { assertRepositoryLifecycleWorkflowResult } from "../../src/domain-workspaces/repository/live-runtime/repository-lifecycle-live-contract.ts";
 import {
   buildRepositoryLifecycleRequest,
-  executeRepositoryLifecycleAction,
+  executeRepositoryLifecycleAction as executeRepositoryLifecycleActionNative,
   readRepositoryLifecycleAudit,
   readRepositoryLifecycleResult,
   RepositoryLifecycleOosError,
@@ -16,6 +16,9 @@ import {
 } from "../support/console-source-projection.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
+import {withRepositoryConnections} from '../support/repository-connections-fetch.mjs';
+const executeRepositoryLifecycleAction = (intent, options) => executeRepositoryLifecycleActionNative({...intent, repositoryOwner:'example-owner'}, {...options,
+  fetchImpl:withRepositoryConnections(options.fetchImpl, options.env, 'example-owner')});
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:console-owner",
   NODE_ENV: "test",
