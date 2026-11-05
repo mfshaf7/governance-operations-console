@@ -1,6 +1,6 @@
 # Workspace Registry Live Integration
 
-## Internal project records — unpublished extension
+## Internal project records
 
 The approved extension stores public and private source-project registrations
 in installation-private operational storage under Governance policy. It is not
@@ -178,6 +178,12 @@ These changes are preview evidence, not a new live commissioning claim.
 
 ## Cold Recovery And Uncertain Acknowledgement
 
+Source-verifying commands use the existing bounded two-minute source-action
+deadline; ordinary reads remain limited to twelve seconds. A deadline leaves
+the result unconfirmed. Open the original request to inspect completion before
+submitting another operation. Owner responses preserve their actual error code;
+only the exact family-specific missing original permits a fresh request.
+
 - Both request families list caller-bound original locators for the exact
   selected kind/name through OOS, with at most25 rows/32KiB per page. The
   displayed pending count covers every page; use `More original requests`
@@ -211,12 +217,17 @@ commissioning, product acceptance or final-journey evidence.
 
 ## Completion Truth
 
-Acknowledgement, a prepared branch, or an open review is not canonical
+Internal project requests complete with `succeeded`, `canonical_mutation: true`,
+the exact installation-bound storage receipt and matching current record.
+Policy, operator, command, record digest and version bindings must verify.
+Their operational data does not require a Git review or merge.
+
+For retained Git-backed requests, acknowledgement, a prepared branch, or an open review is not canonical
 mutation. Completion requires `succeeded`, `canonical_mutation: true`, merged
 authority readback, and a `workspace-inventory-promotion-receipt` in phase
 `merged-authority`.
 
-Lifecycle acknowledgement or a review-branch preparation receipt is also not
+For retained Git-backed lifecycle requests, acknowledgement or a review-branch preparation receipt is also not
 canonical mutation. Lifecycle completion requires `succeeded`,
 `canonical_mutation: true`, a merged human-reviewed Workspace Governance pull
 request, matching lifecycle readback and merged state, and the immutable

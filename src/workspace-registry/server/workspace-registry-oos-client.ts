@@ -50,7 +50,8 @@ import { assertInventoryRequestJournal, inventoryJournalEndpoint,
   type InventoryRequestFamily } from "../workspace-registry-request-journal.ts";
 
 const maxResponseBytes = 2_097_152;
-const timeoutMs = 12_000;
+const readTimeoutMs = 12_000;
+const commandTimeoutMs = 120_000;
 
 type WorkspaceRegistryOosConfig = ConsoleOosConnection;
 
@@ -577,9 +578,15 @@ async function request(
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
       },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: AbortSignal.timeout(init.method === "GET" ? readTimeoutMs : commandTimeoutMs),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new WorkspaceRegistryOosError(
+        "Workspace Registry is taking longer than expected. Reopen the original request to check its result before trying again.",
+        "workspace_registry_oos_timeout", 504, true,
+      );
+    }
     throw new WorkspaceRegistryOosError(
       "Workspace Registry could not reach OOS.",
       "workspace_registry_oos_unavailable",
@@ -615,7 +622,9 @@ async function request(
           : "OOS rejected the Workspace Registry operation.",
       typeof source.code === "string"
         ? source.code
-        : "workspace_registry_oos_rejected",
+        : typeof source.error === "string"
+          ? source.error
+          : "workspace_registry_oos_rejected",
       response.status,
       source.retryable === true,
     );

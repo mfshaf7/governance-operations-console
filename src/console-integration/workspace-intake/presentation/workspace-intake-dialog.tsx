@@ -501,8 +501,8 @@ function WorkspaceIntakeSupport({
         <TerasWizardPanel
           description="The current request state is preserved for inspection or retry."
           fit="content"
-          kicker="Workflow Stopped"
-          title="Workspace Intake Unavailable"
+          kicker="Workflow response"
+          title="Request needs attention"
           tone="danger"
           treatment="rail"
         >
