@@ -41,7 +41,14 @@ export function instanceRegistryItemAuthority(value: Wire, identity: string, fai
   if (value.authority_kind === undefined && value.canonical_authority === undefined) return {};
   const authority = assertInstanceAuthority(value.canonical_authority, fail);
   if (value.authority_kind !== "internal-instance-record" || authority.record_id !== identity) throw fail("Registry item storage authority is mismatched.");
-  return { authority_kind: "internal-instance-record" as const, canonical_authority: authority };
+  const provider = value.provider_repository;
+  if (provider !== undefined && (!object(provider) || !keys(provider, ["provider", "provider_repository_id", "full_name"]) ||
+      provider.provider !== "github" || typeof provider.provider_repository_id !== "string" || !/^[1-9][0-9]*$/.test(provider.provider_repository_id) ||
+      typeof provider.full_name !== "string" || !/^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(provider.full_name))) {
+    throw fail("Registry provider identity is invalid.");
+  }
+  return { authority_kind: "internal-instance-record" as const, canonical_authority: authority,
+    ...(provider === undefined ? {} : {provider_repository: provider as {provider: "github"; provider_repository_id: string; full_name: string}}) };
 }
 
 export function assertInstanceRegistryPage(value: unknown, parsers: Parsers, fail: Fail): InstanceRegistryPage {

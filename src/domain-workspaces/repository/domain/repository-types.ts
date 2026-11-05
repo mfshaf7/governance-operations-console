@@ -57,6 +57,8 @@ export type RepositoryWorkspaceRecord = {
   proposalGate?: RepositoryWorkspaceProposalGate;
   purpose: string;
   providerIdentity?: RepositoryWorkspaceProviderIdentity;
+  visibility?: "public" | "private" | "internal";
+  visibilityObservedAt?: string;
   repoClass: string;
   role: string;
   routeSource: string;

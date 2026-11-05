@@ -82,6 +82,7 @@ export function OperationWorkbenchHost({
             entryIntent={entryIntent}
             onClose={onClose}
             onOpenDeliveryCatalog={onOpenDeliveryCatalog}
+            onOpenWorkspaceRegistration={providerId => onOpenWorkspace("workspace-registry", {mode: "resolve", subjectRef: providerId, requiredMoveRef: "workspace-registry.repository-onboarding"})}
             onOpenProposalSurface={onOpenProposalSurface}
           />
         </OperationWorkbench>

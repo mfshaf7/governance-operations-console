@@ -63,25 +63,6 @@ const repositoryCommandRuntime = createLocalOperationRuntimeAdapter<
   runtimeSource: repositoryRuntimeSource,
 });
 
-export async function recordRepositoryAdmissionCommand(
-  record: RepositoryWorkspaceRecord,
-  submittedAt = repositoryTimestamp(),
-) {
-  const { receipt } = await submitRepositoryRuntimeCommand({
-    command: {
-      kind: "record-admission",
-      record,
-    },
-    commandName: "repository.record-admission",
-    recordId: record.id,
-    sourceRecordVersion: repositoryRecordSourceVersion(record),
-    submittedAt,
-  });
-  const admissionReceipt = repositoryReceiptOfKind(receipt, "admission");
-
-  return admissionReceipt;
-}
-
 export async function recordRepositoryProposalGateResolutionCommand({
   notes,
   record,

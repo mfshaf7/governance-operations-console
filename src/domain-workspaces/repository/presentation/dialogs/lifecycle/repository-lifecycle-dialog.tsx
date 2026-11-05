@@ -186,6 +186,7 @@ export function RepositoryLifecycleDialog({
         },
         provider: repositoryIdentity.provider,
         providerRepositoryId: repositoryIdentity.repositoryId,
+        repositoryOwner: repositoryIdentity.owner,
         repositoryId: repositoryRecordId,
         requestedAt,
         requestId,

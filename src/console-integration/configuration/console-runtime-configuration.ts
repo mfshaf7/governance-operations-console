@@ -189,10 +189,6 @@ const capabilityDefinitions: readonly Readonly<{
         "REPOSITORY_CUSTODY_POLICY_PROFILE",
         "repository custody policy profile",
       ),
-      artifactNames(
-        "REPOSITORY_CUSTODY_CREDENTIAL_BINDING",
-        "repository custody credential binding",
-      ),
     ],
   },
   {
@@ -203,10 +199,6 @@ const capabilityDefinitions: readonly Readonly<{
         "REPOSITORY_CUSTODY_POLICY_PROFILE",
         "repository custody policy profile",
       ),
-      artifactNames(
-        "REPOSITORY_PROVISIONING_CREDENTIAL_BINDING",
-        "repository provisioning credential binding",
-      ),
     ],
   },
   {
@@ -216,10 +208,6 @@ const capabilityDefinitions: readonly Readonly<{
       artifactNames(
         "REPOSITORY_LIFECYCLE_POLICY_PROFILE",
         "repository lifecycle policy profile",
-      ),
-      artifactNames(
-        "REPOSITORY_LIFECYCLE_PROVIDER_CREDENTIAL_BINDING",
-        "repository lifecycle provider credential binding",
       ),
     ],
   },

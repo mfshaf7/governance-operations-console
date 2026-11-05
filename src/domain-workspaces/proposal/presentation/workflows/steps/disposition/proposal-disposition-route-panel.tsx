@@ -11,6 +11,7 @@ import {
   TerasPanelHeader,
   TerasReadoutField,
   TerasSelectField,
+  TerasTextField,
 } from "@/teras";
 
 import type {
@@ -40,7 +41,7 @@ export function ProposalDispositionRoutePanel({
   routeHasRepositoryGate,
   routeSelectionDraft,
   routeSupportsRepository,
-  selectedRepo, registeredRepositories, repositoriesCurrent = true, repositoriesLoading = false, onRefreshRepositories,
+  selectedRepo, registeredRepositories, repositorySearch, repositoriesCurrent = true, repositoriesLoading = false, onRefreshRepositories,
 }: {
   accepting: boolean;
   decisionDraft: ProposalDecisionDraft;
@@ -55,6 +56,7 @@ export function ProposalDispositionRoutePanel({
   routeSupportsRepository: boolean;
   selectedRepo: ProposalRegisteredRepoOption | null;
   registeredRepositories?: ProposalRegisteredRepoOption[];
+  repositorySearch?: {query: string; onQueryChange: (value: string) => void; more: boolean; error: string | null};
   repositoriesCurrent?: boolean;
   repositoriesLoading?: boolean;
   onRefreshRepositories?: () => void;
@@ -125,6 +127,9 @@ export function ProposalDispositionRoutePanel({
                 ? <TerasActionButton emphasis="secondary" onClick={onRefreshRepositories}>Refresh repository list</TerasActionButton> : undefined} /> : routeHasRepositoryGate &&
             routeSelectionDraft.repoMode === "existing" ? (
               dispositionCompleted ? <TerasReadoutField label="Existing responsible repository" value={routeSelectionDraft.repoRef} /> : <>
+              {repositorySearch ? <TerasTextField label="Search onboarded repositories" value={repositorySearch.query} onValueChange={repositorySearch.onQueryChange} placeholder="Search by repository name" /> : null}
+              {repositorySearch?.error ? <TerasContentTray kicker="Repository search unavailable" description={repositorySearch.error} /> : null}
+              {repositorySearch?.more ? <TerasContentTray kicker="More repositories available" description="Narrow the search to find the repository you want. Only the current result page is shown." /> : null}
               <TerasSelectField
                 disabled={!repositoriesCurrent}
                 helper={
@@ -135,7 +140,7 @@ export function ProposalDispositionRoutePanel({
                 label="Existing implementation repository"
                 onValueChange={onRegisteredRepoSelect}
                 options={proposalRegisteredRepoSelectOptions(routeSelectionDraft.routeTarget === "Prototype"
-                  ? registeredRepositories?.filter(repo => repo.value !== prototypeStudioRepositoryRef) : registeredRepositories)}
+                  ? registeredRepositories?.filter(repo => repo.value !== prototypeStudioRepositoryRef && (!repositorySearch?.query || repo.label.includes(repositorySearch.query))) : registeredRepositories?.filter(repo => !repositorySearch?.query || repo.label.includes(repositorySearch.query)))}
                 value={routeSelectionDraft.repoRef}
               />
               {!repositoriesCurrent && onRefreshRepositories ? <TerasActionButton emphasis="secondary" onClick={onRefreshRepositories}>Refresh repository list</TerasActionButton> : null}

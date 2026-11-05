@@ -101,6 +101,8 @@ function repositoryRecordFromCustodyResult(
     ? request.provisioning.description ?? "Governed repository source."
     : "Existing provider repository verified through OOS custody.";
   return {
+    visibility: readback.visibility,
+    visibilityObservedAt: readback.observed_at,
     admissionPosture: [
       {
         description: `Original ${provisioned ? "creation" : "linking"} evidence recorded ${result.receipt.completed_at}. It does not confirm current provider status.`,

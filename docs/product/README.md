@@ -75,6 +75,9 @@ current and future product changes.
 
 Before final release planning or independent-installation qualification, review
 the open [provider onboarding requirement](backlog.md#before-customer-release-provider-onboarding).
+
+Repository account selection, default destinations, visibility and recovery:
+[Connected GitHub accounts](repository-account-routing.md).
 Successful operation in the developer workspace does not close customer setup,
 credential renewal or recovery qualification.
 
@@ -189,3 +192,6 @@ boundary, or implementation maturity, update
 `architecture/system-model.yaml`, every affected registered architecture view,
 and the detailed domain or surface contract in the same slice before calling
 that work complete.
+
+Repository onboarding, source setup, activation and use-gate procedure:
+[Repository onboarding](repository-onboarding.md).

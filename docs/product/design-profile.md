@@ -107,18 +107,26 @@ inspection rather than a duplicate disabled Intake action. Draft switches use
 the existing discard guard. This is the first operator-review slice of the wider
 Repository repair batch, not full Repository operating acceptance.
 
-The registration repair keeps that composition. A live repository awaiting
-registration has one primary `Review workspace registration` action and secondary
-inspection. The details dialog uses the same registration action and reason when
-unavailable. Prototype-local admission controls appear only in explicitly
-disconnected demonstration mode; they do not compete with the live path.
+Repository onboarding keeps that composition. A repository awaiting onboarding
+has one primary **Continue onboarding in Registry** action and secondary
+inspection. Creation/linkage results provide the same exact-identity handoff.
+Registry reuses the actual details, source setup and activation workflows. The
+obsolete prototype-local admission modal and writer are removed; historical
+demonstration receipts remain read-only and cannot establish current readiness.
 
-Registration keeps its content-sized form and shared fields. Purpose, Source
-validation, and Security responsibility group user decisions; metadata already known from custody
+Registration keeps its content-sized form and shared fields. Purpose, Checking source changes, and Security policies group user decisions; metadata already known from custody
 is read-only. Repository type fills internal category/role, and existing shared
 Intake choice labels provide explanations. Advanced overrides and technical codes
 stay available without dominating the main task. Form errors name missing choices,
 owner-read failures retain input, and leaving edited details uses the shared guard.
+Completed matching request answers can prefill a pristine form without overwriting
+an edited draft or inferring a security decision. Existing check IDs remain exact.
+Normal review facts use human labels; protocol/category/role/provider IDs remain
+in technical details. Successful decisions lead to source setup or activation;
+submission is visibly distinct from completion. First reads, preparation and
+command progress show shared waiting feedback. Interrupted submissions retain
+original identity, freeze the reviewed decision and offer original-request recovery.
+Leaving an uncertain result is not labelled cancellation or an unsent draft.
 
 ### Primary Console activity controls (batch three preview)
 

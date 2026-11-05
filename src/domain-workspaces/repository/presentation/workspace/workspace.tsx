@@ -16,6 +16,7 @@ export type RepositoryWorkspaceProps = {
   entryIntent?: ConsoleSurfaceEntryIntent | null;
   onClose: () => void;
   onOpenDeliveryCatalog?: (repositoryId: string) => void;
+  onOpenWorkspaceRegistration?: (providerId: string) => void;
   onOpenProposalSurface?: (proposalId: string) => void;
 };
 
@@ -24,9 +25,10 @@ export function RepositoryWorkspace({
   entryIntent = null,
   onClose,
   onOpenDeliveryCatalog,
+  onOpenWorkspaceRegistration,
   onOpenProposalSurface,
 }: RepositoryWorkspaceProps) {
-  const controller = useRepositoryControlController({ entryIntent, onOpenDeliveryCatalog });
+  const controller = useRepositoryControlController({ entryIntent, onOpenDeliveryCatalog, onOpenWorkspaceRegistration });
   return (
     <TerasModalShell
       bodyLayout="fill"

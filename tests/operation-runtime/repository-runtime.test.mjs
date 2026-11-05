@@ -5,7 +5,6 @@ import {
   getRepositoryRuntimeProjectionSnapshot,
   getRepositoryRuntimeCapabilities,
   listRepositoryRuntimeReceipts,
-  recordRepositoryAdmissionCommand,
   recordRepositoryProposalGateResolutionCommand,
   subscribeRepositoryRuntimeProjection,
 } from "../../src/domain-workspaces/repository/local-runtime/repository-runtime.ts";
@@ -14,49 +13,11 @@ test("repository runtime declares submit capability", () => {
   assert.equal(getRepositoryRuntimeCapabilities().canSubmit, true);
 });
 
-test("repository admission retries reuse one receipt", async () => {
-  const record = { id: "repository-runtime-admission-idempotency" };
-  const first = await recordRepositoryAdmissionCommand(
-    record,
-    "2026-07-10T06:05:00.000Z",
-  );
-  const snapshotAfterFirst = getRepositoryRuntimeProjectionSnapshot();
-  let duplicateEmissions = 0;
-  const unsubscribe = subscribeRepositoryRuntimeProjection(() => {
-    duplicateEmissions += 1;
-  });
-  const repeated = await recordRepositoryAdmissionCommand(
-    record,
-    "2026-07-10T06:10:00.000Z",
-  );
-  unsubscribe();
-  const receipts = await listRepositoryRuntimeReceipts(record.id);
-  const projection = getRepositoryRuntimeProjectionSnapshot();
-  const admissionReceipts = receipts.filter(
-    (receipt) => receipt.receipt.kind === "admission",
-  );
-
-  assert.equal(first.receiptId, repeated.receiptId);
-  assert.equal(projection, snapshotAfterFirst);
-  assert.equal(duplicateEmissions, 0);
-  assert.equal(first.commandName, "repository.record-admission");
-  assert.equal(first.resultState, "recorded");
-  assert.equal(first.reviewedRecord.id, record.id);
-  assert.deepEqual(
-    first.runEvents.map((event) => event.sequence),
-    [1, 2, 3, 4],
-  );
-  assert.equal(admissionReceipts.length, 1);
-  assert.deepEqual(
-    projection.receiptsByRecord[record.id].map(
-      (receipt) => receipt.kind,
-    ),
-    ["admission"],
-  );
-  assert.match(
-    admissionReceipts[0].sourceVersions[0].version,
-    /^local-projection-repository-operation-/,
-  );
+test("obsolete local admission has no public writer and cannot manufacture onboarding evidence", async () => {
+  const runtime = await import("../../src/domain-workspaces/repository/local-runtime/repository-runtime.ts");
+  const handler = await import("../../src/domain-workspaces/repository/local-runtime/repository-runtime-command-handler.ts");
+  assert.equal(runtime.recordRepositoryAdmissionCommand, undefined);
+  assert.throws(() => handler.repositoryRuntimeRunFromCommand({command:{kind:"record-admission",record:{id:"legacy-demo"}}}), /Local admission execution is retired/);
 });
 
 test("repository gate resolution is an idempotent runtime receipt", async () => {

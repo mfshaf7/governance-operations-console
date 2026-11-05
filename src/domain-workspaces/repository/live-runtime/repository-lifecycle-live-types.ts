@@ -36,6 +36,7 @@ export type RepositoryLifecycleCommandIntent = Readonly<{
   impact: RepositoryLifecycleImpactIntent;
   provider: "github";
   providerRepositoryId: string;
+  repositoryOwner?: string;
   repositoryId: string;
   requestedAt: string;
   requestId: string;

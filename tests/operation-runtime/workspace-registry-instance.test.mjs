@@ -52,6 +52,18 @@ test("Registry composes private pages with their actual authority while preservi
   assert.equal(mutations, 0);
 });
 
+test("Registry retains qualified GitHub provenance without changing a native alias or immutable source binding", async () => {
+  const native=page(), row=native.eligible_promotions[0];
+  row.provider_repository=structuredClone(row.active_record.value.provider_repository);
+  delete row.candidate_digest;
+  native.eligible_promotions[0]=bind(row,'candidate_digest');
+  delete native.projection_digest;
+  const rebound=bind(native,'projection_digest');
+  const snapshot=await readWorkspaceRegistry({config,selection:{scope:'eligible'},fetchImpl:async url=>new URL(url).pathname.endsWith('/registry')?registry():sourcePage(url,rebound)});
+  assert.deepEqual(snapshot.eligible_promotions.at(-1).provider_repository,row.provider_repository);
+  assert.equal(snapshot.eligible_promotions.at(-1).target.record_id,row.target.record_id);
+});
+
 test("an unavailable, substituted or missing private Registry protocol cannot become an empty successful Git-only view", async () => {
   const wrongDigest = page(); wrongDigest.eligible_promotions[0].active_record.value.owns = ["Substituted metadata"];
   const overlap = page(); overlap.eligible_promotions[0].target = workspaceRegistryFixture.eligible_promotions[0].target;

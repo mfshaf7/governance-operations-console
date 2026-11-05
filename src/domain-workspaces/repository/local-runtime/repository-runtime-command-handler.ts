@@ -14,24 +14,9 @@ export function repositoryRuntimeRunFromCommand(
   command: OperationCommandEnvelope<RepositoryRuntimeCommand>,
 ): OperationCommandRunResult<RepositoryRuntimeRun> {
   const summary = repositoryCommandSummary(command.command.kind);
-  const progress =
-    command.command.kind === "record-admission"
-      ? [
-          {
-            state: "running" as const,
-            summary:
-              "Repository owner and admission posture loaded from the effective record.",
-          },
-          {
-            state: "running" as const,
-            summary:
-              "Prototype-local boundary confirmed; no repository or workspace contract was mutated.",
-          },
-        ]
-      : undefined;
+  if (command.command.kind !== "resolve-proposal-gate") throw new Error("Local admission execution is retired. Complete repository onboarding in Workspace Registry.");
 
   return {
-    progress,
     run: {
       submittedAt: command.submittedAt,
       summary,
@@ -51,19 +36,6 @@ export function repositoryRuntimeReceiptFromRun({
   const receiptId = `repository-${command.command.kind}-${run.runId}`;
 
   switch (command.command.kind) {
-    case "record-admission":
-      return {
-        ...repositoryLocalReceipt({
-          actionLabel: "Run Local Admission Review",
-          command,
-          commandName: "repository.record-admission",
-          receiptId,
-          run,
-        }),
-        kind: "admission",
-        reviewedRecord: command.command.record,
-        runEvents: [...run.events],
-      };
     case "resolve-proposal-gate":
       return {
         ...repositoryLocalReceipt({
@@ -115,8 +87,6 @@ function repositoryLocalReceipt<TCommandName extends string>({
 
 function repositoryCommandSummary(kind: RepositoryRuntimeCommand["kind"]) {
   switch (kind) {
-    case "record-admission":
-      return "Prototype-local repository admission review receipt recorded.";
     case "resolve-proposal-gate":
       return "Prototype-local Proposal repository gate resolution recorded.";
   }

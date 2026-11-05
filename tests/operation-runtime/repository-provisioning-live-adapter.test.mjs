@@ -9,12 +9,15 @@ import {
   repositoryProvisionedRecordId,
 } from "../../src/domain-workspaces/repository/live-runtime/repository-custody-live-projection.ts";
 import {
-  provisionRepository,
+  provisionRepository as provisionRepositoryNative,
   readRepositoryCustodyResult,
   RepositoryCustodyOosError,
-  resumeRepositoryProvisioning,
+  resumeRepositoryProvisioning as resumeRepositoryProvisioningNative,
 } from "../../src/domain-workspaces/repository/server/repository-custody-oos-client.ts";
 import {
+  repositoryProvisioningChecks,
+  repositoryRequestDraftComplete,
+  repositoryProvisionIntentFromDraft,
   repositoryProvisioningCanCorrect,
   repositoryRequestDraftFromResult,
   repositoryProvisioningResultProjection,
@@ -25,6 +28,11 @@ import {
 } from "../support/console-source-projection.mjs";
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
+import {withRepositoryConnections} from '../support/repository-connections-fetch.mjs';
+const provisionRepository = (intent, options) => provisionRepositoryNative(intent, {...options,
+  fetchImpl:withRepositoryConnections(options.fetchImpl, options.env, intent.repositoryOwner)});
+const resumeRepositoryProvisioning = (id, options) => resumeRepositoryProvisioningNative(id, {...options,
+  fetchImpl:withRepositoryConnections(options.fetchImpl, options.env, intent().repositoryOwner)});
 const env = {
   GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:console-owner",
   OOS_BASE_URL: "http://127.0.0.1:8080",
@@ -122,8 +130,8 @@ test("case:repository-provisioning-negative fails closed on missing authority, i
     provisionRepository(intent(), {
       env: {
         ...env,
-        REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_DIGEST: undefined,
-        REPOSITORY_PROVISIONING_CREDENTIAL_BINDING_URI: undefined,
+        REPOSITORY_CUSTODY_POLICY_PROFILE_DIGEST: undefined,
+        REPOSITORY_CUSTODY_POLICY_PROFILE_URI: undefined,
       },
       fetchImpl: async () => {
         throw new Error("must not call OOS");
@@ -368,4 +376,23 @@ test("request-specific creation binds exact requirement in canonical request and
  let calls=0;
  await assert.rejects(provisionRepository({...intent(),proposalId:"unrelated-reference"},{env,fetchImpl:async()=>{calls++;throw Error("must not call")}}),{code:"repository_provisioning_intent_invalid"});
  assert.equal(calls,0);
+});
+
+
+test("legacy custody remains readable but a new form submission requires a deliberate Dedicated or Shared choice", async () => {
+  for (const kind of ["incubation-repo", "external-repo"]) {
+    const stored = await provisionRepository({ ...intent(), custodyKind: kind }, { env, fetchImpl: async (_url, init) => jsonResponse(provisioningResult(JSON.parse(init.body)), 201) });
+    const draft = repositoryRequestDraftFromResult(stored);
+    assert.equal(draft.custodyKind, kind);
+    assert.equal(repositoryProvisioningChecks(draft).find(item => item.label === "Repository use").status, "required");
+    assert.equal(repositoryProvisioningChecks(draft, stored, true).find(item => item.label === "Repository use").status, "ready");
+    assert.equal(repositoryRequestDraftComplete(draft), false);
+    assert.throws(() => repositoryProvisionIntentFromDraft(draft, {requestId:"repository-custody-request:new-choice",requestedAt: new Date().toISOString()}), /incomplete/);
+    for (const custodyKind of ["dedicated-owner-repo", "shared-owner-repo"]) {
+      const changed = { ...draft, custodyKind, templateReviewed: true, approvalNote: "Approve the explicitly selected repository layout." };
+      assert.equal(repositoryRequestDraftComplete(changed), true);
+      assert.equal(repositoryProvisionIntentFromDraft(changed, {requestId:"repository-custody-request:new-choice",requestedAt:new Date().toISOString()}).custodyKind, custodyKind);
+    }
+    assert.equal(stored.request.requested_custody.custody_kind, kind);
+  }
 });

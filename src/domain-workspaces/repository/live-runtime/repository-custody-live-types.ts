@@ -106,7 +106,7 @@ export type RepositoryProvisionRequest = RepositoryCustodyRequestBase &
     target: Readonly<{
       name: string;
       owner: string;
-      owner_scope: "organization";
+      owner_scope: "personal" | "organization";
       provider: "github";
       provider_host: "github.com";
       provider_repository_id: null;
@@ -132,7 +132,7 @@ export type RepositoryCustodyIntegrity = Readonly<{
 export type RepositoryApprovedProvisioning = Readonly<{
   name: string;
   owner: string;
-  owner_scope: "organization";
+  owner_scope: "personal" | "organization";
   provider: "github";
   provider_host: "github.com";
   settings: RepositoryProvisioningSettings;
@@ -167,7 +167,7 @@ export type RepositoryProviderReadback = Readonly<{
   action: "link-existing" | "provision-new";
   applied_provisioning: Readonly<{
     initialization_state: "initialized";
-    owner_scope: "organization";
+    owner_scope: "personal" | "organization";
     settings: RepositoryProvisioningSettings;
   }> | null;
   artifact_type: "repository_provider_readback";

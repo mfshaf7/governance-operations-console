@@ -39,8 +39,8 @@ Provide these values through the Platform-owned runtime environment. Never use
 | `GOVERNANCE_CONSOLE_OPERATOR_ID` | yes | Accountable operator identity used in the approval artifact. |
 | `REPOSITORY_CUSTODY_POLICY_PROFILE_URI` | yes | Current Workspace Governance custody-policy reference. |
 | `REPOSITORY_CUSTODY_POLICY_PROFILE_DIGEST` | yes | Digest binding for the custody policy. |
-| `REPOSITORY_CUSTODY_CREDENTIAL_BINDING_URI` | yes | Platform-owned provider credential-binding reference. |
-| `REPOSITORY_CUSTODY_CREDENTIAL_BINDING_DIGEST` | yes | Digest binding for the provider credential receipt. |
+| `REPOSITORY_CUSTODY_CREDENTIAL_BINDING_URI` | legacy only | Retained engineering configuration; new commands resolve the selected account through OOS. |
+| `REPOSITORY_CUSTODY_CREDENTIAL_BINDING_DIGEST` | legacy only | Retained binding; account-specific commands use the fresh verified connection. |
 | `OOS_CALLER_ID` | no | Defaults to `governance-operations-console`. |
 
 The browser calls only same-origin
@@ -82,7 +82,8 @@ owner truth leaves the source offline without fixture fallback.
 
 The standalone form uses the same lookup/approval form as Proposal attachment,
 without Proposal fulfilment fields or decisions. The workspace reference is
-filled from the GitHub name (lowercase for a new standalone link); change it
+filled from the GitHub account and name for a new link; known repositories keep
+their existing reference. Change it
 only to associate a different workspace record. Archived targets stay blocked
 by the existing link/readback contract. A known successful creation or link
 offers **Open repository**, not another linking submission; current inventory

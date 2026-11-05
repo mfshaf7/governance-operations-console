@@ -11,12 +11,14 @@ import type { RepositoryProviderObservationSnapshot } from "../../../live-runtim
 import { repositoryProviderObservation } from "../../../live-runtime/repository-provider-observation.ts";
 import { repositoryHistoryControlFacts, repositoryHistoryReceiptFacts, repositoryHistoryRecordFacts, repositoryHistoryTimelineRows } from "./repository-history-view-model.ts";
 import { repositoryRecordStatusLabel, repositoryRecordTone } from "../../shared/repository-display-model.ts";
+import {RepositoryPageControls, type RepositoryPageControl} from "../../shared/repository-page-controls.tsx";
 
 export function RepositoryHistoryDialog({ lifecycleAudit, onClose, onRetry, onRetryProvider, refreshing = false, receipts, repository,
   providerRead, custodyResults = [], custodySourceStatus = "current", custodySourceError, lifecycleSnapshot, lifecycleError, liveMode = false,
-  custodyRetryable = false, lifecycleFailure,
+  custodyRetryable = false, lifecycleFailure, historyPage,
 }: {
   lifecycleAudit: RepositoryLifecycleAudit | null; onClose: () => void; onRetry?: () => void; onRetryProvider?: () => void; refreshing?: boolean;
+  historyPage?: RepositoryPageControl;
   receipts: RepositoryRuntimeReceipt[]; repository: RepositoryWorkspaceRecord | null;
   providerRead?: RepositoryProviderObservationSnapshot;
   custodyResults?: RepositoryCustodyWorkflowResult[]; custodySourceStatus?: "loading" | "current" | "offline";
@@ -56,7 +58,8 @@ export function RepositoryHistoryDialog({ lifecycleAudit, onClose, onRetry, onRe
         </TerasPanel>
         <TerasPanel frame="padded" treatment="neutral" fit="fill" layout="header-body" spacing="normal">
           <TerasPanelHeader kicker="Recorded activity" title="History" description={coverageDetail} actionsLayout="inline"
-            actions={<TerasStatusPill tone={partial ? "warn" : "info"}>{rows.length} {rows.length === 1 ? "receipt" : "receipts"} · {coverage}</TerasStatusPill>} />
+            actions={<><TerasStatusPill tone={partial ? "warn" : "info"}>{rows.length} {rows.length === 1 ? "receipt" : "receipts"} · {historyPage?.cursor ? "More available" : coverage}</TerasStatusPill>
+              <RepositoryPageControls page={historyPage} label="receipts" compact /></>} />
           {loading ? <TerasLoadingState fill label="Reading repository history…" />
             : historyFailed ? <RepositoryReadFailure label="History could not be loaded"
               detail={canRetryHistory ? "The connection failed. Try loading this section again." : "The history response could not be verified. Its source needs attention before it can be shown."}

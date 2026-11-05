@@ -18,7 +18,7 @@ test("Repository history retains all original identity-bound owner receipts with
   const index=repositoryHistoryReceiptFacts([],null,retained);
   assert.equal(index.filter(f=>f.label==="Provisioning").length,1);
   assert.equal(index.find(f=>f.label==="Source").value,"operator-orchestration-service");
-  assert.equal(index.find(f=>f.label==="Local setup review").value,"No local setup receipt");
+  assert.equal(index.find(f=>f.label==="Historical demonstration review").value,"No local setup receipt");
   assert.deepEqual(result,original);
 });
 

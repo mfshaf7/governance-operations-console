@@ -43,7 +43,14 @@ export function projectRepositoryProviderObservations(
   return records.map(record => {
     if (!record.providerIdentity) return record;
     const observation = repositoryProviderObservation(record, undefined, undefined, false, providerReads[record.id]);
-    return { ...record, admissionPosture: [...record.admissionPosture.filter(group => group.id !== "provider-state"), {
+    const currentRead = providerReads[record.id]?.readback;
+    // Retain the newest identity-checked evidence while a later read is pending
+    // or unavailable; its original timestamp still describes the observation.
+    const latestRead = observation.observedAt && currentRead && (!record.visibilityObservedAt ||
+      Date.parse(currentRead.observed_at) >= Date.parse(record.visibilityObservedAt)) ? currentRead : null;
+    return { ...record,
+      ...(latestRead ? {visibility: latestRead.visibility, visibilityObservedAt: latestRead.observed_at} : {}),
+      admissionPosture: [...record.admissionPosture.filter(group => group.id !== "provider-state"), {
       id: "provider-state", title: "Provider status", kicker: "GitHub observation", description: observation.detail,
       tone: observation.tone, statusLabel: observation.label,
       items: [{ label: "GitHub status", value: observation.current ? observation.label : "Not confirmed",

@@ -20,7 +20,7 @@ export function provisioningResult(request, { replayed = false, status = "succee
         action: "provision-new",
         applied_provisioning: {
           initialization_state: "initialized",
-          owner_scope: "organization",
+          owner_scope: request.target.owner_scope,
           settings: structuredClone(request.provisioning),
         },
         artifact_type: "repository_provider_readback",
@@ -88,7 +88,7 @@ export function provisioningResult(request, { replayed = false, status = "succee
         : {
             name: request.target.name,
             owner: request.target.owner,
-            owner_scope: "organization",
+            owner_scope: request.target.owner_scope,
             provider: "github",
             provider_host: "github.com",
             settings: structuredClone(request.provisioning),

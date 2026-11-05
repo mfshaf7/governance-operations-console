@@ -17,29 +17,31 @@ import {
 import type { RepositoryWorkspaceSummaryMetric } from "../../read-model/repository-workspace-read-model.ts";
 
 export function RepositoryControlOverviewPanel({
-  canProvisionRepository,
+  canOpenRepositoryRequest,
   canLinkRepository,
   onOpenExistingRepositoryLink,
   onOpenRepositoryRequestDraft,
   requestSubmittedAt,
   summary,
   workspaceStatus,
+  partial = false, unavailable = false,
 }: {
-  canProvisionRepository: boolean;
+  canOpenRepositoryRequest: boolean;
   canLinkRepository: boolean;
   onOpenExistingRepositoryLink: () => void;
   onOpenRepositoryRequestDraft: () => void;
   requestSubmittedAt: string | null;
   summary: RepositoryWorkspaceSummaryMetric[];
   workspaceStatus: OperationSurfaceStatusModel;
+  partial?: boolean; unavailable?: boolean;
 }) {
   return (
     <TerasRecordControlOverviewGrid>
       <TerasRecordControlSummaryPanel
-        description={workspaceStatus.summary}
+        description={unavailable ? "Repository totals are unavailable until the register can be read." : partial ? "Summary of loaded repositories. Load more in the register to include remaining records." : workspaceStatus.summary}
         kicker="Repository Summary"
         metrics={summary.map(item => ({
-          ...item, label: item.id === "ready" ? "Ready to register" : item.id === "admitted" ? "Registered" : item.id === "blocked" ? "Needs attention" : item.label,
+          ...item, value: unavailable ? "—" : item.value, label: item.id === "ready" ? "Ready to register" : item.id === "admitted" ? "Registered" : item.id === "blocked" ? "Needs attention" : item.label,
         }))}
         statusButtonAttribute="data-repository-status-button"
         title="Repository posture"
@@ -51,7 +53,7 @@ export function RepositoryControlOverviewPanel({
           <TerasActionRow>
           <TerasActionButton
             data-repository-request-action="true"
-            disabled={!canProvisionRepository}
+            disabled={!canOpenRepositoryRequest}
             onClick={onOpenRepositoryRequestDraft}
           >
             <Plus aria-hidden="true" size={14} />

@@ -8,6 +8,7 @@ import {
   assertRepositoryCustodyRequestId,
   linkExistingRepositoryCustody,
   lookupRepositoryProvider,
+  readRepositoryConnections,
   listRepositoryCustodyResults,
   provisionRepository,
   readRepositoryCustodyResult,
@@ -17,9 +18,20 @@ import {
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
+export async function listRepositoryConnectionsRoute() {
+  try { return NextResponse.json(await readRepositoryConnections(), {headers: noStoreHeaders}); }
+  catch (error) { return repositoryCustodyErrorResponse(error); }
+}
+
 export async function listRepositoryCustodyRequestsRoute(request: NextRequest) {
   try {
-    const page = await listRepositoryCustodyResults(request.nextUrl.searchParams.get("cursor"));
+    const query = request.nextUrl.searchParams;
+    if ([...query.keys()].some(key => !["cursor", "view", "provider_repository_id", "proposal_id"].includes(key) || query.getAll(key).length !== 1)) throw invalidIntent();
+    const page = await listRepositoryCustodyResults(query.get("cursor"), {
+      ...(query.has("view") ? {view: query.get("view") as "register" | "requests"} : {}),
+      ...(query.has("provider_repository_id") ? {providerRepositoryId: query.get("provider_repository_id")!} : {}),
+      ...(query.has("proposal_id") ? {proposalId: query.get("proposal_id")!} : {}),
+    });
     return NextResponse.json(
       { ...page, mode: "live", status: "current", error: null },
       { headers: noStoreHeaders },

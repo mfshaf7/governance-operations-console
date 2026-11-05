@@ -24,6 +24,7 @@ import {
   repositorySelectedActionTitle,
 } from "../shared/repository-control-projection.ts";
 import type { RepositoryControlController } from "./use-repository-control-controller.ts";
+import {RepositoryPageControls} from "../shared/repository-page-controls.tsx";
 
 export function RepositoryControlSurface({
   entryIntent = null,
@@ -35,14 +36,22 @@ export function RepositoryControlSurface({
   const selectedRepository = controller.selectedRepository;
   const overview =
     <RepositoryControlOverviewPanel
-      canProvisionRepository={controller.overview.canProvisionRepository}
+      canOpenRepositoryRequest={controller.overview.canOpenRepositoryRequest}
+      partial={controller.overview.partial}
+      unavailable={Boolean(controller.sourceAvailability.error)}
       canLinkRepository={controller.standaloneLink.enabled}
       onOpenExistingRepositoryLink={controller.standaloneLink.show}
       onOpenRepositoryRequestDraft={controller.overview.onOpenRepositoryRequestDraft}
       requestSubmittedAt={controller.overview.requestSubmittedAt}
       summary={controller.overview.summary} workspaceStatus={controller.overview.workspaceStatus} />;
 
-  if (!selectedRepository) {
+  const readFailure = controller.sourceAvailability.error ? <TerasEmptyState fill>
+    <div role="alert"><strong>Repositories could not be loaded</strong><p>{controller.sourceAvailability.error}</p>
+      <p>Previously loaded records are kept. This does not mean the register is empty.</p>
+      <TerasActionButton emphasis="secondary" onClick={() => void controller.sourceAvailability.retry()}>Retry loading repositories</TerasActionButton>
+    </div>
+  </TerasEmptyState> : null;
+  if (!selectedRepository || readFailure) {
     return (
       <>
       <TerasRecordControlLayout
@@ -51,10 +60,10 @@ export function RepositoryControlSurface({
         mode="overview-register-selected"
         overview={overview}
         register={
-          controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading repositories…" /> : <TerasEmptyState fill>
+          readFailure ?? (controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading repositories…" /> : <TerasEmptyState fill>
             No repository records are available to select. Create a repository
             or link an existing one using the actions above.
-          </TerasEmptyState>
+          </TerasEmptyState>)
         }
         selected={
           controller.sourceAvailability.loading ? <TerasLoadingState fill label="Preparing repository details…" skeleton="details" /> : <TerasEmptyState fill>
@@ -80,26 +89,11 @@ export function RepositoryControlSurface({
               "data-repository-register": "standard",
             }}
             density="compact-control"
-            description="Repository requests, workspace association, admission status and retained history."
-            filterBar={
-              <TerasFilterBar
-                data-repository-filter-bar="true"
-                filters={[
-                  {
-                    label: "Filter repository status",
-                    onValueChange: controller.filters.onStatusChange,
-                    options: controller.filters.statusOptions,
-                    value: controller.filters.status,
-                  },
-                ]}
-                search={{
-                  ariaLabel: "Search repositories",
-                  onValueChange: controller.filters.onSearchChange,
-                  placeholder: "Search repository, workspace association, route, class...",
-                  value: controller.filters.search,
-                }}
-              />
-            }
+            description={controller.register.page.cursor
+              ? `${controller.records.all.length} repositories loaded. Search, filters and summary cover these records; load more to include the next page.`
+              : "Repository requests, workspace association, admission status and retained history."}
+            actions={controller.register.page.cursor || controller.register.page.continuationError ? <RepositoryPageControls page={controller.register.page} label="repositories" compact /> : undefined}
+            filterBar={<RepositoryFilters controller={controller} />}
             kicker="Repository Register"
             statusLabel={`${controller.records.filtered.length}/${controller.records.all.length} shown`}
             statusTone="info"
@@ -131,7 +125,7 @@ export function RepositoryControlSurface({
                   <TerasActionButton emphasis="primary"
                     data-repository-selected-action="true" data-repository-intake-open="true"
                     disabled={!controller.intake.canPrepare} onClick={controller.intake.open}>
-                    Review workspace registration
+                    Continue onboarding in Registry
                   </TerasActionButton>
                   <TerasActionButton emphasis="secondary" onClick={controller.selectedRepositoryAction.open}>
                     Inspect Repository
@@ -148,7 +142,7 @@ export function RepositoryControlSurface({
                 </TerasActionButton>}
                 {controller.verification.available ? <TerasActionButton emphasis="secondary" onClick={controller.verification.show}>Application verification</TerasActionButton> : null}
               </TerasActionRow>),
-              title: controller.intake.required ? "Workspace registration" : selectedRepository.admissionState === "admitted" ? "Workspace registration complete" : repositorySelectedActionTitle(
+              title: controller.intake.required ? "Onboarding required" : selectedRepository.admissionState === "admitted" ? "Workspace registration complete" : repositorySelectedActionTitle(
                 selectedRepository,
                 controller.selectedRepositoryCustodyResult,
               ),
@@ -172,4 +166,16 @@ export function RepositoryControlSurface({
       />
     </>
   );
+}
+
+function RepositoryFilters({controller}: {controller: RepositoryControlController}) {
+  const status = {label: "Filter repository status", onValueChange: controller.filters.onStatusChange,
+    options: controller.filters.statusOptions, value: controller.filters.status};
+  const account = {label: "Filter GitHub account", onValueChange: controller.filters.onAccountChange,
+    options: controller.filters.accountOptions, value: controller.filters.account};
+  const search = {ariaLabel: "Search repositories", onValueChange: controller.filters.onSearchChange,
+    placeholder: controller.register.page.cursor ? "Search loaded repositories…" : "Search repository, workspace association, route, class...", value: controller.filters.search};
+  return controller.filters.accountOptions.length > 2
+    ? <TerasFilterBar data-repository-filter-bar="true" filters={[account, status]} search={search} />
+    : <TerasFilterBar data-repository-filter-bar="true" filters={[status]} search={search} />;
 }

@@ -74,9 +74,9 @@ export function projectRepositoryEffectiveRecord({
       admissionReceipt = receipt;
       projectedRecord = {
         ...projectedRecord,
-        lastValidation: `local admission review receipt / ${receipt.recordedAt}`,
+        lastValidation: `historical demonstration receipt / ${receipt.recordedAt}`,
         nextAction:
-          "Review the local admission evidence. Repository admission and workspace contract writes remain future owner-routed actions.",
+          "This historical demonstration did not onboard the repository. Check current workspace onboarding in Registry.",
       };
       continue;
     }

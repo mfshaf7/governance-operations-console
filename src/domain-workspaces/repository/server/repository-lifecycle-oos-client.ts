@@ -16,6 +16,7 @@ import {
 } from "../../../console-integration/source-authority/console-source-authority.ts";
 
 import { assertRepositoryCustodyWorkflowResult } from "../live-runtime/repository-custody-live-contract.ts";
+import { readRepositoryConnections } from "./repository-custody-oos-client.ts";
 import {
   assertRepositoryLifecycleAudit,
   assertRepositoryLifecycleWorkflowResult,
@@ -114,7 +115,15 @@ export async function executeRepositoryLifecycleAction(
   assertRepositoryLifecycleIntent(intent);
   const config = resolveRepositoryLifecycleConfig(env);
   const current = await resolveCurrentLifecycleState(intent, config, fetchImpl);
-  const request = buildRepositoryLifecycleRequest(intent, current, config, env);
+  let binding;
+  if (["archive-provider", "unarchive-provider"].includes(intent.action)) {
+    const connected = await readRepositoryConnections({env, fetchImpl});
+    const selected = connected.connections.find(item => item.account.toLowerCase() === intent.repositoryOwner?.toLowerCase());
+    binding = selected?.credential_bindings.lifecycle;
+    if (!selected?.capabilities.lifecycle || !binding) throw new RepositoryLifecycleOosError(
+      "The selected GitHub account has no active lifecycle connection.", "repository_connection_not_ready", 409);
+  }
+  const request = buildRepositoryLifecycleRequest(intent, current, config, env, binding);
   const result = assertRepositoryLifecycleWorkflowResult(
     await repositoryLifecycleOosRequest(
       config,
@@ -173,6 +182,7 @@ export function buildRepositoryLifecycleRequest(
   },
   config: RepositoryLifecycleOosConfig,
   env: NodeJS.ProcessEnv,
+  connectedBinding?: RepositoryLifecycleArtifactRef,
 ): RepositoryLifecycleRequest {
   assertRepositoryLifecycleIntent(intent);
   const operatorRef = artifactReference(
@@ -241,7 +251,7 @@ export function buildRepositoryLifecycleRequest(
           )
         : null,
       provider_credential_binding_ref: providerAction
-        ? configuredArtifactRef(env, {
+        ? connectedBinding ?? configuredArtifactRef(env, {
             digestName:
               "REPOSITORY_LIFECYCLE_PROVIDER_CREDENTIAL_BINDING_DIGEST",
             label: "repository lifecycle provider credential binding",

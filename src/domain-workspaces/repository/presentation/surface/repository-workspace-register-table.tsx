@@ -39,8 +39,18 @@ export function RepositoryWorkspaceRegisterTable({
       render: (record) => (
         <TerasRecordCellText
           description={repositoryRecordDescription(record)}
-          title={record.name}
+          title={record.providerIdentity ? `${record.providerIdentity.owner}/${record.providerIdentity.name}` : record.name}
         />
+      ),
+    },
+    {
+      header: "Visibility",
+      intent: "status",
+      key: "visibility",
+      render: (record) => (
+        <span title={record.visibilityObservedAt ? `GitHub visibility recorded ${record.visibilityObservedAt}` : "GitHub visibility has not been confirmed"}>
+          {record.visibility === "private" ? "Private" : record.visibility === "internal" ? "Internal" : record.visibility === "public" ? "Public" : "Unknown"}
+        </span>
       ),
     },
     {

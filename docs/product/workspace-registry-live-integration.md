@@ -34,6 +34,16 @@ Private source-file access and complete operating qualification remain pending.
 Isolated source/browser proof does not authorize live activation or establish
 that every native-source consumer is operational.
 
+## Repository onboarding
+
+Registry now coordinates repository onboarding as well as product/component
+registration. **Onboard workspace item** offers Repository first, with concise
+Product/Component explanations. Repository Control hands over the exact immutable
+provider identity; no provider details are re-entered. The existing custody-bound
+repository form, source-control setup and Inventory activation remain the actual
+workflows. See [Repository onboarding](repository-onboarding.md). This candidate
+still requires coordinated source acceptance and activation.
+
 ## Boundary
 
 Workspace Registry is the Console control surface for canonical active

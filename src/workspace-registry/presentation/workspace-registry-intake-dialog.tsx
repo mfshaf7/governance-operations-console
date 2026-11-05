@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { TerasLoadingState, TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack,
   TerasDraftCloseGuardDialog, TerasTechnicalDetails, TerasMetadataList, TerasSelectableRow, TerasList, TerasModalShell, TerasNoteField, TerasSelectField, TerasSignalItem, TerasTextField } from "@/teras";
+import {RepositoryOnboarding} from "../../domain-workspaces/repository/index";
 import { WorkspaceIntakeDialog } from "../../console-integration/workspace-intake/presentation/workspace-intake-dialog";
 import { useWorkspaceIntakeLiveRuntime } from "../../console-integration/workspace-intake/live-runtime/use-workspace-intake-live-runtime";
 import { completedDirectIntakeCandidate, directIntakeTarget, directWorkspaceIntakeCandidate, emptyDirectIntakeDraft,
@@ -12,30 +13,33 @@ import { useIntakeOwnerSetup } from "../live-runtime/use-intake-owner-setup";
 import { componentTypes, deliveryTargets, graphRoles, guidedIntakeDraft, derivedIntakeRole, validationApproaches } from "../model/workspace-intake-guidance";
 import type { WorkspaceRegistrySnapshot } from "../model/workspace-registry-types";
 
-export function WorkspaceRegistryIntakeDialog({ snapshot, onClose, fixtureMode = false }: {
+export function WorkspaceRegistryIntakeDialog({ snapshot, onClose, fixtureMode = false, initialProviderId = null, onActivateRepository }: {
   snapshot: WorkspaceRegistrySnapshot; fixtureMode?: boolean; onClose: () => void;
+  initialProviderId?: string | null; onActivateRepository: (name: string, route?: "activation" | "lifecycle") => void;
 }) {
-  const [kind, setKind] = useState<DirectIntakeKind>("product");
+  const [kind, setKind] = useState<DirectIntakeKind | "repo">("repo");
+  const [repositorySelected, setRepositorySelected] = useState(Boolean(initialProviderId));
   const [name, setName] = useState("");
   const [selected, setSelected] = useState<{ kind: DirectIntakeKind; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [closeGuardOpen, setCloseGuardOpen] = useState(false);
   const requestClose = () => { if (name.trim()) setCloseGuardOpen(true); else onClose(); };
+  if (repositorySelected) return <RepositoryOnboarding providerId={initialProviderId} fixtureMode={fixtureMode} onActivate={onActivateRepository} onClose={onClose} />;
   if (selected) return <DirectIntakeTarget key={`${selected.kind}:${selected.name}`} target={selected}
     snapshot={snapshot} fixtureMode={fixtureMode} onChangeTarget={() => setSelected(null)} onClose={onClose} />;
-  return <><TerasModalShell bodyLayout="scroll" height="content" width="standard" title="Workspace Intake"
-    kicker="Direct classification" surfaceId="workspace-registry-intake-target"
-    description={fixtureMode ? "Preview only. Explore the registration forms without changing workspace records." : "Register an application or service as a product, or a supporting service, library or plugin as a component."}
+  return <><TerasModalShell bodyLayout="scroll" height="content" width="standard" title="Workspace onboarding"
+    kicker="Workspace Registry" surfaceId="workspace-registry-intake-target"
+    description={fixtureMode ? "Preview only. Explore the registration forms without changing workspace records." : "Choose what you want to bring into the managed workspace. Repository onboarding reuses verified GitHub details."}
     onClose={requestClose} footer={<>
       <TerasActionButton emphasis="secondary" onClick={requestClose}>Back to Registry</TerasActionButton>
-      <TerasActionButton onClick={() => { try { setSelected(directIntakeTarget(kind, name.trim())); }
-        catch (failure) { setError(failure instanceof Error ? failure.message : "Invalid target."); } }}>{fixtureMode ? "Preview Intake Form" : "Inspect Intake requests"}</TerasActionButton>
+      <TerasActionButton onClick={() => { if (kind === "repo") { setRepositorySelected(true); return; } try { setSelected(directIntakeTarget(kind, name.trim())); }
+        catch (failure) { setError(failure instanceof Error ? failure.message : "Invalid target."); } }}>{kind === "repo" ? "Continue repository onboarding" : fixtureMode ? "Preview registration form" : "Continue registration"}</TerasActionButton>
     </>}>
     <TerasFieldStack spacing="loose">
       <TerasSelectField label="Registration type" value={kind} onValueChange={setKind}
-        options={[{ label: "Product", value: "product" }, { label: "Component", value: "component" }]} />
-      <TerasTextField label="Short name" value={name} onValueChange={setName} placeholder="For example team-dashboard; lowercase letters, numbers, dots, hyphens or underscores" />
-      <TerasContentTray kicker="Choose an identity" description="A product is an application or service delivered as a whole. A component supports a product or the workspace. The short name becomes its stable workspace identifier; repository registration starts in Repository Control." />
+        options={[{ label: "Repository — source files and Git history", value: "repo" }, { label: "Product — an application or service", value: "product" }, { label: "Component — a supporting service or library", value: "component" }]} />
+      {kind !== "repo" ? <TerasTextField label="Short name" value={name} onValueChange={setName} placeholder="For example team-dashboard; lowercase letters, numbers, dots, hyphens or underscores" /> : null}
+      <TerasContentTray kicker="Choose an identity" description={kind === "repo" ? "Onboard an existing repository using its verified GitHub details. Product and component registration are separate choices for work that needs them." : kind === "product" ? "Register a complete application or service and associate its already onboarded source repositories." : "Register a separately managed service, library or plugin and select its already onboarded repository. Ordinary project folders do not need component records."} />
       {error ? <TerasContentTray kicker="Target required" description={error} /> : null}
     </TerasFieldStack>
   </TerasModalShell><TerasDraftCloseGuardDialog open={closeGuardOpen} kicker="Unsaved Intake target"

@@ -347,6 +347,7 @@ export function ProposalDispositionStep({
             routeSupportsRepository={routeSupportsRepository}
             selectedRepo={selectedRepo}
             registeredRepositories={repositories.options}
+            repositorySearch={repositories.search}
             repositoriesCurrent={repositories.ready}
             repositoriesLoading={repositories.loading}
             onRefreshRepositories={() => { void repositories.refresh().catch(() => undefined); }}

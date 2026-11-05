@@ -189,7 +189,7 @@ for this recovery do not replace exact composed acceptance or live qualification
 
 ### Continue An Approved Source Scope
 
-Source Authorization displays the selected scope, its expiry, credential receipt
+**Source access** displays the selected scope, its expiry, credential receipt
 and original owner operation. The scope approval and its short-lived source
 credential have separate lifetimes. When a current live session requires source
 credentials and the selected scope remains approved, choose
@@ -199,7 +199,8 @@ renews its credential when needed before attempting source work. The primary
 owner next action remains authoritative; this supporting control grants no
 source permission or local success.
 
-After an interruption, use `Recover original` and `Refresh source authority` to
+After an interruption, use **Open access request** and **Check access status**
+(or **Check original access request** after a lost response) to
 inspect the same approval and owner operation. Wait for the current session
 projection before continuing. An unknown command outcome must be reconciled
 through the original session before another action. A valid approval does not

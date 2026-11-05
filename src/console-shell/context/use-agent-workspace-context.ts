@@ -25,7 +25,18 @@ export function useAgentWorkspaceContext(workspaceId: ConsoleWorkspaceId | null)
         try {
           const boundedFetch: typeof fetch = (input, init) => fetch(input, { ...init, signal: deadline });
           if (key === "repositories") {
-            const records = await readRepositoryCustodyRegister(boundedFetch);
+            // Global attention reads one current record per repository, never
+            // every creation/link request. The existing lifetime bounds this read.
+            const records: Awaited<ReturnType<typeof readRepositoryCustodyRegister>>["records"] = [];
+            const seen = new Set<string>();
+            let cursor: string | null = null;
+            do {
+              const page = await readRepositoryCustodyRegister(boundedFetch, {view: "register", cursor, signal: deadline});
+              records.push(...page.records);
+              cursor = page.next_cursor;
+              if (cursor && seen.has(cursor)) throw new Error("Repository pagination did not advance");
+              if (cursor) seen.add(cursor);
+            } while (cursor);
             if (!stopped) {
               const capturedAt = new Date().toISOString();
               setOwnerReads(current => ({ ...current, repositories: { state: "current", payload: records, capturedAt } }));

@@ -113,7 +113,7 @@ export function repositoryHistoryReceiptFacts(
       value: `${result.status} / ${result.receipt!.completed_at}`,
     })),
     ...(includeLocal ? [{
-      label: "Local setup review",
+      label: "Historical demonstration review",
       title: admissionReceipt?.receiptId,
       value: admissionReceipt
         ? repositoryReceiptReference(admissionReceipt)
@@ -181,7 +181,7 @@ function repositoryReceiptTimelineRow(
       return {
         id: `local:${receipt.receiptId}`,
         detail: receipt.summary,
-        label: "Local setup review",
+        label: "Historical demonstration review",
         status: receipt.resultState,
         timestamp: receipt.recordedAt,
         tone: "ok",

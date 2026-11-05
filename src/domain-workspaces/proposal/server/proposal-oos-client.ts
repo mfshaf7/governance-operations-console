@@ -719,8 +719,13 @@ async function proposalOosRequest(
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     const error = isRecord(body) && typeof body.error === "string" ? body.error : response.statusText;
-    const code = isRecord(body) && typeof body.code === "string" ? body.code : "proposal_oos_rejected";
-    throw new ProposalOosError(error || "OOS rejected the Proposal request.", code, response.status);
+    const gateMessages: Record<string, string> = {
+      proposal_repository_onboarding_required: "Complete repository onboarding in Workspace Registry before using this repository. Current readiness could not be confirmed.",
+      proposal_repository_readiness_unavailable: "Current repository readiness is unavailable. Project use remains blocked; restore the connection and retry.",
+      proposal_repository_route_unavailable: "This Prototype Studio route requires verified public source. Private work can use the private-capable Delivery route. Workspace onboarding does not authorize public publication.",
+    };
+    const code = isRecord(body) && typeof body.code === "string" ? body.code : isRecord(body) && typeof body.error === "string" && body.error in gateMessages ? body.error : "proposal_oos_rejected";
+    throw new ProposalOosError(gateMessages[code] ?? (error || "OOS rejected the Proposal request."), code, response.status);
   }
   if (!sourceExpectation) return body;
   try {

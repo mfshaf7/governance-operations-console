@@ -1,4 +1,6 @@
 import type { TerasMetadataItem } from "@/teras";
+import {isRepositoryUse} from "../../../domain/repository-use.ts";
+import { repositoryWorkspaceName } from "../../../domain/repository-workspace-reference.ts";
 
 import type {
   RepositoryCustodyWorkflowResult,
@@ -25,11 +27,11 @@ export function repositoryRequestDraftDirty(draft: RepositoryRequestDraft, basel
 
 export function repositoryRequestDraftComplete(draft: RepositoryRequestDraft) {
   return (
-    draft.name.trim().length > 0 &&
+    isRepositoryUse(draft.custodyKind) && draft.name.trim().length > 0 &&
     draft.ownerDomain.trim().length > 0 &&
     draft.purpose.trim().length > 0 &&
     draft.purpose.trim().length <= 350 &&
-    draft.workspaceOwnerRef.trim().length > 0 &&
+    repositoryWorkspaceName(draft.workspaceOwnerRef) !== null &&
     draft.approvalNote.trim().length >= 12 &&
     draft.templateReviewed
   );
@@ -164,18 +166,24 @@ export function repositoryProvisioningChecks(
   const coordinatesReady = Boolean(
     draft.ownerDomain.trim() && draft.name.trim() && draft.purpose.trim(),
   );
-  const custodyReady = Boolean(draft.workspaceOwnerRef.trim());
+  const custodyReady = repositoryWorkspaceName(draft.workspaceOwnerRef) !== null;
   const approvalReady = resume || draft.approvalNote.trim().length >= 12;
   return [
     {
-      detail: "Organization, repository name, and purpose are required.",
+      detail: "A connected GitHub account, repository name, and purpose are required.",
       label: "Repository coordinates",
       status: coordinatesReady ? "ready" : "required",
       tone: coordinatesReady ? ("ok" as const) : ("warn" as const),
     },
     {
-      detail: "Custody names the workspace repository for the new repository.",
-      label: "Workspace custody",
+      detail: resume ? "Resume preserves the original request's recorded classification." : "Choose Dedicated for one project or Shared for several projects.",
+      label: "Repository use",
+      status: resume || isRepositoryUse(draft.custodyKind) ? "ready" : "required",
+      tone: resume || isRepositoryUse(draft.custodyKind) ? ("ok" as const) : ("warn" as const),
+    },
+    {
+      detail: "The generated workspace identifier must use the supported repository format.",
+      label: "Workspace identifier",
       status: custodyReady ? "ready" : "required",
       tone: custodyReady ? ("ok" as const) : ("warn" as const),
     },

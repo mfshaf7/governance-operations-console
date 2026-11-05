@@ -25,7 +25,7 @@ test("Repository admission review evidence does not claim canonical admission", 
   assert.equal(records.length, 1);
   assert.equal(records[0].name, "Source record");
   assert.equal(records[0].admissionState, "ready");
-  assert.match(records[0].lastValidation, /local admission review receipt/);
+  assert.match(records[0].lastValidation, /historical demonstration receipt/);
   assert.equal(records[0].admissionPosture[0].items[0].state, "pending");
 });
 

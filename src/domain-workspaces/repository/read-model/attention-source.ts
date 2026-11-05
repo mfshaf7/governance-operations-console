@@ -4,7 +4,7 @@ import type {
   ConsoleAttentionSourceSnapshot,
 } from "../../../console-integration/attention-contract.ts";
 import { ownerAttentionSnapshot, currentOwnerRead, attentionRows, type ConsoleOwnerRead } from "../../../console-integration/live-attention.ts";
-import { projectRepositoryProvisioningResults } from "../live-runtime/repository-custody-live-projection.ts";
+import { projectRepositoryProvisioningResults, projectRepositoryCustodyResults } from "../live-runtime/repository-custody-live-projection.ts";
 import { projectRepositoryCurrentInventory } from "../live-runtime/repository-inventory-live-projection.ts";
 import { assertRepositoryCustodyWorkflowResult } from "../live-runtime/repository-custody-live-contract.ts";
 import type { WorkspaceContinuityProjection } from "../../../workspace-continuity/workspace-continuity-types.ts";
@@ -17,7 +17,9 @@ export function projectRepositoryOwnerAttention(read: ConsoleOwnerRead | undefin
     if (registrations !== undefined && !currentOwnerRead(registrations)) throw new Error("Current registration unavailable");
     const results = attentionRows(payload).map(assertRepositoryCustodyWorkflowResult);
     const lookup = registrations === undefined ? undefined : registrations && currentOwnerRead(registrations) ? registrations.payload as RepositoryRegistrationLookup : null;
-    const records = projectRepositoryCurrentInventory(projectRepositoryProvisioningResults([], Object.fromEntries(results.map(result => [result.request.request_id, result]))), continuity!.payload as WorkspaceContinuityProjection, lookup);
+    const provisions = projectRepositoryProvisioningResults([], Object.fromEntries(results.map(result => [result.request.request_id, result])));
+    const custody = projectRepositoryCustodyResults(provisions, Object.fromEntries(results.map(result => [result.request.request_id, result])));
+    const records = projectRepositoryCurrentInventory(custody, continuity!.payload as WorkspaceContinuityProjection, lookup);
     return records.flatMap(record => {
       const candidate = repositoryAttentionCandidate({ record, local: false, projectedAt: observedAt, receiptRefs: [] });
       return candidate ? [candidate] : [];

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { readRepositoryCustodyRegister, RepositoryCustodyReadError } from "./repository-custody-live-readback.ts";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { readRepositoryCustodyRegister } from "./repository-custody-live-readback.ts";
+import { useRepositoryCustodyPages } from "./use-repository-custody-pages.ts";
 
 import {
   assertRepositoryCustodyWorkflowResult,
@@ -25,11 +26,20 @@ export class RepositoryCustodyClientError extends Error {
 }
 
 export function useRepositoryCustodyLiveRuntime() {
-  const [retainedResults, setRetainedResults] = useState<RepositoryCustodyWorkflowResult[]>([]);
-  const [sourceStatus, setSourceStatus] = useState<"loading" | "current" | "offline">("loading");
-  const [sourceError, setSourceError] = useState<string | null>(null);
-  const [sourceRetryable, setSourceRetryable] = useState(false);
-  const refreshSequence = useRef(0);
+  const catalog = useRepositoryCustodyPages({view: "register"}, true);
+  const history = useRepositoryCustodyPages({view: "requests"});
+  const retainedResults = history.records;
+  const sourceStatus = catalog.status, sourceError = catalog.error, sourceRetryable = catalog.retryable;
+  const refresh = catalog.refresh;
+  const [commandResults, setCommandResults] = useState<Record<string, RepositoryCustodyWorkflowResult>>({});
+  const rememberResult = useCallback((result: RepositoryCustodyWorkflowResult) => {
+    setCommandResults(current => ({...current, [result.request.request_id]: result}));
+  }, []);
+  const registerResults = useMemo(() => {
+    const successful = [...catalog.records, ...Object.values(commandResults)].filter(result => result.status === "succeeded" && result.provider_readback);
+    successful.sort((a,b) => (a.receipt?.completed_at ?? a.request.requested_at).localeCompare(b.receipt?.completed_at ?? b.request.requested_at) || a.request.request_id.localeCompare(b.request.request_id));
+    return [...new Map(successful.map(result => [result.provider_readback!.repository_identity.provider_repository_id, result])).values()];
+  }, [catalog.records, commandResults]);
   const [resultsByRepositoryId, setResultsByRepositoryId] = useState<
     Readonly<Record<string, RepositoryCustodyWorkflowResult>>
   >({});
@@ -46,47 +56,21 @@ export function useRepositoryCustodyLiveRuntime() {
   const [pendingProvisioningRequestId, setPendingProvisioningRequestId] =
     useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    const sequence = ++refreshSequence.current;
-    try {
-      const records = await readRepositoryCustodyRegister();
-      if (sequence !== refreshSequence.current) return;
-      const provisions: Record<string, RepositoryCustodyWorkflowResult> = {};
-      const links: Record<string, RepositoryCustodyWorkflowResult> = {};
-      for (const record of records.sort((a, b) =>
-        a.request.requested_at.localeCompare(b.request.requested_at) ||
-        a.request.request_id.localeCompare(b.request.request_id),
-      )) {
-        if (record.request.action === "provision-new") {
-          provisions[record.request.request_id] = record;
-        } else if (record.provider_readback) {
-          links[`repo-provider-${record.provider_readback.repository_identity.provider_repository_id}`] = record;
-        }
-      }
-      setProvisioningResultsByRequestId(provisions);
-      setResultsByRepositoryId(links);
-      setRetainedResults(records);
-      setSourceStatus("current");
-      setSourceError(null);
-      setSourceRetryable(false);
-    } catch (error) {
-      if (sequence !== refreshSequence.current) return;
-      setSourceStatus("offline");
-      setSourceError(error instanceof Error ? error.message : "Canonical Repository readback failed.");
-      setSourceRetryable(error instanceof RepositoryCustodyReadError && error.retryable);
-    }
-  }, []);
-
   useEffect(() => {
-    void refresh();
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, 15_000);
-    return () => {
-      refreshSequence.current += 1;
-      window.clearInterval(timer);
-    };
-  }, [refresh]);
+    const records = [...registerResults, ...history.records].sort((a,b) => a.request.requested_at.localeCompare(b.request.requested_at) || a.request.request_id.localeCompare(b.request.request_id));
+    const provisions: Record<string, RepositoryCustodyWorkflowResult> = {}, links: Record<string, RepositoryCustodyWorkflowResult> = {};
+    for (const record of records) {
+      if (record.request.action === "provision-new") provisions[record.request.request_id] = record;
+      else if (record.provider_readback) links[`repo-provider-${record.provider_readback.repository_identity.provider_repository_id}`] = record;
+    }
+    setProvisioningResultsByRequestId(current => ({...current, ...provisions}));
+    setResultsByRepositoryId(current => ({...current, ...links}));
+  }, [registerResults, history.records]);
+  const findByProvider = useCallback(async (providerRepositoryId: string) => {
+    const page = await readRepositoryCustodyRegister(fetch, {view: "register", providerRepositoryId});
+    for (const result of page.records) rememberResult(result);
+    return page.records;
+  }, [rememberResult]);
 
   const link = useCallback(async (intent: RepositoryCustodyLinkIntent) => {
     setPendingRepositoryId(intent.repositoryId);
@@ -100,7 +84,7 @@ export function useRepositoryCustodyLiveRuntime() {
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) throw clientError(body);
       const result = assertRepositoryCustodyWorkflowResult(body);
-      refreshSequence.current += 1;
+      rememberResult(result);
       setResultsByRepositoryId((current) => ({
         ...current,
         [intent.repositoryId]: result,
@@ -139,7 +123,7 @@ export function useRepositoryCustodyLiveRuntime() {
         const body: unknown = await response.json().catch(() => null);
         if (!response.ok) throw clientError(body);
         const result = assertRepositoryCustodyWorkflowResult(body);
-        refreshSequence.current += 1;
+        rememberResult(result);
         setResultsByRepositoryId((current) => ({
           ...current,
           [repositoryId]: result,
@@ -180,7 +164,7 @@ export function useRepositoryCustodyLiveRuntime() {
           false,
         );
       }
-      refreshSequence.current += 1;
+      rememberResult(result);
       setProvisioningResultsByRequestId((current) => ({
         ...current,
         [intent.requestId]: result,
@@ -216,7 +200,7 @@ export function useRepositoryCustodyLiveRuntime() {
           false,
         );
       }
-      refreshSequence.current += 1;
+      rememberResult(result);
       setProvisioningResultsByRequestId((current) => ({
         ...current,
         [requestId]: result,
@@ -236,6 +220,10 @@ export function useRepositoryCustodyLiveRuntime() {
 
   return {
     retainedResults,
+    registerResults,
+    catalog,
+    history,
+    findByProvider,
     refresh,
     sourceStatus,
     sourceError,

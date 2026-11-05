@@ -25,3 +25,8 @@ export const emptyRepositoryRequestDraft: RepositoryRequestDraft = {
   visibility: "private",
   workspaceOwnerRef: "",
 };
+
+export function repositoryDefaultWorkspaceReference(account: string, name: string) {
+  const repository = name.trim().toLowerCase();
+  return repository ? `repo:${account.trim() ? `${account.trim().toLowerCase()}--` : ""}${repository}` : "";
+}

@@ -3,6 +3,8 @@
 import { repositoryCreationForProposal, repositoryCreationProposalId } from "../../../operation-integrations/proposal-repository-custody.ts";
 import { useProposalRepositoryGateRuntime } from "../../../operation-integrations/use-proposal-repository-gate-runtime.ts";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useRepositoryConnections } from "../../live-runtime/use-repository-connections.ts";
+import { repositoryDefaultDestination } from "../../live-runtime/repository-connections.ts";
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
 import type { OperationSurfaceStatusModel } from "../../../operation-contracts/surface-status.ts";
 import {
@@ -22,17 +24,19 @@ import { recordProposalRepositoryGateResolution } from "../../../operation-integ
 import {
   getRepositoryRuntimeProjectionSnapshot,
   getRepositoryRuntimeCapabilities,
-  recordRepositoryAdmissionCommand,
   recordRepositoryProposalGateResolutionCommand,
   subscribeRepositoryRuntimeProjection,
 } from "../../local-runtime/repository-runtime.ts";
 import {
   emptyRepositoryRequestDraft,
+  repositoryDefaultWorkspaceReference,
   type RepositoryRequestDraft,
 } from "../../work-model/request/repository-request-model.ts";
 import { projectRepositoryEffectiveRecordProjections } from "../../local-runtime/repository-effective-projection.ts";
 import {
   repositoryWorkspaceReadModel,
+  repositoryConnectionsFixture,
+  repositoryLinkPreviewFixture,
   type RepositoryWorkspaceRecord,
 } from "../../read-model/repository-workspace-read-model.ts";
 import {
@@ -85,9 +89,11 @@ const defaultRepositoryId =
 export function useRepositoryControlController({
   entryIntent = null,
   onOpenDeliveryCatalog,
+  onOpenWorkspaceRegistration,
 }: {
   entryIntent?: ConsoleSurfaceEntryIntent | null;
   onOpenDeliveryCatalog?: (repositoryId: string) => void;
+  onOpenWorkspaceRegistration?: (providerId: string) => void;
 }) {
   const runtimeCapabilities = getRepositoryRuntimeCapabilities();
   const consoleRuntime = useConsoleRuntimeCapabilities();
@@ -139,6 +145,10 @@ export function useRepositoryControlController({
   const canLinkRepository = consoleRuntimeCapabilityExecutable(consoleRuntime, "repository-custody", "mutation");
   const lifecycleRuntime = useRepositoryLifecycleLiveRuntime();
   const providerObservations = useRepositoryProviderObservations();
+  const connections = useRepositoryConnections(consoleRuntime.projection?.mode === "live");
+  const previewRepositoryRequest = primaryRecordIsolation.fixtureAllowed;
+  const requestConnections = previewRepositoryRequest ? repositoryConnectionsFixture : connections.value;
+  const canOpenRepositoryRequest = canProvisionRepository || previewRepositoryRequest;
   const proposalRequestRecords = useSyncExternalStore(
     subscribeProposalRepositoryRequestRecords,
     getProposalRepositoryRequestRecords,
@@ -173,11 +183,11 @@ export function useRepositoryControlController({
     () => {
       const provisionedRecords = projectRepositoryProvisioningResults(
         recordProjections.map((projection) => projection.record),
-        custodyRuntime.provisioningResultsByRequestId,
+        Object.fromEntries(custodyRuntime.registerResults.map(result => [result.request.request_id, result])),
       );
       const custodyRecords = projectRepositoryCustodyResults(
         provisionedRecords,
-        custodyRuntime.resultsByRepositoryId,
+        Object.fromEntries(custodyRuntime.registerResults.map(result => [repositoryProvisionedRecordId(result)!, result])),
       );
       const inventoryRecords = primaryRecordIsolation.fixtureAllowed ? custodyRecords
         : projectRepositoryCurrentInventory(custodyRecords, continuityRuntime.projection, registrationStatus.value);
@@ -185,8 +195,7 @@ export function useRepositoryControlController({
     },
     [
       providerObservations.snapshots,
-      custodyRuntime.provisioningResultsByRequestId,
-      custodyRuntime.resultsByRepositoryId,
+      custodyRuntime.registerResults,
       recordProjections,
       continuityRuntime.projection,
       registrationStatus.value,
@@ -222,7 +231,7 @@ export function useRepositoryControlController({
     }
   }, [entryIntent]);
   const [verificationOpen, setVerificationOpen] = useState(false);
-  const [intakeRepositoryId, setIntakeRepositoryId] = useState<string | null>(null);
+
   const allCustodyResults = [...Object.values(custodyRuntime.resultsByRepositoryId),
     ...Object.values(custodyRuntime.provisioningResultsByRequestId), ...custodyRuntime.retainedResults];
   const [requestCloseGuardOpen, setRequestCloseGuardOpen] = useState(false);
@@ -243,14 +252,13 @@ export function useRepositoryControlController({
   const [statusFilter, setStatusFilter] =
     useState<RepositoryStatusFilter>("all");
   const [search, setSearch] = useState("");
+  const [accountFilter, setAccountFilter] = useState("all");
   const [selectedRepositoryId, setSelectedRepositoryId] =
     useState(defaultRepositoryId);
   const [admissionRepositoryId, setAdmissionRepositoryId] = useState<
     string | null
   >(null);
-  const [admissionRunRepositoryId, setAdmissionRunRepositoryId] = useState<
-    string | null
-  >(null);
+
   const [
     repositoryGateResolutionRepositoryId,
     setRepositoryGateResolutionRepositoryId,
@@ -294,9 +302,9 @@ export function useRepositoryControlController({
               .includes(normalizedSearch)
           : true;
 
-        return matchesStatus && matchesSearch;
+        return matchesStatus && matchesSearch && (accountFilter === "all" || record.providerIdentity?.owner.toLowerCase() === accountFilter);
       }),
-    [normalizedSearch, records, statusFilter],
+    [normalizedSearch, records, statusFilter, accountFilter],
   );
   const selectedRepository = useMemo(
     () =>
@@ -313,8 +321,8 @@ export function useRepositoryControlController({
     [inspectedRepositoryId, records],
   );
   const selectedRepositoryCustodyResult = allCustodyResults.find(result => repositoryIntakeCustody(selectedRepository, result));
-  const intakeRepository = records.find((record) => record.id === intakeRepositoryId) ?? null;
-  const intakeCustodyResult = allCustodyResults.find((result) => repositoryIntakeCustody(intakeRepository, result));
+
+
   const custodyRepository = useMemo(
     () =>
       custodyRepositoryId
@@ -329,6 +337,12 @@ export function useRepositoryControlController({
         : null,
     [historyRepositoryId, records],
   );
+  useEffect(() => {
+    if (consoleRuntime.projection?.mode !== "live") return;
+    if (requestDialogOpen) void custodyRuntime.history.load({view: "requests", ...(requestProposalId ? {proposalId: requestProposalId} : {})});
+    else if (canonicalGateOpen && canonicalGateSubject) void custodyRuntime.history.load({view: "requests", proposalId: canonicalGateSubject});
+    else if (historyRepository?.providerIdentity) void custodyRuntime.history.load({view: "requests", providerRepositoryId: historyRepository.providerIdentity.repositoryId});
+  }, [requestDialogOpen, requestProposalId, canonicalGateOpen, canonicalGateSubject, historyRepository?.providerIdentity?.repositoryId, consoleRuntime.projection?.mode, custodyRuntime.history.load]);
   const admissionRepository = useMemo(
     () =>
       admissionRepositoryId
@@ -337,14 +351,7 @@ export function useRepositoryControlController({
         : null,
     [admissionRepositoryId, records],
   );
-  const admissionRunRepository = useMemo(
-    () =>
-      admissionRunRepositoryId
-        ? (records.find((record) => record.id === admissionRunRepositoryId) ??
-          null)
-        : null,
-    [admissionRunRepositoryId, records],
-  );
+
   const repositoryGateResolutionRepository = useMemo(
     () =>
       repositoryGateResolutionRepositoryId
@@ -372,10 +379,9 @@ export function useRepositoryControlController({
     [records],
   );
   const currentOwnersAvailable = custodyRuntime.sourceStatus === "current" && continuityRuntime.mode === "live";
-  const localAdmissionAvailable = primaryRecordIsolation.fixtureAllowed && runtimeCapabilities.canSubmit;
   function workspaceRegistrationFor(record: RepositoryWorkspaceRecord | null | undefined) {
     const native = registrationStatus.value?.mode === "current" ? registrationStatus.value.records.find(row => row.record_id === record?.custody?.workspaceOwnerRef) : undefined;
-    const required = !primaryRecordIsolation.fixtureAllowed && record?.admissionState === "ready" && native?.status !== "admitted";
+    const required = !primaryRecordIsolation.fixtureAllowed && record?.admissionState === "ready";
     const custody = allCustodyResults.find((result) => repositoryIntakeCustody(record ?? null, result));
     const unavailableReason = !currentOwnersAvailable
       ? "Workspace registration needs current repository and workspace records. Refresh when the connection is available."
@@ -437,14 +443,24 @@ export function useRepositoryControlController({
     ? activeRequestResult
     : requestCorrectionOf ? custodyRuntime.provisioningResultsByRequestId[requestCorrectionOf] : undefined;
   const requestResult = activeRequestResult ?? correctionSource;
+  const defaultDestination = requestConnections ? repositoryDefaultDestination(requestConnections) : null;
   const requestDraftDirty = requestResult?.status !== "succeeded" && repositoryRequestDraftDirty(
-    requestDraft, requestResult ? repositoryRequestDraftFromResult(requestResult) : emptyRepositoryRequestDraft,
+    requestDraft, requestResult ? repositoryRequestDraftFromResult(requestResult) : {...emptyRepositoryRequestDraft, ownerDomain: defaultDestination?.account ?? ""},
   );
   const requestError = custodyRuntime.provisioningErrorsByRequestId[requestId];
   const requestPending = custodyRuntime.pendingProvisioningRequestId === requestId;
   const resumeApprovedRequest = Boolean(activeRequestResult?.retryable || activeRequestResult?.status === "applying");
+  useEffect(() => {
+    if (requestDialogOpen && !requestResult && !requestDraft.ownerDomain && defaultDestination) {
+      setRequestDraft(current => current.ownerDomain ? current : {...current, ownerDomain: defaultDestination.account});
+    }
+  }, [requestDialogOpen, requestResult, requestDraft.ownerDomain, defaultDestination]);
   const requestDraftCanSubmit =
+    !previewRepositoryRequest &&
     canProvisionRepository &&
+    (!requestProposalId || custodyRuntime.history.status === "current" && custodyRuntime.history.cursor === null && custodyRuntime.history.selection.proposalId === requestProposalId) &&
+    Boolean(!connections.loading && !connections.error && connections.value?.connections.some(item => item.account.toLowerCase() === requestDraft.ownerDomain.toLowerCase() && item.capabilities.provisioning &&
+      (item.account_type !== "personal" || requestDraft.visibility !== "internal")) || resumeApprovedRequest) &&
     !requestPending &&
     (resumeApprovedRequest || repositoryRequestDraftComplete(requestDraft)) &&
     requestResult?.status !== "succeeded" &&
@@ -489,7 +505,7 @@ export function useRepositoryControlController({
   }
 
   function openRepositoryRequestDraft() {
-    if (!canProvisionRepository) return;
+    if (!canOpenRepositoryRequest) return;
     if (!requestDraftDirty && !resumeApprovedRequest && !requestPending) {
       applyRetainedProvisioningRequest("new", null);
     }
@@ -511,12 +527,13 @@ export function useRepositoryControlController({
     setRequestDraft((current) => {
       const next = { ...current, [field]: value } as RepositoryRequestDraft;
       if (
-        field === "name" &&
+        (field === "name" || field === "ownerDomain") &&
         typeof value === "string" &&
         (!current.workspaceOwnerRef ||
-          current.workspaceOwnerRef === `repo:${current.name}`)
+          current.workspaceOwnerRef === `repo:${current.name}` ||
+          current.workspaceOwnerRef === repositoryDefaultWorkspaceReference(current.ownerDomain, current.name))
       ) {
-        next.workspaceOwnerRef = value.trim() ? `repo:${value.trim()}` : "";
+        next.workspaceOwnerRef = repositoryDefaultWorkspaceReference(next.ownerDomain, next.name);
       }
       return next;
     });
@@ -538,7 +555,8 @@ export function useRepositoryControlController({
     setRequestSubmittedAt(null);
     if (retainedId === "new" || retainedId.startsWith("new-for:")) {
       setRequestProposalId(retainedId.startsWith("new-for:") ? retainedId.slice(8) : proposalId);
-      setRequestDraft(emptyRepositoryRequestDraft);
+      const destination = requestConnections ? repositoryDefaultDestination(requestConnections) : null;
+      setRequestDraft({...emptyRepositoryRequestDraft, ownerDomain: destination?.account ?? ""});
       setRequestId(createRepositoryProvisionRequestId());
       setRequestRequestedAt(new Date().toISOString());
       return;
@@ -634,36 +652,11 @@ export function useRepositoryControlController({
     setInspectedRepositoryId(record.id);
   }
 
-  async function runRepositoryAdmission(record: RepositoryWorkspaceRecord) {
-    if (!localAdmissionAvailable) {
-      return;
-    }
-
-    await recordRepositoryAdmissionCommand(record);
-  }
-
-  async function linkRepositoryCustody(intent: RepositoryCustodyLinkIntent) {
-    await custodyRuntime.link(intent);
-  }
-
-  function startRepositoryAdmissionRun(record: RepositoryWorkspaceRecord) {
-    if (!localAdmissionAvailable) return;
-    setAdmissionRepositoryId(null);
-    setAdmissionRunRepositoryId(record.id);
-  }
-
-  function returnToRepositoryAdmission(
-    record: RepositoryWorkspaceRecord | null,
-  ) {
-    setAdmissionRunRepositoryId(null);
-    setAdmissionRepositoryId(record?.id ?? null);
-  }
+  async function linkRepositoryCustody(intent: RepositoryCustodyLinkIntent) { await custodyRuntime.link(intent); }
 
   function openWorkspaceRegistration(record: RepositoryWorkspaceRecord) {
     if (!workspaceRegistrationFor(record).available) return;
-    setSelectedRepositoryId(record.id);
-    setAdmissionRepositoryId(null);
-    setIntakeRepositoryId(record.id);
+    if (onOpenWorkspaceRegistration && record.providerIdentity) onOpenWorkspaceRegistration(record.providerIdentity.repositoryId);
   }
 
   function openRepositoryLifecycle(
@@ -755,21 +748,15 @@ export function useRepositoryControlController({
             record.record_id === selectedRepositoryCustodyResult.request.requested_custody.workspace_owner_ref))),
     },
     intake: {
-      ownerRepositories: currentOwnersAvailable ? (continuityRuntime.projection?.inventory ?? [])
-        .filter(record => record.kind === "repo" && record.posture === "active").map(record => record.name).sort() : [],
-      classification: currentOwnersAvailable ? (registrationStatus.value?.mode === "current" ? registrationStatus.value.records.find(record =>
-        record.phase === "intake" && record.record_id === intakeCustodyResult?.request.requested_custody.workspace_owner_ref)?.status as "out-of-scope" | "proposed" | "admitted" | undefined : undefined)
-        ?? continuityRuntime.projection?.intake.find(record => record.kind === "repo" && record.record_id === intakeCustodyResult?.request.requested_custody.workspace_owner_ref)?.status : undefined,
       canPrepare: selectedRegistration.available,
       required: selectedRegistration.required,
       unavailableReason: selectedRegistration.unavailableReason,
       open: () => { if (selectedRepository) openWorkspaceRegistration(selectedRepository); },
-      close: () => setIntakeRepositoryId(null),
-      repository: intakeRepository,
-      custodyResult: intakeCustodyResult,
     },
     proposalGate: {
-      custodyCurrent: custodyRuntime.sourceStatus === "current",
+      custodyCurrent: custodyRuntime.sourceStatus === "current" && custodyRuntime.history.status === "current",
+      findByProvider: custodyRuntime.findByProvider,
+      historyPage: custodyRuntime.history,
       attachmentAvailable: consoleRuntimeCapabilityExecutable(consoleRuntime,"repository-custody","mutation"),
       attach: custodyRuntime.link,
       custodyResults: [...new Map([...custodyRuntime.retainedResults,
@@ -778,12 +765,16 @@ export function useRepositoryControlController({
       ].map(result => [result.request.request_id,result])).values()],
     },
     standaloneLink: {
+      continueOnboarding: onOpenWorkspaceRegistration ? (result: RepositoryCustodyWorkflowResult) => { const id = result.provider_readback?.repository_identity.provider_repository_id; if (result.status === "succeeded" && id) onOpenWorkspaceRegistration(id); } : undefined,
       open: standaloneLinkOpen,
-      enabled: canPrepareRepositoryLink,
+      enabled: canPrepareRepositoryLink || primaryRecordIsolation.fixtureAllowed,
+      preview: primaryRecordIsolation.fixtureAllowed,
+      previewLookup: primaryRecordIsolation.fixtureAllowed ? repositoryLinkPreviewFixture : undefined,
       executionAvailable: canLinkRepository,
       show: () => setStandaloneLinkOpen(true),
       close: () => setStandaloneLinkOpen(false),
       results: allCustodyResults,
+      findByProvider: custodyRuntime.findByProvider,
       link: custodyRuntime.link,
       openRepository: (result: RepositoryCustodyWorkflowResult) => {
         const id = repositoryProvisionedRecordId(result);
@@ -806,7 +797,6 @@ export function useRepositoryControlController({
         : undefined,
     },
     admission: {
-      localReviewAvailable: localAdmissionAvailable,
       registration: admissionRegistration,
       onOpenRegistration: openWorkspaceRegistration,
       close: () => setAdmissionRepositoryId(null),
@@ -817,23 +807,7 @@ export function useRepositoryControlController({
       onOpenHistory: openRepositoryHistory,
       onOpenLifecycle: (record: RepositoryWorkspaceRecord) =>
         openRepositoryLifecycle(record, "retire-workspace-record"),
-      onStart: startRepositoryAdmissionRun,
-      receipt: admissionRepository
-        ? (recordProjectionById.get(admissionRepository.id)?.admissionReceipt ??
-          undefined)
-        : undefined,
       repository: admissionRepository,
-    },
-    admissionRun: {
-      available: localAdmissionAvailable,
-      close: () => setAdmissionRunRepositoryId(null),
-      onBack: returnToRepositoryAdmission,
-      onRun: runRepositoryAdmission,
-      receipt: admissionRunRepository
-        ? (recordProjectionById.get(admissionRunRepository.id)
-            ?.admissionReceipt ?? undefined)
-        : undefined,
-      repository: admissionRunRepository,
     },
     details: {
       close: () => setInspectedRepositoryId(null),
@@ -843,6 +817,9 @@ export function useRepositoryControlController({
       repository: inspectedRepository,
     },
     filters: {
+      account: accountFilter,
+      onAccountChange: setAccountFilter,
+      accountOptions: [{label: "All GitHub accounts", value: "all"}, ...[...new Set(records.flatMap(record => record.providerIdentity ? [record.providerIdentity.owner.toLowerCase()] : []))].sort().map(account => ({label: account, value: account}))],
       onSearchChange: setSearch,
       onStatusChange: setStatusFilter,
       search,
@@ -862,7 +839,7 @@ export function useRepositoryControlController({
         if (!historyRepository) return;
         const pending: Promise<unknown>[] = [];
         setHistoryReloading(true);
-        if (custodyRuntime.sourceStatus === "offline" && custodyRuntime.sourceRetryable) pending.push(custodyRuntime.refresh());
+        if (custodyRuntime.history.status === "offline" && custodyRuntime.history.retryable) pending.push(custodyRuntime.history.refresh());
         if (historyRepository.providerIdentity && lifecycleRuntime.errorsByRepositoryId[historyRepository.id]?.retryable) {
           pending.push(lifecycleRuntime.refresh({
             repositoryId: historyRepository.id,
@@ -873,9 +850,10 @@ export function useRepositoryControlController({
         try { await Promise.allSettled(pending); } finally { setHistoryReloading(false); }
       },
       custodyResults: repositoryCustodyHistoryForRecord(historyRepository, allCustodyResults),
-      custodySourceStatus: custodyRuntime.sourceStatus,
-      custodySourceError: custodyRuntime.sourceError,
-      custodyRetryable: custodyRuntime.sourceRetryable,
+      page: custodyRuntime.history,
+      custodySourceStatus: custodyRuntime.history.status,
+      custodySourceError: custodyRuntime.history.error,
+      custodyRetryable: custodyRuntime.history.retryable,
       liveMode: consoleRuntime.projection?.mode === "live",
       lifecycleSnapshot: historyRepository ? lifecycleRuntime.snapshotsByRepositoryId[historyRepository.id] : undefined,
       lifecycleError: historyRepository ? lifecycleRuntime.errorsByRepositoryId[historyRepository.id]?.message : undefined,
@@ -893,7 +871,8 @@ export function useRepositoryControlController({
       repository: historyRepository,
     },
     overview: {
-      canProvisionRepository,
+      canOpenRepositoryRequest,
+      partial: Boolean(custodyRuntime.catalog.cursor),
       onOpenRepositoryRequestDraft: openRepositoryRequestDraft,
       requestSubmittedAt,
       summary,
@@ -905,22 +884,26 @@ export function useRepositoryControlController({
     },
     sourceAvailability: {
       loading: consoleRuntime.status === "loading" || continuityRuntime.mode === "loading" || custodyRuntime.sourceStatus === "loading",
-      error: consoleRuntime.error,
+      error: primaryRecordIsolation.fixtureAllowed ? null : custodyRuntime.sourceError ?? consoleRuntime.error,
+      retry: custodyRuntime.refresh,
+      retryable: custodyRuntime.sourceRetryable,
       reasonCode: primaryRecordIsolation.reasonCode,
       unavailable: !primaryRecordIsolation.fixtureAllowed && records.length === 0,
     },
     register: {
+      page: custodyRuntime.catalog,
       inspect: inspectRepository,
       select: (record: RepositoryWorkspaceRecord) =>
         setSelectedRepositoryId(record.id),
     },
     request: {
+      continueOnboarding: onOpenWorkspaceRegistration && activeRequestResult?.status === "succeeded" && activeRequestResult.provider_readback ? () => onOpenWorkspaceRegistration(activeRequestResult.provider_readback!.repository_identity.provider_repository_id) : undefined,
       canSubmit: requestDraftCanSubmit && (!requestProposalId || resumeApprovedRequest || Boolean(correctionSource) ||
         repositoryRequests.requests.some(request => request.proposalId === requestProposalId && request.sourceCurrent && !request.resolution)),
       proposalId: requestProposalId,
       proposalTitle: repositoryRequests.requests.find(request => request.proposalId === requestProposalId)?.title,
       openForProposal: openRepositoryRequestForProposal,
-      creationAvailable: canProvisionRepository && custodyRuntime.sourceStatus === "current",
+      creationAvailable: canProvisionRepository && custodyRuntime.sourceStatus === "current" && custodyRuntime.history.status === "current" && custodyRuntime.history.cursor === null,
       close: requestRepositoryDraftClose,
       closeGuardOpen: requestCloseGuardOpen,
       guardTitle: requestSwitchTo !== null ? "Switch repository request?" : "Close repository draft?",
@@ -936,6 +919,12 @@ export function useRepositoryControlController({
         } else closeRepositoryRequestDraft({ discard: true });
       },
       draft: requestDraft,
+      historyPage: custodyRuntime.history,
+      preview: previewRepositoryRequest,
+      connections: requestConnections,
+      connectionsLoading: connections.loading,
+      connectionsError: connections.error,
+      onRetryConnections: connections.retry,
       error: requestError,
       keepEditing: () => { setRequestCloseGuardOpen(false); setRequestSwitchTo(null); },
       onSubmit: submitRepositoryRequestDraft,
@@ -945,7 +934,7 @@ export function useRepositoryControlController({
       result: requestResult,
       correction: Boolean(correctionSource),
       resume: resumeApprovedRequest,
-      retainedRequests: Object.values(custodyRuntime.provisioningResultsByRequestId).filter(result => !requestProposalId || repositoryCreationForProposal(result, requestProposalId)),
+      retainedRequests: custodyRuntime.history.records.filter(result => result.request.action === "provision-new" && (!requestProposalId || repositoryCreationForProposal(result, requestProposalId))),
       selectedRequestId: activeRequestResult ? requestId : requestCorrectionOf ?? "new",
       onSelectRetained: selectRetainedProvisioningRequest,
     },
