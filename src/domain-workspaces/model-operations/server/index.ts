@@ -1,4 +1,7 @@
 export {
+  modelProfileLifecycleRoute,
+  modelProfileRequestOptionsRoute,
+  modelProfileRequestHistoryRoute,
   listModelOperationsRoute,
   modelOperationsOperatingProjectionRoute,
   submitModelProfileRequestRoute,

@@ -9,6 +9,7 @@ import {
 import { modelProfileAvailability } from "../../read-model/selectors/model-profile-selectors.ts";
 import type { ModelProfileRecord } from "../../read-model/types/model-operations-types.ts";
 import {
+  modelProfileTitle,
   modelProfileAvailabilityLabel,
   modelProfileAvailabilityTone,
   modelProfileLifecycleLabel,
@@ -33,8 +34,8 @@ export function ModelProfileRegisterTable({
       key: "profile",
       render: (profile) => (
         <TerasRecordCellText
-          description={profile.policy.purpose}
-          title={profile.policy.profileId}
+          description={profile.policy.profileId}
+          title={modelProfileTitle(profile)}
         />
       ),
     },
@@ -70,7 +71,7 @@ export function ModelProfileRegisterTable({
       key: "resolution",
       render: (profile) => (
         <TerasRecordCellText
-          description={profile.policy.provider === modelProfileResolutionLabel(profile) ? undefined : profile.policy.provider}
+          description={profile.evidenceScope==="policy-summary" || profile.policy.provider === modelProfileResolutionLabel(profile) ? undefined : profile.policy.provider}
           title={modelProfileResolutionLabel(profile)}
         />
       ),

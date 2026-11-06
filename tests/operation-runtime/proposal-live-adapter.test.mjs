@@ -9,11 +9,17 @@ import {
 } from "../../src/domain-workspaces/proposal/live-runtime/proposal-live-projection.ts";
 import {
   assertProposalTargetApplicationResult,
+  assertProposalOosHistory,
 } from "../../src/domain-workspaces/proposal/live-runtime/proposal-live-contract.ts";
 import {
   applyProposalCommand,
   applyProposalDeliveryHandoff,
   listProposalLiveRecords,
+  listProposalRegister,
+  readProposalLiveRecord,
+  readProposalHistoryPage,
+  captureProposal,
+  lookupCapturedProposal,
   proposalTargetApplicationId,
   ProposalOosError,
   startProposalTargetApplication,
@@ -57,63 +63,86 @@ test("Studio incubation submits the existing/resolved owner command; unsupported
 const handoffRef19 = "proposal-handoff:idea-851:version-19";
 const handoffRef21 = "proposal-handoff:idea-851:version-21";
 
-test("historical Delivery links use one bounded owner overview and retain unavailable outcomes without rerouting", async () => {
-  const records = Array.from({length:21},(_,index)=>{
-    const id=851+index;
-    return proposalCompletionRecord({status:"accepted",proposal_id:`idea-${id}`,record_ref:`openproject://work_packages/${id}`,
-      delivery_ref:`openproject://work_packages/${1901+index}`});
-  });
-  for(const outcome of ["current","unavailable","denied"]){
-    let overviewReads=0;
-    const fetchImpl=async(url,init)=>{
-      assert.equal(init.method,"GET");
-      if(String(url).includes("/v1/ideas?"))return jsonResponse({ideas:records.map(r=>({idea_id:r.projection.proposal_id})),
-        page:{offset:1,limit:25,count:21,total:21,has_more:false,next_offset:null}});
-      if(String(url).includes("/v1/delivery-initiatives?")){
-        overviewReads++;assertCanonicalSourceRequest(init);
-        if(outcome!=="current")return jsonResponse({error:"Owner unavailable"},outcome==="denied"?403:503);
-        return canonicalSourceResponse({schema_version:1,workflow_id:"delivery-console-overview",project:{identifier:"workspace-delivery-art"},
-          mutation_authority:"none",roots:records.map((r,index)=>({id:1901+index,record_ref:r.projection.delivery_ref,status:index<18?"done":"retired"}))},
-          {recordRef:"openproject://projects/workspace-delivery-art/initiatives",sourceOwner:"workspace-delivery-art"});
-      }
-      const record=records.find(r=>String(url).includes(`/v1/proposals/${r.projection.proposal_id}/projection?`));
-      assert.ok(record);return canonicalSourceResponse({schema_version:1,workflow_id:"proposal-read-snapshot",projection:record.projection,
-        history:{...record.history,proposal_id:record.projection.proposal_id}},
-        {recordRef:record.projection.record_ref,sourceOwner:"workspace-proposals"});
-    };
-    if(outcome==="denied")await assert.rejects(listProposalLiveRecords({env,fetchImpl}),ProposalOosError);
-    else{
-      const read=await listProposalLiveRecords({env,fetchImpl});
-      assert.equal(read.length,21);assert.equal(read[0].projection.status,"accepted");
-      const surface=projectProposalLiveRecords(read);
-      assert.equal(surface.filter(p=>p.status==="retired").length,outcome==="current"?3:0);
-      assert.equal(surface.filter(p=>p.status==="ready-to-route").length,0);
-      assert.equal(read[0].deliveryLink.sourceState,outcome);
-      if(outcome==="unavailable")assert.equal(read[0].deliveryLink.status,null);
-    }
-    assert.equal(overviewReads,1);
-  }
+function registerResponse(records, {selection={query:"",status:"all",ingress:"all"},next_cursor=null,source_total=records.length}={}) {
+  return canonicalSourceResponse({schema_version:1,workflow_id:"proposal-register",selector:selection,source_total,next_cursor,
+    records:records.map(record=>({...record,summaryOnly:true,history:{...record.history,events:[],next_cursor:null}}))},
+    {recordRef:"openproject://projects/workspace-proposals",sourceOwner:"workspace-proposals"});
+}
+
+test("bounded register retains downstream Delivery truth without opening histories or another overview",async()=>{
+ for(const sourceState of ["current","unavailable"]){
+  const records=Array.from({length:21},(_,index)=>({...proposalCompletionRecord({status:"accepted",proposal_id:`idea-${851+index}`,
+    record_ref:`openproject://work_packages/${851+index}`,delivery_ref:`openproject://work_packages/${1901+index}`}),
+    deliveryLink:{recordRef:`openproject://work_packages/${1901+index}`,sourceState,status:sourceState==="current"?(index<18?"done":"retired"):null}}));
+  let calls=0;
+  const read=await listProposalLiveRecords({env,fetchImpl:async(url,init)=>{
+    calls++;assert.equal(new URL(url).pathname,"/v1/proposals/register");assert.equal(init.method,"GET");assertCanonicalSourceRequest(init);
+    return registerResponse(records);
+  }});
+  assert.equal(calls,1);assert.equal(read.length,21);assert.ok(read.every(row=>row.summaryOnly && row.history.events.length===0));
+  const surface=projectProposalLiveRecords(read);
+  assert.equal(surface.filter(row=>row.status==="retired").length,sourceState==="current"?3:0);
+  assert.equal(surface.filter(row=>row.status==="ready-to-route").length,0);
+ }
+ await assert.rejects(listProposalLiveRecords({env,fetchImpl:async()=>jsonResponse({error:"forbidden",message:"Access denied."},403)}),error=>error.status===403);
 });
 
-test("global Proposal reads retain older pages, bound snapshot concurrency and reject shifting or repeated inventory",async()=>{
- const total=142;let concurrent=0,maximum=0,snapshots=0;
- const read=async(url,init)=>{
-  const parsed=new URL(url);
-  if(parsed.pathname==='/v1/ideas'){
-   const offset=Number(parsed.searchParams.get('offset')),start=(offset-1)*25,count=Math.min(25,total-start),more=start+count<total;
-   return jsonResponse({ideas:Array.from({length:count},(_,i)=>({idea_id:`idea-${start+i+1}`})),page:{offset,limit:25,count,total,has_more:more,next_offset:more?offset+1:null}});
-  }
-  const id=Number(/idea-([0-9]+)/.exec(parsed.pathname)[1]);concurrent++;maximum=Math.max(maximum,concurrent);snapshots++;
-  await new Promise(resolve=>setImmediate(resolve));concurrent--;
-  const bound=JSON.parse(JSON.stringify({projection:proposalProjection(),history:proposalHistory()}).replaceAll('851',String(id)));
-  return canonicalSourceResponse({schema_version:1,workflow_id:'proposal-read-snapshot',...bound},{recordRef:`openproject://work_packages/${id}`,sourceOwner:'workspace-proposals'});
- };
- const records=await listProposalLiveRecords({env,fetchImpl:read});
- assert.equal(records.length,total);assert.equal(records.at(-1).projection.proposal_id,`idea-${total}`);assert.equal(snapshots,total);assert.equal(maximum,4);
- for(const kind of ['duplicate','shift','empty'])await assert.rejects(listProposalLiveRecords({env,fetchImpl:async(url,init)=>{
-  const response=await read(url,init);if(!String(url).includes('/v1/ideas?')||new URL(url).searchParams.get('offset')!=='2')return response;
-  const body=await response.json();if(kind==='duplicate')body.ideas[0].idea_id='idea-1';if(kind==='shift')body.page.total++;if(kind==='empty'){body.ideas=[];body.page.count=0;}return jsonResponse(body);
- }}),ProposalOosError);
+test("register sends the exact scoped selection/cursor and rejects malformed or mixed pages",async()=>{
+ const selection={query:"OLDER",status:"captured",ingress:"system"};
+ const record=proposalCompletionRecord({status:"captured"});
+ const result=await listProposalRegister(selection,"opaque:page-2",{env,fetchImpl:async(url,init)=>{
+   const parsed=new URL(url);assert.equal(parsed.pathname,"/v1/proposals/register");assert.deepEqual(Object.fromEntries(parsed.searchParams),{...selection,cursor:"opaque:page-2"});
+   assertCanonicalSourceRequest(init);return registerResponse([record],{selection:{...selection,query:"older"},next_cursor:"opaque:page-3",source_total:301});
+ }});
+ assert.equal(result.page.source_total,301);assert.equal(result.page.next_cursor,"opaque:page-3");
+ for(const kind of ["duplicate","selector","history","version","oversize"]){
+  await assert.rejects(listProposalLiveRecords({env,fetchImpl:async()=>{
+   const response=registerResponse([record]);const value=await response.json(),body=value.projection;
+   if(kind==="duplicate")body.records.push(body.records[0]);
+   if(kind==="selector")body.selector.query="another";
+   if(kind==="history")body.records[0].summaryOnly=false;
+   if(kind==="version")body.records[0].history.record_version="version-999";
+   if(kind==="oversize")body.records=Array.from({length:26},()=>body.records[0]);
+   return jsonResponse(value);
+  }}));
+ }
+});
+
+test("selected source and history use exact identities and reject mismatched versions",async()=>{
+ for(const corrupt of [false,true]){
+  const record=proposalCompletionRecord();record.history.next_cursor="activity-page:2";
+  if(corrupt)record.history.record_version="another-version";
+  const fetchImpl=async(url,init)=>{
+   assertCanonicalSourceRequest(init);const parsed=new URL(url);
+   if(parsed.pathname.endsWith("/history")){assert.equal(parsed.searchParams.get("cursor"),"activity-page:2");return canonicalSourceResponse({...record.history,proposal_id:corrupt?"idea-852":"idea-851"},{recordRef:record.projection.record_ref,sourceOwner:"workspace-proposals"});}
+   assert.equal(parsed.searchParams.get("include_history"),"true");
+   return canonicalSourceResponse({schema_version:1,workflow_id:"proposal-read-snapshot",created_at:"2026-06-20T08:00:00Z",projection:record.projection,history:record.history},{recordRef:record.projection.record_ref,sourceOwner:"workspace-proposals"});
+  };
+  if(corrupt){await assert.rejects(readProposalLiveRecord("idea-851",{env,fetchImpl}));await assert.rejects(readProposalHistoryPage("idea-851","activity-page:2",{env,fetchImpl}));}
+  else{const value=await readProposalLiveRecord("idea-851",{env,fetchImpl});assert.equal(value.summaryOnly,false);assert.equal(value.creationKnown,true);assert.equal(value.createdAt,"2026-06-20T08:00:00Z");assert.equal((await readProposalHistoryPage("idea-851","activity-page:2",{env,fetchImpl})).next_cursor,"activity-page:2");}
+ }
+});
+
+test("capture checks original source identity before creating; found and unavailable never create another",async()=>{
+ const request={requestId:"proposal-capture:synthetic-stable",title:"A simple idea",body:"Original useful context."};
+ for(const outcome of ["missing","found","unavailable","conflict"]){
+  const calls=[];
+  const fetchImpl=async(url,init)=>{const path=new URL(url).pathname,body=JSON.parse(init.body);calls.push({path,body});
+   if(path==="/v1/ideas/lookup"){
+    if(outcome==="missing")return jsonResponse({error:"idea_not_found",message:"No matching idea."},404);
+    if(outcome==="unavailable")return jsonResponse({error:"backend_unavailable",message:"Backlog unavailable."},503);
+    return jsonResponse({idea_id:"idea-851",title:request.title,body:outcome==="conflict"?"Another intent":request.body});
+   }
+   assert.equal(path,"/v1/ideas/capture");return jsonResponse({idea_id:"idea-852"},201);
+  };
+  if(["unavailable","conflict"].includes(outcome))await assert.rejects(captureProposal(request,{env,fetchImpl}),error=>error.code===(outcome==="unavailable"?"proposal_capture_not_submitted":"proposal_capture_conflict"));
+  else assert.equal(await captureProposal(request,{env,fetchImpl}),outcome==="found"?"idea-851":"idea-852");
+  assert.equal(calls.length,outcome==="missing"?2:1);
+  assert.equal(calls[0].body.source.native_ref.request_id,request.requestId);
+  if(outcome==="missing")assert.deepEqual(calls[0].body.source,calls[1].body.source);
+ }
+ const missing=await lookupCapturedProposal(request,{env,fetchImpl:async()=>jsonResponse({error:"idea_not_found",message:"No matching idea."},404)});
+ assert.deepEqual(missing,{status:"not-found",proposalId:null});
 });
 
 test("Repository gate adapter binds successful owner receipt, preserves source and returns durable resolution", async () => {
@@ -172,11 +201,9 @@ test("case:console-proposal-adapter-positive projects OOS truth and submits a ve
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ init, url: String(url) });
-    if (String(url).includes("/v1/ideas?")) {
-      return jsonResponse({
-        ideas: [{ created_at: "2026-08-16T00:00:00Z", idea_id: "idea-851" }],
-        page: { count: 1, has_more: false, offset:1,limit:25,total:1,next_offset:null },
-      });
+    if (new URL(url).pathname === "/v1/proposals/register") {
+      assertCanonicalSourceRequest(init);
+      return registerResponse([{createdAt:"2026-08-16T00:00:00Z",projection:proposalProjection(),history:proposalHistory()}]);
     }
     if (String(url).endsWith("/projection?include_history=true")) {
       assertCanonicalSourceRequest(init);
@@ -971,3 +998,11 @@ function jsonResponse(body, status = 200) {
     status,
   });
 }
+
+
+test("original event decisions accept the owner Unicode character limit and reject malformed history",()=>{
+ const record=proposalCompletionRecord(),route=prototypeRoute();
+ const event={schema_version:1,event_id:"event:original-decision",proposal_id:record.projection.proposal_id,record_version:record.projection.record_version,event_type:"disposition-recorded",status_before:"triaged",status_after:"accepted",actor:{kind:"operator",id:"original-reviewer"},receipt_refs:[],command_id:"command:original",summary:"Original summary",occurred_at:"2026-06-21T08:00:00Z",decision:{type:"disposition",outcome:"accepted",notes:"😀".repeat(2000),route}};
+ const history={...record.history,events:[event]};assert.equal(assertProposalOosHistory(history),history);
+ for(const corrupt of [value=>{value.events[0].decision.notes+="x";},value=>{value.events[0].actor=null;},value=>{value.events[0].proposal_id="idea-852";},value=>{value.events.push(value.events[0]);},value=>{value.next_cursor="not-history";},value=>{value.events[0].decision.route.target="unknown";}]){const value=structuredClone(history);corrupt(value);assert.throws(()=>assertProposalOosHistory(value));}
+});

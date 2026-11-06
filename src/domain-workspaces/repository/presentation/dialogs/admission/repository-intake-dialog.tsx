@@ -23,19 +23,24 @@ function withOwnerChecks(draft: RepositoryIntakeDraft, setup: IntakeOwnerSetup |
     validationNotes: `Recorded check plan from ${setup.repository}: ${setup.notes}\nThis is a plan, not evidence that these checks have passed.${draft.validationNotes.trim() ? `\nAdditional notes: ${draft.validationNotes.trim()}` : ""}` };
 }
 
-export function RepositoryIntakeDialog({ repository, custodyResult, ownerRepositories = [], classification, onActivate, onClose }: {
+export function RepositoryIntakeDialog({ repository, custodyResult, ownerRepositories = [], classification, preview = false, onActivate, onClose }: {
   repository: RepositoryWorkspaceRecord;
-  custodyResult: RepositoryCustodyWorkflowResult;
+  custodyResult?: RepositoryCustodyWorkflowResult;
+  preview?: boolean;
   ownerRepositories?: readonly string[];
   classification?: WorkspaceIntakeDecision;
   onActivate?: () => void;
   onClose: () => void;
 }) {
   const runtime = useWorkspaceIntakeLiveRuntime();
-  const [initialDraft, setInitialDraft] = useState(() => repositoryIntakeDraftFromCustody(custodyResult));
+  const [initialDraft, setInitialDraft] = useState<RepositoryIntakeDraft>(() => custodyResult ? repositoryIntakeDraftFromCustody(custodyResult) : {
+    repoClass: preview ? "product-source" : "", securityBinding: preview ? "false" : "", securityOwner: "",
+    notes: preview ? repository.purpose : "", validationPosture: preview ? "covered-by-owner-repo" : "",
+    graphRole: preview ? "product-runtime-source" : "", catalogRefs: "", validationNotes: "",
+  });
   const [draft, setDraft] = useState(initialDraft);
   const [recordedFormState, setRecordedFormState] = useState<string | null>(null);
-  const [repositoryType, setRepositoryType] = useState("");
+  const [repositoryType, setRepositoryType] = useState(preview ? "application" : "");
   const [checkOwner, setCheckOwner] = useState("");
   const [manualChecks, setManualChecks] = useState(false);
   const [customSecurityOwner, setCustomSecurityOwner] = useState(false);
@@ -53,19 +58,19 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
   const targetName = custody?.target.name, custodyRequestId = custody?.requestId;
   const busy = runtime.pending || preparing;
   const needsCatalog = repositoryIntakeRequiresCatalog(draft.validationPosture);
-  const checks = useIntakeOwnerSetup(null, false, needsCatalog && !manualChecks ? checkOwner : "");
+  const checks = useIntakeOwnerSetup(null, false, !preview && needsCatalog && !manualChecks ? checkOwner : "");
   const effectiveDraft = withOwnerChecks(draft, needsCatalog && !manualChecks && checks.current ? checks.setup : null);
   const issues = repositoryIntakeMissingFields(effectiveDraft);
   if (needsCatalog && !manualChecks && !checks.current) {
-    issues.push(checkOwner ? "Wait for the selected repository’s check plan, or refresh it." : "Choose the repository that owns the registered checks.");
+    issues.push(preview ? "This sample has no shared check plan. Choose repository-owned checks to inspect the review." : checkOwner ? "Wait for the selected repository’s check plan, or refresh it." : "Choose the repository that owns the registered checks.");
   }
   const formState = JSON.stringify({ draft, repositoryType, checkOwner, manualChecks, customSecurityOwner });
   const dirty = recordedFormState !== null ? formState !== recordedFormState
-    : Object.entries(draft).some(([key, value]) => value !== initialDraft[key as keyof RepositoryIntakeDraft]) || Boolean(repositoryType || checkOwner || manualChecks || customSecurityOwner);
+    : Object.entries(draft).some(([key, value]) => value !== initialDraft[key as keyof RepositoryIntakeDraft]) || Boolean(repositoryType !== (preview ? "application" : "") || checkOwner || manualChecks || customSecurityOwner);
   const ownerSetupAvailable = classification === "proposed" || classification === "admitted";
   useEffect(() => {
-    if (targetName && custodyRequestId) void runtime.list(targetName, custodyRequestId).catch(() => undefined);
-  }, [targetName, custodyRequestId, runtime.list]);
+    if (!preview && targetName && custodyRequestId) void runtime.list(targetName, custodyRequestId).catch(() => undefined);
+  }, [preview, targetName, custodyRequestId, runtime.list]);
   useEffect(() => {
     if (restored.current || !runtime.requestPage) return;
     restored.current = true;
@@ -93,9 +98,17 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
     else next();
   }
   function refreshJournal() {
-    if (targetName && custodyRequestId) void runtime.list(targetName, custodyRequestId).catch(() => undefined);
+    if (!preview && targetName && custodyRequestId) void runtime.list(targetName, custodyRequestId).catch(() => undefined);
   }
   async function prepare() {
+    if (preview) {
+      setAttempted(true);
+      const requested = repositoryIntakeRecord(effectiveDraft);
+      if (!requested || issues.length) return;
+      setReview({ candidate: { label: repository.name, target: {kind: "repo", name: repository.name},
+        requested_record: requested, source: {class: "direct", ref: "preview://repository-onboarding/sample", digest: `sha256:${"0".repeat(64)}`}, evidence_refs: [] } });
+      return;
+    }
     if (!custody || busy || !runtime.requestPage || runtime.requestPage.pending_request_count) return;
     setAttempted(true); setPreparationError(null);
     if (issues.length) { errorRef.current?.focus(); return; }
@@ -120,8 +133,8 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
     finally { setPreparing(false); }
   }
   function returnToForm() { setReview(null); refreshJournal(); }
-  if (ownerSetup && targetName && custodyRequestId) return <RepositoryOwnerBootstrapDialog key={`${targetName}:${custodyRequestId}`} ownerRepo={targetName} custodyRequestId={custodyRequestId} returnLabel="Back to onboarding details" onClose={() => { setOwnerSetup(false); refreshJournal(); }} />;
-  if (review) return <WorkspaceIntakeDialog singleReview candidate={review.candidate} repositoryCustody={review.custody}
+  if (!preview && ownerSetup && targetName && custodyRequestId) return <RepositoryOwnerBootstrapDialog key={`${targetName}:${custodyRequestId}`} ownerRepo={targetName} custodyRequestId={custodyRequestId} returnLabel="Back to onboarding details" onClose={() => { setOwnerSetup(false); refreshJournal(); }} />;
+  if (review) return <WorkspaceIntakeDialog preview={preview} singleReview candidate={review.candidate} repositoryCustody={review.custody}
     onRequestRecorded={() => setRecordedFormState(formState)}
     initialRequestId={review.requestId} initialDecision={review.decision} onRepositoryNextAction={decision => { if (decision === "proposed") { setReview(null); setOwnerSetup(true); } else if (decision === "admitted") onActivate?.(); }} onNewCandidate={returnToForm} returnLabel="Back to onboarding details" onClose={returnToForm} />;
   return <><TerasModalShell busy={busy} busyLabel={preparing ? "Preparing onboarding review…" : "Loading recorded onboarding…"} bodyLayout="scroll" height="content" width="standard"
@@ -129,17 +142,17 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
     description="Review its purpose, how source changes are checked and whether a separate security repository is required. Known details are collected automatically."
     onClose={() => requestLeave(onClose)} footer={<>
       <TerasActionButton emphasis="secondary" disabled={busy} onClick={() => requestLeave(onClose)}>Back to onboarding</TerasActionButton>
-      <TerasActionButton busy={busy} disabled={!custody || busy || !runtime.requestPage || Boolean(runtime.requestPage.pending_request_count)} onClick={() => void prepare()}>
-        {busy ? "Preparing review…" : "Review onboarding"}
+      <TerasActionButton busy={busy} disabled={busy || (!preview && (!custody || !runtime.requestPage || Boolean(runtime.requestPage.pending_request_count)))} onClick={() => void prepare()}>
+        {busy ? "Preparing review…" : preview ? "Preview onboarding review" : "Review onboarding"}
       </TerasActionButton>
     </>}>
     <TerasFieldStack spacing="loose">
-      <RepositoryDevelopmentScope visibility={custodyResult.provider_readback?.visibility} />
+      {preview ? <TerasContentTray kicker="Design preview" description="Edit this sample repository and inspect its onboarding review. Submission, source setup and activation are disabled; no real records are changed." /> : <RepositoryDevelopmentScope visibility={custodyResult?.provider_readback?.visibility} />}
       {restoredAnswers ? <TerasContentTray role="status" kicker="Recorded answers loaded" description="Your previous completed onboarding answers are filled in. Review or change them before submitting a new decision; loading them does not approve or activate this repository." /> : null}
-      <TerasContentTray kicker="Repository" description="Collected from the completed creation or attachment. You do not need to enter provider IDs or request references.">
+      <TerasContentTray kicker="Repository" description={preview ? "Illustrative repository details for this example. No repository has been created or linked." : "Collected from the completed creation or attachment. You do not need to enter provider IDs or request references."}>
         <TerasMetadataList items={[
           { label: "Repository", value: repository.githubUrl },
-          { label: "Workspace name", value: targetName ?? "Matching custody unavailable" },
+          { label: "Workspace name", value: preview ? repository.name : targetName ?? "Matching custody unavailable" },
         ]} />
       </TerasContentTray>
       <TerasContentTray kicker="1. Purpose" description="Choose its responsibility. This fills the category and validation role for your review.">
@@ -238,7 +251,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
         </TerasList> : null}
       </TerasContentTray> : null}
       <TerasTechnicalDetails summary="Registration technical details" items={[
-        { label: "Custody request", value: custody?.requestId ?? "Unavailable" },
+        { label: "Custody request", value: custody?.requestId ?? (preview ? "Not issued in preview" : "Unavailable") },
         { label: "Repository category", value: draft.repoClass || "Not selected" },
         { label: "Validation approach", value: draft.validationPosture || "Not selected" },
         { label: "Workspace role", value: draft.graphRole || "Not selected" },
@@ -246,7 +259,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
         ...(checks.current && checks.setup ? [{ label: "Check repository source", value: checks.setup.evidenceRef }] : []),
         ...(runtime.requestPage?.records ?? []).map(entry => ({ label: "Original registration request", value: entry.request_id })),
       ]} />
-      {(attempted && issues.length > 0) || preparationError || runtime.error || !custody ? <div ref={errorRef} tabIndex={-1} role="alert">
+      {(attempted && issues.length > 0) || preparationError || runtime.error || (!preview && !custody) ? <div ref={errorRef} tabIndex={-1} role="alert">
         <TerasContentTray kicker="Check registration details" description={preparationError ?? runtime.error?.message ?? (!custody ? "A successful custody receipt for this exact repository is required." : undefined)}>
           {attempted && issues.length ? <ul>{issues.map(issue => <li key={issue}>{issue}</li>)}</ul> : null}
         </TerasContentTray>

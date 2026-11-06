@@ -8,16 +8,15 @@ exact Security decision and Platform composition.
 Model Operations exposes two jobs in the existing Compact Control surface.
 **Models & routing** submits operator choices for admitted backend/model
 registration, native effort, system defaults, per-workflow overrides and ordered
-fallback. **Purpose profiles** retains the existing two-step request workflow
-for purpose and permission changes. OOS coordinates both workflows; Platform
+fallback. **Purpose profiles** uses one form for purpose and permission requests, followed
+by a separate result dialog. OOS coordinates both workflows; Platform
 owns configuration, verification, profile source and provider credentials.
 Security acceptance and runtime activation remain with their existing owners.
 
-Models & routing retains its existing accepted runtime binding. The Purpose
-registry, request-history and explicit operator-review extension is staged
-under Epic 1332. Its live qualification requires exact composed Security
-acceptance and Platform commissioning; merged Console source alone is not
-activation.
+Models & routing retains its existing accepted runtime binding. The Purpose registry, request history and explicit review boundary were
+introduced under Epic 1332. The current automatic-preparation maintenance
+extension remains unpublished pending operator review, exact composed Security
+acceptance and Platform commissioning. Source alone is not activation.
 
 ## Models & Routing Procedure
 
@@ -179,15 +178,17 @@ followed as local paths. Partial live configuration never falls back to fixtures
 2. Confirm the workspace status is `Current` and inspect the Platform-projected
    profile register.
 3. Select `Request Profile`.
-4. Complete `Profile Intent`. Enter caller identities as
-   `caller-id=owner-repo`; provide only references and classifications, never
-   credentials or provider routes.
-5. Review the derived gateway, identity, audit, and Security obligations.
-6. Record the operator justification and submit.
+4. Choose the registered workflow and enter the profile name, purpose and reason.
+   Confirm the environment and most sensitive data; add optional operating rules.
+   Registered integration references are supplied by the system. A new integration
+   maintainer can use the explicit technical setup path instead.
+5. Inspect technical details if needed. Missing workflow setup is shown explicitly;
+   refresh it before submitting rather than inventing references.
+6. Submit the single form and read its separate recorded outcome.
 7. Inspect the OOS receipt. `submitted` means the request entered review; it
    does not mean Platform fulfillment, Security acceptance, or activation.
-8. Open **Request History** and select the original request, or enter its
-   reference and choose **Read original request**. Inspect its complete intent,
+8. Open **Manage Requests** and select the original request, or choose
+   **Find by reference**, enter its reference and select **Read original request**. Inspect its complete intent,
    requirements, owner next move and receipt history. Register polling cannot
    replace the selected scope.
 9. Choose the review action offered by current OOS state. Explicit approval
@@ -201,7 +202,7 @@ followed as local paths. Partial live configuration never falls back to fixtures
     path. It does not edit the registry, select a model, grant credentials,
     accept Security risk or activate runtime access. Refresh the original
     record to read its actual owner outcome.
-11. After approved/applied, choose **Verify request fulfillment**. Completion
+11. After approved/applied, choose **Verify implementation**. Completion
     requires this request's original lifecycle receipt, merged readback and
     current OOS record. Its historical merged source is shown separately from
     today's registry; later changes cannot invalidate an earlier completed request.
@@ -247,14 +248,14 @@ The operating projection returns `complete` only when all of these agree:
 - partial create/submit: reuse the same request and idempotency identities; OOS
   returns the existing request or rejects conflicting input.
 - lost create/submit acknowledgement: choose **Recover original request** or
-  open its reference in Request History. Submit a retained draft there; read
+  open its reference in Manage Requests. Submit a retained draft there; read
   an already submitted or fulfilled record as it is. Do not replace it.
 - unknown review acknowledgement: retain the frozen command identity, time,
   expected revision and reviewed body. Read the original record or retry that
   exact action. A known rejection permits fresh review after canonical refresh;
   lost acknowledgement never silently changes the command or revision.
 - unavailable current registry: disable new requests without inferring profile
-  state. Request History can still read an original record independently.
+  state. Manage Requests can still read an original record independently.
   Historical verification never uses today's registry as old completion evidence.
 
 ## Validation
@@ -326,3 +327,193 @@ reads do not dispatch inference or change model registration.
 
 Landing Unit Decision: feature_single_landing_unit, operator-approved maintenance
 `maintenance-provider-health-governance-operations-console-20261030`.
+
+### Pending maintenance preview: clarity and recovery
+
+The unpublished Model maintenance preview keeps the existing native API,
+Platform source schema and review authority. Policy summaries explicitly
+distinguish activation permission from provider health and invocation evidence.
+Use **Models & routing** from the Profile Dashboard to inspect or choose model
+settings. Routing defaults and overrides retain their existing enforcement.
+
+To request a purpose profile, choose the registered workflow and describe its
+purpose and usage. The system prepares its registered callers, admitted context
+and output contract. Explicit technical setup remains available to integration
+maintainers; recorded references must be reviewed for current applicability.
+The form does not manufacture contract evidence. Approval or
+rejection still requires the real recorded decision reference and digest.
+
+Keep a pending submission open. If its response cannot be confirmed, use
+**Check original request** or **Check request result** before another submission.
+Only the original request ID is retained for browser recovery. Successful
+readback clears that recovery reference. A failed source refresh disables
+profile actions until **Retry** returns current authoritative evidence.
+
+For an API provider, create a named connection, store its key, then use
+**Continue to model registration** for that exact connection. Register the
+connection if required, verify the desired model and choose workflow routing.
+This does not change provider qualification: experimental presets still need
+real-account verification before broader operating claims. API keys are never
+included in profile drafts, browser recovery references or advisor input.
+
+
+### Single-form request preparation
+
+Open **Request Profile**, choose the registered workflow and enter the profile
+name, purpose and reason. Confirm the environment and most sensitive data; add
+extra rules only when needed. There is no separate review page in this form.
+The real request-review and activation decisions remain later actions.
+
+The server reads the current Platform workflow setup. It supplies the responsible
+repository, registered caller bindings and the output schema with its actual
+owner digest. On submission, OOS admits the request context through the existing
+CGG text-admission API and uses that returned artifact reference and digest in
+the native profile request. Neither the browser nor an advisor invents those
+coordinates. The normal form exposes these values through Technical details,
+not required raw inputs. Workflow setup changes require an explicit refresh and
+review before resubmission; changing providers does not invalidate unchanged
+workflow setup.
+
+A failed setup read shows Retry. A proven pre-create preparation rejection
+keeps the same editable draft and ID. An uncertain transport or native operation
+retains original-request recovery. The separate result dialog names the recorded
+review and implementation states, links to the original request and does not
+claim approval or activation. Pending requests cannot close or double-submit.
+
+**New integration — technical setup** preserves the existing full-reference
+path for integration maintainers and workflows that are not registered yet.
+It is not the ordinary requester path. Revisions retain their original supporting
+references; maintainers can explicitly edit technical setup when the reviewed
+change requires it. Requested changes can be revised and submitted for review
+through the existing native review actions.
+
+Automatic preparation requires the separately accepted Platform metadata
+producer and OOS preparation configuration. It is optional and disabled by
+default until commissioning; unavailable preparation never substitutes samples.
+Disconnected preview alone provides labelled sample choices and results with
+all real submit/review/account/key effects disabled.
+
+### Request history layout
+
+**Manage Requests** presents original Request details and Review side by side,
+with Request events below. Select a human-labelled recorded request, or use the
+secondary **Find by reference** lookup. Explicit lookup can read an original
+request outside the current register list; its identity stays selected.
+
+**Review action** starts at **Choose an action**. Only the existing native
+transitions are offered. Approval and rejection still require the actual saved
+decision record reference and SHA-256 digest; the Console does not create this
+evidence or infer a decision. Successful commands show **Review recorded** and
+the authoritative updated states/events. Unknown outcomes retain the original
+frozen command and read/retry recovery. Implementation verification is available
+when the original request is approved and applied.
+
+Event names and UTC timestamps are readable; each event retains its original
+summary, order, actor, exact timestamp, command, resulting states and receipt
+reference/digest under **Event details**. A source with no history shows an
+explicit empty state rather than an invented event. Technical details also retain
+the original request and any recorded decision references. The modal uses the
+standard scroll region and pinned return action; review and revision remain
+disabled in the labelled disconnected design preview.
+
+### Bounded history and retained outcomes maintenance
+
+The Purpose profile register reads its current Platform source independently.
+It does not enumerate profile requests on the15-second register poll. Opening
+Manage Requests loads25 caller-scoped summaries through the existing OOS list
+with `view=summary`; Previous and Next retain native cursors. Full current
+evidence is read only for the selected request, including direct reference
+lookup outside the visible page. Page failure offers Retry without clearing the
+profile register or an independently loaded original request. Summary rows are
+selection metadata, never mutation authority. The technical request form uses
+the same bounded picker and reads the selected original before filling setup.
+
+Changing records or reading another reference requires explicit discard when
+review text, evidence or requested changes are unsaved. Merely typing a lookup
+reference does not change the active review. Uncertain accepted commands retain
+their original recovery path. Connection operations retain confirmed receipts
+when later current-state or model-register reads fail; those read errors are
+reported separately and edits remain blocked until current source is available.
+
+The native private JSON store still verifies and reads its state once per
+requested page. This removes automatic history polling, event-body projection
+and per-row detail fan-out; it does not claim an indexed storage backend or a
+frozen snapshot across independently requested pages. Existing-profile lifecycle
+coverage remains a separate design checkpoint.
+
+
+## Purpose-profile lifecycle maintenance
+
+**Change profile policy** in the selected profile dashboard is the staged normal
+path for the native six intents. It shows owner-computed impact before submission
+and asks for meaningful policy limits, data sensitivity and a reason. The browser
+cannot author an arbitrary target, choose a checkout, supply a source digest or
+execute commands. Create/amend suspend policy; request wording is metadata.
+
+History records approve/reject with its reason as a real OOS decision artifact.
+Separate explicit Security acceptance appears only for activation/exception and
+can be recorded only by an admitted operator. Approval, source implementation
+and running verification remain separate. Platform implementation shows the
+exact Gary PR/head, requires explicit human review/merge, and preserves original
+operation recovery, real progress/events, unverified outcomes and exact receipt
+rollback. Confirmed source application is not erased by a later runtime failure.
+A rollback is itself reviewed source and cannot overwrite later policy drift.
+
+All lifecycle mutations use existing Console session authorization and server
+custody. Existing externally referenced review commands remain a recovery API,
+not a form requirement. Source operation failures retain original identity;
+read/retry does not silently create another request or decision. No advisor or
+AI model can accept final review or Security decisions. Disconnected preview
+labels source checks and mutation as unavailable rather than inventing effects.
+
+The producer flags remain disabled pending paired source and composed runtime
+acceptance. Qualify a disposable profile and interruption/negative paths after
+landing; preserve current working profiles. Current source/browser conformance
+is not evidence of live activation.
+
+## Permission profiles for installed Console AI Capabilities
+
+The maintenance preview extends the existing controls. A Console AI Capability is an
+implemented integration such as Agent Console, Work Design or Refinement. It is
+not an ART Feature or a user-authored workflow definition. Its guide explains
+behavior, accepted input, returned output and where instructions are implemented.
+Changing a request description or reviewer notes does not write those instructions.
+A new capability requires implementation, tests and registration by its source
+maintainer before it appears as a normal selectable integration.
+
+An installed capability can have several named permission profiles. Create one
+from its registered setup, set permitted-input rules and supported operating
+limits, and submit it through the existing request/review/source path. The result
+is suspended and unselected. Activation needs the separate Security decision.
+Then use **Models & routing → Permission profiles** to explicitly select its
+active profile. The current model-configuration revision guards that selection;
+progress, uncertain completion and recovery use the same original operation.
+Selecting a profile does not register a model or change its reasoning effort.
+
+The stable base profile still authorizes the capability's caller, admitted
+context and response contract. The selected profile is an additional restriction.
+Both policies must permit a request. Free-text data-scope notes document reviewed
+policy; they do not author an access filter or new task instructions. Actual
+context access remains enforced by the registered integration and CGG. Effective numeric limits cannot exceed the
+base or provider ceilings. Managed requests never automatically retry a submitted
+turn. Dedicated-account output uses a byte limit rather than a native token cap.
+Model routing keeps the capability's stable task IDs. Effective selection and the
+audit distinguish its base contract from the actually selected permission profile.
+One captured configuration revision binds both policy selection and model routing;
+replay after a configuration change cannot dispatch the original request again.
+
+When review requests policy changes, use **Revise operating policy** on the same
+request. It reads current source, checks impact, admits supporting context and
+rebuilds the candidate before recording a revision. Prior Security acceptance is
+cleared, and the revision must be resubmitted and reviewed. **Revise review
+details** changes request wording only. Integration-reference changes cannot
+silently discard a prepared candidate. Older manual requests remain readable,
+but automatic implementation requires actual prepared policy rather than invented
+references. Interrupted writes recover the same command and request identities.
+
+Profile names and operating rules enter source review; request descriptions,
+justifications, notes and private supporting context remain in operational
+custody. Do not place project contents or secrets in published policy fields.
+Loading is separate from unavailable or failed reads. Preview contains labelled
+samples and cannot save selections, decisions or operating changes. These staged
+extensions still require source review and exact composed operating acceptance.

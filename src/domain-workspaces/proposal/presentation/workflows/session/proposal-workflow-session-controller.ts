@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ProposalWorkflowActiveStep } from "../../../work-model/proposal-workflow-step-model.ts";
 import {
@@ -23,6 +23,15 @@ export function useProposalWorkflowSessionController({
   routeSelectionDraft,
   triageDraft,
 }: UseProposalWorkflowSessionControllerParams) {
+  const submitting = useRef(false);
+  const [operation, setOperation] = useState<{pending:boolean;label:string;error:string|null;result:string|null}>({pending:false,label:"",error:null,result:null});
+  async function runOperation(label:string, task:()=>Promise<unknown>, result="Proposal updated. Review its current status and next step.") {
+    if(submitting.current)return;
+    submitting.current=true;setOperation({pending:true,label,error:null,result:null});
+    try {await task();setOperation({pending:false,label:"",error:null,result});}
+    catch(error){setOperation({pending:false,label:"",error:error instanceof Error ? error.message : "The response was not confirmed. Your draft is kept; review the current source before sending again.",result:null});}
+    finally{submitting.current=false;}
+  }
   const [activeWorkflowStep, setActiveWorkflowStep] =
     useState<ProposalWorkflowActiveStep>("hub");
   const [pendingWorkflowStep, setPendingWorkflowStep] =
@@ -34,6 +43,7 @@ export function useProposalWorkflowSessionController({
 
   useEffect(() => {
     setActiveWorkflowStep("hub");
+    setOperation({pending:false,label:"",error:null,result:null});
     setPendingWorkflowStep(null);
     setDispositionCloseGuardOpen(false);
     setHandoffCloseGuardOpen(false);
@@ -74,6 +84,7 @@ export function useProposalWorkflowSessionController({
   });
   const { currentMove } = hubProjection;
   const requestWorkflowStep = (target: ProposalWorkflowActiveStep) => {
+    if(submitting.current)return;
     if (target === activeWorkflowStep) {
       return;
     }
@@ -126,9 +137,11 @@ export function useProposalWorkflowSessionController({
     onInspectProposal(proposal);
   };
   const returnToHub = () => {
+    if(submitting.current)return;
     requestWorkflowStep("hub");
   };
   const requestClose = () => {
+    if(submitting.current)return;
     if (hasPendingDispositionDraft) {
       setDispositionCloseGuardOpen(true);
       return;
@@ -147,6 +160,7 @@ export function useProposalWorkflowSessionController({
     onClose();
   };
   const returnToRegister = () => {
+    if(submitting.current)return;
     onClose();
   };
   const applyTriageDraft = async () => {
@@ -267,14 +281,15 @@ export function useProposalWorkflowSessionController({
     setPendingWorkflowStep(null);
   };
   return {
+    operation,runOperation,dismissOperation:()=>setOperation(current=>({...current,error:null,result:null})),
     activeDecisionDraft,
     activeHandoffDraft,
     activeRouteSelectionDraft,
     activeTriageDraft,
     activeWorkflowStep,
-    applyDispositionDraft,
-    applyHandoffDraft,
-    applyTriageDraft,
+    applyDispositionDraft:()=>runOperation("Recording decision…",applyDispositionDraft,"Decision recorded. Review the selected direction and any repository setup needed before handoff."),
+    applyHandoffDraft:()=>runOperation("Updating handoff…",applyHandoffDraft,"Handoff updated. Check the target status to see whether a review or another action is required."),
+    applyTriageDraft:()=>runOperation("Recording review…",applyTriageDraft,"Review recorded. Choose the proposal outcome and direction next."),
     dispositionCloseGuardOpen,
     dispositionReadOnly,
     handoffCloseGuardOpen,
@@ -294,7 +309,7 @@ export function useProposalWorkflowSessionController({
     requestWorkflowStep,
     returnToRegister,
     returnToHub,
-    runFooterMove,
+    runFooterMove:()=>footerMove?.action.startsWith("record-") ? runOperation("Recording proposal…",runFooterMove) : runFooterMove(),
     runCurrentMove,
     shellDescription: proposalWorkflowShellDescription(activeWorkflowStep),
     shellTitle: proposalWorkflowShellTitle(activeWorkflowStep),

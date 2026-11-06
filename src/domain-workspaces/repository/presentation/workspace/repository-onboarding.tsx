@@ -11,10 +11,21 @@ import {projectRepositoryCurrentInventory} from "../../live-runtime/repository-i
 import type {RepositoryCustodyWorkflowResult} from "../../live-runtime/repository-custody-live-types.ts";
 import type {WorkspaceIntakeDecision} from "../../../../console-integration/workspace-intake/workspace-intake-live-types.ts";
 import {RepositoryIntakeDialog} from "../dialogs/admission/repository-intake-dialog.tsx";
+import {repositoryProposedRecords} from "../../read-model/fixtures/records/repository-proposed-records.fixture.ts";
 
 // Registry's public adapter to the existing custody-bound repository form.
 // No new registration record, approval path or client-owned readiness flag.
-export function RepositoryOnboarding({providerId = null, fixtureMode = false, onActivate, onClose}: {
+export function RepositoryOnboarding(props: {
+  providerId?: string | null; fixtureMode?: boolean; onActivate: (name: string, route?: "activation" | "lifecycle") => void; onClose: () => void;
+}) {
+  if (props.fixtureMode) return <RepositoryIntakeDialog preview repository={{...repositoryProposedRecords[0],
+    id: "preview-repository-onboarding", name: "sample-notes-app", githubUrl: "https://github.com/example/sample-notes-app",
+    purpose: "A small notes application for an individual user. This repository holds its source and documentation."}}
+    ownerRepositories={["sample-notes-app"]} onClose={props.onClose} />;
+  return <LiveRepositoryOnboarding {...props} />;
+}
+
+function LiveRepositoryOnboarding({providerId = null, fixtureMode = false, onActivate, onClose}: {
   providerId?: string | null; fixtureMode?: boolean; onActivate: (name: string, route?: "activation" | "lifecycle") => void; onClose: () => void;
 }) {
   const custody = useRepositoryCustodyLiveRuntime(), continuity = useWorkspaceContinuityRuntime();

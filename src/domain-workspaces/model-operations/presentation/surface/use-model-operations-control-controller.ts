@@ -13,11 +13,14 @@ import type {
   ModelProfileRequestDraft,
   ModelProfileRequestProjection,
 } from "../../live-runtime/model-operations-live-types.ts";
+import {useModelProfileRequestOptions} from "../../live-runtime/use-model-profile-request-options.ts";
+import {modelProfileOptionsPreview} from "../../read-model/fixtures/model-review-preview.fixture.ts";
+import {modelProfileDraftFromRequest} from "../../work-model/profile-requests/model-profile-review-model.ts";
+import {modelProfileRequestsPreview} from "../../read-model/fixtures/model-review-preview.fixture.ts";
 import { modelOperationsReadModel } from "../../read-model/model-operations-read-model.ts";
 import type { ModelProfileRecord } from "../../read-model/types/model-operations-types.ts";
 import {
   emptyModelProfileRequestDraft,
-  type ModelProfileRequestStep,
 } from "../../work-model/profile-requests/model-profile-request-model.ts";
 import {
   filterModelProfiles,
@@ -58,13 +61,13 @@ export function useModelOperationsControlController() {
   ) ?? null;
   const [requestSupportOpen, setRequestSupportOpen] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
-  const [requestStep, setRequestStep] = useState<ModelProfileRequestStep>("intent");
   const [requestDraft, setRequestDraft] = useState<ModelProfileRequestDraft>(() =>
     emptyModelProfileRequestDraft(),
   );
   const [requestResult, setRequestResult] =
     useState<ModelProfileRequestProjection | null>(null);
 
+  const requestOptions=useModelProfileRequestOptions(requestOpen,fixtureIsolation.fixtureAllowed);
   const filteredProfiles = useMemo(
     () =>
       filterModelProfiles({
@@ -85,20 +88,20 @@ export function useModelOperationsControlController() {
     null;
 
   const openRequest = () => {
-    setRequestDraft(
-      emptyModelProfileRequestDraft(
-        `model-profile-request:console-${globalThis.crypto.randomUUID()}`,
-      ),
-    );
+    if (liveRuntime.pending) return;
+    if (requestDraft.requestId && !requestResult && Object.entries(requestDraft).some(([key,value])=>key!=="requestId" && key!=="environment" && key!=="dataClassification" && String(value).trim())) {
+      setRequestOpen(true); return;
+    }
+    const id=`model-profile-request:console-${globalThis.crypto.randomUUID()}`;
+    setRequestDraft(fixtureIsolation.fixtureAllowed ? {...modelProfileDraftFromRequest(modelProfileRequestsPreview()[0]),requestId:id,workflowId:modelProfileOptionsPreview().workflows[0].workflow_id,setupDigest:modelProfileOptionsPreview().workflows[0].setup_digest,operationalExpectations:""} : emptyModelProfileRequestDraft(id));
     setRequestResult(null);
-    setRequestStep("intent");
     setRequestOpen(true);
   };
 
   const submitRequest = async () => {
+    if(!consoleActionExecutable(fixtureIsolation,"durable-command")||liveRuntime.snapshot?.status!=="current")return;
     const result = await liveRuntime.submitCreate(requestDraft);
     setRequestResult(result);
-    setRequestStep("receipt");
   };
 
   return {
@@ -134,6 +137,7 @@ export function useModelOperationsControlController() {
     source: {
       loading: !liveRuntime.snapshot,
       unavailable: liveRuntime.snapshot?.status === "offline",
+      refresh: liveRuntime.refresh,
       description: fixtureIsolation.fixtureAllowed
         ? "Disconnected design preview; these sample profiles are not current Platform state."
         : liveRuntime.snapshot?.status === "offline"
@@ -141,22 +145,27 @@ export function useModelOperationsControlController() {
           : "Canonical profile records and caller-specific readiness projections.",
     },
     request: {
-      available:
+      preview: fixtureIsolation.fixtureAllowed,
+      options:requestOptions,
+      submitAvailable:consoleActionExecutable(fixtureIsolation,"durable-command")&&liveRuntime.snapshot?.status==="current",
+      inspectSampleResult:()=>{if(fixtureIsolation.fixtureAllowed){setRequestResult(modelProfileRequestsPreview()[0]);}},
+      available: fixtureIsolation.fixtureAllowed ||
         consoleActionExecutable(fixtureIsolation, "durable-command") &&
         liveRuntime.snapshot?.status === "current" && !liveRuntime.pending,
-      close: () => setRequestOpen(false),
+      recoveryId: fixtureIsolation.fixtureAllowed ? null : liveRuntime.recoveryId,
+      onRecovered: (request:ModelProfileRequestProjection) => {liveRuntime.clearRecovery(request.request_id);if(requestDraft.requestId===request.request_id)setRequestResult(request);},
+      close: () => {if(!liveRuntime.pending)setRequestOpen(false);},
       draft: requestDraft,
       error: liveRuntime.error,
-      latest: [...(liveRuntime.snapshot?.requests ?? [])].sort((a, b) => b.request.requested_at.localeCompare(a.request.requested_at))[0] ?? null,
-      all: liveRuntime.snapshot?.requests ?? [],
-      historyAvailable: liveRuntime.snapshot?.mode === "live",
+      references: fixtureIsolation.fixtureAllowed ? modelProfileRequestsPreview() : liveRuntime.snapshot?.requests ?? [],
+      latest: requestResult,
+      all: fixtureIsolation.fixtureAllowed ? modelProfileRequestsPreview() : liveRuntime.snapshot?.requests ?? [],
+      historyAvailable: fixtureIsolation.fixtureAllowed || liveRuntime.snapshot?.mode === "live",
       refresh: liveRuntime.refresh,
-      onStepChange: setRequestStep,
       open: requestOpen,
       pending: liveRuntime.pending,
       result: requestResult,
       show: openRequest,
-      step: requestStep,
       submit: submitRequest,
       updateDraft: <TKey extends keyof ModelProfileRequestDraft>(
         key: TKey,

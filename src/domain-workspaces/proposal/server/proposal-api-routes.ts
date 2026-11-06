@@ -11,7 +11,10 @@ import {
   applyProposalDeliveryHandoff,
   captureProposal,
   commandProposalTargetApplication,
-  listProposalLiveRecords,
+  listProposalRegister,
+  readProposalLiveRecord,
+  readProposalHistoryPage,
+  lookupCapturedProposal,
   proposalOosConfigured,
   ProposalOosError,
   startProposalTargetApplication,
@@ -39,7 +42,7 @@ export async function resolveProposalRepositoryGateRoute(request: NextRequest, p
   } catch (error) { return proposalErrorResponse(error); }
 }
 
-export async function listProposalsRoute() {
+export async function listProposalsRoute(request?: NextRequest) {
   if (!proposalOosConfigured()) {
     return NextResponse.json(
       {
@@ -54,13 +57,16 @@ export async function listProposalsRoute() {
   }
 
   try {
-    const records = await listProposalLiveRecords();
+    const query = request?.nextUrl.searchParams ?? new URLSearchParams();
+    if ([...query.keys()].some(key => !["query", "status", "ingress", "cursor"].includes(key) || query.getAll(key).length !== 1) || (query.get("query")?.length ?? 0) > 200) throw new ProposalOosError("Review the proposal search and filters.", "proposal_query_invalid", 400);
+    const {records, page} = await listProposalRegister({query: query.get("query") ?? "", status: query.get("status") ?? "all", ingress: query.get("ingress") ?? "all"}, query.get("cursor"));
     return NextResponse.json(
       {
         error: null,
         mode: "live",
         observedAt: new Date().toISOString(),
         records,
+        page,
         status: "current",
       },
       { headers: noStoreHeaders },
@@ -68,6 +74,19 @@ export async function listProposalsRoute() {
   } catch (error) {
     return proposalErrorResponse(error);
   }
+}
+
+export async function readProposalRecordRoute(_request: NextRequest, proposalId: string) {
+  try { return NextResponse.json(await readProposalLiveRecord(proposalId), {headers:noStoreHeaders}); }
+  catch(error) { return proposalErrorResponse(error); }
+}
+export async function readProposalHistoryRoute(request: NextRequest, proposalId: string) {
+  try { return NextResponse.json(await readProposalHistoryPage(proposalId, request.nextUrl.searchParams.get("cursor")), {headers:noStoreHeaders}); }
+  catch(error) { return proposalErrorResponse(error); }
+}
+export async function lookupProposalCaptureRoute(request: NextRequest) {
+  try { return NextResponse.json(await lookupCapturedProposal(assertCaptureRequest(await request.json().catch(()=>null))), {headers:noStoreHeaders}); }
+  catch(error) { return proposalErrorResponse(error); }
 }
 
 export async function captureProposalRoute(request: NextRequest) {

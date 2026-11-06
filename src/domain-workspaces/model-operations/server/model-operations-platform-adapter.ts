@@ -145,6 +145,8 @@ function assertSourceProjection(value: Record<string, unknown>) {
       "purpose",
       "security_review_ref",
       "selected_environments",
+      ...(Object.hasOwn(profile,"capability_id")?["capability_id"]:[]),
+      ...(Object.hasOwn(profile,"display_name")?["display_name"]:[]),
     ]);
     if (
       !new Set(["active", "exception", "retired", "suspended"]).has(text(profile.lifecycle)) ||

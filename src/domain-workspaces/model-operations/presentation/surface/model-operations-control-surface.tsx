@@ -9,6 +9,7 @@ import {
   TerasContentFrame,
   TerasFieldStack,
   TerasEmptyState,
+  TerasContentTray,
   TerasLoadingState,
   TerasFilterBar,
   TerasRecordControlLayout,
@@ -25,6 +26,7 @@ import { ModelProfileRequestSupportDialog } from "../dialogs/request-support/mod
 import { ModelProfileRequestModal } from "../workflows/profile-request/model-profile-request-modal.tsx";
 import { ModelProfileRequestHistoryDialog } from "../dialogs/request-history/model-profile-request-history-dialog.tsx";
 import {
+  modelProfileTitle, modelProfilePurpose,
   modelProfileAvailabilityLabel,
   modelProfileAvailabilityTone,
 } from "../shared/model-profile-display-model.ts";
@@ -49,7 +51,7 @@ export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange
         <TerasSegmentedControl ariaLabel="Model Operations pages" value={view} onValueChange={select}
           options={[{ value: "profiles", label: "Purpose profiles" }, { value: "runtime", label: "Models & routing" }]} />
       </TerasActionRow>
-      {view === "runtime" ? <ModelRuntimeControlSurface onDirtyChange={reportDirty} /> : <ModelProfileControlSurface />}
+      {view === "runtime" ? <ModelRuntimeControlSurface onDirtyChange={reportDirty} /> : <ModelProfileControlSurface onOpenRouting={() => select("runtime")} />}
     </TerasFieldStack>
     </TerasContentFrame>
     <TerasDraftCloseGuardDialog kicker="Routing draft" title="Discard unsaved routing changes?" description="Saved routing remains with the model service."
@@ -58,7 +60,7 @@ export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange
   </>;
 }
 
-function ModelProfileControlSurface() {
+function ModelProfileControlSurface({onOpenRouting}:{onOpenRouting:()=>void}) {
   const controller = useModelOperationsControlController();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyTarget, setHistoryTarget] = useState<string | null>(null);
@@ -78,12 +80,16 @@ function ModelProfileControlSurface() {
         mode="overview-register-selected"
         overview={
           <ModelOperationsControlOverviewPanel
+            loading={controller.source.loading}
             latestRequest={controller.request.latest}
             onOpenHistory={() => openHistory()}
             historyAvailable={controller.request.historyAvailable}
-            onOpenRequest={controller.request.show}
+            onOpenRequest={controller.request.recoveryId ? ()=>openHistory(controller.request.recoveryId) : controller.request.show}
+            recoveryPending={Boolean(controller.request.recoveryId)}
+            preview={controller.request.preview}
+            sourceUnavailable={controller.source.loading || controller.source.unavailable}
             onOpenRequestSupport={controller.requestSupport.show}
-            requestAvailable={controller.request.available}
+            requestAvailable={controller.request.recoveryId ? controller.request.historyAvailable : controller.request.available}
             summary={controller.readModel.summary}
             workspaceStatus={controller.readModel.workspaceStatus}
           />
@@ -139,7 +145,7 @@ function ModelProfileControlSurface() {
               />
             ) : controller.source.loading ? <TerasLoadingState fill label="Loading purpose profiles…" /> : (
               <TerasEmptyState fill>
-                {controller.source.unavailable ? controller.source.description : "No profiles match the current search and filters."}
+                {controller.source.unavailable ? <TerasContentTray kicker="Profiles unavailable" description={controller.source.description} actions={<TerasActionButton emphasis="secondary" onClick={()=>void controller.source.refresh()}>Retry</TerasActionButton>} /> : "No profiles match the current search and filters."}
               </TerasEmptyState>
             )}
           </TerasRegisterPanel>
@@ -159,7 +165,7 @@ function ModelProfileControlSurface() {
                 ),
                 title: selectedProfile.requiredMove.label,
               }}
-              description={selectedProfile.policy.purpose}
+              description={modelProfilePurpose(selectedProfile)}
               kicker="Selected Profile"
               meta={modelProfileSelectedMetadata(selectedProfile)}
               selected
@@ -167,7 +173,7 @@ function ModelProfileControlSurface() {
                 label: modelProfileAvailabilityLabel(availability),
                 tone: modelProfileAvailabilityTone(availability),
               }}
-              title={selectedProfile.policy.profileId}
+              title={modelProfileTitle(selectedProfile)}
               tone={modelProfileAvailabilityTone(availability)}
               variant="compact"
             />
@@ -177,7 +183,7 @@ function ModelProfileControlSurface() {
             </TerasList>
           </TerasFieldStack> : controller.source.loading ? <TerasLoadingState fill label="Preparing profile details…" skeleton="details" /> : (
             <TerasEmptyState fill>
-              No governed model profiles are available from the current authority projection.
+              No purpose profile is available to select.
             </TerasEmptyState>
           )
         }
@@ -186,6 +192,8 @@ function ModelProfileControlSurface() {
         }}
       />
       <ModelProfileDashboard
+        preview={controller.request.preview}
+        onOpenRouting={onOpenRouting}
         onClose={controller.dashboard.close}
         profile={controller.dashboard.profile}
       />
@@ -194,19 +202,23 @@ function ModelProfileControlSurface() {
         open={controller.requestSupport.open}
       />
       <ModelProfileRequestModal
+        preview={controller.request.preview}
+        onInspectSampleResult={controller.request.inspectSampleResult}
         draft={controller.request.draft}
         error={controller.request.error}
         onClose={controller.request.close}
-        onStepChange={controller.request.onStepChange}
+        workflowOptions={controller.request.options}
+        submissionAllowed={controller.request.submitAvailable}
         onSubmit={controller.request.submit}
-        onRecover={() => { controller.request.close(); openHistory(controller.request.draft.requestId); }}
+        onRecover={() => { controller.request.close(); openHistory(controller.request.result?.request_id ?? controller.request.draft.requestId); }}
         onUpdateDraft={controller.request.updateDraft}
         open={controller.request.open}
         pending={controller.request.pending}
+        outcomeUnknown={Boolean(controller.request.error && controller.request.recoveryId)}
+        referenceRequests={controller.request.references}
         result={controller.request.result}
-        step={controller.request.step}
       />
-      <ModelProfileRequestHistoryDialog open={historyOpen} initialRequestId={historyTarget} requests={controller.request.all} onClose={() => setHistoryOpen(false)} onChanged={controller.request.refresh} />
+      <ModelProfileRequestHistoryDialog preview={controller.request.preview} open={historyOpen} initialRequestId={historyTarget} requests={controller.request.all} onClose={() => setHistoryOpen(false)} onChanged={controller.request.refresh} onOriginalRead={controller.request.onRecovered} />
     </>
   );
 }

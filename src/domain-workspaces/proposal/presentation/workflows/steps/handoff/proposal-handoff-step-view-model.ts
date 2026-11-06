@@ -1,3 +1,4 @@
+import { proposalWorkflowTextValid } from "../../../../work-model/proposal-text-limits.ts";
 import type { TerasMetadataItem, TerasTone } from "@/teras";
 import type { ProposalTargetApplicationResult } from "../../../../live-runtime/proposal-live-types.ts";
 
@@ -69,11 +70,15 @@ export function proposalHandoffRepositoryGateMetadata({
 }
 
 export function proposalHandoffRouteStateMetadata({
+  previewMode = true,
+  repositoryGateRef,
   repositoryGateLabel,
   repositoryGateOwner,
   repositoryGateResolved,
   routeSelectionDraft,
 }: {
+  previewMode?:boolean;
+  repositoryGateRef?:string;
   repositoryGateLabel: string;
   repositoryGateOwner: string;
   repositoryGateResolved: boolean;
@@ -91,7 +96,7 @@ export function proposalHandoffRouteStateMetadata({
       label: "Source Custody",
       value: proposalRouteSelectionSourceCustodyLabel(sourceCustody),
     },
-    { label: "Dispatch Mode", value: "Prototype-local packet" },
+    { label: "Processing", value: previewMode ? "Local preview" : "Live workflow" },
     { label: "Repository Gate", value: repositoryGateLabel },
     {
       label: "Repo Mode",
@@ -99,7 +104,7 @@ export function proposalHandoffRouteStateMetadata({
         ? "Resolved repo"
         : proposalRouteSelectionRepoModeLabel(routeSelectionDraft.repoMode),
     },
-    { label: "Implementation repository", value: repositoryGateOwner },
+    { label: "Implementation repository", value: repositoryGateRef || routeSelectionDraft.repoRef || "Not required" },
   ];
 }
 
@@ -147,7 +152,7 @@ export function proposalHandoffStepProjection({
       ? "No source home recorded" : routeHasRepositoryGate ? "Not resolved" : "Not required");
   const workflowBlocked = !workflowReady || sourceReviewBlocked;
   const handoffNotesReady =
-    !workflowBlocked && !repositoryGateBlocked && normalizedNotes.length > 0;
+    !workflowBlocked && !repositoryGateBlocked && proposalWorkflowTextValid(draft.notes);
   const prototypeTarget = routeSelectionDraft.routeTarget === "Prototype";
   const targetTerminalFailure = new Set([
     "cancelled",
@@ -158,7 +163,7 @@ export function proposalHandoffStepProjection({
     !handoffRecorded &&
     !workflowBlocked &&
     !repositoryGateBlocked &&
-    normalizedNotes.length > 0 &&
+    proposalWorkflowTextValid(draft.notes) &&
     !targetApplicationPending &&
     !(prototypeTarget && targetTerminalFailure);
   const handoffTone: TerasTone = handoffRecorded
@@ -203,7 +208,7 @@ export function proposalHandoffStepProjection({
         : repositoryGateBlocked
           ? "Resolve the repository gate before writing notes or applying the handoff."
           : handoffNotesReady
-            ? "Record the review and dispatch a prototype-local packet to the selected route."
+            ? "Record the handoff and continue to the selected destination."
             : "Add handoff notes before applying the handoff.";
   const studioIncubation = proposalUsesPrototypeStudio(routeSelectionDraft);
   const prototypeWithoutHome = prototypeTarget && routeSelectionDraft.repoMode === "not-required";
@@ -311,8 +316,8 @@ export function proposalHandoffStepProjection({
     repositoryGateOwner,
     repositoryGateRef,
     repositoryGateResolved,
-    reviewResultDetail: handoffCopy.handoff,
-    reviewResultStatus: handoffCopy.statusLabel,
+    reviewResultDetail: handoffRecorded ? handoffCopy.handoff : canApply ? "Required reviews and notes are ready. Nothing has been submitted yet." : handoffActionDescription,
+    reviewResultStatus: handoffRecorded ? handoffCopy.statusLabel : canApply ? "ready" : "pending",
     routeHasRepositoryGate,
     targetApplicationCanCancel:
       prototypeTarget &&

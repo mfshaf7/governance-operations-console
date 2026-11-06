@@ -63,6 +63,7 @@ export type ProposalOosProjection = {
 };
 
 export type ProposalOosEvent = {
+  decision?: { type:"disposition"; outcome: "accepted" | "parked" | "rejected"; notes: string; route: ProposalOosRoute | null };
   repository_resolution?: ProposalRepositoryResolutionRecord;
   actor: { id: string; kind: "operator" | "system" | "target" };
   command_id: string | null;
@@ -96,13 +97,20 @@ export type ProposalOosHistory = {
 };
 
 export type ProposalLiveRecord = {
+  creationKnown?:boolean;
+  summaryOnly?: boolean;
+  selectedOnly?: boolean;
   deliveryLink?: ProposalDeliveryLink;
   createdAt: string;
   history: ProposalOosHistory;
   projection: ProposalOosProjection;
 };
 
+export type ProposalRegisterSelection = { query: string; status: string; ingress: string };
+export type ProposalRegisterPage = { selector: ProposalRegisterSelection; next_cursor: string | null; source_total: number };
+
 export type ProposalLiveSnapshot = {
+  page?: ProposalRegisterPage;
   error: string | null;
   mode: "disconnected-preview" | "live";
   observedAt: string;

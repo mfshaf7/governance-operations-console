@@ -3,8 +3,6 @@ import type {
   ModelProfileRequestProjection,
 } from "../../live-runtime/model-operations-live-types.ts";
 
-export type ModelProfileRequestStep = "intent" | "receipt" | "review";
-
 export function emptyModelProfileRequestDraft(requestId = ""): ModelProfileRequestDraft {
   return {
     admittedContextDigest: "",
@@ -25,6 +23,7 @@ export function emptyModelProfileRequestDraft(requestId = ""): ModelProfileReque
 }
 
 export function modelProfileIntentComplete(draft: ModelProfileRequestDraft) {
+  if(draft.workflowId)return Boolean(draft.setupDigest&&draft.displayName.trim()&&draft.purpose.trim());
   return [
     draft.admittedContextDigest,
     draft.admittedContextUri,
@@ -40,7 +39,7 @@ export function modelProfileIntentComplete(draft: ModelProfileRequestDraft) {
 }
 
 export function modelProfileReviewComplete(draft: ModelProfileRequestDraft) {
-  return modelProfileIntentComplete(draft) && draft.justification.trim().length >= 12;
+  return modelProfileIntentComplete(draft) && draft.justification.trim().length > 0;
 }
 
 export function modelProfileRequestReceiptItems(
@@ -55,3 +54,19 @@ export function modelProfileRequestReceiptItems(
     { label: "Receipt", value: projection.latest_receipt.receipt_id },
   ];
 }
+
+
+// Reuse reported references only; the new request keeps its own identity and choices.
+export function modelProfileReferenceFields(source: ModelProfileRequestProjection): Partial<ModelProfileRequestDraft> {
+  const intent=source.request.profile_intent;
+  return {ownerRepo:intent.requesting_owner,
+    registeredCallers:intent.registered_callers.map(item=>`${item.caller_id}=${item.owner_repo}`).join(", "),
+    admittedContextUri:intent.admitted_context_ref.uri,admittedContextDigest:intent.admitted_context_ref.digest,
+    outputSchemaRepo:intent.required_output_schema_ref.repo,outputSchemaPath:intent.required_output_schema_ref.path,outputSchemaVersion:intent.required_output_schema_ref.version,
+  };
+}
+
+export function modelProfileRequestResultSummary(result:ModelProfileRequestProjection) {
+  return [{label:"Review",value:result.review_state.replace(/-/g," ")},{label:"Implementation",value:result.fulfillment_state.replace(/-/g," ")},{label:"Next action",value:result.next_action.replace(/-/g," ")}];
+}
+export function modelProfileOriginalRequestMetadata(draft:ModelProfileRequestDraft) {return [{label:"Original request",value:draft.requestId}];}

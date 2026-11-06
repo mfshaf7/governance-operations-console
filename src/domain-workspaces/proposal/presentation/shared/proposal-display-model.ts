@@ -17,6 +17,10 @@ export function proposalOverviewContext(body: string) {
   return `${excerpt}… Full context is available in Proposal Hub.`;
 }
 
+export function proposalRouteLabel(proposal: ProposalWorkspaceScenario) {
+  return proposal.routeTarget === "Workspace Proposals" ? "Not decided" : proposal.routeTarget;
+}
+
 export function proposalIngressLabel(ingress: ProposalIngressKind) {
   switch (ingress) {
     case "agent":
@@ -111,7 +115,7 @@ export function proposalRepoGateTitle(proposal: ProposalWorkspaceScenario) {
 export function proposalRegisterDescription(
   proposal: ProposalWorkspaceScenario,
 ) {
-  return `${proposalIngressLabel(proposal.ingress)} / ${proposal.routeTarget} / ${proposal.owner}`;
+  return proposalIngressLabel(proposal.ingress);
 }
 
 export function proposalRegisterEvidence(proposal: ProposalWorkspaceScenario) {
@@ -123,7 +127,7 @@ export function proposalSubjectMetadata(
 ): TerasMetadataItem[] {
   return [
     { label: "Proposal", value: proposal.id },
-    { label: "Ingress", value: proposalIngressLabel(proposal.ingress) },
+    { label: "Source", value: proposalIngressLabel(proposal.ingress) },
     { label: "Version", value: proposal.recordVersion },
   ];
 }
@@ -133,8 +137,8 @@ export function proposalSelectedPanelMetadata(
 ): TerasMetadataItem[] {
   return [
     { label: "Proposal", value: proposal.id },
-    { label: "Ingress", value: proposalIngressLabel(proposal.ingress) },
-    { label: "Route", value: proposal.routeTarget },
+    { label: "Source", value: proposalIngressLabel(proposal.ingress) },
+    { label: "Route", value: proposalRouteLabel(proposal) },
     { label: "Repo Gate", value: proposalRepoGateLabel(proposal) },
     { label: "Version", value: proposal.recordVersion },
   ];
@@ -252,7 +256,7 @@ export const proposalIngressFilterOptions: Array<{
   label: string;
   value: ProposalIngressFilter;
 }> = [
-  { label: "All ingress", value: "all" },
+  { label: "All sources", value: "all" },
   { label: "Agent-fed", value: "agent" },
   { label: "API-fed", value: "api" },
   { label: "Console-created", value: "console" },

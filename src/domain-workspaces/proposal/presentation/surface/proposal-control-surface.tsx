@@ -2,6 +2,8 @@
 
 import {
   TerasActionButton,
+  TerasActionRow,
+  TerasContentTray,
   TerasEmptyState,
   TerasLoadingState,
   TerasFilterBar,
@@ -35,6 +37,10 @@ export function ProposalControlSurface({
     controller.selectedProposalHubProjection;
   const selectedProposalMove = selectedProposalHubProjection?.currentMove;
 
+  const sourceFailure = controller.source.pageError ?? controller.source.error;
+  const sourceErrorContent = sourceFailure ? <TerasContentTray kicker={controller.source.pageError ? "Page unavailable" : "Unable to load proposals"} description={sourceFailure}
+    actions={<TerasActionButton emphasis="secondary" onClick={controller.source.onRefresh}>{controller.source.pageError ? "Refresh first page" : "Retry"}</TerasActionButton>} /> : null;
+
   return (
     <>
       <TerasRecordControlLayout
@@ -47,6 +53,7 @@ export function ProposalControlSurface({
             onCaptureProposal={controller.capture.openModal}
             previewMode={controller.capture.previewMode}
             summary={controller.summary}
+        paged={Boolean(controller.source.page)}
             workspaceStatus={controller.workspaceStatus}
           />
         }
@@ -56,7 +63,7 @@ export function ProposalControlSurface({
               "data-proposal-register": "standard",
             }}
             density="compact-control"
-            description="Read-model and console-captured proposal records before triage, disposition, or handoff."
+            description={controller.source.page ? `Search covers all proposals. ${controller.source.page.source_total} proposals in the backlog; this page shows ${controller.proposals.filtered.length}.` : "Review ideas, decide a direction and follow their handoff."}
             filterBar={
               <TerasFilterBar
                 data-proposal-filter-bar="true"
@@ -68,7 +75,7 @@ export function ProposalControlSurface({
                     value: controller.filters.status,
                   },
                   {
-                    label: "Filter proposal ingress",
+                    label: "Filter proposal source",
                     onValueChange: controller.filters.onIngressChange,
                     options: proposalIngressFilterOptions,
                     value: controller.filters.ingress,
@@ -77,16 +84,18 @@ export function ProposalControlSurface({
                 search={{
                   ariaLabel: "Search proposals",
                   onValueChange: controller.filters.onSearchChange,
-                  placeholder: "Search proposal, route, repo gate, workspace...",
+                  placeholder: "Search ideas, routes or repositories…",
                   value: controller.filters.search,
                 }}
               />
             }
             kicker="Proposal Register"
-            statusLabel={`${controller.proposals.filtered.length}/${controller.proposals.all.length} shown`}
+            statusLabel={controller.source.loading ? "Loading" : sourceFailure && !controller.proposals.filtered.length ? "Unavailable" : `${controller.proposals.filtered.length} shown`}
             statusTone="info"
             title="Proposal register"
           >
+
+            {controller.source.result ? <TerasContentTray kicker="Proposal saved" description={controller.source.result} /> : null}
             {controller.source.loading ? <TerasLoadingState fill label="Loading proposals…" /> : controller.proposals.filtered.length > 0 ? (
               <ProposalWorkspaceRegisterTable
                 onInspectProposal={controller.register.inspect}
@@ -96,9 +105,14 @@ export function ProposalControlSurface({
               />
             ) : (
               <TerasEmptyState fill>
-                No proposal records match the current search and filters.
+                {sourceErrorContent ?? "No proposal records match the current search and filters."}
               </TerasEmptyState>
             )}
+            {controller.source.page ? <TerasActionRow>
+              <TerasActionButton emphasis="secondary" disabled={!controller.source.hasPrevious || controller.source.pagePending} onClick={controller.source.onPrevious}>Previous</TerasActionButton>
+              <TerasActionButton emphasis="secondary" busy={controller.source.pagePending} disabled={!controller.source.page.next_cursor || controller.source.pagePending} onClick={controller.source.onNext}>{controller.proposals.filtered.length ? "Next page" : "Continue search"}</TerasActionButton>
+            </TerasActionRow> : null}
+            {controller.proposals.filtered.length > 0 ? sourceErrorContent : null}
           </TerasRegisterPanel>
         }
         selected={selectedProposal && selectedProposalHubProjection && selectedProposalMove ? (
@@ -131,7 +145,7 @@ export function ProposalControlSurface({
           />
         ) : controller.source.loading ? <TerasLoadingState fill label="Preparing proposal details…" skeleton="details" /> : (
           <TerasEmptyState fill>
-            No canonical proposal record is available. Check Workspace Status for source health.
+            No proposal is available to select. Load the register or adjust your search.
           </TerasEmptyState>
         )}
         selectedProps={{
@@ -139,6 +153,9 @@ export function ProposalControlSurface({
         }}
       />
       <ProposalHubModal
+        previewMode={controller.hub.previewMode}
+        sourceLoading={controller.hub.sourceLoading} sourceError={controller.hub.sourceError} onRetrySource={controller.hub.onRetrySource}
+        sourceHistory={controller.hub.sourceHistory} historyPending={controller.hub.historyPending} historyError={controller.hub.historyError} onLoadHistory={controller.hub.onLoadHistory}
         decisionDraft={controller.hub.decisionDraft}
         onApplyDispositionDraft={controller.hub.onApplyDispositionDraft}
         onApplyHandoffDraft={controller.hub.onApplyHandoffDraft}
@@ -167,6 +184,7 @@ export function ProposalControlSurface({
       />
       <ProposalCaptureModal
         pending={controller.capture.pending}
+        outcomeUnknown={controller.capture.outcomeUnknown} canRetry={controller.capture.canRetry}
         error={controller.capture.error}
         previewMode={controller.capture.previewMode}
         canSubmit={controller.capture.canSubmit}

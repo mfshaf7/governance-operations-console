@@ -1,3 +1,4 @@
+import type { ProposalOosHistory } from "../../../../live-runtime/proposal-live-types.ts";
 import type { TerasTone } from "@/teras";
 import { proposalWorkflowClosed } from "../../../../domain/proposal-types.ts";
 
@@ -18,9 +19,11 @@ export type ProposalHistoryStepProjection = ReturnType<
 export function proposalHistoryStepProjection({
   proposal,
   workflowReceipts,
+  sourceHistory = null,
 }: {
   proposal: ProposalWorkspaceScenario;
   workflowReceipts: ProposalWorkflowLocalReceipt[];
+  sourceHistory?: ProposalOosHistory | null;
 }) {
   const chronologicalReceipts =
     proposalWorkflowReceiptsOldestFirst(workflowReceipts);
@@ -28,7 +31,7 @@ export function proposalHistoryStepProjection({
     chronologicalReceipts,
     "handoff",
   );
-  const receiptsRecorded = chronologicalReceipts.length > 0;
+  const receiptsRecorded = sourceHistory ? sourceHistory.events.length > 0 : chronologicalReceipts.length > 0;
   const latestReceipt = chronologicalReceipts.at(-1) ?? null;
   const historyTone: TerasTone = latestReceipt
     ? proposalWorkflowReceiptCopy(latestReceipt).tone
@@ -54,12 +57,13 @@ export function proposalHistoryStepProjection({
     receiptDescription: receiptsRecorded
       ? "Read-only receipt archive for this Proposal pass."
       : "No workflow receipt has been recorded for this Proposal pass.",
-    receiptStatusLabel: receiptsRecorded ? "recorded" : "empty",
+    receiptStatusLabel: sourceHistory?.next_cursor ? "more available" : receiptsRecorded ? "recorded" : "empty",
     receiptStatusTone: receiptsRecorded ? historyTone : ("muted" as const),
     receiptTitle,
     timelineTitle: "Recorded Trail",
-    receiptRows: proposalHistoryReceiptRows(chronologicalReceipts),
-    timelineRows: proposalHistoryTimelineRows(proposal, chronologicalReceipts),
+    receiptRows: sourceHistory ? sourceHistory.events.map(event=>({id:event.event_id,label:sourceEventLabel(event.event_type),value:event.occurred_at,
+      detail:`${event.actor.kind === "operator" ? "Recorded by" : "Reported by"} ${event.actor.id}`,tone:"info" as const})) : proposalHistoryReceiptRows(chronologicalReceipts),
+    timelineRows: sourceHistory ? proposalSourceTimelineRows(proposal,sourceHistory) : proposalHistoryTimelineRows(proposal, chronologicalReceipts),
   };
 }
 
@@ -144,4 +148,21 @@ function proposalWorkflowReceiptCopy(receipt: ProposalWorkflowLocalReceipt): {
       };
     }
   }
+}
+
+function sourceEventLabel(type: string) {
+  return ({captured:"Proposal captured",triaged:"Review recorded","disposition-recorded":"Decision recorded","repository-gate-resolved":"Repository confirmed",
+    "handoff-prepared":"Handoff prepared","handoff-blocked":"Handoff blocked","handoff-applied":"Handoff completed","target-application-failed":"Target needs attention","implementation-reconciled":"Implementation confirmed"} as Record<string,string>)[type] ?? "Workflow event";
+}
+export function proposalSourceTimelineRows(proposal:ProposalWorkspaceScenario, history:ProposalOosHistory) {
+  const rows:{id:string;label:string;timestamp:string;detail:string;status:string;tone:TerasTone}[]=history.events.map(event=>{
+    const decision=event.decision;
+    const detail=decision ? [decision.notes,decision.route ? `Destination: ${decision.route.target === "delivery" ? "Delivery" : "Prototype"}. ${decision.route.rationale}` : null].filter(Boolean).join(" ") : event.summary;
+    return {id:event.event_id,label:sourceEventLabel(event.event_type),timestamp:event.occurred_at,
+      detail:`${detail} · ${event.actor.id}`,status:decision?.outcome ?? event.status_after,
+      tone:(event.event_type === "handoff-blocked" || event.event_type === "target-application-failed" ? "warn" : "info") as TerasTone};
+  });
+  if(proposal.creationKnown!==false && !rows.some(row=>row.label === "Proposal captured"))rows.push({id:`capture:${proposal.id}`,label:"Proposal captured",timestamp:proposal.recordedAt,
+    detail:proposal.bodyPreview,status:proposalIngressLabel(proposal.ingress),tone:"info"});
+  return rows.sort((a,b)=>a.timestamp.localeCompare(b.timestamp)||a.id.localeCompare(b.id));
 }

@@ -17,11 +17,11 @@ export function proposalWorkflowShellDescription(
   activeWorkflowStep: ProposalWorkflowActiveStep,
 ) {
   if (activeWorkflowStep === "disposition") {
-    return "Record the proposal outcome, route, and repository handling in one workflow step.";
+    return "Accept, park or reject the idea. If accepted, choose its destination and repository.";
   }
 
   if (activeWorkflowStep === "handoff") {
-    return "Review route gate and record the handoff review or block.";
+    return "Check what is ready, resolve any blocker, then hand the proposal over.";
   }
 
   if (activeWorkflowStep === "history") {
@@ -29,10 +29,10 @@ export function proposalWorkflowShellDescription(
   }
 
   if (activeWorkflowStep === "triage") {
-    return "Source review step before bounded disposition.";
+    return "Review the idea and record a useful summary before choosing its direction.";
   }
 
-  return "Selected proposal workflow hub for status, progress, and history access.";
+  return "See the current status, next step and recorded history.";
 }
 
 export function proposalWorkflowShellTitle(

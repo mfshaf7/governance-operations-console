@@ -14,7 +14,8 @@ import {
 import { projectLiveModelOperationsReadModel } from "../../src/domain-workspaces/model-operations/live-runtime/model-operations-live-projection.ts";
 import { projectModelOperationsOperatingEvidence } from "../../src/domain-workspaces/model-operations/live-runtime/model-operations-operating-projection.ts";
 import {
-  listModelProfileRequests,
+  listModelProfileRequestPage,
+  readModelProfileRequest,
   submitCreateModelProfileRequest,
   commandModelProfileRequest,
 } from "../../src/domain-workspaces/model-operations/server/model-operations-oos-client.ts";
@@ -22,6 +23,8 @@ import { readPlatformModelOperationsArtifacts, readPlatformModelRegistryArtifact
 import { assertModelProfileReviewCommandDraft } from "../../src/domain-workspaces/model-operations/live-runtime/model-operations-live-contract.ts";
 import { fetchModelProfileFulfillment, submitModelProfileReviewCommand } from "../../src/domain-workspaces/model-operations/live-runtime/model-profile-operator-client.ts";
 import { modelProfileReviewActions, modelProfileDraftFromRequest } from "../../src/domain-workspaces/model-operations/work-model/profile-requests/model-profile-review-model.ts";
+
+import {requestProjection} from "../support/model-profile-request-fixture.mjs";
 
 const revision = "a".repeat(40);
 const zeroDigest = `sha256:${"0".repeat(64)}`;
@@ -158,21 +161,17 @@ test("Platform artifact files that are not operator-private are rejected", async
   }
 });
 
-test("OOS request list re-reads every item through the canonical source envelope", async () => {
-  const projection = requestProjection({ revision: 2, reviewState: "submitted" });
-  const calls = [];
-  const fetchImpl = async (url, init) => {
-    calls.push({ init, url: String(url) });
-    if (String(url).includes("?limit=")) {
-      return Response.json({ schema_version: 1, requests: [projection], next_cursor: null });
-    }
-    return Response.json(sourceEnvelope(projection));
-  };
-  const requests = await listModelProfileRequests({ config: baseConfig(), fetchImpl });
-  assert.equal(requests[0]?.request_id, projection.request_id);
-  assert.equal(calls.length, 2);
-  assert.match(String(new Headers(calls[1].init.headers).get("accept")), /console-source-projection/);
-  assert.equal(new Headers(calls[1].init.headers).get("x-oos-caller-secret"), "private-test-secret");
+test("request history uses bounded summary pages without per-row evidence reads", async () => {
+  const rows=Array.from({length:101},(_,i)=>({request_id:'model-profile-request:page-'+String(i).padStart(3,'0'),revision:2,display_name:'Request '+i,requested_at:'2026-10-08T17:00:00Z',review_state:'submitted',fulfillment_state:'not-started',next_action:'start-review'}));
+  const calls=[];const fetchImpl=async(url,init)=>{calls.push({url:String(url),init});const query=new URL(url).searchParams;assert.equal(query.get('view'),'summary');assert.equal(query.get('limit'),'25');const cursor=query.get('cursor'),remaining=rows.filter(row=>!cursor||row.request_id>cursor),page=remaining.slice(0,25);return Response.json({schema_version:1,requests:page,next_cursor:remaining.length>25?page.at(-1).request_id:null});};
+  let cursor=null;const seen=[];do{const page=await listModelProfileRequestPage(cursor,{config:baseConfig(),fetchImpl});seen.push(...page.requests.map(row=>row.request_id));cursor=page.next_cursor;}while(cursor);
+  assert.equal(seen.length,101);assert.equal(new Set(seen).size,101);assert.equal(calls.length,5);
+  assert.equal(new Headers(calls[0].init.headers).get('x-oos-caller-secret'),'private-test-secret');
+});
+test("selected history evidence still requires its current canonical source envelope",async()=>{
+ const projection=requestProjection({revision:2,reviewState:'submitted'});let accept='';
+ const result=await readModelProfileRequest(projection.request_id,{config:baseConfig(),fetchImpl:async(url,init)=>{accept=new Headers(init.headers).get('accept');return Response.json(sourceEnvelope(projection));}});
+ assert.equal(result.request_id,projection.request_id);assert.match(accept,/console-source-projection/);
 });
 
 test("stale OOS source envelopes fail closed", async () => {
@@ -190,7 +189,7 @@ test("stale OOS source envelopes fail closed", async () => {
     return Response.json(envelope);
   };
   await assert.rejects(
-    listModelProfileRequests({ config: baseConfig(), fetchImpl }),
+    readModelProfileRequest(projection.request_id,{ config: baseConfig(), fetchImpl }),
     (error) => error.code === "source_projection_stale",
   );
 });
@@ -211,9 +210,9 @@ test("same-sequence conflicting OOS source envelopes fail closed", async () => {
     if (reread === 2) value.request.profile_intent.display_name = "conflicting value";
     return Response.json(sourceEnvelope(value));
   };
-  await listModelProfileRequests({ config: baseConfig(), fetchImpl });
+  await readModelProfileRequest(projection.request_id,{ config: baseConfig(), fetchImpl });
   await assert.rejects(
-    listModelProfileRequests({ config: baseConfig(), fetchImpl }),
+    readModelProfileRequest(projection.request_id,{ config: baseConfig(), fetchImpl }),
     (error) => error.code === "source_authority_conflict",
   );
 });
@@ -224,7 +223,7 @@ test("OOS authorization rejection is preserved without a fixture fallback", asyn
     { status: 403 },
   );
   await assert.rejects(
-    listModelProfileRequests({ config: baseConfig(), fetchImpl }),
+    listModelProfileRequestPage(null,{ config: baseConfig(), fetchImpl }),
     (error) => error.code === "caller_unauthorized" && error.status === 403,
   );
 });
@@ -436,84 +435,6 @@ function requestDraft() {
   };
 }
 
-function requestProjection({
-  fulfillment = null,
-  fulfillmentState = "not-started",
-  requestId = "model-profile-request:console-test",
-  revision: requestRevision,
-  reviewState,
-}) {
-  const receiptDigest = `sha256:${String(requestRevision).padStart(64, "0")}`;
-  return {
-    schema_version: 1,
-    workflow_id: "model-profile-request",
-    request_id: requestId,
-    revision: requestRevision,
-    request: {
-      schema_version: 1,
-      request_id: requestId,
-      intent: "create",
-      requested_at: "2026-10-08T17:00:00Z",
-      operator_id: "operator:workspace-owner",
-      profile_intent: {
-        profile_id: null,
-        source: null,
-        display_name: "Console test",
-        intended_purpose: "bounded test",
-        requesting_owner: "governance-operations-console",
-        registered_callers: [{ caller_id: "governance-operations-console/model-operations", owner_repo: "governance-operations-console" }],
-        requested_environments: ["dev-integration"],
-        input_data_classification: "internal",
-        admitted_context_ref: { uri: "https://context.local/test", digest: zeroDigest },
-        required_output_schema_ref: { repo: "governance-operations-console", path: "contracts/test.json", version: "v1" },
-        human_approval_required: true,
-        operational_expectations: ["fail closed"],
-        operator_justification: "bounded test request",
-      },
-      delivery_ref: null,
-      correlation_id: "console-model-profile:test",
-      causation_id: null,
-      idempotency_key: "model-profile-request:test",
-    },
-    review_state: reviewState,
-    fulfillment_state: fulfillmentState,
-    requirements: [],
-    decision_ref: reviewState === "approved" ? { uri: "https://security.local/decision/test", digest: zeroDigest } : null,
-    fulfillment,
-    latest_receipt: {
-      schema_version: 1,
-      receipt_id: "model-profile-receipt:aaaaaaaaaaaaaaaaaaaaaaaa",
-      request_id: requestId,
-      request_revision: requestRevision,
-      intent: "create",
-      review_state: reviewState,
-      fulfillment_state: fulfillmentState,
-      profile_id: null,
-      actor: { caller_id: "governance-operations-console", operator_id: "operator:workspace-owner" },
-      routed_owners: { workflow_owner: "operator-orchestration-service", fulfillment_owner: "platform-engineering", security_owner: "security-architecture" },
-      delivery_ref: null,
-      source_ref: null,
-      prior_receipt_ref: null,
-      recorded_at: "2026-10-08T17:00:00Z",
-      digest: receiptDigest,
-    },
-    history: [{
-      sequence: 1,
-      event_type: "request-created",
-      occurred_at: "2026-10-08T17:00:00Z",
-      actor_id: "operator:workspace-owner",
-      command_id: "model-profile-request:test",
-      review_state_before: null,
-      review_state_after: reviewState,
-      fulfillment_state_before: null,
-      fulfillment_state_after: fulfillmentState,
-      summary: "test",
-      receipt_ref: { uri: "oos://receipt/test", digest: receiptDigest },
-    }],
-    next_action: fulfillmentState === "applied" ? "refresh-authoritative-projections" : reviewState === "draft" ? "revise-or-submit" : reviewState === "submitted" ? "start-review" : "begin-platform-fulfillment",
-    profile_lifecycle_changed: false,
-  };
-}
 
 function sourceEnvelope(projection) {
   const now = new Date();
@@ -616,7 +537,7 @@ test("review cannot smuggle operator, fulfillment, activation or unreviewed deci
     { ...reviewDraft(), operator_id: "operator:another" },
     { ...reviewDraft(), action: "fulfill" },
     { ...reviewDraft(), action: "activate" },
-    { ...reviewDraft("approve"), reason: "Approved without decision evidence" },
+    { ...reviewDraft("approve"), reason: null },
     { ...reviewDraft("request-changes"), reason: "Requires changes", requirements: [] },
     { ...reviewDraft(), expectedRevision: 0 },
     { ...reviewDraft(), issuedAt: "2099-01-01T00:00:00Z" },
@@ -634,6 +555,15 @@ test("review decisions and requested changes retain explicit evidence and native
   assert.throws(() => assertModelProfileReviewCommandDraft({ ...reviewDraft("request-changes"), reason: "Correct owner", requirements: [{ ...requirement, owner_repo: "../unknown" }] }, requestDraft().requestId), /requested change/);
 });
 
+test('ordinary approval records evidence at the owner instead of asking the browser to manufacture a reference',async()=>{
+ const id='model-profile-request:recorded-decision',draft={...reviewDraft('approve'),reason:'Explicit approval of this exact request.'};
+ const result=requestProjection({requestId:id,revision:3,reviewState:'approved'});result.history[0].command_id=draft.commandId;
+ result.decision_ref={uri:'oos://model-profile-requests/'+encodeURIComponent(id)+'/decisions/'+('a'.repeat(64)),digest:'sha256:'+('a'.repeat(64))};
+ let calls=0;await commandModelProfileRequest(id,draft,{config:baseConfig(),fetchImpl:async(url,init)=>{
+  calls++;assert.ok(String(url).endsWith('/review-decisions'));const body=JSON.parse(init.body);assert.equal(body.decision_ref,null);assert.equal(body.operator_id,baseConfig().operatorId);assert.equal(body.reason,draft.reason);return Response.json(result);
+ }});assert.equal(calls,1);
+});
+
 test("revision keeps original request, profile and source binding and cannot silently truncate an existing environment set", async () => {
   const original = requestProjection({ requestId: "model-profile-request:operator-revise-positive", revision: 4, reviewState: "changes-required" });
   original.request.intent = "amend";
@@ -642,7 +572,7 @@ test("revision keeps original request, profile and source binding and cannot sil
   original.request.profile_intent.requested_environments = ["dev-integration", "stage"];
   const revised = { ...modelProfileDraftFromRequest(original), purpose: "Explicitly revised purpose" };
   const draft = { ...reviewDraft("revise"), expectedRevision: 4, reason: "Correct the requested purpose", revisedIntentDraft: revised };
-  const result = structuredClone(original); result.revision = 5; result.latest_receipt.request_revision = 5; result.review_state = "draft"; result.history[0].command_id = draft.commandId;
+  const result = structuredClone(original); result.revision = 5; result.latest_receipt.request_revision = 5; result.review_state = "changes-required"; result.history[0].command_id = draft.commandId;
   let submitted;
   const options = { config: baseConfig(), fetchImpl: async (_url, init) => {
     if (init.method === "GET") return Response.json(sourceEnvelope(original));
@@ -665,7 +595,7 @@ test("native revision rejection and wrong-command acknowledgement cannot become 
 });
 
 test("request review actions follow the current owner lifecycle and never offer Platform fulfillment", () => {
-  for (const [state, expected] of Object.entries({ draft: ["revise", "submit", "withdraw"], submitted: ["start-review", "withdraw"], "under-review": ["approve", "request-changes", "reject", "withdraw"], "changes-required": ["revise", "withdraw"], approved: [], rejected: [], withdrawn: [] })) {
+  for (const [state, expected] of Object.entries({ draft: ["revise", "submit", "withdraw"], submitted: ["start-review", "withdraw"], "under-review": ["approve", "request-changes", "reject", "withdraw"], "changes-required": ["revise", "submit", "withdraw"], approved: [], rejected: [], withdrawn: [] })) {
     const actual = modelProfileReviewActions(requestProjection({ revision: 2, reviewState: state }));
     assert.deepEqual(actual, expected); assert.equal(actual.includes("fulfill"), false);
   }

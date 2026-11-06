@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   TerasActionButton, TerasActionRow, TerasDialog, TerasDraftCloseGuardDialog, TerasEmptyState, TerasLoadingState,
   TerasFieldStack, TerasMetadataList, TerasSelectField, TerasTextField,
@@ -10,15 +10,17 @@ import { connectionMetadata, connectionOperationMetadata } from "./provider-conn
 import { experimentalLabel, type ApiProvider, type ConnectionAction } from "../../../work-model/provider-connections-contract.ts";
 
 type Runtime = ReturnType<typeof useProviderConnections>;
-export function ProviderConnectionsDialog({ open, onClose, runtime, registry, changesBlocked }: {
-  open: boolean; onClose: () => void; runtime: Runtime; registry: ModelRegistry; changesBlocked: boolean;
+export function ProviderConnectionsDialog({ open, onClose, runtime, registry, changesBlocked, onContinueRegistration, preview=false }: {
+  preview?:boolean; open: boolean; onClose: () => void; runtime: Runtime; registry: ModelRegistry; changesBlocked: boolean; onContinueRegistration?: (connectionId:string)=>void;
 }) {
   const [provider, setProvider] = useState<ApiProvider>("claude-api"), [name, setName] = useState("");
   const [connectionId, setConnectionId] = useState(""), [apiKey, setApiKey] = useState("");
+  const seenCreated=useRef<string|null>(null);
   const [confirmation, setConfirmation] = useState<"connection.disconnect" | "connection.remove" | null>(null);
   const snapshot = runtime.snapshot, item = snapshot?.connections.find(value => value.connection_id === connectionId);
   const preset = snapshot?.presets.find(value => value.provider === (item?.provider ?? provider));
   const unresolved = Boolean(runtime.originalId && !runtime.receipt && runtime.operation?.state !== "cancelled");
+  const fieldBlocked=runtime.pending || changesBlocked || (!runtime.fresh&&!preview) || !snapshot;
   const blocked = runtime.pending || changesBlocked || !runtime.fresh || !snapshot;
   const models = Object.values(registry.configuration.configuration.models).filter(value => value.backend_id === item?.connection_id);
   const keyValid = apiKey.length >= 8 && apiKey.length <= 8192 && !/[^\x21-\x7e]/.test(apiKey);
@@ -30,20 +32,26 @@ export function ProviderConnectionsDialog({ open, onClose, runtime, registry, ch
   useEffect(() => {
     if (snapshot && connectionId && !snapshot.connections.some(value => value.connection_id === connectionId)) { setConnectionId(""); setApiKey(""); }
   }, [snapshot, connectionId]);
+  useEffect(()=>{
+    const receipt=runtime.receipt;
+    if(receipt?.action!=="connection.create"||seenCreated.current===receipt.command_id||!snapshot?.connections.some(value=>value.connection_id===receipt.connection_id))return;
+    seenCreated.current=receipt.command_id;setConnectionId(receipt.connection_id);setName("");
+  },[runtime.receipt,snapshot]);
   const close = () => { setApiKey(""); setConfirmation(null); onClose(); };
   const act = (action: ConnectionAction) => { if (item) { setApiKey(""); void runtime.submit(action, { connection_id: item.connection_id }); } };
   return <>
-    <TerasDialog busy={runtime.pending} busyLabel="Contacting connection service…" open={open} onClose={close} kicker="Models & routing" title="API connections"
+    <TerasDialog closeDisabled={runtime.pending} busy={runtime.pending} busyLabel="Contacting connection service…" open={open} onClose={close} kicker="Models & routing" title="API connections"
       description={experimentalLabel + ". Keys are sent only on your explicit action. They are never saved in the browser or sent to advisors."}
       width="standard" height="content" contentOverflow="auto">
       <TerasFieldStack>
+        {preview ? <TerasEmptyState>Design preview: inspect a sample connection or draft a new one. Key storage and provider changes are disabled.</TerasEmptyState>:null}
         <TerasSelectField label="Named connection" value={connectionId} disabled={runtime.pending}
           options={[{ value: "", label: "Add a new connection" }, ...(snapshot?.connections ?? []).map(value => ({ value: value.connection_id, label: value.name + " · " + value.state }))]}
           onValueChange={value => { setApiKey(""); setConnectionId(value); }} />
         {!snapshot ? runtime.error ? <TerasEmptyState>{runtime.error}</TerasEmptyState> : <TerasLoadingState label="Loading provider connections…" skeleton="details" /> : !item ? <>
-          <TerasSelectField label="Provider" value={provider} disabled={blocked} options={snapshot.presets.map(value => ({ value: value.provider, label: value.label + " · Experimental" }))}
+          <TerasSelectField label="Provider" value={provider} disabled={fieldBlocked} options={snapshot.presets.map(value => ({ value: value.provider, label: value.label + " · Experimental" }))}
             onValueChange={value => { setApiKey(""); setProvider(value as ApiProvider); }} />
-          <TerasTextField label="Connection name" value={name} maxLength={100} autoComplete="off" disabled={blocked} onValueChange={setName} />
+          <TerasTextField label="Connection name" value={name} maxLength={100} autoComplete="off" disabled={fieldBlocked} onValueChange={setName} />
           <TerasActionRow><TerasActionButton disabled={blocked || unresolved || !name.trim() || /[\x00-\x1f\x7f]/.test(name) || snapshot.connections.length >= 16}
             onClick={() => void runtime.submit("connection.create", { provider, name })}>Create named connection</TerasActionButton></TerasActionRow>
         </> : <>
@@ -60,7 +68,10 @@ export function ProviderConnectionsDialog({ open, onClose, runtime, registry, ch
           {item.pending_operation ? <TerasActionRow><TerasActionButton emphasis="secondary" disabled={runtime.pending}
             onClick={() => void runtime.check(item.pending_operation!)}>Check pending service operation</TerasActionButton></TerasActionRow> : null}
         </>}
-        <TerasMetadataList shape="list" items={connectionOperationMetadata(runtime, preset)} />
+        <TerasMetadataList shape="list" items={connectionOperationMetadata(runtime, preset, item, preview)} />
+        {item?.state==="active" && item.credential_present && !item.pending_operation && onContinueRegistration ? <TerasActionRow>
+          <TerasActionButton disabled={fieldBlocked||unresolved} emphasis="primary" onClick={()=>{close();onContinueRegistration(item.connection_id);}}>Continue to model registration</TerasActionButton>
+        </TerasActionRow>:null}
         <TerasActionRow>
           <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => void runtime.refresh().catch(() => undefined)}>Refresh connections</TerasActionButton>
           {runtime.originalId ? <>

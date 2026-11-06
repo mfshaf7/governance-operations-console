@@ -7,13 +7,13 @@ export function modelProfileReviewActions(request: ModelProfileRequestProjection
     case "draft": return ["revise", "submit", "withdraw"];
     case "submitted": return ["start-review", "withdraw"];
     case "under-review": return ["approve", "request-changes", "reject", "withdraw"];
-    case "changes-required": return ["revise", "withdraw"];
+    case "changes-required": return ["revise", "submit", "withdraw"];
     default: return [];
   }
 }
 
 export function modelProfileReviewActionLabel(action: ModelProfileReviewAction) {
-  return ({ "start-review": "Start review", approve: "Approve request", reject: "Reject request", "request-changes": "Request changes", withdraw: "Withdraw request", revise: "Revise intent", submit: "Submit for review" })[action];
+  return ({ "start-review": "Start review", approve: "Approve request", reject: "Reject request", "request-changes": "Request changes", withdraw: "Withdraw request", revise: "Revise review details", submit: "Submit for review" })[action];
 }
 
 export function modelProfileDraftFromRequest(request: ModelProfileRequestProjection): ModelProfileRequestDraft {

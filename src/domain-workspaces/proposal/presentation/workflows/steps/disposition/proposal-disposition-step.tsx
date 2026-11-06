@@ -1,5 +1,7 @@
 "use client";
 
+import { proposalWorkflowTextLimit } from "../../../../work-model/proposal-text-limits.ts";
+
 import { useProposalExistingRepositories } from "../../../../../operation-integrations/use-proposal-existing-repositories.ts";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useDraftAdvisor } from "@/agent-console";
@@ -270,8 +272,8 @@ export function ProposalDispositionStep({
       context: JSON.stringify({ title: proposal.title, body: proposal.bodyPreview, status: proposal.status,
         selectedOutcome: decisionDraft.outcome, selectedRoute: routeSelectionDraft.routeTarget,
         boundary: "Outcome and route are operator decisions; only their explanatory drafts are editable." }),
-      fields: [{ key: "notes", label: "Decision notes", value: decisionDraft.notes, maxLength: 8000 },
-        ...(accepting ? [{ key: "rationale", label: "Route rationale", value: routeSelectionDraft.rationale, maxLength: 8000 }] : [])] }),
+      fields: [{ key: "notes", label: "Decision notes", value: decisionDraft.notes, maxLength: proposalWorkflowTextLimit },
+        ...(accepting ? [{ key: "rationale", label: "Route rationale", value: routeSelectionDraft.rationale, maxLength: proposalWorkflowTextLimit }] : [])] }),
     apply: (edits) => {
       const notes = edits.find((edit) => edit.field === "notes");
       const rationale = edits.find((edit) => edit.field === "rationale");

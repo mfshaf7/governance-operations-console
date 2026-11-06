@@ -9,6 +9,8 @@ import type {
 } from "../../read-model/types/model-operations-types.ts";
 import {
   modelProfileAvailabilityLabel,
+  modelProfileTitle,
+  modelProfilePurpose,
   modelProfileLifecycleLabel,
   modelProfileResolutionLabel,
   modelReadinessLabel,
@@ -24,9 +26,9 @@ export function modelProfileSelectedMetadata(
 ): TerasMetadataItem[] {
   return [
     { label: "Profile", value: profile.policy.profileId },
-    { label: "Provider", value: profile.policy.provider },
+    { label: "Lifecycle", value: modelProfileLifecycleLabel(profile.policy.lifecycle) },
     { label: "Callers", value: String(profile.consumers.length) },
-    { label: "Upstream", value: modelProfileResolutionLabel(profile) },
+    { label: "Model selection", value: modelProfileResolutionLabel(profile) },
   ];
 }
 
@@ -96,6 +98,8 @@ export function filterModelProfiles({
       provider === "all" || profile.policy.provider === provider;
     const matchesSearch = query
       ? [
+          modelProfileTitle(profile),
+          modelProfilePurpose(profile),
           profile.policy.profileId,
           profile.policy.purpose,
           profile.policy.provider,

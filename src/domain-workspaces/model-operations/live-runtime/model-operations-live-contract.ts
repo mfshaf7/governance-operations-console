@@ -29,12 +29,12 @@ export function assertModelProfileReviewCommandDraft(value: unknown, requestId: 
     invalid("Model-profile review reason is invalid.");
   }
   const decision = ["approve", "reject"].includes(text(draft.action));
-  if (decision) {
+  if (decision && draft.decisionRef !== null) {
     const ref = record(draft.decisionRef, "review decision reference");
     if (Object.keys(ref).length !== 2 || !digestPattern.test(text(ref.digest))) invalid("Review decision evidence is invalid.");
     try { new URL(text(ref.uri)); } catch { invalid("Review decision reference is invalid."); }
-    if (!draft.reason) invalid("An explicit review reason is required.");
   } else if (draft.decisionRef !== null) invalid("This review action cannot carry a decision reference.");
+  if (decision && !draft.reason) invalid("An explicit review reason is required.");
   if (draft.action === "request-changes") {
     if (!draft.reason || !draft.requirements.length) invalid("Requested changes need a reason and at least one requirement.");
     for (const value of draft.requirements) {

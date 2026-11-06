@@ -81,45 +81,56 @@ A no-repository decision does not project a fabricated repository-request refere
 
 ### Source and target commands
 
-1. The surface follows native25-record OOS pages to retain the complete global
-   Proposal register, with an explicit8192-record bound. Page numbers advance
-   by one; changed totals, missing records or repeated identities fail the
-   read instead of presenting the newest25 as the whole inventory.
-2. It reads each typed projection and original first history page through one
-   fresh OOS snapshot. At most four snapshots run concurrently; simultaneous
-   same-authority GETs can share only a pending read. Completed reads are never
-   cached and operator/credential/endpoint scopes cannot share responses.
-3. It refreshes immediately on open and every 15 seconds while the page is
-   visible.
-   One poll is in flight per mounted surface. After a mutation, refresh waits
-   for any older read and then obtains fresh owner state. Transient failures
-   retain last verified rows with stale/read-only posture and their original
-   observation time; denied identity clears them. Original history cursors and
-   all owner command/version/approval checks remain unchanged.
-4. Capture writes through `/v1/ideas/capture`, then refreshes the canonical
-   projection.
-5. Triage, Disposition, and Handoff send deterministic idempotent command IDs,
+1. The register reads `GET /v1/proposals/register`: at most 25 matching summaries
+   per response, scanning at most four native 25-record collection pages. Search
+   and status/source filters apply across the source backlog through continuation,
+   not just the visible page. A sparse search can return no matches and a
+   **Continue search** action. It is a bounded scan, not an indexed search.
+2. **Previous** and **Next page** replace the visible register page. Overview
+   counts describe that page; the separate backlog count is the source total,
+   not a filtered-match total. Continuation is bound to the exact normalized
+   search/filter selection. Changed source totals or continuation anchors require
+   **Refresh first page** rather than silently combining an inconsistent list.
+3. Only the selected Proposal opens its exact source snapshot and first history
+   page. Register summaries explicitly carry `summaryOnly: true`; their empty
+   history is an unloaded placeholder, not proof that no events exist. A summary
+   cannot authorize a submission. Required moves can load an older selected record
+   independently of the register page. Opening the Hub waits for verified details
+   or offers **Retry details**. The current selection stays separate from page counts.
+4. Register and selected source refresh immediately on open and every 15 seconds
+   while visible. A page in flight suppresses the timer refresh; obsolete selection
+   responses cannot replace newer ones. Transient refresh failure retains the last
+   verified rows as stale/read-only with their original observation time. Identity
+   denial clears retained data, including detail/history reads. No configured
+   failure falls back to preview fixtures.
+5. Capture first looks up the original Console source identity through the existing
+   `/v1/ideas/lookup` route. An identical saved capture is reused. A failed precheck
+   reports that nothing was sent. After an unconfirmed creation response, retain
+   title, context and request ID and use **Check capture result**. Only an explicit
+   not-found result offers **Retry original capture**, with identical intent.
+   The source lookup does not claim global exactly-once creation under concurrency.
+6. Triage, Disposition, and Handoff send deterministic idempotent command IDs,
    expected record version, and current source status to OOS.
-6. A conflict refreshes source truth. The local draft remains available for
+7. A conflict refreshes source truth. The local draft remains available for
    operator review but cannot silently overwrite the newer record.
-7. Applying a Delivery handoff prepares the canonical packet when needed, then
+8. Applying a Delivery handoff prepares the canonical packet when needed, then
    submits that packet through OOS's Delivery application route with one stable
    application identity.
-8. The Console reports Delivery handoff completion only after OOS returns the
+9. The Console reports Delivery handoff completion only after OOS returns the
    target record and application receipt. A failed application refreshes the
    canonical blocked state and remains retryable with the same identity.
-9. An accepted Prototype route remains actionable while its handoff is merely
+10. An accepted Prototype route remains actionable while its handoff is merely
    `ready`; Console no longer treats packet preparation as target application.
-10. The operator starts the Prototype target application from the existing
+11. The operator starts the Prototype target application from the existing
     Handoff panel. The server re-reads the current Proposal, requires resolved
     repository custody, reads the exact Prototype Studio preparation through
     OOS, and constructs the caller-, session-, execution-, and replay-bound
     command without accepting those authority fields from the browser.
-11. OOS opens the deterministic `workspace-prototype-studio` review and returns
+12. OOS opens the deterministic `workspace-prototype-studio` review and returns
     `review-required`. Console displays its exact repository, review number,
     and head, then uses the same application identity for reconciliation or
     cancellation.
-12. Console records Handoff as applied only after OOS verifies the
+13. Console records Handoff as applied only after OOS verifies the
     human-reviewed merge, Studio readback and receipt, and the canonical
     Proposal acknowledgement. Incomplete or malformed success evidence fails
     closed without a local receipt.
@@ -141,9 +152,9 @@ not recorded rather than as new work. History remains available. A stale or
 unavailable source still requires a source refresh before further decisions.
 
 Existing `delivery_ref` links from earlier consumption are preserved even when
-modern route/handoff receipts are absent. One source-validated global Delivery
-overview supplies linked outcomes without per-item Delivery reads or archived
-tree expansion. Done Delivery with an accepted Proposal is labelled as source
+modern route/handoff receipts are absent. A bounded exact-ID metadata read supplies linked Delivery outcomes for the
+native Proposal candidate page, without loading the global Delivery overview or
+archived child trees. Done Delivery with an accepted Proposal is labelled as source
 closeout pending; retired Delivery stays distinct from implementation. An
 unavailable outcome does not erase the recorded link or invite duplicate routing.
 The Proposal source status and version stay unchanged; source closeout remains
@@ -160,3 +171,32 @@ npm audit --omit=dev
 The integration can be exercised against the admitted `dev-integration` OOS
 profile after Platform and Security supply runtime configuration. Do not use a
 direct OpenProject endpoint as a substitute.
+
+## Forms, submission feedback and original history
+
+Triage summary, Decision notes, Route rationale and Handoff notes retain entered
+text, display the existing 2,000-character command limit, and disable both the
+in-panel and footer submission actions until valid. Advisor draft limits match
+that same contract. No field is silently shortened. Handoff readiness describes
+an unsubmitted draft until an actual owner receipt is recorded. Live and local
+preview processing labels differ, and the implementation repository shows its
+actual reference rather than its responsible component.
+
+Submitting an ordinary workflow command opens a shared pending dialog, blocks
+repeat clicks/closing while in flight, and gives a readable result or error.
+The draft survives an unconfirmed response. Existing deterministic command IDs,
+source-version conflicts and approval/target gates remain authoritative.
+
+History follows `next_cursor` through **Load more history**, with retry on a
+failed page. It includes repository confirmations, implementation reconciliation
+and target failures with original dates, actors and receipt references. New
+disposition events retain their accepted decision payload. Legacy events use
+their original summary; current notes or route never substitute for an older
+record. Creation is shown only when the source supplied its actual date. A
+changed source version or conflicting original event stops page combination.
+Technical references stay available through the shared disclosure pattern.
+
+The preview browser suite uses isolated synthetic API responses for delayed,
+failed, denied and interrupted paths. It does not create real Proposals or assert
+live activation. Operator preview review precedes publication; exact composed
+runtime acceptance and authenticated live readback remain the publication gate.

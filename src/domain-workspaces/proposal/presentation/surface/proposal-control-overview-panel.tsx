@@ -16,27 +16,31 @@ import {
 import type { ProposalWorkspaceSummaryMetric } from "../../read-model/proposal-workspace-read-model.ts";
 
 export function ProposalControlOverviewPanel({
+  paged = false,
   canCapture,
   onCaptureProposal,
   previewMode,
   summary,
   workspaceStatus,
 }: {
+  paged?: boolean;
   canCapture: boolean;
   onCaptureProposal: () => void;
   previewMode: boolean;
   summary: ProposalWorkspaceSummaryMetric[];
   workspaceStatus: OperationSurfaceStatusModel;
 }) {
+  const status=projectOperationSurfaceStatusModel(workspaceStatus);
+  status.items=status.items.map(item=>({...item,stateLabel:item.stateLabel==="current"?"Online":item.stateLabel==="local"?"Preview":item.stateLabel==="syncing"?"Loading":item.stateLabel}));
   return (
     <TerasRecordControlOverviewGrid>
       <TerasRecordControlSummaryPanel
-        description={workspaceStatus.summary}
-        kicker="Proposal Summary"
+        description={paged ? "Counts describe this page of results. Search and filters check the full backlog." : status.items.some(item=>item.stateLabel === "offline") ? "Proposal data is unavailable. Retry the failed read in the register." : workspaceStatus.summary}
+        kicker={paged ? "Current Page" : "Proposal Summary"}
         metrics={summary}
         statusButtonAttribute="data-proposal-status-button"
-        title="Proposal posture"
-        surfaceStatus={projectOperationSurfaceStatusModel(workspaceStatus)}
+        title="Proposal overview"
+        surfaceStatus={status}
       />
 
       <TerasRecordControlActionPanel
@@ -53,11 +57,11 @@ export function ProposalControlOverviewPanel({
         boundary={
           previewMode
             ? "Console capture adds a local proposal to this disconnected preview. It does not create a canonical Workspace Proposal."
-            : "Console capture creates a proposal in Workspace Proposals through OOS. External API, agent, and system proposals arrive through the source refresh."
+            : "Save an idea to your proposal backlog, then review it and choose its next step."
         }
-        boundaryKicker="Ingress Boundary"
-        description="Direct console ingress for operator-created proposals."
-        kicker="Console Ingress"
+        boundaryKicker="Start here"
+        description="Describe the idea or problem you want to work on."
+        kicker="New Idea"
         title="Capture a proposal"
         tone="info"
       />

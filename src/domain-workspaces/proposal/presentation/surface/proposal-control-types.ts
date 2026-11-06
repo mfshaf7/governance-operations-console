@@ -20,9 +20,12 @@ import type { OperationSurfaceStatusModel } from "../../../operation-contracts/s
 import type { ProposalTargetApplicationResult } from "../../live-runtime/proposal-live-types.ts";
 
 export type ProposalControlController = {
-  source: { loading: boolean; error: string | null };
+  source: { loading:boolean;error:string|null;page: import("../../live-runtime/proposal-live-types.ts").ProposalRegisterPage|null;
+    pagePending:boolean;pageError:string|null;hasPrevious:boolean;onNext:()=>Promise<void>;onPrevious:()=>Promise<void>;onRefresh:()=>void;result:string|null };
   capture: {
     pending: boolean;
+    outcomeUnknown: boolean;
+    canRetry:boolean;
     error: string | null;
     previewMode: boolean;
     available: boolean;
@@ -51,6 +54,9 @@ export type ProposalControlController = {
     statusOptions: ReturnType<typeof proposalStatusFilterOptions>;
   };
   hub: {
+    previewMode:boolean;sourceLoading:boolean;sourceError:string|null;onRetrySource:()=>void;
+    sourceHistory:import("../../live-runtime/proposal-live-types.ts").ProposalOosHistory|null;
+    historyPending:boolean;historyError:string|null;onLoadHistory:()=>Promise<void>;
     close: () => void;
     decisionDraft: ProposalDecisionDraft | null;
     handoffDraft: ProposalHandoffDraft | null;

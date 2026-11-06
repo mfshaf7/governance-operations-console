@@ -70,23 +70,11 @@ export function projectLiveModelOperationsReadModel(
           state: "current",
           tone: "ok",
         },
-        {
-          detail: "Profile requests are read from OOS and mutations remain server-authenticated.",
-          facts: [
-            { label: "Workflow", value: "model-profile-request" },
-            { label: "Mutation", value: "OOS only" },
-            { label: "Registry write", value: "Console denied" },
-          ],
-          id: "request-path",
-          label: "Request Path",
-          state: "current",
-          tone: "ok",
-        },
       ],
       kicker: "Workspace Status",
       statusLabel: "Current",
-      summary: "OOS request state and Platform profile source are connected through exact validated projections.",
-      title: "Model Operations is source-projected",
+      summary: "Current Platform profile source. Request and history availability are checked separately when opened.",
+      title: "Purpose profile source is current",
       tone: "ok",
     },
   };
@@ -161,6 +149,7 @@ function projectProfile(
   const reviewRef = referenceLabel(record(profile.security_review_ref));
   const receiptMatches = Boolean(lifecycleReceipt && mergedReadback && lifecycleReceipt.profile_id === profileId);
   return {
+    evidenceScope: "policy-summary",
     accessPlane: {
       activationAllowed,
       auditSinkStatus: "not included in bounded source projection",
@@ -205,6 +194,8 @@ function projectProfile(
         : "No lifecycle receipt in the current bounded projection applies to this profile.",
     },
     policy: {
+      ...(typeof profile.display_name==="string"?{displayName:profile.display_name}:{}),
+      ...(typeof profile.capability_id==="string"?{capabilityId:profile.capability_id}:{}),
       allowedCallers: callers,
       allowedDataScope: [],
       directProviderAccessAllowed: false,
@@ -258,7 +249,7 @@ function projectProfile(
 }
 
 function requiredMoveLabel(lifecycle: string, activationAllowed: boolean) {
-  if (activationAllowed) return "Monitor governed access";
+  if (activationAllowed) return "Review capability selection";
   if (lifecycle === "retired") return "Keep retired";
   if (lifecycle === "suspended") return "Maintain suspension";
   if (lifecycle === "exception") return "Review exception scope";
@@ -266,7 +257,7 @@ function requiredMoveLabel(lifecycle: string, activationAllowed: boolean) {
 }
 
 function requiredMoveDetail(lifecycle: string, activationAllowed: boolean) {
-  if (activationAllowed) return "The Platform projection permits governed access for the registered callers.";
+  if (activationAllowed) return "Policy permits use. Models & routing shows the selected permission profile and separate model health.";
   return `Keep direct invocation denied while the Platform lifecycle is ${lifecycle} and activation is not allowed.`;
 }
 

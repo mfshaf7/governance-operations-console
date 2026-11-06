@@ -1,5 +1,6 @@
 export type NativeModelEffort = string | boolean | null;
 export type EffectiveModelSelection = Readonly<{
+  policy_profile_id?: string;
   revision: number;
   configuration_digest: string;
   task: string;
@@ -27,7 +28,8 @@ export function assertEffectiveModelSelection(
   };
   const text = (input: unknown, max = 300) => typeof input === "string" && input.length > 0 && input.length <= max;
   const source = object(value);
-  exact(source, ["revision", "configuration_digest", "task", "selection_ref", "attempts"]);
+  exact(source, ["revision", "configuration_digest", "task", "selection_ref", "attempts", ...(Object.hasOwn(source,"policy_profile_id")?["policy_profile_id"]:[])]);
+  if(source.policy_profile_id!==undefined&&!/^[a-z0-9][a-z0-9._-]{0,127}$/.test(String(source.policy_profile_id)))fail();
   if (!Number.isSafeInteger(source.revision) || Number(source.revision) < 0 ||
       !/^sha256:[0-9a-f]{64}$/.test(String(source.configuration_digest)) ||
       source.task !== task || !/^ai-routing-selection:[0-9a-f]{64}$/.test(String(source.selection_ref)) ||

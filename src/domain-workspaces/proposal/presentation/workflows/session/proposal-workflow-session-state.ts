@@ -1,3 +1,4 @@
+import { proposalWorkflowTextValid } from "../../../work-model/proposal-text-limits.ts";
 import {
   proposalDecisionDraftFromProposal,
   proposalRouteSelectionComplete,
@@ -121,10 +122,10 @@ export function proposalWorkflowSessionState({
   const triageCanApply =
     !sourceReviewRequired &&
     !triageReadOnly &&
-    activeTriageDraft.summary.trim().length > 0;
+    proposalWorkflowTextValid(activeTriageDraft.summary);
   const dispositionCanApply =
     !dispositionReadOnly &&
-    activeDecisionDraft.notes.trim().length > 0 &&
+    proposalWorkflowTextValid(activeDecisionDraft.notes) &&
     (activeDecisionDraft.outcome !== "accepted" ||
       proposalRouteSelectionComplete(activeRouteSelectionDraft));
   const dispositionStepAvailable =
@@ -135,7 +136,7 @@ export function proposalWorkflowSessionState({
     !handoffReadOnly &&
     handoffStepAvailable &&
     !handoffRepositoryGateLocked &&
-    activeHandoffDraft.notes.trim().length > 0;
+    proposalWorkflowTextValid(activeHandoffDraft.notes);
   const hasPendingDispositionDraft = Boolean(
     !proposalWorkflowClosed(proposal) &&
     activeWorkflowStep === "disposition" &&

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserOperationDraftStore } from "../../operation-runtime/browser-draft-store.ts";
 import { useConsoleRuntimeCapabilities } from "../../../console-integration/configuration/use-console-runtime-capabilities.ts";
+import {modelOperationsPreview} from "../read-model/fixtures/model-review-preview.fixture.ts";
 import { modelRuntimePreviewRegistry } from "../read-model/fixtures/model-runtime.fixture.ts";
 import {
   assertModelCatalogue, assertModelRegistry, assertModelRuntimeOperation, modelIdentifier, modelRecord,
@@ -49,6 +50,7 @@ export function useModelRuntime() {
     const current = ++sequence.current;
     if (dataMode !== "live") {
       setRegistry(dataMode === "disconnected-preview" ? modelRuntimePreviewRegistry() : null);
+      setRecords(dataMode === "disconnected-preview" ? modelOperationsPreview() : []);
       setFresh(false);
       setError(dataMode === "invalid" ? "Model service configuration is unavailable." : null);
       return null;
@@ -68,6 +70,8 @@ export function useModelRuntime() {
     finally { refreshReads.current--; if (alive.current && refreshReads.current === 0) setRefreshing(false); }
   }, [dataMode, showError]);
   const loadOperation = useCallback(async (id: string) => {
+    if(dataMode === "disconnected-preview"){const sample=modelOperationsPreview().find(item=>item.request_id===id);if(!sample)return null;if(alive.current&&selected.current===id)setOperation(sample);return sample;}
+    if(dataMode !== "live")return null;
     let next: ModelRuntimeOperation;
     try {
       next = assertModelRuntimeOperation(await request("/requests/" + encodeURIComponent(id)), id);
@@ -83,11 +87,11 @@ export function useModelRuntime() {
     }
     if (terminalModelStates.has(next.state)) void refresh().catch(() => undefined);
     return next;
-  }, [refresh]);
+  }, [dataMode, refresh]);
   const selectOperation = useCallback(async (id: string) => {
-    selected.current = id; setSelectedId(id); setOperation(null); setLookupMissing(false); remember(id);
+    selected.current = id; setSelectedId(id); setOperation(null); setLookupMissing(false); if(dataMode === "live")remember(id);
     try { return await loadOperation(id); } catch (cause) { showError(cause); return null; }
-  }, [loadOperation, showError]);
+  }, [dataMode, loadOperation, showError]);
   useEffect(() => {
     alive.current = true;
     void refresh().catch(() => undefined);
@@ -116,6 +120,7 @@ export function useModelRuntime() {
     return () => window.clearInterval(timer);
   }, [operation, loadOperation, showError]);
   const discover = useCallback(async (backend: string) => {
+    if(dataMode === "disconnected-preview"){setCatalogue({backend_id:backend,models:[{model:"Sample new model",supported_efforts:["medium","high"],model_digest:null,runtime_version:"Sample runtime"}]});return;}
     if (dataMode !== "live") return;
     const version = ++backendSequence.current; setPending(true); setCatalogue(null);
     try {
@@ -140,13 +145,13 @@ export function useModelRuntime() {
       // the mutation with a new ID or silently change its expected revision.
       try {
         const confirmed = await loadOperation(id);
-        if (!sameModelRuntimeRequest(confirmed.request, intent)) throw cause;
+        if (!confirmed || !sameModelRuntimeRequest(confirmed.request, intent)) throw cause;
         return confirmed;
       } catch { throw cause; }
     } finally { if (alive.current) setPending(false); }
   }, [dataMode, loadOperation, refresh, showError]);
   const control = useCallback(async (action: "retry" | "reconcile" | "cancel") => {
-    if (!operation) return;
+    if (dataMode !== "live" || !operation) return;
     const id = operation.request_id; setPending(true);
     try {
       const retained = unconfirmedControl.current;
@@ -161,9 +166,9 @@ export function useModelRuntime() {
       if (terminalModelStates.has(result.state)) await refresh();
     } catch (cause) { showError(cause); }
     finally { if (alive.current) setPending(false); }
-  }, [operation, refresh, showError]);
+  }, [dataMode, operation, refresh, showError]);
   const loadMore = useCallback(async () => {
-    if (!cursor) return;
+    if (dataMode !== "live" || !cursor) return;
     setReadingMore(true);
     try {
       const raw = modelRecord(await request("/requests?" + new URLSearchParams({ cursor })));
@@ -173,12 +178,13 @@ export function useModelRuntime() {
       setCursor(typeof raw.next_cursor === "string" ? raw.next_cursor : null);
     } catch (cause) { showError(cause); }
     finally { if (alive.current) setReadingMore(false); }
-  }, [cursor, showError]);
+  }, [cursor, dataMode, showError]);
+  const clearCatalogue=useCallback(()=>{backendSequence.current++;setCatalogue(null);},[]);
   return {
     registry, catalogue, operation, records, cursor, selectedId, pending, refreshing, readingMore, fresh, error, lookupMissing, preview, dataMode,
     refresh, discover, submit, control, selectOperation, loadMore,
     checkOriginal: () => selectedId ? loadOperation(selectedId).catch(showError) : Promise.resolve(),
-    clearSelection: () => { remember(null); selected.current = null; setSelectedId(null); setOperation(null); setError(null); },
-    clearCatalogue: () => { backendSequence.current++; setCatalogue(null); },
+    clearSelection: () => { if(dataMode === "live")remember(null); selected.current = null; setSelectedId(null); setOperation(null); setError(null); },
+    clearCatalogue,
   };
 }

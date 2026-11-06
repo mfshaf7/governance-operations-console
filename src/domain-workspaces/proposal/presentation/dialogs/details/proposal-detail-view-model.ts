@@ -24,7 +24,7 @@ export function proposalRecordSourceMetadata(
 ): TerasMetadataItem[] {
   return [
     { label: "Proposal", value: proposal.id },
-    { label: "Ingress", value: proposalIngressLabel(proposal.ingress) },
+    { label: "Source", value: proposalIngressLabel(proposal.ingress) },
     { label: "Version", value: proposal.recordVersion },
     { label: "Read State", value: proposal.projectionState },
     { label: "Updated", value: proposal.lastProjectionUpdate },

@@ -9,6 +9,7 @@ import {
 import type { ProposalWorkspaceScenario } from "../../read-model/proposal-workspace-read-model.ts";
 import {
   proposalRegisterDescription,
+  proposalRouteLabel,
   proposalStatusPillLabel,
 } from "../shared/proposal-display-model.ts";
 
@@ -47,8 +48,8 @@ export function ProposalWorkspaceRegisterTable({
       key: "route",
       render: (proposal) => (
         <TerasRecordCellText
-          description={proposal.owner}
-          title={proposal.routeTarget}
+          description={proposal.routeTarget === "Workspace Proposals" || proposal.owner === proposal.routeTarget ? undefined : proposal.owner}
+          title={proposalRouteLabel(proposal)}
         />
       ),
     },

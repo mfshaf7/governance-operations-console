@@ -8,6 +8,7 @@ export type RegisteredModel = {
   model_digest: string | null; runtime_version: string | null; verification_ref: string;
 };
 export type ModelConfiguration = {
+  profile_assignments?: Record<string,string>;
   backends: Record<string, { backend_id: string }>;
   models: Record<string, RegisteredModel>;
   default: ModelRoute | null;
@@ -22,14 +23,16 @@ export type ModelBackend = {
   account_login_supported: boolean; availability: "not-probed";
   experimental?: true; qualification?: "real-account-verification-pending"; catalogue_supported?: boolean; verification_max_tokens?: 4096;
 };
+export type ModelCapability = {capability_id:string;name:string;purpose:string;selected_profile_id:string;profiles:Array<{profile_id:string;name:string;state:"active"|"suspended"|"retired"|"exception";selectable:boolean}>};
 export type ModelRegistry = {
+  capabilities?: ModelCapability[];
   schema_version: 1; tasks: string[]; backends: ModelBackend[]; configuration: ConfigurationSnapshot; health?: ProviderHealth | null;
 };
 export type ModelCatalogue = {
   backend_id: string;
   models: Array<{ model: string; supported_efforts: NativeModelEffort[] | null; model_digest: string | null; runtime_version: string | null }>;
 };
-export const modelActions = ["backend.register", "backend.remove", "model.register", "model.remove", "routing.save", "routing.rollback", "account.login.start", "account.login.cancel"] as const;
+export const modelActions = ["backend.register", "backend.remove", "model.register", "model.remove", "profile.assign", "routing.save", "routing.rollback", "account.login.start", "account.login.cancel"] as const;
 export type ModelAction = typeof modelActions[number];
 export type ModelRuntimeRequest = {
   schema_version: 1; request_id: string; idempotency_key: string;
@@ -102,7 +105,8 @@ export function assertModelRoute(value: unknown): ModelRoute | null {
 export function assertModelConfiguration(value: unknown): ConfigurationSnapshot {
   const row = modelExact(value, ["revision", "current_revision", "digest", "configuration", "history"]);
   requireModel(modelInteger(row.revision) && modelInteger(row.current_revision) && row.current_revision >= row.revision && modelHash(row.digest) && Array.isArray(row.history));
-  const config = modelExact(row.configuration, ["backends", "models", "default", "overrides"]);
+  const config = modelExact(row.configuration, ["backends", "models", "default", "overrides", ...(Object.hasOwn(modelRecord(row.configuration),"profile_assignments")?["profile_assignments"]:[])]);
+  if(config.profile_assignments!==undefined){const assignments=modelRecord(config.profile_assignments);requireModel(Object.keys(assignments).length<=128&&Object.entries(assignments).every(([key,v])=>modelText(key,128)&&modelText(v,128)));}
   for (const [id, value] of Object.entries(modelRecord(config.backends))) requireModel(modelExact(value, ["backend_id"]).backend_id === id);
   for (const [id, value] of Object.entries(modelRecord(config.models))) {
     const model = modelExact(value, ["backend_id", "model", "supported_efforts", "model_digest", "runtime_version", "verification_ref"]);
@@ -119,10 +123,21 @@ export function assertModelConfiguration(value: unknown): ConfigurationSnapshot 
   return value as ConfigurationSnapshot;
 }
 export function assertModelRegistry(value: unknown): ModelRegistry {
-  const row = modelExact(value, ["schema_version", "tasks", "backends", "configuration", ...(Object.hasOwn(modelRecord(value), "health") ? ["health"] : [])]);
+  const row = modelExact(value, ["schema_version", "tasks", "backends", "configuration", ...(Object.hasOwn(modelRecord(value), "health") ? ["health"] : []), ...(Object.hasOwn(modelRecord(value),"capabilities")?["capabilities"]:[])]);
   requireModel(row.schema_version === 1 && Array.isArray(row.tasks) && row.tasks.every(task => modelText(task, 300)) && Array.isArray(row.backends));
   const snapshot = assertModelConfiguration(row.configuration);
   requireModel(snapshot.revision === snapshot.current_revision);
+  if(row.capabilities!==undefined){
+    requireModel(Array.isArray(row.capabilities)&&row.capabilities.length<=128);
+    const capabilities=new Set(),profiles=new Set();
+    for(const item of row.capabilities as unknown[]){
+      const c=modelExact(item,["capability_id","name","purpose","selected_profile_id","profiles"]);
+      requireModel(modelText(c.capability_id,128)&&!capabilities.has(c.capability_id)&&modelText(c.name,160)&&modelText(c.purpose,2000)&&Array.isArray(c.profiles)&&c.profiles.length>0&&c.profiles.length<=128);capabilities.add(c.capability_id);
+      const ids=new Set();
+      for(const value of c.profiles as unknown[]){const p=modelExact(value,["profile_id","name","state","selectable"]);requireModel(modelText(p.profile_id,128)&&!profiles.has(p.profile_id)&&modelText(p.name,160)&&["active","suspended","retired","exception"].includes(String(p.state))&&typeof p.selectable==="boolean"&&(!p.selectable||p.state==="active"));profiles.add(p.profile_id);ids.add(p.profile_id);}
+      requireModel(ids.has(c.capability_id)&&ids.has(c.selected_profile_id)&&c.selected_profile_id===(snapshot.configuration.profile_assignments?.[String(c.capability_id)]??c.capability_id));
+    }
+  }
   for (const value of row.backends as unknown[]) {
     const api = ["claude-api", "deepseek-api", "glm-api"].includes(String(modelRecord(value).provider));
     const backend = modelExact(value, ["backend_id", "provider", "allowed_tasks", "registered", "account_login_supported", "availability", ...(api ? ["experimental", "qualification", "catalogue_supported", "verification_max_tokens"] : [])]);
@@ -149,6 +164,7 @@ export function assertModelRuntimeRequest(value: unknown): ModelRuntimeRequest {
   const action = row.action as ModelAction;
   if (["backend.register", "backend.remove", "account.login.start"].includes(action)) requireModel(modelText(modelExact(row.input, ["backend_id"]).backend_id));
   if (action === "model.register") { const input = modelExact(row.input, ["backend_id", "model"]); requireModel(modelText(input.backend_id) && modelText(input.model)); }
+  if (action === "profile.assign") {const input=modelExact(row.input,["capability_id","profile_id"]);requireModel(modelText(input.capability_id,128)&&modelText(input.profile_id,128));}
   if (action === "model.remove") requireModel(modelHash(modelExact(row.input, ["model_id"]).model_id));
   if (action === "routing.rollback") requireModel(modelInteger(modelExact(row.input, ["revision"]).revision));
   if (action === "account.login.cancel") requireModel(modelIdentifier(modelExact(row.input, ["login_command_id"]).login_command_id));

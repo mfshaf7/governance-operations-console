@@ -11,6 +11,7 @@ import {
 } from "./proposal-live-contract.ts";
 import type {
   ProposalLiveCaptureRequest,
+  ProposalRegisterSelection,
   ProposalLiveCommandRequest,
   ProposalLiveHandoffApplicationRequest,
   ProposalLiveSnapshot,
@@ -20,10 +21,11 @@ import type {
   ProposalTargetApplicationResult,
 } from "./proposal-live-types.ts";
 
-const proposalPollIntervalMs = 15_000;
+import { useProposalSourceRead } from "./use-proposal-source-read.ts";
 
-export function useProposalLiveRuntime() {
-  const [snapshot, setSnapshot] = useState<ProposalLiveSnapshot | null>(null);
+export function useProposalLiveRuntime(selection: ProposalRegisterSelection = {query:"",status:"all",ingress:"all"}, selectedId = "", pinnedId: string | null = null) {
+  const source = useProposalSourceRead(selection, selectedId, pinnedId);
+  const {refresh,refreshSelected} = source;
   const [targetApplications, setTargetApplications] = useState<
     Record<string, ProposalTargetApplicationResult>
   >({});
@@ -33,81 +35,48 @@ export function useProposalLiveRuntime() {
   const [targetApplicationPending, setTargetApplicationPending] = useState<
     Record<string, boolean>
   >({});
-  const refreshSequence = useRef(0);
-  const request = useRef<Promise<ProposalLiveSnapshot> | null>(null);
-  const mounted = useRef(true);
-
-  const refresh = useCallback(async (afterMutation = false) => {
-    if (request.current) {
-      if (!afterMutation) return request.current;
-      await request.current;
-    }
-    const operation = (async () => {
-    const sequence = ++refreshSequence.current;
-    let next: ProposalLiveSnapshot;
-    let denied = false;
-    try {
-      const response = await fetch("/api/proposals", { cache: "no-store" });
-      denied = response.status === 401 || response.status === 403;
-      const body: unknown = await response.json().catch(() => null);
-      next = response.ok ? assertProposalLiveSnapshot(body) : proposalOfflineSnapshot(body);
-    } catch (error) {
-      next = proposalOfflineSnapshot(error);
-    }
-    if (mounted.current && sequence === refreshSequence.current) {
-      setSnapshot(current => !denied && next.status === "offline" && current?.mode === "live" ? {
-        ...next, observedAt: current.observedAt,
-        records: current.records.map(record => ({ ...record, projection: { ...record.projection, projection_state: "stale" as const } })),
-        error: `${next.error ?? "Owner unavailable."} Previously verified records are read-only.`,
-      } : next);
-    }
-    return next;
-    })();
-    request.current = operation;
-    try { return await operation; }
-    finally { if (request.current === operation) request.current = null; }
-  }, []);
-
-  useEffect(() => {
-    mounted.current = true;
-    let active = true;
-    void refresh().catch((error) => {
-      if (active) setSnapshot(proposalOfflineSnapshot(error));
-    });
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void refresh().catch(() => undefined);
-      }
-    }, proposalPollIntervalMs);
-    return () => {
-      active = false;
-      mounted.current = false;
-      refreshSequence.current++;
-      request.current = null;
-      window.clearInterval(timer);
-    };
-  }, [refresh]);
+  const checkCapture = useCallback(async (request:ProposalLiveCaptureRequest):Promise<{status:"found"|"not-found";proposalId:string|null}> => {
+    const response=await fetch("/api/proposals/capture-result",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(request)});
+    const value=await response.json();
+    if(!response.ok || !["found","not-found"].includes(value.status) || (value.status === "found" && typeof value.proposalId !== "string"))throw proposalClientError(value);
+    if(value.status === "found")await refresh(true);
+    return value;
+  },[refresh]);
+  const recoverCapture = useCallback(async (request:ProposalLiveCaptureRequest):Promise<string|null> => {
+    try {return (await checkCapture(request)).proposalId;} catch{return null;}
+  },[checkCapture]);
 
   const capture = useCallback(
     async (request: ProposalLiveCaptureRequest) => {
-      const response = await fetch("/api/proposals", {
+      let response: Response;
+      try { response = await fetch("/api/proposals", {
         body: JSON.stringify(request),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
+      } catch(error) {
+        const recovered = await recoverCapture(request);
+        if(recovered)return recovered;
+        throw Object.assign(new Error("Capture was not confirmed. Check its result before sending again."),{outcomeUnknown:true});
+      }
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        await refresh(true);
-        throw proposalClientError(body);
+        const recovered = await recoverCapture(request);
+        if(recovered)return recovered;
+        const error = proposalClientError(body) as Error & {outcomeUnknown?:boolean};
+        error.outcomeUnknown = ![400,401,403,422].includes(response.status) && !(body && typeof body === "object" && "code" in body && body.code === "proposal_capture_not_submitted");
+        throw error;
       }
       const result = body as { proposalId?: unknown };
       if (typeof result.proposalId !== "string") {
-        throw new Error("Proposal capture did not return a proposal identity.");
+        const recovered=await recoverCapture(request);
+        if(recovered)return recovered;
+        throw Object.assign(new Error("Capture was not confirmed. Check its original result before sending again."),{outcomeUnknown:true});
       }
       await refresh(true);
       return result.proposalId;
     },
-    [refresh],
+    [refresh,recoverCapture],
   );
 
   const command = useCallback(
@@ -122,14 +91,15 @@ export function useProposalLiveRuntime() {
       );
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        await refresh(true);
+        await refresh();
         throw proposalClientError(body);
       }
       const result = assertProposalOosCommandResult(body);
-      await refresh(true);
+      await refreshSelected();
+      await refresh();
       return result;
     },
-    [refresh],
+    [refresh,refreshSelected],
   );
 
   const applyDeliveryHandoff = useCallback(
@@ -146,14 +116,15 @@ export function useProposalLiveRuntime() {
       );
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        await refresh(true);
+        await refresh();
         throw proposalClientError(body);
       }
       const result = assertProposalOosHandoffApplicationResult(body);
-      await refresh(true);
+      await refreshSelected();
+      await refresh();
       return result;
     },
-    [refresh],
+    [refresh,refreshSelected],
   );
 
   const targetApplicationCommand = useCallback(
@@ -188,7 +159,7 @@ export function useProposalLiveRuntime() {
           ...current,
           [proposalId]: null,
         }));
-        if (result.status === "succeeded") await refresh(true);
+        if (result.status === "succeeded") {await refreshSelected();await refresh();}
         return result;
       } catch (error) {
         const message =
@@ -205,7 +176,7 @@ export function useProposalLiveRuntime() {
         }));
       }
     },
-    [refresh],
+    [refresh,refreshSelected],
   );
 
   const startTargetApplication = useCallback(
@@ -226,32 +197,17 @@ export function useProposalLiveRuntime() {
     [targetApplicationCommand],
   );
   return {
+    checkCapture,recoverCapture,
     applyDeliveryHandoff,
     cancelTargetApplication,
     capture,
     command,
     continueTargetApplication,
-    refresh,
-    snapshot,
+    ...source,
     startTargetApplication,
     targetApplicationErrors,
     targetApplicationPending,
     targetApplications,
-  };
-}
-
-function proposalOfflineSnapshot(value: unknown): ProposalLiveSnapshot {
-  const error = isProposalLiveApiError(value)
-    ? value.error
-    : value instanceof Error
-      ? value.message
-      : "OOS could not provide canonical Proposal state.";
-  return {
-    error,
-    mode: "live",
-    observedAt: new Date().toISOString(),
-    records: [],
-    status: "offline",
   };
 }
 

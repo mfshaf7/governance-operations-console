@@ -1,3 +1,4 @@
+import { proposalWorkflowTextValid } from "../../../../work-model/proposal-text-limits.ts";
 import type { TerasTone } from "@/teras";
 
 import type { ProposalWorkspaceScenario } from "../../../../read-model/proposal-workspace-read-model.ts";
@@ -32,7 +33,7 @@ export function proposalTriageStepProjection({
     readOnly && !sourceReviewRequired && !triageReceiptRecorded;
   const triageCompleted = triageReceiptRecorded || triageReadModelReadOnly;
   const triageLocked = triageCompleted || triageSourceBlocked;
-  const canApply = !triageLocked && normalizedSummary.length > 0;
+  const canApply = !triageLocked && proposalWorkflowTextValid(draft.summary);
   const triageTone: TerasTone = triageCompleted ? "ok" : "warn";
   const triageActionLabel = triageReceiptRecorded
     ? "Triage Recorded"
@@ -123,7 +124,7 @@ export function proposalTriageAdvisorDraft({
   return [
     `Advisor review for ${proposal.id}:`,
     `- Source posture: ${proposalScenarioStatusLabel(proposal.status)}.`,
-    `- Ingress: ${proposalIngressLabel(proposal.ingress)}.`,
+    `- Source: ${proposalIngressLabel(proposal.ingress)}.`,
     `- Source context to challenge: ${proposal.bodyPreview}`,
     "- Later steps own disposition, repository handling, and handoff.",
     `- Operator ask: ${prompt}`,
