@@ -12,6 +12,8 @@ import {
 export function ProposalCaptureModal({
   canSubmit,
   pending = false,
+  outcomeUnknown = false,
+  canRetry = false,
   error = null,
   previewMode,
   context,
@@ -24,6 +26,8 @@ export function ProposalCaptureModal({
 }: {
   canSubmit: boolean;
   pending?: boolean;
+  outcomeUnknown?: boolean;
+  canRetry?:boolean;
   error?: string | null;
   previewMode: boolean;
   context: string;
@@ -45,25 +49,25 @@ export function ProposalCaptureModal({
       bodyLayout="scroll"
       height="content"
       width="standard"
-      description={previewMode ? "Capture a proposal in the disconnected preview." : "Capture a proposal in Workspace Proposals for review."}
+      description={outcomeUnknown ? "Keep the original details while checking whether this proposal was saved." : "Record an idea or problem before deciding how to develop it."}
       footer={
         <>
           <TerasActionButton disabled={pending} onClick={onClose} emphasis="secondary">
             Back to Register
           </TerasActionButton>
           <TerasActionButton busy={pending} disabled={!canSubmit} onClick={onSubmit}>
-            Submit Capture
+            {outcomeUnknown ? canRetry ? "Retry original capture" : "Check capture result" : "Create proposal"}
           </TerasActionButton>
         </>
       }
-      kicker="Console Ingress"
+      kicker="Proposal"
       onClose={onClose}
       surfaceId="proposal-capture"
       title="Capture Proposal"
     >
       <TerasFieldStack data-proposal-capture-modal="true" spacing="comfortable">
         <TerasTextField
-          disabled={pending}
+          disabled={pending || outcomeUnknown}
           aria-label="Proposal title"
           label="Proposal title"
           onValueChange={onTitleChange}
@@ -71,18 +75,18 @@ export function ProposalCaptureModal({
           value={title}
         />
         <TerasNoteField
-          disabled={pending}
+          disabled={pending || outcomeUnknown}
           aria-label="Proposal context"
-          label="Context"
+          label="Describe your idea"
           onValueChange={onContextChange}
-          placeholder="Describe the problem, intended outcome, responsibility boundary, and why this belongs in Workspace Proposals."
+          placeholder="What is the idea or problem? What outcome do you want?"
           value={context}
         />
         {error ? <p role="alert">{error}</p> : null}
-        <TerasContentTray kicker="Capture Boundary">
+        <TerasContentTray kicker="What happens next">
           {previewMode
             ? "Creates a local preview proposal. No backend proposal is sent."
-            : "Creates a proposal in Workspace Proposals. Triage, disposition and handoff remain separate reviewed actions."}
+            : "Save the idea to your backlog. Review it, choose a direction, then hand it over when ready."}
         </TerasContentTray>
       </TerasFieldStack>
     </TerasModalShell>

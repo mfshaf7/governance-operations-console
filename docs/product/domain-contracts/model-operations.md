@@ -522,3 +522,16 @@ Model Operations must not:
 - `platform-engineering/security/governed-ai-runtime-assist-contract.yaml`
 - `platform-engineering/docs/standards/governed-ai-access-model.md`
 - `platform-engineering/docs/decisions/adr/ADR-012-governed-ai-access-plane-and-model-profiles.md`
+
+## Console AI Capability and permission profile boundary
+
+A Console AI Capability is a registered implementation with fixed caller, input and
+output contracts. It is distinct from an ART Feature or authored business
+workflow. Its base profile retains authority; named permission variants add
+restrictions and cannot change task implementation. Creation, activation and
+explicit selection are separate states. Selection shares the existing model
+configuration revision, journal and recovery boundary. Source/runtime readiness
+and provider health remain distinct.
+
+The primary operator procedure is
+[Model Operations](../model-operations-live-integration.md#permission-profiles-for-installed-ai-capabilities).

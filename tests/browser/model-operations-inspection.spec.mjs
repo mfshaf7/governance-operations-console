@@ -69,7 +69,7 @@ test("focused sample inspectors preserve saved effort and fallback without creat
   await expect(routing.getByText("Sample reasoning model · sample-cloud · High", { exact: true })).toBeVisible();
   await expect(routing.getByText("Sample local model · sample-local · Thinking off", { exact: true })).toBeVisible();
   await expect(routing.getByRole("button", { name: "Save routing", exact: true })).toBeDisabled();
-  await expect(routing.getByRole("button", { name: "Add explicit fallback", exact: true })).toBeDisabled();
+  await expect(routing.getByRole("button", { name: "Add explicit fallback", exact: true })).toBeEnabled();
   await routing.screenshot({ path: test.info().outputPath("routing-inspector.png") });
   await routing.getByRole("button", { name: "Back to Models & routing", exact: true }).click();
   await control.getByRole("button", { name: "Manage registrations", exact: true }).click();
@@ -81,23 +81,23 @@ test("focused sample inspectors preserve saved effort and fallback without creat
   await registrations.getByRole("button", { name: "Back to Models & routing", exact: true }).click();
   await control.getByRole("button", { name: "Operation history", exact: true }).click();
   const history = page.getByRole("dialog", { name: "Model operation history", exact: true });
-  await expect(history.getByText("No service operations are created in this read-only preview.", { exact: true })).toBeVisible();
+  await expect(history.getByText("Sample operation history only. No provider verification, sign-in or settings change was performed.", { exact: true })).toBeVisible();
   await expect(history.getByRole("button", { name: "Review restoration", exact: true })).toBeDisabled();
   await history.getByRole("button", { name: "Back to Models & routing", exact: true }).click();
-  await expect(control.getByRole("button", { name: "API connections", exact: true })).toBeDisabled();
+  await expect(control.getByRole("button", { name: "API connections", exact: true })).toBeEnabled();
   expect(writes).toEqual([]); expect(ownerReads.filter(url => !url.endsWith("/registry"))).toEqual([]);
 });
 
 test("purpose-profile filtering, checks and evidence inspectors remain separate from model configuration", async ({ page }) => {
   const { control, writes } = await open(page);
   await control.getByRole("radio", { name: "Purpose profiles", exact: true }).click();
-  await expect(control.getByRole("button", { name: "Request Profile", exact: true })).toBeDisabled();
-  await expect(control.getByRole("button", { name: "Request History", exact: true })).toBeDisabled();
+  await expect(control.getByRole("button", { name: "Request Profile", exact: true })).toBeEnabled();
+  await expect(control.getByRole("button", { name: "Manage Requests", exact: true })).toBeEnabled();
   await control.getByRole("searchbox", { name: "Search model profiles", exact: true }).fill("missing-profile");
   await expect(control.getByText("No profiles match the current search and filters.", { exact: true })).toBeVisible();
   await control.getByRole("searchbox", { name: "Search model profiles", exact: true }).fill("");
   await control.getByRole("button", { name: "Request Requirements", exact: true }).click();
-  await page.getByRole("dialog", { name: "Model Profile Request Boundary", exact: true }).getByRole("button", { name: "Close dialog", exact: true }).click();
+  await page.getByRole("dialog", { name: "Profile request requirements", exact: true }).getByRole("button", { name: "Close dialog", exact: true }).click();
   await expect(control.getByRole("button", { name: "Inspect local runtime", exact: true })).toHaveCount(0);
   await control.getByRole("button", { name: "Open Profile Dashboard", exact: true }).click();
   const dashboard = page.getByRole("dialog", { name: "Model Profile Dashboard", exact: true });
@@ -106,7 +106,7 @@ test("purpose-profile filtering, checks and evidence inspectors remain separate 
   for (const name of checks) {
     await dashboard.getByRole("button", { name, exact: true }).click();
     const evidence = page.getByRole("dialog", { name: /Model Profile (Inspector|Check)/ });
-    if (name === "Inspect Access Plane") {
+    if (name === "Inspect Access and activation") {
       await expect(evidence.getByText("Credentials managed by", { exact: true })).toBeVisible();
       await expect(evidence.getByText("Access reason", { exact: true })).toBeVisible();
       await expect(evidence.getByText(/Live profile activation remains blocked until/)).toBeVisible();
@@ -156,7 +156,7 @@ test("local-runtime inspection stays in Ollama backend details and preserves una
   await control.getByRole("button", { name: "Manage registrations", exact: true }).click();
   const registrations = page.getByRole("dialog", { name: "Model registrations", exact: true });
   await expect(registrations.getByRole("button", { name: "Inspect runtime", exact: true })).toHaveCount(0);
-  await registrations.getByRole("button", { name: "Admitted backend", exact: true }).click();
+  await registrations.getByRole("button", { name: "Provider connection", exact: true }).click();
   await page.getByRole("option", { name: "sample-local · ollama", exact: true }).click();
   await registrations.getByRole("button", { name: "Inspect runtime", exact: true }).click();
   const inspector = page.getByRole("dialog", { name: "Local Exception Runtime", exact: true });
@@ -240,7 +240,7 @@ test("registration keeps backend status, scoped model inventory and new-model fo
   await technicalToggle.click();
   await expect(technical).toHaveJSProperty("open", false);
   await expect(technical.getByText("Registered runtime", { exact: true })).toBeHidden();
-  await registrations.getByRole("button", { name: "Admitted backend", exact: true }).click();
+  await registrations.getByRole("button", { name: "Provider connection", exact: true }).click();
   await page.getByRole("option", { name: "sample-local · ollama", exact: true }).click();
   await expect(inventory.locator("tbody tr")).toHaveCount(1);
   await expect(inventory).toContainText("Sample local model");
@@ -262,7 +262,7 @@ test("registration keeps backend status, scoped model inventory and new-model fo
   await registrations.getByRole("button", { name: "Register model", exact: true }).click();
   const form = page.getByRole("dialog", { name: "Register model", exact: true });
   await expect(form).toContainText("Add a model through sample-local");
-  await expect(form.getByText("Read-only sample preview. Discovery and registration are disabled.", { exact: true })).toBeVisible();
+  await expect(form.getByText("Design preview: edit sample selections. Discovery uses a sample catalogue; registration is disabled.", { exact: true })).toBeVisible();
   await expect(form.getByRole("button", { name: "Verify & register model", exact: true })).toBeDisabled();
   await form.screenshot({ path: test.info().outputPath("register-model-form.png") });
   await form.getByRole("button", { name: "Back to registrations", exact: true }).click();

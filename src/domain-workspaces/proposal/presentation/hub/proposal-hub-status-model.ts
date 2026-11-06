@@ -44,7 +44,7 @@ export function proposalHubStatusProjection({
   triageApplied: boolean;
 }): ProposalHubProjection["status"] {
   const baseFacts = [
-    { label: "Ingress", value: proposalIngressLabel(proposal.ingress) },
+    { label: "Source", value: proposalIngressLabel(proposal.ingress) },
     {
       label: "Repo Gate",
       value: repositoryGateResolution

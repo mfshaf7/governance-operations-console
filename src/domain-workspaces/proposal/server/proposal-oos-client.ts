@@ -24,6 +24,7 @@ import {
 } from "../live-runtime/proposal-live-contract.ts";
 import type {
   ProposalLiveCaptureRequest,
+  ProposalRegisterSelection,
   ProposalLiveCommandRequest,
   ProposalLiveHandoffApplicationRequest,
   ProposalLiveRecord,
@@ -36,15 +37,9 @@ import type {
   ProposalTargetApplicationResult,
 } from "../live-runtime/proposal-live-types.ts";
 
-const proposalListLimit = 25;
 const proposalOosTimeoutMs = 8_000;
 
 type ProposalOosConfig = ConsoleOosOperatorConfiguration;
-
-type ProposalIdeaListItem = {
-  created_at?: string | null;
-  idea_id: string;
-};
 
 export class ProposalOosError extends Error {
   readonly code: string;
@@ -101,89 +96,70 @@ export async function resolveProposalRepositoryGate(
   return result;
 }
 
-export async function listProposalLiveRecords({
-  env = process.env,
-  fetchImpl = fetch,
-}: {
-  env?: NodeJS.ProcessEnv;
-  fetchImpl?: typeof fetch;
-} = {}): Promise<ProposalLiveRecord[]> {
-  const config = resolveProposalOosConfig(env);
-  return concurrentSourceRead("proposal-list", config, fetchImpl, async () => {
-  const ideas: ProposalIdeaListItem[] = [], seen = new Set<string>();
-  let expectedTotal: number | null = null;
-  for (let page = 1; ; page++) {
-    const list = await proposalOosRequest(config, `/v1/ideas?limit=${proposalListLimit}&offset=${page}`, {method:"GET"}, fetchImpl);
-    if (!isRecord(list) || !Array.isArray(list.ideas) || list.ideas.length > proposalListLimit || !isRecord(list.page) ||
-        list.page.offset !== page || list.page.count !== list.ideas.length || !Number.isSafeInteger(list.page.total) ||
-        Number(list.page.total) < 0 || Number(list.page.total) > 8192 || typeof list.page.has_more !== "boolean" ||
-        list.page.limit !== proposalListLimit || (expectedTotal !== null && list.page.total !== expectedTotal)) {
-      throw new ProposalOosError("Proposal inventory changed or exceeded its bounded global read. Refresh the owner list.", "proposal_list_invalid", 502);
-    }
-    expectedTotal=Number(list.page.total);
-    for (const item of list.ideas.map(assertIdeaListItem)) {
-      if(seen.has(item.idea_id))throw new ProposalOosError("Repeated Proposal owner identity.","proposal_list_invalid",502);
-      seen.add(item.idea_id);ideas.push(item);
-    }
-    const more=page*proposalListLimit<expectedTotal;
-    if(list.page.has_more!==more || list.page.next_offset!==(more?page+1:null) || (more && list.ideas.length!==proposalListLimit)) {
-      throw new ProposalOosError("Invalid Proposal page continuation.","proposal_list_invalid",502);
-    }
-    if(!more){if(ideas.length!==expectedTotal)throw new ProposalOosError("Incomplete global Proposal list.","proposal_list_invalid",502);break;}
-  }
-  const records: ProposalLiveRecord[] = [];
-  for (let offset = 0; offset < ideas.length; offset += 4) {
-    records.push(...await Promise.all(ideas.slice(offset, offset + 4).map(async (idea) => {
-      const value = await proposalOosRequest(config,
-        `/v1/proposals/${encodeURIComponent(idea.idea_id)}/projection?include_history=true`,
-        { method: "GET" }, fetchImpl, proposalSourceExpectation(idea.idea_id));
-      if (!isRecord(value) || value.schema_version !== 1 || value.workflow_id !== "proposal-read-snapshot") {
-        throw new ProposalOosError("Invalid Proposal owner snapshot.", "proposal_snapshot_invalid", 502);
-      }
-      const projection = assertProposalOosProjection(value.projection), history = assertProposalOosHistory(value.history);
-      if (projection.proposal_id !== idea.idea_id || history.proposal_id !== projection.proposal_id || history.record_version !== projection.record_version) {
-        throw new ProposalOosError("Proposal history does not match the current owner record.", "proposal_snapshot_binding", 502);
-      }
-      return { createdAt: idea.created_at ?? projection.updated_at, history, projection };
-    })));
-  }
-  // One bounded shared overview for linked records, rather than per-Proposal
-  // Delivery reads or archived child-tree expansion.
-  const linked = records.filter(record => record.projection.delivery_ref);
-  if (linked.length) {
-    const observedAt = new Date().toISOString();
-    let roots: Map<string, import("../domain/proposal-types.ts").ProposalDeliveryLink["status"]> | null = null;
-    try {
-      const value = await proposalOosRequest(config,
-        "/v1/delivery-initiatives?include_done=true&include_inactive=true&view=console",
-        {method: "GET"}, fetchImpl, {
-          authority: "operator-orchestration-service", sourceOwner: "workspace-delivery-art",
-          recordRef: "openproject://projects/workspace-delivery-art/initiatives",
-        });
-      if (!isRecord(value) || value.workflow_id !== "delivery-console-overview" || value.schema_version !== 1 ||
-          !isRecord(value.project) || value.project.identifier !== "workspace-delivery-art" || value.mutation_authority !== "none" ||
-          !Array.isArray(value.roots) || value.roots.length > 8192) throw new Error("Invalid Delivery overview.");
-      roots = new Map();
-      for (const root of value.roots) {
-        if (!isRecord(root) || !Number.isSafeInteger(root.id) || Number(root.id) < 1 ||
-            root.record_ref !== `openproject://work_packages/${root.id}` || roots.has(String(root.record_ref)) ||
-            !["new", "ready", "in-progress", "blocked", "done", "parked", "retired"].includes(String(root.status))) {
-          throw new Error("Invalid or repeated Delivery root.");
-        }
-        roots.set(String(root.record_ref), root.status as import("../domain/proposal-types.ts").ProposalDeliveryLink["status"]);
-      }
-    } catch (error) {
-      if (error instanceof ProposalOosError && [401,403].includes(error.status)) throw error;
-      roots = null;
-    }
-    for (const record of linked) {
-      const recordRef = record.projection.delivery_ref!;
-      record.deliveryLink = {recordRef, status: roots?.get(recordRef) ?? null, observedAt,
-        sourceState: roots?.has(recordRef) ? "current" : "unavailable"};
-    }
-  }
-  return records;
+export async function listProposalRegister(
+  selection: ProposalRegisterSelection = { query: "", status: "all", ingress: "all" }, cursor: string | null = null,
+  { env = process.env, fetchImpl = fetch }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+) {
+  const config = resolveProposalOosConfig(env), query = new URLSearchParams(selection);
+  if (cursor) query.set("cursor", cursor);
+  const value = await proposalOosRequest(config, `/v1/proposals/register?${query}`, {method: "GET"}, fetchImpl, {
+    authority: "operator-orchestration-service", sourceOwner: "workspace-proposals", recordRef: "openproject://projects/workspace-proposals",
   });
+  if (!isRecord(value) || value.schema_version !== 1 || value.workflow_id !== "proposal-register" || !Array.isArray(value.records) ||
+      value.records.length > 25 || !isRecord(value.selector) || value.selector.query !== selection.query.trim().toLowerCase() ||
+      value.selector.status !== selection.status || value.selector.ingress !== selection.ingress ||
+      !Number.isSafeInteger(value.source_total) || Number(value.source_total) < 0 ||
+      (value.next_cursor !== null && (typeof value.next_cursor !== "string" || value.next_cursor.length > 600))) {
+    throw new ProposalOosError("Proposal page could not be verified. Refresh the list.", "proposal_register_invalid", 502);
+  }
+  const records = value.records as ProposalLiveRecord[];
+  const ids = new Set<string>();
+  for (const record of records) {
+    assertProposalOosProjection(record.projection); assertProposalOosHistory(record.history);
+    if (record.summaryOnly !== true || record.history.events.length || record.history.next_cursor !== null ||
+        record.history.proposal_id !== record.projection.proposal_id || record.history.record_version !== record.projection.record_version ||
+        ids.has(record.projection.proposal_id)) throw new ProposalOosError("Proposal list contains conflicting identities.", "proposal_register_invalid", 502);
+    ids.add(record.projection.proposal_id);
+  }
+  return { records, page: { selector: {...selection,query:selection.query.trim().toLowerCase()}, source_total: Number(value.source_total), next_cursor: value.next_cursor as string | null } };
+}
+
+// Compatibility for existing engineering clients: one bounded register page.
+export async function listProposalLiveRecords(options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {}): Promise<ProposalLiveRecord[]> {
+  return (await listProposalRegister(undefined, null, options)).records;
+}
+
+export async function readProposalLiveRecord(proposalId: string, {env = process.env, fetchImpl = fetch}: {env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch} = {}): Promise<ProposalLiveRecord> {
+  const config = resolveProposalOosConfig(env);
+  if (!/^idea-[1-9][0-9]*$/.test(proposalId)) throw new ProposalOosError("Select a proposal.", "proposal_identity_invalid", 400);
+  const value = await proposalOosRequest(config, `/v1/proposals/${proposalId}/projection?include_history=true`, {method: "GET"}, fetchImpl, proposalSourceExpectation(proposalId));
+  if (!isRecord(value) || value.workflow_id !== "proposal-read-snapshot") throw new ProposalOosError("Proposal details could not be verified.", "proposal_snapshot_invalid", 502);
+  const projection = assertProposalOosProjection(value.projection), history = assertProposalOosHistory(value.history);
+  if (projection.proposal_id !== proposalId || history.proposal_id !== proposalId || history.record_version !== projection.record_version) throw new ProposalOosError("Proposal details changed while loading. Refresh this record.", "proposal_snapshot_invalid", 502);
+  return {createdAt: typeof value.created_at === "string" ? value.created_at : projection.updated_at, creationKnown:typeof value.created_at === "string", projection, history, summaryOnly: false};
+}
+
+export async function readProposalHistoryPage(proposalId: string, cursor: string | null, options: {env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch} = {}) {
+  if (!/^idea-[1-9][0-9]*$/.test(proposalId) || (cursor !== null && !/^activity-page:[1-9][0-9]*$/.test(cursor))) throw new ProposalOosError("Select a valid history page.", "proposal_history_query_invalid", 400);
+  const config = resolveProposalOosConfig(options.env ?? process.env);
+  const value = await proposalOosRequest(config, `/v1/proposals/${proposalId}/history${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, {method:"GET"}, options.fetchImpl ?? fetch, proposalSourceExpectation(proposalId));
+  const history = assertProposalOosHistory(value);
+  if (history.proposal_id !== proposalId) throw new ProposalOosError("History belongs to another proposal.", "proposal_history_invalid", 502);
+  return history;
+}
+
+export async function lookupCapturedProposal(request: ProposalLiveCaptureRequest, {env = process.env, fetchImpl = fetch}: {env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch} = {}) {
+  const config = resolveProposalOosConfig(env);
+  try {
+    const value = await proposalOosRequest(config, "/v1/ideas/lookup", { method:"POST", body: JSON.stringify({ source: {
+      context_ref:{request_id:request.requestId}, integration_id:"governance-operations-console", native_ref:{command:"proposal-capture",request_id:request.requestId}, surface:"governance-operations-console",
+    }}) }, fetchImpl);
+    if (!isRecord(value) || typeof value.idea_id !== "string" || !/^idea-[1-9][0-9]*$/.test(value.idea_id) || value.title !== request.title || value.body !== request.body) throw new ProposalOosError("The saved proposal does not match this original capture. Review the backlog before starting another.", "proposal_capture_conflict", 409);
+    return { status:"found", proposalId:value.idea_id };
+  } catch(error) {
+    if (error instanceof ProposalOosError && error.status === 404 && error.code === "idea_not_found") return {status:"not-found", proposalId:null};
+    throw error;
+  }
 }
 
 export async function captureProposal(
@@ -194,6 +170,10 @@ export async function captureProposal(
   }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
 ) {
   const config = resolveProposalOosConfig(env);
+  let original;
+  try {original = await lookupCapturedProposal(request, {env,fetchImpl});}
+  catch(error) {if(error instanceof ProposalOosError && error.status!==409)throw new ProposalOosError("The backlog could not be checked. This capture was not sent; restore the connection and try again.","proposal_capture_not_submitted",error.status);throw error;}
+  if (original.status === "found") return original.proposalId!;
   const result = await proposalOosRequest(
     config,
     "/v1/ideas/capture",
@@ -724,8 +704,9 @@ async function proposalOosRequest(
       proposal_repository_readiness_unavailable: "Current repository readiness is unavailable. Project use remains blocked; restore the connection and retry.",
       proposal_repository_route_unavailable: "This Prototype Studio route requires verified public source. Private work can use the private-capable Delivery route. Workspace onboarding does not authorize public publication.",
     };
-    const code = isRecord(body) && typeof body.code === "string" ? body.code : isRecord(body) && typeof body.error === "string" && body.error in gateMessages ? body.error : "proposal_oos_rejected";
-    throw new ProposalOosError(gateMessages[code] ?? (error || "OOS rejected the Proposal request."), code, response.status);
+    const code = isRecord(body) && typeof body.code === "string" ? body.code : isRecord(body) && typeof body.error === "string" && /^[a-z][a-z0-9_]{0,127}$/.test(body.error) ? body.error : "proposal_oos_rejected";
+    const readable = isRecord(body) && typeof body.message === "string" ? body.message : error;
+    throw new ProposalOosError(gateMessages[code] ?? (readable || "OOS rejected the Proposal request."), code, response.status);
   }
   if (!sourceExpectation) return body;
   try {
@@ -738,12 +719,6 @@ async function proposalOosRequest(
   }
 }
 
-function assertIdeaListItem(value: unknown): ProposalIdeaListItem {
-  if (!isRecord(value) || typeof value.idea_id !== "string") {
-    throw new ProposalOosError("OOS returned an invalid Proposal list item.", "proposal_list_invalid", 502);
-  }
-  return value as unknown as ProposalIdeaListItem;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

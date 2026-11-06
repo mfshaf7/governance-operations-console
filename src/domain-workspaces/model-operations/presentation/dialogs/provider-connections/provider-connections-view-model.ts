@@ -10,14 +10,16 @@ export function connectionMetadata(item: ProviderConnection, modelCount: number)
   ];
 }
 export function connectionOperationMetadata(runtime: {
-  fresh: boolean; error: string | null; originalId: string | null; operation: ConnectionOperation | null; receipt: ConnectionReceipt | null;
-}, preset: ProviderConnections["presets"][number] | undefined): TerasMetadataItem[] {
+  fresh: boolean; error: string | null; readError?:string|null;registryError?:string|null; originalId: string | null; operation: ConnectionOperation | null; receipt: ConnectionReceipt | null;
+}, preset: ProviderConnections["presets"][number] | undefined, item?:ProviderConnection, preview=false): TerasMetadataItem[] {
   return [
     { label: "Qualification", value: experimentalLabel, tone: "warn" },
     ...(preset ? [{ label: "Provider endpoint", value: preset.endpoint_origin },
       { label: "Model selection", value: preset.catalogue_supported ? "Discover models, then explicitly verify a selection" : "Enter an exact model ID manually, then explicitly verify it" }] : []),
-    { label: "Next", value: "Close this dialog to register the connection backend, verify a model and review routing." },
-    ...(!runtime.fresh ? [{ label: "Current state", value: "Unavailable or stale; refresh before changing connections", tone: "warn" as const }] : []),
+    { label: "Next", value: !item ? "Create a connection, then add its API key." : item.state!=="active" ? "Reconnect this connection before using its models." : !item.credential_present ? "Store the provider API key to enable model verification." : "Continue to model registration, verify a model, then choose its workflow routing." },
+    ...(!runtime.fresh && !preview ? [{ label: "Current state", value: "Unavailable or stale; refresh before changing connections", tone: "warn" as const }] : []),
+    ...(runtime.readError?[{label:"Current-state read",value:runtime.readError,tone:"warn" as const}]:[]),
+    ...(runtime.registryError?[{label:"Model register read",value:runtime.registryError,tone:"warn" as const}]:[]),
     ...(runtime.error ? [{ label: "Service response", value: runtime.error, tone: "warn" as const }] : []),
     ...(runtime.originalId ? [{ label: "Original operation", value: runtime.originalId },
       { label: "Operation result", value: runtime.receipt ? "Source confirmed · revision " + runtime.receipt.revision : runtime.operation?.state ?? "Unconfirmed" }] : []),

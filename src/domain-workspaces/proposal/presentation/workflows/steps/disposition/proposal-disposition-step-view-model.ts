@@ -1,3 +1,4 @@
+import { proposalWorkflowTextValid } from "../../../../work-model/proposal-text-limits.ts";
 import type { TerasTone } from "@/teras";
 import { proposalWorkflowClosed } from "../../../../domain/proposal-types.ts";
 import { repositoryOwnerRepoCatalogOptions } from "@/domain-workspaces/operation-integrations/repository-owner-repo-catalog-projection";
@@ -177,7 +178,7 @@ export function proposalDispositionStepProjection({
     ) ?? null;
   const routeComplete =
     !accepting || proposalRouteSelectionComplete(routeSelectionDraft);
-  const notesComplete = decisionDraft.notes.trim().length > 0;
+  const notesComplete = proposalWorkflowTextValid(decisionDraft.notes);
   const sourceParkedRevisit =
     proposal.status === "parked" && !dispositionRecorded;
   const canApply = !dispositionCompleted && routeComplete && notesComplete;

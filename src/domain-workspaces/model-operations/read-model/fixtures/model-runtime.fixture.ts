@@ -1,3 +1,4 @@
+import {previewConnectionId} from "./model-review-preview.fixture.ts";
 import type { ModelRegistry } from "../../work-model/model-runtime-contract.ts";
 
 // Read-only design data. Never selected after a configured owner fails.
@@ -6,9 +7,12 @@ export function modelRuntimePreviewRegistry(): ModelRegistry {
   const tasks = ["sample-advisor-v1/planning", "sample-assistant-v1/response"];
   return {
     schema_version: 1, tasks,
+    capabilities: tasks.map(task=>({capability_id:task.split('/')[0],name:task.split('/')[0],purpose:'Sample bounded AI assistance',selected_profile_id:task.split('/')[0],
+      profiles:[{profile_id:task.split('/')[0],name:'Standard profile',state:'active',selectable:true},{profile_id:task.split('/')[0]+'-restricted',name:'Sample restricted profile',state:'active',selectable:true},{profile_id:task.split('/')[0]+'-draft',name:'Sample draft profile',state:'suspended',selectable:false}]})),
     backends: [
       { backend_id: "sample-cloud", provider: "codex-app-server", allowed_tasks: tasks, registered: true, account_login_supported: true, availability: "not-probed" },
       { backend_id: "sample-local", provider: "ollama", allowed_tasks: tasks, registered: true, account_login_supported: false, availability: "not-probed" },
+      {backend_id:previewConnectionId,provider:"claude-api",allowed_tasks:tasks,registered:false,account_login_supported:false,availability:"not-probed",experimental:true,qualification:"real-account-verification-pending",catalogue_supported:true,verification_max_tokens:4096},
     ],
     configuration: {
       revision: 1, current_revision: 1, digest: "sha256:" + "c".repeat(64), history: [],

@@ -57,7 +57,21 @@ export function useProposalControlController({
 }: {
   entryIntent?: ConsoleSurfaceEntryIntent | null;
 } = {}): ProposalControlController {
-  const proposalLiveRuntime = useProposalLiveRuntime();
+  const [selectedProposalId, setSelectedProposalId] = useState(
+    proposalWorkspaceReadModel.proposals[1]?.id ??
+      proposalWorkspaceReadModel.proposals[0]?.id ??
+      "",
+  );
+  const [proposalIngressFilter, setProposalIngressFilter] =
+    useState<ProposalIngressFilter>("all");
+  const [proposalSearch, setProposalSearch] = useState("");
+  const [proposalStatusFilter, setProposalStatusFilter] =
+    useState<ProposalStatusFilter>("all");
+  const [hubProposalId, setHubProposalId] = useState<string | null>(null);
+  const [inspectedProposalId, setInspectedProposalId] = useState<string | null>(
+    null,
+  );
+  const proposalLiveRuntime = useProposalLiveRuntime({query:proposalSearch,status:proposalStatusFilter,ingress:proposalIngressFilter},selectedProposalId,hubProposalId ?? inspectedProposalId);
   const liveSnapshot = proposalLiveRuntime.snapshot;
   const previewMode = liveSnapshot?.mode === "disconnected-preview";
   const runtimeCapabilities = getProposalRuntimeCapabilities();
@@ -132,28 +146,19 @@ export function useProposalControlController({
       repositoryGateResolutions,
     ],
   );
-  const [selectedProposalId, setSelectedProposalId] = useState(
-    proposalWorkspaceReadModel.proposals[1]?.id ??
-      proposalWorkspaceReadModel.proposals[0]?.id ??
-      "",
-  );
   const [captureContext, setCaptureContext] = useState("");
   const [captureOpen, setCaptureOpen] = useState(false);
   const [capturePending, setCapturePending] = useState(false);
+  const [captureCanRetry, setCaptureCanRetry] = useState(false);
+  const [captureOutcomeUnknown, setCaptureOutcomeUnknown] = useState(false);
+  const [captureResult, setCaptureResult] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [captureRequestId, setCaptureRequestId] = useState(
     createProposalCaptureRequestId,
   );
   const [captureTitle, setCaptureTitle] = useState("");
-  const [proposalIngressFilter, setProposalIngressFilter] =
-    useState<ProposalIngressFilter>("all");
-  const [proposalSearch, setProposalSearch] = useState("");
-  const [proposalStatusFilter, setProposalStatusFilter] =
-    useState<ProposalStatusFilter>("all");
-  const [inspectedProposalId, setInspectedProposalId] = useState<string | null>(
-    null,
-  );
-  const [hubProposalId, setHubProposalId] = useState<string | null>(null);
+
+
   const {
     applyDispositionDraft: applyDispositionDraftReceipt,
     applyHandoffDraft: applyHandoffDraftReceipt,
@@ -194,7 +199,7 @@ export function useProposalControlController({
       const liveRecord = liveSnapshot?.records.find(
         (record) => record.projection.proposal_id === input.proposalId,
       );
-      if (!liveRecord || liveSnapshot?.status !== "current") {
+      if (!liveRecord || liveRecord.summaryOnly || liveSnapshot?.status !== "current") {
         throw new Error("Canonical Proposal state is unavailable for this command.");
       }
       const appliesToDelivery =
@@ -301,13 +306,13 @@ export function useProposalControlController({
     ]);
   const filteredProposals = useMemo(
     () =>
-      proposalFilterRegisterRows({
+      !previewMode && liveSnapshot?.page ? proposals.filter(proposal=>liveSnapshot.records.some(record=>!record.selectedOnly && record.projection.proposal_id===proposal.id)) : proposalFilterRegisterRows({
         ingressFilter: proposalIngressFilter,
         proposals,
         search: proposalSearch,
         statusFilter: proposalStatusFilter,
       }),
-    [proposalIngressFilter, proposalSearch, proposalStatusFilter, proposals],
+    [proposalIngressFilter, proposalSearch, proposalStatusFilter, proposals, previewMode, liveSnapshot],
   );
   const selectedProposal = useMemo(
     () =>
@@ -317,12 +322,17 @@ export function useProposalControlController({
     [proposals, selectedProposalId],
   );
   const proposalStatusOptions = useMemo(
-    () => proposalStatusFilterOptions(proposals),
-    [proposals],
+    () => previewMode ? proposalStatusFilterOptions(proposals) : [
+      {label:"All states",value:"all" as const},...(["captured","triaged","ready-to-route","waiting-on-repository","waiting-on-source","parked","done","retired"] as const).map(value=>({value,label:({captured:"Captured",triaged:"Triaged","ready-to-route":"Review","waiting-on-repository":"Repo needed","waiting-on-source":"Needs source",parked:"Parked",done:"Done",retired:"Delivery retired"})[value]}))],
+    [proposals,previewMode],
   );
   const summary = useMemo(
-    () => proposalWorkspaceSummaryMetrics(proposals),
-    [proposals],
+    () => {
+      const metrics = proposalWorkspaceSummaryMetrics(!previewMode && liveSnapshot?.page ? filteredProposals : proposals);
+      return !liveSnapshot || (!previewMode && liveSnapshot.status === "offline" && liveSnapshot.records.length === 0)
+        ? metrics.map(metric=>({...metric,value:"—"})) : metrics;
+    },
+    [proposals,previewMode,liveSnapshot,filteredProposals],
   );
   const inspectedProposal = useMemo(
     () =>
@@ -361,19 +371,12 @@ export function useProposalControlController({
       return;
     }
 
-    const focusedProposal = proposals.find(
-      (proposal) => proposal.id === entryIntent.subjectRef,
-    );
-
-    if (!focusedProposal) {
-      return;
-    }
-
+    // A required move can refer to an older page. Read its exact source independently.
     setProposalIngressFilter("all");
     setProposalSearch("");
     setProposalStatusFilter("all");
-    setSelectedProposalId(focusedProposal.id);
-  }, [entryIntent, proposals]);
+    setSelectedProposalId(entryIntent.subjectRef);
+  }, [entryIntent]);
 
   async function submitCapturedProposal() {
     if (!canSubmitCapture || capturePending) {
@@ -382,7 +385,16 @@ export function useProposalControlController({
     setCapturePending(true);
     setCaptureError(null);
     try {
-    const capturedProposalId = previewMode
+    let recoveredCaptureId:string|null=null;
+    if(captureOutcomeUnknown && !captureCanRetry){
+      const result=await proposalLiveRuntime.checkCapture({body:captureContext.trim(),requestId:captureRequestId,title:captureTitle.trim()});
+      recoveredCaptureId=result.proposalId;
+      if(result.status==="not-found"){
+        setCaptureCanRetry(true);setCaptureError("No saved proposal was found for this capture. You can retry the original request with the same details and identity.");return;
+      }
+    }
+    setCaptureCanRetry(false);
+    const capturedProposalId = recoveredCaptureId ?? (previewMode
       ? (
           await submitProposalCaptureCommand({
             bodyPreview: captureContext.trim(),
@@ -394,14 +406,20 @@ export function useProposalControlController({
           body: captureContext.trim(),
           requestId: captureRequestId,
           title: captureTitle.trim(),
-        });
+        }));
 
+    if (!capturedProposalId) {
+      setCaptureError("The result is still unconfirmed. Check the backlog or check this result again. No additional proposal was sent.");return;
+    }
+    setCaptureOutcomeUnknown(false);setCaptureResult("Proposal created. Open its Hub to review the idea and choose its next step.");
+    setProposalIngressFilter("all");setProposalStatusFilter("all");setProposalSearch("");
     setSelectedProposalId(capturedProposalId);
     setCaptureContext("");
     setCaptureRequestId(createProposalCaptureRequestId());
     setCaptureTitle("");
     setCaptureOpen(false);
     } catch (error) {
+      setCaptureOutcomeUnknown(captureOutcomeUnknown || Boolean(error && typeof error === "object" && "outcomeUnknown" in error && error.outcomeUnknown));
       setCaptureError(error instanceof Error ? error.message : "Proposal capture was not confirmed. Your draft is retained.");
     } finally { setCapturePending(false); }
   }
@@ -415,19 +433,24 @@ export function useProposalControlController({
     capture: {
       previewMode,
       pending: capturePending,
+      outcomeUnknown: captureOutcomeUnknown,
+      canRetry: captureCanRetry,
       error: captureError,
       available: previewMode || liveSnapshot?.status === "current",
       canSubmit: canSubmitCapture,
       close: () => { if (!capturePending) setCaptureOpen(false); },
       context: captureContext,
-      onContextChange: setCaptureContext,
-      onTitleChange: setCaptureTitle,
+      onContextChange: value => {if(!captureOutcomeUnknown)setCaptureContext(value);},
+      onTitleChange: value => {if(!captureOutcomeUnknown)setCaptureTitle(value);},
       open: captureOpen,
       openModal: () => setCaptureOpen(true),
       submit: submitCapturedProposal,
       title: captureTitle,
     },
-    source: { loading: liveSnapshot === null, error: liveSnapshot?.error ?? null },
+    source: { loading: liveSnapshot === null, error: liveSnapshot?.error ?? null,
+      page: liveSnapshot?.page ?? null, pagePending: proposalLiveRuntime.pagePending, pageError: proposalLiveRuntime.pageError,
+      hasPrevious:proposalLiveRuntime.hasPrevious,onNext:proposalLiveRuntime.loadMore,onPrevious:proposalLiveRuntime.previousPage,
+      onRefresh:()=>void proposalLiveRuntime.refresh(true),result:captureResult },
     details: {
       close: () => setInspectedProposalId(null),
       inspect: inspectProposal,
@@ -443,6 +466,10 @@ export function useProposalControlController({
       statusOptions: proposalStatusOptions,
     },
     hub: {
+      previewMode, sourceLoading: !previewMode && Boolean(liveSnapshot?.records.find(record=>record.projection.proposal_id===hubProposalId)?.summaryOnly),
+      sourceError:proposalLiveRuntime.detailError,onRetrySource:()=>void proposalLiveRuntime.refreshSelected(),
+      sourceHistory:liveSnapshot?.records.find(record=>record.projection.proposal_id===hubProposalId)?.history ?? null,
+      historyPending:proposalLiveRuntime.historyPending,historyError:proposalLiveRuntime.historyError,onLoadHistory:proposalLiveRuntime.loadHistory,
       close: () => setHubProposalId(null),
       decisionDraft: hubProposal
         ? (decisionDrafts[hubProposal.id] ?? null)

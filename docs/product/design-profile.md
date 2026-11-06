@@ -2,6 +2,64 @@
 
 Status: graduated baseline design profile.
 
+### Model usability maintenance preview
+
+The Model Profile Dashboard explains purpose, permitted workflows, policy
+status and the next useful action before exposing evidence. Reuse the existing
+Prototype dashboard's overview, balanced panels and technical disclosures;
+retain Model's policy/permission semantics. Bounded Platform policy summaries
+are identified explicitly and do not assert current model health, an invocation
+audit or unreported data/output facts. Reference IDs stay inspectable.
+Purpose-profile forms retain the existing owner contract and later explicit
+review, with one request page and owner-resolved workflow setup. The request and revision
+forms use the large dialog with a filled height and the standard Teras scroll
+region; actions remain pinned. Submission results retain their compact dialog.
+The separate profile-policy change form uses standard width and content height;
+its longer policy-edit states scroll within the shared viewport cap. Pending
+and uncertain requests retain their original identity; failed refreshes cannot
+remain current. Request history groups original details and review into balanced panels, followed
+by the shared event timeline. Human names and review labels lead; raw identities
+and per-event receipts stay in technical disclosure. Reference lookup is secondary,
+and review actions begin with an explicit unselected choice. History uses bounded
+summary pages and lazy selected evidence; record/reference switches protect dirty
+review input. Confirmed connection outcomes remain separate from failed later reads. All scrolling uses
+the standard Teras content region. The accumulated batch stays in preview for operator review.
+
+### Console AI Capability profile maintenance preview
+
+Keep **Request Profile** for creating a request. The existing request-management
+entry and dialog use **Manage Requests**, since they include review, revision,
+approval and implementation progress. History continues to mean an individual
+request's event timeline; no additional action button is introduced.
+
+Use **Console AI Capability** as the visible field label, with helper text
+“Choose the AI function this permission profile applies to.” This names a
+registered function configurable through Model Operations; it does not imply
+a dedicated chat interface, Console invocation path or current runtime readiness.
+Use this term for the existing implemented integration, not workflow template
+or ART Feature. The request retains one form and the separate result dialog. It
+shows source-backed behavior/input/output/instruction guidance, then review
+wording and the shared operating-policy fields. Profiles stay suspended and
+unselected until later explicit steps. Technical integration references remain a
+maintainer path and cannot masquerade as implemented capability code.
+The same shared policy fields serve original requests and policy revisions;
+existing profile-change dialogs keep their approved content-sized layout.
+Permission selection reuses a standard content-sized dialog with a guarded draft,
+current saved choice and normal original-operation progress. No selection is
+made by opening a form. Inactive profiles cannot be submitted as active choices.
+Loading shows the shared skeleton without transient blocked/unavailable badges.
+
+### Proposal usability maintenance preview
+
+Preserve the compact register/selected-panel composition and existing
+Triage, Disposition, Handoff and read-only History layouts. Reuse Teras fields,
+loading states, technical disclosure and pending/result dialogs. Plain task
+language leads; source identity and evidence remain inspectable. Overview
+counts explicitly describe the current page, with the full backlog total
+separate. Paging does not turn summaries into submission authority. Form text
+limits match the owner command contract and never truncate an existing draft.
+The preview requires operator visual review before publication.
+
 ### Proposal Studio incubation preview
 
 Post-baseline maintenance reuses Disposition's choice group, source panel,
@@ -404,3 +462,68 @@ a retained request preserves its original identity. A finished request offers
 **Start new verification change** or **Start new setup review** without altering
 the original result. A completed source request never represents passed
 application checks.
+
+## Repository onboarding example
+
+Explicit disconnected preview reuses the repository onboarding details form and
+single review dialog with a labeled sample notes application. The sample can be
+edited and its decision reviewed, but it cannot submit, run source setup, activate
+a repository or read provider custody. No real repository or successful receipt
+is implied. Live onboarding continues to require verified custody and current
+workspace authority. No advisor is introduced by this review sample.
+
+## Model maintenance preview
+
+This batch retains the Model workspace's two pages and shared Compact Control
+register/selection pattern. Purpose profiles remain the default page. The
+Profile Dashboard leads with purpose, policy permission, permitted workflows,
+reported blockers and the next useful action. Its existing checks and evidence
+inspectors remain reachable; source identifiers belong in Technical details.
+A bounded policy summary describes permission and activation, rather than
+provider health or invocation activity. Profile lifecycle evidence is labelled
+as profile change evidence.
+
+Workflow routing separates model/connection, native reasoning or thinking,
+health and inheritance into register columns. Review Routing uses a standard,
+content-sized dialog. Its body scrolls when ordered fallbacks need more space;
+source revision checks, model eligibility, boolean effort values, four-fallback
+limit and draft guards remain intact. The default row is included in the shown
+count but is not counted as a workflow.
+
+Profile forms group purpose and usage separately from policy references. An
+explicit action may reuse recorded references from an existing request, with
+an applicability warning. It never copies identity, purpose, data choices or
+approval. Pending submissions keep their original identity and cannot close;
+unknown outcomes recover that original request. Browser recovery retains only
+the request reference, not a copy of its context or policy intent. A failed
+background read closes the authority gate and offers Retry; an independently
+recorded submission is still shown as successful if the register refresh fails.
+
+API connection setup selects the source-confirmed new connection and offers a
+continuation to its exact model-registration context after a stored key is
+reported. Keys retain their transient input and Platform custody boundaries.
+Experimental provider qualification stays visible. Operation outcomes explain
+what happens next while keeping source IDs and failure codes inspectable.
+This is unpublished maintenance preview work pending operator visual review;
+isolated browser responses prove interface behavior, not live account or
+mutation qualification.
+
+Disconnected Model preview exposes the same request, review, connection and
+routing forms for visual inspection. Input and local draft navigation are
+available, alongside labelled sample request and operation history. Final
+submissions, provider/account changes, real discovery and key storage remain
+disabled. Sample catalogue discovery stays in memory and never contacts a
+provider. Preview samples are selected only by explicit disconnected mode;
+missing or failed live authority must never select them.
+
+
+The approved single-form refinement removes the request wizard and its progress
+state entirely. Reuse the standard content-sized dialog with a scrolling body
+and pinned actions. Workflow, name, purpose, reason, environment, data sensitivity
+and optional extra rules are the normal inputs. Resolved technical references
+remain read-only in Technical details. The integration-maintainer path is an
+explicit separate choice, preserving full-reference capability. A result is a
+separate compact dialog. Profile request help distinguishes user choices,
+automatic preparation, missing setup and later review without claiming every
+control is currently Active. Visual states were reviewed at1280 and1700 pixels;
+operator preview approval still precedes publication.

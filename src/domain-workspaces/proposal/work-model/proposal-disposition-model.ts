@@ -1,3 +1,4 @@
+import { proposalWorkflowTextValid } from "./proposal-text-limits.ts";
 import type { OperationTone } from "../../operation-contracts/operation-state.ts";
 import type { OperationSourceCustody } from "../../operation-contracts/source-custody.ts";
 
@@ -168,7 +169,7 @@ export function proposalRouteSelectionComplete(
   if (draft.routeTarget === "Prototype" && draft.repoMode === "not-required") return false;
   if (
     !proposalRouteSelectionTargetValid(draft.routeTarget) ||
-    !draft.rationale.trim()
+    !proposalWorkflowTextValid(draft.rationale)
   ) {
     return false;
   }

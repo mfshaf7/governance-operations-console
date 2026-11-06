@@ -24,6 +24,7 @@ import { ProposalHandoffRouteStatePanel } from "./proposal-handoff-route-state-p
 import { proposalHandoffStepProjection } from "./proposal-handoff-step-view-model.ts";
 
 export function ProposalHandoffStep({
+  previewMode = true,
   draft,
   onApplyDraft,
   onCancelTargetApplication,
@@ -41,6 +42,7 @@ export function ProposalHandoffStep({
   targetApplicationPending = false,
   workflowReady = true,
 }: {
+  previewMode?:boolean;
   draft: ProposalHandoffDraft;
   onApplyDraft: () => void;
   onCancelTargetApplication: () => void;
@@ -129,6 +131,7 @@ export function ProposalHandoffStep({
           />
           <TerasContentRegion fill gap="normal" scroll>
             <ProposalHandoffRouteStatePanel
+              previewMode={previewMode} repositoryGateRef={repositoryGateRef}
               repositoryGateLabel={repositoryGateLabel}
               repositoryGateOwner={repositoryGateOwner}
               repositoryGateResolved={repositoryGateResolved}

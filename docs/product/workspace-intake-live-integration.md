@@ -81,6 +81,14 @@ work until batch review and live commissioning.
 
 ## Operator Flow
 
+For design review, open the isolated disconnected Console preview with `?dev=1`,
+then Workspace Registry → Onboard workspace item → Continue repository onboarding.
+The existing details form opens with a labeled sample notes application. Edit the
+example and choose **Preview onboarding review** to inspect the decision screen.
+Submission, source setup and activation stay disabled; no provider receipt or
+successful registration is implied. Shared check-plan reads are not simulated.
+This preview adds no AI advisor and does not change live onboarding.
+
 For operator-authored product or component classification, open Workspace
 Registry → Workspace Intake, select the canonical key and inspect retained
 requests. Reopen an acknowledged request to inspect or continue its original

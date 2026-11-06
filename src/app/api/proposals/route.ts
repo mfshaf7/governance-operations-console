@@ -8,7 +8,7 @@ import {
   listProposalsRoute,
 } from "../../../domain-workspaces/proposal/server/proposal-api-routes.ts";
 
-export const GET = listProposalsRoute;
+export async function GET(request: NextRequest) { return listProposalsRoute(request); }
 
 export async function POST(request: NextRequest) {
   return authorizeConsoleMutation(request, () => captureProposalRoute(request));

@@ -45,6 +45,7 @@ export function WorkspaceIntakeDialog({
   onRepositoryNextAction,
   hasLocalDraft = false,
   singleReview = false,
+  preview = false,
   onEditCandidate,
   onNewCandidate,
   onRequestRecorded,
@@ -58,6 +59,7 @@ export function WorkspaceIntakeDialog({
   onRepositoryNextAction?: (decision: WorkspaceIntakeDecision) => void;
   hasLocalDraft?: boolean;
   singleReview?: boolean;
+  preview?: boolean;
   onEditCandidate?: () => void;
   onNewCandidate?: () => void;
   onRequestRecorded?: (result: WorkspaceIntakeResult) => void;
@@ -88,13 +90,14 @@ export function WorkspaceIntakeDialog({
   } : candidate;
 
   useEffect(() => {
+    if (preview) return;
     if (initialRequestId) {
       void runtime.read(initialRequestId).catch(() => undefined);
       return;
     }
     setConfirmed(false);
     void runtime.prepare(candidate, selectedCustody).catch(() => undefined);
-  }, [candidate, selectedCustody, initialRequestId, runtime.read, runtime.prepare]);
+  }, [preview, candidate, selectedCustody, initialRequestId, runtime.read, runtime.prepare]);
 
   const decisionRecord = workspaceIntakeRecordForDecision(reviewedCandidate.requested_record,
     decision === "unselected" ? "proposed" : decision);
@@ -138,7 +141,7 @@ export function WorkspaceIntakeDialog({
   );
 
   async function submit() {
-    if (!reviewComplete || runtime.pending) return;
+    if (preview || !reviewComplete || runtime.pending) return;
     setSubmissionAttempted(true); setOriginalAbsent(false);
     await runtime
       .submit({ candidate: reviewedCandidate, decision, requestId })
@@ -257,7 +260,7 @@ export function WorkspaceIntakeDialog({
     const resultTitle = result ? ({ accepted: "Registration submitted", succeeded: "Registration completed", rejected: "Registration not accepted", "requires-action": "Registration needs attention", cancelled: "Registration cancelled", cancelling: "Cancelling registration", evaluating: "Checking registration", preparing: "Preparing registration", "review-required": "Registration awaiting review" } satisfies Record<WorkspaceIntakeResult["status"], string>)[result.status] : "Registration request";
     const plainActions = <>
       <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={!showingResult && onEditCandidate ? onEditCandidate : requestClose}>{!showingResult && onEditCandidate ? "Back to Entrant Details" : returnLabel}</TerasActionButton>
-      {!showingResult ? <TerasActionButton busy={runtime.pending} disabled={!reviewComplete || runtime.pending || (submissionUnconfirmed && !originalAbsent)} onClick={() => void submit()}>{runtime.pending ? "Submitting…" : (candidate.target.kind === "repo" ? submissionUnconfirmed ? "Retry same submission" : "Submit onboarding decision" : "Submit Classification")}</TerasActionButton> : null}
+      {!showingResult ? <TerasActionButton busy={runtime.pending} disabled={preview || !reviewComplete || runtime.pending || (submissionUnconfirmed && !originalAbsent)} onClick={() => void submit()}>{runtime.pending ? "Submitting…" : (candidate.target.kind === "repo" ? submissionUnconfirmed ? "Retry same submission" : "Submit onboarding decision" : "Submit Classification")}</TerasActionButton> : null}
     </>;
     const closeGuard = <TerasDraftCloseGuardDialog open={closeGuardOpen} kicker={submissionUnconfirmed ? "Outcome not confirmed" : "Unsaved classification"} title={submissionUnconfirmed ? "Leave this unconfirmed request?" : "Discard Classification Draft?"} description={submissionUnconfirmed ? "The service may have recorded your submission. Leaving does not cancel it. Reopen the original request from onboarding history before starting another decision." : "Your candidate and classification choices have not been submitted."} leaveLabel={submissionUnconfirmed ? "Return to onboarding details" : "Discard Draft"} onKeepEditing={() => setCloseGuardOpen(false)} onLeave={onClose}/>;
     if (showingResult) return <>
@@ -285,6 +288,7 @@ export function WorkspaceIntakeDialog({
     return <>
       <TerasModalShell busy={runtime.pending} busyLabel={checkingOriginal ? "Checking the original request…" : submissionUnconfirmed ? "Submitting onboarding decision…" : "Preparing current review…"} bodyLayout="scroll" height="content" width="standard" title={candidate.target.kind === "repo" ? "Review repository onboarding" : "Workspace Intake Classification"} kicker={candidate.label} surfaceId="workspace-intake-classification" description={candidate.target.kind === "repo" ? "Record the repository for setup, or approve activation after its source controls are verified." : "Choose the classification and confirm this registration."} onClose={requestClose} footer={plainActions}>
         <TerasFieldStack spacing="loose">
+          {preview ? <TerasContentTray kicker="Design preview" description="Sample review only. No canonical checks have run and submission is disabled. In live use, source setup, approval and activation are separate verified steps." /> : null}
           {runtime.error ? <TerasContentTray role="alert" kicker={submissionUnconfirmed ? "Outcome not confirmed" : "Review unavailable"} description={runtime.error.message}
             actions={!submissionAttempted ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => void runtime.prepare(candidate, selectedCustody).catch(() => undefined)}>Retry review details</TerasActionButton> : undefined}/> : null}
           {runtime.pending && !runtime.preparation && !submissionAttempted ? <TerasLoadingState label="Loading current review…" skeleton="details" /> : null}

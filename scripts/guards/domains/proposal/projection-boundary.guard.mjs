@@ -109,7 +109,9 @@ export const guard = {
     ]);
     assertIncludes(failures, oosClient, [
       '"/v1/ideas/capture"',
-      "/v1/ideas?limit=",
+      "/v1/proposals/register?",
+      "readProposalLiveRecord",
+      "readProposalHistoryPage",
       '"x-oos-caller-id"',
       '"x-oos-caller-secret"',
       'cache: "no-store"',
@@ -118,10 +120,12 @@ export const guard = {
     ]);
     assertIncludes(failures, liveRuntime, [
       'fetch("/api/proposals"',
-      "proposalPollIntervalMs",
-      'document.visibilityState === "visible"',
       "await refresh(true)",
     ]);
+    assertIncludes(failures, `${root}/live-runtime/use-proposal-source-read.ts`, [
+      "proposalPollIntervalMs", 'document.visibilityState === "visible"', "summaryOnly", "next_cursor", "readPage",
+    ]);
+    assertIncludes(failures, `${root}/live-runtime/proposal-live-contract.ts`, ["source_total", "next_cursor"]);
     assertOmits(failures, liveRuntime, [
       "proposalWorkspaceReadModel",
       "proposalWorkspaceScenarios",

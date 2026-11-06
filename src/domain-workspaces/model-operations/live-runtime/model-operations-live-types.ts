@@ -93,6 +93,9 @@ export type ModelProfileRequestProjection = Readonly<{
 }>;
 
 export type ModelProfileRequestDraft = Readonly<{
+  policyChanges?: {allowed_data_scope?:string[];runtime_limits?:Record<string,number>};
+  workflowId?: string;
+  setupDigest?: string;
   admittedContextDigest: string;
   admittedContextUri: string;
   dataClassification: ModelProfileIntent["input_data_classification"];

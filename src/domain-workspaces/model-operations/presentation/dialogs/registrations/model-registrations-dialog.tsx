@@ -21,6 +21,7 @@ import { LocalExceptionRuntimeDialog } from "../local-runtime/local-exception-ru
 import { RegisteredModelInspector } from "./registered-model-inspector.tsx";
 
 type Props = {
+  preferredBackendId?:string|null;
   open: boolean;
   onClose: () => void;
   runtime: ReturnType<typeof useModelRuntime>;
@@ -35,7 +36,7 @@ type Props = {
 type ModelRow = ReturnType<typeof registeredModelsForBackend>[number];
 
 export function ModelRegistrationsDialog({
-  open, onClose, runtime, registry, connections, backendLabels, changesBlocked, onSubmit, onOpenConnections,
+  open, onClose, preferredBackendId, runtime, registry, connections, backendLabels, changesBlocked, onSubmit, onOpenConnections,
 }: Props) {
   const [backendId, setBackendId] = useState("");
   const [selectedId, setSelectedId] = useState("");
@@ -44,11 +45,12 @@ export function ModelRegistrationsDialog({
   const [candidate, setCandidate] = useState("");
   const [localRuntimeOpen, setLocalRuntimeOpen] = useState(false);
   const backend = registry.backends.find(item => item.backend_id === backendId)
-    ?? (!backendId ? registry.backends[0] ?? null : null);
+    ?? (!backendId ? (preferredBackendId ? registry.backends.find(item=>item.backend_id===preferredBackendId) ?? null : registry.backends[0] ?? null) : null);
   const connection = connections.snapshot?.connections.find(item => item.connection_id === backend?.backend_id);
   const canProbe = !backend?.experimental || Boolean(connections.fresh && connection?.state === "active"
     && connection.credential_present && !connection.pending_operation);
   const blocked = !runtime.fresh || changesBlocked;
+  const entryBlocked=(!runtime.fresh&&!runtime.preview)||changesBlocked;
   const rows = registeredModelsForBackend(registry, backend?.backend_id);
   const filtered = rows.filter(row => row.model.toLowerCase().includes(search.toLowerCase()));
   const selected = filtered.find(row => row.id === selectedId) ?? filtered[0] ?? null;
@@ -64,6 +66,7 @@ export function ModelRegistrationsDialog({
     }
   }, [backendId, registry, runtime.clearCatalogue]);
 
+  useEffect(()=>{if(open&&preferredBackendId){setBackendId(preferredBackendId);setSelectedId("");setSearch("");setCandidate("");setAdding(false);runtime.clearCatalogue();}},[open,preferredBackendId,runtime.clearCatalogue]);
   useEffect(() => { if (!open) setLocalRuntimeOpen(false); }, [open]);
 
   const submit = (action: ModelAction, input: Record<string, unknown>) => {
@@ -72,7 +75,7 @@ export function ModelRegistrationsDialog({
   };
   const columns: Array<TerasRecordTableColumn<ModelRow>> = [
     { key: "model", header: "Model", intent: "primary", render: row => <TerasRecordCellText title={row.model} /> },
-    { key: "effort", header: "Native effort options", intent: "secondary", render: row => <TerasRecordCellText title={row.supported_efforts.map(modelEffortLabel).join(", ")} /> },
+    { key: "effort", header: "Reasoning / thinking options", intent: "secondary", render: row => <TerasRecordCellText title={row.supported_efforts.map(modelEffortLabel).join(", ")} /> },
     { key: "health", header: "Model health", intent: "secondary", render: row => <TerasRecordCellText title={modelRegistrationHealthLabel(registry, row.id)} /> },
   ];
 
@@ -82,11 +85,11 @@ export function ModelRegistrationsDialog({
       actions={<TerasActionButton emphasis="secondary" onClick={onClose}>Back to Models & routing</TerasActionButton>}>
       <TerasRecordControlLayout composition="compact-control" mode="overview-register-selected"
         overview={<TerasPanel data-model-backend-context="true" frame="padded" treatment="neutral" spacing="compact">
-          <TerasPanelHeader kicker="Backend connection" title="Selected backend"
+          <TerasPanelHeader kicker="Provider connection" title="Selected connection"
             description="Choose the connection whose models you want to manage."
             statusLabel={runtime.preview ? "Sample · read-only" : runtime.fresh ? "Revision " + registry.configuration.revision : "Source unavailable"}
             statusTone={runtime.fresh || runtime.preview ? "info" : "warn"} />
-          <TerasSelectField label="Admitted backend" disabled={changesBlocked || !runtime.fresh && !runtime.preview}
+          <TerasSelectField label="Provider connection" disabled={changesBlocked || !runtime.fresh && !runtime.preview}
             value={backend?.backend_id ?? ""}
             options={registry.backends.map(item => ({ value: item.backend_id,
               label: item.experimental ? backendLabels[item.backend_id] : item.backend_id + " · " + item.provider }))}
@@ -97,13 +100,13 @@ export function ModelRegistrationsDialog({
             <TerasActionRow>
               <TerasActionButton disabled={blocked || !backend} emphasis="secondary"
                 onClick={() => backend && submit(backend.registered ? "backend.remove" : "backend.register", { backend_id: backend.backend_id })}>
-                {backend?.registered ? "Remove backend" : "Register backend"}
+                {backend?.registered ? "Unregister connection" : "Register connection"}
               </TerasActionButton>
               {backend?.account_login_supported ? <TerasActionButton disabled={blocked || !backend.registered} emphasis="secondary"
                 onClick={() => submit("account.login.start", { backend_id: backend.backend_id })}>Connect account</TerasActionButton> : null}
               {backend?.provider === "ollama" ? <TerasActionButton emphasis="secondary" size="table-compact"
                 onClick={() => setLocalRuntimeOpen(true)}>Inspect runtime</TerasActionButton> : null}
-              <TerasActionButton emphasis="secondary" disabled={changesBlocked || runtime.preview}
+              <TerasActionButton emphasis="secondary" disabled={changesBlocked}
                 onClick={onOpenConnections}>Add / manage API connections</TerasActionButton>
             </TerasActionRow>
           }>
@@ -137,21 +140,21 @@ export function ModelRegistrationsDialog({
       actions={<TerasActionButton emphasis="secondary" onClick={() => setAdding(false)}>Back to registrations</TerasActionButton>}>
       <TerasFieldStack>
         <TerasMetadataList shape="line" wrap items={modelBackendMetadata(registry, backend)} />
-        {runtime.preview ? <TerasEmptyState>Read-only sample preview. Discovery and registration are disabled.</TerasEmptyState>
+        {runtime.preview ? <TerasEmptyState>Design preview: edit sample selections. Discovery uses a sample catalogue; registration is disabled.</TerasEmptyState>
           : !runtime.fresh ? <TerasEmptyState>The model service is unavailable. Refresh source state before registering a model.</TerasEmptyState>
-          : !backend?.registered ? <TerasEmptyState>Register this backend before discovering or verifying models.</TerasEmptyState> : null}
+          : !backend?.registered ? <TerasEmptyState>Register this connection before discovering or verifying models.</TerasEmptyState> : null}
         {backend?.catalogue_supported === false
           ? <TerasTextField label="Exact model ID" value={candidate} onValueChange={setCandidate}
-              disabled={blocked || !backend.registered} maxLength={200} autoComplete="off" spellCheck={false} />
+              disabled={entryBlocked || (!backend.registered&&!runtime.preview)} maxLength={200} autoComplete="off" spellCheck={false} />
           : <>
-              <TerasActionRow><TerasActionButton disabled={blocked || !backend?.registered || !canProbe}
+              <TerasActionRow><TerasActionButton disabled={entryBlocked || (!runtime.preview && (!backend?.registered || !canProbe))}
                 emphasis="secondary" onClick={() => backend && void runtime.discover(backend.backend_id)}>Discover models</TerasActionButton></TerasActionRow>
-              <TerasSelectField label="Model" disabled={blocked || !backend?.registered} value={candidate}
+              <TerasSelectField label="Model" disabled={entryBlocked || (!backend?.registered&&!runtime.preview)} value={candidate}
                 options={[{ value: "", label: "Choose an unregistered model" }, ...candidates.map(item => ({ value: item.model, label: item.model }))]}
                 onValueChange={setCandidate} />
               {!candidates.length ? <TerasEmptyState>{catalogue
                 ? "No unregistered models were returned. Existing models can be verified from the registered-model list."
-                : "Discover the models available through this backend."}</TerasEmptyState> : null}
+                : "Discover the models available through this connection."}</TerasEmptyState> : null}
             </>}
         {alreadyRegistered ? <TerasEmptyState>This model is already registered. Select it in Registered models to verify or update it.</TerasEmptyState> : null}
         <TerasActionRow><TerasActionButton disabled={blocked || !backend?.registered || !candidateAvailable || alreadyRegistered || !canProbe}

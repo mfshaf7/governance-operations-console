@@ -1,6 +1,6 @@
 "use client";
 
-import { TerasDraftCloseGuardDialog, TerasModalShell } from "@/teras";
+import { TerasDraftCloseGuardDialog, TerasModalShell, TerasLoadingState, TerasContentTray, TerasActionButton, TerasDialog } from "@/teras";
 
 import type {
   ProposalDecisionDraft,
@@ -21,6 +21,8 @@ import type { ProposalRepositoryGateResolution } from "../../../operation-integr
 import { ProposalHubHome } from "./proposal-hub-home.tsx";
 
 export function ProposalHubModal({
+  previewMode = true, sourceLoading = false, sourceError = null, onRetrySource,
+  sourceHistory = null, historyPending = false, historyError = null, onLoadHistory,
   decisionDraft,
   handoffDraft,
   onCancelTargetApplication,
@@ -43,6 +45,9 @@ export function ProposalHubModal({
   targetApplicationPending,
   workflowReceipts,
 }: {
+  previewMode?:boolean;sourceLoading?:boolean;sourceError?:string|null;onRetrySource?:()=>void;
+  sourceHistory?:import("../../live-runtime/proposal-live-types.ts").ProposalOosHistory|null;
+  historyPending?:boolean;historyError?:string|null;onLoadHistory?:()=>Promise<void>;
   decisionDraft: ProposalDecisionDraft | null;
   handoffDraft: ProposalHandoffDraft | null;
   onApplyDispositionDraft: (drafts: {
@@ -123,9 +128,19 @@ export function ProposalHubModal({
     triageReadOnly,
   } = controller;
   const { currentMove } = hubProjection;
+  const feedback=(<TerasDialog open={Boolean(controller.operation.pending || controller.operation.error || controller.operation.result)} busy={controller.operation.pending} busyLabel={controller.operation.label} closeDisabled={controller.operation.pending} height="content" width="standard" contentOverflow="auto"
+      kicker="Proposal update" title={controller.operation.pending ? "Updating proposal" : controller.operation.error ? "Submission not confirmed" : "Update recorded"}
+      description={controller.operation.pending ? "Please wait while the original request is checked." : controller.operation.error ?? controller.operation.result} onClose={controller.operation.pending ? undefined : controller.dismissOperation}
+      actions={controller.operation.pending ? undefined : <TerasActionButton emphasis="primary" onClick={controller.dismissOperation}>Continue</TerasActionButton>} />);
+  if(sourceLoading || sourceError) return <><TerasModalShell surfaceId="proposal-workflow-source" title="Proposal Hub" kicker="Selected Proposal" width="medium" height="content" bodyLayout="scroll" onClose={onClose}>
+    {sourceError ? <TerasContentTray kicker="Details unavailable" description={sourceError} actions={<TerasActionButton emphasis="secondary" onClick={onRetrySource}>Retry details</TerasActionButton>} /> : <TerasLoadingState fill label="Loading current proposal…" skeleton="details" />}
+  </TerasModalShell>{feedback}</>;
+
 
   return (
+    <>
     <TerasModalShell
+      busy={controller.operation.pending} busyLabel={controller.operation.label}
       height={activeWorkflowStep === "hub" ? "content" : "fill"}
       description={shellDescription}
       footer={
@@ -147,6 +162,7 @@ export function ProposalHubModal({
       title={shellTitle}
       width={activeWorkflowStep === "hub" ? "medium" : "large"}
     >
+
       {activeWorkflowStep === "disposition" ? (
         <>
           <ProposalDispositionStep
@@ -174,6 +190,7 @@ export function ProposalHubModal({
       ) : activeWorkflowStep === "handoff" ? (
         <>
           <ProposalHandoffStep
+            previewMode={previewMode}
             draft={activeHandoffDraft}
             onApplyDraft={applyHandoffDraft}
             onChangeDraft={onChangeHandoffDraft}
@@ -186,7 +203,7 @@ export function ProposalHubModal({
             workflowReady={handoffStepAvailable}
             repositoryGateResolution={repositoryGateResolution}
             routeSelectionDraft={activeRouteSelectionDraft}
-            onCancelTargetApplication={onCancelTargetApplication}
+            onCancelTargetApplication={()=>void controller.runOperation("Cancelling target request…",onCancelTargetApplication,"Cancellation result refreshed. Review the target status.")}
             targetApplication={targetApplication}
             targetApplicationError={targetApplicationError}
             targetApplicationPending={targetApplicationPending}
@@ -203,6 +220,7 @@ export function ProposalHubModal({
         </>
       ) : activeWorkflowStep === "history" ? (
         <ProposalHistoryStep
+          sourceHistory={sourceHistory} historyPending={historyPending} historyError={historyError} onLoadHistory={onLoadHistory}
           onOpenDetails={() => onInspectProposal(proposal)}
           onSelectStep={requestWorkflowStep}
           proposal={proposal}
@@ -241,5 +259,7 @@ export function ProposalHubModal({
         />
       )}
     </TerasModalShell>
+    {feedback}
+    </>
   );
 }

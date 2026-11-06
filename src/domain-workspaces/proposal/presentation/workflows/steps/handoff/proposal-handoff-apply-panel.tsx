@@ -1,3 +1,4 @@
+import { proposalWorkflowTextLabel, proposalWorkflowTextLength, proposalWorkflowTextLimit } from "../../../../work-model/proposal-text-limits.ts";
 import {
   TerasActionButton,
   TerasActionRow,
@@ -128,7 +129,7 @@ export function ProposalHandoffApplyPanel({
             tone={handoffTone}
             detail={reviewResultDetail}
             index="04"
-            label="Review Result"
+            label="Handoff Readiness"
             status={reviewResultStatus}
           />
           {routeSelectionDraft.routeTarget === "Prototype" ? (
@@ -144,7 +145,9 @@ export function ProposalHandoffApplyPanel({
         <TerasNoteField
           density="compact"
           fill
-          label="Handoff notes"
+          aria-label="Handoff notes"
+            aria-invalid={proposalWorkflowTextLength(draft.notes) > proposalWorkflowTextLimit}
+            label={proposalWorkflowTextLabel("Handoff notes", draft.notes)}
           onValueChange={onNotesChange}
           placeholder={
             workflowBlocked

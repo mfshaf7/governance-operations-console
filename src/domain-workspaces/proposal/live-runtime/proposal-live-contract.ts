@@ -36,6 +36,12 @@ export function assertProposalLiveSnapshot(value: unknown): ProposalLiveSnapshot
     throw new Error("Proposal live response does not contain records.");
   }
 
+  if (value.page !== undefined && (!isRecord(value.page) || !isRecord(value.page.selector) ||
+      typeof value.page.selector.query !== "string" || typeof value.page.selector.status !== "string" || typeof value.page.selector.ingress !== "string" ||
+      !Number.isSafeInteger(value.page.source_total) || Number(value.page.source_total) < 0 ||
+      (value.page.next_cursor !== null && (typeof value.page.next_cursor !== "string" || value.page.next_cursor.length > 600)))) {
+    throw new Error("Proposal page metadata is invalid.");
+  }
   for (const record of value.records) {
     if (!isRecord(record) || typeof record.createdAt !== "string") {
       throw new Error("Proposal live record metadata is invalid.");
@@ -243,11 +249,18 @@ export function assertProposalOosHistory(value: unknown): ProposalOosHistory {
     !isRecord(value) ||
     value.schema_version !== 1 ||
     typeof value.proposal_id !== "string" ||
+    typeof value.record_version !== "string" || !value.record_version ||
+    (value.next_cursor !== null && (typeof value.next_cursor !== "string" || !/^activity-page:[1-9][0-9]*$/.test(value.next_cursor))) ||
     !Array.isArray(value.events)
   ) {
     throw new Error("Proposal history does not satisfy the live contract.");
   }
-  value.events.forEach(assertProposalOosEvent);
+  const ids = new Set<string>();
+  value.events.forEach((item:unknown) => {
+    const event = assertProposalOosEvent(item);
+    if (event.proposal_id !== value.proposal_id || ids.has(event.event_id)) throw new Error("Proposal history contains conflicting event identities.");
+    ids.add(event.event_id);
+  });
   return value as unknown as ProposalOosHistory;
 }
 
@@ -258,10 +271,15 @@ function assertProposalOosEvent(value: unknown): ProposalOosEvent {
     typeof value.event_id !== "string" ||
     typeof value.proposal_id !== "string" ||
     typeof value.summary !== "string" ||
-    typeof value.occurred_at !== "string"
+    typeof value.occurred_at !== "string" || !Number.isFinite(Date.parse(value.occurred_at)) ||
+    !isRecord(value.actor) || typeof value.actor.id !== "string" || !["operator","system","target"].includes(String(value.actor.kind)) ||
+    !Array.isArray(value.receipt_refs) || !value.receipt_refs.every((ref:unknown)=>typeof ref === "string")
   ) {
     throw new Error("Proposal event does not satisfy the live contract.");
   }
+  if(value.decision !== undefined && (!isRecord(value.decision) || value.event_type!=="disposition-recorded" || value.decision.type!=="disposition" ||
+      !["accepted","parked","rejected"].includes(String(value.decision.outcome)) || typeof value.decision.notes!=="string" || Array.from(value.decision.notes).length>2000 ||
+      value.decision.outcome!==value.status_after || (value.decision.outcome==="accepted" ? (!isRecord(value.decision.route) || !["delivery","prototype"].includes(String(value.decision.route.target)) || typeof value.decision.route.rationale!=="string" || !isRecord(value.decision.route.source_custody)) : value.decision.route!==null)))throw new Error("Original decision evidence is invalid.");
   if (value.event_type === "repository-gate-resolved") {
     const resolution = assertProposalRepositoryResolutionRecord(value.repository_resolution);
     if (resolution.proposal_id !== value.proposal_id || resolution.resolution_id !== value.command_id ||

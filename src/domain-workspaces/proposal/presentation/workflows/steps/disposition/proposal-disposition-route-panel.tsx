@@ -1,3 +1,4 @@
+import { proposalWorkflowTextLabel, proposalWorkflowTextLength, proposalWorkflowTextLimit } from "../../../../work-model/proposal-text-limits.ts";
 import {
   TerasActionButton,
   TerasChoiceGroup,
@@ -160,9 +161,11 @@ export function ProposalDispositionRoutePanel({
 
             <TerasNoteField
               fill
-              label="Route rationale"
+              aria-label="Route rationale"
+            aria-invalid={proposalWorkflowTextLength(routeSelectionDraft.rationale) > proposalWorkflowTextLimit}
+            label={proposalWorkflowTextLabel("Route rationale", routeSelectionDraft.rationale)}
               onValueChange={(rationale) => onRouteDraftPatch({ rationale })}
-              placeholder="Explain the route target, repository handling, and handoff condition."
+              placeholder="Why is this the right destination, and what repository arrangement does it need?"
               readOnly={dispositionCompleted}
               value={routeSelectionDraft.rationale}
             />

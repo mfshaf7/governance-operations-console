@@ -22,6 +22,7 @@ export type ProposalWorkspaceScenarioKind =
   | "source-context-stale";
 
 export type ProposalWorkspaceScenario = {
+  creationKnown?:boolean;
   deliveryLink?: ProposalDeliveryLink;
   sourceStatus?: string;
   backendRecordId: string;

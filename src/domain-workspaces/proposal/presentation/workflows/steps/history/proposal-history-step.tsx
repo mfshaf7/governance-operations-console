@@ -2,6 +2,7 @@
 
 import {
   TerasContentFrame,
+  TerasActionButton, TerasContentTray, TerasContentRegion, TerasTechnicalDetails,
   TerasEmptyState,
   TerasPanel,
   TerasPanelHeader,
@@ -28,12 +29,15 @@ import {
 import { proposalHistoryStepProjection } from "./proposal-history-step-view-model.ts";
 
 export function ProposalHistoryStep({
+  sourceHistory = null, historyPending = false, historyError = null, onLoadHistory,
   onOpenDetails,
   onSelectStep,
   proposal,
   progressSteps,
   workflowReceipts,
 }: {
+  sourceHistory?:import("../../../../live-runtime/proposal-live-types.ts").ProposalOosHistory|null;
+  historyPending?:boolean;historyError?:string|null;onLoadHistory?:()=>Promise<void>;
   onOpenDetails: () => void;
   onSelectStep: (step: ProposalWorkflowNavigationTarget) => void;
   proposal: ProposalWorkspaceScenario;
@@ -53,6 +57,7 @@ export function ProposalHistoryStep({
   } = proposalHistoryStepProjection({
     proposal,
     workflowReceipts,
+    sourceHistory,
   });
 
   return (
@@ -89,17 +94,18 @@ export function ProposalHistoryStep({
             overflow="hidden"
           >
             <TerasPanelHeader
-              description="A compact read-only trail for this Proposal workflow pass."
+              description="Creation and recorded events, in their original order."
               kicker="Event Timeline"
-              statusLabel={`${timelineRows.length} events`}
+              statusLabel={`${timelineRows.length} shown${sourceHistory?.next_cursor ? " · more available" : ""}`}
               statusTone="info"
               title={timelineTitle}
             />
+            <TerasContentRegion fill scroll gap="normal">
             <TerasTimeline>
               {timelineRows.map((row, index) => (
                 <TerasTimelineItem
                   detail={row.detail}
-                  displayTimestamp={row.timestamp}
+                  displayTimestamp={new Date(row.timestamp).toLocaleString()}
                   key={`${row.timestamp}-${row.label}-${index}`}
                   label={row.label}
                   status={row.status}
@@ -108,6 +114,9 @@ export function ProposalHistoryStep({
                 />
               ))}
             </TerasTimeline>
+            {historyError ? <TerasContentTray kicker="History could not be loaded" description={historyError} /> : null}
+            {sourceHistory?.next_cursor ? <TerasActionButton busy={historyPending} disabled={historyPending} emphasis="secondary" onClick={onLoadHistory}>{historyError ? "Retry history" : "Load more history"}</TerasActionButton> : null}
+            </TerasContentRegion>
           </TerasPanel>
         </TerasZone>
 
@@ -150,13 +159,16 @@ export function ProposalHistoryStep({
             tone={historyTone}
           >
             <TerasPanelHeader
-              description={receiptDescription}
+              description={sourceHistory ? "Original event references remain available for inspection." : receiptDescription}
               kicker="History Archive"
               statusLabel={receiptStatusLabel}
               statusTone={receiptStatusTone}
-              title={receiptTitle}
+              title={sourceHistory ? "Event evidence" : receiptTitle}
             />
-            {receiptRows.length > 0 ? (
+            {sourceHistory ? <TerasContentRegion fill scroll gap="normal">
+              <TerasContentTray kicker="Recorded events" description={`${sourceHistory.events.length} events loaded${sourceHistory.next_cursor ? "; more history is available" : ""}. Original timestamps, authors and receipt references are retained.`} />
+              <TerasTechnicalDetails summary="Event references" items={sourceHistory.events.map(event=>({label:`${event.event_type} · ${new Date(event.occurred_at).toLocaleString()}`,value:[event.event_id,event.actor.id,...event.receipt_refs].join(" · ")}))} />
+            </TerasContentRegion> : receiptRows.length > 0 ? (
               <TerasStatGroup scroll>
                 {receiptRows.map((row) => (
                   <TerasStatItem

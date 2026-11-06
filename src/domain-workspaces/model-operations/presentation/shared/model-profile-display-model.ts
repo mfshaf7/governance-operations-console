@@ -102,6 +102,7 @@ export function modelProfileAvailabilityTone(
 }
 
 export function modelProfileResolutionLabel(profile: ModelProfileRecord) {
+  if(profile.evidenceScope==="policy-summary")return "See Models & routing";
   return profile.policy.upstreamModel === "pending-selection"
     ? "Pending Selection"
     : profile.policy.upstreamModel;
@@ -155,4 +156,20 @@ export function localExceptionRuntimeSummaryMetadata(
     { label: "Models", value: String(runtime.models.length) },
     { label: "Observed", value: runtime.observedAt ?? "not observed" },
   ];
+}
+
+function words(value:string){return value.replace(/[-_]+/g," ").replace(/\b\w/g,word=>word.toUpperCase());}
+export function modelProfileTitle(profile: ModelProfileRecord) {
+  return profile.policy.displayName ?? words(profile.policy.profileId.replace(/-v\d+$/, ""));
+}
+export function modelProfilePurpose(profile: ModelProfileRecord) {
+  const value = profile.policy.purpose;
+  const known: Record<string,string> = {
+    "agent-console-assist":"Assists conversations in the Agent Console.",
+    "governed-runtime-assist":"Provides AI assistance to permitted workflow tasks.",
+    "delivery-work-design":"Helps draft and review delivery plans.",
+    "delivery-refinement":"Helps refine delivery work before execution.",
+    "source-authoring":"Authors source within the approved repository scope.",
+  };
+  return known[value] ?? (/^[a-z0-9_-]+$/.test(value) ? `Purpose: ${words(value)}.` : value);
 }

@@ -1,3 +1,5 @@
+import {assertModelProfileRequestPage} from '../work-model/profile-requests/model-profile-history-contract.ts';
+import {preparedModelProfileInput,assertModelProfileRequestOptions} from "../work-model/profile-requests/model-profile-preparation-contract.ts";
 import {
   ConsoleRuntimeConfigurationError,
   resolveConsoleModelOperationsConfiguration,
@@ -43,23 +45,14 @@ type Options = Readonly<{
   config?: ConsoleModelOperationsConfiguration;
   fetchImpl?: typeof fetch;
   now?: () => Date;
+  timeoutMs?:number;
 }>;
 
-export async function listModelProfileRequests(
-  options: Options = {},
-): Promise<ModelProfileRequestProjection[]> {
-  const list = record(await request("/v1/model-profile-requests?limit=100", { method: "GET" }, options));
-  if (list.schema_version !== 1 || !Array.isArray(list.requests) || list.next_cursor !== null) {
-    throw projectionError("OOS returned an invalid or truncated model-profile request list.");
-  }
-  const ids = list.requests.map((value) => {
-    const item = assertModelProfileRequestProjection(value);
-    return item.request_id;
-  });
-  if (new Set(ids).size !== ids.length) {
-    throw projectionError("OOS returned duplicate model-profile request identities.");
-  }
-  return Promise.all(ids.map((requestId) => readModelProfileRequest(requestId, options)));
+export async function listModelProfileRequestPage(cursor:string|null=null,options:Options={}) {
+  if(cursor!==null)assertModelProfileRequestId(cursor);
+  const query=new URLSearchParams({limit:'25',view:'summary'});if(cursor)query.set('cursor',cursor);
+  try{return assertModelProfileRequestPage(await request('/v1/model-profile-requests?'+query,{method:'GET'},options),cursor);}
+  catch(error){if(error instanceof ModelOperationsOosError)throw error;throw projectionError(error instanceof Error?error.message:'Request history page is invalid.');}
 }
 
 export async function readModelProfileRequest(
@@ -100,7 +93,7 @@ export async function commandModelProfileRequest(requestId: string, value: unkno
     };
   }
   const result = assertModelProfileRequestProjection(await request(
-    `/v1/model-profile-requests/${encodeURIComponent(requestId)}/commands`,
+    `/v1/model-profile-requests/${encodeURIComponent(requestId)}/${['approve','reject'].includes(draft.action)&&draft.decisionRef===null?'review-decisions':'commands'}`,
     { method: "POST", body: JSON.stringify({
       schema_version: 1, command_id: draft.commandId, request_id: requestId,
       expected_revision: draft.expectedRevision, action: draft.action,
@@ -113,6 +106,25 @@ export async function commandModelProfileRequest(requestId: string, value: unkno
     throw projectionError("OOS did not confirm the original request review command.");
   }
   return result;
+}
+
+export async function readModelProfileRequestOptions(options:Options={}) {
+ return assertModelProfileRequestOptions(await request("/v1/model-profile-requests/options",{method:"GET"},options));
+}
+
+export async function modelProfileLifecycleOwner(action:'prepare'|'submit'|'revise'|'operation'|'security',input:unknown=null,requestId:string|null=null,options:Options={}) {
+  if(requestId!==null)assertModelProfileRequestId(requestId);
+  const path=action==='prepare'||action==='submit'||action==='revise'?'/v1/model-profile-requests/lifecycle/'+action:
+    requestId?'/v1/model-profile-requests/'+encodeURIComponent(requestId)+'/'+(action==='operation'?'operation':'security-acceptance'):null;
+  if(!path)throw new ModelOperationsOosError('Read the original request first.','model_profile_request_id_invalid',400);
+  return request(path,{method:input===null?'GET':'POST',...(input===null?{}:{body:JSON.stringify(input)})},options);
+}
+export async function submitPreparedModelProfileRequest(value:unknown,options:Options={}) {
+ let input:ReturnType<typeof preparedModelProfileInput>;
+ try{input=preparedModelProfileInput(value);}catch(error){throw new ModelOperationsOosError(error instanceof Error?error.message:"Complete the profile details.","model_profile_request_prepared_input_invalid",400);}
+ const result=assertModelProfileRequestProjection(await request("/v1/model-profile-requests/submit-prepared",{method:"POST",body:JSON.stringify(input)},{...options,timeoutMs:20000}));
+ if(result.request_id!==input.request_id)throw projectionError("The prepared result belongs to another original request.");
+ return result;
 }
 
 export async function submitCreateModelProfileRequest(
@@ -243,7 +255,7 @@ async function request(
         "x-oos-caller-secret": config.callerSecret,
         "x-oos-operator-id": config.operatorId,
       },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: AbortSignal.timeout(options.timeoutMs??timeoutMs),
     });
   } catch {
     throw new ModelOperationsOosError(

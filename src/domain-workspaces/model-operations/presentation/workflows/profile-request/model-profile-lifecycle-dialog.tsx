@@ -1,0 +1,56 @@
+"use client";
+import {useEffect,useRef,useState} from 'react';
+import {TerasActionButton,TerasActionRow,TerasContentRegion,TerasContentTray,TerasDialog,TerasDraftCloseGuardDialog,TerasFieldGrid,TerasFieldStack,TerasLoadingState,TerasMetadataList,TerasNoteField,TerasPanel,TerasPanelHeader,TerasSelectField,TerasTextField} from '@/teras';
+import type {ModelProfileRecord} from '../../../read-model/types/model-operations-types.ts';
+import type {ModelProfileRequestProjection} from '../../../live-runtime/model-operations-live-types.ts';
+import {prepareProfileLifecycle,submitProfileLifecycle,reviseProfileLifecycle,ProfileLifecycleError} from '../../../live-runtime/model-profile-lifecycle-client.ts';
+import {fetchModelProfileRequest} from '../../../live-runtime/model-profile-operator-client.ts';
+import {profileLifecycleImpactMetadata,profilePolicyChangeMetadata} from '../../shared/model-profile-lifecycle-view-model.ts';
+import {ModelProfilePolicyFields} from "./model-profile-policy-fields.tsx";
+import {profileLifecycleLabels,type ProfileLifecycleIntent,type ProfileLifecyclePreparation,type ProfileLifecycleSelection} from '../../../work-model/profile-requests/model-profile-lifecycle-contract.ts';
+
+type Subject = {policy:Pick<ModelProfileRecord['policy'],'profileId'|'displayName'|'purpose'|'lifecycle'|'allowedDataScope'>};
+export function ModelProfileLifecycleDialog({profile,preview=false,onClose,onRecorded,revision}:{profile:Subject;revision?:{request:ModelProfileRequestProjection;selection:ProfileLifecycleSelection};preview?:boolean;onClose:()=>void;onRecorded:(request:ModelProfileRequestProjection)=>void}){
+ const [requestId]=useState(()=>revision?.request.request_id??`model-profile-request:console-${crypto.randomUUID()}`);
+ const [intent,setIntent]=useState<ProfileLifecycleIntent>(revision?.selection.intent??(profile.policy.lifecycle==='active'?'suspend':'activate')),[reason,setReason]=useState(''),[scope,setScope]=useState((revision?.selection.changes.allowed_data_scope??profile.policy.allowedDataScope).join('\n'));
+ const [limits,setLimits]=useState<Record<string,string>>(()=>Object.fromEntries(Object.entries(revision?.selection.changes.runtime_limits??{}).map(([k,v])=>[k,String(v)])));
+ const [currentLimits,setCurrentLimits]=useState<Record<string,number>>({});
+ const initialScope=useRef(profile.policy.allowedDataScope.join('\n'));
+ const [setupBusy,setSetupBusy]=useState(!preview),[setupReady,setSetupReady]=useState(preview),[setupGeneration,setSetupGeneration]=useState(0);
+ const [prepared,setPrepared]=useState<ProfileLifecyclePreparation|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[unknown,setUnknown]=useState(false),[leave,setLeave]=useState(false);
+ const [classification,setClassification]=useState<string>(revision?.request.request.profile_intent.input_data_classification??'internal');
+ const [displayName,setDisplayName]=useState(revision?.selection.changes.display_name??(profile.policy.displayName??profile.policy.profileId.replace(/-/g,' '))+' copy');
+ const [frozen,setFrozen]=useState<Record<string,unknown>|null>(null);
+ const impactId='profile-impact-'+requestId;
+ useEffect(()=>{if(prepared){const result=document.getElementById(impactId);result?.focus({preventScroll:true});result?.scrollIntoView({block:'start',behavior:'auto'});}},[prepared,impactId]);
+ const policyEdit=['create','amend','exception'].includes(intent);
+ useEffect(()=>{let active=true;if(preview)return;setSetupBusy(true);setSetupReady(false);
+  prepareProfileLifecycle({request_id:requestId,intent:'amend',profile_id:revision?.selection.profile_id??profile.policy.profileId,environment:'dev-integration',changes:{}}).then(value=>{if(active){initialScope.current=value.editable_policy.allowed_data_scope.join('\n');setScope((revision?.selection.changes.allowed_data_scope??value.editable_policy.allowed_data_scope).join('\n'));setCurrentLimits(value.editable_policy.runtime_limits);setSetupReady(true);}}).catch(e=>{if(active)setError(e instanceof Error?e.message:'The current operating policy could not be read.');}).finally(()=>{if(active)setSetupBusy(false);});
+  return()=>{active=false;};
+ },[profile.policy.profileId,preview,requestId,setupGeneration]);
+ const selection=()=>({request_id:requestId,intent,profile_id:revision?.selection.profile_id??profile.policy.profileId,environment:'dev-integration',changes:policyEdit?{...(intent==='create'?{display_name:displayName.trim()}:{}),allowed_data_scope:scope.split('\n').map(s=>s.trim()).filter(Boolean),...(Object.values(limits).some(v=>v!=='')?{runtime_limits:Object.fromEntries(Object.entries(limits).filter(([,v])=>v!=='').map(([k,v])=>[k,Number(v)]))}:{})}: {}});
+ async function inspect(){setBusy(true);setError(null);try{setPrepared(await prepareProfileLifecycle(selection()));}catch(e){setError(e instanceof Error?e.message:'Policy impact is unavailable.');}finally{setBusy(false);}}
+ async function submit(){if(!prepared)return;setBusy(true);setError(null);const input=frozen??{...selection(),preparation_digest:prepared.preparation_digest,display_name:intent==='create'?displayName.trim():(profile.policy.displayName??profile.policy.profileId.replace(/-/g,' ')),intended_purpose:profile.policy.purpose,input_data_classification:classification,operator_justification:reason.trim(),...(revision?{expected_revision:revision.request.revision,command_id:`model-profile-command:console-${crypto.randomUUID()}`}:{})};setFrozen(input);try{const result=await (revision?reviseProfileLifecycle(input):submitProfileLifecycle(input));if(result.request_id!==requestId)throw Error('The owner returned another request.');setUnknown(false);onRecorded(result);}catch(e){const rejected=e instanceof ProfileLifecycleError&&e.status!==null&&e.status>=400&&e.status<500;setUnknown(!rejected);if(rejected){setFrozen(null);if(e.status===409)setPrepared(null);}setError(e instanceof Error?e.message:'Submission outcome is not confirmed.');}finally{setBusy(false);}}
+ async function recover(){setBusy(true);setError(null);try{const result=await fetchModelProfileRequest(requestId);if(revision&&!result.history.some(event=>event.command_id===frozen?.command_id))throw Error('The original revision is not confirmed. Retry the same saved submission.');setUnknown(false);onRecorded(result);}catch(e){setError(e instanceof Error?e.message:'The original request could not be read.');}finally{setBusy(false);}}
+ const locked=busy||setupBusy||unknown||!setupReady;
+ const dirty=Boolean(revision||reason||prepared||unknown||scope!==initialScope.current||Object.values(limits).some(Boolean)||intent!==(profile.policy.lifecycle==='active'?'suspend':'activate'));
+ return <>
+ <TerasDialog open busy={busy||setupBusy} busyLabel="Checking the original profile action…" kicker="Purpose profiles" title={revision?"Revise operating policy":"Change profile policy"} description="Review the effect before submitting. Permission changes require review and Platform implementation." width="standard" height="content" contentOverflow="hidden" closeDisabled={busy||setupBusy} onClose={()=>dirty?setLeave(true):onClose()} actions={<TerasActionRow><TerasActionButton emphasis="secondary" disabled={busy||setupBusy} onClick={()=>dirty?setLeave(true):onClose()}>Cancel</TerasActionButton><TerasActionButton disabled={preview||locked||!prepared||prepared.can_submit===false||!reason.trim()} onClick={()=>void submit()}>{revision?"Save revised policy":"Submit for review"}</TerasActionButton></TerasActionRow>}>
+ <TerasContentRegion fill scroll><TerasFieldStack spacing="normal">
+ {preview?<TerasContentTray kicker="Design preview" description="Inspect the form here. Source checks, submission and policy changes are disabled."/>:null}
+ {setupBusy?<TerasLoadingState inline label="Reading current operating rules…"/>:null}
+ {!preview&&!setupReady&&!setupBusy?<TerasContentTray kicker="Current policy unavailable" description="Retry the owner read before checking this change." actions={<TerasActionButton emphasis="secondary" onClick={()=>{setError(null);setSetupGeneration(v=>v+1);}}>Retry policy setup</TerasActionButton>}/>:null}
+ {error?<TerasContentTray kicker={unknown?'Check original submission':'Profile action needs attention'} description={error} actions={unknown?<TerasActionRow><TerasActionButton emphasis="secondary" disabled={busy} onClick={()=>void recover()}>Check original request</TerasActionButton><TerasActionButton disabled={busy} onClick={()=>void submit()}>Retry original submission</TerasActionButton></TerasActionRow>:undefined}/>:null}
+ <TerasPanel fit="content" frame="padded" treatment="neutral" spacing="normal"><TerasPanelHeader kicker="Selected profile" title={profile.policy.profileId.replace(/-/g,' ')} description={profile.policy.purpose}/>
+ <TerasSelectField label="What should change?" value={intent} disabled={locked||Boolean(revision)} options={Object.entries(profileLifecycleLabels).map(([value,label])=>({value,label}))} onValueChange={v=>{setIntent(v as ProfileLifecycleIntent);setPrepared(null);}}/>
+ {intent==='create'?<TerasTextField label="New profile name" value={displayName} maxLength={160} disabled={locked} onValueChange={v=>{setDisplayName(v);setPrepared(null);}}/>:null}
+ {policyEdit?<ModelProfilePolicyFields scope={scope} limits={limits} currentLimits={currentLimits} disabled={locked}
+ onScopeChange={v=>{setScope(v);setPrepared(null);}} onLimitChange={(key,value)=>{setLimits(current=>({...current,[key]:value}));setPrepared(null);}}/>:null}
+ <TerasSelectField label="Most sensitive data" value={classification} disabled={locked} options={['public','internal','confidential','restricted'].map(value=>({value,label:value.charAt(0).toUpperCase()+value.slice(1)}))} onValueChange={setClassification}/><TerasNoteField label="Why is this change needed?" minimumHeight="short" maxLength={2000} value={reason} disabled={locked} onValueChange={setReason}/>
+ <TerasActionRow><TerasActionButton emphasis="secondary" disabled={preview||locked||!setupReady} onClick={()=>void inspect()}>Check impact</TerasActionButton></TerasActionRow></TerasPanel>
+ {busy?<TerasLoadingState inline label="Checking the policy owner…"/>:null}
+ {prepared?<TerasPanel id={impactId} tabIndex={-1} aria-label="Policy change impact" aria-live="polite" fit="content" frame="padded" treatment="neutral" spacing="normal"><TerasPanelHeader kicker="Impact" title="Review the policy change" description={prepared.impact}/><TerasMetadataList items={profileLifecycleImpactMetadata(prepared)}/><TerasContentTray kicker="Affected workflows" description={prepared.affected_workflows.join(', ')}/>{prepared.policy_changes?.map(change=><TerasContentTray key={change.field} kicker={change.label}><TerasMetadataList items={profilePolicyChangeMetadata(change)}/></TerasContentTray>)}</TerasPanel>:null}
+ </TerasFieldStack></TerasContentRegion></TerasDialog>
+ <TerasDraftCloseGuardDialog kicker="Profile change" open={leave} title="Leave this profile change?" description={unknown?'The original submission may have been recorded. Recover the same request from history; leaving does not cancel it.':'Unsaved form changes will be discarded. The current policy is unchanged.'} leaveLabel="Leave" onKeepEditing={()=>setLeave(false)} onLeave={onClose}/>
+ </>;
+}

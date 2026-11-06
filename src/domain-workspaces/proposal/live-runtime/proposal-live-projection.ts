@@ -27,8 +27,9 @@ export type ProposalCanonicalDrafts = {
 export function projectProposalLiveRecords(
   records: ProposalLiveRecord[],
 ): ProposalWorkspaceScenario[] {
-  return records.map(({ createdAt, deliveryLink, projection }) => {
-    const proposal = projectProposalLiveRecord(projection, createdAt);
+  return records.map(({ createdAt, creationKnown, summaryOnly, deliveryLink, projection }) => {
+    const proposal = {...projectProposalLiveRecord(projection, createdAt), creationKnown};
+    if(summaryOnly)proposal.evidence=proposal.evidence.filter(item=>item.id.endsWith("-source"));
     if (!projection.delivery_ref) return proposal;
     const current = projection.projection_state === "current";
     const retired = deliveryLink?.sourceState === "current" && deliveryLink.status === "retired" && projection.status !== "implemented";
@@ -266,8 +267,8 @@ export function proposalLiveWorkspaceStatus(
   }
   return statusModel(
     "current",
-    "Proposal source is current",
-    "Canonical Proposal projections and writes are connected through OOS.",
+    "Proposal backlog is online",
+    "Review ideas and progress them through the proposal workflow.",
   );
 }
 
@@ -349,16 +350,16 @@ function eventPayload(event: ProposalOosEvent, projection: ProposalOosProjection
       decision: {
         advisorDraft: "",
         advisorPrompt: "",
-        notes: projection.decision_notes ?? event.summary,
+        notes: event.decision?.notes ?? event.summary,
         outcome,
       },
-      route: projection.route
+      route: event.decision?.route
         ? {
-            rationale: projection.route.rationale,
-            repoMode: projection.route.source_custody.repository_mode,
-            repoOwner: projection.route.source_custody.owner ?? "Repository Operation",
-            repoRef: projection.route.source_custody.source_ref ?? "",
-            routeTarget: projection.route.target === "delivery" ? "Delivery" as const : "Prototype" as const,
+            rationale: event.decision.route.rationale,
+            repoMode: event.decision.route.source_custody.repository_mode,
+            repoOwner: event.decision.route.source_custody.owner ?? "Repository Operation",
+            repoRef: event.decision.route.source_custody.source_ref ?? "",
+            routeTarget: event.decision.route.target === "delivery" ? "Delivery" as const : "Prototype" as const,
           }
         : null,
       step: "disposition" as const,
@@ -412,11 +413,11 @@ function statusModel(
       {
         detail: summary,
         facts: [
-          { label: "Record Authority", value: state === "local" ? "Synthetic preview" : "Workspace Proposals" },
-          { label: "Mutation Adapter", value: state === "local" ? "Prototype local" : "Operator Orchestration Service" },
+          { label: "Saved in", value: state === "local" ? "Synthetic preview" : "Workspace Proposals" },
+          { label: "Workflow service", value: state === "local" ? "Prototype local" : "Operator Orchestration Service" },
         ],
         id: "backend",
-        label: "Proposal Source",
+        label: "Backlog",
         state,
         tone,
       },

@@ -1,5 +1,7 @@
 "use client";
 
+import { proposalWorkflowTextLabel, proposalWorkflowTextLength, proposalWorkflowTextLimit } from "../../../../work-model/proposal-text-limits.ts";
+
 import { useRef, type FormEvent } from "react";
 import { useDraftAdvisor } from "@/agent-console";
 
@@ -83,7 +85,7 @@ export function ProposalTriageStep({
     disabled: triageLocked,
     getScope: () => ({ role: "proposal-triage", ref: proposal.id, sourceRef: proposal.backendRecordId,
       sourceRevision: proposal.recordVersion, context: JSON.stringify({ title: proposal.title, body: proposal.bodyPreview, status: proposal.status }),
-      fields: [{ key: "summary", label: "Triage summary", value: draft.summary, maxLength: 8000 }] }),
+      fields: [{ key: "summary", label: "Triage summary", value: draft.summary, maxLength: proposalWorkflowTextLimit }] }),
     apply: (edits) => {
       const summary = edits.find((edit) => edit.field === "summary");
       if (summary) updateDraft({ summary: String(summary.value) });
@@ -145,22 +147,24 @@ export function ProposalTriageStep({
             tone="info"
           >
             <TerasPanelHeader
-              description="Write one source summary for the Disposition step. Do not choose route, repository, acceptance, rejection, parking, or handoff here."
+              description="Summarize the idea, what is known and what needs clarification before deciding."
               kicker="Triage Draft"
               title="Triage summary"
             />
             <TerasFieldStack fill="last" spacing="loose">
               <TerasReadoutField
-                label="Body Preview"
+                label="Original idea"
                 scrollHeight="medium"
                 treatment="quote"
                 value={proposal.bodyPreview}
               />
               <TerasNoteField
                 fill
-                label="Summary"
+                aria-label="Summary"
+            aria-invalid={proposalWorkflowTextLength(draft.summary) > proposalWorkflowTextLimit}
+            label={proposalWorkflowTextLabel("Summary", draft.summary)}
                 onValueChange={(value) => updateDraft({ summary: value })}
-                placeholder="Summarize source completeness, confidence, missing context, and what the Disposition step should know."
+                placeholder="What is the idea trying to achieve? What is clear, missing or worth checking?"
                 readOnly={triageLocked}
                 value={draft.summary}
               />

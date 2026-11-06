@@ -27,6 +27,8 @@ export type ModelProjectionSource = {
 };
 
 export type ModelProfilePolicyProjection = {
+  displayName?: string;
+  capabilityId?: string;
   allowedCallers: string[];
   allowedDataScope: string[];
   directProviderAccessAllowed: boolean;
@@ -119,6 +121,7 @@ export type ModelRequiredMoveProjection = {
 };
 
 export type ModelProfileRecord = {
+  evidenceScope?: "policy-summary";
   accessPlane: ModelAccessPlaneProjection;
   consumers: ModelProfileConsumerProjection[];
   latestAudit: ModelLatestAuditProjection;

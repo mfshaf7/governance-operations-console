@@ -1,3 +1,4 @@
+import { proposalWorkflowTextLabel, proposalWorkflowTextLength, proposalWorkflowTextLimit } from "../../../../work-model/proposal-text-limits.ts";
 import {
   TerasChoiceGroup,
   TerasActionButton,
@@ -93,10 +94,12 @@ export function ProposalDispositionDecisionPanel({
           />
           <TerasNoteField
             fill
-            label="Decision notes"
+            aria-label="Decision notes"
+            aria-invalid={proposalWorkflowTextLength(decisionDraft.notes) > proposalWorkflowTextLimit}
+            label={proposalWorkflowTextLabel("Decision notes", decisionDraft.notes)}
             onValueChange={onNotesChange}
             placeholder={decisionDraft.sourceHomeCorrection ? "Review or refine the source-home change note."
-              : "Record why this proposal should be accepted, rejected, or kept parked."}
+              : "Why should this idea be accepted, rejected or left for later?"}
             readOnly={dispositionCompleted}
             value={decisionDraft.notes}
           />
