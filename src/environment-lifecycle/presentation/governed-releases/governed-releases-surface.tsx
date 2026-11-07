@@ -9,6 +9,8 @@ import {
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
+  TerasRegisterPagination,
+  TerasLoadingState,
 } from "@/teras";
 import type {
   ProductReleaseCapability,
@@ -138,6 +140,9 @@ export function GovernedReleasesSurface({
         mode="register-selected"
         register={
           <TerasRegisterPanel
+            footer={live ? <TerasRegisterPagination label="Governed products" offset={live.runtime.offset} count={products.length} total={live.runtime.projection?.page.total} page={Math.floor(live.runtime.offset/live.runtime.pageSize)+1}
+              pending={live.runtime.loading} unavailable={Boolean(live.runtime.error)} hasPrevious={live.runtime.offset>0} hasNext={live.runtime.current && live.runtime.projection?.page.next_offset!=null}
+              onReset={live.runtime.error?live.runtime.first:undefined} onPrevious={live.runtime.previous} onNext={()=>void live.runtime.loadMore()} /> : undefined}
             description="Each product retains its own release shape; unavailable paths remain explicit."
             filterBar={
               <TerasFilterBar
@@ -191,11 +196,11 @@ export function GovernedReleasesSurface({
               />
             }
             kicker="Governed Releases"
-            statusLabel={live ? `${products.length} of ${live.runtime.projection?.page.total??"?"} loaded` : `${filteredProducts.length}/${products.length} shown`}
+            statusLabel={live ? `${products.length} of ${live.runtime.projection?.page.total??"?"} matching` : `${filteredProducts.length}/${products.length} shown`}
             statusTone="info"
             title="Product Release Register"
           >
-            {filteredProducts.length > 0 ? (
+            {live?.runtime.loading ? <TerasLoadingState fill label="Loading matching products…" /> : filteredProducts.length > 0 ? (
               <GovernedReleasesRegisterTable
                 onInspect={(product) =>
                   openProductDashboard(product.productId)
@@ -224,7 +229,6 @@ export function GovernedReleasesSurface({
           />
         }
       />
-      {live?.runtime.projection?.page.next_offset!=null ? <TerasActionRow><TerasActionButton emphasis="secondary" disabled={live.runtime.loading} onClick={()=>void live.runtime.loadMore()}>Load more products</TerasActionButton></TerasActionRow> : null}
       {selectedProduct &&
       (mode === "dashboard" ||
         mode === "release-workflow" ||

@@ -72,15 +72,7 @@ export async function listLifecycleTransitionOwnerProjections({
     }
 
     for (const value of result.transitions) {
-      const envelope = parseConsoleSourceProjection(value);
-      const raw = record(envelope.projection, "Lifecycle Transition projection");
-      const transitionId = requiredText(raw.transition_id, "transition identity");
-      const projection = acceptCurrentConsoleSourceProjection(value, {
-        authority: "operator-orchestration-service",
-        recordRef: `lifecycle-transition://${transitionId}`,
-        sourceOwner: "operator-orchestration-service",
-      });
-      const projected = projectLifecycleTransitionOwnerProjection(projection);
+      const { envelope, projected } = admitLifecycleTransition(value);
       if (identities.has(projected.transitionId)) {
         throw invalid("OOS returned a duplicate Lifecycle Transition identity.");
       }
@@ -118,7 +110,19 @@ export async function listLifecycleTransitionOwnerProjections({
   };
 }
 
-async function lifecycleTransitionOosRequest(
+export function admitLifecycleTransition(value: unknown) {
+  const envelope = parseConsoleSourceProjection(value);
+  const raw = record(envelope.projection, "Lifecycle Transition projection");
+  const transitionId = requiredText(raw.transition_id, "transition identity");
+  const projection = acceptCurrentConsoleSourceProjection(value, {
+    authority: "operator-orchestration-service",
+    recordRef: `lifecycle-transition://${transitionId}`,
+    sourceOwner: "operator-orchestration-service",
+  });
+  return { envelope, projected: projectLifecycleTransitionOwnerProjection(projection) };
+}
+
+export async function lifecycleTransitionOosRequest(
   config: ReturnType<typeof resolveConsoleOosConnection>,
   path: string,
   fetchImpl: typeof fetch,

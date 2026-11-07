@@ -7,9 +7,11 @@ import {
   LifecycleTransitionOosError,
 } from "./lifecycle-transition-oos-client.ts";
 
+import {readLifecycleTransitionJournal} from "./lifecycle-transition-register-query.ts";
+
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
-export async function listLifecycleTransitionsRoute() {
+export async function listLifecycleTransitionsRoute(request: Request) {
   if (!lifecycleTransitionOosConfigured()) {
     return NextResponse.json(
       {
@@ -25,6 +27,8 @@ export async function listLifecycleTransitionsRoute() {
   }
 
   try {
+    const query=request?new URL(request.url).searchParams:null;
+    if(query?.get("view")==="journal")return NextResponse.json(await readLifecycleTransitionJournal(query,{},request?.signal),{headers:noStoreHeaders});
     const result = await listLifecycleTransitionOwnerProjections();
     return NextResponse.json(
       {

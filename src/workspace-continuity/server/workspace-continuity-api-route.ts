@@ -1,3 +1,4 @@
+import {readWorkspaceProductPage} from "./workspace-products-wgcf-client.ts";
 import { NextResponse } from "next/server";
 
 import {
@@ -8,7 +9,7 @@ import {
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
-export async function readWorkspaceContinuityRoute() {
+export async function readWorkspaceContinuityRoute(request:Request) {
   try {
     if (!workspaceContinuityWgcfConfigured()) {
       throw new WorkspaceContinuityWgcfError(
@@ -17,6 +18,8 @@ export async function readWorkspaceContinuityRoute() {
         503,
       );
     }
+    const params=request?new URL(request.url).searchParams:new URLSearchParams();
+    if(params.get("view")==="products")return NextResponse.json(await readWorkspaceProductPage(params,request.signal),{headers:noStoreHeaders});
     return NextResponse.json(await readWorkspaceContinuity(), {
       headers: noStoreHeaders,
       status: 200,

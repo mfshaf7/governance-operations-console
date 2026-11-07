@@ -450,6 +450,7 @@ export function useProposalControlController({
     source: { loading: liveSnapshot === null, error: liveSnapshot?.error ?? null,
       page: liveSnapshot?.page ?? null, pagePending: proposalLiveRuntime.pagePending, pageError: proposalLiveRuntime.pageError,
       hasPrevious:proposalLiveRuntime.hasPrevious,onNext:proposalLiveRuntime.loadMore,onPrevious:proposalLiveRuntime.previousPage,
+      pageOffset:proposalLiveRuntime.pageOffset,pageNumber:proposalLiveRuntime.pageNumber,
       onRefresh:()=>void proposalLiveRuntime.refresh(true),result:captureResult },
     details: {
       close: () => setInspectedProposalId(null),

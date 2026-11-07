@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
 import type { OperationSurfaceStatusModel } from "../../../operation-contracts/surface-status.ts";
 import { useConsoleRuntimeCapabilities } from "../../../../console-integration/configuration/use-console-runtime-capabilities.ts";
-import { usePrototypeWorkspaceLiveRuntime } from "../../live-runtime/use-prototype-workspace-live-runtime.ts";
+import { usePrototypeWorkspaceLiveRuntime, usePrototypeWorkspaceOverview } from "../../live-runtime/use-prototype-workspace-live-runtime.ts";
 import {
   resolveConsolePrimaryRecordIsolation,
   selectConsoleAuthorityProjection,
@@ -93,7 +93,9 @@ export function usePrototypeControlController({
 } = {}) {
   const runtimeCapabilities = getPrototypeRuntimeCapabilities();
   const consoleRuntime = useConsoleRuntimeCapabilities();
-  const live = usePrototypeWorkspaceLiveRuntime(consoleRuntime.status === "current" && consoleRuntime.projection?.mode === "live");
+  const state = usePrototypeControlState();
+  const live = usePrototypeWorkspaceLiveRuntime(consoleRuntime.status === "current" && consoleRuntime.projection?.mode === "live",state.filters,entryIntent?.subjectRef??null);
+  const overview = usePrototypeWorkspaceOverview(consoleRuntime.status === "current" && consoleRuntime.projection?.mode === "live");
   const primaryRecordIsolation = resolveConsolePrimaryRecordIsolation({
     liveAuthorityAvailable: live.projection !== null,
     runtimeMode: consoleRuntime.projection?.mode ?? null,
@@ -132,7 +134,7 @@ export function usePrototypeControlController({
       primaryRecordIsolation.liveAuthorityAllowed,
     ],
   );
-  const state = usePrototypeControlState(sourceReadModel);
+
   const [requestDraft, setRequestDraft] = useState<PrototypeRequestDraft>(
     emptyPrototypeRequestDraft,
   );
@@ -189,7 +191,7 @@ export function usePrototypeControlController({
       : "The requested Prototype is not present in current source records. Refresh the source and reopen this handoff; another Prototype has not been selected."
     : null;
   const filteredRecords = useMemo(
-    () => filterPrototypeRecords(readModel.records, state.filters),
+    () => filterPrototypeRecords(readModel.records.filter(row=>!(row as {selectedOnly?:boolean}).selectedOnly), state.filters),
     [readModel.records, state.filters],
   );
   const selectedRecord = useMemo(
@@ -285,7 +287,8 @@ export function usePrototypeControlController({
         }
       : {}),
   };
-  const stats = getPrototypeWorkspaceStats(readModel.records);
+  const summaryReady=primaryRecordIsolation.fixtureAllowed || overview.readModel!==null;
+  const stats = getPrototypeWorkspaceStats(primaryRecordIsolation.fixtureAllowed?readModel.records:overview.readModel?.records??[]);
   const workspaceStatus: OperationSurfaceStatusModel =
     primaryRecordIsolation.fixtureAllowed || primaryRecordIsolation.liveAuthorityAllowed
       ? prototypeWorkspaceStatus(readModel, stats, primaryRecordIsolation.liveAuthorityAllowed)
@@ -613,8 +616,10 @@ export function usePrototypeControlController({
       onOpenPrototypeRequest: openPrototypeRequest,
       requestSubmittedAt,
       summary: prototypeSummaryMetrics(stats),
+      unavailable: !summaryReady,
       workspaceStatus,
     },
+    page: primaryRecordIsolation.fixtureAllowed?null:live.page,
     records: {
       all: readModel.records,
       filtered: filteredRecords,
@@ -623,8 +628,8 @@ export function usePrototypeControlController({
       error: live.error ?? consoleRuntime.error,
       reasonCode: primaryRecordIsolation.reasonCode,
       unavailable: !primaryRecordIsolation.fixtureAllowed && !live.projection,
-      loading: consoleRuntime.status === "loading" || consoleRuntime.projection?.mode === "live" && !live.projection && !live.error,
-      refresh: live.refresh,
+      loading: consoleRuntime.status === "loading" || consoleRuntime.projection?.mode === "live" && (live.loading || !live.projection && !live.error),
+      refresh: async()=>{await Promise.allSettled([live.refresh(),overview.refresh()]);},
     },
     request: {
       canSubmit: canSubmitRequest,

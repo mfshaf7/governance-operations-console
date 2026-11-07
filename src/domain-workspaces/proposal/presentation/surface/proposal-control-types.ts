@@ -21,7 +21,7 @@ import type { ProposalTargetApplicationResult } from "../../live-runtime/proposa
 
 export type ProposalControlController = {
   source: { loading:boolean;error:string|null;page: import("../../live-runtime/proposal-live-types.ts").ProposalRegisterPage|null;
-    pagePending:boolean;pageError:string|null;hasPrevious:boolean;onNext:()=>Promise<void>;onPrevious:()=>Promise<void>;onRefresh:()=>void;result:string|null };
+    pagePending:boolean;pageError:string|null;hasPrevious:boolean;pageOffset:number;pageNumber:number;onNext:()=>Promise<void>;onPrevious:()=>Promise<void>;onRefresh:()=>void;result:string|null };
   capture: {
     pending: boolean;
     outcomeUnknown: boolean;

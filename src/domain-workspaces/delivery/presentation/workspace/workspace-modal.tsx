@@ -15,6 +15,7 @@ import type {
 
 import {
   TerasDraftCloseGuardDialog,
+  TerasActionRow,
   TerasModalShell,
   TerasFullscreenSurfaceFrame,
   TerasSurfaceNav,
@@ -267,9 +268,28 @@ export function DeliveryWorkspaceModal({
             kicker="Workspace Nav"
             title="Delivery Areas"
           >
-            {onRecordScopeChange ? <TerasSegmentedControl ariaLabel="Delivery record scope" value={model.history_scope??"current"}
-              options={[{label:"Current",value:"current" as const},{label:"History",value:"history" as const}]}
-              onValueChange={scope=>{if(dirtyExecutionTreeDraftActive())setPendingWorkspaceExit({type:"scope",scope});else onRecordScopeChange(scope);}}/> : null}
+            {onRecordScopeChange ? (
+              <TerasActionRow spacing="none">
+                <TerasSegmentedControl
+                  ariaLabel="Delivery record scope"
+                  disabled={activeSurfaceId === "home" || activeSurfaceId === "catalog"}
+                  layout="fit"
+                  size="compact"
+                  value={model.history_scope ?? "current"}
+                  options={[
+                    { label: "Current", value: "current" as const },
+                    { label: "History", value: "history" as const },
+                  ]}
+                  onValueChange={(scope) => {
+                    if (dirtyExecutionTreeDraftActive()) {
+                      setPendingWorkspaceExit({ type: "scope", scope });
+                    } else {
+                      onRecordScopeChange(scope);
+                    }
+                  }}
+                />
+              </TerasActionRow>
+            ) : null}
             {deliveryWorkspaceSurfaces.map((surface) => {
               const count = deliverySurfaceItemCount({
                 executionCount,
@@ -302,7 +322,7 @@ export function DeliveryWorkspaceModal({
           <TerasSurfaceSummaryHeader
             ariaLabel="Delivery workspace summary"
             description={workspaceSummaryDescription}
-            metrics={workspaceSummaryStats}
+            metrics={workspaceSummaryStats.map(metric=>({...metric,value:metric.value==="—"?<span aria-label="Total not available" title="The full total is not available. Open Intake to browse source history.">—</span>:metric.value}))}
             statuses={projectOperationSurfaceStatusItems(
               deliveryWorkspaceComponentStatuses(model),
             )}

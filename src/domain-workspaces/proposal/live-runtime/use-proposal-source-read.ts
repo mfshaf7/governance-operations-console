@@ -1,4 +1,6 @@
 "use client";
+import {readRegisterWindow} from '../../../console-integration/registers/read-register-window.ts';
+import {useRegisterPageSize} from '../../../console-integration/registers/use-register-page-size.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { assertProposalLiveSnapshot, assertProposalOosHistory, assertProposalOosProjection, isProposalLiveApiError } from "./proposal-live-contract.ts";
 import type { ProposalLiveRecord, ProposalLiveSnapshot, ProposalRegisterSelection } from "./proposal-live-types.ts";
@@ -19,35 +21,42 @@ function mergeHistory(previous: ProposalLiveRecord, next: ProposalLiveRecord) {
   return next;
 }
 export function useProposalSourceRead(selection: ProposalRegisterSelection, selectedId: string, pinnedId: string | null) {
+  const {pageSize}=useRegisterPageSize("Proposal");
   const [snapshot, setSnapshot] = useState<ProposalLiveSnapshot | null>(null);
   const [details, setDetails] = useState<ProposalLiveRecord | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const pageBusyRef = useRef(false), historyBusyRef = useRef(false);
   const cursorRef = useRef<string | null>(null);
-  const [previousCursors, setPreviousCursors] = useState<(string|null)[]>([]);
+  const [previousPages, setPreviousPages] = useState<{cursor:string|null;offset:number}[]>([]);
+  const [pageOffset, setPageOffset] = useState(0);
   const [pagePending, setPagePending] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
   const [historyPending, setHistoryPending] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const key = JSON.stringify(selection), keyRef = useRef(key), selectionRef = useRef(selection), sequence = useRef(0), detailSequence = useRef(0);
+  const filterKey=JSON.stringify(selection),key=JSON.stringify([filterKey,pageSize]), keyRef = useRef(key), selectionRef = useRef(selection), sequence = useRef(0), detailSequence = useRef(0);
   const snapshotRef = useRef(snapshot), detailsRef = useRef(details), mounted = useRef(true);
   const reading = useRef<{key:string;promise:Promise<ProposalLiveSnapshot>} | null>(null);
   keyRef.current = key; selectionRef.current = selection; snapshotRef.current = snapshot; detailsRef.current = details;
 
   const readPage = useCallback(async (cursor: string | null = null) => {
-    const q = selectionRef.current, params = new URLSearchParams();
+    const q=selectionRef.current;let metadata:ProposalLiveSnapshot|null=null;
+    const window=await readRegisterWindow({cursor,pageSize,scope:JSON.stringify(q),identity:(row:ProposalLiveRecord)=>row.projection.proposal_id,readPage:async nativeCursor=>{
+    const params = new URLSearchParams();
     if (q.query) params.set("query", q.query);
     if (q.status !== "all") params.set("status", q.status);
     if (q.ingress !== "all") params.set("ingress", q.ingress);
-    if (cursor) params.set("cursor", cursor);
+    if (nativeCursor) params.set("cursor", nativeCursor);
     const response = await fetch(`/api/proposals${params.size ? `?${params}` : ""}`, {cache:"no-store"});
     const body:unknown = await response.json().catch(()=>null);
     if (!response.ok) throw Object.assign(new Error(message(body)),{status:response.status});
     const next = assertProposalLiveSnapshot(body);
     if (next.page && (next.page.selector.query !== q.query.trim().toLowerCase() || next.page.selector.status !== q.status || next.page.selector.ingress !== q.ingress)) throw new Error("Proposal search response belongs to another selection.");
-    return next;
-  }, []);
+      metadata=next;return {rows:next.records,nextCursor:next.page?.next_cursor??null};
+    }});
+    const next=metadata!;
+    return {...next,records:window.rows,page:{selector:{...q,query:q.query.trim().toLowerCase()},source_total:next.page?.source_total??next.records.length,next_cursor:window.nextCursor}};
+  }, [pageSize]);
 
   const refresh = useCallback(async (afterMutation = false): Promise<ProposalLiveSnapshot> => {
     const boundKey = keyRef.current;
@@ -59,9 +68,12 @@ export function useProposalSourceRead(selection: ProposalRegisterSelection, sele
     const token = ++sequence.current;
     const operation = (async () => {
       try {
-        if(afterMutation){cursorRef.current=null;setPreviousCursors([]);}
+        if(afterMutation)cursorRef.current=null;
         const next = await readPage(cursorRef.current);
-        if (mounted.current && token === sequence.current && boundKey === keyRef.current) { setSnapshot(next); setPageError(null); }
+        if (mounted.current && token === sequence.current && boundKey === keyRef.current) {
+          if(afterMutation){setPreviousPages([]);setPageOffset(0);}
+          setSnapshot(next); setPageError(null);
+        }
         return next;
       } catch(error) {
         const offline:ProposalLiveSnapshot = {mode:"live",status:"offline",observedAt:new Date().toISOString(),records:[],error:message(error)};
@@ -77,8 +89,9 @@ export function useProposalSourceRead(selection: ProposalRegisterSelection, sele
     try { return await operation; } finally { if (reading.current?.promise === operation) reading.current = null; }
   }, [readPage]);
 
+  const lastFilter=useRef(filterKey);
   useEffect(() => {
-    mounted.current = true; cursorRef.current=null;setPreviousCursors([]);setSnapshot(null); setDetails(null); setDetailError(null); setPageError(null);
+    mounted.current = true; cursorRef.current=null;setPreviousPages([]);setPageOffset(0);setSnapshot(null); if(lastFilter.current!==filterKey)setDetails(null);lastFilter.current=filterKey; setDetailError(null); setPageError(null);
     const debounce = window.setTimeout(()=>void refresh(), selection.query ? 350 : 0);
     const timer = window.setInterval(()=>{if(document.visibilityState === "visible")void refresh();},proposalPollIntervalMs);
     return ()=>{window.clearTimeout(debounce);window.clearInterval(timer);sequence.current++;detailSequence.current++;};
@@ -124,20 +137,21 @@ export function useProposalSourceRead(selection: ProposalRegisterSelection, sele
       const next = await readPage(cursor);
       if (mounted.current && boundKey === keyRef.current && token===sequence.current) {
         const previousCursor=cursorRef.current;
-        setPreviousCursors(previous=>[...previous,previousCursor]);cursorRef.current=cursor;setSnapshot(next);
+        setPreviousPages(previous=>[...previous,{cursor:previousCursor,offset:pageOffset}]);
+        setPageOffset(pageOffset+(snapshotRef.current?.records.length ?? 0));cursorRef.current=cursor;setSnapshot(next);
       }
     } catch(error) {if(mounted.current && boundKey===keyRef.current && token===sequence.current){clearDeniedSource(error);setPageError(message(error));}}
     finally {pageBusyRef.current=false;if(mounted.current)setPagePending(false);}
-  }, [readPage,clearDeniedSource]);
+  }, [readPage,clearDeniedSource,pageOffset]);
 
   const previousPage = useCallback(async()=>{
-    if(!previousCursors.length || pageBusyRef.current)return;
+    if(!previousPages.length || pageBusyRef.current)return;
     pageBusyRef.current=true;const token=++sequence.current;
-    const target=previousCursors.at(-1) ?? null,boundKey=keyRef.current;
+    const target=previousPages.at(-1)!,boundKey=keyRef.current;
     setPagePending(true);setPageError(null);
-    try{const next=await readPage(target);if(mounted.current && boundKey===keyRef.current && token===sequence.current){cursorRef.current=target;setPreviousCursors(values=>values.slice(0,-1));setSnapshot(next);}}
+    try{const next=await readPage(target.cursor);if(mounted.current && boundKey===keyRef.current && token===sequence.current){cursorRef.current=target.cursor;setPageOffset(target.offset);setPreviousPages(values=>values.slice(0,-1));setSnapshot(next);}}
     catch(error){if(mounted.current && boundKey===keyRef.current && token===sequence.current){clearDeniedSource(error);setPageError(message(error));}}finally{pageBusyRef.current=false;if(mounted.current)setPagePending(false);}
-  },[previousCursors,readPage,clearDeniedSource]);
+  },[previousPages,readPage,clearDeniedSource]);
 
   const loadHistory = useCallback(async () => {
     const previous = detailsRef.current, cursor = previous?.history.next_cursor;
@@ -168,5 +182,5 @@ export function useProposalSourceRead(selection: ProposalRegisterSelection, sele
     if(!row && currentId===details.projection.proposal_id)return {...snapshot,records:[...snapshot.records,{...details,selectedOnly:true}]};
     return snapshot;
   },[snapshot,details,currentId]);
-  return {snapshot:effectiveSnapshot,refresh,refreshSelected,detailLoading,detailError,loadMore,previousPage,hasPrevious:previousCursors.length>0,pagePending,pageError,loadHistory,historyPending,historyError};
+  return {snapshot:effectiveSnapshot,refresh,refreshSelected,detailLoading,detailError,loadMore,previousPage,hasPrevious:previousPages.length>0,pageOffset,pageNumber:previousPages.length+1,pagePending,pageError,loadHistory,historyPending,historyError};
 }

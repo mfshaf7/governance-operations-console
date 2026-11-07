@@ -124,3 +124,27 @@ test("unverified historical bindings respect Current/History and never pretend t
  assert.equal(intakeEvidenceIssuesForView(retained,"","all","consumed").length,0);
  assert.equal(retained.intake_sources.length,1);assert.equal(retained.evidence_coverage.intake.issue_count,38);
 });
+
+test("Intake register pages replace rows without losing sparse older sources or original receipts",async()=>{
+ const {readDeliveryIntakeRegister}=await import("../../src/domain-workspaces/delivery/server/delivery-intake-register-query.ts");
+ const records=Array.from({length:105},(_,i)=>source(i%2?"proposal":"prototype",1000+i));
+ const calls=[];
+ const fetchImpl=async(url,init)=>{
+   assert.equal(init.method,"GET");const query=new URL(url).searchParams;calls.push(query);
+   const number=Number(query.get("page"));assert.equal(query.get("limit"),"20");assert.ok(Number.isInteger(number)&&number>0);
+   const start=(number-1)*20,selected=records.slice(start,start+20);
+   return canonicalSourceResponse({...page(selected),page:{number,has_more:start+20<records.length},inspected_target_refs:selected.map(row=>row.target_ref)},binding("openproject://projects/workspace-delivery-art/intake"));
+ };
+ const expected=records.map(row=>row.source_id),seen=[];let cursor=null,result;
+ do {
+   result=await readDeliveryIntakeRegister(new URLSearchParams({view:"register",...(cursor?{cursor}:{})}),undefined,{env,fetchImpl});
+   assert.ok(result.sources.length<=25);seen.push(...result.sources.map(row=>row.accepted_source_id));cursor=result.page.next_cursor;
+ }while(cursor);
+ assert.deepEqual(seen,expected);assert.equal(new Set(seen).size,105);assert.equal(result.page.total,null);
+ const first=await readDeliveryIntakeRegister(new URLSearchParams({view:"register",q:"sample-1104"}),undefined,{env,fetchImpl});
+ assert.equal(first.sources.length,0);assert.ok(first.page.next_cursor);
+ const last=await readDeliveryIntakeRegister(new URLSearchParams({view:"register",q:"sample-1104",cursor:first.page.next_cursor}),undefined,{env,fetchImpl});
+ assert.equal(last.sources.length,1);assert.equal(last.sources[0].evidence_refs[0],"receipt:original:1104");assert.equal(last.sources[0].intake_status,"consumed");
+ await assert.rejects(readDeliveryIntakeRegister(new URLSearchParams({view:"register",q:"different",cursor:first.page.next_cursor}),undefined,{env,fetchImpl}),/different search|invalid/i);
+ await assert.rejects(readDeliveryIntakeRegister(new URLSearchParams({view:"register"}),undefined,{env,fetchImpl:async()=>Response.json({error:"Forbidden"},{status:403})}),error=>error.status===403);
+});

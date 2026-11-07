@@ -4,6 +4,7 @@ import { repositoryBootstrapReadRoute, repositoryBootstrapWriteRoute } from "../
 export const dynamic = "force-dynamic";
 export function GET(request: NextRequest) {
   const keys = [...request.nextUrl.searchParams.keys()];
-  return keys.length === 1 && keys[0] === "owner_repo" ? repositoryBootstrapReadRoute(request.nextUrl.searchParams.get("owner_repo")) : repositoryBootstrapReadRoute(null);
+  const valid = keys.includes("owner_repo") && keys.every(key => ["owner_repo", "cursor"].includes(key) && request.nextUrl.searchParams.getAll(key).length === 1);
+  return valid ? repositoryBootstrapReadRoute(request.nextUrl.searchParams.get("owner_repo"),null,false,request.nextUrl.searchParams.get("cursor")) : repositoryBootstrapReadRoute(null);
 }
 export function POST(request: NextRequest) { return authorizeConsoleMutation(request, () => repositoryBootstrapWriteRoute(request, "create")); }

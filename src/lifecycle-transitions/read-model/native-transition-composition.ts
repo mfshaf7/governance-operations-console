@@ -29,7 +29,11 @@ export function composeLifecycleTransitionSnapshot(journal: LifecycleTransitionL
     const project = projectors[key];
     const read = reads[key];
     if (!currentOwnerRead(read)) { missing.push(key); continue; }
-    try { native.push(...project(read!.payload).map(projectNativeTransition)); }
+    try {
+      native.push(...project(read!.payload).map(projectNativeTransition));
+      const payload=read!.payload as {coverage?:{complete?:boolean};projection?:{coverage?:{complete?:boolean}}};
+      if(payload?.coverage?.complete===false||payload?.projection?.coverage?.complete===false)missing.push(key);
+    }
     catch { missing.push(key); }
   }
   if (!journal && native.length === 0) return null;

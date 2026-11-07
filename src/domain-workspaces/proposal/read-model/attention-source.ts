@@ -1,4 +1,4 @@
-import { projectCanonicalRepositoryGateRequests } from "../../operation-integrations/proposal-repository-live-projection.ts";
+import { projectCanonicalRepositoryGateRequests, repositoryRequestState } from "../../operation-integrations/proposal-repository-live-projection.ts";
 import type {
   ConsoleAttentionCandidate,
   ConsoleAttentionFreshness,
@@ -9,6 +9,7 @@ import { ownerAttentionSnapshot, type ConsoleOwnerRead } from "../../../console-
 import { assertProposalLiveSnapshot } from "../live-runtime/proposal-live-contract.ts";
 import { projectProposalLiveRecords } from "../live-runtime/proposal-live-projection.ts";
 import type { NativeLifecycleOutcome } from "../../../console-integration/native-lifecycle-outcome.ts";
+import { proposalCollectionComplete } from "../live-runtime/proposal-collection-read.ts";
 
 export function projectProposalLifecycleOutcomes(payload: unknown): NativeLifecycleOutcome[] {
   const snapshot = assertProposalLiveSnapshot(payload);
@@ -32,11 +33,11 @@ export function projectProposalLifecycleOutcomes(payload: unknown): NativeLifecy
 }
 
 export function projectProposalOwnerAttention(read: ConsoleOwnerRead | undefined) {
-  return ownerAttentionSnapshot(registration, read, "workspace-proposals", (payload, observedAt) => {
+  const projected=ownerAttentionSnapshot(registration, read, "workspace-proposals", (payload, observedAt) => {
     const snapshot = assertProposalLiveSnapshot(payload);
     if (snapshot.mode !== "live" || snapshot.status !== "current") throw new Error("Proposal unavailable");
     const repositoryRequests = new Map(projectCanonicalRepositoryGateRequests(snapshot)
-      .filter(request => !request.resolution || request.recovery).map(request => [request.proposalId, request]));
+      .filter(request => repositoryRequestState(request) !== "resolved").map(request => [request.proposalId, request]));
     return projectProposalLiveRecords(snapshot.records)
       .filter(record => repositoryRequests.has(record.id) || !["done", "retired", "parked", "waiting-on-repository"].includes(record.status))
       .map(record => {
@@ -55,6 +56,9 @@ export function projectProposalOwnerAttention(read: ConsoleOwnerRead | undefined
         };
       });
   });
+  if(projected.source.freshness === "current" && !proposalCollectionComplete(assertProposalLiveSnapshot(read!.payload)))
+    return {...projected,source:{...projected.source,freshness:"unverified" as const,version:"partial-collection"}};
+  return projected;
 }
 import { consoleAttentionSourceRegistrations } from "../../../console-integration/attention-source-registry.ts";
 import {

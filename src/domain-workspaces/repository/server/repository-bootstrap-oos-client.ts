@@ -97,12 +97,21 @@ export async function prepareRepositoryBootstrap(value: unknown, options: Option
   }
   return result;
 }
-export async function listRepositoryBootstraps(owner: string, options: Options = {}) {
+export async function listRepositoryBootstraps(owner: string, options: Options & {cursor?:string|null} = {}) {
   bootstrapOwner(owner);
-  const value = closed(await request(`${base}/requests?owner_repo=${encodeURIComponent(owner)}`, undefined, options, `oos://repository-owner-bootstrap/${owner}`), ["schema_version", "workflow_id", "owner_repo", "pending_request", "records"]);
+  const query=new URLSearchParams({owner_repo:owner,limit:"25",view:"register"});if(options.cursor)query.set("cursor",options.cursor);
+  let raw:Record<string,unknown>;
+  try {raw=object(await request(`${base}/requests?${query}`,undefined,options,`oos://repository-owner-bootstrap/${owner}`));}
+  catch(error){
+    if(options.cursor || !(error instanceof RepositoryBootstrapOosError) || error.status!==400 || error.code!=="repository_owner_bootstrap_query_invalid")throw error;
+    query.delete("view");raw=object(await request(`${base}/requests?${query}`,undefined,options,`oos://repository-owner-bootstrap/${owner}`));
+  }
+  const paged=Object.hasOwn(raw,"next_cursor");
+  const value = closed(raw, ["schema_version", "workflow_id", "owner_repo", "pending_request", "records", ...(paged?["next_cursor"]:[])]);
+  if(paged&&value.next_cursor!==null&&(typeof value.next_cursor!=="string"||!/^[A-Za-z0-9_-]{1,2048}$/.test(value.next_cursor)))throw new Error("Retained setup continuation is invalid.");
   if (value.schema_version !== 1 || value.workflow_id !== "repository-owner-bootstrap-list" || value.owner_repo !== owner || !Array.isArray(value.records) || value.records.length > 100) throw new Error("Retained owner setup list is invalid.");
   const project = (item: unknown) => { const record = projectOwnerBootstrap(item); if (record.ownerRepo !== owner) throw new Error("Owner setup list includes another repository."); return record; };
-  return { records: value.records.map(project), pendingRequest: value.pending_request === null ? null : project(value.pending_request) };
+  return { records: value.records.map(project), pendingRequest: value.pending_request === null ? null : project(value.pending_request),nextCursor:paged?value.next_cursor as string|null:null,historyPagingAvailable:paged };
 }
 export async function readRepositoryBootstrap(id: string, options: Options = {}) {
   const raw = object(await request(requestPath(id), undefined, options, `oos://repository-owner-bootstrap/requests/${id}`));
@@ -174,8 +183,8 @@ async function knownOwnerFailure(response: Response): Promise<string | null> {
     while (true) { const { done, value } = await reader.read(); if (done) break; length += value.length;
       if (length > 4096) { await reader.cancel(); return null; } chunks.push(value); }
     const payload: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    return payload && typeof payload === "object" && !Array.isArray(payload) &&
-      (payload as { error?: unknown }).error === "record_authority_unavailable" ? "record_authority_unavailable" : null;
+    const code=payload && typeof payload === "object" && !Array.isArray(payload)?(payload as {error?:unknown}).error:null;
+    return typeof code==="string" && ["record_authority_unavailable","repository_owner_bootstrap_query_invalid"].includes(code)?code:null;
   } catch { return null; }
   finally { reader.releaseLock(); }
 }

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import {
   TerasEmptyState,
 } from "@/teras";
@@ -15,6 +18,7 @@ import type {
 import { ControlBoardPackageCard } from "./control-board-package-card";
 import {
   controlBoardFamilyGroupTone,
+  filterControlBoardPackages,
   groupControlBoardPackagesByFamily,
   summarizeControlBoardFamilyPackages,
 } from "./control-board-view-model";
@@ -32,6 +36,7 @@ export function ControlBoardFamilyMapView({
   postureTerms: ControlBoardPostureTerms;
   selectedPackageId: string | null;
 }) {
+  const [queries, setQueries] = useState<Record<string, string>>({});
   const groupedPackages = groupControlBoardPackagesByFamily({
     familyGroups,
     packages,
@@ -40,6 +45,8 @@ export function ControlBoardFamilyMapView({
   return (
     <ControlBoardLaneRow>
       {groupedPackages.map((group) => {
+        const query = queries[group.id] ?? "";
+        const visible = filterControlBoardPackages(group.packages, query);
         const groupSelected = group.packages.some(
           (controlPackage) => controlPackage.packageId === selectedPackageId,
         );
@@ -52,14 +59,17 @@ export function ControlBoardFamilyMapView({
               postureTerms,
             })}
             key={group.id}
+            search={{label:`Search ${group.label} items`,value:query,
+              onValueChange:value=>setQueries(current=>({...current,[group.id]:value})),
+              resultLabel:query.trim()?`${visible.length} of ${group.packages.length} shown`:undefined}}
             title={group.label}
             tone={
               groupSelected ? "warn" : controlBoardFamilyGroupTone(group.packages)
             }
           >
             <ControlBoardCardStack>
-              {group.packages.length > 0 ? (
-                group.packages.map((controlPackage) => (
+              {visible.length > 0 ? (
+                visible.map((controlPackage) => (
                   <ControlBoardPackageCard
                     key={controlPackage.packageId}
                     onSelectPackage={onSelectPackage}
@@ -69,7 +79,7 @@ export function ControlBoardFamilyMapView({
                 ))
               ) : (
                 <TerasEmptyState>
-                  No package currently projects to this family.
+                  {query.trim() ? "No items match this search." : "No package currently projects to this family."}
                 </TerasEmptyState>
               )}
             </ControlBoardCardStack>

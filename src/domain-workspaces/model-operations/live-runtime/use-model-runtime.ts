@@ -1,4 +1,6 @@
 "use client";
+import {readRegisterWindow} from '../../../console-integration/registers/read-register-window.ts';
+import {useRegisterPageSize} from '../../../console-integration/registers/use-register-page-size.ts';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createBrowserOperationDraftStore } from "../../operation-runtime/browser-draft-store.ts";
 import { useConsoleRuntimeCapabilities } from "../../../console-integration/configuration/use-console-runtime-capabilities.ts";
@@ -28,6 +30,7 @@ function remember(id: string | null) {
   try { if (id) recoveryStore.writeJson(recoveryKey, id); else recoveryStore.remove(recoveryKey); } catch { /* Page-only recovery remains available. */ }
 }
 export function useModelRuntime() {
+  const {pageSize}=useRegisterPageSize("Model operation history");
   const capabilities = useConsoleRuntimeCapabilities();
   const dataMode = capabilities.status === "current" ? capabilities.projection?.mode : capabilities.status === "unavailable" ? "invalid" : null;
   const preview = dataMode === "disconnected-preview";
@@ -36,6 +39,13 @@ export function useModelRuntime() {
   const [operation, setOperation] = useState<ModelRuntimeOperation | null>(null);
   const [records, setRecords] = useState<ModelRuntimeOperation[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
+  type HistoryPosition = {cursor: string | null; offset: number};
+  const [historyPosition,setHistoryPosition]=useState<HistoryPosition>({cursor:null,offset:0});
+  const [historyTrail,setHistoryTrail]=useState<HistoryPosition[]>([]);
+  const [historySize,setHistorySize]=useState(pageSize);
+  if(historySize!==pageSize){setHistorySize(pageSize);setHistoryPosition({cursor:null,offset:0});setHistoryTrail([]);}
+  const historyPositionRef=useRef(historyPosition);historyPositionRef.current=historyPosition;
+  const historyFlight=useRef<Promise<void>|null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pending, setPending] = useState(false), [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false), [readingMore, setReadingMore] = useState(false);
@@ -46,7 +56,13 @@ export function useModelRuntime() {
   const unconfirmedControl = useRef<{ requestId: string; input: ModelRuntimeControl } | null>(null);
   selected.current = selectedId;
   const showError = useCallback((cause: unknown) => { if (alive.current) { setFresh(false); setError(cause instanceof Error ? cause.message : "Model operation unavailable."); } }, []);
+  const readWindow=useCallback((cursor:string|null)=>readRegisterWindow({cursor,pageSize,scope:"Model operation history",identity:(row:ModelRuntimeOperation)=>row.request_id,readPage:async nativeCursor=>{
+    const list=modelRecord(await request("/requests"+(nativeCursor?"?"+new URLSearchParams({cursor:nativeCursor}):"")));
+    if(!Array.isArray(list.requests)||list.requests.length>100||list.next_cursor!==null&&typeof list.next_cursor!=="string")throw Error("Model-operation history is unavailable.");
+    return {rows:list.requests.map(value=>assertModelRuntimeOperation(value)),nextCursor:list.next_cursor as string|null};
+  }}),[pageSize]);
   const refresh = useCallback(async () => {
+    if(historyFlight.current)await historyFlight.current;
     const current = ++sequence.current;
     if (dataMode !== "live") {
       setRegistry(dataMode === "disconnected-preview" ? modelRuntimePreviewRegistry() : null);
@@ -57,18 +73,16 @@ export function useModelRuntime() {
     }
     refreshReads.current++; setRefreshing(true);
     try {
-      const [rawRegistry, rawList] = await Promise.all([request("/registry"), request("/requests")]);
-      const next = assertModelRegistry(rawRegistry), list = modelRecord(rawList);
-      if (!Array.isArray(list.requests)) throw new Error("Model-operation history is unavailable.");
-      const page = list.requests.map(value => assertModelRuntimeOperation(value));
+      const [rawRegistry, window] = await Promise.all([request("/registry"), readWindow(historyPositionRef.current.cursor)]);
+      const next=assertModelRegistry(rawRegistry),page=window.rows;
       if (alive.current && current === sequence.current) {
-        setRegistry(next); setRecords(page); setCursor(typeof list.next_cursor === "string" ? list.next_cursor : null);
+        setRegistry(next); setRecords(page); setCursor(window.nextCursor);
         setFresh(true); setError(null);
       }
       return next;
     } catch (cause) { if (alive.current && current === sequence.current) setFresh(false); showError(cause); throw cause; }
     finally { refreshReads.current--; if (alive.current && refreshReads.current === 0) setRefreshing(false); }
-  }, [dataMode, showError]);
+  }, [dataMode, showError,readWindow]);
   const loadOperation = useCallback(async (id: string) => {
     if(dataMode === "disconnected-preview"){const sample=modelOperationsPreview().find(item=>item.request_id===id);if(!sample)return null;if(alive.current&&selected.current===id)setOperation(sample);return sample;}
     if(dataMode !== "live")return null;
@@ -83,7 +97,7 @@ export function useModelRuntime() {
     if (unconfirmedControl.current?.requestId === id && unconfirmedControl.current.input.expected_revision !== next.revision) unconfirmedControl.current = null;
     if (alive.current && selected.current === id) {
       setOperation(next); setError(null);
-      setRecords(current => [next, ...current.filter(item => item.request_id !== id)]);
+      setRecords(current => current.map(item => item.request_id === id ? next : item));
     }
     if (terminalModelStates.has(next.state)) void refresh().catch(() => undefined);
     return next;
@@ -167,22 +181,24 @@ export function useModelRuntime() {
     } catch (cause) { showError(cause); }
     finally { if (alive.current) setPending(false); }
   }, [dataMode, operation, refresh, showError]);
-  const loadMore = useCallback(async () => {
-    if (dataMode !== "live" || !cursor) return;
-    setReadingMore(true);
+  const readHistoryPage = useCallback(async (target: HistoryPosition, trail: HistoryPosition[]) => {
+    if(dataMode!=="live")return;
+    if(historyFlight.current)return historyFlight.current;
+    const task=(async()=>{const ticket=++sequence.current;setReadingMore(true);
     try {
-      const raw = modelRecord(await request("/requests?" + new URLSearchParams({ cursor })));
-      if (!Array.isArray(raw.requests)) throw new Error("Model-operation history is unavailable.");
-      const next = raw.requests.map(value => assertModelRuntimeOperation(value));
-      setRecords(current => [...current, ...next.filter(item => !current.some(existing => existing.request_id === item.request_id))]);
-      setCursor(typeof raw.next_cursor === "string" ? raw.next_cursor : null);
-    } catch (cause) { showError(cause); }
-    finally { if (alive.current) setReadingMore(false); }
-  }, [cursor, dataMode, showError]);
+      const window=await readWindow(target.cursor),rows=window.rows;
+      if(alive.current&&ticket===sequence.current){setRecords(rows);setCursor(window.nextCursor);setHistoryPosition(target);setHistoryTrail(trail);setError(null);}
+    }catch(cause){if(ticket===sequence.current)showError(cause);}
+    finally{if(alive.current)setReadingMore(false);}})();
+    historyFlight.current=task;try{await task;}finally{if(historyFlight.current===task)historyFlight.current=null;}
+  },[dataMode,showError,readWindow]);
+  const loadMore=()=>cursor?readHistoryPage({cursor,offset:historyPosition.offset+records.length},[...historyTrail,historyPosition]):Promise.resolve();
+  const previousHistory=()=>historyTrail.length?readHistoryPage(historyTrail.at(-1)!,historyTrail.slice(0,-1)):Promise.resolve();
   const clearCatalogue=useCallback(()=>{backendSequence.current++;setCatalogue(null);},[]);
   return {
     registry, catalogue, operation, records, cursor, selectedId, pending, refreshing, readingMore, fresh, error, lookupMissing, preview, dataMode,
-    refresh, discover, submit, control, selectOperation, loadMore,
+    refresh, discover, submit, control, selectOperation, loadMore, previousHistory,
+    restartHistory:()=>{const first={cursor:null,offset:0};historyPositionRef.current=first;setHistoryPosition(first);setHistoryTrail([]);return refresh();}, historyOffset:historyPosition.offset, historyPage:historyTrail.length+1, hasPreviousHistory:historyTrail.length>0,
     checkOriginal: () => selectedId ? loadOperation(selectedId).catch(showError) : Promise.resolve(),
     clearSelection: () => { if(dataMode === "live")remember(null); selected.current = null; setSelectedId(null); setOperation(null); setError(null); },
     clearCatalogue,

@@ -1,4 +1,5 @@
 "use client";
+import {useRegisterPageSize} from '../../../../../console-integration/registers/use-register-page-size.ts';
 
 import { DeliveryHistoryDialog } from "../../workflows/shared/history/delivery-history-dialog.tsx";
 import { useEffect, useRef, useState } from "react";
@@ -12,10 +13,14 @@ import { getDeliveryIntakeSources } from "../../../read-model/index.ts";
 
 import {
   TerasEmptyState,
+  TerasLoadingState,
+  TerasContentTray,
+  TerasTechnicalDetails,
+  TerasRegisterPagination,
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
-  TerasList, TerasSignalItem, TerasActionButton,
+  TerasActionButton,
 } from "@/teras";
 import {
   intakeOwnerFilterOptions,
@@ -29,6 +34,8 @@ import {
 import { DeliveryIntakeRegisterTable } from "./intake-register-table.tsx";
 import { DeliveryIntakeSelectedSource } from "./intake-selected-source.tsx";
 import type { DeliverySurfaceConfig } from "../../workspace/workspace-types.ts";
+
+import {useDeliveryIntakeRegisterPage} from "../../../live-runtime/use-delivery-intake-register-page.ts";
 
 export function DeliveryIntakeSurface({
   focusSourceId,
@@ -45,6 +52,7 @@ export function DeliveryIntakeSurface({
   onConsumeSource: (source: DeliveryIntakeSource) => void;
   surface: DeliverySurfaceConfig;
 }) {
+  const {pageSize}=useRegisterPageSize('Delivery Intake register');
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [nativeHistoryId,setNativeHistoryId] = useState<string|null>(null);
   const [consumeSourceId, setConsumeSourceId] = useState<string | null>(null);
@@ -65,8 +73,14 @@ export function DeliveryIntakeSurface({
   const [statusFilter, setStatusFilter] = useState<
     DeliveryIntakeSourceStatus | "all"
   >("all");
-  const sources = getDeliveryIntakeSources(model);
-  const ownerOptions = intakeOwnerFilterOptions(sources);
+  const nativeHistory=model.source_truth==="OpenProject-backed OOS"&&model.history_scope==="history";
+  const page=useDeliveryIntakeRegisterPage({query:search,owner:ownerFilter,status:statusFilter},nativeHistory);
+  const [localPosition,setLocalPosition]=useState({key:"",offset:0});
+  const localKey=JSON.stringify([search,ownerFilter,statusFilter,pageSize]);
+  if(localPosition.key!==localKey)setLocalPosition({key:localKey,offset:0});
+  const offset=localPosition.key===localKey?localPosition.offset:0;
+  const sources = nativeHistory?page.sources:getDeliveryIntakeSources(model);
+  const ownerOptions = [...new Set(["all",ownerFilter,...intakeOwnerFilterOptions([...getDeliveryIntakeSources(model),...sources]),...model.packages.map(row=>row.source_custody?.owner).filter((owner):owner is string=>Boolean(owner))])];
   const normalizedSearch = search.trim().toLowerCase();
   const filteredSources = sources.filter((source) => {
     const matchesOwner = ownerFilter === "all" || source.owner === ownerFilter;
@@ -92,10 +106,11 @@ export function DeliveryIntakeSurface({
 
     return matchesOwner && matchesStatus && matchesSearch;
   });
-  const evidenceIssues = intakeEvidenceIssuesForView(model, search, ownerFilter, statusFilter);
+  const visibleSources=nativeHistory?filteredSources:filteredSources.slice(offset,offset+pageSize);
+  const evidenceIssues = nativeHistory?page.issues:intakeEvidenceIssuesForView(model, search, ownerFilter, statusFilter);
   const selectedSource =
-    filteredSources.find((source) => source.accepted_source_id === selectedSourceId) ??
-    filteredSources[0] ??
+    visibleSources.find((source) => source.accepted_source_id === selectedSourceId) ??
+    visibleSources[0] ??
     null;
   const consumeSource =
     sources.find((source) => source.accepted_source_id === consumeSourceId) ??
@@ -182,7 +197,7 @@ export function DeliveryIntakeSurface({
         mode="register-selected"
         register={
           <TerasRegisterPanel
-            description={model.evidence_coverage ? `${model.history_scope === "history" ? "Original admitted and consumed sources. " : "Handoffs awaiting application remain in their origin workflow. Switch to History for consumed sources. "}${model.evidence_coverage.intake.detail}` : "Default view shows accepted sources that still need a Delivery shell."}
+            description={model.history_scope === "history" ? "Sources already transferred to Delivery. Open history to review the original records." : "Review incoming sources. Transferred sources are in History."}
             filterBar={
               <TerasFilterBar
                 search={{
@@ -210,27 +225,33 @@ export function DeliveryIntakeSurface({
                 ]}
               />
             }
+            footer={<TerasRegisterPagination label="Delivery Intake register" offset={nativeHistory?page.offset:offset} count={visibleSources.length} page={nativeHistory?page.page:Math.floor(offset/pageSize)+1} total={nativeHistory?null:filteredSources.length} pending={nativeHistory&&page.loading} unavailable={nativeHistory&&Boolean(page.error)} hasPrevious={nativeHistory?page.hasPrevious:offset>0} hasNext={nativeHistory?Boolean(page.nextCursor):offset+visibleSources.length<filteredSources.length} onPrevious={nativeHistory?page.previous:()=>setLocalPosition({key:localKey,offset:Math.max(0,offset-pageSize)})} onNext={nativeHistory?page.next:()=>setLocalPosition({key:localKey,offset:offset+visibleSources.length})} onReset={nativeHistory&&page.error?page.first:undefined} nextLabel={nativeHistory&&visibleSources.length===0&&page.nextCursor?"Continue search":undefined}/>}
             kicker={surface.title}
-            statusLabel={model.history_scope==="history"&&model.evidence_coverage?.intake.complete===false?"Loading original evidence":`${filteredSources.length}/${sources.length} shown`}
+            statusLabel={nativeHistory?page.loading?"Loading Intake history":page.error?"Intake unavailable":`${visibleSources.length} on this page`:model.history_scope==="history"&&model.evidence_coverage?.intake.complete===false?"Loading original evidence":`${filteredSources.length}/${sources.length} shown`}
             statusTone="warn"
             title="Accepted Source Register"
           >
-            {evidenceIssues.length ? <TerasList ariaLabel="Unverified Intake source evidence" frame="contained" scrollHeight="short">
-              {evidenceIssues.map(issue=><TerasSignalItem key={issue.target_ref} tone="warn" label="Intake evidence unavailable" title={issue.target_ref} detail={issue.detail}
-                actions={<TerasActionButton emphasis="secondary" onClick={()=>setNativeHistoryId(`delivery-${issue.target_ref.split("/").at(-1)}`)}>Inspect source history</TerasActionButton>}/>)}
-            </TerasList> : null}
-            {filteredSources.length > 0 ? (
+            {evidenceIssues.length ? <TerasContentTray kicker="Some source history is unavailable"
+              description={`Transfer history could not be verified for ${evidenceIssues.length} ${evidenceIssues.length === 1 ? "item" : "items"}. Open an item’s history to investigate.`}>
+              <TerasTechnicalDetails summary="Inspect affected items" items={evidenceIssues.map(issue=>({
+                label:model.packages.find(item=>item.source_ref===issue.target_ref)?.display_name ?? `Delivery item #${issue.target_ref.split("/").at(-1)}`,
+                value:issue.target_ref,detail:issue.detail,
+                actions:<TerasActionButton emphasis="secondary" onClick={()=>setNativeHistoryId(`delivery-${issue.target_ref.split("/").at(-1)}`)}>Open item history</TerasActionButton>,
+              }))}/>
+            </TerasContentTray> : null}
+            {nativeHistory&&page.loading?<TerasLoadingState fill label="Loading source history…"/>:nativeHistory&&page.error?<TerasEmptyState fill><p role="alert">{page.error}</p><TerasActionButton emphasis="secondary" onClick={()=>void page.refresh()}>Retry Intake history</TerasActionButton></TerasEmptyState>:visibleSources.length > 0 ? (
               <DeliveryIntakeRegisterTable
                 onAction={openSourceAction}
                 onSelect={(source) =>
                   setSelectedSourceId(source.accepted_source_id)
                 }
                 selectedSourceId={selectedSource?.accepted_source_id ?? null}
-                sources={filteredSources}
+                sources={visibleSources}
+                rowOffset={nativeHistory?page.offset:offset}
               />
             ) : (
               <TerasEmptyState fill>
-                {model.evidence_coverage?.intake.state === "unavailable" ? "Native Intake evidence is unavailable. Refresh to retry; no empty-history claim is made." : model.history_scope === "history"&&model.evidence_coverage?.intake.complete===false ? "Loading original Intake evidence. Global totals and filter results are not complete yet." : model.history_scope === "current" ? "No admitted sources require a Delivery shell. Consumed sources remain in History." : "No verified Intake sources match these filters. Evidence issues are listed separately."}
+                {nativeHistory ? page.nextCursor ? "No matches yet. Continue searching older sources." : "No sources match these filters." : model.history_scope === "current" ? "No incoming sources. Transferred sources are in History." : model.evidence_coverage?.intake.state === "unavailable" ? "Source history could not be loaded. Try again." : model.evidence_coverage?.intake.complete === false ? "Loading source history…" : "No sources match these filters."}
               </TerasEmptyState>
             )}
           </TerasRegisterPanel>

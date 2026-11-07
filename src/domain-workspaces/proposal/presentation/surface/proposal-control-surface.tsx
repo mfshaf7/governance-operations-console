@@ -8,7 +8,9 @@ import {
   TerasLoadingState,
   TerasFilterBar,
   TerasRecordControlLayout,
+  TerasRecordMetaText,
   TerasRegisterPanel,
+  TerasRegisterPagination,
   TerasSelectedPanel,
 } from "@/teras";
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
@@ -63,6 +65,8 @@ export function ProposalControlSurface({
               "data-proposal-register": "standard",
             }}
             density="compact-control"
+            footer={controller.source.page ? <div data-proposal-pagination="true"><TerasRegisterPagination label="Proposal" offset={controller.source.pageOffset} count={controller.proposals.filtered.length} page={controller.source.pageNumber}
+              pending={controller.source.pagePending} unavailable={Boolean(controller.source.pageError)} hasPrevious={controller.source.hasPrevious} hasNext={Boolean(controller.source.page.next_cursor)} onPrevious={()=>void controller.source.onPrevious()} onNext={()=>void controller.source.onNext()} nextLabel={controller.proposals.filtered.length?"Next page":"Continue search"}/></div> : undefined}
             description={controller.source.page ? `Search covers all proposals. ${controller.source.page.source_total} proposals in the backlog; this page shows ${controller.proposals.filtered.length}.` : "Review ideas, decide a direction and follow their handoff."}
             filterBar={
               <TerasFilterBar
@@ -101,6 +105,7 @@ export function ProposalControlSurface({
                 onInspectProposal={controller.register.inspect}
                 onSelectProposal={controller.register.select}
                 proposals={controller.proposals.filtered}
+                rowOffset={controller.source.pageOffset}
                 selectedProposalId={selectedProposal?.id ?? ""}
               />
             ) : (
@@ -108,10 +113,6 @@ export function ProposalControlSurface({
                 {sourceErrorContent ?? "No proposal records match the current search and filters."}
               </TerasEmptyState>
             )}
-            {controller.source.page ? <TerasActionRow>
-              <TerasActionButton emphasis="secondary" disabled={!controller.source.hasPrevious || controller.source.pagePending} onClick={controller.source.onPrevious}>Previous</TerasActionButton>
-              <TerasActionButton emphasis="secondary" busy={controller.source.pagePending} disabled={!controller.source.page.next_cursor || controller.source.pagePending} onClick={controller.source.onNext}>{controller.proposals.filtered.length ? "Next page" : "Continue search"}</TerasActionButton>
-            </TerasActionRow> : null}
             {controller.proposals.filtered.length > 0 ? sourceErrorContent : null}
           </TerasRegisterPanel>
         }

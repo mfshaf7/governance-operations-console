@@ -3,8 +3,8 @@ import { consoleOosModeSelected } from "../../../console-integration/configurati
 import { commandRepositoryBootstrap, createRepositoryBootstrap, listRepositoryBootstraps, prepareRepositoryBootstrap, readRepositoryBootstrap,
   readRepositoryBootstrapDraft, RepositoryBootstrapOosError } from "./repository-bootstrap-oos-client.ts";
 const headers = { "Cache-Control": "no-store" };
-export function repositoryBootstrapReadRoute(owner: string | null, id: string | null = null, draft = false) {
-  return respond(() => id ? draft ? readRepositoryBootstrapDraft(id) : readRepositoryBootstrap(id) : listRepositoryBootstraps(owner ?? ""));
+export function repositoryBootstrapReadRoute(owner: string | null, id: string | null = null, draft = false, cursor: string | null = null) {
+  return respond(() => id ? draft ? readRepositoryBootstrapDraft(id) : readRepositoryBootstrap(id) : listRepositoryBootstraps(owner ?? "", {cursor}));
 }
 export function repositoryBootstrapWriteRoute(request: NextRequest, operation: "prepare" | "create" | "command", id: string | null = null) {
   return respond(async () => {

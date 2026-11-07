@@ -5,6 +5,7 @@ import type { ConsoleWorkspaceId } from "../../console-architecture";
 import type { ConsoleOwnerReads } from "../../console-integration/live-attention";
 import { readRepositoryCustodyRegister } from "../../domain-workspaces/repository";
 import { readRepositoryRegistrationLookups } from "../../workspace-registry/workspace-repository-status";
+import { readProposalCollection } from "../../domain-workspaces/proposal";
 
 export function useAgentWorkspaceContext(workspaceId: ConsoleWorkspaceId | null) {
   const [snapshots, setSnapshots] = useState<AgentOwnerSnapshots>({});
@@ -54,9 +55,13 @@ export function useAgentWorkspaceContext(workspaceId: ConsoleWorkspaceId | null)
             }
             return;
           }
-          const response = await boundedFetch(path, { cache: "no-store" });
-          if (!response.ok) throw new Error("Owner read unavailable");
-          const payload = await response.json();
+          let payload: unknown;
+          if(key === "proposals") payload=await readProposalCollection(boundedFetch,{signal:deadline});
+          else {
+            const response = await boundedFetch(path, { cache: "no-store" });
+            if (!response.ok) throw new Error("Owner read unavailable");
+            payload = await response.json();
+          }
           const capturedAt = new Date().toISOString();
           const snapshot = projectAgentOwnerSnapshot(source, payload, capturedAt);
           if (!stopped) { setSnapshots(current => ({ ...current, [source]: snapshot })); setOwnerReads(current => ({ ...current, [source]: { state: snapshot.state, payload, capturedAt } })); setNow(capturedAt); }

@@ -277,6 +277,8 @@ live-runtime/delivery-work-session-live-types.ts
 live-runtime/delivery-source-realization-live-contract.ts
 live-runtime/delivery-source-realization-live-types.ts
 live-runtime/delivery-workspace-live-projection.ts
+live-runtime/use-delivery-register-page.ts
+live-runtime/use-delivery-intake-register-page.ts
 live-runtime/use-delivery-workspace-live-runtime.ts
 live-runtime/use-delivery-source-realization-live-runtime.ts
 live-runtime/refinement-live-contract.ts
@@ -547,6 +549,8 @@ server/delivery-source-realization-api-routes.ts
 server/delivery-source-realization-oos-client.ts
 server/delivery-source-editor-api-routes.ts
 server/delivery-source-editor-oos-client.ts
+server/delivery-register-query.ts
+server/delivery-intake-register-query.ts
 server/delivery-workspace-oos-client.ts
 server/refinement-catalog-api-routes.ts
 server/refinement-catalog-oos-client.ts

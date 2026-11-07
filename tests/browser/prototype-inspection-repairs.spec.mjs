@@ -230,3 +230,12 @@ test("retired Dashboard retains historical inspection and omits source authoring
   await expect(page.getByRole("dialog", { name: "Prototype History", exact: true })).toBeVisible();
   expect(h.writes).toEqual([]);
 });
+
+test("Prototype summary keeps the complete overview when the register search is empty",async({page})=>{
+ const h=await sourceHarness(page),metrics=h.control.locator('[data-teras-record-control-summary-panel] [data-teras-summary-value]');
+ await expect.poll(()=>metrics.first().textContent()).not.toBe("—");const initial=await metrics.allTextContents();
+ await expect(h.control.getByRole("columnheader")).toHaveText(["No.","Prototype","Source","Status","Inspect"]);
+ await h.control.getByRole("searchbox",{name:"Search prototype records",exact:true}).fill("no-matching-prototype-test");
+ await expect(h.control.locator("tbody tr")).toHaveCount(0);await expect(metrics).toHaveText(initial);
+ expect(h.writes).toEqual([]);
+});

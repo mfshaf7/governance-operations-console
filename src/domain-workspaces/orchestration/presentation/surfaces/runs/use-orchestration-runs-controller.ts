@@ -1,5 +1,6 @@
 "use client";
 
+import {useOrchestrationRunPage} from "../../../live-runtime/use-orchestration-run-page.ts";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -18,21 +19,24 @@ import {
 } from "./orchestration-runs-view-model.ts";
 
 export function useOrchestrationRunsController(
-  records: OrchestrationRunRecord[],
+  sourceRecords: OrchestrationRunRecord[],
   focusRecordId: string | null = null,
+  live = false,
 ) {
   const [filters, setFilters] = useState<OrchestrationRunFilters>(
     defaultOrchestrationRunFilters,
   );
+  const page=useOrchestrationRunPage(filters,live,focusRecordId);
+  const records=useMemo(()=>live?page.original&&!page.records.some(row=>row.id===page.original!.id)?[...page.records,page.original]:page.records:sourceRecords,[live,page.records,page.original,sourceRecords]);
   const [selectedId, setSelectedId] = useState(records[0]?.id ?? null);
   const [dashboardRecordId, setDashboardRecordId] = useState<string | null>(
     null,
   );
   const filteredRecords = useMemo(
-    () => filterOrchestrationRuns(records, filters),
-    [filters, records],
+    () => filterOrchestrationRuns(live?page.records:records, filters),
+    [filters, records,live,page.records],
   );
-  const selectedRecord = selectOrchestrationRun(filteredRecords, selectedId);
+  const selectedRecord = focusRecordId&&selectedId===focusRecordId ? records.find(row=>row.id===focusRecordId)??null : selectOrchestrationRun(filteredRecords, selectedId);
   const dashboardRecord =
     records.find((record) => record.id === dashboardRecordId) ?? null;
 
@@ -56,6 +60,7 @@ export function useOrchestrationRunsController(
   }
 
   return {
+    page,live,
     dashboard: {
       close: () => setDashboardRecordId(null),
       open: (record: OrchestrationRunRecord) => setDashboardRecordId(record.id),
@@ -63,7 +68,7 @@ export function useOrchestrationRunsController(
     },
     filters: {
       definitionId: filters.definitionId,
-      definitionOptions: orchestrationRunDefinitionOptions(records),
+      definitionOptions: orchestrationRunDefinitionOptions(live?[...records,{definitionId:"validation-readiness-run"} as OrchestrationRunRecord]:records),
       onDefinitionChange: (value: string) =>
         updateFilter("definitionId", value),
       onQueryChange: (value: string) => updateFilter("query", value),
@@ -73,7 +78,7 @@ export function useOrchestrationRunsController(
         updateFilter("state", value),
       query: filters.query,
       sourceDomain: filters.sourceDomain,
-      sourceDomainOptions: orchestrationRunSourceDomainOptions(records),
+      sourceDomainOptions: orchestrationRunSourceDomainOptions(live?[...records,{sourceDomain:"workspace-governance-control-fabric"} as OrchestrationRunRecord]:records),
       state: filters.state,
       stateOptions: orchestrationRunStateOptions,
     },

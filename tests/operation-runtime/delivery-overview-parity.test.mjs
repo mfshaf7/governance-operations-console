@@ -50,10 +50,10 @@ test('History keeps every global package and totals; archived children are expli
  for(const phase of ['work_design','refinement','execution'])assert.equal(getDeliveryPackagesByWorkflowPhase(phase,after).length,5);
  assert.deepEqual(after.deferred_history_tree_refs,[ref(1),ref(5)]);
  const unread={...after,evidence_coverage:{intake:{state:'unavailable',issue_count:0,detail:'Independent owner read not yet available'},activity:{state:'unavailable',detail:'Not yet loaded'}}};
- assert.equal(deliverySurfaceItemCount({surfaceId:'intake',executionCount:5,model:unread}),'Unavailable');
- assert.ok(deliveryWorkspaceSummaryStats({activeSurfaceId:'intake',executionCount:5,model:unread}).every(s=>s.value==='Unavailable'));
- assert.ok(deliveryWorkspaceSummaryStats({activeSurfaceId:'intake',executionCount:5,model:{...unread,evidence_coverage:{...unread.evidence_coverage,intake:{...unread.evidence_coverage.intake,state:'partial',complete:false}}}}).every(s=>s.value==='Loading'));
- assert.equal(deliverySurfaceItemCount({surfaceId:'intake',executionCount:5,model:{...unread,evidence_coverage:{...unread.evidence_coverage,intake:{...unread.evidence_coverage.intake,state:'partial',complete:false}}}}),'Loading');
+ assert.equal(deliverySurfaceItemCount({surfaceId:'intake',executionCount:5,model:unread}),'—');
+ assert.ok(deliveryWorkspaceSummaryStats({activeSurfaceId:'intake',executionCount:5,model:unread}).every(s=>s.value==='—'));
+ assert.ok(deliveryWorkspaceSummaryStats({activeSurfaceId:'intake',executionCount:5,model:{...unread,evidence_coverage:{...unread.evidence_coverage,intake:{...unread.evidence_coverage.intake,state:'partial',complete:false}}}}).every(s=>s.value==='—'));
+ assert.equal(deliverySurfaceItemCount({surfaceId:'intake',executionCount:5,model:{...unread,evidence_coverage:{...unread.evidence_coverage,intake:{...unread.evidence_coverage.intake,state:'partial',complete:false}}}}),'—');
  assert.equal(after.packages[0].open_child_count,null);assert.equal(after.art_tree.roots.some(n=>n.legacy_work_package_id===1),false);
  const admission={source_id:'prototype:original',source_kind:'prototype',source_ref:'record://prototype/example',source_version:'v1',packet_ref:'packet:original',delivery_id:'delivery-1',target_ref:ref(1),title:'Original title',owner_repo:'original-owner',state:'consumed',custody:{classification:'existing-repo',owner:'original-owner',rationale:'Original accepted custody',source_ref:'repo://original-owner',repository_gate_state:'resolved'},receipt_ref:'receipt:original',receipt_digest:'sha256:original',recorded_at:at,actor:'operator:sample',evidence_refs:[ref(1)]};
  const original=projectDeliveryIntakeHistory(before,[admission],[]),optimized=projectDeliveryIntakeHistory(after,[admission],[]);

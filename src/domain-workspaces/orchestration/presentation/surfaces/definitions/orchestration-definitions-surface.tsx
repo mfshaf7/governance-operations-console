@@ -10,6 +10,8 @@ import {
   TerasPanelStack,
   TerasRecordControlLayout,
   TerasRegisterPanel,
+  TerasRegisterPagination,
+  useRegisterPage,
   TerasSelectedPanel,
 } from "@/teras";
 
@@ -37,6 +39,7 @@ export function OrchestrationDefinitionsSurface({
     records,
     focusRecordId,
   );
+  const page = useRegisterPage(controller.records.filtered, JSON.stringify([controller.filters.query.trim().toLowerCase(), controller.filters.recordState, controller.filters.classification, controller.filters.sourceDomain]), 'Orchestration definitions');
   const selectedRecord = controller.selectedRecord;
 
   const selectedPosture = selectedRecord
@@ -51,6 +54,7 @@ export function OrchestrationDefinitionsSurface({
         mode="register-selected"
         register={
           <TerasRegisterPanel
+            footer={<TerasRegisterPagination label="Orchestration definitions" offset={page.offset} count={page.rows.length} total={controller.records.filtered.length} page={page.page} hasPrevious={page.hasPrevious} hasNext={page.hasNext} onPrevious={page.previous} onNext={page.next} />}
             bodyProps={{
               "data-orchestration-definition-register": "standard",
             }}
@@ -86,7 +90,7 @@ export function OrchestrationDefinitionsSurface({
               />
             }
             kicker="Definition Register"
-            statusLabel={`${controller.records.filtered.length}/${controller.records.all.length} shown`}
+            statusLabel={`${controller.records.filtered.length}/${controller.records.all.length} matched`}
             statusTone="info"
             title="Orchestration definitions"
           >
@@ -94,7 +98,7 @@ export function OrchestrationDefinitionsSurface({
               <OrchestrationDefinitionsRegister
                 onOpenDefinition={controller.dashboard.open}
                 onSelectDefinition={controller.selectRecord}
-                records={controller.records.filtered}
+                records={page.rows}
                 selectedDefinitionId={selectedRecord?.id ?? null}
               />
             ) : (

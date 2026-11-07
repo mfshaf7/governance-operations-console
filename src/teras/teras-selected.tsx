@@ -50,6 +50,7 @@ export function TerasRequiredActionCard({
 export function TerasSelectedPanel({
   action,
   className,
+  children,
   description,
   facts,
   kicker,
@@ -62,6 +63,7 @@ export function TerasSelectedPanel({
 }: {
   action?: TerasSelectedPanelAction | null;
   className?: string;
+  children?: ReactNode;
   description: ReactNode;
   facts?: TerasMetadataItem[];
   kicker: string;
@@ -99,6 +101,7 @@ export function TerasSelectedPanel({
             wrap
           />
         ) : null}
+        {children}
         {action ? (
           <TerasRequiredActionCard
             action={action.node}
@@ -126,12 +129,13 @@ export function TerasSelectedPanel({
         statusTone={statusTone}
         title={title}
       />
-      {facts?.length || action ? (
+      {facts?.length || action || children ? (
         <div
           className={styles.terasSelectedPanelRichContent}
           data-teras-selected-panel-content="true"
         >
           {facts?.length ? <TerasMetadataList items={facts} /> : null}
+          {children}
           {action ? (
             <TerasRequiredActionCard
               action={action.node}

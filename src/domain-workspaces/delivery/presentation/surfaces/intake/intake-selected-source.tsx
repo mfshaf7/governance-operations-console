@@ -1,6 +1,6 @@
 import type { DeliveryIntakeSource } from "../../../read-model/index.ts";
 
-import { TerasActionButton, TerasSelectedPanel } from "@/teras";
+import { TerasActionButton, TerasSelectedPanel, TerasTechnicalDetails } from "@/teras";
 
 import {
   intakeActionLabel,
@@ -44,12 +44,21 @@ export function DeliveryIntakeSelectedSource({
                   {intakeActionLabel(source)}
                 </TerasActionButton>
               ),
-              description: source.gate_summary,
-              kicker: "Required Action",
+              description: source.intake_status === "consumed" ? "Open history to review the source and its transfer to Delivery." : source.gate_summary,
+              kicker: source.intake_status === "consumed" ? "Source history" : "Required Action",
               title: intakeActionTitle(source),
             }
           : null
       }
-    />
+    >
+      {source ? <TerasTechnicalDetails items={[
+        {label:"Source record",value:source.source_ref},
+        {label:"Accepted source",value:source.accepted_source_id},
+        ...(source.delivery_package_id ? [{label:"Delivery reference",value:source.delivery_package_id}] : []),
+        ...[...new Set(source.evidence_refs)].map((value,index)=>({label:`Evidence ${index+1}`,value})),
+        ...(source.work_design_session_ref ? [{label:"Design session",value:source.work_design_session_ref}] : []),
+        ...(source.consumed_at ? [{label:"Transferred at",value:source.consumed_at}] : []),
+      ]}/> : null}
+    </TerasSelectedPanel>
   );
 }

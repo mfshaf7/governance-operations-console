@@ -28,6 +28,7 @@ const columns: Array<TerasRecordTableColumn<DevIntegrationRegisterRow>> = [
       <TerasRecordCellText
         description={profile.purpose}
         title={profile.profileId}
+        variant="value-stack"
       />
     ),
   },

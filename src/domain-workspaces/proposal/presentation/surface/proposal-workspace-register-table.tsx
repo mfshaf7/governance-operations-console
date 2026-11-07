@@ -17,11 +17,13 @@ export function ProposalWorkspaceRegisterTable({
   onInspectProposal,
   onSelectProposal,
   proposals,
+  rowOffset = 0,
   selectedProposalId,
 }: {
   onInspectProposal: (proposal: ProposalWorkspaceScenario) => void;
   onSelectProposal: (proposal: ProposalWorkspaceScenario) => void;
   proposals: ProposalWorkspaceScenario[];
+  rowOffset?: number;
   selectedProposalId: string | null;
 }) {
   const columns: Array<TerasRecordTableColumn<ProposalWorkspaceScenario>> = [
@@ -29,7 +31,7 @@ export function ProposalWorkspaceRegisterTable({
       header: "No.",
       intent: "index",
       key: "index",
-      render: (_proposal, index) => String(index + 1).padStart(2, "0"),
+      render: (_proposal, index) => String(rowOffset + index + 1).padStart(2, "0"),
     },
     {
       header: "Proposal",

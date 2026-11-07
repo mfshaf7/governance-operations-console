@@ -3,14 +3,15 @@ import { workspaceRegistryFixture } from "../../src/workspace-registry/fixtures/
 import { canonicalSourceResponse } from "./console-source-projection.mjs";
 import { config, at, digest, bind, page } from "./instance-inventory-fixture.mjs";
 
-export async function repositoryCatalogRegistrySnapshot({ query = "", posture = "active", more = false } = {}) {
+export async function repositoryCatalogRegistrySnapshot({ query = "", posture = "active", more = false, count = 1, limit = 25 } = {}) {
   const current = { record: { posture, record: { lineage: { intake_entry_version: 1, source: "repository-custody", source_digest: digest("custody"), source_ref: "oos://synthetic/custody" },
     last_mutation: { id: "synthetic-promotion", action: "promote", applied_at: at, request_ref: "oos://synthetic/promotion", readiness_ref: "wgcf://synthetic/readiness" } } },
     receipt: { version: 2, record_digest: digest("active") } };
   const native = page("inventory", current);
+  if(count>1){const seed=native.records[0];native.records=Array.from({length:count},(_,i)=>{const name=seed.name+'-'+String(i).padStart(3,'0'),row=JSON.parse(JSON.stringify(seed).replaceAll(seed.name,name));if(row.provider_repository)row.provider_repository.provider_repository_id=String(9000+i);return row;});native.counts.inventory.active=count;}
   native.selection.query = query;
   if (more) { native.next_after = native.records.at(-1).id; native.counts.inventory.active += 1; }
-  return readWorkspaceRegistry({ config, selection: { scope: "inventory", query }, now: () => new Date(at), fetchImpl: async url => {
+  return readWorkspaceRegistry({ config, selection: { scope: "inventory", query,limit }, now: () => new Date(at), fetchImpl: async url => {
     if (new URL(url).pathname.endsWith("/registry")) return canonicalSourceResponse(workspaceRegistryFixture, { recordRef: "repo://workspace-governance/contracts/inventory", sourceOwner: "workspace-governance", sourceRevision: workspaceRegistryFixture.authority_revision });
     const { projection_digest: _digest, ...content } = native;
     return canonicalSourceResponse(bind(content, "projection_digest"), { recordRef: `oos://workspace-inventory/instance-records?${new URL(url).searchParams}`, sourceOwner: "operator-orchestration-service" });

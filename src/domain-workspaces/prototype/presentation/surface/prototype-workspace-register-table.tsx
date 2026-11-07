@@ -18,11 +18,13 @@ import {
 } from "../../read-model/selectors/prototype-workspace-selectors.ts";
 
 export function PrototypeWorkspaceRegisterTable({
+  rowOffset=0,
   onOpenRecord,
   onSelectRecord,
   records,
   selectedRecordId,
 }: {
+  rowOffset?:number;
   onOpenRecord: (record: PrototypeRecord) => void;
   onSelectRecord: (record: PrototypeRecord) => void;
   records: PrototypeRecord[];
@@ -30,7 +32,7 @@ export function PrototypeWorkspaceRegisterTable({
 }) {
   return (
     <TerasRecordTable
-      columns={prototypeRegisterColumns({ onOpenRecord })}
+      columns={prototypeRegisterColumns({ onOpenRecord, rowOffset })}
       fill
       getRowId={(record) => record.id}
       onSelect={onSelectRecord}
@@ -41,8 +43,10 @@ export function PrototypeWorkspaceRegisterTable({
 }
 
 function prototypeRegisterColumns({
+  rowOffset,
   onOpenRecord,
 }: {
+  rowOffset:number;
   onOpenRecord: (record: PrototypeRecord) => void;
 }): Array<TerasRecordTableColumn<PrototypeRecord>> {
   return [
@@ -50,7 +54,7 @@ function prototypeRegisterColumns({
       header: "No.",
       intent: "index",
       key: "index",
-      render: (_record, index) => String(index + 1).padStart(2, "0"),
+      render: (_record, index) => String(rowOffset + index + 1).padStart(2, "0"),
     },
     {
       header: "Prototype",

@@ -6,6 +6,8 @@ import {
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
+  TerasRegisterPagination,
+  TerasLoadingState,
   TerasSelectedPanel,
   TerasPanelStack,
   TerasTechnicalDetails,
@@ -24,23 +26,18 @@ import type { OrchestrationRunControlInput, OrchestrationRunControlReceipt } fro
 
 export function OrchestrationRunsSurface({
   focusRecordId = null,
+  live = false,
   onControl,
   records,
 }: {
   focusRecordId?: string | null;
+  live?:boolean;
   onControl: (runId: string, input: OrchestrationRunControlInput) => Promise<OrchestrationRunControlReceipt>;
   records: OrchestrationRunRecord[];
 }) {
-  const controller = useOrchestrationRunsController(records, focusRecordId);
+  const controller = useOrchestrationRunsController(records, focusRecordId, live);
   const selectedRecord = controller.selectedRecord;
 
-  if (records.length === 0) {
-    return (
-      <TerasEmptyState fill>
-        No run records are available in the current projection.
-      </TerasEmptyState>
-    );
-  }
 
   const selectedPosture = selectedRecord
     ? orchestrationRunPosture(selectedRecord)
@@ -54,10 +51,12 @@ export function OrchestrationRunsSurface({
         mode="register-selected"
         register={
           <TerasRegisterPanel
+            footer={live?<TerasRegisterPagination label="Orchestration runs" offset={controller.page.offset} count={controller.records.filtered.length} page={controller.page.pageNumber}
+              pending={controller.page.loading} unavailable={Boolean(controller.page.error)} hasPrevious={controller.page.hasPrevious} hasNext={Boolean(controller.page.nextCursor)} onReset={controller.page.error&&controller.page.hasPrevious?controller.page.first:undefined} onPrevious={controller.page.previous} onNext={controller.page.next} nextLabel={controller.records.filtered.length?"Next page":"Continue search"}/>:undefined}
             bodyProps={{
               "data-orchestration-run-register": "standard",
             }}
-            description="Aggregate run projections from approved source-domain commands. This register does not start runs."
+            description={controller.page.originalError??"Search covers retained runs through bounded owner pages. This register does not start runs."}
             filterBar={
               <TerasFilterBar
                 filters={[
@@ -93,7 +92,7 @@ export function OrchestrationRunsSurface({
             statusTone="info"
             title="Orchestration runs"
           >
-            {controller.records.filtered.length > 0 ? (
+            {live&&controller.page.loading ? <TerasLoadingState fill label="Loading matching runs…" /> : live&&controller.page.error ? <TerasEmptyState fill><p role="alert">{controller.page.error}</p><TerasActionButton emphasis="secondary" onClick={()=>void controller.page.refresh()}>Retry run search</TerasActionButton></TerasEmptyState> : controller.records.filtered.length > 0 ? (
               <OrchestrationRunsRegister
                 onOpenRun={controller.dashboard.open}
                 onSelectRun={controller.selectRecord}
@@ -102,7 +101,7 @@ export function OrchestrationRunsSurface({
               />
             ) : (
               <TerasEmptyState fill>
-                No run records match the current search and filters.
+                {live&&controller.page.nextCursor?"No matches in this search window. Continue search to check older runs.":"No run records match the current search and filters."}
               </TerasEmptyState>
             )}
           </TerasRegisterPanel>
@@ -146,7 +145,7 @@ export function OrchestrationRunsSurface({
         }}
       />
       <RunDashboardModal
-        onControl={onControl}
+        onControl={async(runId,input)=>{const receipt=await onControl(runId,input);if(live)await controller.page.refresh();return receipt;}}
         onClose={controller.dashboard.close}
         record={controller.dashboard.record}
       />

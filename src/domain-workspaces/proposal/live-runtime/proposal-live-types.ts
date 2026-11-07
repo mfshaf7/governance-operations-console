@@ -111,6 +111,7 @@ export type ProposalRegisterPage = { selector: ProposalRegisterSelection; next_c
 
 export type ProposalLiveSnapshot = {
   page?: ProposalRegisterPage;
+  coverage?: { complete: boolean; loaded: number; total: number; next_cursor: string | null; detail: string | null };
   error: string | null;
   mode: "disconnected-preview" | "live";
   observedAt: string;

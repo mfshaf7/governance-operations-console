@@ -38,6 +38,7 @@ const maxResponseBytes = 2_097_152;
 type PrototypeLandingOosConfig = ConsoleOosConnection;
 
 type RequestOptions = Readonly<{
+  selection?: {cursor?:string|null;id?:string|null};
   config?: PrototypeLandingOosConfig;
   fetchImpl?: typeof fetch;
 }>;
@@ -61,12 +62,14 @@ export function prototypeLandingOosConfigured(env = process.env) {
 
 export async function readCanonicalPrototypeWorkspace(options: RequestOptions = {}) {
   const config=options.config??resolveConfig();
-  return concurrentSourceRead("prototype-workspace",config,options.fetchImpl??fetch,async()=>{
-  const body = await request("/v1/prototypes", { method: "GET" }, {...options,config}, {
+  return concurrentSourceRead(`prototype-workspace:${JSON.stringify(options.selection??null)}`,config,options.fetchImpl??fetch,async()=>{
+  const params=options.selection?new URLSearchParams({view:"register",...(options.selection.cursor?{cursor:options.selection.cursor}:{}),...(options.selection.id?{id:options.selection.id}:{})}):null;
+  const body = await request(`/v1/prototypes${params?`?${params}`:""}`, { method: "GET" }, {...options,config}, {
     authority: "operator-orchestration-service", sourceOwner: "workspace-prototype-studio",
     recordRef: "repo://workspace-prototype-studio/prototypes", sourceRef: "repo://workspace-prototype-studio@main",
   }, 5 * 1024 * 1024);
-  return projectCanonicalPrototypeWorkspace(body, new Date().toISOString(), canonicalDigest(body));
+  const projection=projectCanonicalPrototypeWorkspace(body, new Date().toISOString(), canonicalDigest(body));
+  return {...projection,...(body&&typeof body==="object"&&"page" in body?{ownerPage:body.page}: {})};
   });
 }
 

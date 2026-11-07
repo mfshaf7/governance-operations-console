@@ -8,6 +8,7 @@ import {
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
+  TerasRegisterPagination,
   TerasSelectedPanel,
 } from "@/teras";
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
@@ -24,7 +25,6 @@ import {
   repositorySelectedActionTitle,
 } from "../shared/repository-control-projection.ts";
 import type { RepositoryControlController } from "./use-repository-control-controller.ts";
-import {RepositoryPageControls} from "../shared/repository-page-controls.tsx";
 
 export function RepositoryControlSurface({
   entryIntent = null,
@@ -38,7 +38,7 @@ export function RepositoryControlSurface({
     <RepositoryControlOverviewPanel
       canOpenRepositoryRequest={controller.overview.canOpenRepositoryRequest}
       partial={controller.overview.partial}
-      unavailable={Boolean(controller.sourceAvailability.error)}
+      unavailable={controller.overview.unavailable}
       canLinkRepository={controller.standaloneLink.enabled}
       onOpenExistingRepositoryLink={controller.standaloneLink.show}
       onOpenRepositoryRequestDraft={controller.overview.onOpenRepositoryRequestDraft}
@@ -51,29 +51,6 @@ export function RepositoryControlSurface({
       <TerasActionButton emphasis="secondary" onClick={() => void controller.sourceAvailability.retry()}>Retry loading repositories</TerasActionButton>
     </div>
   </TerasEmptyState> : null;
-  if (!selectedRepository || readFailure) {
-    return (
-      <>
-      <TerasRecordControlLayout
-        composition="compact-control"
-        data-repository-control-surface="unavailable"
-        mode="overview-register-selected"
-        overview={overview}
-        register={
-          readFailure ?? (controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading repositories…" /> : <TerasEmptyState fill>
-            No repository records are available to select. Create a repository
-            or link an existing one using the actions above.
-          </TerasEmptyState>)
-        }
-        selected={
-          controller.sourceAvailability.loading ? <TerasLoadingState fill label="Preparing repository details…" skeleton="details" /> : <TerasEmptyState fill>
-            No canonical Repository record is available to select.
-          </TerasEmptyState>
-        }
-      />
-      </>
-    );
-  }
 
   return (
     <>
@@ -89,31 +66,32 @@ export function RepositoryControlSurface({
               "data-repository-register": "standard",
             }}
             density="compact-control"
-            description={controller.register.page.cursor
-              ? `${controller.records.all.length} repositories loaded. Search, filters and summary cover these records; load more to include the next page.`
-              : "Repository requests, workspace association, admission status and retained history."}
-            actions={controller.register.page.cursor || controller.register.page.continuationError ? <RepositoryPageControls page={controller.register.page} label="repositories" compact /> : undefined}
+            description="Search repositories and review their workspace setup."
+            footer={<TerasRegisterPagination label="Repository" offset={controller.register.queryPage.offset} count={controller.records.filtered.length} page={controller.register.queryPage.pageNumber}
+              pending={controller.sourceAvailability.loading} unavailable={Boolean(controller.sourceAvailability.error)} hasPrevious={controller.register.queryPage.hasPrevious} hasNext={Boolean(controller.register.queryPage.nextCursor)}
+              onReset={controller.register.queryPage.error&&controller.register.queryPage.hasPrevious?controller.register.queryPage.first:undefined} onPrevious={controller.register.queryPage.previous} onNext={controller.register.queryPage.next} nextLabel={controller.records.filtered.length?"Next page":"Continue search"} />}
             filterBar={<RepositoryFilters controller={controller} />}
             kicker="Repository Register"
             statusLabel={`${controller.records.filtered.length}/${controller.records.all.length} shown`}
             statusTone="info"
             title="Repository register"
           >
-            {controller.records.filtered.length > 0 ? (
+            {readFailure ?? (controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading matching repositories…" /> : controller.records.filtered.length > 0 ? (
               <RepositoryWorkspaceRegisterTable
                 onInspectRepository={controller.register.inspect}
                 onSelectRepository={controller.register.select}
+                rowOffset={controller.register.queryPage.offset}
                 records={controller.records.filtered}
                 selectedRepositoryId={selectedRepository.id}
               />
             ) : (
               <TerasEmptyState fill>
-                No repository records match the current search and filters.
+                {controller.register.queryPage.nextCursor ? "No matches in this search window. Continue search to check remaining repositories." : "No repositories match this search and filters."}
               </TerasEmptyState>
-            )}
+            ))}
           </TerasRegisterPanel>
         }
-        selected={
+        selected={selectedRepository ? (
           <TerasSelectedPanel
             action={{
               description: controller.intake.required
@@ -159,7 +137,7 @@ export function RepositoryControlSurface({
             tone={repositoryRecordTone(selectedRepository)}
             variant="compact"
           />
-        }
+        ) : controller.sourceAvailability.loading ? <TerasLoadingState fill label="Preparing repository details…" skeleton="details" /> : <TerasEmptyState fill>Select a repository to inspect its details.</TerasEmptyState>}
         selectedProps={{
           "data-repository-selected-launcher": "true",
         }}

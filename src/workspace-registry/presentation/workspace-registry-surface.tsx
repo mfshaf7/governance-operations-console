@@ -1,4 +1,5 @@
 "use client";
+import {useRegisterPageSize} from '../../console-integration/registers/use-register-page-size.ts';
 
 import { useMemo, useState } from "react";
 
@@ -17,6 +18,7 @@ import {
   TerasRecordStatusStack,
   TerasRecordTable,
   TerasRegisterPanel,
+  TerasRegisterPagination,
   TerasSelectedPanel,
   TerasStatusPill,
   TerasTechnicalDetails,
@@ -69,6 +71,7 @@ export function WorkspaceRegistrySurface({
   onPreviousPage?: () => void;
   onNextPage?: () => void;
 }) {
+  const {pageSize}=useRegisterPageSize('Workspace Registry');
   const [kind, setKind] = useState<KindFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const availableRecords = view === "registry" ? snapshot?.records ?? [] : snapshot?.eligible_promotions ?? [];
@@ -80,12 +83,33 @@ export function WorkspaceRegistrySurface({
       const target = entryTarget(entry);
       const owners = entryOwners(entry);
       return (
+        (!instancePage?.after || entry.authority_kind === "internal-instance-record") &&
         (kind === "all" || target.kind === kind) &&
         (entry.authority_kind === "internal-instance-record" || !normalized || `${target.name} ${target.record_id} ${owners.join(" ")}`.toLowerCase().includes(normalized))
       );
     });
-  }, [kind, query, records]);
-  const selected = filtered.find((entry) => entryTarget(entry).record_id === selectedId) ?? filtered[0] ?? null;
+  }, [kind, query, records, instancePage?.after]);
+  const scopeKey=JSON.stringify([view,query.trim().toLowerCase(),kind,pageSize]);
+  const [navigation,setNavigation]=useState({key:scopeKey,entries:[{cursor:null as string|null,localOffset:0,offset:0}]});
+  if(navigation.key!==scopeKey)setNavigation({key:scopeKey,entries:[{cursor:null,localOffset:0,offset:0}]});
+  const entries=navigation.key===scopeKey?navigation.entries:[{cursor:null,localOffset:0,offset:0}];
+  const position=entries.at(-1)!;
+  const visible=filtered.slice(position.localOffset,position.localOffset+pageSize);
+  const matchesPage=pageCurrent&&(!instancePage||instancePage.after===position.cursor);
+  const nativeNext=kind==="all"||kind==="repo"?instancePage?.next_after:null;
+  const next=()=>{
+    if(pagePending||!matchesPage)return;
+    const local=position.localOffset+visible.length<filtered.length;
+    if(!local&&!nativeNext)return;
+    setNavigation({key:scopeKey,entries:[...entries,{cursor:local?position.cursor:nativeNext!,localOffset:local?position.localOffset+visible.length:0,offset:position.offset+visible.length}]});
+    if(!local)onNextPage?.();
+  };
+  const previous=()=>{
+    if(pagePending||entries.length<2)return;
+    const prior=entries.at(-2)!;setNavigation({key:scopeKey,entries:entries.slice(0,-1)});
+    if(prior.cursor!==position.cursor)onPreviousPage?.();
+  };
+  const selected = visible.find((entry) => entryTarget(entry).record_id === selectedId) ?? visible[0] ?? null;
 
   if (!snapshot) {
     return (
@@ -125,7 +149,7 @@ export function WorkspaceRegistrySurface({
               filters={[
                 {
                   label: "Filter record type",
-                  onValueChange: setKind,
+                  onValueChange: (value) => {setKind(value as KindFilter);onQueryChange(query);},
                   options: [
                     { label: "All types", value: "all" },
                     { label: "Repositories", value: "repo" },
@@ -143,28 +167,27 @@ export function WorkspaceRegistrySurface({
               }}
             />
           }
+          footer={<TerasRegisterPagination label="Workspace Registry" offset={position.offset} count={visible.length} page={entries.length} pending={pagePending||!matchesPage&&!availabilityError} unavailable={Boolean(availabilityError)}
+            onReset={availabilityError?()=>{setNavigation({key:scopeKey,entries:[{cursor:null,localOffset:0,offset:0}]});onQueryChange(query);}:undefined} hasPrevious={entries.length>1} hasNext={position.localOffset+visible.length<filtered.length||Boolean(nativeNext)} onPrevious={previous} onNext={next} nextLabel={visible.length?"Next page":"Continue search"} />}
           kicker={view === "registry" ? "Canonical Register" : "Promotion Register"}
-          statusLabel={instancePage ? `${filtered.length} shown · ${Object.values(view === "registry" ? instancePage.counts.inventory : instancePage.counts.intake).reduce((total, count) => total + count, 0)} matching internal records` : `${filtered.length}/${records.length} shown`}
+          statusLabel={instancePage ? `${visible.length} on this page · ${Object.values(view === "registry" ? instancePage.counts.inventory : instancePage.counts.intake).reduce((total, count) => total + count, 0)} matching internal records` : `${visible.length} on this page`}
           statusTone={retained ? "warn" : fixtureMode ? "info" : "ok"}
           title={view === "registry" ? "Workspace inventory" : "Eligible entrants"}
         >
-          {!pageCurrent ? <TerasLoadingState fill label="Loading matching records…" /> : filtered.length ? (
+          {availabilityError&&!pagePending ? <TerasEmptyState fill><p role="alert">{availabilityError}</p><TerasActionButton emphasis="secondary" onClick={onRetry}>Retry registry read</TerasActionButton></TerasEmptyState> : !matchesPage ? <TerasLoadingState fill label="Loading matching records…" /> : visible.length ? (
             <TerasRecordTable
               columns={registryColumns(view)}
               fill
               getRowId={(entry) => entryTarget(entry).record_id}
               profile="register"
               onSelect={(entry) => setSelectedId(entryTarget(entry).record_id)}
-              rows={[...filtered]}
+              rows={[...visible]}
               selectedRowId={selected ? entryTarget(selected).record_id : null}
             />
           ) : (
-            <TerasEmptyState fill>No record matches the current filters.</TerasEmptyState>
+            <TerasEmptyState fill>{nativeNext?"No matches on this page. Continue search to check remaining records.":"No record matches the current filters."}</TerasEmptyState>
           )}
-          {instancePage ? <TerasActionRow>
-            <TerasActionButton emphasis="secondary" disabled={pagePending || !pageCurrent || !canPreviousPage} onClick={onPreviousPage}>Previous page</TerasActionButton>
-            <TerasActionButton emphasis="secondary" disabled={pagePending || !pageCurrent || !instancePage.next_after} onClick={onNextPage}>Next page</TerasActionButton>
-          </TerasActionRow> : null}
+
         </TerasRegisterPanel>
       }
       selected={

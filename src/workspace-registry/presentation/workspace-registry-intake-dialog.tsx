@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TerasLoadingState, TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack,
-  TerasDraftCloseGuardDialog, TerasTechnicalDetails, TerasMetadataList, TerasSelectableRow, TerasList, TerasModalShell, TerasNoteField, TerasSelectField, TerasSignalItem, TerasTextField } from "@/teras";
+  TerasRegisterPagination, TerasDraftCloseGuardDialog, TerasTechnicalDetails, TerasMetadataList, TerasSelectableRow, TerasList, TerasModalShell, TerasNoteField, TerasSelectField, TerasSignalItem, TerasTextField } from "@/teras";
 import {RepositoryOnboarding} from "../../domain-workspaces/repository/index";
 import { WorkspaceIntakeDialog } from "../../console-integration/workspace-intake/presentation/workspace-intake-dialog";
 import { useWorkspaceIntakeLiveRuntime } from "../../console-integration/workspace-intake/live-runtime/use-workspace-intake-live-runtime";
@@ -215,11 +215,13 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
           : runtime.error?.message ?? "Reading the native journal. New classification requires a successful read."}
         actions={<TerasActionRow>
           <TerasActionButton emphasis="secondary" disabled={busy || fixtureMode} onClick={() => void runtime.listDirect(target.kind, target.name).catch(() => undefined)}>Refresh retained requests</TerasActionButton>
-          {page?.next_cursor ? <TerasActionButton emphasis="secondary" disabled={busy}
-            onClick={() => void runtime.listDirect(target.kind, target.name, page.next_cursor).catch(() => undefined)}>More retained requests</TerasActionButton> : null}
+
           {completed ? <TerasActionButton emphasis="secondary" disabled={busy || Boolean(page?.pending_request_count) || inInventory}
             onClick={() => void reclassify()}>Reclassify completed candidate</TerasActionButton> : null}
         </TerasActionRow>}>
+        {!fixtureMode ? <TerasRegisterPagination label="Workspace onboarding requests" offset={runtime.requestPageOffset} count={page?.records.length ?? 0} page={runtime.requestPageNumber}
+          pending={runtime.pending} unavailable={Boolean(runtime.error)} hasPrevious={!busy && runtime.hasPreviousRequestPage} hasNext={!busy && Boolean(page?.next_cursor)}
+          onPrevious={()=>void runtime.previousRequestPage().catch(()=>undefined)} onNext={()=>void runtime.nextRequestPage().catch(()=>undefined)} /> : null}
         {page?.records.length ? <TerasList frame="contained" scrollHeight="short">
           {page.records.map(entry => <TerasSignalItem key={entry.request_id} label={entry.request_id}
             title={`${entry.classification} / ${entry.status}`} detail={entry.updated_at} tone="info"

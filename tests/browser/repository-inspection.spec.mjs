@@ -1,6 +1,7 @@
 import { preparation as instancePreparation, result as instanceResult, bind as bindInstance } from "../support/instance-intake-fixture.mjs";
 import {test,expect} from "@playwright/test";
 import {providerLookupFor,lifecycleAuditFor} from "../support/repository-history-fixture.mjs";
+import {proposalCompletionRecord} from "../support/proposal-completion-fixture.mjs";
 import {execFileSync} from "node:child_process";
 import {createRequire} from "node:module";
 const {workspaceRegistryFixture}=createRequire(import.meta.url)("../../src/workspace-registry/fixtures/workspace-registry.fixture.ts");
@@ -8,6 +9,10 @@ const fixtures=JSON.parse(execFileSync(process.execPath,["--experimental-strip-t
  "import {repositoryUiFixture} from './tests/support/repository-ui-fixture.mjs'; process.stdout.write(JSON.stringify({own:await repositoryUiFixture(),other:await repositoryUiFixture({proposalId:'idea-852'}),standalone:await repositoryUiFixture({proposalId:null})}));"],{encoding:"utf8"}));
 const fixture=fixtures.own;
 if(fixture.capabilities.mode!=="live")throw new Error("Repository UI fixture must provide complete synthetic runtime configuration.");
+const {projectRepositoryProvisioningResults,projectRepositoryCustodyResults,repositoryProvisionedRecordId}=createRequire(import.meta.url)("../../src/domain-workspaces/repository/live-runtime/repository-custody-live-projection.ts");
+const {projectRepositoryCurrentInventory}=createRequire(import.meta.url)("../../src/domain-workspaces/repository/live-runtime/repository-inventory-live-projection.ts");
+const {projectCanonicalRepositoryGateRequests,repositoryRequestState}=createRequire(import.meta.url)("../../src/domain-workspaces/operation-integrations/proposal-repository-live-projection.ts");
+const {repositoryMatchesSelection}=createRequire(import.meta.url)("../../src/domain-workspaces/repository/read-model/repository-register-selection.ts");
 const base=process.env.CONSOLE_TEST_BASE_URL??"http://127.0.0.1:4317";
 test.use({viewport:{width:1700,height:1000},actionTimeout:15000});test.setTimeout(90000);
 
@@ -18,7 +23,7 @@ function custodyPageFor(route, records) {
  return route.fulfill({json:{schema_version:1,mode:'live',status:'current',error:null,records:selected,next_cursor:null}});
 }
 
-async function setup(page,{empty=false,lifecycle="unavailable",posture="active",requests="pending",custodyOrigin="own",intakeAvailable=true,inventoryAvailable=true,runtimeMode="live",intakeOwners=false,provisionAvailable=true,linkAvailable=true,internalRegistration=null}={}){
+async function setup(page,{empty=false,lifecycle="unavailable",posture="active",requests="pending",custodyOrigin="own",intakeAvailable=true,inventoryAvailable=true,runtimeMode="live",intakeOwners=false,provisionAvailable=true,linkAvailable=true,internalRegistration=null,proposalPages=false}={}){
  const f=structuredClone(fixtures[custodyOrigin]),writes=[];
  const existingOwner=structuredClone(f.continuity.inventory[0]);
  if(posture==="unregistered")f.continuity.inventory=[];
@@ -46,6 +51,14 @@ async function setup(page,{empty=false,lifecycle="unavailable",posture="active",
   registry.records=f.continuity.inventory.map(row=>({id:row.record_id,name:row.name,kind:row.kind,version:row.record_version,record_digest:row.record_digest,posture:row.posture,maturity:null,owner_refs:[row.name],lineage:row.lineage,last_mutation:{action:row.last_mutation.action,applied_at:row.last_mutation.applied_at,id:row.last_mutation.id,readiness_ref:row.last_mutation.readiness_ref,request_ref:row.last_mutation.request_ref}}));
   return r.fulfill({json:registry});
  });
+ await page.route('**/api/repositories/register?*',r=>{
+  if(!inventoryAvailable||internalRegistration==='unavailable')return r.fulfill({status:503,json:{error:'Synthetic register source unavailable'}});
+  const q=new URL(r.request().url()).searchParams,selection={query:q.get('q')??'',status:q.get('status')??'all',account:q.get('account')??'all'};
+  const raw=empty?[]:[f.result],projected=projectRepositoryCustodyResults(projectRepositoryProvisioningResults([],Object.fromEntries(raw.map(row=>[row.request.request_id,row]))),Object.fromEntries(raw.map(row=>[repositoryProvisionedRecordId(row),row])));
+  const registrations=internalRegistration?{mode:'current',instanceId:'synthetic-installation',recordIds:projected.map(row=>row.custody.workspaceOwnerRef),records:[{record_id:'repo:synthetic-source',version:7,record_digest:`sha256:${'a'.repeat(64)}`,phase:['proposed','admitted'].includes(internalRegistration)?'intake':'inventory',status:internalRegistration,provider_repository:{provider:'github',provider_repository_id:f.result.provider_readback.repository_identity.provider_repository_id,full_name:`${f.result.provider_readback.canonical_owner}/${f.result.provider_readback.canonical_name}`}}]}:{mode:'not-configured'};
+  const records=projectRepositoryCurrentInventory(projected,f.continuity,registrations).filter(row=>repositoryMatchesSelection(row,selection));
+  return r.fulfill({json:{mode:'live',status:'current',error:null,records,page:{selection,next_cursor:null,total:null}}});
+ });
  await page.route("**/api/workspace-continuity",r=>inventoryAvailable?r.fulfill({json:f.continuity}):r.fulfill({status:503,json:{error:"Synthetic inventory unavailable"}}));
  await page.route("**/api/workspace-intake/requests?*",r=>r.fulfill({json:{schema_version:1,workflow_id:"workspace-intake",
   target:{kind:"repo",name:"synthetic-source",record_id:"repo:synthetic-source"},custody_request_id:f.result.request.request_id,
@@ -65,9 +78,26 @@ async function setup(page,{empty=false,lifecycle="unavailable",posture="active",
   if(requests==="implemented")f.gate.projection.status="implemented";
  }
  if(requests==="stale")f.gate.projection.projection_state="stale";
+ if(requests==="source-resolved")Object.assign(f.gate.projection.route.source_custody,{repository_gate_state:"resolved",owner:resolution.resolved_owner,source_ref:resolution.resolved_repo_ref});
  if(requests==="triaged")Object.assign(f.gate.projection,{status:"triaged",route:null,decision_notes:null});
- await page.route("**/api/proposals",r=>requests==="offline"?r.fulfill({status:503,json:{error:"Synthetic owner unavailable"}}):
-  r.fulfill({json:{mode:"live",status:"current",error:null,observedAt:new Date().toISOString(),records:requests==="none"?[]:[f.gate]}}));
+ await page.route('**/api/repositories/requests/register?*',r=>{
+  if(requests==='offline'||proposalPages==='incomplete')return r.fulfill({status:503,json:{error:'Synthetic request source unavailable'}});
+  const q=new URL(r.request().url()).searchParams,selection={query:q.get('q')??'',status:q.get('status')??'attention'};
+  const records=projectCanonicalRepositoryGateRequests({mode:'live',status:'current',error:null,observedAt:new Date().toISOString(),records:requests==='none'?[]:[f.gate]}).filter(row=>(selection.status==='all'||(selection.status==='attention'?repositoryRequestState(row)!=='resolved':repositoryRequestState(row)===selection.status))&&(!selection.query||JSON.stringify(row).toLowerCase().includes(selection.query)));
+  return r.fulfill({json:{mode:'live',status:'current',error:null,records,page:{selection,next_cursor:null,total:null}}});
+ });
+ await page.route(url=>url.pathname==='/api/proposals',r=>{
+  if(requests==='offline')return r.fulfill({status:503,json:{error:'Synthetic owner unavailable'}});
+  if(!proposalPages)return r.fulfill({json:{mode:'live',status:'current',error:null,observedAt:new Date().toISOString(),records:requests==='none'?[]:[f.gate]}});
+  const second=new URL(r.request().url()).searchParams.has('cursor');
+  if(second&&proposalPages==='incomplete')return r.fulfill({status:503,json:{error:'Synthetic later page unavailable'}});
+  const records=second?[{...f.gate,summaryOnly:true,history:{...f.gate.history,events:[],next_cursor:null}}]:Array.from({length:25},(_,i)=>{
+   const record=proposalCompletionRecord({proposal_id:`idea-${i+1}`,record_ref:`openproject://work_packages/${i+1}`,title:`Synthetic completed idea ${i+1}`,status:'implemented'});
+   return {...record,summaryOnly:true,history:{...record.history,proposal_id:record.projection.proposal_id,events:[],next_cursor:null}};
+  });
+  return r.fulfill({json:{mode:'live',status:'current',error:null,observedAt:new Date().toISOString(),records,page:{selector:{query:'',status:'all',ingress:'all'},source_total:26,next_cursor:second?null:'page-two'}}});
+ });
+ await page.route('**/api/proposals/idea-851',r=>r.fulfill({json:{...f.gate,summaryOnly:false}}));
  await page.route("**/api/repositories/lifecycle/repositories/**",r=>lifecycle==="unavailable"
   ?r.fulfill({status:503,json:{mode:"live",status:"offline",retryable:false,code:"repository_lifecycle_runtime_not_configured",error:"The repository lifecycle runtime is not configured."}})
   :r.fulfill({json:{mode:"live",status:"not-initialized",audit:null,error:null,observedAt:new Date().toISOString()}}));
@@ -328,6 +358,64 @@ for(const requests of ["resolved","implemented"])test(`resolved request history 
  await control.getByRole('button',{name:'Open Proposal',exact:true}).click();
  const proposal=page.getByRole('dialog',{name:'Proposal Control',exact:true});
  await expect(proposal.getByRole('row').filter({hasText:'Synthetic pending repository gate'})).toBeVisible();
+ expect(writes).toEqual([]);
+});
+
+test('resolved source decision without a historical receipt remains inspectable and cannot recreate repository work',async({page})=>{
+ const {writes,result}=await setup(page,{requests:'source-resolved'});
+ const control=page.getByRole('dialog',{name:'Repository Control',exact:true});
+ await expect(control.locator('[data-repository-request-count]')).toHaveText('(0)');
+ await control.getByRole('radio',{name:/^Requests/}).click();
+ await expect(control.getByText('No repository requests need attention.',{exact:false})).toBeVisible();
+ await control.getByRole('button',{name:'Filter request status',exact:true}).click();await page.getByRole('option',{name:'Resolved history',exact:true}).click();
+ await control.getByRole('button',{name:'Inspect source decision',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Repository request',exact:true});
+ await expect(dialog).toContainText('original confirmation receipt is not available');
+ await expect(dialog).toContainText(result.provider_readback.canonical_url);
+ await expect(dialog.getByRole('button',{name:'Create repository for this request',exact:true})).toHaveCount(0);
+ await expect(dialog.getByRole('button',{name:'Confirm repository',exact:true})).toHaveCount(0);expect(writes).toEqual([]);
+});
+
+test('incomplete request coverage never presents a first-page empty result as no outstanding work',async({page})=>{
+ const {writes}=await setup(page,{proposalPages:'incomplete'});
+ const control=page.getByRole('dialog',{name:'Repository Control',exact:true});
+ await expect(control.locator('[data-repository-request-count]')).toHaveText('(—)');
+ await control.getByRole('radio',{name:/^Requests/}).click();
+ await expect(control.getByRole('navigation',{name:'Repository requests pages',exact:true}).getByRole('status')).toHaveText('Page unavailable');await expect(control).toContainText('Synthetic request source unavailable');
+ await expect(control.getByText('No repository requests need attention.',{exact:false})).toHaveCount(0);
+ expect(writes).toEqual([]);
+});
+
+test('repository requests beyond the first Proposal page remain reachable and inspect original source lazily',async({page})=>{
+ const {writes}=await setup(page,{proposalPages:true});
+ const control=page.getByRole('dialog',{name:'Repository Control',exact:true});
+ await expect(control.locator('[data-repository-request-count]')).toHaveText('(1)');
+ await control.getByRole('radio',{name:/^Requests/}).click();
+ await control.getByRole('row').filter({hasText:'Synthetic pending repository gate'}).getByRole('button',{name:'Review',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Repository request',exact:true});
+ await expect(dialog.getByRole('button',{name:'Confirm repository',exact:true})).toBeDisabled();
+ await dialog.getByRole('textbox',{name:'Repository resolution notes',exact:true}).fill('Review only; no submission.');
+ await expect(dialog.getByRole('button',{name:'Confirm repository',exact:true})).toBeEnabled();expect(writes).toEqual([]);
+});
+
+test('an inspected original stays independently reachable when a later request page read fails',async({page})=>{
+ const {writes}=await setup(page,{proposalPages:true});let originals=0;
+ page.on('request',r=>{if(new URL(r.url()).pathname==='/api/proposals/idea-851')originals++;});
+ const control=page.getByRole('dialog',{name:'Repository Control',exact:true});
+ await control.getByRole('radio',{name:/^Requests/}).click();
+ await control.getByRole('row').filter({hasText:'Synthetic pending repository gate'}).getByRole('button',{name:'Review',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Repository request',exact:true});
+ await expect(dialog.getByRole('textbox',{name:'Repository resolution notes',exact:true})).toBeEnabled();
+ await dialog.getByRole('button',{name:'Back to Requests',exact:true}).click();
+ await page.route('**/api/repositories/requests/register?*',r=>r.fulfill({status:503,json:{error:'Synthetic request page unavailable'}}));
+ await control.getByRole('button',{name:'Refresh requests',exact:true}).click();
+ await expect(control.getByRole('navigation',{name:'Repository requests pages',exact:true}).getByRole('status')).toHaveText('Page unavailable');
+ await expect(control.locator('[data-repository-request-count]')).toHaveText('(1)');
+ await expect(control.locator('[data-repository-requests-surface] tbody tr')).toHaveCount(0);
+ await expect(control.getByText('Read-only',{exact:true})).toBeVisible();
+ await control.getByRole('button',{name:'Review request',exact:true}).click();
+ await expect.poll(()=>originals).toBeGreaterThanOrEqual(2);
+ await expect(dialog.getByRole('textbox',{name:'Repository resolution notes',exact:true})).toBeEnabled();
  expect(writes).toEqual([]);
 });
 
@@ -1304,4 +1392,40 @@ test('verification shows action-specific waiting and interrupted saves recover t
   for(const button of await buttons.all()){if(!await button.isVisible())continue;const b=await button.boundingBox();expect(b.x).toBeGreaterThanOrEqual(bounds.x);expect(b.x+b.width).toBeLessThanOrEqual(bounds.x+bounds.width+1);}
   await dialog.screenshot({path:testInfo.outputPath(`verification-feedback-${width}.png`)});
  }
+});
+
+test("Repository summary and baseline columns survive an empty register search",async({page})=>{
+ const h=await setup(page);const control=page.getByRole("dialog",{name:"Repository Control",exact:true});
+ const metrics=control.locator('[data-teras-record-control-summary-panel] [data-teras-summary-value]');
+ await expect.poll(()=>metrics.first().textContent()).not.toBe("—");const initial=await metrics.allTextContents();expect(Number(initial[0])).toBeGreaterThan(0);
+ await expect(control.getByRole("columnheader")).toHaveText(["No.","Repository","Visibility","Status","Action"]);
+ await control.getByRole("searchbox",{name:"Search repositories",exact:true}).fill("no-matching-repository-test");
+ await expect(control.getByText("No repositories match this search and filters.",{exact:true})).toBeVisible();await expect(metrics).toHaveText(initial);
+ expect(h.writes).toEqual([]);
+});
+
+test('onboarding request pages retain global pending protection and edited answers through back navigation and retry',async({page})=>{
+ const {result,writes}=await setup(page,{posture:'unregistered',requests:'none'});let fail=false;const cursors=[];
+ const digest=`sha256:${'a'.repeat(64)}`,source={class:'repository-custody',ref:`oos://repository-custody/requests/${encodeURIComponent(result.request.request_id)}/intake/${'a'.repeat(64)}`,digest};
+ const candidate={schema_version:1,artifact_type:'workspace-intake-source-candidate',candidate_digest:digest,source,target:{kind:'repo',name:'synthetic-source',record_id:'repo:synthetic-source'},requested_record:{kind:'repo',repo_class:'product-source',notes:'Recorded application purpose.',requires_security_bindings:true,security_owner:'example-security',validation_behavior:{posture:'covered-by-owner-repo',wgcf_graph_role:'product-runtime-source',catalog_refs:[],notes:'Recorded source checks.'}},evidence_refs:[source.ref]};
+ const records=Array.from({length:61},(_,i)=>({request_id:'workspace-intake-request:page-'+i,classification:'proposed',status:'succeeded',revision:2,requested_at:'2026-11-04T01:00:00Z',updated_at:'2026-11-04T01:00:00Z',candidate}));
+ await page.route('**/api/workspace-intake/requests?*',r=>{if(fail)return r.fulfill({status:503,json:{error:'Synthetic history unavailable'}});const cursor=new URL(r.request().url()).searchParams.get('cursor'),offset=cursor?parseInt(cursor,16):0;cursors.push(offset);return r.fulfill({json:{schema_version:1,workflow_id:'workspace-intake',target:candidate.target,custody_request_id:result.request.request_id,revision:1000,pending_request_count:1,updated_at:'2026-11-04T01:00:00Z',next_cursor:offset+25<records.length?(offset+25).toString(16).padStart(64,'0'):null,records:records.slice(offset,offset+25)}});});
+ await page.getByRole('dialog',{name:'Repository Control',exact:true}).getByRole('button',{name:'Continue onboarding in Registry',exact:true}).click();await page.getByRole('dialog',{name:'Repository onboarding',exact:true}).getByRole('button',{name:'Continue onboarding',exact:true}).click();
+ const form=page.getByRole('dialog',{name:'Repository onboarding details',exact:true}),pager=form.getByRole('navigation',{name:'Repository onboarding requests pages',exact:true});
+ await expect(pager.getByRole('status')).toHaveText('Showing 1–25 · Page 1');await pager.getByRole('button',{name:'Repository onboarding requests rows per page',exact:true}).click();await page.getByRole('option',{name:'100',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 1–61 · Page 1');await pager.getByRole('button',{name:'Repository onboarding requests rows per page',exact:true}).click();await page.getByRole('option',{name:'25',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 1–25 · Page 1');await form.getByRole('textbox',{name:'What does this repository own?',exact:true}).fill('Keep these edited answers while paging.');await expect(form.getByRole('button',{name:'Review onboarding',exact:true})).toBeDisabled();
+ await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 26–50 · Page 2');await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 51–61 · Page 3');await pager.getByRole('button',{name:'Previous',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 26–50 · Page 2');
+ await expect(form.getByRole('textbox',{name:'What does this repository own?',exact:true})).toHaveValue('Keep these edited answers while paging.');await expect(form.getByRole('button',{name:'Review onboarding',exact:true})).toBeDisabled();
+ fail=true;await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Page unavailable');fail=false;await form.getByRole('button',{name:'Retry onboarding history',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 1–25 · Page 1');await expect(form.getByRole('textbox',{name:'What does this repository own?',exact:true})).toHaveValue('Keep these edited answers while paging.');expect(cursors).toContain(50);expect(writes).toEqual([]);
+});
+
+test('repository setup history pages independently of its pending original and discloses an older recent-only source',async({page})=>{
+ const {writes}=await setup(page,{requests:'none'});let legacy=false;const cursors=[];
+ const seed={operation:'configure-verification',requestId:'owner-bootstrap:pending-original',ownerRepo:'synthetic-source',state:'existing-controls-inspected',revision:'2026-11-05T09:00:00Z',sourceRevision:null,sourceStartDigest:`sha256:${'a'.repeat(64)}`,sessionId:null,sourceIntentRef:null,nextAction:'owner-bootstrap-existing-checkout-required',draft:null,sourceDelivery:{},existingCheckout:null,cancellation:null};
+ const records=Array.from({length:61},(_,i)=>({...seed,requestId:'owner-bootstrap:page-'+i,state:'succeeded',nextAction:'complete'}));
+ await page.route('**/api/repository-owner-bootstrap/requests?*',r=>{const offset=Number(new URL(r.request().url()).searchParams.get('cursor')??0);cursors.push(offset);return r.fulfill({json:{mode:'live',projection:{records:records.slice(offset,offset+25),pendingRequest:seed,nextCursor:legacy?null:offset+25<records.length?String(offset+25):null,historyPagingAvailable:!legacy}}});});
+ await page.route('**/api/repository-owner-bootstrap/requests/*',r=>r.fulfill({json:{mode:'live',projection:seed}}));
+ await page.getByRole('dialog',{name:'Repository Control',exact:true}).getByRole('button',{name:'Application verification',exact:true}).click();
+ const form=page.getByRole('dialog',{name:'Application verification',exact:true}),pager=form.getByRole('navigation',{name:'Repository setup requests pages',exact:true});
+ await expect(pager.getByRole('status')).toHaveText('Showing 1–25 · Page 1');await pager.getByRole('button',{name:'Repository setup requests rows per page',exact:true}).click();await page.getByRole('option',{name:'100',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 1–61 · Page 1');await pager.getByRole('button',{name:'Repository setup requests rows per page',exact:true}).click();await page.getByRole('option',{name:'25',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 1–25 · Page 1');await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 26–50 · Page 2');await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 51–61 · Page 3');await pager.getByRole('button',{name:'Previous',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 26–50 · Page 2');await form.getByText('Technical details',{exact:true}).click();await expect(form.getByText(seed.requestId,{exact:true})).toBeVisible();
+ legacy=true;await form.getByRole('button',{name:'Refresh requests',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 1–25 · Page 1');await expect(form.getByText('Older request history is unavailable from this source.',{exact:true})).toBeVisible();await expect(pager.getByRole('button',{name:'Next page',exact:true})).toBeDisabled();expect(cursors).toContain(50);expect(writes).toEqual([]);
 });

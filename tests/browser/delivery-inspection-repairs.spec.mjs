@@ -25,7 +25,16 @@ async function deliveryHarness(page, { live = false, online = false } = {}) {
       artifactType: "console-runtime-capability-projection", schemaVersion: 1,
       mode: live ? "live" : "disconnected-preview", capabilities: [],
     } });
-    if (path === "/api/delivery/workspace") return route.fulfill({ json: { mode: "live", projection: model } });
+    if (path === "/api/delivery/workspace") {
+      const q=new URL(request.url()).searchParams;
+      if(q.get("view")==="register"){
+        const selection={surface:q.get("surface")??"work-design",scope:q.get("scope")??"current",query:q.get("q")??"",status:q.get("status")??"all"};
+        const matching=model.packages.filter(row=>(!q.has("id")||row.delivery_package_id===q.get("id"))&&(selection.scope==="history"||!["done","retired","parked"].includes(row.backend_status)&&row.workflow_phase===(selection.surface==="work-design"?"work_design":"refinement"))&&(selection.status==="all"||row.package_posture===selection.status)&&(!selection.query||`${row.display_name} ${row.delivery_package_id} ${row.source_ref}`.toLowerCase().includes(selection.query)));
+        const offset=Number(q.get("cursor")??0),packages=matching.slice(offset,offset+25),ids=new Set(packages.map(row=>row.delivery_package_id));
+        return route.fulfill({json:{mode:"live",status:"current",error:null,projection:{...model,packages,selected_packages:model.selected_packages.filter(row=>ids.has(row.delivery_package_id)),history_scope:selection.scope},page:{selection,total:null,next_cursor:offset+25<matching.length?String(offset+25):null}}});
+      }
+      return route.fulfill({ json: { mode: "live", projection: model } });
+    }
     if (path === "/api/delivery/intake") return route.fulfill({ status: 503, json: { error: "Isolated evidence owner unavailable" } });
     if (path.startsWith("/api/saved-work/")) return route.fulfill({ json: { mode: "disconnected-preview" } });
     if (path === "/api/delivery/catalog/projection") return route.fulfill({ json: {
@@ -147,6 +156,46 @@ test("Delivery registers, Home and Catalog remain readable at short desktop size
     await reachable(page, h.workspace.getByRole("button", { name: "Edit", exact: true }).last());
   }
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+
+test("Home and Catalog stay current while work sections retain their selected history scope",async({page})=>{
+ const h=await deliveryHarness(page,{live:true});
+ const scope=h.workspace.getByRole("radiogroup",{name:"Delivery record scope",exact:true});
+ await expect(scope.getByRole("radio",{name:"Current",exact:true})).toBeChecked();
+ await expect(scope.getByRole("radio",{name:"History",exact:true})).toBeDisabled();
+ await h.section("work-design");
+ await expect(scope.getByRole("radio",{name:"History",exact:true})).toBeEnabled();
+ await scope.getByRole("radio",{name:"History",exact:true}).click();
+ await expect(scope.getByRole("radio",{name:"History",exact:true})).toBeChecked();
+ await h.section("home");
+ await expect(scope.getByRole("radio",{name:"Current",exact:true})).toBeChecked();
+ await expect(scope.getByRole("radio",{name:"History",exact:true})).toBeDisabled();
+ await expect(h.workspace.locator('[data-delivery-home-agent-console]')).toBeVisible();
+ await expect(h.workspace).not.toContainText("History is read-only.");
+ await h.section("catalog");
+ await expect(scope.getByRole("radio",{name:"Current",exact:true})).toBeChecked();
+ await expect(scope.getByRole("radio",{name:"Current",exact:true})).toBeDisabled();
+ await expect(scope.getByRole("radio",{name:"History",exact:true})).toBeDisabled();
+ await h.section("refinement");
+ await expect(scope.getByRole("radio",{name:"History",exact:true})).toBeChecked();
+ await expect(scope.getByRole("radio",{name:"History",exact:true})).toBeEnabled();
+ expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
+});
+
+test("failed package reads show unavailable rather than an empty successful register and recover through retry",async({page})=>{
+ const h=await deliveryHarness(page,{live:true});
+ await page.route("**/api/delivery/workspace?**",route=>new URL(route.request().url()).searchParams.get("view")==="register"?route.fulfill({status:503,json:{error:"Synthetic package source unavailable"}}):route.fallback());
+ await h.section("work-design");
+ const footer=h.workspace.getByRole("navigation",{name:"Work Design packages pages",exact:true});
+ await expect(footer.getByRole("status")).toHaveText("Page unavailable");
+ await expect(footer.getByRole("button",{name:"Previous",exact:true})).toBeDisabled();
+ await expect(footer.getByRole("button",{name:"Continue search",exact:true})).toBeDisabled();
+ await expect(h.workspace.getByRole("alert")).toContainText("Synthetic package source unavailable");
+ await page.unroute("**/api/delivery/workspace?**");
+ await h.workspace.getByRole("button",{name:"Retry package search",exact:true}).click();
+ await expect(footer.getByRole("status")).not.toHaveText("Page unavailable");
+ await expect(h.workspace.getByRole("alert")).toHaveCount(0);
+ expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
 });
 
 test("Work Design review action and Context Session advisor are reachable at 1280x720", async ({ page }) => {
@@ -448,7 +497,14 @@ test("long selected-package prose remains bounded with the complete original ava
   const h=await deliveryHarness(page,{live:true});
   const full="Synthetic original package context. ".repeat(120)+"End of complete original context.";
   const p=h.model.packages.find(p=>p.display_name==="Adapter Contract Metadata Repair");p.summary=full;
-  await h.refresh();await h.section("refinement");await h.workspace.getByRole("row").filter({hasText:p.display_name}).click();
+  await h.refresh();await h.section("refinement");
+  const row=h.workspace.getByRole("row").filter({hasText:p.display_name});
+  for(const width of [1280,1700]){
+    await page.setViewportSize({width,height:width===1280?800:1000});
+    expect(await row.evaluate(el=>el.getBoundingClientRect().height)).toBeLessThan(160);
+    await expect(row).not.toContainText("End of complete original context.");
+  }
+  await row.click();
   const selected=h.workspace.locator('[data-teras-selected-panel="rich"]');
   await expect(selected).not.toContainText("End of complete original context.");
   await selected.getByRole("button",{name:"Full context",exact:true}).click();
@@ -555,4 +611,79 @@ test("Execution tree-change review keeps its heading and acceptance input inside
     await expect(modal.getByRole("button", { name: "Apply Changes", exact: true })).toBeDisabled();
   }
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+
+for(const width of [1280,1700])test(`Intake history replaces pages and keeps older sources searchable at ${width}`,async({page})=>{
+ await page.setViewportSize({width,height:900});const h=await deliveryHarness(page,{live:true});
+ h.model.evidence_coverage={intake:{state:"unavailable",issue_count:0,detail:"Not loaded"},activity:{state:"unavailable",detail:"Not loaded"}};await h.refresh();
+ const seed=structuredClone(h.model.intake_sources[0]);
+ const records=Array.from({length:61},(_,i)=>({...seed,accepted_source_id:`source:retained-${i}`,delivery_package_id:`delivery-${1000+i}`,source_ref:`record://proposal/retained-${i}`,title:`Retained source ${i}`,summary:"Original retained source",intake_status:"consumed",status_label:"Consumed",owner:"synthetic-owner",tone:"ok",evidence_refs:[`receipt:retained-${i}`],source_custody:{classification:"non-source-work",owner:"synthetic-owner",rationale:"Synthetic owner proof",repository_gate_state:"not-required",repo_ref:null}}));
+ await page.route("**/api/delivery/intake?**",async route=>{
+   const q=new URL(route.request().url()).searchParams;
+   if(q.get("view")!=="register")return route.fallback();
+   const selection={query:(q.get("q")??"").trim().toLowerCase(),owner:q.get("owner")??"all",status:q.get("status")??"all"};
+   const offset=Number(q.get("cursor")??0),rows=records.filter(row=>(selection.owner==="all"||row.owner===selection.owner)&&(selection.status==="all"||row.intake_status===selection.status)&&(!selection.query||row.title.toLowerCase().includes(selection.query)));
+   return route.fulfill({json:{mode:"live",status:"current",sources:rows.slice(offset,offset+25),issues:[],page:{selection,total:null,next_cursor:offset+25<rows.length?String(offset+25):null}}});
+ });
+ await h.section("intake");await h.workspace.getByRole("radio",{name:"History",exact:true}).click();
+ const footer=h.workspace.getByRole("navigation",{name:"Delivery Intake register pages",exact:true});
+ await expect(h.workspace.locator('[data-teras-summary-value]')).toHaveText(["—","—","—","—"]);
+ await expect(footer.getByRole("status")).toContainText("Showing 1–25");
+ expect(await footer.getByRole("status").locator("p").evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeLessThanOrEqual(12);
+ expect(await footer.locator("..").evaluate(el=>getComputedStyle(el).borderTopWidth)).toBe("0px");
+ await expect(h.workspace.locator("table")).toContainText("Receipt recorded");
+ await expect(h.workspace.locator("table")).not.toContainText("receipt:retained-");
+ await expect(h.workspace.locator("table")).not.toContainText("record://proposal/");
+ await footer.getByRole("button",{name:"Next page",exact:true}).click();
+ await expect(footer.getByRole("status")).toContainText("Showing 26–50");
+ await expect(h.workspace.getByRole("row").filter({hasText:"Retained source 25"})).toContainText("26");
+ await footer.getByRole("button",{name:"Next page",exact:true}).click();
+ await expect(footer.getByRole("status")).toContainText("Showing 51–61");
+ await expect(footer.getByRole("button",{name:"Next page",exact:true})).toBeDisabled();
+ await footer.getByRole("button",{name:"Previous",exact:true}).click();
+ await expect(footer.getByRole("status")).toContainText("Showing 26–50");
+ await h.workspace.getByRole("searchbox",{name:"Search intake accepted sources",exact:true}).fill("Retained source 60");
+ await expect(footer.getByRole("status")).toContainText("Showing 1–1");
+ await expect(footer.getByRole("button",{name:"Previous",exact:true})).toBeDisabled();
+ await reachable(page,footer.getByRole("button",{name:"Next page",exact:true}));
+ const technical=h.workspace.locator('[data-teras-selected-panel]').locator("details");
+ await expect(technical).not.toHaveAttribute("open","");
+ await technical.getByText("Technical details",{exact:true}).click();
+ await expect(technical).toContainText("receipt:retained-60");
+ await expect(technical).toContainText("record://proposal/retained-60");
+ expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
+});
+
+for(const width of [1280,1700])test(`Execution column search keeps crowded Done cards expanded and independent at ${width}`,async({page})=>{
+ await page.setViewportSize({width,height:width===1280?800:1000});const h=await deliveryHarness(page,{live:true});
+ const seed=structuredClone(h.model.packages[0]);
+ const rows=Array.from({length:40},(_,i)=>({...seed,delivery_package_id:`delivery-${9000+i}`,legacy_epic_id:9000+i,tree_root_id:`test-root-${i}`,source_ref:`openproject://work_packages/${9000+i}`,display_name:`Completed item ${i}`,backend_status:"done",package_posture:"Done",workflow_phase:"audit_only",open_child_count:0}));
+ h.model.packages=[...rows,{...seed,delivery_package_id:"delivery-8999",legacy_epic_id:8999,source_ref:"OpenProject #8999",display_name:"Incoming item",backend_status:"new",package_posture:"New",workflow_phase:"execution"}];
+ await h.refresh();await h.section("execution-board");await h.workspace.getByRole("radio",{name:"History",exact:true}).click();
+ const lanes=h.workspace.locator('[class*="controlBoardLanePanel"]');await expect(lanes).toHaveCount(8);await expect(lanes.getByRole("searchbox")).toHaveCount(8);
+ const done=lanes.filter({has:page.locator('[class*="controlBoardLaneTitle"]').getByText("Done",{exact:true})});await done.scrollIntoViewIfNeeded();
+ const cards=done.locator('button[class*="controlBoardCard"]');await expect(cards).toHaveCount(40);
+ const sizes=await cards.evaluateAll(nodes=>nodes.map(el=>({height:el.clientHeight,content:el.scrollHeight})));
+ for(const size of sizes)expect(size.height).toBeGreaterThanOrEqual(size.content-1);
+ const stack=done.locator('[class*="controlBoardCardStack"]');expect(await stack.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+ await done.getByRole("searchbox").fill("Epic 9039");await expect(cards).toHaveCount(1);await expect(done.getByRole("status")).toHaveText("1 of 40 shown");
+ await expect(cards.first().locator('[class*="controlBoardCardKicker"]')).toHaveText("Epic 9039");
+ await expect(cards.first().locator('[title="openproject://work_packages/9039"]')).toHaveCount(1);
+ await done.getByRole("searchbox").fill("openproject://work_packages/9039");await expect(cards).toHaveCount(1);
+ await expect(done.locator('[class*="controlBoardLaneCount"]')).toHaveText("40");
+ const incoming=lanes.filter({has:page.locator('[class*="controlBoardLaneTitle"]').getByText("New",{exact:true})});await incoming.getByRole("searchbox").fill("missing");await expect(cards).toHaveCount(1);
+ await incoming.getByRole("searchbox").clear();await expect(incoming.locator('button[class*="controlBoardCard"]')).toHaveCount(1);
+ await done.getByRole("searchbox").fill("missing");await expect(done.getByText("No items match this search.",{exact:true})).toBeVisible();
+ await done.getByRole("searchbox").clear();await expect(cards).toHaveCount(40);await cards.last().scrollIntoViewIfNeeded();expect(await stack.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);
+ await h.workspace.getByRole("radio",{name:"Family Map",exact:true}).click();expect(await lanes.getByRole("searchbox").count()).toBe(await lanes.count());
+ expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
+});
+
+for(const width of[1280,1700])test(`Delivery package and Intake history selectors fill source windows without changing columns at ${width}`,async({page})=>{
+ await page.setViewportSize({width,height:width===1280?800:1000});const h=await deliveryHarness(page,{live:true});const seed=structuredClone(h.model.packages[0]);
+ h.model.packages=Array.from({length:131},(_,i)=>({...seed,delivery_package_id:'delivery-'+(8000+i),display_name:'Sized delivery package '+i,legacy_epic_id:8000+i,source_ref:'openproject://work_packages/'+(8000+i),workflow_phase:'work_design',backend_status:'in progress'}));
+ await h.refresh();await h.section('work-design');const pager=h.workspace.getByRole('navigation',{name:'Work Design packages pages',exact:true});await expect(pager.getByRole('status')).toContainText('Showing 1–25');const columns=await h.workspace.getByRole('columnheader').allTextContents();await pager.getByRole('button',{name:'Work Design packages rows per page',exact:true}).click();await page.getByRole('option',{name:'100',exact:true}).click();await expect(pager.getByRole('status')).toContainText('Showing 1–100');await expect(h.workspace.locator('[data-delivery-surface-register] tbody tr')).toHaveCount(100);await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toContainText('Showing 101–131');await expect(h.workspace.getByRole('columnheader')).toHaveText(columns);
+ const source=structuredClone(h.model.intake_sources[0]),sources=Array.from({length:131},(_,i)=>({...source,accepted_source_id:'sized-source:'+i,delivery_package_id:'delivery-'+(8000+i),title:'Sized Intake source '+i,intake_status:'consumed',evidence_refs:['receipt:sized-'+i]}));
+ await page.route('**/api/delivery/intake?**',r=>{const q=new URL(r.request().url()).searchParams,offset=Number(q.get('cursor')??0),selection={query:q.get('q')??'',owner:q.get('owner')??'all',status:q.get('status')??'all'};return r.fulfill({json:{mode:'live',status:'current',sources:sources.slice(offset,offset+25),issues:[],page:{selection,next_cursor:offset+25<sources.length?String(offset+25):null,total:null}}});});
+ await h.section('intake');await h.workspace.getByRole('radio',{name:'History',exact:true}).click();const intake=h.workspace.getByRole('navigation',{name:'Delivery Intake register pages',exact:true});await expect(intake.getByRole('status')).toContainText('Showing 1–25');await intake.getByRole('button',{name:'Delivery Intake register rows per page',exact:true}).click();await page.getByRole('option',{name:'100',exact:true}).click();await expect(intake.getByRole('status')).toContainText('Showing 1–100');await intake.getByRole('button',{name:'Next page',exact:true}).click();await expect(intake.getByRole('status')).toContainText('Showing 101–131');expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);await h.workspace.screenshot({path:test.info().outputPath('page-size-delivery.png')});
 });

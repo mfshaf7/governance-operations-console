@@ -68,16 +68,27 @@ async function workflow(page,title){await hub(page,title);await page.locator('[d
 test('register replaces pages, selected records load independently, and sparse search reaches older records',async({page})=>{
  const h=await open(page);
  await expect(page.getByRole('row').filter({hasText:'Plan a useful tool'})).toBeVisible();
+ await expect(page.getByRole('row').filter({hasText:'Plan a useful tool'}).getByRole('cell').first()).toHaveText('01');
+ const pagination=page.getByRole('navigation',{name:'Proposal pages',exact:true});
+ await expect(pagination).toContainText('Page 1 · 1–2 shown');
+ const footer=await pagination.boundingBox(),body=await page.locator('[data-proposal-register="standard"]').boundingBox();
+ expect(footer.y).toBeGreaterThanOrEqual(body.y+body.height);
+ for(const name of ['Previous','Next page'])expect((await pagination.getByRole('button',{name,exact:true}).boundingBox()).height).toBeGreaterThanOrEqual(30);
  await page.getByRole('button',{name:'Next page',exact:true}).click();
  await expect(page.getByRole('row').filter({hasText:'Older backlog idea'})).toBeVisible();
+ await expect(page.getByRole('row').filter({hasText:'Older backlog idea'}).getByRole('cell').first()).toHaveText('03');
+ await expect(pagination).toContainText('Page 2 · 3–3 shown');
  await expect(page.getByRole('row').filter({hasText:'Plan a useful tool'})).toHaveCount(0);
  await page.getByRole('button',{name:'Previous',exact:true}).click();
  await expect(page.getByRole('row').filter({hasText:'Plan a useful tool'})).toBeVisible();
+ await expect(page.getByRole('row').filter({hasText:'Plan a useful tool'}).getByRole('cell').first()).toHaveText('01');
  await page.getByRole('searchbox',{name:'Search proposals',exact:true}).fill('older');
  await expect(page.getByRole('button',{name:'Continue search',exact:true})).toBeEnabled();
  await expect(page.getByRole('row').filter({hasText:'Older backlog idea'})).toHaveCount(0);
  await page.getByRole('button',{name:'Continue search',exact:true}).click();
  await expect(page.getByRole('row').filter({hasText:'Older backlog idea'})).toBeVisible();
+ await expect(page.getByRole('row').filter({hasText:'Older backlog idea'}).getByRole('cell').first()).toHaveText('01');
+ await expect(pagination).toContainText('Page 2 · 1–1 shown');
  expect(h.reads.filter(r=>r.path.includes('/history'))).toHaveLength(0);
  expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
 });

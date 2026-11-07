@@ -5,7 +5,7 @@ import {
   TerasActionButton, TerasActionRow, TerasDialog, TerasEmptyState,
   TerasFieldStack, TerasFilterBar, TerasMetadataList, TerasPanel, TerasPanelHeader,
   TerasRecordCellText, TerasRecordControlLayout, TerasRecordTable, TerasRegisterPanel, TerasSelectField,
-  TerasStatusPill, TerasTextField, type TerasRecordTableColumn,
+  TerasStatusPill, TerasTextField, TerasRegisterPagination, useRegisterPage, type TerasRecordTableColumn,
 } from "@/teras";
 import { modelEffortLabel } from "../../../../../console-integration/governed-ai/model-selection.ts";
 import type { useModelRuntime } from "../../../live-runtime/use-model-runtime.ts";
@@ -53,7 +53,8 @@ export function ModelRegistrationsDialog({
   const entryBlocked=(!runtime.fresh&&!runtime.preview)||changesBlocked;
   const rows = registeredModelsForBackend(registry, backend?.backend_id);
   const filtered = rows.filter(row => row.model.toLowerCase().includes(search.toLowerCase()));
-  const selected = filtered.find(row => row.id === selectedId) ?? filtered[0] ?? null;
+  const page = useRegisterPage(filtered, JSON.stringify([backend?.backend_id, search.trim().toLowerCase(), open]), 'Registered models');
+  const selected = filtered.find(row => row.id === selectedId) ?? page.rows[0] ?? null;
   const catalogue = runtime.catalogue?.backend_id === backend?.backend_id ? runtime.catalogue : null;
   const candidates = catalogue?.models.filter(item => !rows.some(row => row.model === item.model)) ?? [];
   const alreadyRegistered = rows.some(row => row.model === candidate);
@@ -115,14 +116,15 @@ export function ModelRegistrationsDialog({
           {backend?.experimental ? <TerasMetadataList shape="line" treatment="chip" wrap items={modelBackendQualificationMetadata(backend)} /> : null}
         </TerasPanel>}
         register={<TerasRegisterPanel data-model-registrations-register="true" density="compact-control"
+          footer={<TerasRegisterPagination label="Registered models" disabled={runtime.pending} offset={page.offset} count={page.rows.length} total={filtered.length} page={page.page} pending={runtime.refreshing} unavailable={!runtime.fresh && !runtime.preview} hasPrevious={page.hasPrevious} hasNext={page.hasNext} onPrevious={page.previous} onNext={page.next} />}
           kicker="Model inventory" title="Registered models" description={"Models registered through " + backendLabel + "."}
           actions={<TerasActionRow>
-            <TerasStatusPill tone="info">{filtered.length}/{rows.length} shown</TerasStatusPill>
+            <TerasStatusPill tone="info">{filtered.length}/{rows.length} matched</TerasStatusPill>
             <TerasActionButton disabled={!backend} onClick={() => setAdding(true)}>Register model</TerasActionButton>
           </TerasActionRow>}
           filterBar={<TerasFilterBar search={{ ariaLabel: "Search registered models", value: search,
             onValueChange: setSearch, placeholder: "Search models on this backend..." }} />}>
-          {filtered.length ? <TerasRecordTable fill columns={columns} rows={filtered} getRowId={row => row.id}
+          {filtered.length ? <TerasRecordTable fill columns={columns} rows={page.rows} getRowId={row => row.id}
             selectedRowId={selected?.id} onSelect={row => setSelectedId(row.id)} />
             : <TerasEmptyState>{rows.length ? "No models match this search on the selected backend."
               : "No models are registered on this backend. Use Register model to add one."}</TerasEmptyState>}

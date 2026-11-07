@@ -1,4 +1,5 @@
 "use client";
+import {useRegisterPageSize} from "../../console-integration/registers/use-register-page-size.ts";
 
 import { useCallback, useRef, useState } from "react";
 
@@ -34,6 +35,7 @@ export class WorkspaceRegistryClientError extends Error {
 }
 
 export function useWorkspaceRegistryLiveRuntime() {
+  const {pageSize}=useRegisterPageSize("Workspace Registry");
   const [mode, setMode] = useState<
     "disconnected-preview" | "live" | "loading" | "unavailable"
   >("loading");
@@ -53,7 +55,7 @@ export function useWorkspaceRegistryLiveRuntime() {
     try {
       return await run(async () => {
         const next = assertWorkspaceRegistrySnapshot(
-          await jsonRequest(`/api/workspace-registry?${new URLSearchParams({ scope: nextSelection.scope ?? "inventory", query: nextSelection.query ?? "", ...(nextSelection.after ? { after: nextSelection.after } : {}) })}`, {
+          await jsonRequest(`/api/workspace-registry?${new URLSearchParams({ scope: nextSelection.scope ?? "inventory", query: nextSelection.query ?? "", ...(pageSize!==25 ? {limit:String(pageSize)} : {}), ...(nextSelection.after ? { after: nextSelection.after } : {}) })}`, {
             cache: "no-store",
             method: "GET",
           }),
@@ -73,7 +75,7 @@ export function useWorkspaceRegistryLiveRuntime() {
       );
       throw failure;
     }
-  }, []);
+  }, [pageSize]);
 
   const prepare = useCallback(async (candidate: WorkspaceRegistryCandidate) => {
     return run(async () => {

@@ -264,12 +264,13 @@ export function EnvironmentLifecycleWorkspace({
           }
         >
           {liveRuntime.snapshot.mode !== "disconnected-preview" ? (
-            <TerasContentRegion fill gap="normal" scroll>
-              {activeWorkspaceId === "governed-releases" && !productRuntime.projection && !productRuntime.error ? <TerasLoadingState fill label="Loading governed releases…" /> : activeWorkspaceId === "dev-integration" && !profileRuntime.projection && !profileRuntime.error ? <TerasLoadingState fill label="Loading integration profiles…" /> : activeWorkspaceId === "governed-releases" && productRuntime.projection ? <>
+            <TerasContentRegion fill gap="normal" scroll
+              style={activeWorkspaceId === "dev-integration" ? profileRuntime.projection ? {gridTemplateRows:"100%"} : undefined : productRuntime.projection ? {gridTemplateRows:"100%"} : undefined}>
+              {activeWorkspaceId === "governed-releases" && !productRuntime.projection && !productRuntime.error ? <TerasLoadingState fill label="Loading governed releases…" /> : activeWorkspaceId === "dev-integration" && !profileRuntime.projection && !profileRuntime.error ? <TerasLoadingState fill label="Loading integration profiles…" /> : activeWorkspaceId === "governed-releases" && productRuntime.projection ? <TerasPanelStack fill="last">
                 <TerasPanel fit="content" frame="padded" treatment="neutral"><TerasPanelHeader kicker="Product source" title="Registered products" statusLabel={productRuntime.projection?.source_posture==="accepted-snapshot" ? "Accepted snapshot" : productRuntime.current ? "Current" : "Retained"} statusTone={productRuntime.current ? "info" : "warn"} description={productRuntime.error??productRuntime.projection?.source_notice??"Source contracts and recorded release evidence. Protected workflows retain their own execution and approval."} actions={<TerasActionButton busy={productRuntime.loading} emphasis="secondary" onClick={()=>void productRuntime.load()}>Refresh products</TerasActionButton>}/></TerasPanel>
                 <GovernedReleasesSurface products={ownerProducts} runtime={runtime} onDirtyChange={setDirty}
                   live={{runtime:productRuntime,actions:(product,onInspect)=><NativeReleaseActions product={product} current={productRuntime.current&&liveRuntime.snapshot.status==="current"} runtime={liveRuntime} onInspect={onInspect}/>,history:productId=><PlatformOperationHistory onRead={liveRuntime.read} onControl={liveRuntime.control} operations={liveRuntime.snapshot.operations.filter(operation=>operation.command.subject.ref===`product:${productId}`)} controlsAvailable={liveRuntime.snapshot.status==="current"}/>}}/>
-              </> : activeWorkspaceId === "dev-integration" && profileRuntime.projection ? <>
+              </TerasPanelStack> : activeWorkspaceId === "dev-integration" && profileRuntime.projection ? <TerasPanelStack fill="last">
                 <TerasPanel fit="content" frame="padded" treatment="neutral"><TerasPanelHeader
                   kicker="Source" title="Dev Integration profiles" description={profileRuntime.error ?? "Canonical registry and committed profile contracts. Runtime observations retain independent freshness."}
                   statusLabel={profileRuntime.current ? "Current" : "Retained"} statusTone={profileRuntime.current ? "info" : "warn"}
@@ -284,8 +285,7 @@ export function EnvironmentLifecycleWorkspace({
                     history:profileId => <PlatformOperationHistory onControl={liveRuntime.control} onRead={liveRuntime.read}
                       operations={liveRuntime.snapshot.operations.filter(operation => operation.command.subject.ref === `profile:${profileId}`)}
                       controlsAvailable={liveRuntime.snapshot.mode === "live" && liveRuntime.snapshot.status === "current"}/>}}/>
-                <DevIntegrationRequestHistory runtime={profileRuntime}/>
-              </> : <PlatformOperationsLiveSurface
+              </TerasPanelStack> : <PlatformOperationsLiveSurface
                 kind={activeWorkspaceId}
                 focusRecordRef={entryIntent?.subjectRef}
                 onControl={liveRuntime.control}
@@ -293,9 +293,12 @@ export function EnvironmentLifecycleWorkspace({
                 onSubmit={liveRuntime.submit}
                 snapshot={liveRuntime.snapshot}
               />}
+              {activeWorkspaceId === "dev-integration" && profileRuntime.projection ? <DevIntegrationRequestHistory runtime={profileRuntime}/> : null}
               {activeWorkspaceId==="governed-releases" && !productRuntime.projection && productRuntime.error ? <TerasPanel fit="content" frame="padded" treatment="neutral"><TerasPanelHeader kicker="Product readback" title="Product register unavailable" description={productRuntime.error??"Reading product source contracts. The action catalog alone does not supply registered products."} actions={<TerasActionButton emphasis="secondary" onClick={()=>void productRuntime.load()}>Retry product read</TerasActionButton>}/></TerasPanel> : null}
               <PlatformOperationHistory
-                loading={liveRuntime.snapshot.status === "loading"}
+                loading={liveRuntime.loading || liveRuntime.snapshot.status === "loading"}
+                sourceError={liveRuntime.snapshot.error?.message}
+                onRefreshHistory={liveRuntime.restartHistory}
                 onLoadMore={liveRuntime.loadMore}
                 nextPageAvailable={Boolean(liveRuntime.snapshot.historyPage?.next_cursor)}
                 onControl={liveRuntime.control}

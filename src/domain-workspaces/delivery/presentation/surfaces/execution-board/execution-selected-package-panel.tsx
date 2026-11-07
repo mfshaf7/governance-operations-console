@@ -71,7 +71,7 @@ export function ExecutionSelectedPackagePanel({
         statusLabel={effectiveProjection.posture}
         statusTone={effectiveProjection.tone}
         title={packageSummary.display_name}
-        description={packageSummary.source_ref}
+        description={<span title={packageSummary.source_ref}>Epic {packageSummary.legacy_epic_id}</span>}
       />
 
       <TerasInspectionSection title="Lifecycle Context">

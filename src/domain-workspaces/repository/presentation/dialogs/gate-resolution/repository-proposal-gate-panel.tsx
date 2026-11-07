@@ -4,9 +4,9 @@ import { RepositoryRequestAttachment } from "./repository-request-attachment.tsx
 import {RepositoryPageControls, type RepositoryPageControl} from "../../shared/repository-page-controls.tsx";
 import { repositoryCreationForProposal, repositoryFulfilmentForProposal, repositoryAttachmentProposalId } from "../../../../operation-integrations/proposal-repository-custody.ts";
 import { useEffect, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack, TerasMetadataList, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSelectField, TerasSegmentedControl, TerasTechnicalDetails, TerasTrayStack } from "@/teras";
+import { TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack, TerasLoadingState, TerasMetadataList, TerasNoteField, TerasPanel, TerasPanelHeader, TerasSelectField, TerasSegmentedControl, TerasTechnicalDetails, TerasTrayStack } from "@/teras";
 import type { useProposalRepositoryGateRuntime } from "../../../../operation-integrations/use-proposal-repository-gate-runtime.ts";
-import { repositoryRequestStateLabel } from "../../../../operation-integrations/proposal-repository-live-projection.ts";
+import { repositoryRequestState, repositoryRequestStateLabel } from "../../../../operation-integrations/proposal-repository-live-projection.ts";
 import type { RepositoryCustodyWorkflowResult, RepositoryCustodyLinkIntent } from "../../../live-runtime/repository-custody-live-types.ts";
 
 export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custodyCurrent, onDirtyChange, runtime, onCreateRepository, creationAvailable = false, onAttachRepository, attachmentAvailable = false, onBusyChange, onFindByProvider, historyPage }: {
@@ -27,16 +27,22 @@ export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custod
   const [drafts, setDrafts] = useState<Record<string, { custodyId: string; notes: string }>>({});
   const dirty = attachmentDirty || Object.entries(drafts).some(([id, draft]) => {
     const request = runtime.requests.find(request => request.proposalId === id);
-    return Boolean((draft.custodyId || draft.notes.trim()) && (!request?.resolution || request.recovery));
+    return Boolean((draft.custodyId || draft.notes.trim()) && (!request || repositoryRequestState(request) !== "resolved"));
   });
   useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   const target = subjectRef ?? selectedId;
   // An explicit route must never resolve a different request if its source disappears.
   const request = target ? runtime.requests.find(entry => entry.proposalId === target) :
-    runtime.requests.find(entry => !entry.resolution || entry.recovery) ?? runtime.requests[0];
+    runtime.requests.find(entry => repositoryRequestState(entry) !== "resolved") ?? runtime.requests[0];
   const recovery = request?.recovery;
-  const resolved = Boolean(request?.resolution && !recovery);
-  const current = Boolean(request?.sourceCurrent);
+  const requestId=request?.proposalId;
+  const inspectId=subjectRef??requestId;
+  useEffect(()=>{if(inspectId)void runtime.inspect(inspectId);},[inspectId,runtime.observedAt,runtime.inspect]);
+  const inspection=runtime.inspection?.id===requestId?runtime.inspection:null;
+  const inspected=Boolean(requestId&&inspection?.state==="current"&&inspection.version===request?.recordVersion);
+  const resolved = Boolean(request && repositoryRequestState(request) === "resolved");
+  const repositoryRef = request?.resolution?.resolved_repo_ref ?? request?.resolvedRepositoryRef;
+  const current = Boolean(request?.sourceCurrent&&inspected);
   const draft = request ? drafts[request.proposalId] ?? { custodyId: "", notes: "" } : { custodyId: "", notes: "" };
   const notes = recovery?.notes ?? draft.notes;
   const options = [...new Map(custodyResults.filter(result => result.status === "succeeded" && result.receipt_ref && result.provider_readback &&
@@ -56,7 +62,7 @@ export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custod
   }
   return <TerasPanel frame="padded" treatment="rail" fit="content" tone={resolved ? "ok" : "warn"}>
     <TerasPanelHeader kicker="From Proposal" title={request?.title ?? "Request unavailable"}
-      description={resolved ? "The repository requirement has been confirmed." : recovery ?
+      description={resolved ? request?.resolution ? "The repository requirement has been confirmed." : !inspected ? "The current Proposal records this repository requirement as resolved. Reading its original confirmation evidence." : "The current Proposal records this repository requirement as resolved. Its original confirmation receipt is not available in this view." : recovery ?
         "Finish the interrupted confirmation using its original receipt and notes." :
         readyToConfirm ? "Review the repository associated with this request, then confirm it." :
         "Create a repository, or attach one already created to fulfil this request."}
@@ -65,15 +71,17 @@ export function RepositoryProposalGatePanel({ subjectRef, custodyResults, custod
     <TerasTrayStack spacing="loose" topOffset="section">
       <RepositoryPageControls page={historyPage} label="requests" />
       {runtime.error ? <p role="alert">{runtime.error}</p> : null}
+      {inspection?.state==="loading" ? <TerasLoadingState inline label="Reading original request…" /> : null}
+      {inspection?.error ? <TerasContentTray kicker="Original request unavailable" description={inspection.error} /> : null}
       {!current ? <><p role="status">{request ? "This retained request is read-only. Refresh its source before confirming." :
         target ? "The requested Proposal requirement is not available. Refresh its source or return to Requests." :
         "No current repository request is available."}</p>
-        <TerasActionButton emphasis="secondary" onClick={() => { void runtime.refresh(); }}>Refresh request</TerasActionButton></> : null}
+        <TerasActionButton emphasis="secondary" onClick={() => { if(requestId)void runtime.inspect(requestId);else void runtime.refresh(); }}>Refresh request</TerasActionButton></> : null}
       {request ? <>
         {!subjectRef ? <TerasSelectField label="Proposal request" aria-label="Proposal repository request" value={request.proposalId}
           onValueChange={setSelectedId} disabled={runtime.pending || attachmentBusy || attachmentDirty}
           options={runtime.requests.map(entry => ({ label: entry.title, value: entry.proposalId }))} /> : null}
-        {request.resolution ? <TerasMetadataList items={[{label: "Repository", value: request.resolution.resolved_repo_ref}]} /> : null}
+        {repositoryRef ? <TerasMetadataList items={[{label: "Repository", value: repositoryRef}]} /> : null}
         {!resolved ? !custodyCurrent ? <TerasContentTray kicker="Repository result" title="Results unavailable"
           description="Repository creation results could not be verified. Refresh Repositories before creating or confirming a repository." /> :
           !readyToConfirm ? <TerasFieldStack spacing="loose">

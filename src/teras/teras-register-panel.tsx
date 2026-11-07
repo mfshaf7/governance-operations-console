@@ -19,6 +19,7 @@ export function TerasRegisterPanel({
   density = "normal",
   description,
   filterBar,
+  footer,
   headerClassName,
   kicker,
   statusLabel,
@@ -34,6 +35,7 @@ export function TerasRegisterPanel({
   density?: TerasRegisterPanelDensity;
   description?: ReactNode;
   filterBar: ReactNode;
+  footer?: ReactNode;
   headerClassName?: string;
   kicker: string;
   statusLabel?: ReactNode;
@@ -50,6 +52,7 @@ export function TerasRegisterPanel({
       {...props}
       className={cx(styles.terasRegisterPanel, className)}
       data-register-density={density}
+      data-register-footer={footer ? "true" : undefined}
       data-register-body-min={
         density === "compact-control" ? "compact" : "fill"
       }
@@ -70,10 +73,12 @@ export function TerasRegisterPanel({
       {filterBar}
       <div
         {...resolvedBodyProps}
+        data-teras-register-body="true"
         className={cx(styles.terasRegisterPanelBody, bodyClassName)}
       >
         {children}
       </div>
+      {footer ? <div className={styles.terasRegisterPanelFooter}>{footer}</div> : null}
     </TerasPanel>
   );
 }
