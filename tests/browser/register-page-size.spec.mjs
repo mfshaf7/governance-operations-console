@@ -26,3 +26,22 @@ for(const width of[1280,1700]){
   await open(page,'REPOSITORY');const w=page.getByRole('dialog',{name:'Repository Control',exact:true});await w.getByRole('radio',{name:/^Requests/}).click();const pager=w.getByRole('navigation',{name:'Repository requests pages',exact:true});await expect(pager.getByRole('status')).toHaveText('Showing 1–25 · Page 1');await size(page,pager,'Repository requests',50);await expect(pager.getByRole('status')).toHaveText('Showing 1–50 · Page 1');await expect(w.locator('[data-repository-requests-surface] tbody tr')).toHaveCount(50);await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 51–100 · Page 2');deny=true;await size(page,pager,'Repository requests',100);await expect(pager.getByRole('status')).toHaveText('Page unavailable');await expect(w.locator('[data-repository-requests-surface] tbody tr')).toHaveCount(0);deny=false;await w.getByRole('button',{name:'Refresh requests',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 1–100 · Page 1');await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 101–131 · Page 2');await w.getByRole('searchbox',{name:'Search repository requests',exact:true}).fill('request 130');await expect(pager.getByRole('status')).toHaveText('Showing 1–1 · Page 1');await size(page,pager,'Repository requests',50);await expect(w.getByRole('searchbox',{name:'Search repository requests',exact:true})).toHaveValue('request 130');await expect(pager.getByRole('status')).toHaveText('Showing 1–1 · Page 1');await fits(pager);await w.screenshot({path:test.info().outputPath('page-size-requests.png')});expect(calls.some(row=>row.offset===75)).toBe(true);expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
  });
 }
+
+
+for(const width of [1280,1700]) test(`compact register keeps readable rows and reachable paging at ${width}`,async({page})=>{
+  await page.setViewportSize({width,height:width===1280?800:1000});
+  const h=await setup(page,async(route,{path})=>{if(path==='/api/model-operations'){await route.fulfill({json:{mode:'live',status:'current',observedAt:new Date().toISOString(),requests:[],source:{authority:'platform-engineering'},readModel:fixture.readModel}});return true;}if(path==='/api/model-operations/runtime/registry'){await route.fulfill({json:fixture.registry});return true;}if(path==='/api/model-operations/runtime/requests'){await route.fulfill({json:{requests:[],next_cursor:null}});return true;}return false;});await open(page,'MODEL');
+  const workspace=page.getByRole('dialog',{name:'Model Operations Control',exact:true});
+  const table=workspace.locator('table').first();await expect(table.locator('tbody tr')).toHaveCount(25);
+  const body=workspace.locator('[data-model-profile-register] [data-profile=register]');
+  const geometry=await body.evaluate(el=>({height:el.clientHeight,header:el.querySelector('thead').getBoundingClientRect().height,row:el.querySelector('tbody tr').getBoundingClientRect().height}));
+  expect(geometry.height).toBeGreaterThanOrEqual(geometry.header+2*geometry.row-1);
+  expect(geometry.height).toBeLessThan(await workspace.evaluate(el=>el.clientHeight));
+  const first=table.locator('tbody tr').first();await first.scrollIntoViewIfNeeded();
+  expect(await first.evaluate(el=>{let top=el.getBoundingClientRect().top,bottom=el.getBoundingClientRect().bottom;for(let p=el.parentElement;p;p=p.parentElement){if(['auto','scroll','hidden','clip'].includes(getComputedStyle(p).overflowY)){const r=p.getBoundingClientRect();top=Math.max(top,r.top);bottom=Math.min(bottom,r.top+p.clientHeight);}}return bottom-top;})).toBeGreaterThan(40);
+  const pager=workspace.getByRole('navigation',{name:'Purpose profiles pages',exact:true});await fits(pager);
+  await size(page,pager,'Purpose profiles',50);await fits(pager);
+  expect(await body.evaluate(el=>el.clientHeight)).toBeLessThanOrEqual(geometry.height+2);
+  await size(page,pager,'Purpose profiles',25);await fits(pager);
+  await workspace.screenshot({path:test.info().outputPath('compact-register-'+width+'.png')});expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
+});

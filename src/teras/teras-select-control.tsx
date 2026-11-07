@@ -2,7 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import type { CSSProperties, KeyboardEvent } from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import styles from "./teras-patterns.module.css";
@@ -162,7 +162,7 @@ export function TerasSelectControl<Value extends string>({
     };
   }, [menuStyle, open]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || disabled || menuPlacement !== "portal") {
       return undefined;
     }
@@ -180,12 +180,18 @@ export function TerasSelectControl<Value extends string>({
         viewportPadding,
         Math.min(rect.left, window.innerWidth - width - viewportPadding),
       );
-      const top = rect.bottom + 6;
+      const gap = 6;
+      const below = Math.max(0, window.innerHeight - viewportPadding - rect.bottom - gap);
+      const above = Math.max(0, rect.top - gap - viewportPadding);
+      const heightCap = 22 * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const desiredHeight = Math.min(heightCap, (menuRef.current?.scrollHeight ?? heightCap) + 2);
+      const opensAbove = below < desiredHeight && above > below;
 
       setMenuStyle({
+        bottom: opensAbove ? window.innerHeight - rect.top + gap : undefined,
         left,
-        maxHeight: `min(22rem, calc(100vh - ${Math.ceil(top)}px - 1rem))`,
-        top,
+        maxHeight: Math.min(heightCap, opensAbove ? above : below),
+        top: opensAbove ? undefined : rect.bottom + gap,
         width,
       });
     };
@@ -265,7 +271,7 @@ export function TerasSelectControl<Value extends string>({
         id={menuId}
         ref={menuRef}
         role="listbox"
-        style={menuPlacement === "portal" ? menuStyle ?? undefined : undefined}
+        style={menuPlacement === "portal" ? menuStyle ?? { visibility: "hidden" } : undefined}
       >
         {options.map((option, index) => (
           <button
@@ -311,7 +317,7 @@ export function TerasSelectControl<Value extends string>({
       </button>
       {menuPlacement === "inline"
         ? menu
-        : menu && menuStyle && portalHost
+        : menu && portalHost
           ? createPortal(menu, portalHost)
           : null}
     </div>
