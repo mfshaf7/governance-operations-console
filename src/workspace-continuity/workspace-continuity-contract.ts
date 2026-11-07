@@ -442,3 +442,5 @@ function exact(value: unknown, expected: unknown, label: string) {
 function invalid(message: string): never {
   throw new WorkspaceContinuityContractError(message);
 }
+
+export {parseProduct as assertWorkspaceContinuityProduct};

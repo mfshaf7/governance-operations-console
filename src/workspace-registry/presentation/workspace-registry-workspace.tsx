@@ -1,4 +1,5 @@
 "use client";
+import {useRegisterPageSize} from "../../console-integration/registers/use-register-page-size.ts";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ConsoleEntryIntent } from "../../console-architecture";
@@ -44,6 +45,7 @@ export function WorkspaceRegistryWorkspace({
 }) {
   const runtime = useWorkspaceRegistryLiveRuntime();
   const continuity = useWorkspaceContinuityRuntime();
+  const {pageSize}=useRegisterPageSize("Workspace Registry");
   const [view, setView] = useState<RegistryView>("registry");
   const [query, setQuery] = useState("");
   const [pageHistory, setPageHistory] = useState<readonly (string | null)[]>([null]);
@@ -113,6 +115,7 @@ export function WorkspaceRegistryWorkspace({
   const retained = Boolean(snapshot && !currentSnapshot);
   const availabilityError = reconciliation.error ?? continuity.error?.message ?? runtime.error?.message ?? null;
   const scope = view === "registry" ? "inventory" : "eligible";
+  useEffect(()=>setPageHistory([null]),[pageSize]);
   const instancePage = snapshot?.workflow_id === "workspace-registry-view" ? snapshot.instance_page : null;
   const selectionCurrent = !instancePage || instancePage.selection.scope === scope && instancePage.selection.query === query.trim().toLowerCase() && instancePage.after === after;
   const owners = useMemo(
@@ -121,7 +124,7 @@ export function WorkspaceRegistryWorkspace({
   );
 
   const refresh = useCallback((): Promise<boolean> => {
-    const key = JSON.stringify([scope, query.trim().toLowerCase(), after]);
+    const key = JSON.stringify([scope, query.trim().toLowerCase(), after,pageSize]);
     if (refreshInFlight.current) return refreshInFlight.current.key === key ? refreshInFlight.current.promise : refreshInFlight.current.promise.then(() => refresh());
     setRefreshing(true);
     const request = (async () => {
@@ -134,7 +137,7 @@ export function WorkspaceRegistryWorkspace({
     })();
     refreshInFlight.current = { key, promise: request };
     return request;
-  }, [continuity.load, runtime.load, scope, query, after]);
+  }, [continuity.load, runtime.load, scope, query, after,pageSize]);
 
   useEffect(() => {
     if (intakeOpen || promotionTarget || lifecycleRecord) return;
@@ -193,7 +196,7 @@ export function WorkspaceRegistryWorkspace({
               <TerasSurfaceNavButton
                 current={view === "registry"}
                 kicker="01"
-                meta={snapshot ? `${snapshot.records.length}${instancePage ? " shown" : ""}` : "—"}
+                meta={snapshot ? `${snapshot.records.length}${instancePage ? " loaded" : ""}` : "—"}
                 onClick={() => { setView("registry"); setPageHistory([null]); }}
                 title="Registry"
                 tone="ok"
@@ -201,7 +204,7 @@ export function WorkspaceRegistryWorkspace({
               <TerasSurfaceNavButton
                 current={view === "eligible"}
                 kicker="02"
-                meta={snapshot ? `${snapshot.eligible_promotions.length}${instancePage ? " shown" : ""}` : "—"}
+                meta={snapshot ? `${snapshot.eligible_promotions.length}${instancePage ? " loaded" : ""}` : "—"}
                 onClick={() => { setView("eligible"); setPageHistory([null]); }}
                 title="Eligible"
                 tone="warn"
@@ -212,9 +215,9 @@ export function WorkspaceRegistryWorkspace({
             <TerasSurfaceSummaryHeader
               ariaLabel="Workspace Registry summary"
               metrics={[
-                { id: "records", label: instancePage ? "Records shown" : "Records", value: snapshot ? String(snapshot.records.length) : "—" },
-                { id: "eligible", label: instancePage ? "Eligible shown" : "Eligible", tone: "warn", value: snapshot ? String(snapshot.eligible_promotions.length) : "—" },
-                { id: "owners", label: instancePage ? "Repositories shown" : "Responsible repositories", value: snapshot ? String(owners) : "—" },
+                { id: "records", label: "Records", value: snapshot ? String(snapshot.records.length) : "—" },
+                { id: "eligible", label: "Eligible", tone: "warn", value: snapshot ? String(snapshot.eligible_promotions.length) : "—" },
+                { id: "owners", label: "Repositories", value: snapshot ? String(owners) : "—" },
               ]}
               statuses={[
                 {

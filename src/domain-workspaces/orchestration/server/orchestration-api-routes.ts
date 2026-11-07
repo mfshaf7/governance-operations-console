@@ -1,11 +1,14 @@
+import {readOrchestrationRunRegister} from "./orchestration-register-query.ts";
 import { NextRequest, NextResponse } from "next/server";
 import { consoleOosModeSelected } from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { controlOrchestrationRun, OrchestrationOosError, readOrchestrationWorkspace } from "./orchestration-oos-client.ts";
 
 const noStoreHeaders = { "Cache-Control": "no-store" };
-export async function readOrchestrationWorkspaceRoute() {
+export async function readOrchestrationWorkspaceRoute(request:NextRequest) {
   if (!consoleOosModeSelected()) return NextResponse.json({ definitions: [], error: null, mode: "disconnected-preview", observedAt: new Date().toISOString(), runs: [], status: "current" }, { headers: noStoreHeaders });
-  try { return NextResponse.json({ ...(await readOrchestrationWorkspace()), error: null, mode: "live", observedAt: new Date().toISOString(), status: "current" }, { headers: noStoreHeaders }); }
+  try {
+    if(request?.nextUrl.searchParams.get("view")==="register")return NextResponse.json(await readOrchestrationRunRegister(request.nextUrl.searchParams,{},request.signal),{headers:noStoreHeaders});
+    return NextResponse.json({ ...(await readOrchestrationWorkspace()), error: null, mode: "live", observedAt: new Date().toISOString(), status: "current" }, { headers: noStoreHeaders }); }
   catch (error) { return errorResponse(error); }
 }
 export async function controlOrchestrationRunRoute(request: NextRequest, runId: string) {

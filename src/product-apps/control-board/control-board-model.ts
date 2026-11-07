@@ -35,6 +35,7 @@ export type ControlBoardPackage = {
   posture: ControlBoardPackagePosture;
   progress: ControlBoardPackageProgress | null;
   sourceRef: string;
+  sourceLabel?: string;
   tone: TerasTone;
 };
 

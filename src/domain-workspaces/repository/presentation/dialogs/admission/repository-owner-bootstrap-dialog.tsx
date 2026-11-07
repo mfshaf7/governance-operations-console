@@ -1,6 +1,8 @@
 "use client";
+import {readRegisterWindow} from '../../../../../console-integration/registers/read-register-window.ts';
+import {useRegisterPageSize} from '../../../../../console-integration/registers/use-register-page-size.ts';
 import { useEffect, useRef, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasContentTray, TerasDraftCloseGuardDialog, TerasFieldStack, TerasList, TerasMetadataList, TerasModalShell, TerasNoteField, TerasSelectField, TerasSignalItem, TerasTechnicalDetails, TerasTextField, TerasLoadingState } from "@/teras";
+import { TerasRegisterPagination, TerasActionButton, TerasActionRow, TerasContentTray, TerasDraftCloseGuardDialog, TerasFieldStack, TerasList, TerasMetadataList, TerasModalShell, TerasNoteField, TerasSelectField, TerasSignalItem, TerasTechnicalDetails, TerasTextField, TerasLoadingState } from "@/teras";
 import { SourceAuthorizationPanel } from "../../../../../environment-lifecycle/presentation/source-authorization-panel.tsx";
 import type { OwnerBootstrapSummary } from "../../../live-runtime/repository-bootstrap-contract.ts";
 
@@ -12,12 +14,12 @@ const base = "/api/repository-owner-bootstrap", options = (values: string[]) => 
 class RepositorySetupError extends Error {
   constructor(message: string, readonly retryable: boolean, readonly outcomeUnknown = false) { super(message); }
 }
-async function api(path: string, input?: unknown): Promise<unknown> {
+async function api(path: string, input?: unknown,signal?:AbortSignal): Promise<unknown> {
   const write = input !== undefined;
   try {
     // Allow the owner's 12s read / 120s command budget plus transport time.
     // Ending the browser wait does not cancel an accepted owner operation.
-    const response = await fetch(path, { cache: "no-store", signal: AbortSignal.timeout(write ? 135_000 : 15_000), ...(write ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) } : {}) });
+    const response = await fetch(path, { cache: "no-store", signal: signal ? AbortSignal.any([signal,AbortSignal.timeout(write ? 135_000 : 15_000)]) : AbortSignal.timeout(write ? 135_000 : 15_000), ...(write ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) } : {}) });
     const body = await response.json();
     if (!response.ok || body.mode !== "live" || body.error) throw new RepositorySetupError(body.error ?? "Repository setup is unavailable.", response.status >= 500 || [408, 429].includes(response.status), write && (response.status >= 500 || [408, 429].includes(response.status)));
     return body.projection;
@@ -43,6 +45,11 @@ const actionFeedback: Record<string, [string, string]> = {
   "cancel-unapplied": ["Withdrawing the unapplied request…", "Withdrawal status updated."],
 };
 export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, operation = "bootstrap", returnLabel = "Back to Repository", onClose }: { ownerRepo: string; custodyRequestId: string; operation?: "bootstrap" | "configure-verification"; returnLabel?: string; onClose: () => void }) {
+  type HistoryPosition={cursor:string|null;offset:number};
+  const {pageSize}=useRegisterPageSize("Repository setup requests");
+  const lastPageSize=useRef(pageSize);
+  const [history,setHistory]=useState<{position:HistoryPosition;previous:HistoryPosition[];nextCursor:string|null;pagingAvailable:boolean}>({position:{cursor:null,offset:0},previous:[],nextCursor:null,pagingAvailable:false});
+  const [historyError,setHistoryError]=useState<string|null>(null);
   const [records, setRecords] = useState<OwnerBootstrapSummary[] | null>(null), [current, setCurrent] = useState<OwnerBootstrapSummary | null>(null);
   const [retryable, setRetryable] = useState(false);
   const [pendingAction, setPendingAction] = useState("load"), [notice, setNotice] = useState<string | null>(null), [needsRefresh, setNeedsRefresh] = useState(false);
@@ -65,10 +72,20 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, op
     catch (error) { if (mounted.current) { setError(error instanceof Error ? error.message : "Repository setup is unavailable."); setRetryable(error instanceof RepositorySetupError && error.retryable); if (error instanceof RepositorySetupError && error.outcomeUnknown) setNeedsRefresh(true); } }
     finally { lock.current = false; if (mounted.current) setPending(false); }
   }
-  async function refresh() {
-    const page = await api(`${base}/requests?owner_repo=${encodeURIComponent(ownerRepo)}`) as { records: OwnerBootstrapSummary[]; pendingRequest: OwnerBootstrapSummary | null };
+  async function refresh(target:HistoryPosition={cursor:null,offset:0},previous:HistoryPosition[] = []) {
+    setHistoryError(null);
+    let page:{records:OwnerBootstrapSummary[];pendingRequest:OwnerBootstrapSummary|null;nextCursor?:string|null;historyPagingAvailable?:boolean};
+    try {
+      let metadata:typeof page|null=null;const signal=AbortSignal.timeout(15000);
+      const window=await readRegisterWindow({cursor:target.cursor,pageSize,scope:ownerRepo,signal,identity:(row:OwnerBootstrapSummary)=>row.requestId,readPage:async cursor=>{
+        const next=await api(`${base}/requests?${new URLSearchParams({owner_repo:ownerRepo,...(cursor?{cursor}:{})})}`,undefined,signal) as typeof page;
+        metadata=next;return {rows:next.records,nextCursor:next.nextCursor??null};
+      }});
+      page={...metadata!,records:window.rows,nextCursor:window.nextCursor};
+    }
+    catch(error){if(mounted.current)setHistoryError(error instanceof Error?error.message:"Request history unavailable.");throw error;}
     if (!mounted.current) return;
-    setRecords(page.records); setPendingOwner(page.pendingRequest?.requestId ?? null);
+    setRecords(page.records);setHistory({position:target,previous,nextCursor:page.nextCursor ?? null,pagingAvailable:page.historyPagingAvailable===true}); setPendingOwner(page.pendingRequest?.requestId ?? null);
     if (!current && page.pendingRequest) setCurrent(await api(`${base}/requests/${encodeURIComponent(page.pendingRequest.requestId)}`) as OwnerBootstrapSummary);
     else if (current) setCurrent(await api(`${base}/requests/${encodeURIComponent(current.requestId)}`) as OwnerBootstrapSummary);
     return page;
@@ -78,6 +95,7 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, op
     if (active && page && !page.pendingRequest && !current && !existingProfile) await inspectCurrent();
   }
   useEffect(() => { mounted.current = true; void run("load", reload); return () => { mounted.current = false; }; }, [ownerRepo, custodyRequestId]); // owner-scoped modal; durable truth is OOS.
+  useEffect(()=>{if(!pending&&lastPageSize.current!==pageSize){lastPageSize.current=pageSize;void run("load",()=>refresh());}},[pageSize,pending]);
   function invalidate() { setEdited(true); setPrepared(null); setWorkflowApproved(false); acceptedCreate.current = null; }
   function updateCheck(index: number, field: keyof Check, value: string) { invalidate(); setChecks(values => values.map((item, at) => at === index ? { ...item, [field]: value } : item)); }
   function inspection() {
@@ -230,7 +248,12 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, op
       </> : null}
       {files.map(file => <TerasNoteField key={file.path} label={`Proposed file: ${file.path}`} readOnly value={file.content} onValueChange={() => undefined} minimumHeight="medium" />)}
       <TerasContentTray kicker="Previous requests" description={records === null ? pending ? "Loading previous requests…" : "Previous requests could not be loaded." : records.length ? "Open an earlier setup or verification request to inspect its status or continue unfinished work." : "No previous setup or verification requests."}
-        actions={<TerasActionButton disabled={pending} emphasis="secondary" onClick={() => void run("load", refresh)}>Refresh requests</TerasActionButton>}>
+        actions={<TerasActionButton disabled={pending} emphasis="secondary" onClick={() => void run("load", () => refresh())}>Refresh requests</TerasActionButton>}>
+        <TerasRegisterPagination label="Repository setup requests" disabled={blocked} offset={history.position.offset} count={records?.length ?? 0} page={history.previous.length+1}
+          pending={pending} unavailable={Boolean(historyError)} hasPrevious={!blocked && history.previous.length>0} hasNext={!blocked && Boolean(history.nextCursor)}
+          onPrevious={()=>{const prior=history.previous.at(-1);if(prior)void run("load",()=>refresh(prior,history.previous.slice(0,-1)));}}
+          onNext={()=>{if(history.nextCursor)void run("load",()=>refresh({cursor:history.nextCursor,offset:history.position.offset+(records?.length ?? 0)},[...history.previous,history.position]));}} />
+        {records && !history.pagingAvailable ? <TerasContentTray kicker="Recent requests" description="Older request history is unavailable from this source." /> : null}
         {records?.length ? <TerasList frame="contained" scrollHeight="short">
           {records.map(record => <TerasSignalItem key={record.requestId} label={requestType(record)} title={requestState(record)} detail={`Updated ${new Date(record.revision).toLocaleString()}`}
             {...(blocked ? { statusLabel: pending ? "Reading" : "Check original request first" } : { actionLabel: "Open request", ariaLabel: `Open ${requestType(record).toLowerCase()} request ${record.requestId}`, onSelect: () => void run("load", async () => { setCurrent(await api(`${base}/requests/${encodeURIComponent(record.requestId)}`) as OwnerBootstrapSummary); setDraft(null); setSourceIntent(null); }) })}

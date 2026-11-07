@@ -86,8 +86,12 @@ A no-repository decision does not project a fabricated repository-request refere
    and status/source filters apply across the source backlog through continuation,
    not just the visible page. A sparse search can return no matches and a
    **Continue search** action. It is a bounded scan, not an indexed search.
-2. **Previous** and **Next page** replace the visible register page. Overview
-   counts describe that page; the separate backlog count is the source total,
+2. **Previous** and **Next page** replace the visible register page.
+   Pagination stays in a separate fixed register footer, outside the scrolling
+   table, with the current page and shown row range. Row numbers continue from
+   the actual number of results on earlier pages, including sparse searches;
+   changing search/filters or refreshing the first page resets that sequence.
+   Overview counts describe that page; the separate backlog count is the source total,
    not a filtered-match total. Continuation is bound to the exact normalized
    search/filter selection. Changed source totals or continuation anchors require
    **Refresh first page** rather than silently combining an inconsistent list.
@@ -97,6 +101,7 @@ A no-repository decision does not project a fabricated repository-request refere
    cannot authorize a submission. Required moves can load an older selected record
    independently of the register page. Opening the Hub waits for verified details
    or offers **Retry details**. The current selection stays separate from page counts.
+
 4. Register and selected source refresh immediately on open and every 15 seconds
    while visible. A page in flight suppresses the timer refresh; obsolete selection
    responses cannot replace newer ones. Transient refresh failure retains the last
@@ -134,6 +139,32 @@ A no-repository decision does not project a fabricated repository-request refere
     human-reviewed merge, Studio readback and receipt, and the canonical
     Proposal acknowledgement. Incomplete or malformed success evidence fails
     closed without a local receipt.
+
+### Repository requests and whole-Console reads
+
+These collection consumers follow the existing summary-page continuation instead
+of treating the first 25 rows as the whole backlog. They verify selector scope,
+total, cursor progression and unique Proposal identities. The primary Console
+uses the same reader for attention and AI context; its proposal count therefore
+describes the collected backlog, while the Proposal overview remains page-scoped.
+
+The overview reader reuses the existing 80-second owner-read deadline and 2 MiB
+projection budget. Interrupted or over-budget reads expose partial coverage,
+unknown total attention and an explicit context warning. Authorization failures,
+changed totals and invalid continuations fail closed. These overview budgets are
+not repository or Proposal lifetime limits: normal Proposal pagination/search
+and exact original-record reads remain independent. Broader register-scale work
+must still replace whole-collection scans with suitable owner queries.
+
+Repository Requests derives completion from the current canonical repository
+gate as well as retained confirmation evidence. A resolved gate with a repository
+reference does not become a new repository requirement merely because its old
+confirmation receipt is absent. It remains inspectable under Resolved history,
+with the source decision and missing-receipt distinction explicit. No receipt or
+approval is fabricated. Opening a repository request lazily reads that original
+Proposal and history before confirmation becomes available. Explicit original
+references can be read independently of an incomplete collection; those selected
+records do not masquerade as complete global coverage.
 
 Runtime availability requires current exact composed Security acceptance and
 Platform commissioning; source/UI proof alone does not activate the path.
@@ -200,3 +231,5 @@ The preview browser suite uses isolated synthetic API responses for delayed,
 failed, denied and interrupted paths. It does not create real Proposals or assert
 live activation. Operator preview review precedes publication; exact composed
 runtime acceptance and authenticated live readback remain the publication gate.
+
+The accumulated preview register batch is documented in [Register navigation and coverage](register-navigation-and-coverage.md).

@@ -60,6 +60,12 @@ separate. Paging does not turn summaries into submission authority. Form text
 limits match the owner command contract and never truncate an existing draft.
 The preview requires operator visual review before publication.
 
+Proposal pagination uses a separate register footer with comfortable button
+height and spacing. The table owns its scroll area; navigation stays visible.
+Show the current page and displayed range, with row numbers continuing across
+pages of the current search. Sparse continuation pages count actual results,
+not an assumed full page size. Filtering and first-page refresh reset numbering.
+
 ### Proposal Studio incubation preview
 
 Post-baseline maintenance reuses Disposition's choice group, source panel,
@@ -86,6 +92,40 @@ and structural rules live in the normalized contract set:
 - [`teras-contract.md`](teras-contract.md)
 - [`domain-contracts/`](domain-contracts/README.md)
 - [`surface-contracts/`](surface-contracts/README.md)
+
+### Register pagination visual maintenance
+
+The shared footer keeps its compact range on the left and Rows per page 25/50/100
+beside Previous/Next on the right. Default 25 is consistent across registers and
+nested request histories; native transport chunk sizes remain separate. The size
+selector uses the existing portal select control and primitive-owned sizing,
+with wrapping at narrow footer widths. Size changes reset the first page and
+vertical table scroll, retaining filters, separate originals and review drafts.
+
+Model configuration registers and Orchestration Definitions retain their existing
+columns and page complete configuration snapshots using the shared footer.
+Repository Requests follows the native Proposal collection independently of its
+overview. Nested request histories reuse footer controls while preserving their
+native continuation, selected original, unsaved review and pending-request guards.
+
+Pagination reuses Proposal’s compact record metadata text for range, empty and
+pending labels. It must not inherit the page-body font size. Keep the existing
+register frame and comfortable footer spacing without an additional divider.
+Numeric summary cards retain their existing design; unavailable totals use an
+em dash with an explanation rather than long status phrases in the value slot.
+Repository and Prototype summaries retain their independent overview scope;
+register search and page navigation do not redefine their totals. Execution
+status and Family Map columns keep natural card heights with independent compact
+search fields beneath their headings. Counts retain the unfiltered total.
+Intake shows readable source and receipt labels, keeping exact references and
+read failures in technical disclosure. A compact notice preserves visibility of
+unverified source history without repeating large diagnostic cards above rows.
+Environment source headers and registers share a bounded main region; existing
+request and operation history remains reachable in the outer scroll region.
+
+Verify actual long descriptions, pending/empty/ready states and the full footer
+at the supported desktop viewport sizes. Successful paging actions and absence
+of JavaScript errors alone do not establish visual conformance.
 
 ## Visual Direction
 

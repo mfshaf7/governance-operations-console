@@ -265,3 +265,19 @@ test("internal project promotion preserves the existing review interface and sho
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
   await page.screenshot({ path: testInfo.outputPath("internal-registry-promoted.png"), fullPage: true });
 });
+
+test('Inventory request history keeps Previous/Next ranges, global pending protection and a failed-read retry',async({page})=>{
+ const h=await setup(page);let unavailable=false;const cursors=[];
+ await page.route('**/api/workspace-registry/lifecycle/requests?**',route=>{
+  if(unavailable)return route.fulfill({status:503,json:{error:'Synthetic request history unavailable'}});
+  const query=new URL(route.request().url()).searchParams,cursor=query.get('cursor'),offset=cursor?parseInt(cursor,16):0;cursors.push(offset);
+  const rows=Array.from({length:61},(_,i)=>({request_id:'workspace-inventory-lifecycle-request:history-'+i,status:'succeeded',revision:1,requested_at:'2026-11-01T00:00:00Z',updated_at:'2026-11-01T00:00:00Z',action:'update'}));
+  return route.fulfill({json:{schema_version:1,workflow_id:'workspace-inventory-lifecycle',target:{kind:record.kind,name:record.name,record_id:record.id},revision:1000,pending_request_count:1,canonical_mutation:false,updated_at:'2026-11-01T00:00:00Z',records:rows.slice(offset,offset+25),next_cursor:offset+25<rows.length?(offset+25).toString(16).padStart(64,'0'):null}});
+ });
+ await h.workspace.getByRole('button',{name:'Manage Lifecycle',exact:true}).click();const d=page.getByRole('dialog',{name:'Workspace Inventory Lifecycle',exact:true}),pager=d.getByRole('navigation',{name:'Inventory request history pages',exact:true});
+ await expect(pager.getByRole('status')).toHaveText('Showing 1–25 · Page 1');await expect(d).toContainText('1 pending. Open the original request');await pager.getByRole('button',{name:'Inventory request history rows per page',exact:true}).click();await page.getByRole('option',{name:'100',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 1–61 · Page 1');await pager.getByRole('button',{name:'Inventory request history rows per page',exact:true}).click();await page.getByRole('option',{name:'25',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 1–25 · Page 1');await expect(d.getByRole('button',{name:'Refresh record',exact:true})).toBeDisabled();
+ await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 26–50 · Page 2');await expect(d.getByRole('button',{name:'Refresh record',exact:true})).toBeDisabled();
+ await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 51–61 · Page 3');await pager.getByRole('button',{name:'Previous',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 26–50 · Page 2');
+ unavailable=true;await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Page unavailable');unavailable=false;await d.getByRole('button',{name:'Refresh original requests',exact:true}).click();await expect(pager.getByRole('status')).toHaveText('Showing 26–50 · Page 2');
+ expect(cursors).toContain(50);expect(cursors.filter(value=>value===25).length).toBeGreaterThan(1);expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
+});

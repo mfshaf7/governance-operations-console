@@ -1,4 +1,6 @@
 "use client";
+import {readRegisterWindow} from '../../console-integration/registers/read-register-window.ts';
+import {useRegisterPageSize} from '../../console-integration/registers/use-register-page-size.ts';
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -12,21 +14,37 @@ const reconcileAttempts = 10;
 const terminalStates = new Set(["blocked", "cancelled", "failed", "succeeded"]);
 
 export function usePlatformOperationsRuntime(workspace?:"dev-integration"|"governed-releases") {
+  const {pageSize}=useRegisterPageSize(workspace?"Platform operation history":"Primary platform observations");
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const scope=useRef(workspace);scope.current=workspace;
+  const [loading,setLoading]=useState(false);
+  const readScope=JSON.stringify([workspace,pageSize]),scope=useRef(readScope);scope.current=readScope;
+  const loadSequence=useRef(0);
   const pendingRequestIds = useRef(new Map<string, string>());
   const mounted = useRef(true);
   const reconciling = useRef(new Set<string>());
-  const load = useCallback(async () => {
+  const historyWindow=useCallback(async(cursor:string|null,first?:Record<string,unknown>)=>{
+    let metadata:ReturnType<typeof assertPlatformHistoryPage>=null;
+    const window=await readRegisterWindow({cursor,pageSize,scope:workspace??"all",identity:(row:PlatformOperationRecord)=>row.operation_id,readPage:async nativeCursor=>{
+      const body=nativeCursor===null&&first?first:record(await jsonRequest(`/api/environment-operations?${new URLSearchParams({...(workspace?{workspace}:{}),...(nativeCursor?{cursor:nativeCursor}:{})})}`));
+      if(body.status!=="current")throw Error("Operation history could not be read. Existing records are retained.");
+      const rows=assertPlatformOperationList({workflow_id:"platform-operation-list",operations:body.operations}),page=assertPlatformHistoryPage(body.historyPage,workspace);
+      if(metadata&&page&&(metadata.snapshot!==page.snapshot||metadata.total!==page.total))throw Error("Operation history changed. Refresh the first page.");metadata=page;
+      return {rows,nextCursor:page?.next_cursor??null};
+    }});
+    const page=metadata as ReturnType<typeof assertPlatformHistoryPage>;
+    return {operations:window.rows,historyPage:page?{...page,next_cursor:window.nextCursor}:null};
+  },[workspace,pageSize]);
+  const load = useCallback(async (resetHistory = false) => {
+    const sequence=++loadSequence.current;if(resetHistory)setLoading(true);
     try {
       const body = record(await jsonRequest(`/api/environment-operations${workspace ? `?workspace=${workspace}` : ""}`, { cache: "no-store" }));
-      if(scope.current!==workspace)return initialSnapshot;
+      if(scope.current!==readScope||sequence!==loadSequence.current)return initialSnapshot;
       if (body.mode === "disconnected-preview") {
         const next = { ...initialSnapshot, mode: "disconnected-preview" as const, observedAt: text(body.observedAt), status: "current" as const };
         setSnapshot(next);
         return next;
       }
-      const operations = assertPlatformOperationList({ workflow_id: "platform-operation-list", operations: body.operations });
+      let operations = assertPlatformOperationList({ workflow_id: "platform-operation-list", operations: body.operations });
       if (body.status === "partial") {
         const sourceError = record(body.error);
         const catalog = body.catalog === null ? null : assertPlatformOperationCatalog(body.catalog);
@@ -45,25 +63,28 @@ export function usePlatformOperationsRuntime(workspace?:"dev-integration"|"gover
         }));
         return next;
       }
+      const window=workspace?await historyWindow(null,body):null;
+      if(scope.current!==readScope||sequence!==loadSequence.current)return initialSnapshot;
+      if(window)operations=window.operations;
       const next: PlatformOperationsLiveSnapshot = {
         catalog: assertPlatformOperationCatalog(body.catalog),
         error: null,
         mode: "live",
         observedAt: text(body.observedAt),
         operations,
-        historyPage: assertPlatformHistoryPage(body.historyPage,workspace),
+        historyPage: window?window.historyPage:assertPlatformHistoryPage(body.historyPage,workspace),
         status: "current",
       };
-      setSnapshot(current=>({...next,operations:workspace ? [...operations,...current.operations.filter(old=>!operations.some(item=>item.operation_id===old.operation_id))] : operations,historyPage:workspace&&current.historyPage&&current.operations.length>operations.length ? {...next.historyPage!,next_cursor:current.historyPage.next_cursor} : next.historyPage}));
+      setSnapshot(current=>({...next,operations:workspace && !resetHistory ? [...operations,...current.operations.filter(old=>!operations.some(item=>item.operation_id===old.operation_id))] : operations,historyPage:workspace&&!resetHistory&&current.historyPage&&current.operations.length>operations.length ? {...next.historyPage!,next_cursor:current.historyPage.next_cursor} : next.historyPage}));
       return next;
     } catch (caught) {
-      if(scope.current!==workspace)return initialSnapshot;
+      if(scope.current!==readScope||sequence!==loadSequence.current)return initialSnapshot;
       const error = normalizeError(caught);
       const next: PlatformOperationsLiveSnapshot = { ...initialSnapshot, error, mode: "unavailable", observedAt: new Date().toISOString(), status: "offline" };
       setSnapshot((current) => ({ ...current, error, mode: "unavailable", observedAt: next.observedAt, status: "offline" }));
       return next;
-    }
-  }, [workspace]);
+    }finally{if(scope.current===readScope&&sequence===loadSequence.current)setLoading(false);}
+  }, [workspace,historyWindow]);
 
   useEffect(() => {
     mounted.current = true;
@@ -133,17 +154,17 @@ export function usePlatformOperationsRuntime(workspace?:"dev-integration"|"gover
   const read = useCallback(async (operationId: string) => {
     const operation = assertPlatformOperationRecord(await jsonRequest(`/api/environment-operations/${encodeURIComponent(operationId)}`, {cache: "no-store", method: "GET"}));
     if (operation.operation_id !== operationId) throw new Error("The owner returned a different operation.");
-    upsert(setSnapshot, operation);
+    setSnapshot(current=>({...current,operations:current.operations.map(row=>row.operation_id===operation.operation_id?operation:row)}));
     return operation;
   }, []);
   async function loadMore(){
     if(!workspace||!snapshot.historyPage?.next_cursor)return;
-    const body=record(await jsonRequest(`/api/environment-operations?${new URLSearchParams({workspace,cursor:snapshot.historyPage.next_cursor})}`));
-    if(body.status!=="current")throw new Error("Older history could not be read. Existing records are retained.");
-    const operations=assertPlatformOperationList({workflow_id:"platform-operation-list",operations:body.operations});
-    setSnapshot(current=>({...current,operations:[...current.operations,...operations.filter(item=>!current.operations.some(old=>old.operation_id===item.operation_id))],historyPage:assertPlatformHistoryPage(body.historyPage,workspace)}));
+    const window=await historyWindow(snapshot.historyPage.next_cursor);
+    if(scope.current!==readScope)return;
+    setSnapshot(current=>({...current,operations:[...current.operations,...window.operations.filter(item=>!current.operations.some(old=>old.operation_id===item.operation_id))],historyPage:window.historyPage}));
   }
-  return { control, load, loadMore, read, snapshot, submit };
+  useEffect(()=>{if(workspace)void load(true);},[pageSize]);
+  return { loading,control, load, loadMore, read, snapshot, submit, restartHistory:()=>load(true) };
 }
 
 function upsert(setSnapshot: React.Dispatch<React.SetStateAction<PlatformOperationsLiveSnapshot>>, operation: PlatformOperationRecord) {

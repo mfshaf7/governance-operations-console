@@ -31,11 +31,11 @@ const defaultFilters: PrototypeWorkspaceRecordFilters = {
 };
 
 export function usePrototypeControlState(
-  readModel: PrototypeWorkspaceReadModel,
+  readModel?: PrototypeWorkspaceReadModel,
 ) {
   const defaultSelectedRecordId =
-    readModel.records.find((record) => record.lifecycle !== "retired")?.id ??
-    readModel.records[0]?.id ??
+    readModel?.records.find((record) => record.lifecycle !== "retired")?.id ??
+    readModel?.records[0]?.id ??
     null;
   const [activeDialog, setActiveDialog] = useState<PrototypeDialogRoute | null>(
     null,

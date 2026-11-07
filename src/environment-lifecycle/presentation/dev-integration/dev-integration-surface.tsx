@@ -17,6 +17,8 @@ import {
   TerasRecordControlActionPanel,
   TerasRecordControlLayout,
   TerasRegisterPanel,
+  TerasRegisterPagination,
+  TerasLoadingState,
   TerasStatusPill,
   TerasTimeline,
   TerasTimelineItem,
@@ -345,6 +347,9 @@ export function DevIntegrationSurface({
         mode="register-selected"
         register={
           <TerasRegisterPanel
+            footer={live ? <TerasRegisterPagination label="Dev Integration profiles" offset={live.runtime.offset} count={profiles.length} total={live.runtime.projection?.page.total} page={Math.floor(live.runtime.offset/live.runtime.pageSize)+1}
+              pending={live.runtime.loading} unavailable={Boolean(live.runtime.error)} hasPrevious={live.runtime.offset>0} hasNext={live.runtime.current && live.runtime.projection?.page.next_offset!=null}
+              onReset={live.runtime.error?live.runtime.first:undefined} onPrevious={live.runtime.previous} onNext={()=>void live.runtime.next()} /> : undefined}
             description="Profile lifecycle and runtime observation remain separate."
             filterBar={
               <TerasFilterBar
@@ -406,11 +411,11 @@ export function DevIntegrationSurface({
               />
             }
             kicker="Dev Integration"
-            statusLabel={live ? `${profiles.length} of ${live.runtime.projection?.page.total ?? 0} loaded` : `${filteredProfiles.length}/${profiles.length} shown`}
+            statusLabel={live ? `${profiles.length} of ${live.runtime.projection?.page.total ?? 0} matching` : `${filteredProfiles.length}/${profiles.length} shown`}
             statusTone="info"
             title="Profile Register"
           >
-            {filteredProfiles.length > 0 ? (
+            {live?.runtime.loading ? <TerasLoadingState fill label="Loading matching profiles…" /> : filteredProfiles.length > 0 ? (
               <DevIntegrationRegisterTable
                 onInspect={(profile) =>
                   openProfileDashboard(profile.profileId)
@@ -426,7 +431,6 @@ export function DevIntegrationSurface({
                 No profiles match the current search and filters.
               </TerasEmptyState>
             )}
-            {live?.runtime.projection?.page.next_offset !== null && live ? <TerasActionButton emphasis="secondary" onClick={() => void live.runtime.load(true)}>Load more profiles</TerasActionButton> : null}
           </TerasRegisterPanel>
         }
         selected={

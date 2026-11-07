@@ -115,6 +115,7 @@ function deliveryPackageToControlBoardPackage({
       totalChildCount,
     },
     sourceRef: packageSummary.source_ref,
+    sourceLabel: `Epic ${packageSummary.legacy_epic_id}`,
     tone: packageProjection.tone,
   };
 }

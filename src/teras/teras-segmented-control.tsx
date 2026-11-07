@@ -7,7 +7,7 @@ import styles from "./teras-patterns.module.css";
 import { cx } from "./teras-utils";
 
 export type TerasSegmentedControlLayout = "fill" | "fit";
-export type TerasSegmentedControlSize = "default" | "large";
+export type TerasSegmentedControlSize = "compact" | "default" | "large";
 export type TerasSegmentedControlOption<T extends string> = Readonly<{
   label: ReactNode;
   value: T;

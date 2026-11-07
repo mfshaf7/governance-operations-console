@@ -267,3 +267,43 @@ function sendJson(response, value) {
   response.writeHead(200, { "Content-Type": "application/json" });
   response.end(JSON.stringify(value));
 }
+
+test("journal search reaches originals beyond the overview ceiling without fabricating source decisions", async () => {
+  const {readLifecycleTransitionJournal}=await import("../../src/lifecycle-transitions/server/lifecycle-transition-register-query.ts");
+  const requests=[];
+  const rows=Array.from({length:526},(_,index)=>ownerEnvelope(`retained-${index}`,index+1));
+  const fetchImpl=async(url,init)=>{
+    const parsed=new URL(url);requests.push(parsed);
+    assert.equal(init.headers["x-oos-caller-id"],"governance-operations-console");
+    if(parsed.pathname.includes("/lifecycle-transitions/"))return Response.json(rows.at(-1));
+    assert.equal(parsed.searchParams.get("limit"),"25");
+    assert.equal(parsed.searchParams.get("route_id"),"proposal-to-prototype");
+    assert.equal(parsed.searchParams.get("state"),"blocked");
+    const offset=Number(parsed.searchParams.get("cursor")?.split(":").at(-1)??0);
+    return Response.json({schema_version:1,transitions:rows.slice(offset,offset+25),next_cursor:offset+25<rows.length?`transition-list:${offset+25}`:null});
+  };
+  let cursor=null,result,windows=0;
+  do {
+    const query=new URLSearchParams({view:"journal",routeId:"proposal-to-prototype",state:"blocked",q:"retained-525",...(cursor?{cursor}:{})});
+    result=await readLifecycleTransitionJournal(query,{env:liveEnv("http://127.0.0.1:3000"),fetchImpl});
+    cursor=result.page.next_cursor;windows++;
+    if(windows===1){assert.equal(result.items.length,0);assert.ok(cursor);}
+    assert.ok(windows<10);
+  }while(cursor);
+  assert.equal(windows,6);
+  assert.equal(result.items.length,1);
+  assert.equal(result.items[0].transitionId,"lifecycle-transition:retained-525");
+  assert.equal(result.items[0].stateLabel,"Blocked");
+  assert.equal(result.items[0].posture.find(x=>x.label==="Validation").stateLabel,"Blocked");
+  assert.equal(result.page.total,null);
+  const original=await readLifecycleTransitionJournal(new URLSearchParams({view:"journal",routeId:"proposal-to-prototype",id:"lifecycle-transition:retained-525"}),{env:liveEnv("http://127.0.0.1:3000"),fetchImpl});
+  assert.equal(original.items[0].transitionId,result.items[0].transitionId);
+  assert.match(requests.at(-1).pathname,/lifecycle-transition%3Aretained-525$/);
+});
+
+test("journal owner denial and a foreign filtered route never become an empty successful register", async () => {
+  const {readLifecycleTransitionJournal}=await import("../../src/lifecycle-transitions/server/lifecycle-transition-register-query.ts");
+  const query=new URLSearchParams({view:"journal",routeId:"proposal-to-delivery"});
+  await assert.rejects(readLifecycleTransitionJournal(query,{env:liveEnv("http://127.0.0.1:3000"),fetchImpl:async()=>Response.json({error:"Forbidden",code:"caller_denied"},{status:403})}),error=>error.status===403);
+  await assert.rejects(readLifecycleTransitionJournal(query,{env:liveEnv("http://127.0.0.1:3000"),fetchImpl:async()=>Response.json({schema_version:1,transitions:[ownerEnvelope()],next_cursor:null})}),/different route/i);
+});

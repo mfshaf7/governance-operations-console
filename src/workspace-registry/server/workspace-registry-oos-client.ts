@@ -59,7 +59,7 @@ type RequestOptions = Readonly<{
   config?: WorkspaceRegistryOosConfig;
   fetchImpl?: typeof fetch;
   now?: () => Date;
-  selection?: Partial<InstanceRegistrySelection> & Readonly<{ after?: string | null }>;
+  selection?: Partial<InstanceRegistrySelection> & Readonly<{ after?: string | null;limit?:25|50|100 }>;
 }>;
 
 export class WorkspaceRegistryOosError extends Error {
@@ -120,6 +120,7 @@ export async function readWorkspaceRegistry(
 ): Promise<WorkspaceRegistrySnapshot> {
   const query = new URLSearchParams({ scope: options.selection?.scope ?? "inventory", query: options.selection?.query ?? "" });
   if (options.selection?.after) query.set("after", options.selection.after);
+  if(options.selection?.limit&&options.selection.limit!==25)query.set("limit",String(options.selection.limit));
   const [legacy, body] = await Promise.all([
     readLegacyWorkspaceRegistry(options),
     request(`/v1/workspace-inventory/instance-records?${query}`, { method: "GET" }, options, {
@@ -131,6 +132,7 @@ export async function readWorkspaceRegistry(
       Object.keys(body).sort().join(",") === "mode,projected_at,schema_version" && typeof body.projected_at === "string" && !Number.isNaN(Date.parse(body.projected_at))) return legacy;
   try {
     const page = assertInstanceRegistryPage(body, { record: assertWorkspaceRegistryRecord, candidate: assertWorkspaceRegistryCandidate }, contractError);
+    if(page.records.length+page.eligible_promotions.length>(options.selection?.limit??25))throw contractError("Internal Registry exceeded the requested page size.");
     const { projection_digest, ...content } = page;
     if (canonicalDigest(content) !== projection_digest || page.selection.scope !== query.get("scope") || page.selection.query !== query.get("query")?.trim().toLowerCase() || page.after !== (options.selection?.after ?? null)) throw contractError("Internal Registry page changed its exact selection or content binding.");
     for (const candidate of page.eligible_promotions) {

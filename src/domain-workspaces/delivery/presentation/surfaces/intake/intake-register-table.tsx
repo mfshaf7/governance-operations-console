@@ -12,11 +12,13 @@ import {
 import { intakeActionLabel } from "./intake-view-model.ts";
 
 export function DeliveryIntakeRegisterTable({
+  rowOffset = 0,
   onAction,
   onSelect,
   selectedSourceId,
   sources,
 }: {
+  rowOffset?: number;
   onAction: (source: DeliveryIntakeSource) => void;
   onSelect: (source: DeliveryIntakeSource) => void;
   selectedSourceId: string | null;
@@ -27,7 +29,7 @@ export function DeliveryIntakeRegisterTable({
       header: "No.",
       intent: "index",
       key: "index",
-      render: (_source, index) => String(index + 1).padStart(2, "0"),
+      render: (_source, index) => String(rowOffset + index + 1).padStart(2, "0"),
     },
     {
       header: "Accepted Source",
@@ -35,7 +37,7 @@ export function DeliveryIntakeRegisterTable({
       key: "source",
       render: (source) => (
         <TerasRecordCellText
-          description={`${source.source_ref} / ${source.owner}`}
+          description={`${source.source_kind === "prototype" ? "Prototype" : "Proposal"} · ${source.owner}`}
           title={source.title}
         />
       ),
@@ -46,7 +48,7 @@ export function DeliveryIntakeRegisterTable({
       key: "evidence",
       render: (source) => (
         <TerasRecordMetaText>
-          {source.evidence_refs.slice(0, 2).join(" / ")}
+          {source.intake_status === "consumed" && source.evidence_refs.length ? "Receipt recorded" : source.evidence_refs.length ? "Supporting records" : "Not recorded"}
         </TerasRecordMetaText>
       ),
     },

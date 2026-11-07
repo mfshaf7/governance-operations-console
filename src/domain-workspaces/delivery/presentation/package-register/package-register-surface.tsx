@@ -1,5 +1,6 @@
 "use client";
 
+import {useDeliveryRegisterPage} from "../../live-runtime/use-delivery-register-page.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
@@ -12,6 +13,9 @@ import {
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
+  TerasRegisterPagination,
+  TerasLoadingState,
+  TerasActionButton,
 } from "@/teras";
 import { packageActionForSurface } from "../workflows/shared/package-actions/package-action-routing.ts";
 import { loadWorkDesignSessionDraft } from "../../local-runtime/index.ts";
@@ -21,7 +25,7 @@ import type {
   DeliverySurfaceConfig,
   DeliverySurfaceId,
 } from "../workspace/workspace-types.ts";
-import { getDeliveryPackageRegisterPackages } from "./package-register-data.ts";
+import { projectDeliveryPackageRegisterPackage, getDeliveryPackageRegisterPackages } from "./package-register-data.ts";
 import {
   deliveryWorkflowPhaseLabel,
   deliveryPackageRegisterPackageStepLabel,
@@ -65,22 +69,24 @@ export function DeliveryPackageRegisterSurface({
   >("all");
   const [packageSearch, setPackageSearch] = useState("");
   const [registerRevision, setRegisterRevision] = useState(0);
+  const live=model.source_truth==="OpenProject-backed OOS";
+  const page=useDeliveryRegisterPage({surface:surface.id,scope:model.history_scope??"current",query:packageSearch.trim().toLowerCase(),status:packagePostureFilter},live,focusPackageId);
+  const registerModel=useMemo(()=>{
+    const base=live?page.model??{...model,packages:[],selected_packages:[],art_tree:{...model.art_tree,roots:[]}}:model;
+    const exact=page.original;
+    return exact?{...base,packages:[...base.packages,...exact.packages],selected_packages:[...base.selected_packages,...exact.selected_packages],art_tree:{...base.art_tree,roots:[...base.art_tree.roots,...exact.art_tree.roots]}}:base;
+  },[live,model,page.model,page.original]);
   const handledFocusTokenRef = useRef<number | null>(null);
   const packages: DeliveryPackageRegisterPackage[] = useMemo(() => {
     return getDeliveryPackageRegisterPackages({
-      model,
+      model:registerModel,
       surface,
       workDesignSessionForPackage: loadWorkDesignSessionDraft,
     });
-  }, [model, surface, registerRevision]);
-  const packagePostureOptions: Array<
-    DeliveryPackageRegisterStatusLabel | "all"
-  > = [
-    "all",
-    ...Array.from(new Set(packages.map(deliveryPackageRegisterStatusLabel))),
-  ];
+  }, [registerModel, surface, registerRevision]);
+  const packagePostureOptions: Array<DeliveryPackageRegisterStatusLabel|"all">=live?["all","New","Ready","In Progress","Blocked","Done","Deferred","Retired","Closeout Pending"]:["all",...Array.from(new Set(packages.map(deliveryPackageRegisterStatusLabel)))];
   const normalizedPackageSearch = packageSearch.trim().toLowerCase();
-  const filteredPackages = packages.filter((deliveryPackage) => {
+  const filteredPackages = live ? packages.filter(row=>page.model?.packages.some(source=>source.delivery_package_id===row.delivery_package_id)) : packages.filter((deliveryPackage) => {
     const matchesPosture =
       packagePostureFilter === "all" ||
       deliveryPackageRegisterStatusLabel(deliveryPackage) ===
@@ -128,8 +134,11 @@ export function DeliveryPackageRegisterSurface({
     defaultSelectedPackage ??
     packages[0] ??
     null;
-  const packageActionSummary = selectedPackage
-    ? packageActionForSurface(surface, selectedPackage)
+  const focusedOriginal=page.original?.packages[0];
+  const selectedOriginal=focusedOriginal&&selectedPackageId===focusedOriginal.delivery_package_id?projectDeliveryPackageRegisterPackage(surface,focusedOriginal,model.history_scope==="history"?null:loadWorkDesignSessionDraft(focusedOriginal.delivery_package_id)):null;
+  const displayedPackage=selectedOriginal??selectedPackage;
+  const packageActionSummary = displayedPackage
+    ? packageActionForSurface(surface, displayedPackage)
     : null;
 
   useEffect(() => {
@@ -144,9 +153,8 @@ export function DeliveryPackageRegisterSurface({
       !focusToken ||
       handledFocusTokenRef.current === focusToken ||
       !packages.some(
-        (deliveryPackage) =>
-          deliveryPackage.delivery_package_id === focusPackageId,
-      )
+        (deliveryPackage) => deliveryPackage.delivery_package_id === focusPackageId,
+      ) && page.original?.packages[0]?.delivery_package_id!==focusPackageId
     ) {
       return;
     }
@@ -155,7 +163,7 @@ export function DeliveryPackageRegisterSurface({
     setPackagePostureFilter("all");
     setPackageSearch("");
     setSelectedPackageId(focusPackageId);
-  }, [focusPackageId, focusToken, packages]);
+  }, [focusPackageId, focusToken, packages,page.original]);
 
   return (
     <>
@@ -165,6 +173,8 @@ export function DeliveryPackageRegisterSurface({
         mode="register-selected"
         register={
           <TerasRegisterPanel
+            footer={live?<TerasRegisterPagination label={`${surface.title} packages`} preferenceKey={"Delivery packages:"+surface.id} offset={page.offset} count={filteredPackages.length} page={page.pageNumber} pending={page.loading} unavailable={Boolean(page.error)}
+              hasPrevious={page.hasPrevious} hasNext={Boolean(page.nextCursor)} onReset={page.error&&page.hasPrevious?page.first:undefined} onPrevious={page.previous} onNext={page.next} nextLabel={filteredPackages.length?"Next page":"Continue search"}/>:undefined}
             description={model.history_scope === "history" ? "All retained packages. Inspect the full workflow without editing, applying or restarting work." : "Filter projected packages, then select a row to inspect the current context."}
             filterBar={
               <TerasFilterBar
@@ -176,10 +186,10 @@ export function DeliveryPackageRegisterSurface({
                 }}
                 filters={[
                   {
-                    label: `Filter ${surface.title} status`,
+                    label: live?"Filter project status":`Filter ${surface.title} status`,
                     onValueChange: setPackagePostureFilter,
                     options: packagePostureOptions.map((posture) => ({
-                      label: posture === "all" ? "All status" : posture,
+                      label: posture === "all" ? live?"All project statuses":"All status" : posture,
                       value: posture,
                     })),
                     value: packagePostureFilter,
@@ -188,11 +198,11 @@ export function DeliveryPackageRegisterSurface({
               />
             }
             kicker={surface.title}
-            statusLabel={`${filteredPackages.length}/${packages.length} shown`}
+            statusLabel={live?`${filteredPackages.length} on this page`:`${filteredPackages.length}/${packages.length} shown`}
             statusTone="warn"
             title={`${surface.title} Register`}
           >
-            {filteredPackages.length > 0 ? (
+            {live&&page.loading?<TerasLoadingState fill label="Loading matching packages…"/>:live&&page.error?<TerasEmptyState fill><p role="alert">{page.error}</p><TerasActionButton emphasis="secondary" onClick={()=>void page.refresh()}>Retry package search</TerasActionButton></TerasEmptyState>:filteredPackages.length > 0 ? (
               <DeliveryPackageRegisterTable
                 onSelectPackage={(deliveryPackage) =>
                   setSelectedPackageId(deliveryPackage.delivery_package_id)
@@ -200,12 +210,13 @@ export function DeliveryPackageRegisterSurface({
                 onViewPackage={(deliveryPackage) =>
                   setSelectedPackageId(deliveryPackage.delivery_package_id)
                 }
+                rowOffset={live?page.offset:0}
                 packages={filteredPackages}
                 selectedPackageId={selectedPackage?.delivery_package_id ?? null}
               />
             ) : (
               <TerasEmptyState fill>
-                No projected package matches the current filters.
+                {live&&page.nextCursor?"No matches in this search window. Continue search to check remaining packages.":"No projected package matches the current filters."}
               </TerasEmptyState>
             )}
           </TerasRegisterPanel>
@@ -213,7 +224,7 @@ export function DeliveryPackageRegisterSurface({
         selected={
           <DeliveryPackageRegisterSelectedPanel
             action={packageActionSummary}
-            deliveryPackage={selectedPackage}
+            deliveryPackage={displayedPackage}
             onOpenAction={(deliveryPackage) => {
               if (!packageActionSummary) {
                 return;
@@ -231,10 +242,11 @@ export function DeliveryPackageRegisterSurface({
       />
 
       <DeliveryPackageWorkflowRouter
-        model={model}
+        model={registerModel}
         onCloseRefinement={() => {
           setPackageAction(null);
           setRegisterRevision((revision) => revision + 1);
+          if(live)void page.refresh();
         }}
         onCloseWorkDesign={() => {
           setPackageAction(null);
@@ -242,6 +254,7 @@ export function DeliveryPackageRegisterSurface({
         onOpenRefinementPackage={onRequestPackageRegisterFocus}
         onRefreshRegister={() => {
           setRegisterRevision((revision) => revision + 1);
+          if(live)void page.refresh();
         }}
         onWorkDesignApplied={onWorkDesignApplied}
         packageAction={packageAction}

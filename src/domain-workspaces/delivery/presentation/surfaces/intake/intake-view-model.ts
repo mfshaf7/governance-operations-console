@@ -29,7 +29,7 @@ export function intakeActionLabel(source: DeliveryIntakeSource) {
     case "consume_failed":
       return "Repair";
     case "consumed":
-      return "View Summary";
+      return "View history";
     case "needs_consume":
       return "Consume";
   }
@@ -40,7 +40,7 @@ export function intakeActionTitle(source: DeliveryIntakeSource) {
     case "consume_failed":
       return "Repair or retry the failed consume attempt.";
     case "consumed":
-      return "Review consumed handoff.";
+      return "Review transfer to Delivery.";
     case "needs_consume":
       return "Create one Delivery shell.";
   }
@@ -54,23 +54,23 @@ export function intakeSelectedSourceFacts(
   }
 
   return [
-    { label: "Source Ref", value: source.source_ref },
-    { label: "Source workspace", value: source.owner },
+    { label: "Source", value: source.source_kind === "prototype" ? "Prototype" : "Proposal" },
+    { label: "Repository", value: source.owner },
     {
-      label: "Source Custody",
+      label: "Repository setup",
       value: intakeSourceCustodyClassLabel(
         source.source_custody.classification,
       ),
     },
     {
-      label: "Repo Gate",
+      label: "Repository check",
       value: intakeSourceCustodyGateLabel(
         source.source_custody.repository_gate_state,
       ),
     },
     {
-      label: "Delivery Ref",
-      value: source.delivery_package_id ?? "Not created",
+      label: "Delivery item",
+      value: source.delivery_package_id?.startsWith("delivery-") ? `#${source.delivery_package_id.slice(9)}` : source.delivery_package_id ?? "Not created",
     },
   ];
 }
@@ -81,7 +81,7 @@ export function intakeSelectedSourceProjection(
   return {
     description: source
       ? source.summary
-      : "Select an accepted proposal source to inspect the consume handoff.",
+      : "Select a source to review its transfer to Delivery.",
     statusLabel: source?.status_label,
     statusTone: source?.tone ?? ("info" as TerasTone),
     title: source?.title ?? "No source selected",

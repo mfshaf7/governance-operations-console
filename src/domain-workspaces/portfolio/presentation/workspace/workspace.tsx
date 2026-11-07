@@ -64,16 +64,12 @@ export function PortfolioWorkspace({
           />
         ) : (
           <ProductPortfolioContinuitySurface
-            error={controller.productContinuity.error}
             focusProductId={controller.focusedContinuityProductId}
-            loading={controller.productContinuity.loading}
             onOpenRegistry={(product) => requestExit(() => onOpenWorkspace("workspace-registry", {
               mode: "review",
               requiredMoveRef: "workspace-inventory.lifecycle-maintenance",
               subjectRef: product.product_id,
             }))}
-            onRetry={() => void controller.productContinuity.reload()}
-            products={controller.productContinuity.products}
           />
         )
       ) : activeSurfaceId === "publication" ? (

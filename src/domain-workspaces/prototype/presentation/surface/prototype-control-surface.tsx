@@ -7,6 +7,7 @@ import {
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
+  TerasRegisterPagination,
 } from "@/teras";
 import type { ConsoleSurfaceEntryIntent } from "../../../../console-architecture.ts";
 
@@ -38,12 +39,13 @@ export function PrototypeControlSurface({
             onOpenPrototypeRequest={controller.overview.onOpenPrototypeRequest}
             requestSubmittedAt={controller.overview.requestSubmittedAt}
             summary={controller.overview.summary}
+            unavailable={controller.overview.unavailable}
             workspaceStatus={controller.overview.workspaceStatus}
           />
         }
         register={
           controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading prototypes…" /> : <TerasEmptyState fill>
-            {controller.entryError ?? (controller.sourceAvailability.unavailable ? "Canonical Prototype records are unavailable. Fixtures are not used as fallback in live mode." : "No canonical Prototype records yet. Capture and route a Proposal to Prototype.")}
+            {controller.entryError ?? controller.sourceAvailability.error ?? (controller.sourceAvailability.unavailable ? "Canonical Prototype records are unavailable. Fixtures are not used as fallback in live mode." : "No canonical Prototype records yet. Capture and route a Proposal to Prototype.")}
             <TerasActionButton emphasis="secondary" onClick={() => void controller.sourceAvailability.refresh()}>Refresh canonical records</TerasActionButton>
           </TerasEmptyState>
         }
@@ -69,6 +71,7 @@ export function PrototypeControlSurface({
             onOpenPrototypeRequest={controller.overview.onOpenPrototypeRequest}
             requestSubmittedAt={controller.overview.requestSubmittedAt}
             summary={controller.overview.summary}
+            unavailable={controller.overview.unavailable}
             workspaceStatus={controller.overview.workspaceStatus}
           />
         }
@@ -77,6 +80,8 @@ export function PrototypeControlSurface({
             bodyProps={{
               "data-prototype-register": "standard",
             }}
+            footer={controller.page?<TerasRegisterPagination label="Prototype" offset={controller.page.offset} count={controller.records.filtered.length} page={controller.page.pageNumber}
+              pending={controller.sourceAvailability.loading} unavailable={Boolean(controller.sourceAvailability.error)} hasPrevious={controller.page.hasPrevious} hasNext={Boolean(controller.page.nextCursor)} onReset={controller.sourceAvailability.error&&controller.page.hasPrevious?controller.page.first:undefined} onPrevious={controller.page.previous} onNext={controller.page.next} nextLabel={controller.records.filtered.length?"Next page":"Continue search"}/>:undefined}
             density="compact-control"
             description="Prototype records before landing, baseline promotion, preview proof, movement preparation, or retirement."
             filterBar={
@@ -109,23 +114,24 @@ export function PrototypeControlSurface({
             statusTone="info"
             title="Prototype register"
           >
-            {controller.records.filtered.length > 0 ? (
+            {controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading matching prototypes…" /> : controller.sourceAvailability.error ? <TerasEmptyState fill><p role="alert">{controller.sourceAvailability.error}</p><TerasActionButton emphasis="secondary" onClick={()=>void controller.sourceAvailability.refresh()}>Retry prototype search</TerasActionButton></TerasEmptyState> : controller.records.filtered.length > 0 ? (
               <PrototypeWorkspaceRegisterTable
                 onOpenRecord={(record) =>
                   controller.openDialog("dashboard", record)
                 }
                 onSelectRecord={controller.selectRecord}
+                rowOffset={controller.page?.offset??0}
                 records={controller.records.filtered}
-                selectedRecordId={selectedRecord.id}
+                selectedRecordId={selectedRecord?.id??null}
               />
             ) : (
               <TerasEmptyState fill>
-                No prototype records match the current search and filters.
+                {controller.page?.nextCursor?"No matches in this search window. Continue search to check remaining prototypes.":"No prototypes match the current search and filters."}
               </TerasEmptyState>
             )}
           </TerasRegisterPanel>
         }
-        selected={
+        selected={selectedRecord ? (
           <PrototypeControlSelectedPanel
             onOpenSourceAuthoring={(record) => controller.openDialog("source-authoring", record)}
             onOpenCurrentAction={(record) =>
@@ -139,7 +145,7 @@ export function PrototypeControlSurface({
             }
             selectedRecord={selectedRecord}
           />
-        }
+        ) : <TerasEmptyState fill>Select a Prototype to inspect its current source and actions.</TerasEmptyState>}
         selectedProps={{
           "data-prototype-selected-panel": "true",
         }}

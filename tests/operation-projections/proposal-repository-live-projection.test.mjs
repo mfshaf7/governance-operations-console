@@ -48,6 +48,24 @@ test("request attention counts pending and interrupted confirmation but keeps co
  assert.equal(repositoryRequestAttentionCount(implemented),0);
  assert.equal(repositoryRequestAttentionCount(source({status:"parked"})),0);
 });
+test("canonical resolved gate without a separate historical receipt stays resolved and does not reopen repository work",()=>{
+ const snapshot=source({route:{target:"prototype",rationale:"Recorded source decision",source_custody:{classification:"new-repo-required",repository_mode:"new",repository_gate_state:"resolved",owner:"repo:test",source_ref:"https://example.test/repo",rationale:"Existing approved source"}},repository_resolution:null});
+ snapshot.records[0].projection.handoff.state="applied";
+ const [request]=projectCanonicalRepositoryGateRequests(snapshot);
+ assert.equal(repositoryRequestState(request),"resolved");assert.equal(request.resolution,null);
+ assert.equal(request.resolvedRepositoryRef,"https://example.test/repo");
+ assert.equal(repositoryRequestAttentionCount(snapshot),0);
+ assert.equal(projectProposalOwnerAttention({payload:snapshot,state:"current",capturedAt:new Date().toISOString()}).candidates.length,0);
+ snapshot.records[0].projection.status="implemented";
+ assert.equal(repositoryRequestState(projectCanonicalRepositoryGateRequests(snapshot)[0]),"resolved");
+});
+test("partial Proposal coverage never becomes a complete request count or attention source",()=>{
+ const snapshot=source();snapshot.coverage={complete:false,loaded:1,total:30,next_cursor:"next-page",detail:"Checking remaining pages"};
+ assert.equal(repositoryRequestAttentionCount(snapshot),null);
+ const attention=projectProposalOwnerAttention({payload:snapshot,state:"current",capturedAt:new Date().toISOString()});
+ assert.equal(attention.source.freshness,"unverified");assert.equal(attention.candidates.length,1);
+ assert.equal(attention.candidates[0].source.freshness,"current");
+});
 test("unknown source counts do not become zero and retained metadata cannot authorize confirmation",()=>{
  assert.equal(repositoryRequestAttentionCount(null),null);
  for(const snapshot of [{...source(),status:"offline"},source({projection_state:"stale"})]){

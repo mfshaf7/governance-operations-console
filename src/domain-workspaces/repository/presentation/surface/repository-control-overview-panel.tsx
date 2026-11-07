@@ -38,7 +38,7 @@ export function RepositoryControlOverviewPanel({
   return (
     <TerasRecordControlOverviewGrid>
       <TerasRecordControlSummaryPanel
-        description={unavailable ? "Repository totals are unavailable until the register can be read." : partial ? "Summary of loaded repositories. Load more in the register to include remaining records." : workspaceStatus.summary}
+        description={unavailable ? "Repository totals are unavailable until the register can be read." : partial ? "Summary of loaded repositories." : workspaceStatus.summary}
         kicker="Repository Summary"
         metrics={summary.map(item => ({
           ...item, value: unavailable ? "—" : item.value, label: item.id === "ready" ? "Ready to register" : item.id === "admitted" ? "Registered" : item.id === "blocked" ? "Needs attention" : item.label,

@@ -15,11 +15,13 @@ import {
 } from "../shared/repository-display-model.ts";
 
 export function RepositoryWorkspaceRegisterTable({
+  rowOffset=0,
   onInspectRepository,
   onSelectRepository,
   records,
   selectedRepositoryId,
 }: {
+  rowOffset?:number;
   onInspectRepository: (record: RepositoryWorkspaceRecord) => void;
   onSelectRepository: (record: RepositoryWorkspaceRecord) => void;
   records: RepositoryWorkspaceRecord[];
@@ -30,7 +32,7 @@ export function RepositoryWorkspaceRegisterTable({
       header: "No.",
       intent: "index",
       key: "index",
-      render: (_record, index) => String(index + 1).padStart(2, "0"),
+      render: (_record, index) => String(rowOffset + index + 1).padStart(2, "0"),
     },
     {
       header: "Repository",

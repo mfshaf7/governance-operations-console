@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { lifecycleTransitionProjectionFixtures } = require("../../src/lifecycle-transitions/fixtures/lifecycle-transition-projections.fixture.ts");
+const { buildLifecycleTransitionOverviewItem } = require("../../src/lifecycle-transitions/presentation/lifecycle-transition-overview-view-model.ts");
 const { prototypeWorkspaceReadModel } = require("../../src/domain-workspaces/prototype/read-model/prototype-workspace-read-model.ts");
 const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:3320";
 test.setTimeout(90000);
@@ -14,7 +15,7 @@ function prototypeProjection(records = [], nativeLifecycleOutcomes = []) {
   } };
 }
 
-async function setup(page, { transitions = lifecycleTransitionProjectionFixtures, records = [], nativeOutcomes = [] } = {}) {
+async function setup(page, { transitions = lifecycleTransitionProjectionFixtures, records = [], nativeOutcomes = [], journalRows = null } = {}) {
   let journalFailure = false;
   const writes = [], errors = [];
   page.on("pageerror", error => errors.push(String(error)));
@@ -28,11 +29,20 @@ async function setup(page, { transitions = lifecycleTransitionProjectionFixtures
     if (path === "/api/console/capabilities") return route.fulfill({ json: {
       artifactType: "console-runtime-capability-projection", schemaVersion: 1, mode: "live", capabilities: [],
     } });
+    if(path==="/api/lifecycle-transitions"&&new URL(request.url()).searchParams.get("view")==="journal"&&journalRows){
+      const q=new URL(request.url()).searchParams,selection={routeId:q.get("routeId"),state:q.get("state"),query:(q.get("q")??"").trim().toLowerCase()};
+      const all=journalRows.filter(row=>row.routeId===selection.routeId&&(selection.state==="all"||row.state===selection.state)&&(!selection.query||row.sourceRecordId.toLowerCase().includes(selection.query))),offset=Number(q.get("cursor")??0);
+      return route.fulfill({json:{mode:"live",status:"current",items:all.slice(offset,offset+25),page:{selection,total:null,next_cursor:offset+25<all.length?String(offset+25):null}}});
+    }
     if (path === "/api/lifecycle-transitions") return journalFailure ? route.abort("failed") : route.fulfill({ json: {
       mode: "live", status: "current", error: null, observedAt: new Date().toISOString(), truncated: false, transitions,
     } });
     if (path === "/api/proposals") return route.fulfill({ json: { mode: "live", status: "current", records: [] } });
-    if (path === "/api/prototypes/records") return route.fulfill({ json: prototypeProjection(records, nativeOutcomes) });
+    if (path === "/api/prototypes/records") {
+      const id=new URL(request.url()).searchParams.get("id");
+      if(id){const original=records.filter(row=>row.id===`prototype-${id}`);return original.length?route.fulfill({json:prototypeProjection(original,nativeOutcomes)}):route.fulfill({status:404,json:{error:"The requested Prototype is not present in current owner records."}});}
+      return route.fulfill({ json: prototypeProjection(records, nativeOutcomes) });
+    }
     return route.continue();
   });
   await page.goto(base, { waitUntil: "domcontentloaded" });
@@ -162,3 +172,27 @@ for (const missing of [false, true]) {
     expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
   });
 }
+
+for(const width of [1280,1700])test(`Journal register continues older records and resets search without changing workspace overview at ${width}`,async({page})=>{
+  await page.setViewportSize({width,height:900});
+  const baseItem=buildLifecycleTransitionOverviewItem(lifecycleTransitionProjectionFixtures.find(row=>row.route.routeId==="proposal-to-prototype"));
+  const journalRows=Array.from({length:61},(_,index)=>({...baseItem,transitionId:`retained-${index}`,sourceRecordId:`proposal:retained-${index}`}));
+  const h=await setup(page,{journalRows});
+  await h.workspace.getByLabel("Filter handoff record source",{exact:true}).click();
+  await page.getByRole("option",{name:"Workflow journal",exact:true}).click();
+  const footer=h.workspace.getByRole("navigation",{name:"Lifecycle transition register pages",exact:true});
+  await expect(footer.getByRole("status")).toContainText("Showing 1–25");
+  await expect(h.workspace.getByText("proposal:retained-0",{exact:true}).first()).toBeVisible();
+  await footer.getByRole("button",{name:"Next page",exact:true}).click();
+  await expect(footer.getByRole("status")).toContainText("Showing 26–50");
+  await footer.getByRole("button",{name:"Next page",exact:true}).click();
+  await expect(footer.getByRole("status")).toContainText("Showing 51–61");
+  await expect(footer.getByRole("button",{name:"Next page",exact:true})).toBeDisabled();
+  await footer.getByRole("button",{name:"Previous",exact:true}).click();
+  await expect(footer.getByRole("status")).toContainText("Showing 26–50");
+  await h.workspace.getByRole("searchbox",{name:"Search lifecycle transitions",exact:true}).fill("retained-60");
+  await expect(footer.getByRole("status")).toContainText("Showing 1–1");
+  await expect(footer.getByRole("button",{name:"Previous",exact:true})).toBeDisabled();
+  await expectUnclipped(footer.getByRole("button",{name:"Next page",exact:true}));
+  expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
+});

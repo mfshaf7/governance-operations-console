@@ -1,13 +1,16 @@
+import {readDeliveryRegister} from "../../../../domain-workspaces/delivery/server/delivery-register-query.ts";
 import { NextResponse } from "next/server";
 import { readCanonicalDeliveryInventory } from "../../../../domain-workspaces/delivery/server/delivery-workspace-oos-client.ts";
 import { deliveryOosConfigured, DeliveryOosError } from "../../../../domain-workspaces/delivery/server/delivery-oos-client.ts";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request:Request) {
   const headers = { "Cache-Control": "no-store" };
   if (!deliveryOosConfigured()) return NextResponse.json({ mode: "disconnected-preview", projection: null, error: null }, { headers });
   try {
+    const query=new URL(request.url).searchParams;
+    if(query.get("view")==="register")return NextResponse.json(await readDeliveryRegister(query,request.signal),{headers});
     return NextResponse.json({ mode: "live", projection: await readCanonicalDeliveryInventory({overview:true}), error: null }, { headers });
   } catch (error) {
     const status=error instanceof DeliveryOosError && [401,403].includes(error.status)?error.status:503;

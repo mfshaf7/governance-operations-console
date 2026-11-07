@@ -120,11 +120,12 @@ export function lifecycleTransitionRouteNavLabel(
 
 export function lifecycleTransitionStateOptions(
   items: readonly LifecycleTransitionOverviewItem[],
+  includeAll = false,
 ): Array<Readonly<{
   label: string;
   value: LifecycleTransitionState | "all";
 }>> {
-  const states = [...new Set(items.map((item) => item.state))].sort();
+  const states: LifecycleTransitionState[] = includeAll ? ["applied","applying","authorized","awaiting-admission","awaiting-authority","blocked","cancelled","deferred","failed","prepared","rejected","returned","superseded","validating"] : [...new Set(items.map((item) => item.state))].sort();
 
   return [
     {

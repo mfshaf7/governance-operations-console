@@ -26,6 +26,14 @@ export const controlBoardPostureOrder: ControlBoardPackagePosture[] = [
   "Retired",
 ];
 
+export function filterControlBoardPackages(packages: ControlBoardPackage[], query: string) {
+  const normalized = query.trim().toLowerCase();
+  return normalized ? packages.filter(item =>
+    [item.displayName, item.sourceLabel ?? "", item.sourceRef, item.packageId, item.posture]
+      .some(value => value.toLowerCase().includes(normalized)),
+  ) : packages;
+}
+
 export function controlBoardPostureTone(posture: ControlBoardPackagePosture) {
   switch (posture) {
     case "Blocked":

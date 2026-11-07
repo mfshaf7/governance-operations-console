@@ -1,19 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TerasLoadingState, TerasActionButton, TerasActionRow, TerasContentTray, TerasDialog, TerasEmptyState, TerasFieldStack, TerasList, TerasMetadataList, TerasPanel, TerasPanelHeader, TerasSignalItem, TerasStatusItem, TerasTechnicalDetails, TerasTimeline, TerasTimelineItem } from "@/teras";
+import { TerasLoadingState, TerasActionButton, TerasActionRow, TerasRegisterPagination, useRegisterPage, TerasContentTray, TerasDialog, TerasEmptyState, TerasFieldStack, TerasList, TerasMetadataList, TerasPanel, TerasPanelHeader, TerasSignalItem, TerasStatusItem, TerasTechnicalDetails, TerasTimeline, TerasTimelineItem } from "@/teras";
 import type { PlatformOperationRecord } from "../../live-runtime/platform-operation-types.ts";
 import { operationStateLabel, operationTime, operationTone, platformActionLabel, platformSubjectLabel } from "../../read-model/platform-operation-display.ts";
 
-export function PlatformOperationHistory({ onControl, onRead, operations, controlsAvailable = true, onLoadMore, nextPageAvailable=false, focusRecordRef, loading = false }: {
+export function PlatformOperationHistory({ onControl, onRead, operations, controlsAvailable = true, onRefreshHistory, onLoadMore, nextPageAvailable=false, focusRecordRef, loading = false, sourceError }: {
   onLoadMore?:()=>Promise<unknown>;
+  onRefreshHistory?:()=>Promise<unknown>;
   nextPageAvailable?:boolean;
-  loading?:boolean;
+  loading?:boolean; sourceError?:string;
   onControl: (operationId: string, action: "cancel" | "retry", reason: string) => Promise<PlatformOperationRecord>;
   onRead?: (operationId: string) => Promise<PlatformOperationRecord>;
   operations: readonly PlatformOperationRecord[]; controlsAvailable?: boolean; focusRecordRef?: string | null;
 }) {
-  const [visible, setVisible] = useState(10);
+
   const [selectedId, setSelectedId] = useState<string | null>(focusRecordRef && operations.some(item => item.operation_id === focusRecordRef) ? focusRecordRef : null);
   const appliedFocus = useRef<string | null>(null);
   useEffect(() => {
@@ -21,10 +22,11 @@ export function PlatformOperationHistory({ onControl, onRead, operations, contro
       appliedFocus.current = focusRecordRef; setSelectedId(focusRecordRef);
     }
   }, [focusRecordRef, operations]);
+  const [selectedOriginal,setSelectedOriginal]=useState<PlatformOperationRecord|null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const selected = operations.find(item => item.operation_id === selectedId) ?? null;
+  const selected = operations.find(item => item.operation_id === selectedId) ?? (selectedOriginal?.operation_id===selectedId?selectedOriginal:null);
   const selectedReleasePending = Boolean(selected?.provider_operation.release_workflow && !["succeeded", "failed", "cancelled"].includes(selected.state));
   useEffect(() => {
     if (!selectedId || !selectedReleasePending || !onRead) return;
@@ -34,7 +36,7 @@ export function PlatformOperationHistory({ onControl, onRead, operations, contro
     const tick = async () => {
       if (active && !busy && !document.hidden) {
         busy = true;
-        try { await onRead(selectedId); }
+        try { setSelectedOriginal(await onRead(selectedId)); }
         catch { if (active) setError("Original operation progress could not be refreshed. Existing evidence is retained; inspect the original workflow or refresh again."); }
         finally { busy = false; }
       }
@@ -46,32 +48,41 @@ export function PlatformOperationHistory({ onControl, onRead, operations, contro
     window.addEventListener("focus", visible);
     return () => { active = false; clearTimeout(timer); document.removeEventListener("visibilitychange", visible); window.removeEventListener("focus", visible); };
   }, [selectedId, selectedReleasePending, onRead]);
-  const cancelling = operations.find(item => item.operation_id === cancelId) ?? null;
+  const cancelling = operations.find(item => item.operation_id === cancelId) ?? (selected?.operation_id===cancelId?selected:null);
   const sorted = [...operations].sort((a,b) => Date.parse(b.updated_at)-Date.parse(a.updated_at));
+  const page = useRegisterPage(sorted, "platform-operation-history", 'Platform operation history');
   async function control(operationId: string, action: "cancel" | "retry") {
-    const current = operations.find(item => item.operation_id === operationId);
+    const current = operations.find(item => item.operation_id === operationId) ?? (selected?.operation_id===operationId?selected:null);
     if (pending || !controlsAvailable || !current || !(action === "cancel" ? current.provider_operation.cancel_available : current.provider_operation.retryable)) return;
     setPending(true); setError(null);
-    try { await onControl(operationId,action, action === "cancel" ? "Cancel this exact retained operation without assuming rollback." : "Retry this exact retained operation after reviewing its current source state."); setCancelId(null); }
+    try { setSelectedOriginal(await onControl(operationId,action, action === "cancel" ? "Cancel this exact retained operation without assuming rollback." : "Retry this exact retained operation after reviewing its current source state.")); setCancelId(null); }
     catch(caught) {setError(caught instanceof Error ? caught.message : "The service could not confirm this control. Refresh the original operation before retrying.");}
     finally {setPending(false);}
   }
   async function read() {
     if (!selected || !onRead || pending) return;
     setPending(true); setError(null);
-    try {await onRead(selected.operation_id);} catch(caught) {setError(caught instanceof Error ? caught.message : "The original operation could not be refreshed.");} finally {setPending(false);}
+    try {setSelectedOriginal(await onRead(selected.operation_id));} catch(caught) {setError(caught instanceof Error ? caught.message : "The original operation could not be refreshed.");} finally {setPending(false);}
   }
+  const nextPage=()=>{
+    if(page.hasNext){page.next();return;}if(!onLoadMore)return;
+    setPending(true);setError(null);void onLoadMore().then(()=>page.next()).catch(caught=>setError(caught instanceof Error?caught.message:"Older history is unavailable.")).finally(()=>setPending(false));
+  };
+  const restart=()=>{if(!onRefreshHistory)return;setPending(true);setError(null);void onRefreshHistory().then(result=>{
+    if(result&&typeof result==="object"&&"status" in result&&result.status!=="current")throw new Error("Operation history could not be refreshed.");page.first();
+  }).catch(caught=>setError(caught instanceof Error?caught.message:"History unavailable.")).finally(()=>setPending(false));};
   const close = () => {if(!pending){setSelectedId(null);setError(null);}};
   return <>
     <TerasPanel spacing="normal" fit="content" frame="padded" treatment="neutral">
       <TerasPanelHeader busy={pending} busyLabel="Reading operation history…" kicker="Recorded operations" title="Operation history" description="Inspect an original operation, its recorded events and receipt. These are loaded records, not a complete lifetime total."
-        statusLabel={`${Math.min(visible,operations.length)} of ${operations.length} loaded`} statusTone="info"/>
-      {loading && !sorted.length ? <TerasLoadingState label="Loading operation history…" /> : sorted.length ? <TerasList frame="contained">{sorted.slice(0,visible).map(operation => <TerasSignalItem key={operation.operation_id} ariaLabel={`Inspect operation ${operation.operation_id}`} actionLabel="Inspect operation" onSelect={() => {setSelectedId(operation.operation_id);setError(null);}}
+        statusLabel={`${operations.length} loaded`} statusTone="info"/>
+      {loading && !sorted.length ? <TerasLoadingState label="Loading operation history…" /> : sorted.length ? <TerasList frame="contained">{page.rows.map(operation => <TerasSignalItem key={operation.operation_id} ariaLabel={`Inspect operation ${operation.operation_id}`} actionLabel="Inspect operation" onSelect={() => {setSelectedId(operation.operation_id);setSelectedOriginal(operation);setError(null);}}
         label={platformSubjectLabel(operation.command.subject.ref)} title={`${platformActionLabel(operation.command.action)} · ${operationStateLabel(operation.state)}`}
         detail={operationTime(operation.updated_at)} tone={operationTone(operation.state)}/>)}</TerasList> : <TerasEmptyState>No operations are loaded for this workspace.</TerasEmptyState>}
-      {onLoadMore&&nextPageAvailable ? <TerasActionRow><TerasActionButton emphasis="secondary" disabled={pending} onClick={()=>{setPending(true);setError(null);void onLoadMore().then(()=>setVisible(count=>count+10)).catch(caught=>setError(caught instanceof Error?caught.message:"Older history is unavailable.")).finally(()=>setPending(false));}}>Load older operations</TerasActionButton></TerasActionRow> : null}
+      <TerasRegisterPagination label="Platform operation history" offset={page.offset} count={page.rows.length} page={page.page}
+        pending={loading || pending} unavailable={Boolean(sourceError || error && !selected)} hasPrevious={page.hasPrevious} hasNext={page.hasNext || Boolean(onLoadMore && nextPageAvailable)}
+        onReset={error && onRefreshHistory ? restart : undefined} onPrevious={page.previous} onNext={nextPage} />
       {error&&!selected ? <TerasEmptyState>{error}</TerasEmptyState> : null}
-      {visible < sorted.length ? <TerasActionRow><TerasActionButton emphasis="secondary" onClick={() => setVisible(count => count+10)}>Show more operations</TerasActionButton></TerasActionRow> : null}
     </TerasPanel>
     <TerasDialog busy={pending} busyLabel="Reading original operation…" open={Boolean(selectedId)} onClose={close} closeDisabled={pending} closeLabel="Close operation details" contentOverflow="auto" height="content" width="standard" kicker="Original operation"
       title={selected ? platformActionLabel(selected.command.action) : "Operation unavailable"} description={selected ? `${platformSubjectLabel(selected.command.subject.ref)} · ${operationStateLabel(selected.state)}` : "The selected operation is no longer in the loaded history. Refresh the workspace to inspect it."}

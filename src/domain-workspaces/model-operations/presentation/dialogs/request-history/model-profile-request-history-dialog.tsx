@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasContentRegion, TerasContentTray, TerasLoadingState, TerasPanel, TerasPanelHeader, TerasDialog, TerasDraftCloseGuardDialog, TerasFieldGrid, TerasFieldStack, TerasMetadataList, TerasNoteField, TerasSelectField, TerasTextField } from "@/teras";
+import { TerasRegisterPagination, TerasActionButton, TerasActionRow, TerasContentRegion, TerasContentTray, TerasLoadingState, TerasPanel, TerasPanelHeader, TerasDialog, TerasDraftCloseGuardDialog, TerasFieldGrid, TerasFieldStack, TerasMetadataList, TerasNoteField, TerasSelectField, TerasTextField } from "@/teras";
 import type { ModelOperationsOperatingProjection, ModelProfileRequestDraft, ModelProfileRequestProjection, ModelProfileReviewAction, ModelProfileReviewCommandDraft } from "../../../live-runtime/model-operations-live-types.ts";
 import { assertModelProfileReviewCommandDraft } from "../../../live-runtime/model-operations-live-contract.ts";
 import { fetchModelProfileFulfillment, fetchModelProfileRequest, ModelProfileOperatorError, submitModelProfileReviewCommand } from "../../../live-runtime/model-profile-operator-client.ts";
@@ -121,7 +121,9 @@ export function ModelProfileRequestHistoryDialog({ open, onClose, initialRequest
           <TerasSelectField label="Recorded request" value={selected?.request_id ?? ""} disabled={locked || !listedRequests.length} options={[{value:"",label:listedRequests.length?"Choose a request":"No requests in this list"},...listedRequests.map(r=>({value:r.request_id,label:modelProfileRequestChoice(r)}))]} onValueChange={chooseOriginal} />
           {historyPage.status==='loading'?<TerasLoadingState inline label="Loading profile requests…"/>:null}
           {historyPage.error?<TerasContentTray kicker="Requests unavailable" description={historyPage.error} actions={<TerasActionButton emphasis="secondary" disabled={busy} onClick={()=>void historyPage.refresh()}>Retry requests</TerasActionButton>}/>:null}
-          {historyPage.status==='current'?<TerasActionRow layout="split" end={<TerasActionRow><TerasActionButton emphasis="secondary" disabled={historyPage.status!=='current'||!historyPage.hasPrevious} onClick={()=>void historyPage.back()}>Previous requests</TerasActionButton><TerasActionButton emphasis="secondary" disabled={!historyPage.page?.next_cursor} onClick={()=>void historyPage.next()}>Next requests</TerasActionButton></TerasActionRow>}><span>{historyPage.page?.requests.length??0} requests on this page</span></TerasActionRow>:null}
+          <TerasRegisterPagination label="Profile requests" disabled={locked} offset={historyPage.offset} count={historyPage.page?.requests.length ?? 0} page={historyPage.pageNumber}
+            pending={historyPage.status === "loading"} unavailable={historyPage.status === "unavailable"} hasPrevious={!locked && historyPage.hasPrevious} hasNext={!locked && Boolean(historyPage.page?.next_cursor)}
+            onPrevious={()=>void historyPage.back()} onNext={()=>void historyPage.next()} />
           {referenceOpen||!listedRequests.length?<TerasFieldGrid columns={2} align="end">
             <TerasTextField label="Original request reference" placeholder="Paste a request reference from a previous submission" disabled={locked} value={reference} onValueChange={setReference} />
             <TerasActionRow><TerasActionButton emphasis="secondary" disabled={busy || !reference.trim()} onClick={() => chooseOriginal(reference.trim())}>Read original request</TerasActionButton></TerasActionRow>

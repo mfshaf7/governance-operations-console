@@ -185,6 +185,23 @@ and scroll-owned table/list body frame. Use `density="normal"` for app-sized
 or Delivery-style registers and `density="compact-control"` for focused
 compact control registers.
 
+`TerasRegisterPanel` accepts an optional footer for persistent register controls.
+It reserves a separate content-sized row below the scrollable body; panels without
+a footer retain their existing layout. Pagination uses the standard action row
+and buttons within that footer rather than sharing the table's flexible row.
+`TerasRegisterPagination` supplies compact ranges, pending/unavailable/empty
+states, Previous/Next and a compact 25/50/100 Rows per page selector (default 25).
+Its stable preference key must match the reader's `useRegisterPageSize` key.
+The preference is browser-local presentation only. Size changes reset the first
+page while preserving filters and drafts. Pending actions disable the selector;
+an unavailable page permits choosing another size unless an operation guard blocks navigation. Register table
+scrolling resets vertically on page/size changes, preserving horizontal position. Existing table columns and summary meanings
+stay unchanged. `useRegisterPage` may page a verified complete local collection;
+operational collections retain native owner continuation. A search/filter change
+resets page state before children render, so clearing a search cannot restore an
+obsolete page. Exact selected originals remain outside page counts. Choice
+fields and an individual record's event trail are not registers.
+
 Record control surfaces use `TerasRecordControlLayout` for register-owned
 first-screen structure. Supported modes are `register-only`,
 `register-selected`, and `overview-register-selected`; callers must choose the
@@ -765,8 +782,26 @@ The default `none` frame preserves existing timeline consumers.
 
 ### Register primary-column containment
 
-Register tables reserve the existing 16.75rem primary-column width even without
-an evidence column. Fixed secondary/status/action columns must not consume the
-primary column at smaller desktop widths; the existing table shell scrolls when
-the combined column widths exceed its available space. Evidence-register sizing
-and inventory/value-matrix profiles retain their existing rules.
+Register tables use the existing 16.75rem primary-column hint even without
+an evidence column. Automatic layout distributes available space while keeping
+secondary/status/action columns readable. The existing table shell owns any
+necessary horizontal scrolling. Inventory/value-matrix profiles retain their
+existing minimum widths and sizing rules.
+
+
+### Register footer and column sizing
+
+`TerasSegmentedControl size="compact"` provides an opt-in compact treatment for
+narrow action rows. Fit layout keeps its background around the options; the
+containing action row owns alignment. Default and large treatments are unchanged.
+
+Register paging uses the compact record-metadata text pattern for ready, empty
+and pending ranges, matching Proposal. Its footer stays outside the table scroll
+region and adds spacing without another divider. Numeric summary values stay
+numbers or an explained em dash; status prose belongs in status/help content.
+
+Register columns use automatic table layout with primitive-owned width hints.
+Technical/evidence columns retain a readable minimum; domain code does not set
+column widths. Keep any necessary overflow inside the table region. Long purpose descriptions can reuse the existing
+`value-stack` two-line preview while retaining the complete text in record details.
+Environment surfaces compose these patterns without local CSS.

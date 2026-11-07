@@ -52,8 +52,7 @@ export function DeliveryWorkspaceController({
   onClose: () => void;
 }) {
   const consoleRuntime = useConsoleRuntimeCapabilities();
-  const [historyEvidenceRequested,setHistoryEvidenceRequested]=useState(false);
-  const live = useDeliveryWorkspaceLiveRuntime(consoleRuntime.status === "current" && consoleRuntime.projection?.mode === "live",historyEvidenceRequested);
+  const live = useDeliveryWorkspaceLiveRuntime(consoleRuntime.status === "current" && consoleRuntime.projection?.mode === "live");
   const primaryRecordIsolation = resolveConsolePrimaryRecordIsolation({
     liveAuthorityAvailable: live.model !== null,
     runtimeMode: consoleRuntime.projection?.mode ?? null,
@@ -78,7 +77,6 @@ export function DeliveryWorkspaceController({
       baseModel={selectedBaseModel}
       allowLocalProjection={primaryRecordIsolation.fixtureAllowed}
       onSourceRefresh={live.refresh}
-      onHistoryEvidenceRequested={setHistoryEvidenceRequested}
       contract={contract}
       entryIntent={entryIntent}
       onClose={onClose}
@@ -89,7 +87,6 @@ export function DeliveryWorkspaceController({
 function AvailableDeliveryWorkspaceController({
   allowLocalProjection,
   onSourceRefresh,
-  onHistoryEvidenceRequested,
   baseModel,
   contract,
   entryIntent,
@@ -97,7 +94,6 @@ function AvailableDeliveryWorkspaceController({
 }: {
   allowLocalProjection: boolean;
   onSourceRefresh: () => Promise<void>;
-  onHistoryEvidenceRequested: (requested: boolean) => void;
   baseModel: DeliveryReadModel;
   contract: OperationWorkbenchDomainContract;
   entryIntent: ConsoleSurfaceEntryIntent | null;
@@ -115,7 +111,8 @@ function AvailableDeliveryWorkspaceController({
   const [workspaceMounted, setWorkspaceMounted] = useState(false);
   const appliedEntryIntentRef = useRef<string | null>(null);
   const [recordScope,setRecordScope] = useState<"current"|"history">("current");
-  useEffect(()=>{onHistoryEvidenceRequested(recordScope==="history");},[recordScope,onHistoryEvidenceRequested]);
+  const effectiveRecordScope = activeWorkspaceSurfaceId === "home" || activeWorkspaceSurfaceId === "catalog"
+    ? "current" : recordScope;
   const completeModel = useMemo(
     () =>
       allowLocalProjection ? projectDeliveryEffectiveReadModel({
@@ -124,7 +121,7 @@ function AvailableDeliveryWorkspaceController({
       }) : baseModel,
     [allowLocalProjection, baseModel, localProjection],
   );
-  const model = useMemo(() => allowLocalProjection ? completeModel : deliveryModelForScope(completeModel,recordScope),[allowLocalProjection,completeModel,recordScope]);
+  const model = useMemo(() => allowLocalProjection ? completeModel : deliveryModelForScope(completeModel,effectiveRecordScope),[allowLocalProjection,completeModel,effectiveRecordScope]);
   const executionCount = useMemo(
     () => getExecutionBoardPackages(model).length,
     [model],

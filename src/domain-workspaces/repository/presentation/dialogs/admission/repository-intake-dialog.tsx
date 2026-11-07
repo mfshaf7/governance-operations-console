@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasContentTray, TerasDraftCloseGuardDialog,
+import { TerasRegisterPagination, TerasActionButton, TerasActionRow, TerasContentTray, TerasDraftCloseGuardDialog,
   TerasFieldStack, TerasLoadingState, TerasList, TerasMetadataList, TerasModalShell, TerasNoteField,
   TerasSelectField, TerasSignalItem, TerasTechnicalDetails, TerasTextField } from "@/teras";
 import { WorkspaceIntakeDialog } from "@/console-integration/workspace-intake/presentation/workspace-intake-dialog.tsx";
@@ -32,7 +32,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
   onActivate?: () => void;
   onClose: () => void;
 }) {
-  const runtime = useWorkspaceIntakeLiveRuntime();
+  const runtime = useWorkspaceIntakeLiveRuntime("Repository onboarding requests");
   const [initialDraft, setInitialDraft] = useState<RepositoryIntakeDraft>(() => custodyResult ? repositoryIntakeDraftFromCustody(custodyResult) : {
     repoClass: preview ? "product-source" : "", securityBinding: preview ? "false" : "", securityOwner: "",
     notes: preview ? repository.purpose : "", validationPosture: preview ? "covered-by-owner-repo" : "",
@@ -239,9 +239,11 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
           : runtime.error ? "Registration history could not be read. Refresh it before starting a review." : "Reading registration history…"}
         actions={<TerasActionRow>
           {runtime.error ? <TerasActionButton emphasis="secondary" disabled={!targetName || !custodyRequestId || busy} onClick={refreshJournal}>Retry onboarding history</TerasActionButton> : null}
-          {runtime.requestPage?.next_cursor ? <TerasActionButton emphasis="secondary" disabled={busy}
-            onClick={() => { if (targetName && custodyRequestId) void runtime.list(targetName, custodyRequestId, runtime.requestPage!.next_cursor).catch(() => undefined); }}>More requests</TerasActionButton> : null}
+
         </TerasActionRow>}>
+        <TerasRegisterPagination label="Repository onboarding requests" offset={runtime.requestPageOffset} count={runtime.requestPage?.records.length ?? 0} page={runtime.requestPageNumber}
+          pending={runtime.pending} unavailable={Boolean(runtime.error)} hasPrevious={!busy && runtime.hasPreviousRequestPage} hasNext={!busy && Boolean(runtime.requestPage?.next_cursor)}
+          onPrevious={()=>void runtime.previousRequestPage().catch(()=>undefined)} onNext={()=>void runtime.nextRequestPage().catch(()=>undefined)} />
         {runtime.requestPage?.records.length ? <TerasList frame="contained" scrollHeight="short">
           {runtime.requestPage.records.map(entry => <TerasSignalItem key={entry.request_id}
             label={repository.name} title={`${entry.classification === "admitted" ? "Approval for activation" : entry.classification === "proposed" ? "Setup and review" : "Outside managed workspace"} · ${entry.status.replaceAll("-", " ")}`} detail={new Date(entry.updated_at).toLocaleString()}

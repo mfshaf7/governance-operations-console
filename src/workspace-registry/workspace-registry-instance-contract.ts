@@ -67,7 +67,7 @@ export function assertInstanceRegistryPage(value: unknown, parsers: Parsers, fai
   }
   const records = value.records.map(parsers.record), candidates = value.eligible_promotions.map(parsers.candidate);
   const identities = [...records.map(row => row.id), ...candidates.map(row => row.target.record_id)];
-  if (identities.length > 25 || new Set(identities).size !== identities.length ||
+  if (identities.length > 100 || new Set(identities).size !== identities.length ||
       records.some(row => row.kind !== "repo" || row.authority_kind !== authority.kind || row.canonical_authority?.instance_id !== authority.instance_id) ||
       candidates.some(row => row.target.kind !== "repo" || row.authority_kind !== authority.kind || row.canonical_authority?.instance_id !== authority.instance_id) ||
       (value.selection.scope === "inventory" ? candidates.length > 0 : records.length > 0) ||

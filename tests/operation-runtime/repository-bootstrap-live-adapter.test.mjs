@@ -170,3 +170,15 @@ test("an active owner reads its current unconfigured plan using Inventory author
   assert.equal(result.plan, null); assert.equal(result.owner_authority.intake_entry_ref, null);
   await assert.rejects(prepareRepositoryBootstrap({ ...selected, operation: "other" }, { config, fetchImpl }));
 });
+
+test("setup register view exposes source continuation and only the exact old-owner rejection permits a first-page compatibility read",async()=>{
+ const body={schema_version:1,workflow_id:"repository-owner-bootstrap-list",owner_repo:owner,pending_request:raw(),records:[],next_cursor:null};
+ const paths=[];
+ const current=await listRepositoryBootstraps(owner,{config,fetchImpl:async url=>{paths.push(new URL(url).searchParams.get("view"));return canonicalSourceResponse(body,{recordRef:`oos://repository-owner-bootstrap/${owner}`,sourceOwner:"operator-orchestration-service"});}});
+ assert.equal(current.historyPagingAvailable,true);assert.equal(current.nextCursor,null);assert.deepEqual(paths,["register"]);
+ const {next_cursor,...legacy}=body;let calls=0;
+ const old=await listRepositoryBootstraps(owner,{config,fetchImpl:async url=>{calls++;return new URL(url).searchParams.has("view")?Response.json({error:"repository_owner_bootstrap_query_invalid"},{status:400}):canonicalSourceResponse(legacy,{recordRef:`oos://repository-owner-bootstrap/${owner}`,sourceOwner:"operator-orchestration-service"});}});
+ assert.equal(old.historyPagingAvailable,false);assert.equal(calls,2);
+ for(const status of [401,403]){let denied=0;await assert.rejects(listRepositoryBootstraps(owner,{config,fetchImpl:async()=>{denied++;return Response.json({error:"denied"},{status});}}));assert.equal(denied,1);}
+ let cursorReads=0;await assert.rejects(listRepositoryBootstraps(owner,{config,cursor:"retained-cursor",fetchImpl:async()=>{cursorReads++;return Response.json({error:"repository_owner_bootstrap_query_invalid"},{status:400});}}));assert.equal(cursorReads,1);
+});

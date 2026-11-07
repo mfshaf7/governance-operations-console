@@ -6,7 +6,7 @@ import {
   TerasFieldGrid, TerasFieldStack, TerasFilterBar, TerasMetadataList, TerasPanel, TerasPanelHeader, TerasPanelStack,
   TerasRecordControlOverviewGrid, TerasRecordControlSummaryPanel, TerasRecordControlActionPanel,
   TerasSelectedPanel, TerasRecordCellText, TerasRecordControlLayout, TerasRecordTable,
-  TerasRegisterPanel, TerasTechnicalDetails, TerasSelectField, TerasStatusPill, type TerasRecordTableColumn,
+  TerasRegisterPanel, TerasRegisterPagination, useRegisterPage, TerasTechnicalDetails, TerasSelectField, TerasStatusPill, type TerasRecordTableColumn,
 } from "@/teras";
 import { modelEffortLabel } from "../../../../console-integration/governed-ai/model-selection.ts";
 import { useModelRuntime } from "../../live-runtime/use-model-runtime.ts";
@@ -66,6 +66,7 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
   const taskRows = useMemo(() => [defaultModelScope, ...(registry?.tasks ?? [])].filter(task =>
     (task === defaultModelScope ? "System default" : workflowTaskLabel(task) + " " + task).toLowerCase().includes(taskSearch.toLowerCase())),
   [registry, taskSearch]);
+  const taskPage = useRegisterPage(taskRows, taskSearch.trim().toLowerCase(), "Workflow routing");
   const eligible = registry ? eligibleModelIds(registry, scope) : [];
   const issue = registry ? routingDraftIssue(registry, scope, mode, route) : null;
   const moved = editRevision !== null && registry?.configuration.revision !== editRevision;
@@ -131,12 +132,12 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
             <TerasActionButton emphasis="secondary" onClick={() => setDialog("activity")}>Operation history</TerasActionButton>
           </>} />
       </TerasRecordControlOverviewGrid>}
-      register={<TerasRegisterPanel density="compact-control" kicker="Workflow routing" title="Choose models by workflow"
+      register={<TerasRegisterPanel footer={<TerasRegisterPagination label="Workflow routing" offset={taskPage.offset} count={taskPage.rows.length} total={taskRows.length} page={taskPage.page} pending={runtime.refreshing} unavailable={!runtime.fresh && !runtime.preview} hasPrevious={taskPage.hasPrevious} hasNext={taskPage.hasNext} onPrevious={taskPage.previous} onNext={taskPage.next} />} density="compact-control" kicker="Workflow routing" title="Choose models by workflow"
         description="Each workflow keeps its permission and output rules. Overrides replace the system default."
         filterBar={<TerasFilterBar search={{ ariaLabel: "Search workflows", onValueChange: setTaskSearch, placeholder: "Search workflows...", value: taskSearch }} />}
         statusLabel={`${taskRows.length}/${registry.tasks.length+1} shown`} statusTone="info"
         actions={<TerasActionButton busy={runtime.refreshing} emphasis="secondary" onClick={() => void runtime.refresh().catch(() => undefined)}>Refresh</TerasActionButton>}>
-        <TerasRecordTable fill columns={columns} rows={taskRows} getRowId={task => task} onSelect={changeScope} selectedRowId={scope} />
+        <TerasRecordTable fill columns={columns} rows={taskPage.rows} getRowId={task => task} onSelect={changeScope} selectedRowId={scope} />
       </TerasRegisterPanel>}
       selected={<TerasSelectedPanel kicker="Selected routing" title={scope === defaultModelScope ? "System default" : workflowTaskLabel(scope)}
         description={effectiveRouteLabel(config, scope, backendLabels)} variant="compact" selected
@@ -231,7 +232,9 @@ function ModelRuntimeActivity({ runtime }: { runtime: Runtime }) {
         options={[{ value: "", label: "Select an operation" }, ...runtime.records.map(item => ({ value: item.request_id, label: actionLabels[item.request.action] + " · " +
           String(item.request.input.model ?? item.request.input.backend_id ?? "settings") + " · " + operationLabels[item.state] + " · " + item.request_id.slice(-8) }))]}
         onValueChange={id => { if (id) void runtime.selectOperation(id); }} />
-      {runtime.cursor ? <TerasActionRow><TerasActionButton busy={runtime.readingMore} emphasis="secondary" onClick={() => void runtime.loadMore()}>Load more operations</TerasActionButton></TerasActionRow> : null}
+      <TerasRegisterPagination label="Model operation history" disabled={runtime.pending} offset={runtime.historyOffset} count={runtime.records.length} page={runtime.historyPage}
+        pending={runtime.readingMore || runtime.refreshing} unavailable={Boolean(runtime.error && !runtime.fresh)} hasPrevious={!runtime.pending && runtime.hasPreviousHistory} hasNext={!runtime.pending && Boolean(runtime.cursor)}
+        onReset={runtime.error && !runtime.fresh ? ()=>void runtime.restartHistory().catch(()=>undefined) : undefined} onPrevious={()=>void runtime.previousHistory()} onNext={()=>void runtime.loadMore()} />
     </TerasFieldStack>
   </TerasPanel>;
 }

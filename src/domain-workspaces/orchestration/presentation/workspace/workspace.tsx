@@ -113,6 +113,7 @@ export function OrchestrationWorkspace({
             <TerasActionButton emphasis="secondary" onClick={() => setRunDialog("recover")}>Read original run</TerasActionButton>
           </TerasActionRow> : null}
           {sourceLoading ? <TerasLoadingState fill label="Loading workflow definitions and runs…" /> : <OrchestrationWorkspaceSurfaceContent
+          live={sourceMode!=="disconnected-preview"}
           activeSurfaceId={activeSurfaceId}
           controlRun={controlRun}
           entryIntent={entryIntent}
@@ -134,6 +135,7 @@ export function OrchestrationWorkspace({
 }
 
 function OrchestrationWorkspaceSurfaceContent({
+  live,
   activeSurfaceId,
   controlRun,
   entryIntent,
@@ -142,6 +144,7 @@ function OrchestrationWorkspaceSurfaceContent({
   readModel,
   onStartRun,
 }: {
+  live:boolean;
   activeSurfaceId: OrchestrationWorkspaceSurfaceId;
   controlRun: (runId: string, input: OrchestrationRunControlInput) => Promise<OrchestrationRunControlReceipt>;
   entryIntent: ConsoleSurfaceEntryIntent | null;
@@ -169,6 +172,7 @@ function OrchestrationWorkspaceSurfaceContent({
     case "runs":
       return (
         <OrchestrationRunsSurface
+          live={live}
           onControl={controlRun}
           focusRecordId={focusedRecord?.surfaceId === "runs" ? focusedRecord.recordId : orchestrationFocusRecordId(entryIntent, "run")}
           records={readModel.runs}

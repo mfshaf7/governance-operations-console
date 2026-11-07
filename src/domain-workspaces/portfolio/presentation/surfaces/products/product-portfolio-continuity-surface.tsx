@@ -1,5 +1,6 @@
 "use client";
 
+import {useWorkspaceProductsPage} from "../../../../../workspace-continuity/live-runtime/use-workspace-products-page.ts";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -17,6 +18,7 @@ import {
   TerasRecordStatusStack,
   TerasRecordTable,
   TerasRegisterPanel,
+  TerasRegisterPagination,
   TerasSelectedPanel,
   TerasStatusPill,
   TerasTechnicalDetails,
@@ -29,19 +31,11 @@ import {
 } from "./product-continuity-view-model.ts";
 
 export function ProductPortfolioContinuitySurface({
-  error,
   focusProductId,
-  loading,
   onOpenRegistry,
-  onRetry,
-  products,
 }: {
-  error: string | null;
   focusProductId: string | null;
-  loading: boolean;
   onOpenRegistry: (product: WorkspaceContinuityProduct) => void;
-  onRetry: () => void;
-  products: readonly WorkspaceContinuityProduct[] | null;
 }) {
   const [query, setQuery] = useState("");
   const [maturity, setMaturity] = useState<
@@ -51,39 +45,19 @@ export function ProductPortfolioContinuitySurface({
     WorkspaceContinuityProduct["posture"] | "all"
   >("all");
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const page=useWorkspaceProductsPage({query,maturity,posture},focusProductId);
+  const products=page.products??[],error=page.error,loading=page.loading,onRetry=()=>void page.refresh();
   useEffect(() => {
-    if (focusProductId && products?.some((product) => product.product_id === focusProductId)) {
+    if (focusProductId && (products?.some((product) => product.product_id === focusProductId)||page.original?.product_id===focusProductId)) {
       setSelectedProductId(focusProductId);
     }
-  }, [focusProductId, products]);
+  }, [focusProductId, products,page.original]);
   const filtered = useMemo(
     () => selectProductContinuityRecords(products ?? [], { maturity, posture, query }),
     [maturity, posture, products, query],
   );
-  const selected = filtered.find((item) => item.product_id === selectedProductId) ?? filtered[0] ?? null;
+  const selected = page.original?.product_id===selectedProductId?page.original:filtered.find((item) => item.product_id === selectedProductId) ?? filtered[0] ?? null;
 
-  if (!products) {
-    return (
-      <TerasPanelStack fill="last">
-        <TerasPanel fit="content" frame="padded" treatment="neutral">
-          <TerasPanelHeader
-            description={error ?? "Reading managed products from Workspace Governance."}
-            kicker="Product Portfolio"
-            statusLabel={error ? "Unavailable" : "Loading"}
-            statusTone={error ? "danger" : "info"}
-            title={error ? "Managed products unavailable" : "Loading managed products"}
-          />
-          {error ? (
-            <TerasActionButton emphasis="secondary" onClick={onRetry}>
-              Retry
-            </TerasActionButton>
-          ) : null}
-        </TerasPanel>
-        {loading && !error ? <TerasLoadingState fill label="Loading managed products…" />
-          : <TerasEmptyState fill>No canonical product projection is available.</TerasEmptyState>}
-      </TerasPanelStack>
-    );
-  }
 
   return (
     <TerasRecordControlLayout
@@ -92,6 +66,7 @@ export function ProductPortfolioContinuitySurface({
       mode="register-selected"
       register={
         <TerasRegisterPanel
+          footer={<TerasRegisterPagination label="Managed products" offset={page.offset} count={filtered.length} total={page.total} page={page.pageNumber} pending={loading} unavailable={Boolean(error)} hasPrevious={page.hasPrevious} hasNext={Boolean(page.nextCursor)} onReset={error&&page.hasPrevious?page.first:undefined} onPrevious={page.previous} onNext={page.next}/> }
           description="Product identity and lifecycle from Workspace Governance. Select a product to inspect responsibilities and readiness."
           filterBar={
             <TerasFilterBar
@@ -128,11 +103,11 @@ export function ProductPortfolioContinuitySurface({
             />
           }
           kicker="Product register"
-          statusLabel={`${filtered.length}/${products.length} shown`}
+          statusLabel={`${filtered.length} on this page · ${page.total??"—"} matching`}
           statusTone="ok"
           title="Managed products"
         >
-          {filtered.length ? (
+          {loading?<TerasLoadingState fill label="Loading matching products…"/>:error?<TerasEmptyState fill><p role="alert">{error}</p><TerasActionButton emphasis="secondary" onClick={onRetry}>Retry product read</TerasActionButton></TerasEmptyState>:filtered.length ? (
             <TerasRecordTable
               columns={columns}
               fill
@@ -150,7 +125,7 @@ export function ProductPortfolioContinuitySurface({
       selected={selected ? (
         <ProductContinuitySelected product={selected} onOpenRegistry={onOpenRegistry} />
       ) : (
-        <TerasEmptyState fill>No canonical product is selected.</TerasEmptyState>
+        loading?<TerasLoadingState fill label="Preparing product details…" skeleton="details"/>:<TerasEmptyState fill>No canonical product is selected.</TerasEmptyState>
       )}
       selectedProps={{ "data-product-portfolio-selected-product": "true" }}
     />

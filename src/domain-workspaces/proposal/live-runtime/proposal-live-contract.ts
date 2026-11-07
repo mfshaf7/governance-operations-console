@@ -36,6 +36,15 @@ export function assertProposalLiveSnapshot(value: unknown): ProposalLiveSnapshot
     throw new Error("Proposal live response does not contain records.");
   }
 
+  if (value.coverage !== undefined && (!isRecord(value.coverage) || typeof value.coverage.complete !== "boolean" ||
+      !Number.isSafeInteger(value.coverage.loaded) || Number(value.coverage.loaded) !== value.records.filter(row=>!isRecord(row)||row.selectedOnly!==true).length ||
+      !Number.isSafeInteger(value.coverage.total) || Number(value.coverage.total) < Number(value.coverage.loaded) ||
+      (value.coverage.next_cursor !== null && (typeof value.coverage.next_cursor !== "string" || value.coverage.next_cursor.length > 600)) ||
+      (value.coverage.detail !== null && typeof value.coverage.detail !== "string") ||
+      (value.coverage.complete && (value.coverage.next_cursor !== null || value.coverage.loaded !== value.coverage.total)))) {
+    throw new Error("Proposal collection coverage is invalid.");
+  }
+
   if (value.page !== undefined && (!isRecord(value.page) || !isRecord(value.page.selector) ||
       typeof value.page.selector.query !== "string" || typeof value.page.selector.status !== "string" || typeof value.page.selector.ingress !== "string" ||
       !Number.isSafeInteger(value.page.source_total) || Number(value.page.source_total) < 0 ||

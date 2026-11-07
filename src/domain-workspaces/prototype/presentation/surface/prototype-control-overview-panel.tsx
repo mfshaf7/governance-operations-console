@@ -16,12 +16,14 @@ import {
 import type { PrototypeSummaryMetric } from "./prototype-control-view-model.ts";
 
 export function PrototypeControlOverviewPanel({
+  unavailable=false,
   canRequestPrototype,
   onOpenPrototypeRequest,
   requestSubmittedAt,
   summary,
   workspaceStatus,
 }: {
+  unavailable?: boolean;
   canRequestPrototype: boolean;
   onOpenPrototypeRequest: () => void;
   requestSubmittedAt: string | null;
@@ -33,7 +35,7 @@ export function PrototypeControlOverviewPanel({
       <TerasRecordControlSummaryPanel
         description={workspaceStatus.summary}
         kicker="Prototype Control"
-        metrics={summary}
+        metrics={summary.map(metric=>({...metric,value:unavailable?"—":metric.value}))}
         statusButtonAttribute="data-prototype-status-button"
         title="Prototype registry"
         surfaceStatus={projectOperationSurfaceStatusModel(workspaceStatus)}

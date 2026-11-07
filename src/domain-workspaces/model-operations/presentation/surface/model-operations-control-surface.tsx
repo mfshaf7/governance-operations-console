@@ -14,6 +14,8 @@ import {
   TerasFilterBar,
   TerasRecordControlLayout,
   TerasRegisterPanel,
+  TerasRegisterPagination,
+  useRegisterPage,
   TerasSelectedPanel,
   TerasList,
   TerasStatusItem,
@@ -62,6 +64,7 @@ export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange
 
 function ModelProfileControlSurface({onOpenRouting}:{onOpenRouting:()=>void}) {
   const controller = useModelOperationsControlController();
+  const page = useRegisterPage(controller.profiles.filtered, JSON.stringify([controller.filters.search.trim().toLowerCase(), controller.filters.lifecycle, controller.filters.access, controller.filters.provider]), 'Purpose profiles');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyTarget, setHistoryTarget] = useState<string | null>(null);
   const openHistory = (requestId: string | null = controller.request.latest?.request_id ?? null) => { setHistoryTarget(requestId); setHistoryOpen(true); };
@@ -99,6 +102,7 @@ function ModelProfileControlSurface({onOpenRouting}:{onOpenRouting:()=>void}) {
             bodyProps={{
               "data-model-profile-register": "standard",
             }}
+            footer={<TerasRegisterPagination label="Purpose profiles" offset={page.offset} count={page.rows.length} total={controller.profiles.filtered.length} page={page.page} pending={controller.source.loading} unavailable={controller.source.unavailable} hasPrevious={page.hasPrevious} hasNext={page.hasNext} onPrevious={page.previous} onNext={page.next} />}
             density="compact-control"
             description={controller.source.description}
             filterBar={
@@ -132,7 +136,7 @@ function ModelProfileControlSurface({onOpenRouting}:{onOpenRouting:()=>void}) {
               />
             }
             kicker="Profile Register"
-            statusLabel={`${controller.profiles.filtered.length}/${controller.profiles.all.length} shown`}
+            statusLabel={`${controller.profiles.filtered.length}/${controller.profiles.all.length} matched`}
             statusTone="info"
             title="Governed profile register"
           >
@@ -140,7 +144,7 @@ function ModelProfileControlSurface({onOpenRouting}:{onOpenRouting:()=>void}) {
               <ModelProfileRegisterTable
                 onInspectProfile={controller.dashboard.open}
                 onSelectProfile={controller.selectProfile}
-                profiles={controller.profiles.filtered}
+                profiles={page.rows}
                 selectedProfileId={selectedProfile?.policy.profileId ?? null}
               />
             ) : controller.source.loading ? <TerasLoadingState fill label="Loading purpose profiles…" /> : (

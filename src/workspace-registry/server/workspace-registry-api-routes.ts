@@ -55,10 +55,10 @@ export async function readWorkspaceRegistryRoute(request?: NextRequest) {
   return execute(async () => {
     requireConfigured();
     const query = request?.nextUrl.searchParams ?? new URLSearchParams();
-    const keys = [...query.keys()], scope = query.get("scope") ?? "inventory", search = query.get("query") ?? "", after = query.get("after");
-    if (new Set(keys).size !== keys.length || keys.some(key => !["scope", "query", "after"].includes(key)) ||
-        !["inventory", "eligible"].includes(scope) || search.length > 128 || (after !== null && !/^repo:[a-z0-9][a-z0-9._-]{0,185}$/.test(after))) throw new WorkspaceRegistryContractError("Select one bounded Registry page.");
-    return readWorkspaceRegistry({ selection: { scope: scope as "inventory" | "eligible", query: search.trim().toLowerCase(), after } });
+    const keys = [...query.keys()], scope = query.get("scope") ?? "inventory", search = query.get("query") ?? "", after = query.get("after"),limit=Number(query.get("limit")??25);
+    if (new Set(keys).size !== keys.length || keys.some(key => !["scope", "query", "after", "limit"].includes(key)) ||
+        ![25,50,100].includes(limit) || !["inventory", "eligible"].includes(scope) || search.length > 128 || (after !== null && !/^repo:[a-z0-9][a-z0-9._-]{0,185}$/.test(after))) throw new WorkspaceRegistryContractError("Select one bounded Registry page.");
+    return readWorkspaceRegistry({ selection: { scope: scope as "inventory" | "eligible", query: search.trim().toLowerCase(), after,limit:limit as 25|50|100 } });
   });
 }
 

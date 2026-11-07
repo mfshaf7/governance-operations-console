@@ -2,7 +2,7 @@
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-import { TerasStatusPill } from "@/teras";
+import { TerasStatusPill, TerasTextField, TerasRecordMetaText } from "@/teras";
 import type { TerasTone } from "@/teras";
 
 import styles from "./control-board.module.css";
@@ -40,6 +40,7 @@ export function ControlBoardLanePanel({
   className,
   count,
   description,
+  search,
   title,
   tone = "warn",
 }: {
@@ -47,6 +48,7 @@ export function ControlBoardLanePanel({
   className?: string;
   count: ReactNode;
   description: ReactNode;
+  search?: { label: string; value: string; onValueChange: (value: string) => void; resultLabel?: string };
   title: ReactNode;
   tone?: TerasTone;
 }) {
@@ -68,6 +70,11 @@ export function ControlBoardLanePanel({
           {count}
         </TerasStatusPill>
       </div>
+      {search ? <div className={styles.controlBoardLaneSearch}>
+        <TerasTextField label={search.label} aria-label={search.label} labelVisibility="hidden" density="compact"
+          type="search" placeholder="Search…" value={search.value} onValueChange={search.onValueChange}/>
+        {search.resultLabel ? <div role="status"><TerasRecordMetaText>{search.resultLabel}</TerasRecordMetaText></div> : null}
+      </div> : null}
       {children}
     </section>
   );

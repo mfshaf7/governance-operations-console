@@ -29,7 +29,11 @@ export function ControlBoardPackageCard({
           totalLabel={progress.totalLabel}
         />
       }
-      kicker={formatControlBoardPackageRef(packageSummary.sourceRef)}
+      kicker={
+        <span title={packageSummary.sourceRef}>
+          {packageSummary.sourceLabel ?? formatControlBoardPackageRef(packageSummary.sourceRef)}
+        </span>
+      }
       onClick={() => onSelectPackage(packageSummary.packageId)}
       pills={
         <>

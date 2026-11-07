@@ -74,7 +74,7 @@ export const guard = {
     assertIncludes(failures, controller, [
       "projectRepositoryEffectiveRecordProjections",
       "recordProjectionById",
-      "repositorySummaryFromRecords(records)",
+      "repositorySummaryFromRecords(overviewRecords)",
       "useRepositoryLifecycleLiveRuntime",
       "openRepositoryLifecycle",
       "runtimeProjection: repositoryRuntimeProjection",
