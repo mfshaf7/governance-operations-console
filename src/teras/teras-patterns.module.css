@@ -1917,6 +1917,14 @@
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 
+.terasPanel.terasRegisterPanel[data-register-body-min="compact"][data-register-footer="true"] {
+  grid-template-rows: auto auto minmax(11rem, 1fr) auto;
+}
+
+.terasPanel.terasRegisterPanel[data-register-body-min="compact"] .terasRegisterPanelBody {
+  contain: size;
+}
+
 .terasRegisterPanelFooter {
   min-width: 0;
   padding-top: 0.72rem;
@@ -4723,6 +4731,11 @@
 
 .terasRecordControlLayout[data-composition="compact-control"] {
   --teras-record-control-side-width: 430px;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
 }
 
 .terasRecordControlLayout[data-composition="fullscreen-register"] {
@@ -4731,6 +4744,18 @@
 
 .terasRecordControlLayout[data-mode="overview-register-selected"] {
   grid-template-rows: auto minmax(0, 1fr);
+}
+
+.terasRecordControlLayout[data-composition="compact-control"] .terasRecordControlOverviewZone {
+  flex: 0 0 auto;
+}
+
+.terasRecordControlLayout[data-composition="compact-control"] .terasRecordControlWorkZone {
+  flex: 1 0 auto;
+}
+
+.terasRecordControlLayout[data-composition="compact-control"] .terasRecordControlSelectedColumn {
+  contain: size;
 }
 
 .terasRecordControlOverviewZone {

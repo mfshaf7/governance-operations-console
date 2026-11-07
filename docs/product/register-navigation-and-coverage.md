@@ -132,3 +132,15 @@ boundary; the size is an upper bound and is never evidence of collection complet
 
 Primary Console activity retains its distinct purpose and controls. Choice
 fields and individual-record event trails do not acquire register pagination.
+
+
+Compact register panels retain their existing minimum body height when paging
+controls are present. At short viewport heights, the existing control layout
+scrolls its contents instead of clipping the rows beneath the table header.
+This preserves columns, cards, selected records and reachable paging controls;
+it does not shrink the readable row body to make the footer fit.
+
+Portal selectors measure their menu before painting and open upward when the
+space below the trigger cannot fit the options. The menu remains within the
+viewport when a compact register scrolls; pointer and keyboard choices retain
+the existing selection behavior.
