@@ -26,7 +26,7 @@ export function PrototypeRequestReadinessPanel({
   const readinessTone = blockedRows > 0 ? "danger" : canSubmit ? "ok" : "warn";
 
   return (
-    <TerasPanel
+    <TerasPanel spacing="normal"
       frame="padded"
       treatment="rail"
       layout="header-body"

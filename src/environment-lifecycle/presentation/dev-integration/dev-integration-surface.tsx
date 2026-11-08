@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../console-integration/registers/workspace-view-state.ts";
 
 import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -180,7 +181,7 @@ function ProfileHistory({
     >
       <TerasZoneLayout variant="main-aside">
         <TerasZone fit="fill">
-          <TerasPanel
+          <TerasPanel spacing="normal"
             fit="fill"
             frame="padded"
             overflow="hidden"
@@ -285,13 +286,13 @@ export function DevIntegrationSurface({
   runtime?: EnvironmentLifecycleRuntimeController;
 }) {
   const [localFilters, setLocalFilters] =
-    useState<DevIntegrationProfileFilters>(initialFilters);
+    useWorkspaceViewState<DevIntegrationProfileFilters>('dev-integration-view:localFilters', initialFilters);
   const filters = live?.runtime.filters ?? localFilters;
   const setFilters = live?.runtime.setFilters ?? setLocalFilters;
   const [mode, setMode] =
     useState<DevIntegrationSurfaceMode>("register");
   const [selectedProfileId, setSelectedProfileId] =
-    useState<string | null>(profiles[0]?.profileId ?? null);
+    useWorkspaceViewState<string | null>('dev-integration-view:selectedProfileId', profiles[0]?.profileId ?? null);
   const filteredProfiles = useMemo(
     () => filterDevIntegrationProfiles(profiles, filters),
     [filters, profiles],

@@ -7,6 +7,8 @@ import {withRepositoryConnections} from '../support/repository-connections-fetch
 const provisionRepository = (intent, options) => provisionRepositoryNative(intent, {...options,
   fetchImpl:withRepositoryConnections(options.fetchImpl, options.env, intent.repositoryOwner)});
 import { projectRepositoryProvisioningResults } from "../../src/domain-workspaces/repository/live-runtime/repository-custody-live-projection.ts";
+import { projectWorkspacePulseFromAttention } from "../../src/command-center/read-model/workspace-pulse.ts";
+import { projectCommandCenterAttention } from "../../src/command-center/read-model/command-center-attention.ts";
 import { projectRepositoryOwnerAttention } from "../../src/domain-workspaces/repository/read-model/attention-source.ts";
 import { projectRepositoryCurrentInventory } from "../../src/domain-workspaces/repository/live-runtime/repository-inventory-live-projection.ts";
 import { repositorySelectedActionLabel, repositorySummaryFromRecords } from "../../src/domain-workspaces/repository/presentation/shared/repository-control-projection.ts";
@@ -146,4 +148,21 @@ test("primary attention shares current internal registration and never reopens a
   assert.equal(loading.source.freshness, "loading"); assert.deepEqual(loading.candidates, []);
   const unavailable = projectRepositoryOwnerAttention(read, continuity, { state: "unavailable", payload: null, capturedAt });
   assert.equal(unavailable.source.freshness, "unavailable"); assert.deepEqual(unavailable.candidates, []);
+});
+
+
+test("Failed or expired repository reads settle even before registration lookups start", () => {
+  const capturedAt = new Date().toISOString();
+  assert.equal(projectRepositoryOwnerAttention(undefined, undefined, null).source.freshness, "loading");
+  for (const read of [
+    { state: "unavailable", payload: null, capturedAt },
+    { state: "current", payload: [], capturedAt: new Date(Date.now() - 180_000).toISOString() },
+  ]) {
+    const attention = projectRepositoryOwnerAttention(read, undefined, null);
+    assert.equal(attention.source.freshness, "unavailable");
+    assert.deepEqual(attention.candidates, []);
+    const pulse = projectWorkspacePulseFromAttention(projectCommandCenterAttention([attention], capturedAt));
+    assert.equal(pulse.sources.some(source => source.state === "loading"), false);
+    assert.equal(pulse.posture.id, "unavailable");
+  }
 });

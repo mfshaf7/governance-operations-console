@@ -90,6 +90,7 @@ export function DeliveryPackageRegisterTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Delivery packages"
       columns={registerColumns}
       fill
       getRowId={(deliveryPackage) => deliveryPackage.delivery_package_id}

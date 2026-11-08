@@ -54,6 +54,8 @@ for (const width of [1280, 1700]) test(`Pulse loading preserves known results an
       await expect(card.locator("strong")).toHaveText("—");
       await expect(card.locator(".metric-detail")).toHaveText("Reading status…");
     }
+    // The immediately current lifecycle source must not end coverage loading.
+    await expect(panel.locator('[data-pulse-signal="source-coverage"] .metric-detail')).toHaveText("Reading sources…");
     await expect(mood).toHaveAttribute("data-pulse-mood", "loading");
     await expect(mood.locator("strong")).toHaveText("Checking…");
     const motion = await cards.first().locator('[data-teras-loading-signal] i').first()
@@ -66,9 +68,12 @@ for (const width of [1280, 1700]) test(`Pulse loading preserves known results an
     const decisions = panel.locator('[data-pulse-signal="required-decisions"]');
     await expect(decisions.locator("strong")).toHaveText("1+");
     await expect(decisions).not.toHaveAttribute("aria-busy", "true");
-    // Known data keeps the original detail, including its coverage qualification.
-    await expect(decisions.locator(".metric-detail")).toContainText("1 projected operator decision needs review.");
-    await expect(decisions.locator(".metric-detail")).toContainText("Source coverage");
+    // Known partial counts remain usable, but cards keep compact pending copy.
+    await expect(decisions.locator(".metric-detail")).toHaveText("Checking sources…");
+    await expect(panel.locator('[data-pulse-signal="source-coverage"] .metric-detail')).toHaveText("Reading sources…");
+    await decisions.click();
+    await expect(page.locator(".pulse-focus-panel").getByText(/1 projected operator decision needs review\. Source coverage is incomplete/, { exact: false })).toBeVisible();
+    await page.getByRole("button", { name: "Back to Command Center", exact: true }).click();
     await expect(decisions.locator('[data-teras-loading-signal]')).toHaveCount(1);
     await expect(panel.locator('[data-pulse-signal="source-coverage"] strong')).toHaveText("2/9");
 

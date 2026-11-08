@@ -249,10 +249,10 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, op
       {files.map(file => <TerasNoteField key={file.path} label={`Proposed file: ${file.path}`} readOnly value={file.content} onValueChange={() => undefined} minimumHeight="medium" />)}
       <TerasContentTray kicker="Previous requests" description={records === null ? pending ? "Loading previous requests…" : "Previous requests could not be loaded." : records.length ? "Open an earlier setup or verification request to inspect its status or continue unfinished work." : "No previous setup or verification requests."}
         actions={<TerasActionButton disabled={pending} emphasis="secondary" onClick={() => void run("load", () => refresh())}>Refresh requests</TerasActionButton>}>
-        <TerasRegisterPagination label="Repository setup requests" disabled={blocked} offset={history.position.offset} count={records?.length ?? 0} page={history.previous.length+1}
+        {!historyError && records && (records.length > 0 || history.previous.length > 0 || history.nextCursor) ? <TerasRegisterPagination label="Repository setup requests" disabled={blocked} offset={history.position.offset} count={records?.length ?? 0} page={history.previous.length+1}
           pending={pending} unavailable={Boolean(historyError)} hasPrevious={!blocked && history.previous.length>0} hasNext={!blocked && Boolean(history.nextCursor)}
           onPrevious={()=>{const prior=history.previous.at(-1);if(prior)void run("load",()=>refresh(prior,history.previous.slice(0,-1)));}}
-          onNext={()=>{if(history.nextCursor)void run("load",()=>refresh({cursor:history.nextCursor,offset:history.position.offset+(records?.length ?? 0)},[...history.previous,history.position]));}} />
+          onNext={()=>{if(history.nextCursor)void run("load",()=>refresh({cursor:history.nextCursor,offset:history.position.offset+(records?.length ?? 0)},[...history.previous,history.position]));}} /> : null}
         {records && !history.pagingAvailable ? <TerasContentTray kicker="Recent requests" description="Older request history is unavailable from this source." /> : null}
         {records?.length ? <TerasList frame="contained" scrollHeight="short">
           {records.map(record => <TerasSignalItem key={record.requestId} label={requestType(record)} title={requestState(record)} detail={`Updated ${new Date(record.revision).toLocaleString()}`}

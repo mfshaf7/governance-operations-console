@@ -26,7 +26,7 @@ export function OrchestrationHomeInFlightPanel({
   );
 
   return (
-    <TerasPanel
+    <TerasPanel spacing="normal"
       fit="fill"
       frame="padded"
       treatment="neutral"

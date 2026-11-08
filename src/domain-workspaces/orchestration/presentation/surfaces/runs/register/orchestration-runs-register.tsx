@@ -101,6 +101,7 @@ export function OrchestrationRunsRegister({
 
   return (
     <TerasRecordTable
+      ariaLabel="Orchestration runs"
       columns={columns}
       fill
       profile="inventory"

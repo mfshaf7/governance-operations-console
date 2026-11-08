@@ -174,7 +174,7 @@ export function TerasChoiceGroup<T extends string>({
             aria-current={selected ? "true" : undefined}
             aria-disabled={optionLocked}
             aria-label={`${option.label}${option.confirmed ? ", confirmed" : ""}${
-              option.disabledReason ? `, unavailable: ${option.disabledReason}` : ""
+              option.disabled === true && option.disabledReason ? `, unavailable: ${option.disabledReason}` : ""
             }`}
             className={cx(
               styles.terasChoiceButton,

@@ -82,6 +82,7 @@ export function DeliveryIntakeRegisterTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Delivery intake"
       columns={columns}
       fill
       getRowId={(source) => source.accepted_source_id}

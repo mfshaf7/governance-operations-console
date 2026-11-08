@@ -22,7 +22,7 @@ export function OrchestrationHomeMaterialEventsPanel({
   );
 
   return (
-    <TerasPanel
+    <TerasPanel spacing="normal"
       fit="fill"
       frame="padded"
       treatment="neutral"

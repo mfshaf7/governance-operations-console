@@ -101,6 +101,7 @@ export function ProductPortfolioProductsRegisterTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Managed products"
       columns={columns}
       fill
       getRowId={(entry) => entry.identity.productId}

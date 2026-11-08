@@ -111,8 +111,8 @@ The detailed cross-surface read contract is
 ## Operator Flow
 
 1. Open `Workspace Registry` from Console navigation.
-2. Inspect active records or filter entrants in `Eligible`.
-3. Open `Review Promotion`. The Console checks original requests first and
+2. Inspect workspace inventory or filter approved items in `Eligible`.
+3. Open `Review activation`. The Console checks original requests first and
    automatically reads the current source when no request is pending. An
    unavailable or invalid journal blocks a new request. Open any pending original
    instead; reading history never prepares or advances it.
@@ -243,6 +243,43 @@ canonical mutation. Lifecycle completion requires `succeeded`,
 request, matching lifecycle readback and merged state, and the immutable
 canonical history event reference returned by OOS.
 
+## Classification and activation
+
+`Onboard workspace item` offers Repository, Product and Component registration.
+Repository onboarding reuses verified provider identity. Product and Component
+registration describes a separately managed application or supporting service;
+ordinary folders do not need these extra records.
+
+Product and Component metadata is recorded in Workspace Governance Git and
+inherits that repository's visibility. Responsibility choices use active
+Governance repository records. Installation-private source-project records are
+not eligible shared validation owners, and this form does not implement private
+Product or Component registration. Repository onboarding retains its separate
+private operational-storage path.
+
+A successful classification is **Classification recorded**, not an activated
+inventory item. The result follows the original recorded decision, including
+when reopened from history:
+
+- **Admitted:** `Review activation` opens the existing Eligible register filtered
+  to the item. The existing source, approval and freshness checks still apply.
+- **Proposed:** complete planning and review, then use the existing reclassification
+  action to request admission. No activation action is presented.
+- **Out of scope:** the exclusion is recorded; there is no activation action.
+
+The Repos loaded metric counts repository records in the loaded source
+window, not distinct responsibility references and not a global native total.
+A linked product is displayed separately from responsible repositories without
+changing the original signed source bindings. Source codes and digests remain
+available in technical details.
+
+Preparation reads say Reading or Preparing review. A source-difference warning
+requires an actual preparation to compare. Approval references identify the
+approval for that exact change; the Console neither invents one nor reuses an
+unrelated approval. Pending histories refresh while visible, and failed history
+reads show a section retry. Completed original requests do not keep a refresh
+button. Nonterminal original progress remains inspectable.
+
 ## Ordinary forms and separate feedback dialogs in the pending UI batch
 
 Registry actions reuse the clean Workspace Intake form pattern: standard width,
@@ -255,7 +292,7 @@ acceptance. Changing classification clears acceptance, including Out of scope
 normalization; returning to details preserves the authored draft. Other source-domain classification entry points retain their existing workflow.
 
 Submission opens a separate result dialog. Accepted requests say submitted;
-completed labels require a succeeded owner outcome. Source review, pending work,
+recorded-classification labels require a succeeded owner outcome; inventory activation is a separate outcome. Source review, pending work,
 failures, cancellation and unavailable outcomes retain their actual state.
 Original opaque request IDs, pagination, pending totals, recovery, cancellation
 and continuation stay bound to the existing owner journal. Request history is a
@@ -267,3 +304,20 @@ These are operator-review preview changes in the same maintenance Landing Unit.
 The Console server and OOS authority checks are unchanged. Verification submits
 no real classification, promotion or lifecycle business command; an isolated
 synthetic acknowledgement test proves the separate submitted-state dialog.
+
+## Refresh follow-up in the same pending maintenance batch
+
+Automatic Registry reads preserve the displayed page and keep their pending
+indicator separate from initial reads, explicit refreshes and source changes.
+Pending journal checks retain the selected history page. Starting activation
+during a background read waits for that read before preparing the current
+candidate; a failed read still prevents a new mutation.
+
+The approved companion Console repair applies the same quiet-read distinction
+to Dev Integration and the Proposal repository picker. Search, filters,
+selected identifiers and workspace pages use bounded shell-lifetime
+presentation memory. Returning to a workspace still reads its source again;
+this memory supplies neither records nor permission to act. Model tab readers
+retain their read state while that workspace is open and pause inactive
+register polling. The shared interaction policy is recorded in the
+[design profile](design-profile.md#refresh-and-workspace-navigation-continuity).

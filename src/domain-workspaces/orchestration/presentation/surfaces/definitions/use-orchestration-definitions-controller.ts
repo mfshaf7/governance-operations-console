@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../../console-integration/registers/workspace-view-state.ts";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -21,10 +22,10 @@ export function useOrchestrationDefinitionsController(
   records: OrchestrationDefinitionRecord[],
   focusRecordId: string | null = null,
 ) {
-  const [filters, setFilters] = useState<OrchestrationDefinitionFilters>(
+  const [filters, setFilters] = useWorkspaceViewState<OrchestrationDefinitionFilters>('orchestration-definitions:filters',
     defaultOrchestrationDefinitionFilters,
   );
-  const [selectedId, setSelectedId] = useState(records[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useWorkspaceViewState('orchestration-definitions:selectedId', records[0]?.id ?? null);
   const [dashboardRecord, setDashboardRecord] =
     useState<OrchestrationDefinitionRecord | null>(null);
   const [designSession, setDesignSession] = useState<{

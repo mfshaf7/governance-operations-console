@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../../console-integration/registers/workspace-view-state.ts";
 
 import { useState } from "react";
 
@@ -35,14 +36,14 @@ export function ProductPortfolioProductsSurface({
   onOpenProduct: (entry: ProductPortfolioEntry) => void;
 }) {
   const [availability, setAvailability] =
-    useState<ProductPortfolioAvailabilityFilter>("all");
+    useWorkspaceViewState<ProductPortfolioAvailabilityFilter>('portfolio-products:availability', "all");
   const [listingView, setListingView] =
-    useState<ProductPortfolioListingView>("active");
+    useWorkspaceViewState<ProductPortfolioListingView>('portfolio-products:listingView', "active");
   const [maturity, setMaturity] =
-    useState<ProductPortfolioMaturityFilter>("all");
-  const [query, setQuery] = useState("");
-  const [scope, setScope] = useState<ProductPortfolioScopeFilter>("all");
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    useWorkspaceViewState<ProductPortfolioMaturityFilter>('portfolio-products:maturity', "all");
+  const [query, setQuery] = useWorkspaceViewState('portfolio-products:query', "");
+  const [scope, setScope] = useWorkspaceViewState<ProductPortfolioScopeFilter>('portfolio-products:scope', "all");
+  const [selectedProductId, setSelectedProductId] = useWorkspaceViewState<string | null>('portfolio-products:selectedProductId',
     null,
   );
   const filteredEntries = productPortfolioProductsForRegister(entries, {

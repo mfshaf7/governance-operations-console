@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 
 import { useCallback, useState } from "react";
 
@@ -40,9 +41,12 @@ import {
 } from "./model-operations-control-view-model.ts";
 import { useModelOperationsControlController } from "./use-model-operations-control-controller.ts";
 import { ModelRuntimeControlSurface } from "./model-runtime-control-surface.tsx";
+import { useModelRuntime } from "../../live-runtime/use-model-runtime.ts";
 
 export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
-  const [view, setView] = useState<"runtime" | "profiles">("profiles");
+  const [view, setView] = useWorkspaceViewState<"runtime" | "profiles">('model:view', "profiles");
+  const runtime = useModelRuntime(view === "runtime");
+  const profiles = useModelOperationsControlController(view === "profiles");
   const [dirty, setDirty] = useState(false), [nextView, setNextView] = useState<"runtime" | "profiles" | null>(null);
   const reportDirty = useCallback((value: boolean) => { setDirty(value); onDirtyChange?.(value); }, [onDirtyChange]);
   const select = (value: "runtime" | "profiles") => { if (value === view) return; if (dirty) setNextView(value); else setView(value); };
@@ -53,7 +57,7 @@ export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange
         <TerasSegmentedControl ariaLabel="Model Operations pages" value={view} onValueChange={select}
           options={[{ value: "profiles", label: "Purpose profiles" }, { value: "runtime", label: "Models & routing" }]} />
       </TerasActionRow>
-      {view === "runtime" ? <ModelRuntimeControlSurface onDirtyChange={reportDirty} /> : <ModelProfileControlSurface onOpenRouting={() => select("runtime")} />}
+      {view === "runtime" ? <ModelRuntimeControlSurface runtime={runtime} onDirtyChange={reportDirty} /> : <ModelProfileControlSurface controller={profiles} onOpenRouting={() => select("runtime")} />}
     </TerasFieldStack>
     </TerasContentFrame>
     <TerasDraftCloseGuardDialog kicker="Routing draft" title="Discard unsaved routing changes?" description="Saved routing remains with the model service."
@@ -62,8 +66,7 @@ export function ModelOperationsControlSurface({ onDirtyChange }: { onDirtyChange
   </>;
 }
 
-function ModelProfileControlSurface({onOpenRouting}:{onOpenRouting:()=>void}) {
-  const controller = useModelOperationsControlController();
+function ModelProfileControlSurface({controller,onOpenRouting}:{controller:ReturnType<typeof useModelOperationsControlController>;onOpenRouting:()=>void}) {
   const page = useRegisterPage(controller.profiles.filtered, JSON.stringify([controller.filters.search.trim().toLowerCase(), controller.filters.lifecycle, controller.filters.access, controller.filters.provider]), 'Purpose profiles');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyTarget, setHistoryTarget] = useState<string | null>(null);
@@ -84,6 +87,7 @@ function ModelProfileControlSurface({onOpenRouting}:{onOpenRouting:()=>void}) {
         overview={
           <ModelOperationsControlOverviewPanel
             loading={controller.source.loading}
+            sourceRevalidating={controller.source.revalidating}
             latestRequest={controller.request.latest}
             onOpenHistory={() => openHistory()}
             historyAvailable={controller.request.historyAvailable}

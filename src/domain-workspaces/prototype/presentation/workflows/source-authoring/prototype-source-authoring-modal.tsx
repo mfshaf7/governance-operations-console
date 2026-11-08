@@ -97,7 +97,7 @@ function PrototypeSourceTool({ record, prototypeId }: { record: PrototypeRecord;
         </> : null}
       </TerasPanel>
     </> : null}
-    {runtime.draft ? <TerasPanel frame="padded" treatment="neutral">
+    {runtime.draft ? <TerasPanel spacing="normal" frame="padded" treatment="neutral">
       <TerasPanelHeader kicker="Inert Draft Inspection" title={runtime.draft.change_set.commit_message} description={`Exact reviewed digest: ${runtime.draft.digest}`} />
       <TerasFieldStack spacing="normal">{runtime.draft.change_set.operations.map(operation => <TerasNoteField key={operation.path} label={`${operation.action}: ${operation.path}`} readOnly value={operation.content ?? "(delete)"} onValueChange={() => undefined} minimumHeight="medium" />)}</TerasFieldStack>
     </TerasPanel> : null}

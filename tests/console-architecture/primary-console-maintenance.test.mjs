@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import {projectAgentOwnerSnapshot} from "../../src/console-shell/context/agent-workspace-context.ts";
 import test from "node:test";
-import {ownerAttentionSnapshot} from "../../src/console-integration/live-attention.ts";
+import {ownerAttentionSnapshot,ownerActionCandidate} from "../../src/console-integration/live-attention.ts";
 import {projectCommandCenterAttention} from "../../src/command-center/read-model/command-center-attention.ts";
 import {projectWorkspacePulseFromAttention} from "../../src/command-center/read-model/workspace-pulse.ts";
 import {activityPresentation,isRoutineActivityRead} from "../../src/console-shell/activity/console-activity-view-model.ts";
@@ -38,4 +39,33 @@ test("failed, stalled and conflicting history pages cannot replace retained even
  const two=snapshot([],[{owner:"wgcf",cursor:"w"},{owner:"oos",cursor:"o"}]);
  await assert.rejects(readOlderActivityPage(two,async url=>new Response(JSON.stringify(snapshot([{...event("conflict"),summary:url}])))),/Conflicting/);
  assert.deepEqual(previous.events.map(e=>e.eventId),["head"]);
+});
+
+
+test("fresh owner reads preserve stale item truth, disable its route and qualify aggregate coverage",()=>{
+ const capturedAt=new Date(now).toISOString();
+ for(const freshness of ["stale","unverified","unavailable","loading"]){
+  const original=ownerActionCandidate({id:"move:stale",title:"Retained item",subjectRef:"record:retained",move:"Inspect",reason:"Current item truth is not verified.",owner:"owner",observedAt:capturedAt,target:{id:"console",kind:"workspace",workspaceId:"console"}});
+  original.source.freshness=freshness;
+  const source=ownerAttentionSnapshot(registration,{state:"current",capturedAt,payload:{}},"owner",()=>[original],now);
+  assert.equal(source.candidates[0].source.freshness,freshness);assert.equal(source.source.freshness,"unverified");
+  const attention=projectCommandCenterAttention([source],capturedAt);
+  assert.equal(attention.candidates[0].route.availability,"unavailable");
+  const pulse=projectWorkspacePulseFromAttention(attention);
+  assert.equal(pulse.signals.find(s=>s.id==="active-operations").value,"1+");
+  if(freshness!=="loading")assert.equal(pulse.signals.find(s=>s.id==="active-operations").tone,freshness==="unavailable"?"danger":"stale");
+  assert.notEqual(pulse.signals.find(s=>s.id==="source-coverage").stateLabel,"CURRENT");
+ }
+});
+
+
+test("Agent Console summaries qualify the same partial collections as the visible overview",()=>{
+ const capturedAt=new Date(now).toISOString();
+ const cases=[
+  ["prototypes",{mode:"live",coverage:{complete:false},projection:{readModel:{records:[]}}}],
+  ["orchestration",{mode:"live",definitions:[],runs:Array.from({length:100},()=>({state:"completed"}))}],
+  ["platform",{mode:"live",catalog:{freshness:"current",subjects:[]},operations:Array.from({length:200},()=>({state:"succeeded"}))}],
+  ["lifecycle",{mode:"live",transitions:[],truncated:true}],
+ ];
+ for(const [source,payload] of cases){const projected=projectAgentOwnerSnapshot(source,payload,capturedAt);assert.equal(projected.state,"current");assert.equal(projected.partial,true);}
 });

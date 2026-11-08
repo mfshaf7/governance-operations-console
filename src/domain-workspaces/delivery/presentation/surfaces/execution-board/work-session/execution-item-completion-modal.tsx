@@ -127,7 +127,7 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
       <TerasActionButton onClick={() => void submit()} disabled={pending || uncertain || !context?.can_complete || !confirmed || !valid}>Record non-source completion</TerasActionButton>
     </TerasActionRow>}>
     <TerasFieldStack spacing="loose">
-      <TerasPanel frame="padded" fit="content" treatment="neutral">
+      <TerasPanel spacing="normal" frame="padded" fit="content" treatment="neutral">
         <TerasPanelHeader kicker="Canonical target" title={context?.subject ?? `ART work item #${workItemId}`}
           description="OOS remains the work-state, readiness and narrative authority. No branch, source credential or source packet is created here." />
         {context ? <TerasMetadataList columns={2} items={[
@@ -139,7 +139,7 @@ export function ExecutionItemCompletionModal({ workItemId, onClose }: { workItem
       </TerasPanel>
       {outcome ? <TerasList frame="contained"><TerasSignalItem label="Canonical result" title={outcome} detail={context?.record_ref ?? "Read the original target."} tone="ok" /></TerasList> : null}
       {context?.blocking_reasons.length ? <TerasList frame="contained">{context.blocking_reasons.map(reason => <TerasSignalItem key={reason} label="Service prerequisite" title="Completion unavailable" detail={reason} tone="warn" />)}</TerasList> : null}
-      {context?.pi_review && context.status !== "done" ? <TerasPanel frame="padded" fit="content" treatment="neutral">
+      {context?.pi_review && context.status !== "done" ? <TerasPanel spacing="normal" frame="padded" fit="content" treatment="neutral">
         <TerasPanelHeader kicker="Earned objective review" title="Record the actual PI outcome" description="Review the completed outcome and evidence. OOS records actual value and its native review outcome; this does not complete the objective." />
         <TerasMetadataList columns={2} items={[
           { label: "Initiative", value: context.pi_review.delivery_id }, { label: "Target PI", value: context.pi_review.target_pi },

@@ -178,8 +178,8 @@ export function ArchitecturePacketAuthoringModal({
       width="viewport"
     >
       <TerasZoneLayout variant="main-aside">
-        <TerasZone fit="fill">
-          <TerasPanel frame="padded" layout="header-body" tone="info" treatment="state">
+        <TerasZone fit="fill" scroll>
+          <TerasPanel spacing="normal" frame="padded" layout="header-body" tone="info" treatment="state">
             <TerasPanelHeader
               description="The Console sends only editable design intent. OOS binds fresh ART truth and the server-held operator before returning a local candidate."
               kicker="Step 1"
@@ -248,7 +248,7 @@ export function ArchitecturePacketAuthoringModal({
           </TerasPanel>
 
           {candidate ? (
-            <TerasPanel frame="padded" layout="header-body" tone="info" treatment="state">
+            <TerasPanel spacing="normal" frame="padded" layout="header-body" tone="info" treatment="state">
               <TerasPanelHeader
                 description="This is the exact OOS-authored local candidate. Editing any input invalidates it and requires fresh validation."
                 kicker="Step 2"
@@ -260,7 +260,7 @@ export function ArchitecturePacketAuthoringModal({
               <TerasNoteField
                 disabled={submitting}
                 aria-label="Canonical Architecture Packet JSON"
-                fill
+                minimumHeight="tall"
                 label="Canonical packet"
                 onValueChange={() => undefined}
                 readOnly
@@ -271,7 +271,7 @@ export function ArchitecturePacketAuthoringModal({
           ) : null}
 
           {persisted ? (
-            <TerasPanel frame="padded" layout="header-body" tone="ok" treatment="state">
+            <TerasPanel spacing="normal" frame="padded" layout="header-body" tone="ok" treatment="state">
               <TerasPanelHeader
                 description="WGCF custody and OOS source evidence now bind the accepted packet."
                 kicker="Step 3"
@@ -302,8 +302,8 @@ export function ArchitecturePacketAuthoringModal({
           ) : null}
         </TerasZone>
 
-        <TerasZone fit="content">
-          <TerasPanel
+        <TerasZone fit="fill" scroll>
+          <TerasPanel spacing="normal"
             frame="padded"
             layout="header-body"
             tone={error ? "danger" : persisted ? "ok" : "info"}
@@ -391,7 +391,7 @@ export function ArchitecturePacketAuthoringModal({
           </TerasPanel>
 
           {current ? (
-            <TerasPanel frame="padded" layout="header-body" tone="info" treatment="state">
+            <TerasPanel spacing="normal" frame="padded" layout="header-body" tone="info" treatment="state">
               <TerasPanelHeader
                 description="Use this immutable packet as the editable starting point only when supersession is intended."
                 kicker="Current packet"
@@ -420,7 +420,7 @@ export function ArchitecturePacketAuthoringModal({
           ) : null}
 
           {draftIssues.length > 1 ? (
-            <TerasPanel frame="padded" layout="header-body" tone="warn" treatment="state">
+            <TerasPanel spacing="normal" frame="padded" layout="header-body" tone="warn" treatment="state">
               <TerasPanelHeader
                 description="Every missing responsibility, topology, evidence, gate, and decision input remains visible before OOS is called."
                 kicker="Input blockers"

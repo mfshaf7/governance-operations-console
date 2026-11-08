@@ -164,7 +164,7 @@ export function RunDashboardModal({
                 />
                 <TerasTechnicalDetails items={orchestrationRunTechnicalFacts(record)} />
 
-                <TerasPanel
+                <TerasPanel spacing="normal"
                   frame="padded"
                   treatment="neutral"
                   fit="fill"
@@ -248,7 +248,7 @@ export function RunDashboardModal({
                   {record.controls.some(control => !control.available) ? <TerasTechnicalDetails summary="Unavailable actions" items={record.controls.filter(control => !control.available).map(control => ({ label: control.label, value: control.disabledReason ?? "Not available for this run." }))} /> : null}
                 </TerasPanel>
 
-                <TerasPanel
+                <TerasPanel spacing="normal"
                   frame="padded"
                   treatment="neutral"
                   fit="fill"
@@ -275,7 +275,7 @@ export function RunDashboardModal({
                   </TerasList>
                 </TerasPanel>
 
-                <TerasPanel
+                <TerasPanel spacing="normal"
                   frame="padded"
                   treatment="neutral"
                   fit="content"

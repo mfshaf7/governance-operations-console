@@ -1,3 +1,4 @@
+import { attentionCandidateTone, attentionClassTone } from "./attention-tone.ts";
 import type { ConsoleNavigationTarget } from "../../console-architecture";
 import type {
   CommandCenterAttentionCandidate,
@@ -179,6 +180,8 @@ function operationalSignal(
 ): WorkspacePulseSignal {
   const records = recordsFor(input, signalId);
   const definition = signalDefinitions[signalId];
+  const recordWarning = records.some(record => record.tone === "stale") ? "stale"
+    : signalId !== "blocked-operations" && records.some(record => record.tone === "danger") ? "danger" : null;
   const incomplete = input.sources.some((source) => source.state !== "current");
   const coverage = incomplete ? " Source coverage is incomplete or still loading; this is not a workspace total." : "";
   const value = `${records.length}${incomplete ? "+" : ""}`;
@@ -197,7 +200,7 @@ function operationalSignal(
       records,
       sourceSummary,
       stateLabel: incomplete ? "INCOMPLETE" : records.length === 0 ? "CLEAR" : "WAITING",
-      tone: incomplete || records.length > 0 ? "warn" : "ok",
+      tone: recordWarning ?? (incomplete || records.length > 0 ? attentionClassTone("decision") : "ok"),
       value,
     };
   }
@@ -216,7 +219,7 @@ function operationalSignal(
       records,
       sourceSummary,
       stateLabel: records.length > 0 ? "BLOCKED" : incomplete ? "INCOMPLETE" : "CLEAR",
-      tone: records.length > 0 ? "danger" : incomplete ? "warn" : "ok",
+      tone: recordWarning ?? (records.length > 0 ? attentionClassTone("recovery") : incomplete ? "warn" : "ok"),
       value,
     };
   }
@@ -234,7 +237,7 @@ function operationalSignal(
     records,
     sourceSummary,
     stateLabel: incomplete ? "INCOMPLETE" : records.length === 0 ? "QUIET" : "ACTION NEEDED",
-    tone: incomplete ? "warn" : records.length === 0 ? "muted" : "info",
+    tone: recordWarning ?? (records.length > 0 ? attentionClassTone("required-action") : incomplete ? "warn" : "muted"),
     value,
   };
 }
@@ -551,7 +554,7 @@ function attentionCandidatePulseRecord(
     summary: candidate.reason,
     timingLabel: candidatePulseTiming(candidate),
     title: candidate.subject.title,
-    tone: candidatePulseTone(candidate),
+    tone: attentionCandidateTone(candidate),
   };
 }
 
@@ -582,20 +585,6 @@ function candidatePulseState(candidate: CommandCenterAttentionCandidate) {
     case "required-action":
       return "ACTION NEEDED";
   }
-}
-
-function candidatePulseTone(
-  candidate: CommandCenterAttentionCandidate,
-): WorkspacePulseTone {
-  if (candidate.source.freshness !== "current") return "stale";
-  if (candidate.attentionClass === "recovery") return "danger";
-  if (
-    candidate.attentionClass === "decision" ||
-    candidate.attentionClass === "review"
-  ) {
-    return "warn";
-  }
-  return candidate.urgency === "low" ? "muted" : "info";
 }
 
 function candidatePulseTiming(candidate: CommandCenterAttentionCandidate) {

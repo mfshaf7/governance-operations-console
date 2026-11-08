@@ -98,6 +98,7 @@ export function OrchestrationDefinitionsRegister({
 
   return (
     <TerasRecordTable
+      ariaLabel="Orchestration definitions"
       columns={columns}
       fill
       profile="inventory"

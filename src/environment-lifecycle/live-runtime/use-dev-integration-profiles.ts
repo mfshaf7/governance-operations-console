@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../console-integration/registers/workspace-view-state.ts";
 import {readRegisterOffsetWindow} from '../../console-integration/registers/read-register-offset-window.ts';
 import {useRegisterPageSize} from '../../console-integration/registers/use-register-page-size.ts';
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -20,7 +21,7 @@ export function useDevIntegrationProfiles(enabled: boolean) {
   const [current, setCurrent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState(defaults);
+  const [filters, setFilters] = useWorkspaceViewState('dev-integration:filters', defaults);
   const [requests, setRequests] = useState<ProfileRequestRecord[]>([]);
   const [requestPage, setRequestPage] = useState<{next_offset:number|null;total:number}>({next_offset:null,total:0});
   const [historyCurrent, setHistoryCurrent] = useState(false);
@@ -32,8 +33,8 @@ export function useDevIntegrationProfiles(enabled: boolean) {
     setRequests(rows => [record, ...rows.filter(row => row.request_id !== record.request_id)]);
     if (pending.current?.id === record.request_id && ["recorded", "failed"].includes(record.state)) pending.current = null;
   }, []);
-  const loadHistory = useCallback(async (offset = 0) => {
-    historyReads.current++; setHistoryLoading(true);
+  const loadHistory = useCallback(async (offset = 0, background = false) => {
+    if (!background) { historyReads.current++; setHistoryLoading(true); }
     try {
       const window=await readRegisterOffsetWindow<ProfileRequestRecord,{offset:number;limit:number;total:number;next_offset:number|null}>({offset,pageSize:historyPageSize,readPage:async nativeOffset=>{
         const body=await json(`/api/dev-integration/requests?offset=${nativeOffset}&limit=25`);
@@ -46,7 +47,7 @@ export function useDevIntegrationProfiles(enabled: boolean) {
       setRequestPage(previous=>offset===0 && historyTailOffset.current>0 ? {...body.page,next_offset:previous.next_offset} : body.page);
       historyTailOffset.current=Math.max(historyTailOffset.current,offset);setHistoryCurrent(true);return true;
     } catch { if (mounted.current) setHistoryCurrent(false);return false; }
-    finally { historyReads.current--; if (mounted.current && historyReads.current === 0) setHistoryLoading(false); }
+    finally { if (!background) historyReads.current--; if (mounted.current && historyReads.current === 0) setHistoryLoading(false); }
   }, [historyPageSize]);
   useEffect(()=>{historyTailOffset.current=0;},[historyPageSize]);
   const filterKey = JSON.stringify([filters,pageSize]);
@@ -99,7 +100,7 @@ export function useDevIntegrationProfiles(enabled: boolean) {
   }, [enabled, filters, filterKey, offset, loadHistory]);
   useEffect(() => {
     if (!enabled) return;
-    const refresh = () => { if (document.visibilityState === "visible") { void loadRef.current(); void loadHistory(); } };
+    const refresh = () => { if (document.visibilityState === "visible") { void loadRef.current(true); void loadHistory(0, true); } };
     const timer = window.setInterval(refresh, 30000);
     document.addEventListener("visibilitychange", refresh);
     return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", refresh); };

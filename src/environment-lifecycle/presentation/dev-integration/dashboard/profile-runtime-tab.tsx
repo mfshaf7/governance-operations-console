@@ -94,7 +94,7 @@ export function ProfileRuntimeStage({
         />
       </TerasPanel>
 
-      <TerasPanel fit="content" frame="padded" treatment="neutral">
+      <TerasPanel fit="content" frame="padded" spacing="normal" treatment="neutral">
         <TerasPanelHeader
           description="Stable execution and persistence contract for runtime commands."
           kicker="Runtime Boundary"
@@ -175,7 +175,7 @@ export function ProfileRuntimeDock({
   return (
     <>
       <TerasContentFrame fill variant="standard">
-        <TerasPanel
+        <TerasPanel spacing="normal"
           fit="content"
           frame="padded"
           treatment="rail"

@@ -166,7 +166,7 @@ export function ExecutionWorkSessionModal({
       </TerasEmptyState> : null}
       <TerasZoneLayout variant="main-aside">
         <TerasZone fit="fill">
-          <TerasPanel
+          <TerasPanel spacing="normal"
             frame="padded"
             layout="header-body"
             tone="info"
@@ -207,7 +207,7 @@ export function ExecutionWorkSessionModal({
           </TerasPanel>
 
           {decision ? (
-            <TerasPanel
+            <TerasPanel spacing="normal"
               frame="padded"
               layout="header-body"
               tone="warn"
@@ -350,7 +350,7 @@ export function ExecutionWorkSessionModal({
           /> : null}
 
           {projection?.session_id ? (
-            <TerasPanel
+            <TerasPanel spacing="normal"
               frame="padded"
               layout="header-body"
               tone="info"
@@ -377,7 +377,7 @@ export function ExecutionWorkSessionModal({
         </TerasZone>
 
         <TerasZone fit="content">
-          <TerasPanel
+          <TerasPanel spacing="normal"
             frame="padded"
             layout="header-body"
             tone={runtime.projectionStatus === "offline" ? "danger" : "info"}
@@ -483,7 +483,7 @@ export function ExecutionWorkSessionModal({
           </TerasPanel>
 
           {projection?.command_receipt ? (
-            <TerasPanel
+            <TerasPanel spacing="normal"
               frame="padded"
               layout="header-body"
               tone="info"
@@ -505,7 +505,7 @@ export function ExecutionWorkSessionModal({
           ) : null}
 
           {projection?.closeout ? (
-            <TerasPanel
+            <TerasPanel spacing="normal"
               frame="padded"
               layout="header-body"
               tone={projection.closeout.state === "complete" ? "ok" : "warn"}
@@ -544,7 +544,7 @@ export function ExecutionWorkSessionModal({
           ) : null}
 
           {projection?.cleanup_receipt ? (
-            <TerasPanel
+            <TerasPanel spacing="normal"
               frame="padded"
               layout="header-body"
               tone="ok"

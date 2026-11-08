@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 import { useEffect, useMemo, useState } from "react";
 import { openExternalConsoleRoute } from "../../../../console-integration/external-route.ts";
 import {
@@ -27,7 +28,7 @@ import { ProviderConnectionsDialog } from "../dialogs/provider-connections/provi
 import { providerPresets } from "../../work-model/provider-connections-contract.ts";
 
 type Runtime = ReturnType<typeof useModelRuntime>;
-type Props = { onDirtyChange?: (dirty: boolean) => void };
+type Props = { runtime: Runtime; onDirtyChange?: (dirty: boolean) => void };
 const operationLabels: Record<ModelRuntimeOperation["state"], string> = {
   queued: "Queued", running: "Source verification in progress", "awaiting-account": "Account sign-in needed",
   retryable: "Retry available", unknown: "Completion unconfirmed", blocked: "Source evidence needs review",
@@ -39,8 +40,8 @@ const actionLabels: Record<ModelAction, string> = {
   "account.login.start": "Connect account", "account.login.cancel": "Cancel account sign-in",
 };
 
-export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
-  const runtime = useModelRuntime(), registry = runtime.registry, config = registry?.configuration.configuration;
+export function ModelRuntimeControlSurface({ runtime, onDirtyChange }: Props) {
+  const registry = runtime.registry, config = registry?.configuration.configuration;
   const connections = useProviderConnections(runtime.refresh, runtime.dataMode === "live", runtime.preview);
   const [dialog, setDialog] = useState<"registration" | "routing" | "activity" | "permission" | null>(null);
   const [closeRouting, setCloseRouting] = useState(false);
@@ -51,8 +52,8 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
     const label = connection ? connection.name + " · " + providerPresets[connection.provider].label : item.backend_id;
     return [item.backend_id, label + (item.experimental ? " · Experimental" : "")];
   }));
-  const [taskSearch, setTaskSearch] = useState("");
-  const [scope, setScope] = useState(defaultModelScope), [mode, setMode] = useState<RoutingMode>("source");
+  const [taskSearch, setTaskSearch] = useWorkspaceViewState('model-routing:taskSearch', "");
+  const [scope, setScope] = useWorkspaceViewState('model-routing:scope', defaultModelScope), [mode, setMode] = useState<RoutingMode>("source");
   const [route, setRoute] = useState<ModelRoute>({ primary: { model_id: "", effort: null }, fallbacks: [], on_exhausted: "fail-closed" });
   const [editRevision, setEditRevision] = useState<number | null>(null), [dirty, setDirty] = useState(false);
   const [nextScope, setNextScope] = useState<string | null>(null), [reloadGuard, setReloadGuard] = useState(false);
@@ -137,7 +138,7 @@ export function ModelRuntimeControlSurface({ onDirtyChange }: Props) {
         filterBar={<TerasFilterBar search={{ ariaLabel: "Search workflows", onValueChange: setTaskSearch, placeholder: "Search workflows...", value: taskSearch }} />}
         statusLabel={`${taskRows.length}/${registry.tasks.length+1} shown`} statusTone="info"
         actions={<TerasActionButton busy={runtime.refreshing} emphasis="secondary" onClick={() => void runtime.refresh().catch(() => undefined)}>Refresh</TerasActionButton>}>
-        <TerasRecordTable fill columns={columns} rows={taskPage.rows} getRowId={task => task} onSelect={changeScope} selectedRowId={scope} />
+        <TerasRecordTable ariaLabel="AI workflow routing" fill columns={columns} rows={taskPage.rows} getRowId={task => task} onSelect={changeScope} selectedRowId={scope} />
       </TerasRegisterPanel>}
       selected={<TerasSelectedPanel kicker="Selected routing" title={scope === defaultModelScope ? "System default" : workflowTaskLabel(scope)}
         description={effectiveRouteLabel(config, scope, backendLabels)} variant="compact" selected

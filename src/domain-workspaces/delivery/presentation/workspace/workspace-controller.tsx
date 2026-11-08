@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 
 import {
   useEffect,
@@ -107,10 +108,10 @@ function AvailableDeliveryWorkspaceController({
   const [packageRegisterFocus, setPackageRegisterFocus] =
     useState<DeliveryPackageRegisterFocus | null>(null);
   const [activeWorkspaceSurfaceId, setActiveWorkspaceSurfaceId] =
-    useState<DeliveryWorkspaceSurfaceId>("home");
+    useWorkspaceViewState<DeliveryWorkspaceSurfaceId>('delivery:activeWorkspaceSurfaceId', "home");
   const [workspaceMounted, setWorkspaceMounted] = useState(false);
   const appliedEntryIntentRef = useRef<string | null>(null);
-  const [recordScope,setRecordScope] = useState<"current"|"history">("current");
+  const [recordScope,setRecordScope] = useWorkspaceViewState<"current"|"history">('delivery:recordScope', "current");
   const effectiveRecordScope = activeWorkspaceSurfaceId === "home" || activeWorkspaceSurfaceId === "catalog"
     ? "current" : recordScope;
   const completeModel = useMemo(

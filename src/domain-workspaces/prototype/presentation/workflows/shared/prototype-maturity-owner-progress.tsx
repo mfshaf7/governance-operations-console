@@ -28,7 +28,7 @@ export function PrototypeMaturityOwnerProgressPanel({ progress }: { progress?: P
   const reviewUrl = typeof review?.url === "string" && /^https:\/\/github\.com\/[^/]+\/workspace-prototype-studio\/pull\/[1-9][0-9]*$/.test(review.url) ? review.url : null;
   const continuable = prototypeMaturityRequestPending(progress);
   const run = (operation: () => Promise<unknown>) => { void operation().catch(() => undefined); };
-  return <TerasPanel frame="padded" layout="header-body" tone={progress.error || result?.failure || findings.length ? "danger" : "info"} treatment="state">
+  return <TerasPanel spacing="normal" frame="padded" layout="header-body" tone={progress.error || result?.failure || findings.length ? "danger" : "info"} treatment="state">
     <TerasPanelHeader busy={progress.pending} busyLabel="Reading workflow progress…" kicker="Recorded workflow progress" title="Maturity source review"
       statusLabel={progress.pending ? "Working" : result?.status ?? "Not submitted"}
       description={progress.error ?? result?.failure?.message ?? "OOS owns this request and Studio owns its source. Only exact reviewed merge and source readback can promote lifecycle."} />

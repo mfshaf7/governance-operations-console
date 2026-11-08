@@ -9,13 +9,18 @@ import { assertOosOrchestrationDefinitions, assertOosOrchestrationRuns } from ".
 import { projectLiveOrchestrationWorkspace } from "../live-runtime/orchestration-live-projection.ts";
 
 export function projectOrchestrationOwnerAttention(read: ConsoleOwnerRead | undefined) {
-  return ownerAttentionSnapshot(registration, read, "operator-orchestration-service", (payload, observedAt) => {
+  const result = ownerAttentionSnapshot(registration, read, "operator-orchestration-service", (payload, observedAt) => {
     const body = attentionRecord(payload);
     if (body.mode !== "live" || body.status !== "current" || body.error) throw new Error("Orchestration unavailable");
     const definitions = assertOosOrchestrationDefinitions({ schema_version: 1, definitions: body.definitions });
     const runs = assertOosOrchestrationRuns({ schema_version: 1, runs: body.runs });
     return projectLiveOrchestrationWorkspace(definitions, runs, observedAt).attention.map(item => orchestrationAttentionCandidate(item, observedAt));
   });
+  const runs = (read?.payload as { runs?: unknown[] } | undefined)?.runs;
+  // The overview API reads the latest 100 runs; register paging is separate.
+  return result.source.freshness === "current" && (runs?.length ?? 0) >= 100
+    ? { ...result, source: { ...result.source, freshness: "unverified" as const, version: "bounded-run-window" } }
+    : result;
 }
 import { consoleAttentionSourceRegistrations } from "../../../console-integration/attention-source-registry.ts";
 import type {

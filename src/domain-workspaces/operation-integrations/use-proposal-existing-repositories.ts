@@ -8,7 +8,7 @@ import {repositoryOwnerRepoCatalogOptions} from "./repository-owner-repo-catalog
 export function useProposalExistingRepositories() {
   const runtime = useConsoleRuntimeCapabilities(), mode = runtime.projection?.mode;
   const search = useRepositoryCatalogChoices(mode === "live");
-  useEffect(() => { if (mode !== "live") return; const timer = window.setInterval(() => { if (document.visibilityState === "visible") search.refresh(); }, 15000); return () => window.clearInterval(timer); }, [mode, search.refresh]);
+  useEffect(() => { if (mode !== "live") return; const timer = window.setInterval(() => { if (document.visibilityState === "visible") search.refresh(true); }, 15000); return () => window.clearInterval(timer); }, [mode, search.refresh]);
   const snapshot = search.result?.snapshot;
   // Keep the active Studio owner available for its incubation route while the
   // existing-repository field searches bounded private Registry pages.

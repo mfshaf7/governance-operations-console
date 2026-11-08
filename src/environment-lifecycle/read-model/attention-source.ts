@@ -4,18 +4,23 @@ import type {
   ConsoleAttentionSourceMode,
 } from "../../console-integration/attention-contract";
 import { ownerAttentionSnapshot, ownerActionCandidate, attentionRecord, type ConsoleOwnerRead } from "../../console-integration/live-attention.ts";
+import { platformOperationsNeedingRecovery, platformOperationCollectionComplete } from "./platform-operation-attention.ts";
 import { assertPlatformOperationCatalog, assertPlatformOperationList } from "../live-runtime/platform-operation-contract.ts";
 
 export function projectEnvironmentOwnerAttention(read: ConsoleOwnerRead | undefined, workspaceId: "dev-integration" | "governed-releases") {
-  return ownerAttentionSnapshot(workspaceId === "dev-integration" ? devRegistration : releaseRegistration, read, "platform-engineering", (payload, observedAt) => {
+  const result = ownerAttentionSnapshot(workspaceId === "dev-integration" ? devRegistration : releaseRegistration, read, "platform-engineering", (payload, observedAt) => {
     const body = attentionRecord(payload);
     if (body.mode !== "live" || body.status !== "current" || body.error) throw new Error("Platform unavailable");
     const catalog = assertPlatformOperationCatalog(body.catalog);
     const operations = assertPlatformOperationList({ workflow_id: "platform-operation-list", operations: body.operations });
     const subjects = new Set(catalog.subjects.filter(subject => workspaceId === "dev-integration" ? ["dev-integration-profile", "profile-request"].includes(subject.kind) : ["product-release", "product-runtime-lifecycle"].includes(subject.kind)).map(subject => subject.ref));
-    return operations.filter(operation => subjects.has(operation.command.subject.ref) && (operation.next_action.authority === "operator" || ["blocked", "failed"].includes(operation.state)) && !["succeeded", "cancelled"].includes(operation.state) && !["complete", "wait-for-provider", "poll-operation"].includes(operation.next_action.code))
+    return platformOperationsNeedingRecovery(operations).filter(operation => subjects.has(operation.command.subject.ref) && (operation.next_action.authority === "operator" || ["blocked", "failed"].includes(operation.state)) && !["succeeded", "cancelled"].includes(operation.state) && !["complete", "wait-for-provider", "poll-operation"].includes(operation.next_action.code))
       .map(operation => ownerActionCandidate({ id: `platform:${operation.operation_id}:${operation.next_action.code}`, title: operation.command.subject.ref, subjectRef: operation.operation_id, updatedAt: operation.updated_at, move: operation.next_action.code, reason: operation.next_action.reason, owner: operation.next_action.authority, observedAt, recovery: operation.state === "blocked" || operation.state === "failed", target: { id: workspaceId, kind: "workspace", workspaceId } }));
   });
+  const payload = read?.payload as { operations?: unknown[]; historyPage?: unknown } | undefined;
+  return result.source.freshness === "current" && !platformOperationCollectionComplete(payload?.operations ?? [], payload?.historyPage)
+    ? { ...result, source: { ...result.source, freshness: "unverified" as const, version: "bounded-operation-window" } }
+    : result;
 }
 import { consoleAttentionSourceRegistrations } from "../../console-integration/attention-source-registry.ts";
 import {

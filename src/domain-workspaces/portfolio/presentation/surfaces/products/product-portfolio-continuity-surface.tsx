@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../../console-integration/registers/workspace-view-state.ts";
 
 import {useWorkspaceProductsPage} from "../../../../../workspace-continuity/live-runtime/use-workspace-products-page.ts";
 import { useEffect, useMemo, useState } from "react";
@@ -37,14 +38,14 @@ export function ProductPortfolioContinuitySurface({
   focusProductId: string | null;
   onOpenRegistry: (product: WorkspaceContinuityProduct) => void;
 }) {
-  const [query, setQuery] = useState("");
-  const [maturity, setMaturity] = useState<
+  const [query, setQuery] = useWorkspaceViewState('portfolio-continuity:query', "");
+  const [maturity, setMaturity] = useWorkspaceViewState<
     WorkspaceContinuityProduct["maturity"] | "all"
-  >("all");
-  const [posture, setPosture] = useState<
+  >('portfolio-continuity:maturity', "all");
+  const [posture, setPosture] = useWorkspaceViewState<
     WorkspaceContinuityProduct["posture"] | "all"
-  >("all");
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  >('portfolio-continuity:posture', "all");
+  const [selectedProductId, setSelectedProductId] = useWorkspaceViewState<string | null>('portfolio-continuity:selectedProductId', null);
   const page=useWorkspaceProductsPage({query,maturity,posture},focusProductId);
   const products=page.products??[],error=page.error,loading=page.loading,onRetry=()=>void page.refresh();
   useEffect(() => {
@@ -109,6 +110,7 @@ export function ProductPortfolioContinuitySurface({
         >
           {loading?<TerasLoadingState fill label="Loading matching products…"/>:error?<TerasEmptyState fill><p role="alert">{error}</p><TerasActionButton emphasis="secondary" onClick={onRetry}>Retry product read</TerasActionButton></TerasEmptyState>:filtered.length ? (
             <TerasRecordTable
+              ariaLabel="Product continuity"
               columns={columns}
               fill
               getRowId={(item) => item.product_id}
@@ -172,7 +174,7 @@ function ProductContinuitySelected({
         tone={product.posture === "active" ? "ok" : "warn"}
         variant="rich"
       />
-      <TerasPanel fit="fill" frame="padded" layout="header-body" overflow="auto" treatment="neutral">
+      <TerasPanel spacing="normal" fit="fill" frame="padded" layout="header-body" overflow="auto" treatment="neutral">
         <TerasPanelHeader
           description="Responsibility and publication readiness from the same product record. Expand the source details for exact references."
           kicker="Product evidence"

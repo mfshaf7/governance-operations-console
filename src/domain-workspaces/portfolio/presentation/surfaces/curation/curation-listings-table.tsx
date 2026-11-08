@@ -84,6 +84,7 @@ export function ProductPortfolioCurationListingsTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Portfolio listings"
       columns={columns}
       fill
       getRowId={(entry) => entry.identity.productId}

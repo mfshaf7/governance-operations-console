@@ -23,9 +23,10 @@ export function ownerAttentionSnapshot(
   try {
     const candidates = project(read!.payload, read!.capturedAt).map(candidate => ({
       ...candidate,
-      source: { ...candidate.source, authority, freshness: "current" as const, mode: "live" as const, observedAt: read!.capturedAt, projectedAt: read!.capturedAt },
+      source: { ...candidate.source, authority, mode: "live" as const, observedAt: read!.capturedAt, projectedAt: read!.capturedAt },
     }));
-    return { schemaVersion: 1, registration, candidates, source: { ...source, freshness: "current", observedAt: read!.capturedAt, projectedAt: read!.capturedAt, version: read!.capturedAt } };
+    const freshness = candidates.some(candidate => candidate.source.freshness !== "current") ? "unverified" : "current";
+    return { schemaVersion: 1, registration, candidates, source: { ...source, freshness, observedAt: read!.capturedAt, projectedAt: read!.capturedAt, version: read!.capturedAt } };
   } catch {
     return { schemaVersion: 1, registration, candidates: [], source };
   }

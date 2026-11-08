@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../../console-integration/registers/workspace-view-state.ts";
 
 import { useEffect, useState } from "react";
 
@@ -39,11 +40,11 @@ export function useProductPortfolioPublicationController({
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [captureSourceId, setCaptureSourceId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(
+  const [query, setQuery] = useWorkspaceViewState('portfolio-publication:query', "");
+  const [selectedScenarioId, setSelectedScenarioId] = useWorkspaceViewState<string | null>('portfolio-publication:selectedScenarioId',
     null,
   );
-  const [viewId, setViewId] = useState<ProductPublicationRegisterViewId>("open");
+  const [viewId, setViewId] = useWorkspaceViewState<ProductPublicationRegisterViewId>('portfolio-publication:viewId', "open");
   const availablePublicationSources = productPublicationAvailableSources(
     publicationSources,
     records,

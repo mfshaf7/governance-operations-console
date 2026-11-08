@@ -51,7 +51,7 @@ export function SourceEditorWorkspace({ target, onClose, onSaved, onReviewed }: 
         {current ? <>
           {importOpen ? <SourceImportPanel scope={target.scope} disabled={!runtime.editable} onImport={files => runtime.importFiles(files).then(success => { if (success) setImportOpen(false); })} /> : null}
           <TerasDetailGrid variant="balanced">
-            <TerasPanel frame="padded" treatment="neutral">
+            <TerasPanel spacing="normal" frame="padded" treatment="neutral">
               <TerasPanelHeader kicker="Files" title={`${current.paths.length} source paths${current.truncated ? " / truncated tree" : ""}`} description="Changed files stay at the top. Unsupported paths show their reason. Original text is read on selection; saved draft text is retained for review." />
               <TerasFieldStack spacing="normal">
                 <TerasTextField label="Find source path" value={filter} onValueChange={setFilter} maxLength={240} />
@@ -67,7 +67,7 @@ export function SourceEditorWorkspace({ target, onClose, onSaved, onReviewed }: 
                 <TerasTextField label="Commit message for the saved draft" value={current.message} onValueChange={runtime.setMessage} maxLength={120} disabled={!runtime.editable} />
               </TerasFieldStack>
             </TerasPanel>
-            <TerasPanel frame="padded" treatment="neutral">
+            <TerasPanel spacing="normal" frame="padded" treatment="neutral">
               <TerasPanelHeader kicker={buffer?.deleted ? "Explicit deletion" : "Text source"} title={buffer?.path ?? "Select a file"}
                 description={buffer ? `${byteLength(buffer.content)} UTF-8 bytes${buffer.content.startsWith("\uFEFF") ? " / BOM preserved" : ""}. ${buffer.baseline === undefined ? "Original text is not available in this lifecycle; retained draft inspection only." : "Diff compares the recorded source base with this buffer."}` : "Open a source file, add a path or import text to begin."} />
               <TerasFieldStack spacing="normal">

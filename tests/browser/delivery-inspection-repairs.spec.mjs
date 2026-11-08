@@ -11,7 +11,7 @@ test.use({ viewport: { width: 1700, height: 1000 }, actionTimeout: 15000, naviga
 
 // Isolated presentation tests. Synthetic owner responses prove browser behaviour,
 // never a successful live owner command or operating qualification.
-async function deliveryHarness(page, { live = false, online = false } = {}) {
+async function deliveryHarness(page, { live = false, online = false, disconnected = false } = {}) {
   const model = structuredClone(deliveryReadModel), writes = [], requests = [], errors = [];
   if (live) {
     const now = new Date().toISOString();
@@ -33,10 +33,13 @@ async function deliveryHarness(page, { live = false, online = false } = {}) {
         const offset=Number(q.get("cursor")??0),packages=matching.slice(offset,offset+25),ids=new Set(packages.map(row=>row.delivery_package_id));
         return route.fulfill({json:{mode:"live",status:"current",error:null,projection:{...model,packages,selected_packages:model.selected_packages.filter(row=>ids.has(row.delivery_package_id)),history_scope:selection.scope},page:{selection,total:null,next_cursor:offset+25<matching.length?String(offset+25):null}}});
       }
-      return route.fulfill({ json: { mode: "live", projection: model } });
+      return route.fulfill({ json: disconnected ? { mode: "disconnected-preview" } : { mode: "live", projection: model } });
     }
     if (path === "/api/delivery/intake") return route.fulfill({ status: 503, json: { error: "Isolated evidence owner unavailable" } });
     if (path.startsWith("/api/saved-work/")) return route.fulfill({ json: { mode: "disconnected-preview" } });
+    if (disconnected && path.endsWith("/change-control")) return route.fulfill({ json: {
+      mode: "disconnected-preview", status: "current", observedAt: new Date().toISOString(), projection: null, error: null,
+    } });
     if (path === "/api/delivery/catalog/projection") return route.fulfill({ json: {
       mode: "disconnected-preview", status: "current", observedAt: new Date().toISOString(), error: null, projection: null,
     } });
@@ -451,7 +454,7 @@ test("History uses the native Work Design flow with navigation enabled and mutat
   const p=h.model.packages.find(p=>p.delivery_package_id==="delivery-724");p.backend_status="done";
   await page.route("**/api/delivery/execution/delivery-724/change-control",r=>r.fulfill({json:retainedTreeSnapshot("delivery-724")}));
   await page.route("**/api/delivery/execution/724/change-control",r=>r.fulfill({json:retainedTreeSnapshot("delivery-724")}));
-  await h.refresh();await h.workspace.getByRole("radio",{name:"History",exact:true}).click();await h.section("work-design");
+  await h.refresh();await h.section("work-design");await h.workspace.getByRole("radio",{name:"History",exact:true}).click();
   await h.workspace.getByRole("row").filter({hasText:"Control Fabric ART Design"}).click();
   await h.workspace.getByRole("button",{name:"Open Design Hub",exact:true}).click();
   const hub=page.getByRole("dialog",{name:"Design Hub",exact:true});await expect(hub.getByRole("group",{name:"Work design steps"})).toBeVisible();
@@ -551,7 +554,7 @@ for (const [packageName, actionName, reviewName, recordName] of [
   ["Security Baseline Review", "Resume", "Review Resume", "Record Resume Receipt"],
 ]) {
   test(`${actionName}: rounded panel content stays inset and reachable in draft, review and local receipt`, async ({ page }) => {
-    const h = await deliveryHarness(page); await h.section("execution-board");
+    const h = await deliveryHarness(page, { disconnected: true }); await h.section("execution-board");
     await h.workspace.getByRole("button").filter({ hasText: packageName }).first().click();
     await h.workspace.getByRole("button", { name: new RegExp(`^${actionName}(?: for .*)?$`) }).click();
     const modal = page.getByRole("dialog", { name: "Execution Action", exact: true });

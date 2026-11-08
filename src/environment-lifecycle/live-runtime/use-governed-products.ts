@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../console-integration/registers/workspace-view-state.ts";
 import {readRegisterOffsetWindow} from '../../console-integration/registers/read-register-offset-window.ts';
 import {useRegisterPageSize} from '../../console-integration/registers/use-register-page-size.ts';
 import {useCallback,useEffect,useRef,useState} from "react";
@@ -8,7 +9,7 @@ const initialFilters:ProductReleaseFilters={query:"",maturity:"all",endpoint:"al
 export function useGovernedProducts(enabled:boolean){
  const {pageSize}=useRegisterPageSize("Governed products");
  const [projection,setProjection]=useState<GovernedProductProjection|null>(null);
- const [filters,setFilters]=useState(initialFilters),[error,setError]=useState<string|null>(null),[current,setCurrent]=useState(false),[loading,setLoading]=useState(false);
+ const [filters,setFilters]=useWorkspaceViewState('governed-releases:filters', initialFilters),[error,setError]=useState<string|null>(null),[current,setCurrent]=useState(false),[loading,setLoading]=useState(false);
  const generation=useRef(0),mounted=useRef(true);const key=JSON.stringify([filters,pageSize]);
  const [position,setPosition]=useState({key,offset:0});
  if(position.key!==key)setPosition({key:key,offset:0});

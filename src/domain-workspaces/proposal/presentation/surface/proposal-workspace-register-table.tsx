@@ -85,6 +85,7 @@ export function ProposalWorkspaceRegisterTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Proposals"
       columns={columns}
       fill
       getRowId={(proposal) => proposal.id}

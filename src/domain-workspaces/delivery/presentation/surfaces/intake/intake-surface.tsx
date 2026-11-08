@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../../console-integration/registers/workspace-view-state.ts";
 import {useRegisterPageSize} from '../../../../../console-integration/registers/use-register-page-size.ts';
 
 import { DeliveryHistoryDialog } from "../../workflows/shared/history/delivery-history-dialog.tsx";
@@ -53,7 +54,7 @@ export function DeliveryIntakeSurface({
   surface: DeliverySurfaceConfig;
 }) {
   const {pageSize}=useRegisterPageSize('Delivery Intake register');
-  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [selectedSourceId, setSelectedSourceId] = useWorkspaceViewState<string | null>('delivery-intake:selectedSourceId', null);
   const [nativeHistoryId,setNativeHistoryId] = useState<string|null>(null);
   const [consumeSourceId, setConsumeSourceId] = useState<string | null>(null);
   const [consumedSummarySourceId, setConsumedSummarySourceId] = useState<
@@ -68,11 +69,11 @@ export function DeliveryIntakeSurface({
     setReturnToFocusedSourceAfterConsumedSummary,
   ] = useState(false);
   const handledFocusTokenRef = useRef<number | null>(null);
-  const [ownerFilter, setOwnerFilter] = useState("all");
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
+  const [ownerFilter, setOwnerFilter] = useWorkspaceViewState('delivery-intake:ownerFilter', "all");
+  const [search, setSearch] = useWorkspaceViewState('delivery-intake:search', "");
+  const [statusFilter, setStatusFilter] = useWorkspaceViewState<
     DeliveryIntakeSourceStatus | "all"
-  >("all");
+  >('delivery-intake:statusFilter', "all");
   const nativeHistory=model.source_truth==="OpenProject-backed OOS"&&model.history_scope==="history";
   const page=useDeliveryIntakeRegisterPage({query:search,owner:ownerFilter,status:statusFilter},nativeHistory);
   const [localPosition,setLocalPosition]=useState({key:"",offset:0});

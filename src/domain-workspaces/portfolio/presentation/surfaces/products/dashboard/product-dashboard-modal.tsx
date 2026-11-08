@@ -291,7 +291,7 @@ function ProductDashboardTabContent({
   switch (activeTab) {
     case "overview":
       return (
-        <TerasPanel
+        <TerasPanel spacing="normal"
           frame="padded"
           treatment="neutral"
           fit="fill"
@@ -334,7 +334,7 @@ function ProductDashboardTabContent({
       );
     case "operations":
       return (
-        <TerasPanel
+        <TerasPanel spacing="normal"
           frame="padded"
           treatment="neutral"
           fit="fill"
@@ -378,7 +378,7 @@ function ProductDashboardTabContent({
       const historyRows = productDashboardHistoryRows(historyEvents);
 
       return (
-        <TerasPanel
+        <TerasPanel spacing="normal"
           frame="padded"
           treatment="neutral"
           fit="fill"

@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 
 import { repositoryCreationForProposal, repositoryCreationProposalId } from "../../../operation-integrations/proposal-repository-custody.ts";
 import { useProposalRepositoryGateRuntime } from "../../../operation-integrations/use-proposal-repository-gate-runtime.ts";
@@ -100,13 +101,13 @@ export function useRepositoryControlController({
   const runtimeCapabilities = getRepositoryRuntimeCapabilities();
   const consoleRuntime = useConsoleRuntimeCapabilities();
   const [statusFilter, setStatusFilter] =
-    useState<RepositoryStatusFilter>("all");
-  const [search, setSearch] = useState("");
-  const [accountFilter, setAccountFilter] = useState("all");
+    useWorkspaceViewState<RepositoryStatusFilter>('repository:statusFilter', "all");
+  const [search, setSearch] = useWorkspaceViewState('repository:search', "");
+  const [accountFilter, setAccountFilter] = useWorkspaceViewState('repository:accountFilter', "all");
   const custodyRuntime = useRepositoryCustodyLiveRuntime();
   const registerPage=useRepositoryRegisterPage({query:search.trim().toLowerCase(),status:statusFilter,account:accountFilter},consoleRuntime.projection?.mode==="live");
   const repositoryRequests = useProposalRepositoryGateRuntime();
-  const [view, setView] = useState<"requests" | "repositories">("repositories");
+  const [view, setView] = useWorkspaceViewState<"requests" | "repositories">('repository:view', "repositories");
   const continuityRuntime = useWorkspaceContinuityRuntime();
   useEffect(() => {
     if (consoleRuntime.projection?.mode !== "live" && consoleRuntime.projection?.mode !== "invalid") return;
@@ -259,7 +260,7 @@ export function useRepositoryControlController({
   );
 
   const [selectedRepositoryId, setSelectedRepositoryId] =
-    useState(defaultRepositoryId);
+    useWorkspaceViewState('repository:selectedRepositoryId', defaultRepositoryId);
   const [admissionRepositoryId, setAdmissionRepositoryId] = useState<
     string | null
   >(null);
@@ -451,7 +452,7 @@ export function useRepositoryControlController({
   const requestResult = activeRequestResult ?? correctionSource;
   const defaultDestination = requestConnections ? repositoryDefaultDestination(requestConnections) : null;
   const requestDraftDirty = requestResult?.status !== "succeeded" && repositoryRequestDraftDirty(
-    requestDraft, requestResult ? repositoryRequestDraftFromResult(requestResult) : {...emptyRepositoryRequestDraft, ownerDomain: defaultDestination?.account ?? ""},
+    requestDraft, requestResult ? repositoryRequestDraftFromResult(requestResult) : {...emptyRepositoryRequestDraft, ownerDomain: requestDraft.ownerDomain ? defaultDestination?.account ?? "" : ""},
   );
   const requestError = custodyRuntime.provisioningErrorsByRequestId[requestId];
   const requestPending = custodyRuntime.pendingProvisioningRequestId === requestId;
@@ -634,6 +635,7 @@ export function useRepositoryControlController({
       if (recordId) setSelectedRepositoryId(recordId);
       setRequestSubmittedAt(result.receipt?.completed_at ?? new Date().toISOString());
       setRequestCloseGuardOpen(false);
+      void registerPage.refresh();
     }
   }
 
@@ -785,9 +787,13 @@ export function useRepositoryControlController({
       openRepository: (result: RepositoryCustodyWorkflowResult) => {
         const id = repositoryProvisionedRecordId(result);
         if (!id) return;
+        if (result.provider_readback) setSearch(`${result.provider_readback.canonical_owner}/${result.provider_readback.canonical_name}`);
+        setStatusFilter("all");
+        setAccountFilter("all");
         setSelectedRepositoryId(id);
         setView("repositories");
         setStandaloneLinkOpen(false);
+        void registerPage.refresh();
       },
     },
     custody: {
@@ -890,7 +896,7 @@ export function useRepositoryControlController({
       filtered: filteredRecords,
     },
     sourceAvailability: {
-      loading: consoleRuntime.status === "loading" || continuityRuntime.mode === "loading" || custodyRuntime.sourceStatus === "loading" || registerPage.loading,
+      loading: consoleRuntime.status === "loading" || !primaryRecordIsolation.fixtureAllowed && (continuityRuntime.mode === "loading" || custodyRuntime.sourceStatus === "loading" || registerPage.loading),
       error: primaryRecordIsolation.fixtureAllowed ? null : registerPage.error ?? custodyRuntime.sourceError ?? consoleRuntime.error,
       retry: async()=>{await Promise.allSettled([custodyRuntime.refresh(),registerPage.refresh()]);},
       retryable: custodyRuntime.sourceRetryable,

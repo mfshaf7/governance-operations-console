@@ -185,7 +185,7 @@ export function ProductRuntimeLifecycleWorkflow({
 
   const support =
     step === "intent" ? (
-      <TerasPanel
+      <TerasPanel spacing="normal"
         fit="fill"
         frame="padded"
         tone={detailsReady ? "ok" : "warn"}
@@ -216,7 +216,7 @@ export function ProductRuntimeLifecycleWorkflow({
               value: lifecycle.adapter.ref ?? "Adapter unavailable",
             },
           ]}
-          topOffset="compact"
+          topOffset="none"
         />
         <TerasList ariaLabel="Runtime lifecycle intent checks">
           {checks.map((check, index) => (
@@ -247,7 +247,7 @@ export function ProductRuntimeLifecycleWorkflow({
         title="Lifecycle request result"
       />
     ) : (
-      <TerasPanel
+      <TerasPanel spacing="normal"
         fit="fill"
         frame="padded"
         tone={lifecycle.adapter.available ? "ok" : "danger"}

@@ -4,6 +4,7 @@ import type {
   ConsoleAttentionSourceSnapshot,
   ConsoleAttentionUrgency,
 } from "../../../console-integration/attention-contract.ts";
+import { prototypeSummaryComplete } from "../live-runtime/prototype-read-coverage.ts";
 import { ownerAttentionSnapshot, attentionRecord, attentionRows, type ConsoleOwnerRead } from "../../../console-integration/live-attention.ts";
 import type { NativeLifecycleOutcome } from "../../../console-integration/native-lifecycle-outcome.ts";
 
@@ -16,7 +17,7 @@ export function projectPrototypeLifecycleOutcomes(payload: unknown): NativeLifec
 }
 
 export function projectPrototypeOwnerAttention(read: ConsoleOwnerRead | undefined) {
-  return ownerAttentionSnapshot(registration, read, "workspace-prototype-studio", (payload, observedAt) => {
+  const result = ownerAttentionSnapshot(registration, read, "workspace-prototype-studio", (payload, observedAt) => {
     const body = attentionRecord(payload);
     if (body.mode !== "live" || body.error) throw new Error("Prototype unavailable");
     const model = attentionRecord(attentionRecord(body.projection).readModel);
@@ -24,6 +25,9 @@ export function projectPrototypeOwnerAttention(read: ConsoleOwnerRead | undefine
       .filter(record => !["retired", "graduated", "graduating"].includes(record.lifecycle) && !["archive", "history"].includes(record.currentMove.id))
       .map(record => prototypeAttentionCandidate({ record, local: false, projectedAt: observedAt, receiptRefs: [] }));
   });
+  return result.source.freshness === "current" && !prototypeSummaryComplete(read?.payload)
+    ? { ...result, source: { ...result.source, freshness: "unverified", version: "partial-collection" } } as ConsoleAttentionSourceSnapshot
+    : result;
 }
 import { consoleAttentionSourceRegistrations } from "../../../console-integration/attention-source-registry.ts";
 import {

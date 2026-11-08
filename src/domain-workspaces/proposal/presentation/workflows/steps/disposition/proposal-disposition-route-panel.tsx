@@ -67,7 +67,7 @@ export function ProposalDispositionRoutePanel({
   const studio = proposalUsesPrototypeStudio(routeSelectionDraft);
 
   return (
-    <TerasPanel
+    <TerasPanel spacing="normal"
       frame="padded"
       treatment="state"
       layout="header-body"

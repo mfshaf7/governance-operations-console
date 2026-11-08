@@ -425,7 +425,7 @@ function ExecutionCloseoutSupport({
 }) {
   if (runtime.loading) {
     return (
-      <TerasPanel
+      <TerasPanel spacing="normal"
         fit="fill"
         frame="padded"
         layout="header-body"
@@ -444,7 +444,7 @@ function ExecutionCloseoutSupport({
 
   if (!projection) {
     return (
-      <TerasPanel
+      <TerasPanel spacing="normal"
         fit="fill"
         frame="padded"
         layout="header-body"

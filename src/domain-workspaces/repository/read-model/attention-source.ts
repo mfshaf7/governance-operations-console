@@ -11,10 +11,12 @@ import type { WorkspaceContinuityProjection } from "../../../workspace-continuit
 import type { RepositoryRegistrationLookup } from "../../../workspace-registry/workspace-repository-status.ts";
 
 export function projectRepositoryOwnerAttention(read: ConsoleOwnerRead | undefined, continuity: ConsoleOwnerRead | undefined, registrations?: ConsoleOwnerRead | null) {
-  if (registrations === null) return ownerAttentionSnapshot(registration, undefined, "Workspace repository control", () => []);
+  // Registration lookups start only after a successful repository read. A failed
+  // or expired read cannot still be waiting for that dependent lookup.
+  if (registrations === null && (!read || currentOwnerRead(read))) return ownerAttentionSnapshot(registration, undefined, "Workspace repository control", () => []);
   return ownerAttentionSnapshot(registration, read, "Workspace repository control", (payload, observedAt) => {
     if (!currentOwnerRead(continuity)) throw new Error("Inventory unavailable");
-    if (registrations !== undefined && !currentOwnerRead(registrations)) throw new Error("Current registration unavailable");
+    if (registrations !== undefined && !currentOwnerRead(registrations ?? undefined)) throw new Error("Current registration unavailable");
     const results = attentionRows(payload).map(assertRepositoryCustodyWorkflowResult);
     const lookup = registrations === undefined ? undefined : registrations && currentOwnerRead(registrations) ? registrations.payload as RepositoryRegistrationLookup : null;
     const provisions = projectRepositoryProvisioningResults([], Object.fromEntries(results.map(result => [result.request.request_id, result])));

@@ -6,6 +6,11 @@ test.setTimeout(120000);
 
 test("all resource focus panels fill their slot and connect only in the lateral layout", async ({ page }) => {
   const writes = [];
+  const errors = [];
+  page.on("pageerror", error => errors.push(String(error)));
+  page.on("console", message => {
+    if (message.type() === "error" && /same key/.test(message.text())) errors.push(message.text());
+  });
   await page.route("**/api/**", route => {
     if (["GET", "HEAD", "OPTIONS"].includes(route.request().method())) return route.continue();
     writes.push(route.request().url());
@@ -28,6 +33,7 @@ test("all resource focus panels fill their slot and connect only in the lateral 
       await expect(card).toHaveAttribute("aria-pressed", "true");
       const panel = page.locator(".resource-focus-panel");
       await expect(panel.getByRole("heading", { name: label, exact: true })).toBeVisible();
+      await expect(panel.locator(".resource-focus-evidence-row").filter({ has: page.getByText("Captured", { exact: true }) })).toHaveCount(1);
       const bounds = await panel.evaluate(node => {
         const rect = element => {
           const box = element.getBoundingClientRect();
@@ -57,4 +63,5 @@ test("all resource focus panels fill their slot and connect only in the lateral 
     await expect(page.getByRole("region", { name: "Operator priority", exact: true })).toBeVisible();
   }
   expect(writes).toEqual([]);
+  expect(errors).toEqual([]);
 });

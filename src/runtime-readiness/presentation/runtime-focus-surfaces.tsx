@@ -107,7 +107,7 @@ export function ResourceMetricFocus({ metric }: { metric: ResourceMetricDetail }
                     />
                   ))}
                   {metric.axisTicks.map((tick) => (
-                    <g key={tick.label}>
+                    <g key={tick.y}>
                       <text className="resource-axis-label" x="-3.5" y={tick.y + 2.2} textAnchor="end">
                         {tick.label}
                       </text>

@@ -43,6 +43,7 @@ async function open(page,{missing=false,unavailable=false,historical=false,hando
       return r.fulfill({json:{schema_version:1,workflow_id:'workspace-registry-view',canonical_mutation:false,authority_revision:registry.authority_revision,projection_id:'workspace-registry:synthetic-native',source_authorities:{legacy:registry.canonical_authority,instance:instance_page.authority},legacy_snapshot:registry,instance_page,records:[...registry.records,...instance_page.records],eligible_promotions:[],projected_at:new Date().toISOString(),projection_digest:`sha256:${'f'.repeat(64)}`}});
     }
     if(path==="/api/proposals")return r.fulfill({json:{mode:"live",status:"current",error:null,observedAt:new Date().toISOString(),records:[record]}});
+    if(path===`/api/proposals/${record.projection.proposal_id}`)return r.fulfill({json:{...record,summaryOnly:false}});
     return r.abort();
   });
   await page.goto(base,{waitUntil:"domcontentloaded",timeout:90000});
@@ -54,7 +55,7 @@ async function open(page,{missing=false,unavailable=false,historical=false,hando
   else await page.locator('[data-proposal-hub-primary-action="true"]').click();
   const dialog=page.getByRole('dialog',{name:handoff||correction?'Proposal Handoff':'Proposal Disposition',exact:true});
   await expect(dialog).toBeVisible();
-  return {dialog,writes,recover:()=>{fail=false;},releaseList,record};
+  return {dialog,writes,recover:()=>{fail=false;},setUnavailable:value=>{fail=value;},releaseList,record};
 }
 
 async function choosePrototype(dialog) {
@@ -63,6 +64,47 @@ async function choosePrototype(dialog) {
   await expect(choices.getByRole('radio',{name:'Prototype Studio',exact:true})).toBeChecked();
   return choices;
 }
+
+test('automatic repository checks preserve the routing explanation and draft', async ({page}) => {
+  await page.clock.install();
+  const h = await open(page);
+  await choosePrototype(h.dialog);
+  await expect(h.dialog.getByText('Incubate in Prototype Studio', {exact:true})).toBeVisible();
+  await h.dialog.getByLabel('Route rationale', {exact:true}).fill('Keep this routing draft while checking repository availability.');
+  let reads = 0, release;
+  const gate = new Promise(resolve => { release = resolve; }), active = [];
+  const handler = route => {
+    const work = (async () => { reads++; await gate; await route.fallback(); })();
+    active.push(work); return work;
+  };
+  await page.route('**/api/workspace-registry**', handler);
+  try {
+    await page.clock.fastForward(16000);
+    await expect.poll(() => reads).toBeGreaterThan(0);
+    await expect(h.dialog.getByText('Incubate in Prototype Studio', {exact:true})).toBeVisible();
+    await expect(h.dialog.getByText('Checking repository list…', {exact:true})).toHaveCount(0);
+    await expect(h.dialog.getByLabel('Route rationale', {exact:true})).toHaveValue('Keep this routing draft while checking repository availability.');
+    expect(h.writes).toEqual([]);
+  } finally {
+    release(); await Promise.allSettled(active); await page.unroute('**/api/workspace-registry**', handler);
+  }
+});
+
+test('failed automatic repository checks close the recording gate and recover without losing notes', async ({page}) => {
+  await page.clock.install();
+  const h=await open(page);await choosePrototype(h.dialog);
+  await expect(h.dialog.getByText('Incubate in Prototype Studio',{exact:true})).toBeVisible();
+  await h.dialog.getByRole('textbox',{name:'Decision notes',exact:true}).fill('Keep exploring this idea.');
+  await h.dialog.getByLabel('Route rationale',{exact:true}).fill('Use Studio for the experiment.');
+  const submit=h.dialog.locator('[data-proposal-disposition-primary-action="true"]');
+  await expect(submit).toBeEnabled();h.setUnavailable(true);
+  await page.clock.fastForward(16000);
+  await expect(h.dialog.getByRole('button',{name:'Refresh repository list',exact:true})).toBeVisible();
+  await expect(submit).toBeDisabled();
+  await expect(h.dialog.getByRole('textbox',{name:'Decision notes',exact:true})).toHaveValue('Keep exploring this idea.');
+  h.recover();await h.dialog.getByRole('button',{name:'Refresh repository list',exact:true}).click();
+  await expect(submit).toBeEnabled();expect(h.writes).toEqual([]);
+});
 
 test('Prototype offers Studio incubation without a project repository and sends existing custody',async({page},info)=>{
   const {dialog,writes}=await open(page);

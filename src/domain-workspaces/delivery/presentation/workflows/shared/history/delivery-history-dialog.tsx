@@ -35,12 +35,12 @@ export function DeliveryOwnerHistoryContent({projection,error,sections,loading=f
       {!projection?(!error&&loading?<TerasLoadingState label="Loading original source history…" />:null):<>
         <TerasMetadataList items={[{label:"Delivery",value:projection.record_ref},{label:"Current package status",value:projection.package.status},{label:"Current implementation repository",value:projection.package.owner_repo??"Not projected"},{label:"History coverage",value:projection.history_state},{label:"Observed",value:projection.projected_at}]} />
         <DeliveryOwnerEventTrail projection={projection} loading={loading} onPage={onPage}/>
-        {sections.map(key=>{const section=projection.sections[key];return <TerasPanel key={key} frame="padded" treatment="rail" tone={["unavailable","partial"].includes(section.state)?"warn":"info"}>
+        {sections.map(key=>{const section=projection.sections[key];return <TerasPanel spacing="normal" key={key} frame="padded" treatment="rail" tone={["unavailable","partial"].includes(section.state)?"warn":"info"}>
           <TerasPanelHeader kicker="Original source evidence" title={labels[key]} description={section.data?section.detail:undefined} statusLabel={section.state} statusTone={["unavailable","partial"].includes(section.state)?"warn":"info"}/>
           {!section.data?<TerasEmptyState>{section.detail}</TerasEmptyState>:
             key==="intake"?<IntakeEvidence source={section.data as DeliveryIntakeRecord}/>:"records" in section.data?<TerasFieldStack>
               <TerasMetadataList items={[{label:"Source view state",value:section.data.state},{label:"Retained records",value:String(section.data.total_records)}]}/>
-              {section.data.records.length===0?<TerasEmptyState>No retained application records were returned by this source read.</TerasEmptyState>:section.data.records.map(record=><TerasPanel key={record.id} frame="padded" treatment="state" tone={record.tone}>
+              {section.data.records.length===0?<TerasEmptyState>No retained application records were returned by this source read.</TerasEmptyState>:section.data.records.map(record=><TerasPanel spacing="normal" key={record.id} frame="padded" treatment="state" tone={record.tone}>
                 <TerasPanelHeader kicker="Retained receipt" title={record.title} statusLabel={record.state} statusTone={record.tone}/>
                 <TerasMetadataList items={[{label:"Original record",value:record.id},{label:"Recorded",value:record.at??"Not projected"},{label:"Actor",value:record.actor??"Not projected"},{label:"Original receipt",value:record.receipt_ref??"No receipt returned"},{label:"Digest",value:record.digest??"Not projected"},...record.evidence_refs.map((ref,index)=>({label:`Linked evidence ${index+1}`,value:ref}))]}/>
               </TerasPanel>)}

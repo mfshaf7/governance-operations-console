@@ -14,6 +14,14 @@ source responsibility rules and native Teras modal foundation remain binding.
 - Workspace Pulse summarizes projected work, not whole-system availability.
   Retained failed operations keep their owner state, timestamp and exact next
   action. A newer successful operation cannot silently supersede another intent.
+  Historical diagnostic failures and exactly revoked source-authorisation
+  attempts stay inspectable without becoming current blocked work. Primary
+  attention and Environment readiness share the current-work selector; an
+  unrelated newest success cannot hide another unresolved workflow failure.
+- Pulse and Focus use matching category colours for known work: actions and
+  follow-ups blue, reviews and decisions amber, blocked/recovery work red.
+  Urgency remains an explicit label and ranking input. Freshness metadata uses
+  reliability colours; incomplete coverage keeps its own warning and qualifiers.
 - Priority details/actions follow the filtered queue. No match has no actionable
   selected priority.
 

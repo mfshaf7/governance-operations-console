@@ -567,3 +567,75 @@ separate compact dialog. Profile request help distinguishes user choices,
 automatic preparation, missing setup and later review without claiming every
 control is currently Active. Visual states were reviewed at1280 and1700 pixels;
 operator preview approval still precedes publication.
+
+## Registry usability maintenance preview
+
+Nested Console workflows use the existing normal panel gap when a heading and
+its fields, facts, list, history or result body have no separation of their own.
+Preserve established compact/custom layouts, tray offsets, register chrome and
+the primary Console visual profile. Registers without a filter bar use a real
+header/body layout, including their existing body sizing and pinned footer.
+Resource evidence shows the capture time once. These repairs remain in preview
+until operator review and batch publication.
+
+Register identity, status and action columns retain readable minimum widths;
+status pills keep their standard single-line treatment, with wide tables scrolling
+inside their register. Sticky table headings are opaque. Architecture authoring
+and evidence columns scroll independently without compressing review/results;
+the canonical packet uses the existing tall read-only text field.
+
+Dev Integration's Profile Dashboard uses standard panel spacing between the
+heading and content in Identity and provenance, Declared support boundary,
+Declared execution profile, and Profile checks. Preserve the existing tabs,
+panel frames, data and actions; this is a spacing repair in preview.
+
+Retain the summary composition and Teras form layout. Give record Type its own
+column with a compact, single-line pill in inventory and activation registers.
+Evidence panels use standard panel spacing between heading, facts and details.
+Show repository record counts as loaded counts; separate linked products from
+responsible repositories in the same existing column and selected-item facts.
+Use human type labels in the selected record, guided component-type choices in
+metadata editing, and preserve unknown legacy values plus complete-record access.
+
+Product/Component classification results distinguish recording from activation.
+Disclose Governance Git storage before metadata entry and again at review.
+Preparation is a read, not a submission; an enabled choice must never announce
+itself as unavailable. Healthy immutable histories have no refresh action;
+failed histories offer a section retry and pending originals retain progress
+visibility. These changes remain preview work pending operator review and live
+publication proof.
+
+History pagination applies to populated request lists, including card lists.
+Empty, initial-loading and failed history sections show their state without row
+count or page-size controls. Keep navigation for a later empty page or a native
+continuation; absence of rows on one page must not strand the operator.
+
+Automatic Registry freshness checks run quietly: retain the current record list,
+selection, page and draft while reading. Reserve blocking loading treatment for
+initial reads, explicit refreshes and navigation. Pending request polling keeps
+the current history page. Failed background reads still show the unavailable
+state and block new actions; entering activation waits for an in-flight source
+read before preparing the exact current candidate.
+
+## Refresh and workspace navigation continuity
+
+Routine same-scope freshness checks keep the current rows, selection, search,
+history page and draft visible and usable. They do not replace a populated
+register with its initial loading skeleton or invalidate same-query repository
+choices merely because another read started. Initial reads, changed filters or
+source scope, and explicit operations still show their appropriate loading
+state. A failed source read remains visible and closes the relevant action gate.
+
+Retain search, filters, selected identifiers, workspace tabs and presentation
+pagination in shell-lifetime memory, using fixed field keys and a bounded
+entry count. This memory contains no source records, authority decisions, open
+dialogs or workflow drafts and is never written to browser storage. Workspaces
+still unmount when closed. Returning re-reads authoritative data; source cursors
+and version checks remain owned by each reader. A document reload starts fresh.
+
+Model Operations keeps the two tab readers at workspace scope. Returning to a
+loaded tab revalidates quietly against the retained read state. Inactive tab
+register polls pause; progress tracking for an outstanding original operation
+continues. Existing dirty-draft guards and submission checks remain in force.
+Retained tab data is last-known state until the resumed reader confirms its
+source. It cannot make an action eligible merely because its rows are visible.

@@ -72,7 +72,7 @@ test('Registry offers Repository as the default onboarding type and explains Pro
  await form.getByRole('button',{name:'Continue repository onboarding',exact:true}).click();
  const onboarding=page.getByRole('dialog',{name:'Repository onboarding',exact:true});
  await onboarding.getByRole('button',{name:'Repository to onboard',exact:true}).click();
- await page.getByRole('option',{name:'https://github.com/synthetic-workspace/synthetic-source',exact:true}).click();
+ await page.getByRole('option',{name:'synthetic-workspace/synthetic-source',exact:true}).click();
  await expect(onboarding.getByRole('button',{name:'Continue onboarding',exact:true})).toBeVisible();expect(writes).toEqual([]);
 });
 test('a verified creation receipt never becomes onboarding-ready when its current selection cannot be read',async({page})=>{
@@ -101,7 +101,7 @@ test('current active inventory completes onboarding without presenting another a
  await page.getByRole('dialog',{name:'Workspace onboarding',exact:true}).getByRole('button',{name:'Continue repository onboarding',exact:true}).click();
  const onboarding=page.getByRole('dialog',{name:'Repository onboarding',exact:true});
  await onboarding.getByRole('button',{name:'Repository to onboard',exact:true}).click();
- await page.getByRole('option',{name:'https://github.com/synthetic-workspace/synthetic-source',exact:true}).click();
+ await page.getByRole('option',{name:'synthetic-workspace/synthetic-source',exact:true}).click();
  await expect(onboarding.getByText('Onboarding complete',{exact:true})).toBeVisible();
  await expect(onboarding.getByRole('button',{name:'Continue onboarding',exact:true})).toHaveCount(0);
  await expect(onboarding.getByRole('button',{name:'Review activation',exact:true})).toHaveCount(0);
@@ -114,7 +114,7 @@ for(const posture of ['suspended','retired'])test(`existing ${posture} Registry 
  await page.getByRole('dialog',{name:'Workspace onboarding',exact:true}).getByRole('button',{name:'Continue repository onboarding',exact:true}).click();
  const onboarding=page.getByRole('dialog',{name:'Repository onboarding',exact:true});
  await onboarding.getByRole('button',{name:'Repository to onboard',exact:true}).click();
- await page.getByRole('option',{name:'https://github.com/synthetic-workspace/synthetic-source',exact:true}).click();
+ await page.getByRole('option',{name:'synthetic-workspace/synthetic-source',exact:true}).click();
  await expect(onboarding.getByText(`Repository ${posture}`,{exact:true})).toBeVisible();
  await expect(onboarding.getByRole('button',{name:'Continue onboarding',exact:true})).toHaveCount(0);
  await expect(onboarding.getByRole('button',{name:'Review activation',exact:true})).toHaveCount(0);

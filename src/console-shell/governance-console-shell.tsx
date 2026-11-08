@@ -27,6 +27,7 @@ import { ConsoleActivityPanel } from "./presentation/console-activity-panel";
 import { ConsoleCommandBar } from "./presentation/console-command-bar";
 import { ConsoleFocusRouter } from "./presentation/console-focus-router";
 import { useConsoleShellController } from "./use-console-shell-controller";
+import { WorkspaceViewStateProvider } from "../console-integration/registers/workspace-view-state";
 
 const embeddedAgentRuntimeIdentity = {
   callerId: "console-ai.embedded",
@@ -52,7 +53,9 @@ export function GovernanceConsoleShell() {
   return (
     <AgentRuntimePresenceProvider>
       <DraftAdvisorScopeProvider>
-      <GovernanceConsoleContent providerStatus={providerStatus} />
+      <WorkspaceViewStateProvider>
+        <GovernanceConsoleContent providerStatus={providerStatus} />
+      </WorkspaceViewStateProvider>
       </DraftAdvisorScopeProvider>
     </AgentRuntimePresenceProvider>
   );

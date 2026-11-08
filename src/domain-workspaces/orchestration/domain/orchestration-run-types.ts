@@ -187,7 +187,7 @@ export type OrchestrationRunRecord = {
 
 export type OrchestrationRunSummaryMetric = {
   id: string;
-  label: "Active" | "Blocked" | "Completed" | "Failed" | "Waiting";
+  label: "Active" | "Blocked" | "Completed" | "Failed" | "Waiting" | `Recent ${string}`;
   tone: OperationTone;
   value: string;
 };

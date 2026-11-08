@@ -9,7 +9,7 @@ function record(id,title,status='captured') {
 }
 function event(type,id,overrides={}) {return {schema_version:1,event_id:`proposal-event:idea-851:${id}`,proposal_id:'idea-851',record_version:'version-17',event_type:type,status_before:'accepted',status_after:'accepted',actor:{id:'operator:original-reviewer',kind:'operator'},command_id:`command:${id}`,receipt_refs:[`receipt:${id}`],summary:`Original ${type} summary.`,occurred_at:'2026-06-21T08:00:00Z',...overrides};}
 async function open(page,options={}) {
- const records=[record(851,'Plan a useful tool'),record(852,'Explore another idea'),record(853,'Older backlog idea')],writes=[],reads=[],errors=[];
+ const records=[record(851,'Plan a useful tool'),record(852,'Explore another idea'),...Array.from({length:23},(_,index)=>record(900+index,`Additional current idea ${index+1}`)),record(853,'Older backlog idea')],writes=[],reads=[],errors=[];
  page.on('pageerror',error=>errors.push(error.message));
  let nextFailure=options.nextFailure??0,detailFailure=options.detailFailure??0,historyFailure=options.historyFailure??0,registerFailure=options.registerFailure??0;
  if(options.history){
@@ -41,8 +41,8 @@ async function open(page,options={}) {
    if(registerFailure)return route.fulfill({status:registerFailure,json:{mode:'live',status:'offline',code:'synthetic_source_unavailable',error:'The proposal backlog is unavailable.'}});
    const query=(url.searchParams.get('query')??'').trim().toLowerCase(),cursor=url.searchParams.get('cursor'),second=cursor==='page:2';
    if(second&&nextFailure)return route.fulfill({status:nextFailure,json:{mode:'live',status:'offline',code:'synthetic_source_unavailable',error:'The next page is unavailable.'}});
-   const found=query==='older'?(second?[records[2]]:[]):second?[records[2]]:records.slice(0,2);
-   return route.fulfill({json:{mode:'live',status:'current',observedAt:new Date().toISOString(),records:found.map(r=>({...r,summaryOnly:true,history:{...r.history,events:[],next_cursor:null}})),page:{source_total:3,selector:{query,status:url.searchParams.get('status')??'all',ingress:url.searchParams.get('ingress')??'all'},next_cursor:second?null:'page:2'}}});
+   const found=query==='older'?(second?[records.at(-1)]:[]):second?[records.at(-1)]:records.slice(0,-1);
+   return route.fulfill({json:{mode:'live',status:'current',observedAt:new Date().toISOString(),records:found.map(r=>({...r,summaryOnly:true,history:{...r.history,events:[],next_cursor:null}})),page:{source_total:records.length,selector:{query,status:url.searchParams.get('status')??'all',ingress:url.searchParams.get('ingress')??'all'},next_cursor:second?null:'page:2'}}});
   }
   if(path==='/api/proposals/idea-851/history'){
    if(historyFailure)return route.fulfill({status:historyFailure,json:{mode:'live',status:'offline',code:'synthetic_source_unavailable',error:'History is temporarily unavailable.'}});
@@ -70,14 +70,14 @@ test('register replaces pages, selected records load independently, and sparse s
  await expect(page.getByRole('row').filter({hasText:'Plan a useful tool'})).toBeVisible();
  await expect(page.getByRole('row').filter({hasText:'Plan a useful tool'}).getByRole('cell').first()).toHaveText('01');
  const pagination=page.getByRole('navigation',{name:'Proposal pages',exact:true});
- await expect(pagination).toContainText('Page 1 · 1–2 shown');
+ await expect(pagination).toContainText('Showing 1–25 · Page 1');
  const footer=await pagination.boundingBox(),body=await page.locator('[data-proposal-register="standard"]').boundingBox();
  expect(footer.y).toBeGreaterThanOrEqual(body.y+body.height);
  for(const name of ['Previous','Next page'])expect((await pagination.getByRole('button',{name,exact:true}).boundingBox()).height).toBeGreaterThanOrEqual(30);
  await page.getByRole('button',{name:'Next page',exact:true}).click();
  await expect(page.getByRole('row').filter({hasText:'Older backlog idea'})).toBeVisible();
- await expect(page.getByRole('row').filter({hasText:'Older backlog idea'}).getByRole('cell').first()).toHaveText('03');
- await expect(pagination).toContainText('Page 2 · 3–3 shown');
+ await expect(page.getByRole('row').filter({hasText:'Older backlog idea'}).getByRole('cell').first()).toHaveText('26');
+ await expect(pagination).toContainText('Showing 26–26 · Page 2');
  await expect(page.getByRole('row').filter({hasText:'Plan a useful tool'})).toHaveCount(0);
  await page.getByRole('button',{name:'Previous',exact:true}).click();
  await expect(page.getByRole('row').filter({hasText:'Plan a useful tool'})).toBeVisible();
@@ -88,7 +88,7 @@ test('register replaces pages, selected records load independently, and sparse s
  await page.getByRole('button',{name:'Continue search',exact:true}).click();
  await expect(page.getByRole('row').filter({hasText:'Older backlog idea'})).toBeVisible();
  await expect(page.getByRole('row').filter({hasText:'Older backlog idea'}).getByRole('cell').first()).toHaveText('01');
- await expect(pagination).toContainText('Page 2 · 1–1 shown');
+ await expect(pagination).toContainText('Showing 1–1 · Page 2');
  expect(h.reads.filter(r=>r.path.includes('/history'))).toHaveLength(0);
  expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
 });
@@ -118,7 +118,7 @@ test('history keeps original decision, loads later events and supports retry',as
  h.recoverHistory();await dialog.getByRole('button',{name:'Retry history',exact:true}).click();await expect(dialog).toContainText('Implementation confirmed');
  await expect(dialog.getByRole('button',{name:'Load more history',exact:true})).toHaveCount(0);await expect(dialog).toContainText('operator:original-reviewer');
  await dialog.getByText('Event references',{exact:true}).click();await expect(dialog).toContainText('receipt:implementation');expect(h.errors).toEqual([]);
- await page.screenshot({path:process.env.CONSOLE_TEST_SCREENSHOT_DIR+'/proposal-history.png'});
+ await page.screenshot({path:test.info().outputPath('proposal-history.png')});
 });
 
 test('held command prevents duplicate submission, retains draft on failure and explains the result',async({page})=>{
@@ -178,5 +178,5 @@ for(const width of [1280,1700])test(`Proposal form stays within the baseline at 
  await page.setViewportSize({width,height:900});const h=await open(page),dialog=await workflow(page);
  const box=await dialog.boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);
  for(const field of await dialog.getByRole('textbox').all()){const f=await field.boundingBox();expect(f.x).toBeGreaterThanOrEqual(box.x);expect(f.x+f.width).toBeLessThanOrEqual(box.x+box.width+1);}
- await page.screenshot({path:process.env.CONSOLE_TEST_SCREENSHOT_DIR+`/proposal-triage-${width}.png`});expect(h.errors).toEqual([]);
+ await page.screenshot({path:test.info().outputPath(`proposal-triage-${width}.png`)});expect(h.errors).toEqual([]);
 });

@@ -76,6 +76,15 @@ function CommandCenterMetricCard({
   pending?: boolean;
   signal: WorkspacePulseSignal;
 }) {
+  // Counts can be useful before all owners reply. Keep their loading copy
+  // compact without changing the retained explanation used by the inspector.
+  const detail = loading
+    ? signal.id === "source-coverage" ? "Reading sources…" : "Reading status…"
+    : pending
+      ? signal.id === "source-coverage"
+        ? signal.stateLabel === "LOADING" ? "Reading sources…" : signal.detail
+        : "Checking sources…"
+      : signal.detail;
   return (
     <button
       aria-pressed={active}
@@ -109,7 +118,7 @@ function CommandCenterMetricCard({
       <span className={styles.metricBody}>
         <strong>{loading ? "—" : signal.value}</strong>
         <span className={`metric-detail ${styles.metricDetail}`}>
-          {loading ? "Reading status…" : signal.detail}
+          {detail}
         </span>
       </span>
       <span className={styles.metricState}>{loading ? "LOADING" : signal.stateLabel}</span>

@@ -21,6 +21,7 @@ import type { ModelProfileRequestProjection } from "../../live-runtime/model-ope
 export function ModelOperationsControlOverviewPanel({
   preview = false,
   recoveryPending = false, sourceUnavailable = false, loading = false,
+  sourceRevalidating = false,
   onOpenRequestSupport,
   onOpenRequest,
   requestAvailable,
@@ -32,6 +33,7 @@ export function ModelOperationsControlOverviewPanel({
 }: {
   preview?: boolean;
   loading?: boolean;
+  sourceRevalidating?: boolean;
   recoveryPending?: boolean; sourceUnavailable?: boolean;
   onOpenRequestSupport: () => void;
   onOpenRequest: () => void;
@@ -64,7 +66,7 @@ export function ModelOperationsControlOverviewPanel({
       <TerasRecordControlActionPanel
         action={
           <>
-            <TerasActionButton disabled={!requestAvailable} onClick={onOpenRequest}>
+            <TerasActionButton busy={sourceRevalidating} disabled={!requestAvailable} onClick={onOpenRequest}>
               <Plus aria-hidden="true" size={14} />
               {recoveryPending ? "Check request result" : "Request Profile"}
             </TerasActionButton>
@@ -96,8 +98,8 @@ export function ModelOperationsControlOverviewPanel({
             : "The primary request path creates one profile intent without direct registry mutation."
         }
         kicker="Profile Requests"
-        title={preview ? "Inspect profile forms" : requestAvailable ? "Request a governed profile" : "Request path is unavailable"}
-        tone={requestAvailable ? "info" : "warn"}
+        title={preview ? "Inspect profile forms" : sourceRevalidating ? "Checking profile source" : requestAvailable ? "Request a governed profile" : "Request path is unavailable"}
+        tone={requestAvailable || sourceRevalidating ? "info" : "warn"}
       />
     </TerasRecordControlOverviewGrid>
   );

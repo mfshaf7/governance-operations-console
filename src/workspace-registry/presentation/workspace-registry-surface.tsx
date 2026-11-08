@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../console-integration/registers/workspace-view-state.ts";
 import {useRegisterPageSize} from '../../console-integration/registers/use-register-page-size.ts';
 
 import { useMemo, useState } from "react";
@@ -30,6 +31,8 @@ import type {
   WorkspaceRegistryRecord,
   WorkspaceRegistrySnapshot,
 } from "../model/workspace-registry-types";
+
+import {registryKindLabel, registryResponsibilities} from "./workspace-registry-copy";
 
 type RegistryView = "eligible" | "registry";
 type KindFilter = "all" | WorkspaceRegistryKind;
@@ -72,8 +75,8 @@ export function WorkspaceRegistrySurface({
   onNextPage?: () => void;
 }) {
   const {pageSize}=useRegisterPageSize('Workspace Registry');
-  const [kind, setKind] = useState<KindFilter>("all");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [kind, setKind] = useWorkspaceViewState<KindFilter>('registry-register:kind', "all");
+  const [selectedId, setSelectedId] = useWorkspaceViewState<string | null>('registry-register:selectedId', null);
   const availableRecords = view === "registry" ? snapshot?.records ?? [] : snapshot?.eligible_promotions ?? [];
   const records = pageCurrent ? availableRecords : availableRecords.filter(row => row.authority_kind !== "internal-instance-record");
   const instancePage = snapshot?.workflow_id === "workspace-registry-view" ? snapshot.instance_page : null;
@@ -123,9 +126,11 @@ export function WorkspaceRegistrySurface({
             title={availabilityError ? "Registry unavailable" : "Loading registry"}
           />
           {availabilityError ? (
+            <TerasActionRow spacing="normal">
             <TerasActionButton emphasis="secondary" onClick={onRetry}>
               Retry Registry
             </TerasActionButton>
+            </TerasActionRow>
           ) : null}
         </TerasPanel>
         {availabilityError ? <TerasEmptyState fill>No canonical records are available.</TerasEmptyState>
@@ -143,7 +148,7 @@ export function WorkspaceRegistrySurface({
           description={retained
             ? `Retained inventory; current source could not be confirmed. Refresh before making changes. ${availabilityError ?? ""}`
             : fixtureMode ? "Preview records; no canonical changes are submitted."
-            : view === "registry" ? "Workspace inventory, including retained suspended and retired records." : "Approved intake entrants eligible for inventory promotion."}
+            : view === "registry" ? "Workspace inventory, including retained suspended and retired records." : "Approved items awaiting activation."}
           filterBar={
             <TerasFilterBar
               filters={[
@@ -162,21 +167,22 @@ export function WorkspaceRegistrySurface({
               search={{
                 ariaLabel: `Search ${view}`,
                 onValueChange: onQueryChange,
-                placeholder: instancePage ? "Search repository name or identity..." : "Search name, identity, or responsible repository...",
+                placeholder: instancePage ? "Search name or identity..." : "Search name, identity, or responsible repository...",
                 value: query,
               }}
             />
           }
           footer={<TerasRegisterPagination label="Workspace Registry" offset={position.offset} count={visible.length} page={entries.length} pending={pagePending||!matchesPage&&!availabilityError} unavailable={Boolean(availabilityError)}
             onReset={availabilityError?()=>{setNavigation({key:scopeKey,entries:[{cursor:null,localOffset:0,offset:0}]});onQueryChange(query);}:undefined} hasPrevious={entries.length>1} hasNext={position.localOffset+visible.length<filtered.length||Boolean(nativeNext)} onPrevious={previous} onNext={next} nextLabel={visible.length?"Next page":"Continue search"} />}
-          kicker={view === "registry" ? "Canonical Register" : "Promotion Register"}
+          kicker={view === "registry" ? "Workspace register" : "Activation register"}
           statusLabel={instancePage ? `${visible.length} on this page · ${Object.values(view === "registry" ? instancePage.counts.inventory : instancePage.counts.intake).reduce((total, count) => total + count, 0)} matching internal records` : `${visible.length} on this page`}
           statusTone={retained ? "warn" : fixtureMode ? "info" : "ok"}
-          title={view === "registry" ? "Workspace inventory" : "Eligible entrants"}
+          title={view === "registry" ? "Workspace inventory" : "Eligible items"}
         >
           {availabilityError&&!pagePending ? <TerasEmptyState fill><p role="alert">{availabilityError}</p><TerasActionButton emphasis="secondary" onClick={onRetry}>Retry registry read</TerasActionButton></TerasEmptyState> : !matchesPage ? <TerasLoadingState fill label="Loading matching records…" /> : visible.length ? (
             <TerasRecordTable
-              columns={registryColumns(view)}
+              ariaLabel="Workspace registry"
+              columns={registryColumns(view, snapshot)}
               fill
               getRowId={(entry) => entryTarget(entry).record_id}
               profile="register"
@@ -204,6 +210,7 @@ export function WorkspaceRegistrySurface({
           ) : (
             <PromotionCandidateSelected
               candidate={selected as WorkspaceRegistryCandidate}
+              snapshot={snapshot}
               actionsCurrent={actionsCurrent}
               fixtureMode={fixtureMode}
               onPromote={onPromote}
@@ -239,7 +246,7 @@ function RegistryRecordSelected({
           description: fixtureMode
             ? "Inspect the lifecycle flow; fixture mode cannot mutate canonical inventory."
             : !actionsCurrent ? "Current authority is unavailable. Refresh Registry before preparing a change."
-            : "Review current authority before updating metadata or changing posture through OOS.",
+            : "Review the current record before updating its details or changing its status.",
           kicker: "Available Action",
           node: (
             <TerasActionRow>
@@ -253,10 +260,10 @@ function RegistryRecordSelected({
         }}
         description={fixtureMode ? "Preview record; no inventory changes are submitted." : !actionsCurrent ? "Last reconciled record. Refresh Registry to confirm its current posture." : "Current inventory identity and responsibility posture."}
         facts={[
-          { label: "Type", value: record.kind },
+          { label: "Type", value: registryKindLabel(record.kind) },
           { label: "Version", value: String(record.version) },
           { label: "Maturity", value: record.maturity ?? "Not declared" },
-          { label: "Responsible repositories", value: record.owner_refs.join(", ") },
+          ...responsibilityFacts(record.owner_refs, snapshot),
         ]}
         kicker="Selected Record"
         selected
@@ -265,9 +272,9 @@ function RegistryRecordSelected({
         tone={record.posture === "active" ? "ok" : "warn"}
         variant="rich"
       />
-      <TerasPanel fit="content" treatment="neutral">
-        <TerasPanelHeader description="Latest source and mutation context; request journals retain workflow history."
-          kicker="Record Evidence" title="Authority lineage" />
+      <TerasPanel fit="content" spacing="normal" treatment="neutral">
+        <TerasPanelHeader description="Where this record came from and its latest change. Open request history for workflow progress."
+          kicker="Record Evidence" title="Record origin and changes" />
         <TerasMetadataList columns={1} shape="list" items={[
           { label: "Origin", value: record.lineage.source.replaceAll("-", " ") },
           { label: "Latest change", value: record.last_mutation.action.replaceAll("-", " ") },
@@ -293,11 +300,13 @@ function RegistryRecordSelected({
 
 function PromotionCandidateSelected({
   candidate,
+  snapshot,
   actionsCurrent,
   fixtureMode,
   onPromote,
 }: {
   candidate: WorkspaceRegistryCandidate;
+  snapshot: WorkspaceRegistrySnapshot;
   actionsCurrent: boolean;
   fixtureMode: boolean;
   onPromote: (candidate: WorkspaceRegistryCandidate) => void;
@@ -306,28 +315,28 @@ function PromotionCandidateSelected({
     <TerasPanelStack fill="last" scroll>
       <TerasSelectedPanel
         action={{
-          description: fixtureMode ? "Inspect the promotion flow; fixture mode cannot mutate canonical inventory." : "Review current authority evidence before sending the promotion through OOS.",
+          description: fixtureMode ? "Inspect the promotion flow; fixture mode cannot mutate canonical inventory." : "Review the approved item and current source before requesting activation.",
           kicker: "Available Action",
-          node: <TerasActionButton disabled={!fixtureMode && !actionsCurrent} onClick={() => onPromote(candidate)}>Review Promotion</TerasActionButton>,
-          title: "Promote entrant",
+          node: <TerasActionButton disabled={!fixtureMode && !actionsCurrent} onClick={() => onPromote(candidate)}>Review activation</TerasActionButton>,
+          title: "Activate item",
         }}
-        description={!fixtureMode && !actionsCurrent ? "Retained entrant. Refresh Registry to confirm it is still eligible." : "Approved intake entrant that is not yet part of active inventory."}
+        description={!fixtureMode && !actionsCurrent ? "Retained item. Refresh Registry to confirm it is still eligible." : "Approved item awaiting activation in workspace inventory."}
         facts={[
-          { label: "Type", value: candidate.target.kind },
+          { label: "Type", value: registryKindLabel(candidate.target.kind) },
           { label: "Version", value: String(candidate.intake_entry_ref.version) },
-          { label: "Responsible repositories", value: candidate.owner_refs.join(", ") },
+          ...responsibilityFacts(candidate.owner_refs, snapshot),
           { label: "Approvals", value: String(candidate.approval_refs.length) },
         ]}
-        kicker="Selected Entrant"
+        kicker="Selected item"
         selected
         status={{ label: !fixtureMode && !actionsCurrent ? "Retained" : "Eligible", tone: !fixtureMode && !actionsCurrent ? "warn" : "ok" }}
         title={candidate.target.name}
         tone="ok"
         variant="rich"
       />
-      <TerasPanel fit="content" treatment="neutral">
+      <TerasPanel fit="content" spacing="normal" treatment="neutral">
         <TerasPanelHeader
-          description="Digest-bound source evidence used to detect stale review state."
+          description="The recorded approval and source are checked again before activation."
           kicker="Promotion Evidence"
           title="Reviewed inputs"
         />
@@ -347,7 +356,7 @@ function PromotionCandidateSelected({
   );
 }
 
-function registryColumns(view: RegistryView) {
+function registryColumns(view: RegistryView, snapshot: WorkspaceRegistrySnapshot) {
   return [
     {
       header: "Record",
@@ -355,15 +364,22 @@ function registryColumns(view: RegistryView) {
       key: "record",
       render: (entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) => {
         const target = entryTarget(entry);
-        return <TerasRecordCellText meta={target.kind === "repo" ? "Repository" : target.kind === "product" ? "Product" : "Component"}
-          description={entry.provider_repository?.full_name} title={target.name} />;
+        return <TerasRecordCellText description={entry.provider_repository?.full_name} title={target.name} />;
       },
+    },
+    {
+      header: "Type",
+      intent: "status" as const,
+      key: "type",
+      render: (entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) => (
+        <TerasStatusPill size="compact" tone="info" wrap="nowrap">{registryKindLabel(entryTarget(entry).kind)}</TerasStatusPill>
+      ),
     },
     {
       header: "Responsible repositories",
       intent: "technical" as const,
       key: "owner",
-      render: (entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) => entryOwners(entry).join(", ") || "Unassigned",
+      render: (entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) => responsibilityFacts(entry.owner_refs, snapshot).map(fact => fact.label === "Associated product" ? `Product: ${fact.value}` : fact.value).join(" · "),
     },
     {
       header: "Status",
@@ -389,4 +405,10 @@ function entryTarget(entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate
 
 function entryOwners(entry: WorkspaceRegistryRecord | WorkspaceRegistryCandidate) {
   return [...entry.owner_refs];
+}
+
+function responsibilityFacts(refs: readonly string[], snapshot: WorkspaceRegistrySnapshot) {
+  const {repositories, products} = registryResponsibilities(refs, snapshot.records.filter(record => record.kind === "product").map(record => record.name), snapshot.records.filter(record => record.kind === "repo").map(record => record.name));
+  return [{label:"Responsible repositories",value:repositories.join(", ") || "Unassigned"},
+    ...(products.length ? [{label:"Associated product",value:products.join(", ")}] : [])];
 }

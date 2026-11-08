@@ -49,7 +49,7 @@ async function mount(page, { loseFirst = false } = {}) {
   await page.getByRole("navigation", { name: "Console navigation", exact: true }).hover();
   await page.locator('button[title="Open ORCHESTRATION"]').focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("button", { name: "Refresh owner truth", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Refresh status", exact: true })).toBeVisible();
   return { writes, errors, retained: () => retained };
 }
 async function openStart(page) {

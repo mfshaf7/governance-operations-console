@@ -83,7 +83,7 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
           <TerasActionButton busy={pending} disabled={pending || (!frozen && (!source?.startAllowed || !approved || !purpose.trim()))} onClick={() => void start()}>{pending ? "Contacting service" : frozen ? "Retry original start" : "Start reviewed run"}</TerasActionButton> : null}
       </>}>
       <TerasFieldStack spacing="normal">
-        {mode === "start" ? <TerasPanel frame="padded" treatment="neutral">
+        {mode === "start" ? <TerasPanel spacing="normal" frame="padded" treatment="neutral">
           <TerasPanelHeader title="Initiative and purpose" kicker="Current source"
             description="This definition runs workspace-governance smoke validation and WGCF readiness. The selected initiative binds its request and evidence; this action does not complete Delivery work." />
           <TerasFieldStack spacing="normal">
@@ -94,7 +94,7 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
             <TerasActionButton disabled={locked || !/^[1-9][0-9]*$/.test(initiative)} emphasis="secondary" onClick={() => void readSource()}>Review current source</TerasActionButton>
           </TerasFieldStack>
         </TerasPanel> : null}
-        {source ? <TerasPanel frame="padded" treatment="rail" tone={source.startAllowed ? "warn" : "danger"}>
+        {source ? <TerasPanel spacing="normal" frame="padded" treatment="rail" tone={source.startAllowed ? "warn" : "danger"}>
           <TerasPanelHeader kicker="Explicit operator decision" title={source.title}
             description={source.startAllowed ? "Approval binds this exact source and purpose for fifteen minutes. Admission is not completion." : source.blockers.join(" ")} />
           <TerasMetadataList items={[{ label: "Record", value: source.recordRef }, { label: "Source version", value: source.sourceVersion },
@@ -109,7 +109,7 @@ export function OrchestrationRunStartDialog({ onClose, onViewRuns, mode = "start
         {receipt ? <TerasPanel frame="padded" treatment="rail" tone="ok"><TerasPanelHeader kicker="OOS acknowledgement"
           title={receipt.duplicate ? "Original run recovered" : "Run admitted"}
           description={receipt.state ? `Source state: ${receipt.state}.` : "No run projection is available yet. Read the original run as the worker becomes available."} /></TerasPanel> : null}
-        <TerasPanel frame="padded" treatment="neutral">
+        <TerasPanel spacing="normal" frame="padded" treatment="neutral">
           <TerasPanelHeader title="Recover the original run" kicker="Source readback" description="Use the same reference after an interrupted response or reload. Reading never creates another run." />
           {runs.length ? <TerasSelectField label="Choose a retained run" value={runs.some(run => run.runId === originalRef) ? originalRef : ""}
             disabled={pending || Boolean(frozen)} onValueChange={value => { setOriginalRef(value); setOriginal(null); setError(null); }}

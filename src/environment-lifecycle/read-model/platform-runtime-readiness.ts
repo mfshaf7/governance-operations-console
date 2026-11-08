@@ -1,3 +1,4 @@
+import { platformOperationsNeedingRecovery, platformOperationCollectionComplete } from "./platform-operation-attention.ts";
 import type {
   PlatformOperationRecord,
   PlatformOperationSubject,
@@ -10,12 +11,12 @@ export type PlatformRuntimeReadiness = Readonly<{
   actionable: boolean;
   catalogState: "current" | "stale" | "unavailable";
   detail: string;
-  label: "Degraded" | "Ready" | "Recovering" | "Stale" | "Unavailable";
+  label: "History incomplete" | "Degraded" | "Ready" | "Recovering" | "Stale" | "Unavailable";
   latestOperation: PlatformOperationRecord | null;
   nextAction: Readonly<{ authority: string; code: string; reason: string }>;
   operationState: "current" | "recovering" | "retained" | "unavailable";
   ready: boolean;
-  state: "degraded" | "ready" | "recovering" | "stale" | "unavailable";
+  state: "partial" | "degraded" | "ready" | "recovering" | "stale" | "unavailable";
   tone: "danger" | "info" | "ok" | "stale" | "warn";
 }>;
 
@@ -36,7 +37,12 @@ export function projectPlatformRuntimeReadiness(
   const latestOperation = [...operations].sort(
     (left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at),
   )[0] ?? null;
-  const nextAction = latestOperation?.next_action ?? refreshAction;
+  const outstanding = platformOperationsNeedingRecovery(operations).sort(
+    (left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at),
+  );
+  const recovery = outstanding.find(operation => operation.state === "failed" || operation.state === "blocked");
+  const pending = outstanding.find(operation => ["requested", "queued", "running"].includes(operation.state));
+  const nextAction = (recovery ?? pending)?.next_action ?? refreshAction;
 
   if (snapshot.status === "loading") {
     return projection("recovering", "Recovering", "info", "unavailable", "recovering", false, false,
@@ -66,18 +72,23 @@ export function projectPlatformRuntimeReadiness(
       "Only part of the OOS operation projection is current. Retained truth remains visible, but new actions are disabled.",
       latestOperation, nextAction);
   }
-  if (latestOperation && new Set(["requested", "queued", "running"]).has(latestOperation.state)) {
+  if (recovery) {
+    return projection("degraded", "Degraded", recovery.state === "failed" ? "danger" : "warn", "current", "retained", false, true,
+      "A workflow operation still needs its recorded recovery action. Unrelated successes do not resolve it.",
+      recovery, recovery.next_action);
+  }
+  if (pending) {
     return projection("recovering", "Recovering", "info", "current", "recovering", false, true,
       "OOS retained an operation that has not reached terminal owner readback. The Console is reconciling it.",
-      latestOperation, nextAction);
+      pending, pending.next_action);
   }
-  if (latestOperation && new Set(["blocked", "failed"]).has(latestOperation.state)) {
-    return projection("degraded", "Degraded", latestOperation.state === "failed" ? "danger" : "warn", "current", "retained", false, true,
-      "The latest durable operation needs the projected recorded next action before this workspace is ready.",
-      latestOperation, nextAction);
+  if (!platformOperationCollectionComplete(snapshot.operations, snapshot.historyPage)) {
+    return projection("partial", "History incomplete", "info", "current", "retained", false, true,
+      "The catalog is current, but the recent operation window cannot rule out older recovery work. Available actions remain usable.",
+      latestOperation, refreshAction);
   }
   return projection("ready", "Ready", "ok", "current", "current", true, true,
-    "The OOS catalog is current and no retained operation is waiting for owner recovery.",
+    "The OOS catalog is current and no workflow recovery is pending.",
     latestOperation, nextAction);
 }
 

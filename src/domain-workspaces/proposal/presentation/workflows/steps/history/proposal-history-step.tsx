@@ -87,7 +87,7 @@ export function ProposalHistoryStep({
               title: proposal.title,
             }}
           />
-          <TerasPanel
+          <TerasPanel spacing="normal"
             frame="padded"
             treatment="neutral"
             layout="header-body"
@@ -151,7 +151,7 @@ export function ProposalHistoryStep({
             </TerasStatGroup>
           </TerasPanel>
 
-          <TerasPanel
+          <TerasPanel spacing="normal"
             frame="padded"
             treatment="rail"
             layout="header-body"

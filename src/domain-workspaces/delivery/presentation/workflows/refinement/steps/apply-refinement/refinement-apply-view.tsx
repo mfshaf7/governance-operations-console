@@ -168,7 +168,7 @@ export function RefinementApplyView({
         </TerasZone>
 
         <TerasZone scroll fit="fill">
-          <TerasPanel
+          <TerasPanel spacing="normal"
             density="compact"
             frame="padded"
             treatment="rail"

@@ -94,7 +94,7 @@ export function WorkDesignHistoryView({
             title: deliveryPackage.display_name,
           }}
         />
-        <TerasPanel frame="padded" treatment="neutral" layout="header-body">
+        <TerasPanel spacing="normal" frame="padded" treatment="neutral" layout="header-body">
           <TerasPanelHeader
             kicker="Event Timeline"
             statusLabel={`${historyTimelineRows.length} events`}
