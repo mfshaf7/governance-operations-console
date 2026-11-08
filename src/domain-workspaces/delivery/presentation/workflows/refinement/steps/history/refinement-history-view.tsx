@@ -68,7 +68,7 @@ export function RefinementHistoryView({
             title: deliveryPackage.display_name,
           }}
         />
-        <TerasPanel frame="padded" treatment="neutral" layout="header-body">
+        <TerasPanel spacing="normal" frame="padded" treatment="neutral" layout="header-body">
           <TerasPanelHeader
             kicker="Event Timeline"
             statusLabel={`${timelineRows.length} events`}

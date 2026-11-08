@@ -537,6 +537,24 @@ row, keyboard focus, sticky header, compact density, and scroll frame behavior
 for those intents. Domain code supplies display-ready cell content, row ids,
 selection handlers, action handlers, and source-specific projection only.
 
+Every table supplies a stable, human-readable `ariaLabel`. It identifies the
+register for assistive technology and scopes its optional column-width
+preferences. Do not include record ids or user-entered content in that label.
+Primary columns receive spare width before compact status and action columns.
+Cell gutters keep neighboring values separate; narrow viewports scroll rather
+than squeezing controls or splitting status labels.
+
+Resize dividers sit between columns; the table's outside edge stays anchored
+to its frame. A divider transfers width between its two neighboring columns,
+so the final column resizes from its left divider. The table fills its frame,
+including with older saved preferences and after viewport expansion. Minimum
+content widths may still require horizontal scrolling on narrow screens.
+Use Left/Right arrow keys for 10px adjustments (Shift for 50px), and double-click
+or press Enter to restore responsive defaults for the neighboring pair. Escape
+cancels an active drag. Minimum widths preserve readable headers and controls.
+Preferences survive paging and reopening in this browser. They contain only
+static column keys and numeric widths; storage failure must not block the table.
+
 Domain CSS must not recreate table shell, sticky header, row hover, selected
 row, action-cell alignment, status/metric column alignment, index styling, or
 profile-owned column widths. Domain CSS may place a table in a local grid or

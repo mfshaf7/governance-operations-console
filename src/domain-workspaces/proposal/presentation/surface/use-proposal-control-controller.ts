@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
@@ -57,16 +58,16 @@ export function useProposalControlController({
 }: {
   entryIntent?: ConsoleSurfaceEntryIntent | null;
 } = {}): ProposalControlController {
-  const [selectedProposalId, setSelectedProposalId] = useState(
+  const [selectedProposalId, setSelectedProposalId] = useWorkspaceViewState('proposal:selectedProposalId',
     proposalWorkspaceReadModel.proposals[1]?.id ??
       proposalWorkspaceReadModel.proposals[0]?.id ??
       "",
   );
   const [proposalIngressFilter, setProposalIngressFilter] =
-    useState<ProposalIngressFilter>("all");
-  const [proposalSearch, setProposalSearch] = useState("");
+    useWorkspaceViewState<ProposalIngressFilter>('proposal:proposalIngressFilter', "all");
+  const [proposalSearch, setProposalSearch] = useWorkspaceViewState('proposal:proposalSearch', "");
   const [proposalStatusFilter, setProposalStatusFilter] =
-    useState<ProposalStatusFilter>("all");
+    useWorkspaceViewState<ProposalStatusFilter>('proposal:proposalStatusFilter', "all");
   const [hubProposalId, setHubProposalId] = useState<string | null>(null);
   const [inspectedProposalId, setInspectedProposalId] = useState<string | null>(
     null,

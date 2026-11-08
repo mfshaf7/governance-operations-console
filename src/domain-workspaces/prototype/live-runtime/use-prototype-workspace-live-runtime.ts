@@ -1,4 +1,6 @@
 "use client";
+
+import { prototypeSummaryComplete } from "./prototype-read-coverage.ts";
 import {readRegisterWindow} from '../../../console-integration/registers/read-register-window.ts';
 import {useRegisterPageSize} from '../../../console-integration/registers/use-register-page-size.ts';
 import {useCallback,useEffect,useRef,useState} from "react";
@@ -80,7 +82,7 @@ export function usePrototypeWorkspaceOverview(enabled:boolean){
     try{
       const response=await fetch("/api/prototypes/records",{cache:"no-store",signal:AbortSignal.any([controller.signal,AbortSignal.timeout(80000)])});
       const value=await response.json();check(response,value);
-      if(value.coverage?.complete===false||value.page?.next_cursor||value.projection.ownerPage?.next_cursor)throw Error("Prototype summary is incomplete.");
+      if(!prototypeSummaryComplete(value))throw Error("Prototype summary is incomplete.");
       if(ticket===sequence.current)setReadModel(value.projection.readModel);
     }catch{if(ticket===sequence.current&&!controller.signal.aborted)setReadModel(null);}
     finally{if(ticket===sequence.current)pending.current=false;}

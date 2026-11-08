@@ -29,3 +29,18 @@ export const deliveryTargets = [
 export function validationApproachLabel(value: string | undefined) { return validationApproaches.find(item => item.value === value)?.label ?? value ?? "Not in scope"; }
 export function validationRoleLabel(value: string | undefined) { return graphRoles.find(item => item.value === value)?.label ?? value ?? "Not in scope"; }
 export function deliveryTargetLabel(value: string | null) { return deliveryTargets.find(item => item.value === value)?.label ?? value ?? "Not in scope"; }
+
+export const componentClasses = [
+  {value:"shared-platform",label:"Shared infrastructure service"},
+  {value:"shared-governance-runtime",label:"Shared governance service"},
+  {value:"product-runtime",label:"Product runtime or backend"},
+  {value:"product-channel",label:"Product communication channel"},
+  {value:"product-plugin",label:"Product plugin or extension"},
+];
+export function componentClassLabel(value: string | null | undefined) {
+  return componentClasses.find(item => item.value === value)?.label ?? value ?? "Not in scope";
+}
+
+export function intakeSourceLabel(value: string) {
+  return ({direct:"Direct registration",delivery:"Delivery",prototype:"Prototype Studio","repository-custody":"Repository onboarding"} as Record<string,string>)[value] ?? value;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { TerasRegisterPagination, TerasLoadingState, TerasActionButton, TerasActionRow, TerasContentTray, TerasList, TerasSignalItem } from "@/teras";
+import { TerasEmptyState, TerasRegisterPagination, TerasLoadingState, TerasActionButton, TerasContentTray, TerasList, TerasSignalItem } from "@/teras";
 import { registryRequestStatus, registryTimestamp } from "./workspace-registry-copy";
 import type { InventoryRequestJournalRuntime } from "../live-runtime/use-inventory-request-journal";
 
@@ -11,12 +11,10 @@ export function WorkspaceRegistryRequestJournal({ journal, disabled, onReopen }:
     description={journal.error ?? (journal.pending ? "Reading request history…"
       : journal.page ? journal.page.pending_request_count ? `${journal.page.pending_request_count} pending. Open the original request before starting another.` : journal.page.records.length ? "Open a request to inspect its recorded progress." : "No previous requests for this item."
       : "History must be available before a new request.")}
-    actions={<TerasActionRow>
-      <TerasActionButton emphasis="secondary" disabled={disabled || journal.pending} onClick={() => void journal.refresh()}>Refresh original requests</TerasActionButton>
-
-    </TerasActionRow>}>
+    >
+    {journal.error ? <TerasEmptyState><TerasActionButton emphasis="secondary" disabled={disabled || journal.pending} onClick={() => void journal.refresh()}>Retry request history</TerasActionButton></TerasEmptyState> : null}
     {journal.pending ? <TerasLoadingState inline={!!journal.page} label="Loading request history…" /> : null}
-    {journal.page?.records.length ? <TerasList frame="contained" scrollHeight="short">
+    {!journal.error && journal.page?.records.length ? <TerasList frame="contained" scrollHeight="short">
       {journal.page.records.map(entry => <TerasSignalItem key={entry.request_id} label={entry.action ? ({ update: "Metadata update", suspend: "Suspension", restore: "Restoration", retire: "Retirement" } as Record<string, string>)[entry.action] ?? entry.action : "Promotion"}
         title={registryRequestStatus(entry.status)} detail={registryTimestamp(entry.updated_at)} tone="info"
         {...(disabled || journal.pending ? { statusLabel: "Wait for current read" } : {
@@ -24,8 +22,8 @@ export function WorkspaceRegistryRequestJournal({ journal, disabled, onReopen }:
           onSelect: () => onReopen(entry.request_id),
         })} />)}
     </TerasList> : null}
-    <TerasRegisterPagination label="Inventory request history" offset={journal.offset} count={journal.page?.records.length ?? 0} page={journal.pageNumber}
+    {!journal.error && journal.page && (journal.page.records.length > 0 || journal.hasPrevious || journal.page.next_cursor) ? <TerasRegisterPagination label="Inventory request history" offset={journal.offset} count={journal.page?.records.length ?? 0} page={journal.pageNumber}
       pending={journal.pending} unavailable={Boolean(journal.error)} hasPrevious={!disabled && journal.hasPrevious} hasNext={!disabled && Boolean(journal.page?.next_cursor)}
-      onPrevious={()=>void journal.back()} onNext={()=>void journal.next()} />
+      onPrevious={()=>void journal.back()} onNext={()=>void journal.next()} /> : null}
   </TerasContentTray>;
 }

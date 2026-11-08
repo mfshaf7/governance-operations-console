@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TerasLoadingState, TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack,
+import { TerasEmptyState, TerasLoadingState, TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldStack,
   TerasRegisterPagination, TerasDraftCloseGuardDialog, TerasTechnicalDetails, TerasMetadataList, TerasSelectableRow, TerasList, TerasModalShell, TerasNoteField, TerasSelectField, TerasSignalItem, TerasTextField } from "@/teras";
 import {RepositoryOnboarding} from "../../domain-workspaces/repository/index";
 import { WorkspaceIntakeDialog } from "../../console-integration/workspace-intake/presentation/workspace-intake-dialog";
 import { useWorkspaceIntakeLiveRuntime } from "../../console-integration/workspace-intake/live-runtime/use-workspace-intake-live-runtime";
 import { completedDirectIntakeCandidate, directIntakeTarget, directWorkspaceIntakeCandidate, emptyDirectIntakeDraft,
   type DirectIntakeDraft, type DirectIntakeKind } from "../../console-integration/workspace-intake/workspace-intake-direct-candidate";
-import type { WorkspaceIntakeCandidate } from "../../console-integration/workspace-intake/workspace-intake-live-types";
+import type { WorkspaceIntakeCandidate, WorkspaceIntakeDecision } from "../../console-integration/workspace-intake/workspace-intake-live-types";
 import { useIntakeOwnerSetup } from "../live-runtime/use-intake-owner-setup";
 import { componentTypes, deliveryTargets, graphRoles, guidedIntakeDraft, derivedIntakeRole, validationApproaches } from "../model/workspace-intake-guidance";
 import type { WorkspaceRegistrySnapshot } from "../model/workspace-registry-types";
@@ -26,7 +26,7 @@ export function WorkspaceRegistryIntakeDialog({ snapshot, onClose, fixtureMode =
   const requestClose = () => { if (name.trim()) setCloseGuardOpen(true); else onClose(); };
   if (repositorySelected) return <RepositoryOnboarding providerId={initialProviderId} fixtureMode={fixtureMode} onActivate={onActivateRepository} onClose={onClose} />;
   if (selected) return <DirectIntakeTarget key={`${selected.kind}:${selected.name}`} target={selected}
-    snapshot={snapshot} fixtureMode={fixtureMode} onChangeTarget={() => setSelected(null)} onClose={onClose} />;
+    snapshot={snapshot} fixtureMode={fixtureMode} onChangeTarget={() => setSelected(null)} onClose={onClose} onActivate={() => onActivateRepository(selected.name)} />;
   return <><TerasModalShell bodyLayout="scroll" height="content" width="standard" title="Workspace onboarding"
     kicker="Workspace Registry" surfaceId="workspace-registry-intake-target"
     description={fixtureMode ? "Preview only. Explore the registration forms without changing workspace records." : "Choose what you want to bring into the managed workspace. Repository onboarding reuses verified GitHub details."}
@@ -38,18 +38,19 @@ export function WorkspaceRegistryIntakeDialog({ snapshot, onClose, fixtureMode =
     <TerasFieldStack spacing="loose">
       <TerasSelectField label="Registration type" value={kind} onValueChange={setKind}
         options={[{ label: "Repository — source files and Git history", value: "repo" }, { label: "Product — an application or service", value: "product" }, { label: "Component — a supporting service or library", value: "component" }]} />
+      {kind !== "repo" ? <TerasContentTray kicker="Governance registration" description="Saved to Workspace Governance Git and visible to anyone who can read that repository. Choose active Governance repositories here; installation-private product and component registration is not supported." /> : null}
       {kind !== "repo" ? <TerasTextField label="Short name" value={name} onValueChange={setName} placeholder="For example team-dashboard; lowercase letters, numbers, dots, hyphens or underscores" /> : null}
-      <TerasContentTray kicker="Choose an identity" description={kind === "repo" ? "Onboard an existing repository using its verified GitHub details. Product and component registration are separate choices for work that needs them." : kind === "product" ? "Register a complete application or service and associate its already onboarded source repositories." : "Register a separately managed service, library or plugin and select its already onboarded repository. Ordinary project folders do not need component records."} />
+      <TerasContentTray kicker="What will be registered" description={kind === "repo" ? "Onboard an existing repository using its verified GitHub details. Product and component registration are separate choices for work that needs them." : kind === "product" ? "Register a complete application or service and associate its active Governance source repositories." : "Register a separately managed service, library or plugin and select its active Governance repository. Ordinary project folders do not need component records."} />
       {error ? <TerasContentTray kicker="Target required" description={error} /> : null}
     </TerasFieldStack>
   </TerasModalShell><TerasDraftCloseGuardDialog open={closeGuardOpen} kicker="Unsaved Intake target"
-    title="Discard Intake Target?" description="The entrant key has not been submitted." leaveLabel="Discard Draft"
+    title="Discard Intake Target?" description="The item name has not been submitted." leaveLabel="Discard Draft"
     onKeepEditing={() => setCloseGuardOpen(false)} onLeave={onClose} /></>;
 }
 
-function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onClose }: {
+function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onClose, onActivate }: {
   target: { kind: DirectIntakeKind; name: string }; snapshot: WorkspaceRegistrySnapshot; fixtureMode: boolean;
-  onChangeTarget: () => void; onClose: () => void;
+  onChangeTarget: () => void; onClose: () => void; onActivate: () => void;
 }) {
   const runtime = useWorkspaceIntakeLiveRuntime();
   const [draft, setDraft] = useState<DirectIntakeDraft>(() => ({ ...emptyDirectIntakeDraft, graphRole: target.kind === "product" ? "product-readiness-aggregate" : "" }));
@@ -59,7 +60,7 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
   const [customEndpoint, setCustomEndpoint] = useState(false);
   const [roleOverridden, setRoleOverridden] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [review, setReview] = useState<{ candidate: WorkspaceIntakeCandidate; requestId?: string } | null>(null);
+  const [review, setReview] = useState<{ candidate: WorkspaceIntakeCandidate; requestId?: string; decision?: WorkspaceIntakeDecision } | null>(null);
   const [building, setBuilding] = useState(false);
   const errorRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -70,6 +71,13 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
   const products = snapshot.records.filter(record => record.kind === "product" && record.posture === "active").map(record => record.name);
   const inInventory = snapshot.records.some(record => record.kind === target.kind && record.name === target.name);
   const busy = runtime.pending || building;
+  useEffect(() => {
+    if (fixtureMode || review || busy || !runtime.requestPage?.pending_request_count) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void runtime.refreshRequestPage(true).catch(() => undefined);
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [fixtureMode, review, busy, runtime.requestPage, runtime.refreshRequestPage, target.kind, target.name]);
   const codeOwners = draft.sourceOwners.split(",").filter(Boolean);
   const validationSource = validationRepository || (target.kind === "component" ? draft.ownerRepo : codeOwners.length === 1 ? codeOwners[0] : draft.runtimeOwner);
   const validationRecord = snapshot.records.find(record => record.kind === "repo" && record.name === validationSource && record.posture === "active") ?? null;
@@ -115,7 +123,7 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
     } catch (failure) { setError(failure instanceof Error ? failure.message : "Reclassification unavailable."); }
     finally { setBuilding(false); }
   }
-  if (review) return <WorkspaceIntakeDialog singleReview candidate={review.candidate} initialRequestId={review.requestId} hasLocalDraft={dirty}
+  if (review) return <WorkspaceIntakeDialog singleReview candidate={review.candidate} initialRequestId={review.requestId} initialDecision={review.decision} onClassificationNextAction={onActivate} hasLocalDraft={dirty}
     returnLabel="Back to Registry" onClose={onClose}
     onEditCandidate={review.requestId ? undefined : () => setReview(null)} onNewCandidate={() => {
       setReview(null); void runtime.listDirect(target.kind, target.name).catch(() => undefined);
@@ -142,6 +150,7 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
     </>}>
     <TerasFieldStack spacing="loose">
       {!inInventory ? <>
+      <TerasContentTray kicker="Governance registration" description="Saved to Workspace Governance Git and visible to anyone who can read that repository. Choose active Governance repositories here; installation-private product and component registration is not supported." />
       <TerasContentTray kicker="1. Purpose" description="Describe the responsibility of this item in your own words.">
         <TerasFieldStack spacing="normal">
           <TerasNoteField label="What does this item do?" placeholder="Who is it for, what does it provide, and what is outside its responsibility?" value={draft.notes} disabled={busy} onValueChange={value => update("notes", value)} />
@@ -210,23 +219,23 @@ function DirectIntakeTarget({ target, snapshot, fixtureMode, onChangeTarget, onC
         </TerasFieldStack>
       </TerasContentTray>
       </> : null}
-      <TerasContentTray kicker="Retained Intake requests"
+      <TerasContentTray kicker="Onboarding requests"
         description={fixtureMode ? "Preview only; no service journal is loaded and no classification can be submitted." : page ? `${page.pending_request_count} pending request(s) across all pages. Reopen reads the original request without resubmitting.`
           : runtime.error?.message ?? "Reading the native journal. New classification requires a successful read."}
         actions={<TerasActionRow>
-          <TerasActionButton emphasis="secondary" disabled={busy || fixtureMode} onClick={() => void runtime.listDirect(target.kind, target.name).catch(() => undefined)}>Refresh retained requests</TerasActionButton>
 
           {completed ? <TerasActionButton emphasis="secondary" disabled={busy || Boolean(page?.pending_request_count) || inInventory}
             onClick={() => void reclassify()}>Reclassify completed candidate</TerasActionButton> : null}
         </TerasActionRow>}>
-        {!fixtureMode ? <TerasRegisterPagination label="Workspace onboarding requests" offset={runtime.requestPageOffset} count={page?.records.length ?? 0} page={runtime.requestPageNumber}
+        {runtime.error ? <TerasEmptyState><TerasActionButton emphasis="secondary" disabled={busy || fixtureMode} onClick={() => void runtime.listDirect(target.kind, target.name).catch(() => undefined)}>Retry request history</TerasActionButton></TerasEmptyState> : runtime.pending && !page ? <TerasLoadingState label="Loading request history…" /> : page && !page.records.length ? <TerasEmptyState>No previous onboarding requests for this item.</TerasEmptyState> : null}
+        {!fixtureMode && !runtime.error && page && (page.records.length > 0 || runtime.hasPreviousRequestPage || page.next_cursor) ? <TerasRegisterPagination label="Workspace onboarding requests" offset={runtime.requestPageOffset} count={page?.records.length ?? 0} page={runtime.requestPageNumber}
           pending={runtime.pending} unavailable={Boolean(runtime.error)} hasPrevious={!busy && runtime.hasPreviousRequestPage} hasNext={!busy && Boolean(page?.next_cursor)}
           onPrevious={()=>void runtime.previousRequestPage().catch(()=>undefined)} onNext={()=>void runtime.nextRequestPage().catch(()=>undefined)} /> : null}
         {page?.records.length ? <TerasList frame="contained" scrollHeight="short">
           {page.records.map(entry => <TerasSignalItem key={entry.request_id} label={entry.request_id}
             title={`${entry.classification} / ${entry.status}`} detail={entry.updated_at} tone="info"
             {...(busy ? { statusLabel: "Reading" } : { ariaLabel: `Reopen original request ${entry.request_id}`,
-              actionLabel: "Reopen original request", onSelect: () => requestLeave(() => setReview({ requestId: entry.request_id,
+              actionLabel: "Reopen original request", onSelect: () => requestLeave(() => setReview({ requestId: entry.request_id, decision: entry.classification,
                 candidate: { label: target.name, target, source: entry.candidate.source,
                   requested_record: entry.candidate.requested_record, evidence_refs: entry.candidate.evidence_refs } })) })} />)}
         </TerasList> : null}

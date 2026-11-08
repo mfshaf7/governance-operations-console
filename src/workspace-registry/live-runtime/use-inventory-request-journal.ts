@@ -17,11 +17,12 @@ export function useInventoryRequestJournal(family: InventoryRequestFamily, targe
   const [previous, setPrevious] = useState<Position[]>([]);
   const generation = useRef(0), active = useRef<AbortController | null>(null);
   const { kind, name, record_id } = target;
-  const load = useCallback(async (cursor?: string, trail: Position[] = [], offset = 0) => {
+  const load = useCallback(async (cursor?: string, trail: Position[] = [], offset = 0, background = false) => {
     if (fixtureMode) return;
     const current = ++generation.current;
     active.current?.abort(); const controller = new AbortController(); active.current = controller;
-    setPending(true); setError(null); setPage(null);
+    if (!background) { setPending(true); setPage(null); }
+    setError(null);
     try {
       const exactTarget = { kind, name, record_id };
       const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(15000)]);let metadata:InventoryRequestJournal|null=null;
@@ -38,10 +39,17 @@ export function useInventoryRequestJournal(family: InventoryRequestFamily, targe
       const next={...metadata!,records:window.rows,next_cursor:window.nextCursor};
       if (current === generation.current) { setPage(next);setPosition({cursor:cursor ?? null,offset});setPrevious(trail); }
     } catch (caught) {
-      if (current === generation.current && !controller.signal.aborted) setError(caught instanceof Error ? caught.message : "Original Inventory requests are unavailable.");
-    } finally { if (current === generation.current) setPending(false); }
+      if (current === generation.current && !controller.signal.aborted) { setPage(null); setError(caught instanceof Error ? caught.message : "Original Inventory requests are unavailable."); }
+    } finally { if (current === generation.current && !background) setPending(false); }
   }, [family, kind, name, record_id, fixtureMode,pageSize]);
   useEffect(() => { setPosition({cursor:null,offset:0});setPrevious([]);void load();return () => { generation.current += 1;active.current?.abort(); }; }, [load]);
+  useEffect(() => {
+    if (fixtureMode || pending || !page?.pending_request_count) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load(position.cursor ?? undefined, previous, position.offset, true);
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [fixtureMode, pending, page, load, position, previous]);
   return { page, error, pending, load, offset:position.offset,pageNumber:previous.length+1,hasPrevious:previous.length>0,
     refresh:()=>load(position.cursor ?? undefined,previous,position.offset),
     next:()=>page?.next_cursor&&!pending?load(page.next_cursor,[...previous,position],position.offset+page.records.length):Promise.resolve(),

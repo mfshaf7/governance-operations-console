@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../../console-integration/registers/workspace-view-state.ts";
 
 import { useEffect, useState } from "react";
 
@@ -26,10 +27,10 @@ export function useProductPortfolioCurationController({
   ) => Promise<ProductListingApplyResult>;
 }) {
   const [activeViewId, setActiveViewId] =
-    useState<ProductPortfolioCurationViewId>("all-active");
+    useWorkspaceViewState<ProductPortfolioCurationViewId>('portfolio-listing:activeViewId', "all-active");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+  const [query, setQuery] = useWorkspaceViewState('portfolio-listing:query', "");
+  const [selectedProductId, setSelectedProductId] = useWorkspaceViewState<string | null>('portfolio-listing:selectedProductId',
     focusedProductId ?? null,
   );
   const visibleEntries = productPortfolioCurationEntries(

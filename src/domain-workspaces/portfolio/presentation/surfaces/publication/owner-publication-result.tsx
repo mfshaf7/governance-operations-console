@@ -4,7 +4,7 @@ import type { GovernedProductPublicationResult } from "../../../live-runtime/pro
 export function OwnerPublicationResult({ result }: { result: GovernedProductPublicationResult }) {
   const posture = result.maintenance_projection;
   const findings = posture.evidence_posture.findings;
-  return <TerasPanel frame="padded" fit="content" tone={result.state === "applied" ? "ok" : "warn"} treatment="state">
+  return <TerasPanel spacing="normal" frame="padded" fit="content" tone={result.state === "applied" ? "ok" : "warn"} treatment="state">
     <TerasPanelHeader kicker="Service result" title={result.state === "applied" ? "Catalog updated" : "Change rejected"}
       description="Verified publication result and source receipt. Publication does not grant product access or operating approval." />
     <TerasMetadataList columns={2} items={[

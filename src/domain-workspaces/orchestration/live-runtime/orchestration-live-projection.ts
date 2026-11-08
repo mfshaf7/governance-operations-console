@@ -7,6 +7,12 @@ import type { OosOrchestrationDefinition, OosOrchestrationRun } from "./orchestr
 export function projectLiveOrchestrationWorkspace(definitions: readonly OosOrchestrationDefinition[], runs: readonly OosOrchestrationRun[], observedAt: string): OrchestrationWorkspaceReadModel {
   const projectedDefinitions = definitions.map((definition) => projectDefinition(definition, observedAt));
   const projectedRuns = runs.map(projectRun);
+  const recentWindow = runs.length >= 100;
+  const summary = orchestrationWorkspaceSummary({ definitions: projectedDefinitions, runs: projectedRuns });
+  if (recentWindow) {
+    summary.home = summary.home.map(metric => metric.id === "definition-work" ? metric : { ...metric, label: `Recent ${metric.label.toLowerCase()}` });
+    summary.runs = summary.runs.map(metric => ({ ...metric, label: `Recent ${metric.label.toLowerCase()}` }));
+  }
   return {
     attention: orchestrationAttentionQueue({ definitions: projectedDefinitions, now: observedAt, runs: projectedRuns }),
     definitions: projectedDefinitions,
@@ -14,13 +20,13 @@ export function projectLiveOrchestrationWorkspace(definitions: readonly OosOrche
     materialEvents: orchestrationMaterialEvents(projectedRuns),
     runs: projectedRuns,
     scenarioCoverage: [],
-    summary: orchestrationWorkspaceSummary({ definitions: projectedDefinitions, runs: projectedRuns }),
+    summary,
     workspaceStatus: {
       ariaLabel: "Orchestration workspace status", kicker: "Workspace Status", statusLabel: "Live", summary: "Definitions, runs, controls, events, and receipts are projected from OOS without fixture fallback.", title: "OOS orchestration authority is connected", tone: "ok",
       items: [
         { id: "oos", label: "OOS API", state: "online", tone: "ok", detail: "Authenticated server-only OOS projection is current.", facts: [{ label: "Authority", value: "operator-orchestration-service" }] },
         { id: "catalog", label: "Catalog", state: "current", tone: "ok", detail: "Immutable definition versions come from the OOS catalog.", facts: [{ label: "Definitions", value: String(projectedDefinitions.length) }] },
-        { id: "projection", label: "Run Projection", state: "current", tone: "ok", detail: "Aggregate run state and receipts come from OOS.", facts: [{ label: "Runs", value: String(projectedRuns.length) }] },
+        { id: "projection", label: "Run Projection", state: "current", tone: "ok", detail: recentWindow ? "This overview covers the latest 100 runs. Use the run register to inspect older work." : "Aggregate run state and receipts come from OOS.", facts: [{ label: recentWindow ? "Recent runs" : "Runs", value: String(projectedRuns.length) }] },
         { id: "execution", label: "Execution", state: definitions.some((definition) => definition.lifecycle === "active" && definition.admission.start_allowed && definition.admission.gates.every(gate => gate.satisfied)) ? "ready" : "blocked", tone: definitions.some((definition) => definition.lifecycle === "active" && definition.admission.start_allowed && definition.admission.gates.every(gate => gate.satisfied)) ? "ok" : "warn", detail: "New runs require current service admission. Retained runs keep their own permitted controls.", facts: [] },
       ],
     },

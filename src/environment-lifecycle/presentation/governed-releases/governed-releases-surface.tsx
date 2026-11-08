@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../console-integration/registers/workspace-view-state.ts";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -63,7 +64,7 @@ export function GovernedReleasesSurface({
   runtime: EnvironmentLifecycleRuntimeController;
 }) {
   const [localFilters, setLocalFilters] =
-    useState<ProductReleaseFilters>(initialFilters);
+    useWorkspaceViewState<ProductReleaseFilters>('governed-releases-view:localFilters', initialFilters);
   const filters=live?.runtime.filters??localFilters;
   const setFilters=live?.runtime.setFilters??setLocalFilters;
   const [mode, setMode] =
@@ -71,7 +72,7 @@ export function GovernedReleasesSurface({
   const [releaseStepId, setReleaseStepId] =
     useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] =
-    useState<string | null>(products[0]?.productId ?? null);
+    useWorkspaceViewState<string | null>('governed-releases-view:selectedProductId', products[0]?.productId ?? null);
   const filteredProducts = useMemo(
     () => filterProductReleaseCapabilities(products, filters),
     [filters, products],

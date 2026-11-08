@@ -53,10 +53,11 @@ export function TerasRegisterPanel({
       className={cx(styles.terasRegisterPanel, className)}
       data-register-density={density}
       data-register-footer={footer ? "true" : undefined}
+      data-register-toolbar={filterBar ? "true" : "false"}
       data-register-body-min={
         density === "compact-control" ? "compact" : "fill"
       }
-      layout="header-toolbar-body"
+      layout={filterBar ? "header-toolbar-body" : "header-body"}
       overflow="hidden"
       treatment="neutral"
     >

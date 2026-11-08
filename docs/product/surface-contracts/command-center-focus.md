@@ -152,7 +152,15 @@ An attention candidate carries:
   refs
 
 Visual tone is derived presentation. It is never a ranking input or source of
-business meaning.
+business meaning. Focus rows, selected priority headers, Pulse cards with known
+work, and Pulse detail records share category colours: actions/follow-ups use
+blue, decisions/reviews use amber, and recovery/blocked work uses red. Urgency
+remains explicitly labelled and independently ranked. Source freshness metadata
+uses its own reliability tone; stale or unavailable item sources override the
+category colour. The queue badge counts listed matches; it must not claim
+that every listed row is currently visible inside the scroll viewport.
+Incomplete coverage remains explicit in counts, state labels
+and the source-coverage card without recolouring known current actions as reviews.
 
 Only a current source projection may claim that its route is executable. A
 stale, unavailable, or unverified source cannot silently remain actionable. If

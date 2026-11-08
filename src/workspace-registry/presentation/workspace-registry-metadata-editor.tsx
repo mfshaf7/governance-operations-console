@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { TerasActionButton, TerasActionRow, TerasContentTray, TerasSelectField, TerasFieldStack, TerasNoteField, TerasTextField, TerasTextListField } from "@/teras";
+import { TerasActionButton, TerasActionRow, TerasContentTray, TerasSelectField, TerasFieldStack, TerasNoteField, TerasTextListField } from "@/teras";
+
+import {componentClasses, componentClassLabel} from "../../console-integration/workspace-intake/workspace-intake-display-options";
 
 /** Edits only supplied fields; the full owner record is retained for submission. */
 export function WorkspaceRegistryMetadataEditor({ value, disabled, repositories, onChange }: {
@@ -15,7 +17,7 @@ export function WorkspaceRegistryMetadataEditor({ value, disabled, repositories,
   function update(key: string, next: unknown) { if (record) onChange(JSON.stringify({ ...record, [key]: next }, null, 2)); }
   const ownerFields = [["platform_owner", "Platform repository"], ["runtime_owner", "Runtime repository"],
     ["security_owner", "Security repository"], ["owner_repo", "Responsible repository"]];
-  const scalarFields = [["notes", "Purpose and boundary"], ["component_class", "Component type"]];
+
   const sourceOwners = Array.isArray(record?.source_owners) && record.source_owners.every(item => typeof item === "string") ? record.source_owners as string[] : null;
   const listFields = [["owns", "Responsibilities"], ["must_not_own", "Responsibility limits"]];
   return <TerasFieldStack spacing="compact">
@@ -26,7 +28,11 @@ export function WorkspaceRegistryMetadataEditor({ value, disabled, repositories,
       <TerasSelectField label="Add source repository" disabled={disabled} value="" options={[{label:"Choose a repository",value:""},...repositories.filter(name => !sourceOwners.includes(name)).map(name => ({label:name,value:name}))]}
         onValueChange={name => {if(name) update("source_owners", [...sourceOwners,name]);}}/>
     </TerasContentTray> : null}
-    {scalarFields.map(([key, label]) => typeof record?.[key] === "string" ? <TerasTextField key={key} label={label} disabled={disabled} value={record[key] as string} onValueChange={next => update(key, next)}/> : null)}
+    {typeof record?.notes === "string" ? <TerasNoteField label="Purpose and boundary" disabled={disabled} minimumHeight="short" value={record.notes} onValueChange={next => update("notes", next)}/> : null}
+    {typeof record?.component_class === "string" ? <TerasSelectField label="Component type" disabled={disabled} value={record.component_class}
+      options={[...componentClasses, ...(!componentClasses.some(item => item.value === record?.component_class) ? [{value:record.component_class,label:componentClassLabel(record.component_class)}] : [])]}
+      helper="Existing custom values are preserved. Use the complete record editor for a different specialist type."
+      onValueChange={next => update("component_class",next)}/> : null}
     {listFields.map(([key, label]) => Array.isArray(record?.[key]) && (record[key] as unknown[]).every(item => typeof item === "string") ? <TerasTextListField key={key} label={label} disabled={disabled} items={record[key] as string[]} itemLabel={index => `${label} ${index + 1}`} maxItems={Math.max(20, (record[key] as string[]).length)} onItemsChange={next => update(key, next)} visibleItems={2}/> : null)}
     {typeof validation?.notes === "string" ? <TerasNoteField label="Validation notes" disabled={disabled} minimumHeight="short" value={validation.notes} onValueChange={notes => update("validation_behavior", { ...validation, notes })}/> : null}
     <TerasActionButton emphasis="secondary" onClick={() => setAdvanced(current => !current)}>{advanced ? "Hide complete record" : "Edit complete record"}</TerasActionButton>

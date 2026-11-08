@@ -1921,6 +1921,26 @@
   grid-template-rows: auto auto minmax(11rem, 1fr) auto;
 }
 
+.terasPanel.terasRegisterPanel[data-register-toolbar="false"] {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.terasPanel.terasRegisterPanel[data-register-toolbar="false"][data-register-body-min="compact"] {
+  grid-template-rows: auto minmax(11rem, 1fr);
+}
+
+.terasPanel.terasRegisterPanel[data-register-toolbar="false"][data-register-footer="true"] {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.terasPanel.terasRegisterPanel[data-register-toolbar="false"][data-register-body-min="compact"][data-register-footer="true"] {
+  grid-template-rows: auto minmax(11rem, 1fr) auto;
+}
+
+.terasRegisterPanel[data-register-toolbar="false"] > .terasRegisterPanelBody {
+  margin-top: 0.72rem;
+}
+
 .terasPanel.terasRegisterPanel[data-register-body-min="compact"] .terasRegisterPanelBody {
   contain: size;
 }
@@ -2074,6 +2094,21 @@
   width: 16.75rem;
 }
 
+.recordTableShell[data-profile="register"] .recordTable th[data-intent="primary"],
+.recordTableShell[data-profile="register"] .recordTable td[data-intent="primary"] {
+  min-width: 14rem;
+}
+
+.recordTableShell[data-profile="register"] .recordTable th[data-intent="status"],
+.recordTableShell[data-profile="register"] .recordTable td[data-intent="status"] {
+  min-width: 8rem;
+}
+
+.recordTableShell[data-profile="register"] .recordTable th[data-intent="action"],
+.recordTableShell[data-profile="register"] .recordTable td[data-intent="action"] {
+  min-width: 6rem;
+}
+
 .recordTableShell[data-profile="register"] .recordTable {
   table-layout: auto;
 }
@@ -2144,7 +2179,7 @@
   z-index: 1;
   padding: 0.72rem 0.78rem;
   color: var(--teras-inner-title-muted, rgba(255, 218, 148, 0.62));
-  background: rgba(8, 10, 14, 0.96);
+  background: rgb(8, 10, 14);
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.59rem;
   font-weight: 800;
@@ -2163,7 +2198,6 @@
   overflow-wrap: anywhere;
 }
 
-.recordTable .statusPill,
 .sectionHeaderActions .statusPill {
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -6964,3 +6998,57 @@
 
 .registerPageSize { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; white-space: nowrap; }
 .registerPageSize > button { width: 72px; min-height: 32px; padding: 6px 10px; font-size: 11px; }
+
+/* Explicit widths keep primary content legible and column resizing predictable. */
+.recordTableShell[data-column-sizing="ready"] .recordTable {
+  table-layout: fixed;
+  min-width: 0;
+}
+
+.recordTableShell[data-column-sizing="ready"] .recordTable th,
+.recordTableShell[data-column-sizing="ready"] .recordTable td {
+  min-width: 0;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.recordTableShell[data-column-sizing="ready"] .recordTable th {
+  padding-right: 1.25rem;
+}
+
+.recordColumnResize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  touch-action: none;
+  outline-offset: -2px;
+}
+
+.recordColumnResize::after {
+  content: "";
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  right: 3px;
+  width: 1px;
+  background: rgba(245, 239, 226, 0.2);
+}
+
+.recordColumnResize:hover::after,
+.recordColumnResize:focus-visible::after {
+  width: 2px;
+  background: var(--primary, #ffc15a);
+}
+
+.recordColumnResize:focus-visible {
+  outline: 1px solid var(--primary, #ffc15a);
+}
+
+.recordTableShell[data-resizing="true"],
+.recordTableShell[data-resizing="true"] * {
+  cursor: col-resize;
+  user-select: none;
+}

@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 
 import { useMemo, useState } from "react";
 
@@ -31,8 +32,8 @@ import {
   type ModelProfileLifecycleFilter,
 } from "./model-operations-control-view-model.ts";
 
-export function useModelOperationsControlController() {
-  const liveRuntime = useModelOperationsLiveRuntime();
+export function useModelOperationsControlController(enabled = true) {
+  const liveRuntime = useModelOperationsLiveRuntime(enabled);
   const fixtureIsolation = resolveConsoleFixtureIsolation({
     mode: liveRuntime.snapshot?.mode ?? null,
     status: liveRuntime.snapshot?.status ?? "loading",
@@ -47,12 +48,12 @@ export function useModelOperationsControlController() {
       liveRuntime.snapshot?.error ??
         "Model Operations source state is still loading.",
     );
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useWorkspaceViewState('model-profiles:search', "");
   const [lifecycle, setLifecycle] =
-    useState<ModelProfileLifecycleFilter>("all");
-  const [access, setAccess] = useState<ModelProfileAccessFilter>("all");
-  const [provider, setProvider] = useState("all");
-  const [selectedProfileId, setSelectedProfileId] = useState(
+    useWorkspaceViewState<ModelProfileLifecycleFilter>('model-profiles:lifecycle', "all");
+  const [access, setAccess] = useWorkspaceViewState<ModelProfileAccessFilter>('model-profiles:access', "all");
+  const [provider, setProvider] = useWorkspaceViewState('model-profiles:provider', "all");
+  const [selectedProfileId, setSelectedProfileId] = useWorkspaceViewState('model-profiles:selectedProfileId',
     readModel.profiles[0]?.policy.profileId ?? null,
   );
   const [dashboardProfileId, setDashboardProfileId] = useState<string | null>(null);
@@ -99,7 +100,7 @@ export function useModelOperationsControlController() {
   };
 
   const submitRequest = async () => {
-    if(!consoleActionExecutable(fixtureIsolation,"durable-command")||liveRuntime.snapshot?.status!=="current")return;
+    if(!consoleActionExecutable(fixtureIsolation,"durable-command")||!liveRuntime.current||liveRuntime.snapshot?.status!=="current")return;
     const result = await liveRuntime.submitCreate(requestDraft);
     setRequestResult(result);
   };
@@ -136,22 +137,25 @@ export function useModelOperationsControlController() {
     readModel,
     source: {
       loading: !liveRuntime.snapshot,
+      revalidating: !fixtureIsolation.fixtureAllowed && liveRuntime.snapshot?.status === "current" && !liveRuntime.current,
       unavailable: liveRuntime.snapshot?.status === "offline",
       refresh: liveRuntime.refresh,
       description: fixtureIsolation.fixtureAllowed
         ? "Disconnected design preview; these sample profiles are not current Platform state."
         : liveRuntime.snapshot?.status === "offline"
           ? liveRuntime.snapshot.error ?? "Current Purpose profile evidence is unavailable."
-          : "Canonical profile records and caller-specific readiness projections.",
+          : !liveRuntime.current && liveRuntime.snapshot
+            ? "Showing the last loaded profiles while checking current source state."
+            : "Canonical profile records and caller-specific readiness projections.",
     },
     request: {
       preview: fixtureIsolation.fixtureAllowed,
       options:requestOptions,
-      submitAvailable:consoleActionExecutable(fixtureIsolation,"durable-command")&&liveRuntime.snapshot?.status==="current",
+      submitAvailable:consoleActionExecutable(fixtureIsolation,"durable-command")&&liveRuntime.current&&liveRuntime.snapshot?.status==="current",
       inspectSampleResult:()=>{if(fixtureIsolation.fixtureAllowed){setRequestResult(modelProfileRequestsPreview()[0]);}},
       available: fixtureIsolation.fixtureAllowed ||
         consoleActionExecutable(fixtureIsolation, "durable-command") &&
-        liveRuntime.snapshot?.status === "current" && !liveRuntime.pending,
+        liveRuntime.current && liveRuntime.snapshot?.status === "current" && !liveRuntime.pending,
       recoveryId: fixtureIsolation.fixtureAllowed ? null : liveRuntime.recoveryId,
       onRecovered: (request:ModelProfileRequestProjection) => {liveRuntime.clearRecovery(request.request_id);if(requestDraft.requestId===request.request_id)setRequestResult(request);},
       close: () => {if(!liveRuntime.pending)setRequestOpen(false);},

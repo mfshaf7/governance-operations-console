@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 
 import {useDeliveryRegisterPage} from "../../live-runtime/use-delivery-register-page.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -61,13 +62,13 @@ export function DeliveryPackageRegisterSurface({
 }) {
   const [packageAction, setPackageAction] =
     useState<DeliveryPackageActionState | null>(null);
-  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(
+  const [selectedPackageId, setSelectedPackageId] = useWorkspaceViewState<string | null>(`delivery-register:${surface.id}:selectedPackageId`,
     null,
   );
-  const [packagePostureFilter, setPackagePostureFilter] = useState<
+  const [packagePostureFilter, setPackagePostureFilter] = useWorkspaceViewState<
     DeliveryPackageRegisterStatusLabel | "all"
-  >("all");
-  const [packageSearch, setPackageSearch] = useState("");
+  >(`delivery-register:${surface.id}:packagePostureFilter`, "all");
+  const [packageSearch, setPackageSearch] = useWorkspaceViewState(`delivery-register:${surface.id}:packageSearch`, "");
   const [registerRevision, setRegisterRevision] = useState(0);
   const live=model.source_truth==="OpenProject-backed OOS";
   const page=useDeliveryRegisterPage({surface:surface.id,scope:model.history_scope??"current",query:packageSearch.trim().toLowerCase(),status:packagePostureFilter},live,focusPackageId);

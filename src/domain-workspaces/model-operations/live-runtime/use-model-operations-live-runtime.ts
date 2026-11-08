@@ -8,8 +8,9 @@ import type {ModelOperationsLiveSnapshot,ModelProfileRequestDraft,ModelProfileRe
 const pollIntervalMs=15_000;
 const recoveryKey="console:model-profiles:original-request";
 const recoveryStore=createBrowserOperationDraftStore();
-export function useModelOperationsLiveRuntime() {
+export function useModelOperationsLiveRuntime(enabled = true) {
   const [snapshot,setSnapshot]=useState<ModelOperationsLiveSnapshot|null>(null);
+  const [current,setCurrent]=useState(false);
   const [pending,setPending]=useState(false),[error,setError]=useState<string|null>(null);
   const [recoveryId,setRecoveryId]=useState<string|null>(null);
   const alive=useRef(true),sequence=useRef(0),recoveryRef=useRef<string|null>(null);
@@ -33,17 +34,20 @@ export function useModelOperationsLiveRuntime() {
         const body:unknown=await response.json().catch(()=>null);
         next=response.ok?assertModelOperationsLiveSnapshot(body):offlineSnapshot(body);
       }catch(cause){next=offlineSnapshot(cause);}
-      if(alive.current&&token===sequence.current)setSnapshot(next);
+      if(alive.current&&token===sequence.current){setSnapshot(next);setCurrent(next.status==="current");}
       return next;
     })();
     reading.current=operation;
     try{return await operation;}finally{if(reading.current===operation)reading.current=null;}
   },[]);
   useEffect(()=>{
-    alive.current=true;void refresh();
+    alive.current=true;
+    setCurrent(false);
+    if (!enabled) return () => { alive.current=false; };
+    void refresh();
     const timer=window.setInterval(()=>{if(document.visibilityState==="visible")void refresh();},pollIntervalMs);
     return()=>{alive.current=false;window.clearInterval(timer);};
-  },[refresh]);
+  },[enabled,refresh]);
   const submitCreate=useCallback((draft:ModelProfileRequestDraft):Promise<ModelProfileRequestProjection>=>{
     if(submitting.current)return submitting.current;
     setPending(true);setError(null);setRecoveryId(draft.requestId);recoveryRef.current=draft.requestId;try{recoveryStore.writeJson(recoveryKey,draft.requestId);}catch{/* Keep in-memory original-request recovery when browser storage is denied. */}
@@ -64,7 +68,7 @@ export function useModelOperationsLiveRuntime() {
     void operation.finally(()=>{if(submitting.current===operation)submitting.current=null;}).catch(()=>undefined);
     return operation;
   },[clearRecovery,refresh]);
-  return {error,pending,refresh,snapshot,submitCreate,recoveryId,clearRecovery};
+  return {error,pending,refresh,snapshot,current:enabled&&current,submitCreate,recoveryId,clearRecovery};
 }
 function offlineSnapshot(value:unknown):ModelOperationsLiveSnapshot {
   return {error:isModelOperationsLiveApiError(value)?value.error:value instanceof Error?value.message:"Purpose profiles are unavailable. Retry the source read.",

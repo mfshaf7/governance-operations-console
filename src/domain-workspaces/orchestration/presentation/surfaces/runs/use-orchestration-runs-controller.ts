@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../../console-integration/registers/workspace-view-state.ts";
 
 import {useOrchestrationRunPage} from "../../../live-runtime/use-orchestration-run-page.ts";
 import { useEffect, useMemo, useState } from "react";
@@ -23,12 +24,12 @@ export function useOrchestrationRunsController(
   focusRecordId: string | null = null,
   live = false,
 ) {
-  const [filters, setFilters] = useState<OrchestrationRunFilters>(
+  const [filters, setFilters] = useWorkspaceViewState<OrchestrationRunFilters>('orchestration-runs:filters',
     defaultOrchestrationRunFilters,
   );
   const page=useOrchestrationRunPage(filters,live,focusRecordId);
   const records=useMemo(()=>live?page.original&&!page.records.some(row=>row.id===page.original!.id)?[...page.records,page.original]:page.records:sourceRecords,[live,page.records,page.original,sourceRecords]);
-  const [selectedId, setSelectedId] = useState(records[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useWorkspaceViewState('orchestration-runs:selectedId', records[0]?.id ?? null);
   const [dashboardRecordId, setDashboardRecordId] = useState<string | null>(
     null,
   );

@@ -14,7 +14,7 @@ export const emptyDirectIntakeDraft: DirectIntakeDraft = {
 };
 export function directIntakeTarget(kind: string, name: string) {
   if (!["product", "component"].includes(kind) || !/^[a-z0-9][a-z0-9._-]*$/.test(name)) {
-    throw new Error("Select product or component and enter its exact canonical key.");
+    throw new Error("Use a short name starting with a lowercase letter or number. Only lowercase letters, numbers, dots, hyphens and underscores are allowed.");
   }
   return { kind: kind as DirectIntakeKind, name };
 }

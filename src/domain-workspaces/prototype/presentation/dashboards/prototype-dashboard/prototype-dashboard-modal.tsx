@@ -74,7 +74,7 @@ export function PrototypeDashboardModal({
         <TerasPanel frame="padded" treatment="neutral" spacing="normal" data-prototype-issues="true">
           <TerasPanelHeader kicker="Attention" title="Open issues and required fixes" actionsLayout="inline"
             actions={<TerasStatusPill tone={record.openIssues.length ? "warn" : "muted"}>{record.openIssues.length} open</TerasStatusPill>} />
-          {record.openIssues.length ? <TerasRecordTable profile="register" density="normal" rows={record.openIssues} getRowId={issue => issue.id} columns={[
+          {record.openIssues.length ? <TerasRecordTable ariaLabel="Prototype open issues" profile="register" density="normal" rows={record.openIssues} getRowId={issue => issue.id} columns={[
             { key: "issue", header: "Issue", intent: "primary", render: issue => issue.title },
             { key: "status", header: "Status", intent: "status", render: issue => <TerasStatusPill tone={issue.tone}>{issue.status}</TerasStatusPill> },
             { key: "owner", header: "Resolve with", render: issue => issue.owner },

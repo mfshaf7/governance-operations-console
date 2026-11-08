@@ -232,7 +232,7 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
         : "First choose Review onboarding and Record for setup and review. Once that request completes, source setup becomes available. Project use stays blocked until activation."}
         actions={<TerasActionButton emphasis="secondary" disabled={!custody || busy || !ownerSetupAvailable} onClick={() => setOwnerSetup(true)}>Review repository setup</TerasActionButton>} />
       {runtime.pending && !runtime.requestPage ? <TerasLoadingState label="Loading onboarding history…" skeleton="details" /> : null}
-      {runtime.error || runtime.requestPage?.records.length ? <TerasContentTray kicker="Previous onboarding requests"
+      {runtime.error || runtime.requestPage && (runtime.requestPage.records.length > 0 || runtime.hasPreviousRequestPage || runtime.requestPage.next_cursor) ? <TerasContentTray kicker="Previous onboarding requests"
         description={runtime.requestPage ? runtime.requestPage.pending_request_count
           ? "A registration request is still pending. Open it below before starting another."
           : runtime.requestPage.records.length ? "Open an earlier request to inspect its original decision and result." : "No previous registration requests."
@@ -241,9 +241,9 @@ export function RepositoryIntakeDialog({ repository, custodyResult, ownerReposit
           {runtime.error ? <TerasActionButton emphasis="secondary" disabled={!targetName || !custodyRequestId || busy} onClick={refreshJournal}>Retry onboarding history</TerasActionButton> : null}
 
         </TerasActionRow>}>
-        <TerasRegisterPagination label="Repository onboarding requests" offset={runtime.requestPageOffset} count={runtime.requestPage?.records.length ?? 0} page={runtime.requestPageNumber}
+        {!runtime.error && runtime.requestPage && (runtime.requestPage.records.length > 0 || runtime.hasPreviousRequestPage || runtime.requestPage.next_cursor) ? <TerasRegisterPagination label="Repository onboarding requests" offset={runtime.requestPageOffset} count={runtime.requestPage?.records.length ?? 0} page={runtime.requestPageNumber}
           pending={runtime.pending} unavailable={Boolean(runtime.error)} hasPrevious={!busy && runtime.hasPreviousRequestPage} hasNext={!busy && Boolean(runtime.requestPage?.next_cursor)}
-          onPrevious={()=>void runtime.previousRequestPage().catch(()=>undefined)} onNext={()=>void runtime.nextRequestPage().catch(()=>undefined)} />
+          onPrevious={()=>void runtime.previousRequestPage().catch(()=>undefined)} onNext={()=>void runtime.nextRequestPage().catch(()=>undefined)} /> : null}
         {runtime.requestPage?.records.length ? <TerasList frame="contained" scrollHeight="short">
           {runtime.requestPage.records.map(entry => <TerasSignalItem key={entry.request_id}
             label={repository.name} title={`${entry.classification === "admitted" ? "Approval for activation" : entry.classification === "proposed" ? "Setup and review" : "Outside managed workspace"} · ${entry.status.replaceAll("-", " ")}`} detail={new Date(entry.updated_at).toLocaleString()}

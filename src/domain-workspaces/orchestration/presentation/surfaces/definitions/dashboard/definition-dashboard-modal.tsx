@@ -136,7 +136,7 @@ export function DefinitionDashboardModal({
                   { label: "Freshness", value: record.source.freshness },
                 ]} />
 
-                <TerasPanel
+                <TerasPanel spacing="normal"
                   frame="padded"
                   treatment="neutral"
                   fit="fill"
@@ -212,7 +212,7 @@ export function DefinitionDashboardModal({
                   description={canStart ? "Review the current initiative source and explicitly approve a read-only run." : "Current service admission and source freshness are required before starting."} />
                 <TerasActionRow><TerasActionButton disabled={!canStart} onClick={onStartRun}>Start Run</TerasActionButton></TerasActionRow>
               </TerasPanel> : null}
-              <TerasPanel frame="padded" treatment="neutral" fit="content">
+              <TerasPanel spacing="normal" frame="padded" treatment="neutral" fit="content">
                 <TerasPanelHeader
                   description="Implementation, validation, platform, security, and runtime admission remain separate checks."
                   kicker="Admission Posture"
@@ -236,7 +236,7 @@ export function DefinitionDashboardModal({
                 </TerasList>
               </TerasPanel>
 
-              <TerasPanel frame="padded" treatment="neutral" fit="content">
+              <TerasPanel spacing="normal" frame="padded" treatment="neutral" fit="content">
                 <TerasPanelHeader
                   description="Open one focused contract area without expanding technical detail across the dashboard."
                   kicker="Inspectors"

@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../console-integration/registers/workspace-view-state.ts";
 import {useRegisterPageSize} from "../../console-integration/registers/use-register-page-size.ts";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -46,8 +47,8 @@ export function WorkspaceRegistryWorkspace({
   const runtime = useWorkspaceRegistryLiveRuntime();
   const continuity = useWorkspaceContinuityRuntime();
   const {pageSize}=useRegisterPageSize("Workspace Registry");
-  const [view, setView] = useState<RegistryView>("registry");
-  const [query, setQuery] = useState("");
+  const [view, setView] = useWorkspaceViewState<RegistryView>('registry:view', "registry");
+  const [query, setQuery] = useWorkspaceViewState('registry:query', "");
   const [pageHistory, setPageHistory] = useState<readonly (string | null)[]>([null]);
   const after = pageHistory.at(-1) ?? null;
   const [intakeOpen, setIntakeOpen] = useState(false);
@@ -119,14 +120,14 @@ export function WorkspaceRegistryWorkspace({
   const instancePage = snapshot?.workflow_id === "workspace-registry-view" ? snapshot.instance_page : null;
   const selectionCurrent = !instancePage || instancePage.selection.scope === scope && instancePage.selection.query === query.trim().toLowerCase() && instancePage.after === after;
   const owners = useMemo(
-    () => new Set(snapshot?.records.flatMap((record) => record.owner_refs) ?? []).size,
+    () => snapshot?.records.filter((record) => record.kind === "repo").length ?? 0,
     [snapshot],
   );
 
-  const refresh = useCallback((): Promise<boolean> => {
+  const refresh = useCallback((background = false): Promise<boolean> => {
     const key = JSON.stringify([scope, query.trim().toLowerCase(), after,pageSize]);
-    if (refreshInFlight.current) return refreshInFlight.current.key === key ? refreshInFlight.current.promise : refreshInFlight.current.promise.then(() => refresh());
-    setRefreshing(true);
+    if (!background) setRefreshing(true);
+    if (refreshInFlight.current) return refreshInFlight.current.key === key ? refreshInFlight.current.promise : refreshInFlight.current.promise.then(() => refresh(background));
     const request = (async () => {
       try {
         const [owner, inventory] = await Promise.allSettled([continuity.load(), runtime.load({ scope, query: query.trim().toLowerCase(), after })]);
@@ -143,9 +144,9 @@ export function WorkspaceRegistryWorkspace({
     if (intakeOpen || promotionTarget || lifecycleRecord) return;
     const initial = window.setTimeout(() => void refresh(), 250);
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible" && !intakeOpen && !promotionTarget && !lifecycleRecord) void refresh();
+      if (document.visibilityState === "visible" && !intakeOpen && !promotionTarget && !lifecycleRecord) void refresh(true);
     }, 15_000);
-    const visible = () => { if (document.visibilityState === "visible" && !intakeOpen && !promotionTarget && !lifecycleRecord) void refresh(); };
+    const visible = () => { if (document.visibilityState === "visible" && !intakeOpen && !promotionTarget && !lifecycleRecord) void refresh(true); };
     document.addEventListener("visibilitychange", visible);
     return () => { window.clearTimeout(initial); window.clearInterval(timer); document.removeEventListener("visibilitychange", visible); };
   }, [refresh, intakeOpen, promotionTarget, lifecycleRecord]);
@@ -173,7 +174,7 @@ export function WorkspaceRegistryWorkspace({
       <TerasModalShell
         agentHost
         bodyLayout="fill"
-        description="Inspect canonical workspace inventory and promote approved entrants through the responsible workflow service."
+        description="Manage registered repositories, products and components. Review approved items before activation."
         height="fill"
         kicker="Workspace Governance"
         onClose={onClose}
@@ -185,11 +186,11 @@ export function WorkspaceRegistryWorkspace({
           nav={
             <TerasSurfaceNav
               ariaLabel="Workspace Registry views"
-              description="Inspect active inventory or review entrants eligible for promotion."
+              description="View inventory or activate approved items."
               kicker="Registry Nav"
               title="Inventory Views"
             >
-              <TerasActionButton busy={refreshing} emphasis="secondary" disabled={refreshing || runtime.pending}
+              <TerasActionButton busy={refreshing} emphasis="secondary" disabled={refreshing}
                 onClick={() => void refresh()}>{refreshing ? "Refreshing…" : "Refresh Registry"}</TerasActionButton>
               <TerasActionButton disabled={!snapshot || refreshing || (!fixtureMode && (!liveActionExecutable || retained))}
                 onClick={() => { setIntakeProviderId(null); setIntakeOpen(true); }}>Onboard workspace item</TerasActionButton>
@@ -217,7 +218,7 @@ export function WorkspaceRegistryWorkspace({
               metrics={[
                 { id: "records", label: "Records", value: snapshot ? String(snapshot.records.length) : "—" },
                 { id: "eligible", label: "Eligible", tone: "warn", value: snapshot ? String(snapshot.eligible_promotions.length) : "—" },
-                { id: "owners", label: "Repositories", value: snapshot ? String(owners) : "—" },
+                { id: "owners", label: "Repos loaded", value: snapshot ? String(owners) : "—" },
               ]}
               statuses={[
                 {
@@ -235,15 +236,15 @@ export function WorkspaceRegistryWorkspace({
                   tone: fixtureMode ? "info" : retained ? "warn" : snapshot ? "ok" : combinedMode === null ? "info" : "danger",
                 },
                 {
-                  detail: "Canonical authority",
+                  detail: "Workspace Governance policy",
                   facts: [],
                   id: "authority",
-                  label: "Responsible repository",
+                  label: "Policy",
                   stateLabel: snapshot ? "Governance" : "Not read",
                   tone: snapshot ? "ok" : "warn",
                 },
               ]}
-              title={view === "registry" ? "Canonical Inventory" : "Promotion Candidates"}
+              title={view === "registry" ? "Managed inventory" : "Items awaiting activation"}
               titleKicker="Registry Summary"
             />
           }

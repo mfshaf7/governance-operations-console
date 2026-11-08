@@ -31,33 +31,10 @@ import type {
   CommandCenterAttentionSnapshot,
   CommandCenterAttentionUrgency,
 } from "../read-model/command-center-attention";
+import { attentionCandidateTone, attentionFreshnessTone } from "../read-model/attention-tone";
 import { CommandCenterStatusDot } from "./command-center-presentation-support";
 import styles from "./command-center-focus.module.css";
 import {priorityTitle, priorityMove, priorityExplanation} from "./priority-view-model.ts";
-
-function attentionTone(
-  candidate: CommandCenterAttentionCandidate,
-): ConsoleTone {
-  if (candidate.source.freshness === "unavailable") {
-    return "danger";
-  }
-
-  if (
-    candidate.source.freshness === "stale" ||
-    candidate.source.freshness === "unverified"
-  ) {
-    return "stale";
-  }
-
-  const urgencyTone = {
-    critical: "danger",
-    high: "warn",
-    low: "muted",
-    normal: "info",
-  } as const satisfies Record<CommandCenterAttentionUrgency, ConsoleTone>;
-
-  return urgencyTone[candidate.urgency];
-}
 
 function projectionTone(
   snapshot: CommandCenterAttentionSnapshot,
@@ -157,7 +134,7 @@ function AttentionQueueRow({
   index: number;
   onSelect: () => void;
 }) {
-  const tone = attentionTone(candidate);
+  const tone = attentionCandidateTone(candidate);
 
   return (
     <button
@@ -226,7 +203,7 @@ function SourceDetailsDialog({
               },
               {
                 label: "Freshness",
-                tone: attentionTone(candidate),
+                tone: attentionFreshnessTone(candidate.source.freshness),
                 value: sourcePostureLabel(candidate.source.freshness),
               },
               {
@@ -293,14 +270,14 @@ function PriorityDetail({
         <>
           <header
             className={styles.priorityHeader}
-            data-tone={attentionTone(candidate)}
+            data-tone={attentionCandidateTone(candidate)}
           >
             <div className={styles.priorityEyebrow}>
               <span
                 className={styles.toneDot}
-                data-tone={attentionTone(candidate)}
+                data-tone={attentionCandidateTone(candidate)}
               >
-                <CommandCenterStatusDot tone={attentionTone(candidate)} />
+                <CommandCenterStatusDot tone={attentionCandidateTone(candidate)} />
               </span>
               <span>{formatToken(candidate.attentionClass)}</span>
               <span>{formatToken(candidate.urgency)}</span>
@@ -334,7 +311,7 @@ function PriorityDetail({
               {
                 label: "Projection",
                 meta: formatToken(candidate.source.mode),
-                tone: attentionTone(candidate),
+                tone: attentionFreshnessTone(candidate.source.freshness),
                 value: sourcePostureLabel(candidate.source.freshness),
               },
               { label: "Record last changed", value: candidate.subject.updatedAt ? formatTimestamp(candidate.subject.updatedAt) : "Not supplied by the source" },
@@ -484,7 +461,7 @@ export function CommandCenterFocus({
               </span>
             </div>
             <span className={styles.visibleCount}>
-              {Math.min(filteredCandidates.length, 5)} visible
+              {filteredCandidates.length} listed
             </span>
           </header>
           {loadingSourceCount > 0 && !snapshot.candidates.length ? <TerasLoadingState label="Checking required actions…" /> : filteredCandidates.length > 0 ? (

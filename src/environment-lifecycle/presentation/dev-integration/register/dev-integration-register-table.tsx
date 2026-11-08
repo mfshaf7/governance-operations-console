@@ -127,6 +127,7 @@ export function DevIntegrationRegisterTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Development profiles"
       columns={columns}
       fill
       getRowId={(profile) => profile.profileId}

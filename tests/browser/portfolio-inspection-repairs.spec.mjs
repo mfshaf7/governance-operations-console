@@ -100,6 +100,11 @@ for (const width of [1700, 1280]) {
       await expect(table).toBeVisible();
       const widths = await table.locator("tbody tr").first().locator("td").evaluateAll(cells => cells.map(cell => cell.getBoundingClientRect().width));
       expect(widths[0]).toBeGreaterThan(220);
+      const pillLines = await table.locator('td[data-intent="status"] span[data-size]').evaluateAll(pills => pills.map(pill => {
+        const range = document.createRange(); range.selectNodeContents(pill);
+        return new Set([...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0).map(rect => Math.round(rect.top))).size;
+      }));
+      expect(pillLines.every(lines => lines <= 1), "Register status labels stay on one readable line").toBe(true);
       const row = table.locator("tbody tr").nth(1);
       await row.locator("td").first().click();
       await expect(row).toHaveAttribute("aria-selected", "true");

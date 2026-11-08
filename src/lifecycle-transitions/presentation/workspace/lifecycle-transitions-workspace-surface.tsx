@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../console-integration/registers/workspace-view-state.ts";
 import {useRegisterPageSize} from '../../../console-integration/registers/use-register-page-size.ts';
 
 import { useEffect, useMemo, useState } from "react";
@@ -52,13 +53,13 @@ export function LifecycleTransitionsWorkspaceSurface({
   runtimePosture: LifecycleTransitionRuntimePosture | null;
 }) {
   const {pageSize}=useRegisterPageSize('Lifecycle transition register');
-  const [recordSource,setRecordSource]=useState("overview");
+  const [recordSource,setRecordSource]=useWorkspaceViewState('lifecycle-transitions:recordSource', "overview");
   const [localPosition,setLocalPosition]=useState({key:"",offset:0});
-  const [query, setQuery] = useState("");
-  const [selectedTransitionId, setSelectedTransitionId] = useState<string | null>(
+  const [query, setQuery] = useWorkspaceViewState('lifecycle-transitions:query', "");
+  const [selectedTransitionId, setSelectedTransitionId] = useWorkspaceViewState<string | null>('lifecycle-transitions:selectedTransitionId',
     route.items[0]?.transitionId ?? null,
   );
-  const [state, setState] = useState<LifecycleTransitionStateFilter>("all");
+  const [state, setState] = useWorkspaceViewState<LifecycleTransitionStateFilter>('lifecycle-transitions:state', "all");
   const live=runtimePosture?.mode==="live",journalMode=live&&recordSource==="journal";
   const journal=useLifecycleTransitionJournalPage({routeId:route.routeId,state,query},journalMode,route.items.some(item=>item.transitionId===focusTransitionId)?null:focusTransitionId);
   const filteredItems = useMemo(() => {

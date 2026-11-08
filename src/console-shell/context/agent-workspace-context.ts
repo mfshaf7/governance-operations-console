@@ -67,7 +67,8 @@ export function projectAgentOwnerSnapshot(source: AgentContextSource, value: unk
       detail = `${partial?`Partial: ${rows.length} of ${total}`:total} proposals (${tally(rows.map(r => object(r).projection), "status")}); ${examples(rows.map(r => object(r).projection), "proposal_id", "title")}`;
     } else if (source === "prototypes") {
       const projection = object(body.projection); const rows = list(object(projection.readModel).records);
-      detail = `${rows.length} prototypes (${tally(rows, "lifecycle")}); ${rows.slice(0, 2).map(r => label(object(r).name)).join(", ")}`;
+      partial=object(body.coverage).complete===false || object(projection.coverage).complete===false || Boolean(object(body.page).next_cursor || object(projection.ownerPage).next_cursor);
+      detail = `${partial ? "Partial: " : ""}${rows.length} prototypes (${tally(rows, "lifecycle")}); ${rows.slice(0, 2).map(r => label(object(r).name)).join(", ")}`;
       sourceRevision = revision(projection.sourceRevision);
     } else if (source === "delivery") {
       const projection = object(body.projection); const state = object(projection.projection_state);
@@ -76,13 +77,13 @@ export function projectAgentOwnerSnapshot(source: AgentContextSource, value: unk
       detail = `${rows.length} retained Delivery initiatives; ${active.length} current (${tally(rows, "backend_status")}); terminal and parked records are history`;
       sourceRevision = revision(state.source_revision);
     } else if (source === "orchestration") {
-      const rows = list(body.runs); detail = `${list(body.definitions).length} definitions; ${rows.length} runs (${tally(rows, "state")})`;
+      const rows = list(body.runs); partial=rows.length>=100; detail = `${partial ? "Partial recent window: " : ""}${list(body.definitions).length} definitions; ${rows.length} runs (${tally(rows, "state")})`;
     } else if (source === "lifecycle") {
-      const rows = list(body.transitions); detail = `${rows.length} OOS journal records (${tally(rows, "state")}); native owner handoff readbacks are shown separately in Lifecycle; ${body.truncated ? "truncated" : "bounded owner read"}`;
+      const rows = list(body.transitions); partial=body.truncated===true; detail = `${rows.length} OOS journal records (${tally(rows, "state")}); native owner handoff readbacks are shown separately in Lifecycle; ${body.truncated ? "truncated" : "bounded owner read"}`;
     } else {
       const catalog = object(body.catalog);
       if (catalog.freshness !== "current") throw new Error("Platform catalog not current");
-      const rows = list(body.operations); detail = `${list(catalog.subjects).length} admitted Platform subjects; ${rows.length} retained operations (${tally(rows, "state")}). Legacy environment cards are preview-only.`;
+      const rows = list(body.operations); partial=rows.length>=200; detail = `${partial ? "Partial recent window: " : ""}${list(catalog.subjects).length} admitted Platform subjects; ${rows.length} retained operations (${tally(rows, "state")}). Legacy environment cards are preview-only.`;
       sourceRevision = revision(catalog.source_version);
     }
   }

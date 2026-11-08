@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 
 import { useState, useSyncExternalStore } from "react";
 
@@ -41,13 +42,13 @@ export function usePrototypeControlState(
     null,
   );
   const [filters, setFilters] =
-    useState<PrototypeWorkspaceRecordFilters>(defaultFilters);
+    useWorkspaceViewState<PrototypeWorkspaceRecordFilters>('prototype:filters', defaultFilters);
   const localProjection = useSyncExternalStore(
     subscribePrototypeRuntimeProjection,
     getPrototypeRuntimeProjectionSnapshot,
     getPrototypeRuntimeProjectionSnapshot,
   );
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(
+  const [selectedRecordId, setSelectedRecordId] = useWorkspaceViewState<string | null>('prototype:selectedRecordId',
     defaultSelectedRecordId,
   );
 

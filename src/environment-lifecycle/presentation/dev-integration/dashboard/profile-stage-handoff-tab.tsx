@@ -47,6 +47,7 @@ export function ProfileStageHandoffStage({
       <TerasPanel
         fit="content"
         frame="padded"
+        spacing="normal"
         treatment="neutral"
       >
         <TerasPanelHeader

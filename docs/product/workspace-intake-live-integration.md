@@ -231,3 +231,20 @@ completed registration. Changing classification clears acceptance; returning to
 item details preserves the draft. This is opt-in at the Registry entry point;
 other source domains keep their existing workflow. Retained request inspection
 uses the same separate result dialog and exact original identity.
+
+## Registry classification outcome and storage scope
+
+Registry Product/Component reviews use an ordinary single review dialog.
+The successful result says **Classification recorded**, with distinct guidance
+for Proposed, Admitted and Out of scope. Only an Admitted original offers
+`Review activation`, which navigates to the existing Eligible register; it does
+not perform activation. Reopening supplies the retained request's classification,
+so a default selection cannot imply a different result. Submission acceptance
+alone does not produce this successful label.
+
+The chooser, metadata form and review disclose that these records are saved to
+Workspace Governance Git with its visibility. Private installation records are
+not silently admitted as shared validation owners. See the
+[Registry operator flow](workspace-registry-live-integration.md#classification-and-activation)
+for the supported scope and next steps. Other source-domain wizard flows and
+canonical request validation retain their existing behavior.

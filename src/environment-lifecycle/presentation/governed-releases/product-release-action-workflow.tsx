@@ -175,7 +175,7 @@ export function ProductReleaseActionWorkflow({
 
   const support =
     step === "details" ? (
-      <TerasPanel
+      <TerasPanel spacing="normal"
         fit="fill"
         frame="padded"
         tone={detailsReady ? "ok" : "warn"}
@@ -217,7 +217,7 @@ export function ProductReleaseActionWorkflow({
         title="Release request result"
       />
     ) : (
-      <TerasPanel
+      <TerasPanel spacing="normal"
         fit="fill"
         frame="padded"
         tone={operation.adapter.available ? "ok" : "danger"}

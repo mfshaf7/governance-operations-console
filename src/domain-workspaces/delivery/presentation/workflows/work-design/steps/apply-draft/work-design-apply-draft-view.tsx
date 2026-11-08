@@ -113,7 +113,7 @@ export function WorkDesignApplyDraftView({
               title: deliveryPackage.display_name,
             }}
           />
-          <TerasPanel
+          <TerasPanel spacing="normal"
             frame="padded"
             treatment="state"
             layout="header-body"
@@ -141,7 +141,7 @@ export function WorkDesignApplyDraftView({
           </TerasPanel>
         </TerasZone>
         <TerasZone scroll fit="fill">
-          <TerasPanel
+          <TerasPanel spacing="normal"
             density="compact"
             frame="padded"
             treatment="rail"

@@ -572,7 +572,6 @@ export function buildResourceMetricDetail({
         { label: "Host", value: latest?.host.hostname ?? "not available" },
         { label: "Platform", value: latest?.host.platform ?? "not available" },
         { label: "Booted", value: bootedAt },
-        { label: "Captured", value: capturedAt },
       ],
       freshness,
       id,

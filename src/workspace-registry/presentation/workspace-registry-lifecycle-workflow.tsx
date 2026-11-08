@@ -62,7 +62,9 @@ export function WorkspaceRegistryLifecycleWorkflow({
   runtime: WorkspaceRegistryLiveRuntime;
 }) {
   const attempted = useRef(false);
+  const submittedRequestId = useRef<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<LifecycleStep>("configure");
   const [action, setAction] = useState<WorkspaceInventoryLifecycleAction>(() =>
     defaultWorkspaceInventoryLifecycleAction(record.posture),
@@ -165,13 +167,16 @@ export function WorkspaceRegistryLifecycleWorkflow({
   async function submit() {
     if (!configured || !preparation || (action === "update" && !reviewConfirmed) || !metadata.valid || !journal.canStart || runtime.pending || result) return;
     setLocalError(null);
+    const requestId = `workspace-inventory-lifecycle-request:console-${crypto.randomUUID()}`;
+    submittedRequestId.current = requestId;
+    setSubmitting(true);
     try {
       await runtime.submitLifecycle({
         action,
         approvalRefs: [approvalRef.trim()],
         impactAcknowledgements: [impactAcknowledgement],
         reason: reason.trim(),
-        requestId: `workspace-inventory-lifecycle-request:console-${crypto.randomUUID()}`,
+        requestId,
         requestedValue: action === "update" ? metadata.value : null,
       });
       setStep("result");
@@ -179,6 +184,7 @@ export function WorkspaceRegistryLifecycleWorkflow({
       setLocalError(message(error));
       setStep("result");
     } finally {
+      setSubmitting(false);
       void journal.load();
     }
   }
@@ -210,7 +216,8 @@ export function WorkspaceRegistryLifecycleWorkflow({
   const actions = <>
     <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={step === "review" ? () => setStep("configure") : requestClose}>{step === "review" ? "Back" : "Back to Registry"}</TerasActionButton>
     {step === "configure" && action === "update" ? <TerasActionButton disabled={!configured || !metadata.valid || runtime.pending || !journal.canStart || Boolean(result)} onClick={() => setStep("review")}>Review Action</TerasActionButton> : null}
-    {step === "review" || (step === "configure" && action !== "update") ? <TerasActionButton busy={runtime.pending} tone={action === "retire" ? "danger" : "accent"} disabled={fixtureMode || runtime.pending || !configured || !metadata.valid || (action === "update" && !reviewConfirmed) || !journal.canStart || Boolean(result)} onClick={() => void submit()}>{runtime.pending ? "Submitting…" : workspaceInventoryLifecycleActionLabels[action]}</TerasActionButton> : null}
+    {step === "review" || (step === "configure" && action !== "update") ? <TerasActionButton busy={runtime.pending} tone={action === "retire" ? "danger" : "accent"} disabled={fixtureMode || runtime.pending || !configured || !metadata.valid || (action === "update" && !reviewConfirmed) || !journal.canStart || Boolean(result)} onClick={() => void submit()}>{runtime.pending ? submitting ? "Submitting…" : "Reading source…" : workspaceInventoryLifecycleActionLabels[action]}</TerasActionButton> : null}
+    {step === "result" && (localError || runtime.error) && (result?.request_id || submittedRequestId.current) ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => void recover(result?.request_id ?? submittedRequestId.current!)}>Check original request</TerasActionButton> : null}
     {step === "result" && result && canContinue(result) ? <TerasActionButton disabled={runtime.pending} onClick={() => void continueLifecycle()}>{result.next_action === "review-and-merge" ? "Check Review" : "Continue Lifecycle"}</TerasActionButton> : null}
     {step === "result" && result && terminal(result.status) ? <TerasActionButton emphasis="secondary" disabled={runtime.pending || !journal.canStart} onClick={() => void prepareNewAction()}>Start another change</TerasActionButton> : null}
   </>;
@@ -234,10 +241,10 @@ export function WorkspaceRegistryLifecycleWorkflow({
               selectedId={action}
             />
             <TerasMetadataList columns={2} items={[
-              {label: "Current posture", value: currentPosture},
-              {label: "Expected posture", value: workspaceInventoryLifecycleNextPosture(action, currentPosture)},
+              {label: "Current status", value: currentPosture},
+              {label: "Resulting status", value: workspaceInventoryLifecycleNextPosture(action, currentPosture)},
             ]}/>
-            {!sourceCurrent ? <TerasStatusItem label="Reviewed source" status="Refresh required" detail="Registry and prepared source differ. Refresh the record before confirming." tone="warn"/> : null}
+            {preparation && !sourceCurrent ? <TerasStatusItem label="Reviewed source" status="Refresh required" detail="Registry and prepared source differ. Refresh the record before confirming." tone="warn"/> : null}
             <TerasFieldStack spacing="compact">
               <TerasNoteField
                 density="compact"
@@ -251,6 +258,7 @@ export function WorkspaceRegistryLifecycleWorkflow({
                 placeholder="Explain this change in at least 12 characters."
                 value={reason}
               />
+              <TerasContentTray kicker="Approval" description="Use the link or ID of the approval recorded for this exact change, such as its approved review. If no approval exists, obtain it before submitting.">
               <TerasTextField
                 label="Approval reference"
                 disabled={runtime.pending}
@@ -258,9 +266,10 @@ export function WorkspaceRegistryLifecycleWorkflow({
                   setApprovalRef(value);
                   setReviewConfirmed(false);
                 }}
-                placeholder="Link or reference to the recorded approval for this change"
+                placeholder="Approved review URL or recorded approval ID"
                 value={approvalRef}
               />
+              </TerasContentTray>
               {action === "update" ? <WorkspaceRegistryMetadataEditor repositories={runtime.snapshot?.records.filter(item => item.kind === "repo" && item.posture === "active").map(item => item.name) ?? (fixtureMode ? [record.owner_refs[0]] : [])} value={metadataValue} disabled={runtime.pending || !preparation || !sourceCurrent}
                 onChange={value => { setMetadataValue(value); setReviewConfirmed(false); }}/> : null}
               {action === "update" && metadata.error ? (
@@ -301,8 +310,8 @@ export function WorkspaceRegistryLifecycleWorkflow({
               items={[
                 { label: "Record", value: record.id },
                 { label: "Version", value: String(preparation?.expected_state.record_version ?? record.version) },
-                { label: "Current posture", value: currentPosture },
-                { label: "Expected posture", value: workspaceInventoryLifecycleNextPosture(action, currentPosture) },
+                { label: "Current status", value: currentPosture },
+                { label: "Resulting status", value: workspaceInventoryLifecycleNextPosture(action, currentPosture) },
                 { label: "Approval", value: approvalRef.trim() },
 
               ]}
@@ -351,7 +360,7 @@ export function WorkspaceRegistryLifecycleWorkflow({
     </TerasDialog>{guard}
   </>;
   return <>
-    <TerasModalShell bodyLayout="scroll" height="content" width="standard" title="Workspace Inventory Lifecycle" kicker={record.name}
+    <TerasModalShell bodyLayout="scroll" height="content" width="standard" title="Manage workspace item" kicker={record.name}
       description="Update this record or change its status. Its identity and history are preserved." surfaceId="workspace-registry-lifecycle" onClose={requestClose} footer={actions}>
       <TerasFieldStack spacing="loose">
         <TerasMetadataList columns={2} items={[{label:"Item",value:record.name},{label:"Type and version",value:`${registryKindLabel(record.kind)} · version ${currentVersion}`}]}/>
@@ -433,7 +442,7 @@ function LifecycleResultPanel({
           ]}/>
           {(
             <TerasActionRow spacing="compact">
-              <TerasActionButton emphasis="secondary" disabled={pending} onClick={onRead}>Refresh Original Request</TerasActionButton>
+              {!terminal(result.status) ? <TerasActionButton emphasis="secondary" disabled={pending} onClick={onRead}>Check request progress</TerasActionButton> : null}
               {result.review ? (
                 <TerasActionButton
                   emphasis="secondary"

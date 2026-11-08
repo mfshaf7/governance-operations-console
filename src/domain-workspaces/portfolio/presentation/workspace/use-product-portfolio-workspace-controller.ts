@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 
 import {
   useEffect,
@@ -77,7 +78,7 @@ export function useProductPortfolioWorkspaceController({
   );
   const readModel = useMemo(() => productFixtureMode ? effectiveProjection.readModel : productPortfolioReadModelFromProjections([]), [productFixtureMode, effectiveProjection.readModel]);
   const [activeSurfaceId, setActiveSurfaceId] =
-    useState<ProductPortfolioWorkspaceSurfaceId>("products");
+    useWorkspaceViewState<ProductPortfolioWorkspaceSurfaceId>('portfolio:activeSurfaceId', "products");
   const [dashboardProductId, setDashboardProductId] = useState<string | null>(
     null,
   );

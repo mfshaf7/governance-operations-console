@@ -41,7 +41,7 @@ export function SourceImportPanel({ disabled, scope, onImport }: {
     } catch (error) { setError(error instanceof Error ? error.message : "Selected files could not be prepared."); }
     finally { setPending(false); }
   }
-  return <TerasPanel frame="padded" treatment="neutral">
+  return <TerasPanel spacing="normal" frame="padded" treatment="neutral">
     <TerasPanelHeader busy={pending} busyLabel="Reading selected files…" kicker="Import from your computer" title="Review file mapping before importing"
       description="Choose files edited in VS Code or a source folder. Missing files never become deletions. Import replaces only the mapped local buffers; saving and source acceptance remain separate." />
     <TerasFieldStack spacing="normal">

@@ -32,6 +32,7 @@ export function PrototypeWorkspaceRegisterTable({
 }) {
   return (
     <TerasRecordTable
+      ariaLabel="Prototypes"
       columns={prototypeRegisterColumns({ onOpenRecord, rowOffset })}
       fill
       getRowId={(record) => record.id}

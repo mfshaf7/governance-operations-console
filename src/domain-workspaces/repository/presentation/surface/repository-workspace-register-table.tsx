@@ -86,6 +86,7 @@ export function RepositoryWorkspaceRegisterTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Repositories"
       columns={columns}
       fill
       getRowId={(record) => record.id}

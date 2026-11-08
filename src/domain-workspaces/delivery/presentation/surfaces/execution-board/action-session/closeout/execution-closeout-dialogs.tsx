@@ -289,7 +289,7 @@ export function ExecutionCloseoutImpactDialog({
               </TerasFieldGrid>
               <TerasTextListField
                 items={entrant.sourceOwners}
-                itemLabel={(index) => `Source source ${index + 1}`}
+                itemLabel={(index) => `Source repository ${index + 1}`}
                 label="Source repositories"
                 minItems={1}
                 onItemsChange={(items) => updateEntrant("sourceOwners", items)}

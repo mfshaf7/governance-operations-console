@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
@@ -22,7 +23,7 @@ export function useOrchestrationWorkspaceController({
   entryIntent?: ConsoleSurfaceEntryIntent | null;
 } = {}) {
   const [activeSurfaceId, setActiveSurfaceId] =
-    useState<OrchestrationWorkspaceSurfaceId>("home");
+    useWorkspaceViewState<OrchestrationWorkspaceSurfaceId>('orchestration:activeSurfaceId', "home");
   const readModel = useSyncExternalStore(
     subscribeOrchestrationWorkspaceProjection,
     getOrchestrationWorkspaceProjectionSnapshot,

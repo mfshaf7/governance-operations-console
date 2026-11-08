@@ -372,7 +372,7 @@ function ProductReleaseDashboardTabContent({
   switch (activeTab) {
     case "overview":
       return (
-        <TerasPanel
+        <TerasPanel spacing="normal"
           fit="fill"
           frame="padded"
           overflow="hidden"
@@ -458,7 +458,7 @@ function ProductReleaseDashboardTabContent({
         </TerasPanel>
       );
     case "release-path":
-      if(product.recordedEvidence)return <TerasPanel fit="fill" frame="padded" layout="header-body" overflow="hidden" treatment="neutral">
+      if(product.recordedEvidence)return <TerasPanel spacing="normal" fit="fill" frame="padded" layout="header-body" overflow="hidden" treatment="neutral">
         <TerasPanelHeader kicker="Release records" title="Recorded source state" description="These are source records, not an executable workflow or proof of current environment health. Inspect each record for its candidate binding and evidence."/>
         <TerasTrayStack scroll>{product.recordedEvidence.length ? product.recordedEvidence.map(record=><TerasContentTray key={record.id} kicker={record.label}>
           <TerasMetadataList items={[{label:"Recorded status",value:formatProductReleaseStatus(record.status)},{label:"Recorded",value:record.recorded_at ? formatObservedAt(record.recorded_at) : "Not recorded"}]}/>
@@ -467,7 +467,7 @@ function ProductReleaseDashboardTabContent({
         </TerasContentTray>) : <TerasEmptyState>{product.unavailableReason}</TerasEmptyState>}</TerasTrayStack>
       </TerasPanel>;
       return (
-        <TerasPanel
+        <TerasPanel spacing="normal"
           fit="fill"
           frame="padded"
           overflow="hidden"

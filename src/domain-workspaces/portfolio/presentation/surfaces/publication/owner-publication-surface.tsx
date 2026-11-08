@@ -173,7 +173,7 @@ export function OwnerPublicationSurface({ runtime, state, products, productsErro
       <TerasContentRegion gap="normal">
         {previewMode ? <TerasContentTray kicker="Design preview" description="Sample product information. Publishing is disabled; this review cannot change the catalog." /> : null}
         {result ? <OwnerPublicationResult result={result} /> : review ? <>
-          <TerasPanel frame="padded" fit="content" treatment="neutral"><TerasPanelHeader kicker="Catalog change" title={selected?.name ?? productId}
+          <TerasPanel spacing="normal" frame="padded" fit="content" treatment="neutral"><TerasPanelHeader kicker="Catalog change" title={selected?.name ?? productId}
             description={publicationActionLabels[review.intent.action]} />
             <TerasMetadataList columns={2} items={[
               { label: "Current listing", value: publicationPostureLabels[review.intent.current_publication_posture] },

@@ -16,6 +16,7 @@ export function WorkspaceRegistryPromotionWorkflow({ candidate, target, fixtureM
   const [historyOpen, setHistoryOpen] = useState(!candidate);
   const [localError, setLocalError] = useState<string | null>(null);
   const attempted = useRef<string | null>(null);
+  const submittedRequestId = useRef<string | null>(null);
   const journal = useInventoryRequestJournal("promotion", target, fixtureMode);
   const result = runtime.result;
   const sourceReady = fixtureMode || Boolean(!localError && !runtime.error && candidate && runtime.preparation?.target.record_id === target.record_id &&
@@ -31,15 +32,17 @@ export function WorkspaceRegistryPromotionWorkflow({ candidate, target, fixtureM
     catch (error) { setLocalError(message(error)); }
   }
   useEffect(() => {
-    if (!candidateKey || attempted.current === candidateKey || !journal.canStart || fixtureMode || result) return;
+    if (!candidateKey || attempted.current === candidateKey || !journal.canStart || fixtureMode || result || runtime.pending) return;
     attempted.current = candidateKey;
     void prepare();
-  }, [candidateKey, journal.canStart, fixtureMode, result]);
+  }, [candidateKey, journal.canStart, fixtureMode, result, runtime.pending]);
 
   async function submit() {
     if (!candidate || fixtureMode || !sourceReady || !journal.canStart || runtime.pending || result) return;
     setLocalError(null);
-    try { await runtime.submit(candidate, `workspace-inventory-request:console-${crypto.randomUUID()}`); }
+    const requestId = `workspace-inventory-request:console-${crypto.randomUUID()}`;
+    submittedRequestId.current = requestId;
+    try { await runtime.submit(candidate, requestId); }
     catch (error) { setLocalError(message(error)); }
     finally { setShowResult(true); void journal.load(); }
   }
@@ -61,6 +64,7 @@ export function WorkspaceRegistryPromotionWorkflow({ candidate, target, fixtureM
   const actions = <>
     <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={requestClose}>Back to Registry</TerasActionButton>
     {!showResult && candidate ? <TerasActionButton busy={runtime.pending} disabled={fixtureMode || runtime.pending || !sourceReady || !journal.canStart || Boolean(result)} onClick={() => void submit()}>{runtime.pending ? "Please wait…" : "Add to Registry"}</TerasActionButton> : null}
+    {showResult && currentError && (result?.request_id || submittedRequestId.current) ? <TerasActionButton emphasis="secondary" disabled={runtime.pending} onClick={() => void recover(result?.request_id ?? submittedRequestId.current!)}>Check original request</TerasActionButton> : null}
     {showResult && result && canContinue(result.next_action) ? <TerasActionButton disabled={runtime.pending} onClick={() => void control("continue")}>{result.next_action === "review-and-merge" ? "Check Review" : "Continue Request"}</TerasActionButton> : null}
     {candidate && showResult && result && terminal(result.status) ? <TerasActionButton emphasis="secondary" disabled={runtime.pending || !journal.canStart} onClick={() => { runtime.reset(); attempted.current = null; setLocalError(null); setShowResult(false); }}>Review another promotion</TerasActionButton> : null}
   </>;
@@ -69,7 +73,7 @@ export function WorkspaceRegistryPromotionWorkflow({ candidate, target, fixtureM
     description={result ? registryNextAction(result.next_action) : "The request outcome could not be confirmed. Inspect the original request before trying another."} actions={actions}>
     {currentError ? <TerasStatusItem label="Request" status="Needs attention" detail={currentError} tone="danger"/> : null}
     {result ? <PromotionResultPanel result={result} pending={runtime.pending} onCancel={() => void control("cancel")} onRead={() => void recover(result.request_id)}/> : <TerasFieldStack spacing="normal">
-      <TerasEmptyState>No confirmed outcome is available. Recover the original request from history.</TerasEmptyState>
+      <TerasEmptyState>No confirmed outcome is available. Check the original request or open it from history.</TerasEmptyState>
       <WorkspaceRegistryRequestJournal journal={journal} disabled={runtime.pending} onReopen={id => void recover(id)}/>
     </TerasFieldStack>}
   </TerasDialog>;
@@ -95,7 +99,7 @@ export function WorkspaceRegistryPromotionWorkflow({ candidate, target, fixtureM
         </TerasActionRow> : null}
       </> : currentError ? <TerasStatusItem label="Request" status="Needs attention" detail={currentError} tone="danger"/> : null}
       {!fixtureMode && (historyOpen || (!showResult && Boolean(journal.page?.pending_request_count)) || Boolean(journal.error)) ? <WorkspaceRegistryRequestJournal journal={journal} disabled={runtime.pending} onReopen={id => void recover(id)}/> : null}
-      {!candidate ? <PromotionResultPanel result={result} pending={runtime.pending} onCancel={() => void control("cancel")} onRead={() => { if (result) void recover(result.request_id); }}/> : null}
+      {!candidate && (result || Boolean(journal.page?.records.length)) ? <PromotionResultPanel result={result} pending={runtime.pending} onCancel={() => void control("cancel")} onRead={() => { if (result) void recover(result.request_id); }}/> : null}
     </TerasFieldStack>
   </TerasModalShell>;
 }
@@ -107,7 +111,7 @@ function PromotionResultPanel({result,pending,onCancel,onRead}:{result:Workspace
     {result.failure?<TerasContentTray kicker="Needs attention" description={result.failure.message}/>:null}
     <TerasTimeline ariaLabel="Workspace Inventory promotion history">{result.history.map(event=><TerasTimelineItem key={`${event.sequence}-${event.status}`} label={registryRequestStatus(event.status)} detail={null} status={null} displayTimestamp={registryTimestamp(event.at)} timestamp={event.at} tone={event.status==="succeeded"?"ok":event.status==="blocked"||event.status==="rejected"?"danger":"info"} evidence={<TerasTechnicalDetails summary="Event details" items={[{label:"Sequence",value:String(event.sequence)},{label:"Source status",value:event.status},...(event.details?[{label:"Recorded details",value:JSON.stringify(event.details,null,2)}]:[])]}/>}/>)}</TerasTimeline>
     <TerasTechnicalDetails summary="Request and receipt details" items={[{label:"Request",value:result.request_id},{label:"Receipt",value:result.receipt ? result.receipt.artifact_type === "instance-operational-record-receipt" ? result.receipt.receipt_digest : result.receipt.receipt_id : "No receipt issued"},{label:"Next action code",value:result.next_action},{label:"Request revision",value:String(result.revision)}]}/>
-    <TerasActionRow><TerasActionButton emphasis="secondary" disabled={pending} onClick={onRead}>Refresh Original Request</TerasActionButton>{result.review?<TerasActionButton emphasis="secondary" onClick={()=>window.open(result.review!.url,"_blank","noopener,noreferrer")}>Open Review</TerasActionButton>:null}{!terminal(result.status)&&result.cancel_allowed!==false?<TerasActionButton emphasis="secondary" disabled={pending} onClick={onCancel}>Cancel Request</TerasActionButton>:null}</TerasActionRow>
+    <TerasActionRow>{!terminal(result.status) ? <TerasActionButton emphasis="secondary" disabled={pending} onClick={onRead}>Check request progress</TerasActionButton> : null}{result.review?<TerasActionButton emphasis="secondary" onClick={()=>window.open(result.review!.url,"_blank","noopener,noreferrer")}>Open Review</TerasActionButton>:null}{!terminal(result.status)&&result.cancel_allowed!==false?<TerasActionButton emphasis="secondary" disabled={pending} onClick={onCancel}>Cancel Request</TerasActionButton>:null}</TerasActionRow>
   </TerasTrayStack>:<TerasEmptyState>No request selected.</TerasEmptyState>}
  </TerasContentTray>;
 }

@@ -56,10 +56,15 @@ may require approval or source recovery rather than a wait. Cancellable requests
 keep their existing Cancel control.
 
 Workspace Pulse uses the shared decorative indicator inside its existing cards.
-Only unresolved cards replace their coverage paragraphs with short loading text;
-loaded results, partial known counts, failures and inspector explanations keep
-their existing wording. A source failure remains explicit even if other reads
-are pending. Indicators stop when their reads settle, including failure.
+While any initial source read is pending, cards use compact loading text rather
+than full coverage paragraphs. Known partial counts and blocker/status labels
+remain visible; they do not end the pending presentation. Source coverage keeps
+its partial ratio while saying "Reading sources…", including when one source
+responds immediately. Source failures stay explicit even while other reads are
+pending. Inspectors retain full explanations, and settled cards retain their
+original wording. Indicators stop when their reads settle, including failure.
+A failed prerequisite read must settle its status rather than wait for a
+follow-up lookup that will never start.
 
 ## Local validation
 

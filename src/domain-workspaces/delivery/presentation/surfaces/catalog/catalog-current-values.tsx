@@ -63,6 +63,7 @@ export function CatalogValuesTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Delivery catalog values"
       columns={columns}
       density="compact"
       fill

@@ -97,6 +97,7 @@ export function ModelProfileRegisterTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Purpose profiles"
       columns={columns}
       fill
       getRowId={(profile) => profile.policy.profileId}

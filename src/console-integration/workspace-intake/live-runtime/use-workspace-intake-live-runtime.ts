@@ -52,8 +52,8 @@ export function useWorkspaceIntakeLiveRuntime(registerKey="Workspace onboarding 
         {binding,position:{cursor,offset:previous.position.offset+previous.count},previous:[...previous.previous,previous.position],count};
     });
   }
-  const list = useCallback(async (targetName: string, custodyRequestId: string, cursor: string | null = null) => {
-    const sequence=++requestListSequence.current;requestRead.current?.abort();const controller=new AbortController();requestRead.current=controller;const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(15000)]);setRequestPage(null);
+  const list = useCallback(async (targetName: string, custodyRequestId: string, cursor: string | null = null, background = false) => {
+    const sequence=++requestListSequence.current;requestRead.current?.abort();const controller=new AbortController();requestRead.current=controller;const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(15000)]);if (!background) setRequestPage(null);
     return run(async () => {
       let metadata:WorkspaceIntakeRequestPage|null=null;
       const window=await readRegisterWindow({cursor,pageSize,signal,scope:JSON.stringify([registerKey,"repo",targetName,custodyRequestId]),identity:(row:WorkspaceIntakeRequestPage["records"][number])=>row.request_id,readPage:async nativeCursor=>{
@@ -67,11 +67,11 @@ export function useWorkspaceIntakeLiveRuntime(registerKey="Workspace onboarding 
       const page={...metadata!,records:window.rows,next_cursor:window.nextCursor};
       if(sequence===requestListSequence.current){setRequestPage(page);rememberRequestPage({kind:"repo",name:targetName,custody:custodyRequestId},cursor,page.records.length);}
       return page;
-    },()=>sequence===requestListSequence.current);
+    },()=>sequence===requestListSequence.current,background).catch(error=>{if(sequence===requestListSequence.current)setRequestPage(null);throw error;});
   }, [pageSize,registerKey]);
 
-  const listDirect = useCallback(async (kind: "product" | "component", targetName: string, cursor: string | null = null) => {
-    const sequence=++requestListSequence.current;requestRead.current?.abort();const controller=new AbortController();requestRead.current=controller;const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(15000)]);setRequestPage(null);
+  const listDirect = useCallback(async (kind: "product" | "component", targetName: string, cursor: string | null = null, background = false) => {
+    const sequence=++requestListSequence.current;requestRead.current?.abort();const controller=new AbortController();requestRead.current=controller;const signal=AbortSignal.any([controller.signal,AbortSignal.timeout(15000)]);if (!background) setRequestPage(null);
     return run(async () => {
       let metadata:WorkspaceIntakeRequestPage|null=null;
       const window=await readRegisterWindow({cursor,pageSize,signal,scope:JSON.stringify([registerKey,kind,targetName,null]),identity:(row:WorkspaceIntakeRequestPage["records"][number])=>row.request_id,readPage:async nativeCursor=>{
@@ -85,7 +85,7 @@ export function useWorkspaceIntakeLiveRuntime(registerKey="Workspace onboarding 
       const page={...metadata!,records:window.rows,next_cursor:window.nextCursor};
       if(sequence===requestListSequence.current){setRequestPage(page);rememberRequestPage({kind,name:targetName,custody:null},cursor,page.records.length);}
       return page;
-    },()=>sequence===requestListSequence.current);
+    },()=>sequence===requestListSequence.current,background).catch(error=>{if(sequence===requestListSequence.current)setRequestPage(null);throw error;});
   }, [pageSize,registerKey]);
 
   const prepare = useCallback(async (candidate: Pick<WorkspaceIntakeCandidate, "target">, custody?: WorkspaceIntakeCustodyPreparation) => {
@@ -155,8 +155,8 @@ export function useWorkspaceIntakeLiveRuntime(registerKey="Workspace onboarding 
     setResult(null);
   }, []);
 
-  async function run<T>(operation: () => Promise<T>,isCurrent=()=>true) {
-    setPending(true);
+  async function run<T>(operation: () => Promise<T>,isCurrent=()=>true,background=false) {
+    if(!background)setPending(true);
     setError(null);
     try {
       return await operation();
@@ -165,7 +165,7 @@ export function useWorkspaceIntakeLiveRuntime(registerKey="Workspace onboarding 
       if(isCurrent())setError(failure);
       throw failure;
     } finally {
-      if(isCurrent())setPending(false);
+      if(isCurrent()&&!background)setPending(false);
     }
   }
 
@@ -192,6 +192,12 @@ export function useWorkspaceIntakeLiveRuntime(registerKey="Workspace onboarding 
     });
   }
 
+  const refreshRequestPage = useCallback((background=false) => {
+    if(!requestHistory||pending)return Promise.resolve();
+    const {binding,position}=requestHistory;
+    return binding.kind==="repo" ? list(binding.name,binding.custody!,position.cursor,background)
+      : listDirect(binding.kind,binding.name,position.cursor,background);
+  },[requestHistory,pending,list,listDirect]);
   useEffect(()=>{if(requestHistory)void requestPageAt(null).catch(()=>undefined);},[pageSize]);
   function requestPageAt(cursor:string|null){
     if(!requestHistory||pending)return Promise.resolve();const binding=requestHistory.binding;
@@ -200,6 +206,7 @@ export function useWorkspaceIntakeLiveRuntime(registerKey="Workspace onboarding 
   return {
     list,
     listDirect,
+    refreshRequestPage,
     requestPage,
     requestPageOffset:requestHistory?.position.offset ?? 0,
     requestPageNumber:(requestHistory?.previous.length ?? 0)+1,

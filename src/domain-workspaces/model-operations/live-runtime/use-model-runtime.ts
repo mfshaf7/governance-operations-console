@@ -29,7 +29,7 @@ async function request(path: string, body?: unknown) {
 function remember(id: string | null) {
   try { if (id) recoveryStore.writeJson(recoveryKey, id); else recoveryStore.remove(recoveryKey); } catch { /* Page-only recovery remains available. */ }
 }
-export function useModelRuntime() {
+export function useModelRuntime(enabled = true) {
   const {pageSize}=useRegisterPageSize("Model operation history");
   const capabilities = useConsoleRuntimeCapabilities();
   const dataMode = capabilities.status === "current" ? capabilities.projection?.mode : capabilities.status === "unavailable" ? "invalid" : null;
@@ -61,7 +61,7 @@ export function useModelRuntime() {
     if(!Array.isArray(list.requests)||list.requests.length>100||list.next_cursor!==null&&typeof list.next_cursor!=="string")throw Error("Model-operation history is unavailable.");
     return {rows:list.requests.map(value=>assertModelRuntimeOperation(value)),nextCursor:list.next_cursor as string|null};
   }}),[pageSize]);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (background = false) => {
     if(historyFlight.current)await historyFlight.current;
     const current = ++sequence.current;
     if (dataMode !== "live") {
@@ -71,7 +71,7 @@ export function useModelRuntime() {
       setError(dataMode === "invalid" ? "Model service configuration is unavailable." : null);
       return null;
     }
-    refreshReads.current++; setRefreshing(true);
+    if (!background) { refreshReads.current++; setRefreshing(true); }
     try {
       const [rawRegistry, window] = await Promise.all([request("/registry"), readWindow(historyPositionRef.current.cursor)]);
       const next=assertModelRegistry(rawRegistry),page=window.rows;
@@ -81,7 +81,7 @@ export function useModelRuntime() {
       }
       return next;
     } catch (cause) { if (alive.current && current === sequence.current) setFresh(false); showError(cause); throw cause; }
-    finally { refreshReads.current--; if (alive.current && refreshReads.current === 0) setRefreshing(false); }
+    finally { if (!background) refreshReads.current--; if (alive.current && refreshReads.current === 0) setRefreshing(false); }
   }, [dataMode, showError,readWindow]);
   const loadOperation = useCallback(async (id: string) => {
     if(dataMode === "disconnected-preview"){const sample=modelOperationsPreview().find(item=>item.request_id===id);if(!sample)return null;if(alive.current&&selected.current===id)setOperation(sample);return sample;}
@@ -108,14 +108,18 @@ export function useModelRuntime() {
   }, [dataMode, loadOperation, showError]);
   useEffect(() => {
     alive.current = true;
-    void refresh().catch(() => undefined);
-    if (dataMode !== "live") return () => { alive.current = false; sequence.current++; };
-    const id = recoveryStore.readJson(recoveryKey, value => modelIdentifier(value) ? value : null);
-    if (id) void selectOperation(id);
     return () => { alive.current = false; sequence.current++; backendSequence.current++; };
-  }, [dataMode, refresh, selectOperation]);
+  }, []);
   useEffect(() => {
+    setFresh(false);
+    if (!enabled) return;
+    void refresh(true).catch(() => undefined);
     if (dataMode !== "live") return;
+    const id = recoveryStore.readJson(recoveryKey, value => modelIdentifier(value) ? value : null);
+    if (id && id !== selected.current) void selectOperation(id);
+  }, [enabled, dataMode, refresh, selectOperation]);
+  useEffect(() => {
+    if (!enabled || dataMode !== "live") return;
     const timer = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
       const current = ++sequence.current;
@@ -125,7 +129,7 @@ export function useModelRuntime() {
       }).catch(showError);
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [dataMode, showError]);
+  }, [enabled, dataMode, showError]);
   useEffect(() => {
     if (!operation || !["queued", "running", "awaiting-account"].includes(operation.state)) return;
     const timer = window.setInterval(() => {

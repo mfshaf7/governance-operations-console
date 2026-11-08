@@ -119,7 +119,7 @@ export function LifecycleTransitionSelected({
         tone={item.tone}
         variant="rich"
       />
-      <TerasPanel
+      <TerasPanel spacing="normal"
         fit="content"
         treatment="neutral"
       >

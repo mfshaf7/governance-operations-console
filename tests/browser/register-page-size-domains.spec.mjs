@@ -17,5 +17,50 @@ for(const width of[1280,1700])for(const domain of['Proposal','Prototype','Orches
  if(domain==='Managed products'&&path==='/api/workspace-continuity'){if(q.get('view')!=='products')return route.fulfill({json:f.repo.continuity});offsets.push(offset);const selection={query:q.get('query')??'',maturity:q.get('maturity')??'all',posture:q.get('posture')??'all',id:q.get('id')};return route.fulfill({json:{artifact_type:'workspace-products-page',projection_state:'current',selection,products:f.products.slice(offset,offset+25),page:{next_cursor:next,total:131}}});}
  return route.fulfill({status:503,json:{mode:'live',status:'offline',error:'Unrelated synthetic source unavailable'}});});
  const destination=domain==='Managed products'?'PORTFOLIO':domain==='Orchestration runs'?'ORCHESTRATION':domain.toUpperCase();await page.goto(base,{waitUntil:'domcontentloaded'});await page.waitForFunction(title=>{const b=document.querySelector('button[title="Open '+title+'"]');return b&&Object.keys(b).some(k=>k.startsWith('__reactProps$'));},destination);await page.locator('button[title="Open '+destination+'"]').click();if(domain==='Orchestration runs')await page.locator('[data-orchestration-workspace-section="runs"]').click();
- const pager=page.getByRole('navigation',{name:domain+' pages',exact:true});await expect(pager.getByRole('status')).toContainText('Showing 1–25');await pager.getByRole('button',{name:domain+' rows per page',exact:true}).click();const menu=page.getByRole('listbox');await expect(menu).toBeVisible();const menuBox=await menu.boundingBox();expect(menuBox.y).toBeGreaterThanOrEqual(0);expect(menuBox.y+menuBox.height).toBeLessThanOrEqual(width===1280?800:1000);await page.getByRole('option',{name:'100',exact:true}).click();await expect(pager.getByRole('status')).toContainText('Showing 1–100');await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toContainText('Showing 101–131');await pager.getByRole('button',{name:domain+' rows per page',exact:true}).click();await page.getByRole('option',{name:'50',exact:true}).click();await expect(pager.getByRole('status')).toContainText('Showing 1–50');expect(offsets).toContain(75);await pager.scrollIntoViewIfNeeded();const geometry=await pager.evaluate(el=>({bottom:el.getBoundingClientRect().bottom,h:innerHeight,overflow:el.scrollWidth-el.clientWidth}));expect(geometry.bottom).toBeLessThanOrEqual(geometry.h);expect(geometry.overflow).toBeLessThan(2);expect(writes).toEqual([]);expect(errors).toEqual([]);await page.screenshot({path:test.info().outputPath('page-size-domain.png')});
+ const table=page.getByRole('table',{name:({'Proposal':'Proposals','Prototype':'Prototypes','Orchestration runs':'Orchestration runs','Managed products':'Product continuity'})[domain],exact:true});
+ await expect(table).toBeVisible();await expect(table.locator('..')).toHaveAttribute('data-column-sizing','ready');
+ const columns=await table.locator('thead th').count();await expect(table.getByRole('separator')).toHaveCount(columns-1);
+ const primary=table.locator('thead th[data-intent="primary"]').first(),handle=primary.getByRole('separator');
+ const initial=await primary.evaluate(el=>el.getBoundingClientRect().width);expect(initial).toBeGreaterThanOrEqual(239);
+ const tableWidth=await table.evaluate(el=>el.getBoundingClientRect().width);
+ expect(await table.evaluate(el=>el.getBoundingClientRect().width>=el.parentElement.clientWidth-1)).toBe(true);
+ await expect(table.locator('thead th').last().getByRole('separator')).toHaveCount(0);
+ const start=await handle.boundingBox();await page.mouse.move(start.x+start.width/2,start.y+start.height/2);await page.mouse.down();await page.mouse.move(start.x+start.width/2-30,start.y+start.height/2,{steps:8});await page.mouse.up();
+ await expect.poll(()=>primary.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(initial-30,0);
+ await expect.poll(()=>table.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(tableWidth,0);
+ await handle.press('ArrowRight');await expect.poll(()=>primary.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(initial-20,0);
+ const retainedWidth=await primary.evaluate(el=>el.getBoundingClientRect().width);
+ expect(await table.locator('tbody td').evaluateAll(cells=>cells.every(cell=>parseFloat(getComputedStyle(cell).paddingLeft)>=16&&parseFloat(getComputedStyle(cell).paddingRight)>=16))).toBe(true);
+ const pager=page.getByRole('navigation',{name:domain+' pages',exact:true});await expect(pager.getByRole('status')).toContainText('Showing 1–25');await pager.getByRole('button',{name:domain+' rows per page',exact:true}).click();const menu=page.getByRole('listbox');await expect(menu).toBeVisible();const menuBox=await menu.boundingBox();expect(menuBox.y).toBeGreaterThanOrEqual(0);expect(menuBox.y+menuBox.height).toBeLessThanOrEqual(width===1280?800:1000);await page.getByRole('option',{name:'100',exact:true}).click();await expect(pager.getByRole('status')).toContainText('Showing 1–100');await pager.getByRole('button',{name:'Next page',exact:true}).click();await expect(pager.getByRole('status')).toContainText('Showing 101–131');await pager.getByRole('button',{name:domain+' rows per page',exact:true}).click();await page.getByRole('option',{name:'50',exact:true}).click();await expect(pager.getByRole('status')).toContainText('Showing 1–50');expect(offsets).toContain(75);await pager.scrollIntoViewIfNeeded();const geometry=await pager.evaluate(el=>({bottom:el.getBoundingClientRect().bottom,h:innerHeight,overflow:el.scrollWidth-el.clientWidth}));expect(geometry.bottom).toBeLessThanOrEqual(geometry.h);expect(geometry.overflow).toBeLessThan(2);await expect.poll(()=>primary.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(retainedWidth,0);
+ await page.getByRole('dialog').first().locator('button[aria-label^="Close"]').first().click();await page.locator('button[title="Open '+destination+'"]').click();if(domain==='Orchestration runs')await page.locator('[data-orchestration-workspace-section="runs"]').click();
+ await expect(table).toBeVisible();await expect.poll(()=>primary.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(retainedWidth,0);
+ if(domain==='Proposal'&&width===1280){
+  await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>{const b=document.querySelector('button[title="Open PROPOSAL"]');return b&&Object.keys(b).some(k=>k.startsWith('__reactProps$'));});await page.locator('button[title="Open PROPOSAL"]').click();await expect(table).toBeVisible();await expect.poll(()=>primary.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(retainedWidth,0);
+
+  await handle.press('ArrowLeft');await handle.press('ArrowRight');
+ }
+ await handle.press('Enter');await expect.poll(()=>primary.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(initial,0);
+ await handle.press('ArrowRight');await handle.dblclick();await expect.poll(()=>primary.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(initial,0);
+ const finalCell=table.locator('thead th').last(),beforeLast=await finalCell.evaluate(el=>el.getBoundingClientRect().width);
+ const previousCell=table.locator('thead th').nth(columns-2),divider=previousCell.getByRole('separator'),previousWidth=await previousCell.evaluate(el=>el.getBoundingClientRect().width);
+ const minimum=Number(await divider.getAttribute('aria-valuemin')),maximum=Number(await divider.getAttribute('aria-valuemax'));
+ const direction=previousWidth-minimum>=10?'ArrowLeft':'ArrowRight',expected=Math.min(maximum,Math.max(minimum,previousWidth+(direction==='ArrowLeft'?-10:10)));
+ const beforeTotal=await table.evaluate(el=>el.getBoundingClientRect().width);await divider.press(direction);
+ await expect.poll(()=>previousCell.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(expected,0);
+ await expect.poll(()=>finalCell.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(beforeLast+previousWidth-expected,0);
+ await expect.poll(()=>table.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(beforeTotal,0);
+ await divider.scrollIntoViewIfNeeded();const finalBoundary=await divider.boundingBox();await page.mouse.move(finalBoundary.x+finalBoundary.width/2,finalBoundary.y+finalBoundary.height/2);await page.mouse.down();await page.mouse.move(finalBoundary.x+finalBoundary.width/2-20,finalBoundary.y+finalBoundary.height/2,{steps:5});
+ await expect.poll(()=>table.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(beforeTotal,0);await page.mouse.up();
+ await expect.poll(()=>previousCell.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(Math.max(minimum,expected-20),0);
+ await expect.poll(()=>finalCell.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(beforeLast+previousWidth-Math.max(minimum,expected-20),0);
+ // The last cell meets the scroll frame even when the table must scroll.
+ expect(await table.evaluate(el=>{const shell=el.parentElement,old=shell.scrollLeft;shell.scrollLeft=shell.scrollWidth;const gap=shell.getBoundingClientRect().left+shell.clientLeft+shell.clientWidth-el.tHead.rows[0].lastElementChild.getBoundingClientRect().right;shell.scrollLeft=old;return Math.abs(gap);})).toBeLessThan(1.5);
+ if(domain==='Proposal'&&width===1280){
+  // Reconcile preferences saved before the anchored-edge fix.
+  await page.evaluate(()=>localStorage.setItem('console.table-widths.v1:Proposals',JSON.stringify({index:56,proposal:160,route:128,state:136,action:152})));
+  await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>{const b=document.querySelector('button[title="Open PROPOSAL"]');return b&&Object.keys(b).some(k=>k.startsWith('__reactProps$'));});await page.locator('button[title="Open PROPOSAL"]').click();await expect(table).toBeVisible();
+  await expect.poll(()=>table.evaluate(el=>el.getBoundingClientRect().width>=el.parentElement.clientWidth-1)).toBe(true);
+  await page.setViewportSize({width:1700,height:1000});await expect.poll(()=>table.evaluate(el=>el.getBoundingClientRect().width>=el.parentElement.clientWidth-1)).toBe(true);
+ }
+ expect(writes).toEqual([]);expect(errors).toEqual([]);await page.screenshot({path:test.info().outputPath('page-size-domain.png')});
 });

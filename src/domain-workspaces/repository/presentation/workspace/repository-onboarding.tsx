@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
+import {openExternalConsoleRoute} from "../../../../console-integration/external-route.ts";
 import {TerasActionButton, TerasContentTray, TerasFieldStack, TerasLoadingState, TerasMetadataList, TerasModalShell, TerasSelectField} from "@/teras";
 import {useWorkspaceContinuityRuntime} from "../../../../workspace-continuity/live-runtime/use-workspace-continuity-runtime.ts";
 import {useRepositoryRegistrationStatus} from "../../../../workspace-registry/live-runtime/use-repository-registration-status.ts";
@@ -77,7 +78,7 @@ function LiveRepositoryOnboarding({providerId = null, fixtureMode = false, onAct
       {!providerId ? <TerasSelectField label="Repository to onboard" value={selection} disabled={reading || fixtureMode || custody.sourceStatus === "loading"}
         helper="Choose a repository already created or linked in Repository Control. No GitHub details need to be entered again."
         options={[{label: "Select a verified repository", value: ""}, ...custody.registerResults.map(result => ({
-          label: result.provider_readback?.canonical_url ?? result.request.target.name,
+          label: result.provider_readback?.canonical_url?.replace(/^https:\/\/github\.com\//, "") ?? result.request.target.name,
           value: result.provider_readback?.repository_identity.provider_repository_id ?? "",
         })).filter(option => option.value)]} onValueChange={setSelection} /> : null}
       {fixtureMode ? <TerasContentTray kicker="Preview only" description="Live repository onboarding requires the verified repository connection and current workspace records." /> : null}
@@ -88,7 +89,8 @@ function LiveRepositoryOnboarding({providerId = null, fixtureMode = false, onAct
       {reading ? <TerasLoadingState label="Reading repository and onboarding status…" /> : error ? <TerasContentTray role="alert" kicker="Unable to verify repository" description={error}
         actions={<TerasActionButton onClick={() => setReload(value => value + 1)}>Retry repository</TerasActionButton>} /> : null}
       {selected ? <>
-        <TerasContentTray kicker="Selected repository" title={selected.provider_readback?.canonical_url} description="Creation or linking is complete. Workspace onboarding is tracked separately below.">
+        <TerasContentTray kicker="Selected repository" title={selected.provider_readback?.canonical_url?.replace(/^https:\/\/github\.com\//, "")} description="Creation or linking is complete. Workspace onboarding is tracked separately below."
+          actions={selected.provider_readback?.canonical_url ? <TerasActionButton emphasis="secondary" onClick={() => openExternalConsoleRoute(selected.provider_readback?.canonical_url)}>Open on GitHub</TerasActionButton> : undefined}>
           <TerasMetadataList items={[
             {label: "Workspace review", value: active || inactiveRecord ? "Previously recorded" : classification === "admitted" ? "Approved" : classification === "proposed" ? "In progress" : classification === "out-of-scope" ? "Outside managed workspace" : current ? "Required" : "Checking current records"},
             {label: "Source controls", value: inactiveRecord ? "Recheck before restoration" : active || classification === "admitted" ? "Verified for recorded approval" : "Verify during onboarding"},

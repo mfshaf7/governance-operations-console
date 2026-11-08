@@ -80,7 +80,7 @@ function RequestCheckPanel({
   title: string;
 }) {
   return (
-    <TerasPanel
+    <TerasPanel spacing="normal"
       fit="fill"
       frame="padded"
       tone={complete ? "ok" : "warn"}
@@ -373,7 +373,7 @@ export function DevIntegrationProfileRequest({
         title="Profile request result"
       />
     ) : (
-      <TerasPanel
+      <TerasPanel spacing="normal"
         fit="fill"
         frame="padded"
         tone={reviewReady ? "ok" : "warn"}
@@ -415,7 +415,7 @@ export function DevIntegrationProfileRequest({
                   : "Not triggered",
             },
           ]}
-          topOffset="compact"
+          topOffset="none"
         />
         <TerasList ariaLabel="Profile request final checks">
           {reviewChecks.map((check, index) => (

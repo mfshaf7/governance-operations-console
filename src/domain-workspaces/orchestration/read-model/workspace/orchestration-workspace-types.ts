@@ -12,7 +12,7 @@ import type {
 
 export type OrchestrationHomeSummaryMetric = {
   id: string;
-  label: "Active Runs" | "Blocked" | "Definition Work" | "Failed" | "Waiting";
+  label: "Active Runs" | "Blocked" | "Definition Work" | "Failed" | "Waiting" | `Recent ${string}`;
   tone: OperationTone;
   value: string;
 };

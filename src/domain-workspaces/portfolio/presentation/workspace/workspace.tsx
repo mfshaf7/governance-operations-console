@@ -6,7 +6,7 @@ import type { ConsoleWorkspaceId } from "../../../../console-architecture.ts";
 import type { OperationWorkbenchDomainContract } from "../../../../operation-workbench/operation-workbench-contract.ts";
 import { OwnerPublicationPreview } from "../surfaces/publication/owner-publication-preview.tsx";
 import { OwnerPublicationSurface, useOwnerPublicationState } from "../surfaces/publication/owner-publication-surface.tsx";
-import { TerasActionButton, TerasDraftCloseGuardDialog, TerasPanel, TerasPanelHeader } from "@/teras";
+import { TerasActionButton, TerasActionRow, TerasDraftCloseGuardDialog, TerasPanel, TerasPanelHeader } from "@/teras";
 import { ProductPortfolioCurationSurface } from "../surfaces/curation/curation-surface.tsx";
 import { ProductDashboardModal } from "../surfaces/products/dashboard/product-dashboard-modal.tsx";
 import { ProductPortfolioProductsSurface } from "../surfaces/products/products-surface.tsx";
@@ -90,7 +90,7 @@ export function PortfolioWorkspace({
         />
         ) : <TerasPanel frame="padded" fit="content" treatment="neutral"><TerasPanelHeader kicker="Listing settings" title="Manage listing through Publication"
           description="Change listing and audience using the latest publication receipt and a committed product manifest. Product details remain in Registry; the product component controls access." />
-          <TerasActionButton onClick={() => controller.setActiveSurfaceId("publication")}>Open Publication</TerasActionButton>
+          <TerasActionRow spacing="normal"><TerasActionButton onClick={() => controller.setActiveSurfaceId("publication")}>Open Publication</TerasActionButton></TerasActionRow>
         </TerasPanel>
       )}
 

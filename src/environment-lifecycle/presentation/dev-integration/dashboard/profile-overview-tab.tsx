@@ -30,7 +30,7 @@ export function ProfileOverviewStage({
 
   return (
     <TerasPanelStack fill="last" scroll>
-      <TerasPanel fit="content" frame="padded" treatment="neutral">
+      <TerasPanel fit="content" frame="padded" spacing="normal" treatment="neutral">
         <TerasPanelHeader
           description="Request identity and source authority carried by this profile."
           kicker="Profile Contract"
@@ -66,6 +66,7 @@ export function ProfileOverviewStage({
         fit="content"
         frame="padded"
         layout="header-body-footer"
+        spacing="normal"
         treatment="neutral"
       >
         <TerasPanelHeader

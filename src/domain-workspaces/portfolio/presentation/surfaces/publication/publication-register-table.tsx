@@ -98,6 +98,7 @@ export function ProductPortfolioPublicationRegisterTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Publications"
       columns={columns}
       fill
       getRowId={(record) => record.scenarioId}

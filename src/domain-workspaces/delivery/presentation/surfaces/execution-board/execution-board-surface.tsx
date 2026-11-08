@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceViewState } from "../../../../../console-integration/registers/workspace-view-state.ts";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -107,7 +108,7 @@ export function DeliveryExecutionBoard({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [activeView, setActiveView] =
     useState<ControlBoardViewMode>("control-board");
-  const [selectedPackageId, setSelectedPackageId] = useState(
+  const [selectedPackageId, setSelectedPackageId] = useWorkspaceViewState('delivery-execution:selectedPackageId',
     getExecutionBoardPackages(model)[0]?.delivery_package_id ?? "",
   );
   const [treeDraftPackageId, setTreeDraftPackageId] = useState<string | null>(

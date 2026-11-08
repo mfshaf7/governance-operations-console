@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRepositoryRequestPage } from "../../live-runtime/use-repository-request-page.ts";
 import {
-  TerasActionButton, TerasActionRow, TerasContentTray, TerasEmptyState, TerasFilterBar, TerasLoadingState,
+  TerasActionButton, TerasActionRow, TerasContentTray, TerasEmptyState, TerasFieldStack, TerasFilterBar, TerasLoadingState,
   TerasRecordCellText, TerasRecordControlLayout, TerasRecordTable, TerasRegisterPanel, TerasRegisterPagination, useRegisterPage,
   TerasSelectedPanel, TerasStatusPill, type TerasRecordTableColumn,
 } from "@/teras";
@@ -33,6 +33,7 @@ export function RepositoryRequestsSurface({ controller, onOpenProposal }: {
   const selected = records.find(request => request.proposalId === selectedId) ?? (retainedSelection?.proposalId === selectedId ? { ...retainedSelection, sourceCurrent: false } : records[0]);
   const loading = live ? native.loading : runtime.status === "loading";
   const current = live ? !native.loading && !native.error : runtime.status === "current" && (runtime.attentionCount !== null || runtime.coverage?.complete === false);
+  const countUnavailable = runtime.status !== "loading" && runtime.attentionCount === null;
   const refresh = () => live ? native.refresh() : runtime.refresh();
   const pageError = live ? native.error : runtime.error;
   const inspect = (request: ProposalRepositoryGateRequest) => {
@@ -51,7 +52,7 @@ export function RepositoryRequestsSurface({ controller, onOpenProposal }: {
       }}>Review</TerasActionButton> },
   ];
   const empty = loading ? <TerasLoadingState fill label="Loading repository requests…" /> :
-    <TerasEmptyState fill>{!current ? "The request source is unavailable or incomplete. Refresh to check for current requests." :
+    <TerasEmptyState fill>{!current || countUnavailable ? "The request source is unavailable or incomplete. Refresh to check for current requests." :
       live && native.nextCursor ? "No matches in this search window. Continue search to check remaining requests." : runtime.coverage?.complete === false && !live ? "No matching requests are visible in the proposals checked so far. The remaining proposals have not been checked." :
       search.trim() ? "No requests match your search." : filter === "attention" ?
       "No repository requests need attention. Resolved requests remain available in history." :
@@ -68,12 +69,14 @@ export function RepositoryRequestsSurface({ controller, onOpenProposal }: {
           {label: "Finish confirmation", value: "confirmation"}, {label: "Resolved history", value: "resolved"},
           {label: "All requests", value: "all"},
         ]}]} />}>
-      {!loading && !current ? <p role="status">Current request count is unavailable. Requests with stale source data are read-only.</p> : null}
-      {pageError ? <p role="alert">{pageError}</p> : null}
+      <TerasFieldStack fill="last">
+      {!loading && (!current || countUnavailable) ? <TerasContentTray role="status" kicker="Request coverage" description="Current request count is unavailable. Requests with stale source data are read-only." /> : null}
+      {pageError ? <TerasContentTray role="alert" kicker="Requests unavailable" description={pageError} /> : null}
       {!live && runtime.coverage && !runtime.coverage.complete ? runtime.reading ? <TerasLoadingState inline label="Checking remaining Proposal pages…" /> :
         <TerasContentTray kicker="Incomplete request coverage" description={runtime.coverage.detail ?? "Some proposals have not been checked. The total needing attention is unavailable."} /> : null}
-      {records.length ? <TerasRecordTable columns={columns} rows={records} fill getRowId={request => request.proposalId}
+      {records.length ? <TerasRecordTable ariaLabel="Repository requests" columns={columns} rows={records} fill getRowId={request => request.proposalId}
         selectedRowId={selected?.proposalId ?? null} onSelect={request => {setSelectedId(request.proposalId);setRetainedSelection(request);}} /> : empty}
+      </TerasFieldStack>
     </TerasRegisterPanel>}
     selected={selected ? <TerasSelectedPanel selected variant="compact" kicker="Request context" title={selected.title}
       tone={selected.sourceCurrent && repositoryRequestState(selected) === "resolved" ? "ok" : "warn"}

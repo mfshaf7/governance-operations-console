@@ -124,7 +124,7 @@ export function ModelRegistrationsDialog({
           </TerasActionRow>}
           filterBar={<TerasFilterBar search={{ ariaLabel: "Search registered models", value: search,
             onValueChange: setSearch, placeholder: "Search models on this backend..." }} />}>
-          {filtered.length ? <TerasRecordTable fill columns={columns} rows={page.rows} getRowId={row => row.id}
+          {filtered.length ? <TerasRecordTable ariaLabel="Registered models" fill columns={columns} rows={page.rows} getRowId={row => row.id}
             selectedRowId={selected?.id} onSelect={row => setSelectedId(row.id)} />
             : <TerasEmptyState>{rows.length ? "No models match this search on the selected backend."
               : "No models are registered on this backend. Use Register model to add one."}</TerasEmptyState>}

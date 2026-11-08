@@ -8,7 +8,7 @@ export function useLifecycleTransitionJournalPage(selection:{routeId:string;stat
   const {pageSize}=useRegisterPageSize("Lifecycle transition register");
   const selectionKey=JSON.stringify({...selection,query:selection.query.trim().toLowerCase()}),key=JSON.stringify([selectionKey,pageSize]);
   const [position,setPosition]=useState({key,history:[{cursor:null as string|null,offset:0}]});
-  if(position.key!==selectionKey)setPosition({key,history:[{cursor:null,offset:0}]});
+  if(position.key!==key)setPosition({key,history:[{cursor:null,offset:0}]});
   const history=position.key===key?position.history:[{cursor:null,offset:0}],entry=history.at(-1)!,scope=JSON.stringify([key,entry.cursor,focusId]);
   const [result,setResult]=useState<{scope:string;items:LifecycleTransitionOverviewItem[];original:LifecycleTransitionOverviewItem|null;next_cursor:string|null;error:string|null}|null>(null);
   const [loading,setLoading]=useState(enabled),ticket=useRef(0),active=useRef<AbortController|null>(null),inFlight=useRef(false);

@@ -64,6 +64,7 @@ export function LifecycleTransitionRegister({
 }) {
   return (
     <TerasRecordTable
+      ariaLabel="Lifecycle transitions"
       columns={columns}
       fill
       getRowId={(item) => item.transitionId}

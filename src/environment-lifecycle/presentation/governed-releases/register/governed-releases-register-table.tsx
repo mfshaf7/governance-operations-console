@@ -98,6 +98,7 @@ export function GovernedReleasesRegisterTable({
 
   return (
     <TerasRecordTable
+      ariaLabel="Governed releases"
       columns={columns}
       fill
       profile="inventory"

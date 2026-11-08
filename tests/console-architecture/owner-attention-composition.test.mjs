@@ -1,4 +1,8 @@
+import { projectPrototypeOwnerAttention } from "../../src/domain-workspaces/prototype/read-model/attention-source.ts";
+import { projectOrchestrationOwnerAttention } from "../../src/domain-workspaces/orchestration/read-model/attention-source.ts";
+import { ownerWorkspace, retainedRun } from "../support/orchestration-ui-fixture.mjs";
 import assert from "node:assert/strict";
+import { attentionCandidateTone, attentionFreshnessTone } from "../../src/command-center/read-model/attention-tone.ts";
 import test from "node:test";
 
 import {
@@ -253,3 +257,55 @@ function candidate(overrides = {}) {
     ...overrides,
   };
 }
+
+
+test("attention category colours match Pulse records at every urgency without changing rank or classification", () => {
+  for (const [attentionClass, expected] of [["required-action", "info"], ["external-follow-up", "info"], ["review", "warn"], ["decision", "warn"], ["recovery", "danger"]]) {
+    for (const urgency of ["critical", "high", "normal", "low"]) {
+      const record = candidate({ attentionClass, urgency });
+      const before = structuredClone(record);
+      const attention = projectCommandCenterAttention([sourceSnapshot({ candidates: [record] })], observedAt);
+      const pulse = projectWorkspacePulseFromAttention(attention);
+      const signal = pulse.signals.find(signal => signal.records.length);
+      assert.equal(attentionCandidateTone(record), expected);
+      assert.equal(signal.tone, expected);
+      assert.equal(signal.records[0].tone, expected);
+      assert.equal(attention.candidates[0].urgency, urgency);
+      assert.deepEqual(record, before);
+    }
+  }
+});
+
+test("source reliability remains separate from category and partial coverage preserves known action colour", () => {
+  const action = candidate({ attentionClass: "required-action", urgency: "high" });
+  const source = sourceSnapshot({ candidates: [action] });
+  const unavailable = sourceSnapshot({ id: "missing", candidates: [] });
+  unavailable.source.freshness = "unavailable";
+  const pulse = projectWorkspacePulseFromAttention(projectCommandCenterAttention([source, unavailable], observedAt));
+  const signal = pulse.signals.find(signal => signal.id === "active-operations");
+  assert.equal(signal.value, "1+"); assert.equal(signal.stateLabel, "INCOMPLETE"); assert.equal(signal.tone, "info");
+  assert.equal(pulse.signals.find(signal => signal.id === "source-coverage").tone, "danger");
+  for (const [freshness, expected] of [["current", "ok"], ["loading", "info"], ["stale", "stale"], ["unverified", "stale"], ["unavailable", "danger"]]) {
+    assert.equal(attentionFreshnessTone(freshness), expected);
+    if (freshness !== "current") assert.equal(attentionCandidateTone({ ...action, source: { ...action.source, freshness } }), expected);
+  }
+});
+
+
+test("partial Prototype summaries never certify a complete zero-attention workspace",()=>{
+ const capturedAt=new Date().toISOString();
+ for(const marker of [{coverage:{complete:false}},{page:{next_cursor:"cursor:more"}},{projection:{ownerPage:{next_cursor:"cursor:more"}}}]){
+  const payload={mode:"live",...marker,projection:{...marker.projection,readModel:{records:[]}}};
+  const source=projectPrototypeOwnerAttention({state:"current",capturedAt,payload});
+  assert.equal(source.source.freshness,"unverified");
+  const pulse=projectWorkspacePulseFromAttention(projectCommandCenterAttention([source],capturedAt));
+  assert.equal(pulse.signals.find(s=>s.id==="active-operations").value,"0+");
+ }
+});
+
+test("the bounded Orchestration overview qualifies attention coverage instead of certifying a full workspace total",()=>{
+ const payload=ownerWorkspace(),seed=retainedRun();
+ payload.runs=Array.from({length:100},(_,i)=>JSON.parse(JSON.stringify(seed).replaceAll(seed.run_id,'run:window-'+i)));
+ const source=projectOrchestrationOwnerAttention({state:"current",capturedAt:new Date().toISOString(),payload});
+ assert.equal(source.source.freshness,"unverified");
+});

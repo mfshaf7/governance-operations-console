@@ -5,6 +5,7 @@ const { lifecycleTransitionProjectionFixtures } = require("../../src/lifecycle-t
 const { buildLifecycleTransitionOverviewItem } = require("../../src/lifecycle-transitions/presentation/lifecycle-transition-overview-view-model.ts");
 const { prototypeWorkspaceReadModel } = require("../../src/domain-workspaces/prototype/read-model/prototype-workspace-read-model.ts");
 const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:3320";
+if (new URL(base).port === "3317") throw new Error("Use the isolated preview, never the live Console.");
 test.setTimeout(90000);
 test.use({ actionTimeout: 10000, navigationTimeout: 60000 });
 
@@ -190,6 +191,10 @@ for(const width of [1280,1700])test(`Journal register continues older records an
   await expect(footer.getByRole("button",{name:"Next page",exact:true})).toBeDisabled();
   await footer.getByRole("button",{name:"Previous",exact:true}).click();
   await expect(footer.getByRole("status")).toContainText("Showing 26–50");
+  await footer.getByRole("button",{name:"Lifecycle transition register rows per page",exact:true}).click();
+  await page.getByRole("option",{name:"50",exact:true}).click();
+  await expect(footer.getByRole("status")).toContainText("Showing 1–50");
+  await expect(footer.getByRole("button",{name:"Previous",exact:true})).toBeDisabled();
   await h.workspace.getByRole("searchbox",{name:"Search lifecycle transitions",exact:true}).fill("retained-60");
   await expect(footer.getByRole("status")).toContainText("Showing 1–1");
   await expect(footer.getByRole("button",{name:"Previous",exact:true})).toBeDisabled();

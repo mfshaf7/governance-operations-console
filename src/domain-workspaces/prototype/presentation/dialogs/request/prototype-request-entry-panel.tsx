@@ -46,7 +46,7 @@ export function PrototypeRequestEntryPanel({
   onOpenSelectionGuide: () => void;
 }) {
   return (
-    <TerasPanel
+    <TerasPanel spacing="normal"
       frame="padded"
       treatment="neutral"
       layout="header-body"
