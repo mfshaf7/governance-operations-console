@@ -1392,6 +1392,12 @@ OOS verify that metadata before target application instead of assuming every
 graduating prototype requires a new repository. Prototype must not hand off to
 Delivery while a repository/source-custody gate is still unresolved.
 
+Proposal's repository choice describes the incubation source home. Studio
+incubation can reuse Studio's existing repository without a dedicated project
+repository. It does not permanently assign the finished product's source home:
+the later Delivery movement packet records and validates that choice again.
+Changing the displayed label is not a source transfer or repository operation.
+
 The accepted route is:
 
 ```text

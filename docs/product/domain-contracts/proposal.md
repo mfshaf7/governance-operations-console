@@ -276,6 +276,22 @@ target admission, target application, or Proposal completion.
 Prototype-local fixtures must model packet preparation and target application
 as distinct receipts even when both are simulated in one local session.
 
+## Repository Selection Meaning
+
+Disposition records one source home for handoff, not an exhaustive list of
+every repository that later work may involve. For Delivery, present this as
+the **main implementation repository**. Delivery planning records each work
+item's implementation repository separately; it may use another admitted
+repository. Do not claim this selection automatically assigns every child.
+
+For Prototype, present the choice as **incubation source home** and an existing
+selection as **incubation repository**. Prototype Studio uses its existing
+repository without requiring a dedicated project repository. This choice
+does not create source or permanently assign the finished product's repository.
+Landing and the later Delivery handoff retain their existing custody checks.
+Disposition and Handoff must describe the same scope. Preserve canonical
+repository modes, gate states, references and historical decisions.
+
 ## States
 
 Proposal must distinguish:

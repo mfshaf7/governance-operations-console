@@ -33,7 +33,7 @@ export function useRepositoryCatalogChoices(enabled: boolean, focus = "") {
     setRevision(value => value + 1);
   }, []);
   return { result: current?.result ?? null, query,
-    loading: enabled && (current === null || refreshing), error: current?.error ?? null,
+    loading: enabled && (current === null || (current.result === null && current.error === null) || refreshing), error: current?.error ?? null,
     onQueryChange: (value: string) => setQuery(value.trim().toLowerCase().slice(0, 128)),
     refresh };
 }

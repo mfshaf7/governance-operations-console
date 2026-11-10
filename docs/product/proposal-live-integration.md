@@ -243,3 +243,25 @@ live activation. Operator preview review precedes publication; exact composed
 runtime acceptance and authenticated live readback remain the publication gate.
 
 The accumulated preview register batch is documented in [Register navigation and coverage](register-navigation-and-coverage.md).
+
+## Repository selection meaning
+
+For Delivery, Disposition and Handoff identify one **main implementation
+repository** for the initiative. Delivery planning records each work item's
+implementation repository; another onboarded repository can be selected for a
+particular item. This is not a promise that every child is assigned automatically.
+
+For Prototype, the choice is the **incubation source home**. **Prototype Studio**
+uses Studio's existing repository without requesting a dedicated project
+repository. **Existing Repo** selects another incubation repository; **New Repo**
+requires the existing Repository Control resolution before handoff. Landing is
+still separate from capture, and the later Delivery handoff reviews the
+implementation source home again.
+
+These captions clarify existing scope. They do not change canonical payloads,
+source custody, repository admission, historical decisions or command authority.
+
+The shared repository choice reader reports loading until its first result or
+error settles. An empty initial state is not evidence that Studio is missing.
+Existing background refreshes keep their current behavior and submission still
+requires current admitted repository evidence.

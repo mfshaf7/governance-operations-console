@@ -132,7 +132,7 @@ test('Prototype offers Studio incubation without a project repository and sends 
 test('Studio, another repository, new repository and Delivery no-repository choices retain distinct meanings',async({page})=>{
   const {dialog,writes}=await open(page);const choices=await choosePrototype(dialog);
   await choices.getByRole('radio',{name:'Existing Repo',exact:true}).click();
-  await dialog.getByLabel('Existing implementation repository',{exact:true}).click();
+  await dialog.getByLabel('Incubation repository',{exact:true}).click();
   await page.getByRole('option',{name:/example-project/}).click();
   await choices.getByRole('radio',{name:'New Repo',exact:true}).click();
   await expect(dialog).toContainText('creates a request in Repository Control');
@@ -221,7 +221,7 @@ test('Proposal reuse searches current internal Registry repositories and sends t
  await dialog.getByRole('radiogroup',{name:'Proposal route target',exact:true}).getByRole('radio',{name:'Delivery',exact:true}).click();
  await dialog.getByRole('radiogroup',{name:'Proposal repository requirement',exact:true}).getByRole('radio',{name:'Existing Repo',exact:true}).click();
  await dialog.getByRole('textbox',{name:'Search onboarded repositories',exact:true}).fill('synthetic');
- await dialog.getByRole('button',{name:'Existing implementation repository',exact:true}).click();
+ await dialog.getByRole('button',{name:'Main implementation repository',exact:true}).click();
  await page.getByRole('option',{name:new RegExp(nativeRepoName)}).click();
  await dialog.getByRole('textbox',{name:'Decision notes',exact:true}).fill('Use this onboarded internal source repository for Delivery.');
  await dialog.getByLabel('Route rationale',{exact:true}).fill('Keep internal source under its current registered identity.');

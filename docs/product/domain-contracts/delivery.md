@@ -292,6 +292,13 @@ stable package context. Downstream Delivery surfaces receive that context, but
 they should only render it when it helps the operator make or audit a decision.
 Catalog does not consume package source custody.
 
+The Proposal repository selection identifies the initiative's main repository,
+not a restriction on all descendant work. Each work item's implementation
+repository is a separate recorded value. Refinement must explain this on the
+selected repository field and retain its existing admitted Catalog options and
+per-target confirmation. Do not imply that changing a child silently changes
+the Proposal's retained source custody or another work item's repository.
+
 Execution-time source custody repair is a separate concern from Intake. If an
 operator discovers during active Delivery execution that a work item now needs a
 repo owner, the console must not free-text that value into the work item. The

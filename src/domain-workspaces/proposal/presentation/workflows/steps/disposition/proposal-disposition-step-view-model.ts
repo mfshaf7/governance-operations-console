@@ -71,7 +71,7 @@ export function proposalRegisteredRepoSelectOptions(repositories = proposalRegis
   value: string;
 }> {
   return [
-    { label: "Select implementation repository", value: "" },
+    { label: "Select repository", value: "" },
     ...repositories.map((repo) => ({
       label: `${repo.label} / ${repo.owner}`,
       value: repo.value,
