@@ -12,9 +12,13 @@ async function openProposal(page, record, titleOverride) {
     writes.push(route.request().url());
     return route.abort();
   });
-  if (record) await page.route("**/api/proposals", route => route.fulfill({json: {
-    mode: "live", status: "current", error: null, observedAt: new Date().toISOString(), records: [record],
-  }}));
+  if (record) {
+    await page.route("**/api/proposals", route => route.fulfill({json: {
+      mode: "live", status: "current", error: null, observedAt: new Date().toISOString(), records: [record],
+    }}));
+    await page.route(`**/api/proposals/${record.projection.proposal_id}`, route =>
+      route.fulfill({json: {...record, summaryOnly: false}}));
+  }
   await page.goto(base, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => {
     const n = document.querySelector('button[title="Open PROPOSAL"]');

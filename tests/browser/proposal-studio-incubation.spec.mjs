@@ -221,7 +221,7 @@ test('Proposal reuse searches current internal Registry repositories and sends t
  await dialog.getByRole('radiogroup',{name:'Proposal route target',exact:true}).getByRole('radio',{name:'Delivery',exact:true}).click();
  await dialog.getByRole('radiogroup',{name:'Proposal repository requirement',exact:true}).getByRole('radio',{name:'Existing Repo',exact:true}).click();
  await dialog.getByRole('textbox',{name:'Search onboarded repositories',exact:true}).fill('synthetic');
- await dialog.getByRole('button',{name:'Incubation repository',exact:true}).click();
+ await dialog.getByRole('button',{name:'Main implementation repository',exact:true}).click();
  await page.getByRole('option',{name:new RegExp(nativeRepoName)}).click();
  await dialog.getByRole('textbox',{name:'Decision notes',exact:true}).fill('Use this onboarded internal source repository for Delivery.');
  await dialog.getByLabel('Route rationale',{exact:true}).fill('Keep internal source under its current registered identity.');

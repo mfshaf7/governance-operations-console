@@ -260,3 +260,8 @@ implementation source home again.
 
 These captions clarify existing scope. They do not change canonical payloads,
 source custody, repository admission, historical decisions or command authority.
+
+The shared repository choice reader reports loading until its first result or
+error settles. An empty initial state is not evidence that Studio is missing.
+Existing background refreshes keep their current behavior and submission still
+requires current admitted repository evidence.
