@@ -11,6 +11,7 @@ export type ClosureFieldSpec = Readonly<{
   label: string;
   placeholder: string;
   kind: "ref" | "text";
+  helper?: string;
 }>;
 
 export const closureActionLabels: Record<PrototypeClosureAction, string> = {
@@ -35,15 +36,15 @@ const specs: Record<ClosureFieldKey, ClosureFieldSpec> = {
   accepted_baseline_receipt_ref: { key: "accepted_baseline_receipt_ref", label: "Accepted baseline receipt", placeholder: "receipt://...", kind: "ref" },
   target_kind: { key: "target_kind", label: "Delivery target", placeholder: "", kind: "text" },
   target_delivery_ref: { key: "target_delivery_ref", label: "Existing Delivery item", placeholder: "openproject://work_packages/...", kind: "ref" },
-  accepted_delivery_target_receipt_ref: { key: "accepted_delivery_target_receipt_ref", label: "Accepted Delivery receipt", placeholder: "receipt://...", kind: "ref" },
-  durable_owner_ref: { key: "durable_owner_ref", label: "Durable owner", placeholder: "Owner identity", kind: "text" },
-  durable_repo_ref: { key: "durable_repo_ref", label: "Durable repository", placeholder: "github://...", kind: "ref" },
-  durable_owner_acceptance_ref: { key: "durable_owner_acceptance_ref", label: "Owner acceptance", placeholder: "receipt://...", kind: "ref" },
+  accepted_delivery_target_receipt_ref: { key: "accepted_delivery_target_receipt_ref", label: "Accepted Delivery receipt", helper: "Copy the accepted application receipt from Delivery or the retained Studio record.", placeholder: "oos://receipts/prototype-delivery-application/...", kind: "ref" },
+  durable_owner_ref: { key: "durable_owner_ref", label: "Maintaining project or component", helper: "Use the registered project/component reference that accepts responsibility for this source.", placeholder: "Registered project or component reference", kind: "text" },
+  durable_repo_ref: { key: "durable_repo_ref", label: "Destination repository", helper: "The registered repository receiving this prototype source.", placeholder: "github://account/repository", kind: "ref" },
+  durable_owner_acceptance_ref: { key: "durable_owner_acceptance_ref", label: "Source acceptance receipt", helper: "Reviewed acceptance from the destination project/component; a repository URL alone is not acceptance.", placeholder: "receipt://...", kind: "ref" },
   transfer_strategy: { key: "transfer_strategy", label: "Source transfer", placeholder: "", kind: "text" },
   already_owned_source_proof_ref: { key: "already_owned_source_proof_ref", label: "Existing ownership proof", placeholder: "receipt://...", kind: "ref" },
   retirement_reason: { key: "retirement_reason", label: "Retirement reason", placeholder: "Why should incubation end?", kind: "text" },
-  retention_plan_ref: { key: "retention_plan_ref", label: "Retention plan", placeholder: "record://...", kind: "ref" },
-  runtime_disposition_plan_ref: { key: "runtime_disposition_plan_ref", label: "Runtime disposition plan", placeholder: "record://...", kind: "ref" },
+  retention_plan_ref: { key: "retention_plan_ref", label: "Source retention plan", helper: "Reviewed Studio plan identifying the source and evidence to retain.", placeholder: "record://prototype-closure/.../retention-plans/...", kind: "ref" },
+  runtime_disposition_plan_ref: { key: "runtime_disposition_plan_ref", label: "Runtime cleanup plan", helper: "Platform-reviewed plan for stopping or retaining the prototype runtime; required even when the decision is no runtime action.", placeholder: "record://...", kind: "ref" },
   prior_retirement_receipt_ref: { key: "prior_retirement_receipt_ref", label: "Prior retirement receipt", placeholder: "receipt://...", kind: "ref" },
 };
 

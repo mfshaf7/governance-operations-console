@@ -535,3 +535,22 @@ Manual instructions, automated plans and source-control success never count as
 passed application results. Public synthetic main-source qualification stays
 explicit. The [verification maturity delta](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-11-03-repository-verification-maturity.md)
 owns this change review; exact composed runtime acceptance remains separate.
+
+## Source editor runtime preview extension (unpublished)
+
+The optional embedded preview reads the existing source owner's runtime.
+A project-owned profile must opt into the current exact loopback Console
+origin before framing is offered. Studio remains default-deny; Console does
+not proxy app HTML, inherit app credentials or run draft contents. Native
+loopback app frames are cross-origin, sandboxed without forms, popups or top
+navigation, with no-referrer and denied camera/microphone/location/clipboard
+permissions. Existing app network and server-mutation restrictions remain.
+The running source revision/digest is separate from private draft identity.
+
+The choice travels through the reviewed owner profile preparation intent,
+not a chat action or direct runtime policy mutation. Source approval, Gary
+application/publication and runtime reconciliation remain separate.
+The Studio incubation baseline remains context, not acceptance of this new
+ancestor opt-in. Fresh composed Security delta review and normal Platform
+acceptance are required before this unpublished extension is commissioned.
+Isolated native HTTP/browser tests do not qualify a production integration.

@@ -64,10 +64,12 @@ export function PrototypePreviewRuntimeModal({
   onPreviewProfileAction,
   onPreviewRuntimeAction,
   ownerMode,
+  ownerError,
   receipts,
   record,
 }: {
   receipts: PrototypeProjectedReceipt[];
+  ownerError?: {code: string; message: string} | null;
   ownerMode: "disconnected" | "error" | "live" | "loading";
   onBackToDashboard: () => void;
   onClose: () => void;
@@ -242,7 +244,7 @@ export function PrototypePreviewRuntimeModal({
               value={activeTab}
             />
 
-            {ownerMode === "loading" ? <TerasLoadingState label="Checking preview runtime…" skeleton="details" /> : ownerMode === "error" ? <TerasEmptyState>Studio preview status is unavailable. Reopen Preview Runtime to retry; local examples are excluded.</TerasEmptyState> : modeStage}
+            {ownerMode === "loading" ? <TerasLoadingState label="Checking preview runtime…" skeleton="details" /> : ownerMode === "error" ? <TerasEmptyState>{ownerError?.code === "prototype_preview_profile_missing" ? ["graduated", "retired"].includes(selectedRecord.lifecycle) ? "This incubation has ended and has no saved Studio preview profile. Inspect the current application runtime through its Delivery or product record." : selectedRecord.landing.state !== "landed" ? "Complete Landing before preparing a Preview profile. A captured idea does not need a running app yet." : selectedRecord.landing.previewNeed === "none" ? "This prototype does not require a preview runtime. No profile is configured." : ownerError.message : ownerError?.message ?? "Preview status could not be checked. Reopen this view to retry."}</TerasEmptyState> : modeStage}
           </TerasZone>
 
           <TerasZone fit="fill">{ownerMode === "loading" || ownerMode === "error" ? null : modeDock}</TerasZone>

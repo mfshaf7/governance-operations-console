@@ -95,6 +95,7 @@ const completedDomains = [
 
 const allowedIndexPaths = new Set([
   "src/domain-workspaces/delivery/index.ts",
+  "src/domain-workspaces/delivery/server/index.ts",
   "src/domain-workspaces/delivery/local-runtime/index.ts",
   "src/domain-workspaces/delivery/presentation/package-register/index.ts",
   "src/domain-workspaces/delivery/presentation/workflows/refinement/index.ts",

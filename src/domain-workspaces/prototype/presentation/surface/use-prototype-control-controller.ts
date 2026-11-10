@@ -287,8 +287,8 @@ export function usePrototypeControlController({
         }
       : {}),
   };
-  const summaryReady=primaryRecordIsolation.fixtureAllowed || overview.readModel!==null;
-  const stats = getPrototypeWorkspaceStats(primaryRecordIsolation.fixtureAllowed?readModel.records:overview.readModel?.records??[]);
+  const summaryReady=primaryRecordIsolation.fixtureAllowed || overview.stats!==null;
+  const stats = primaryRecordIsolation.fixtureAllowed ? getPrototypeWorkspaceStats(readModel.records) : overview.stats ?? getPrototypeWorkspaceStats([]);
   const workspaceStatus: OperationSurfaceStatusModel =
     primaryRecordIsolation.fixtureAllowed || primaryRecordIsolation.liveAuthorityAllowed
       ? prototypeWorkspaceStatus(readModel, stats, primaryRecordIsolation.liveAuthorityAllowed)
@@ -640,6 +640,7 @@ export function usePrototypeControlController({
       open: requestOpen,
     },
     selectedPreviewReceipts,
+    selectedPreviewOwnerError: activeRecord ? previewRuntime.errorByRecord[activeRecord.id] ?? null : null,
     selectedPreviewOwnerMode: selectedPreviewMode,
     selectedReceipts,
     selectedClosure: activeRecord ? {

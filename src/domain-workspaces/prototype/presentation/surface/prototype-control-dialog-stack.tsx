@@ -40,7 +40,9 @@ type PrototypeControlDialogStackProps = {
   activeDialog: PrototypeDialogRoute | null;
   activeRecord: PrototypeRecord | null;
   canSubmitRequest: boolean;
+  canonicalRecords: boolean;
   previewReceipts: PrototypeProjectedReceipt[];
+  previewOwnerError: PrototypeControlController["selectedPreviewOwnerError"];
   previewOwnerMode: PrototypeControlController["selectedPreviewOwnerMode"];
   receipts: PrototypeProjectedReceipt[];
   landingProjection: PrototypeLandingLiveProjection | null;
@@ -102,8 +104,10 @@ export function PrototypeControlDialogStack({
   activeDialog,
   activeRecord,
   canSubmitRequest,
+  canonicalRecords,
   previewReceipts,
   previewOwnerMode,
+  previewOwnerError,
   receipts,
   landingProjection,
   maturityProgress,
@@ -170,6 +174,7 @@ export function PrototypeControlDialogStack({
       />
       <PrototypePreviewRuntimeModal
         ownerMode={previewOwnerMode}
+        ownerError={previewOwnerError}
         receipts={previewReceipts}
         onBackToDashboard={onBackToDashboard}
         onClose={onCloseDialog}
@@ -194,6 +199,7 @@ export function PrototypeControlDialogStack({
         sourceDeliveryPacket={sourceDeliveryPacket}
       />
       <PrototypeHistoryModal
+        canonical={canonicalRecords}
         closure={closure}
         closureActions={closureActions}
         receipts={receipts}

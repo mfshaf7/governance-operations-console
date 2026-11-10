@@ -1,3 +1,4 @@
+import type { SourcePreviewAdapter } from "./source-preview-contract.ts";
 export const sourceEditorLimits = { fileBytes: 65536, readBytes: 262144, readFiles: 48, treePaths: 5000, operations: 64, changedBytes: 524288, wireBytes: 1048576 } as const;
 export type SourceOperation = { action: "create" | "replace" | "delete"; path: string; content: string | null; expected_digest: string | null };
 export type OperatorDraftCommand = {
@@ -22,6 +23,7 @@ export type SourceEditorState = {
 };
 export type SourceEditorTarget = {
   endpoint: string; label: string; current: SourceEditorState; objective: string;
+  preview?: SourcePreviewAdapter;
   objectiveReadOnly?: boolean; objectiveMin: number; objectiveMax: number;
   scope: null | { source_root: string; design_profile: string };
 };

@@ -1,3 +1,4 @@
+import { prototypeSourceEligibility } from "../shared/prototype-source-work-display.ts";
 import { TerasActionButton, TerasActionRow, TerasSelectedPanel } from "@/teras";
 
 import type { PrototypeRecord } from "../../read-model/prototype-workspace-read-model.ts";
@@ -47,7 +48,7 @@ export function PrototypeControlSelectedPanel({
             >
               Open Dashboard
             </TerasActionButton>
-            {onOpenSourceAuthoring && !prototypeIsTerminal(selectedRecord) ? <TerasActionButton emphasis="secondary" onClick={() => onOpenSourceAuthoring(selectedRecord)}>Open Source Authoring</TerasActionButton> : null}
+            {onOpenSourceAuthoring && !prototypeIsTerminal(selectedRecord) ? <TerasActionButton emphasis="secondary" onClick={() => onOpenSourceAuthoring(selectedRecord)}>{prototypeSourceEligibility(selectedRecord) ? "Inspect source work" : "Open Source Authoring"}</TerasActionButton> : null}
           </TerasActionRow>
         ),
         title: selectedRecord.currentMove.label,

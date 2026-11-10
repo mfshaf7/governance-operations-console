@@ -62,7 +62,7 @@ export function PrototypeClosureModal({
   record: PrototypeRecord | null;
 }) {
   const [step, setStep] = useState<Step>("prepare");
-  const [action, setAction] = useState<PrototypeClosureAction>("retire-incubation");
+  const [action, setAction] = useState<PrototypeClosureAction | null>(null);
   const [fields, setFields] = useState<PrototypeClosureRequestFields>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -72,18 +72,18 @@ export function PrototypeClosureModal({
   const preparation = closure?.preparation ?? null;
   const result = closure?.result ?? null;
   const available = preparation ? closureActionsForLifecycle(preparation.expected_state.lifecycle) : [];
-  const selectedAction = available.includes(action) ? action : available[0] ?? action;
-  const selectedFields = selectedAction === action
+  const selectedAction = action && available.includes(action) ? action : null;
+  const selectedFields = !selectedAction || selectedAction === action
     ? fields
     : initialClosureFields(selectedAction, ownerEvidence);
-  const complete = available.length > 0 && closureFieldsComplete(selectedAction, selectedFields);
+  const complete = Boolean(selectedAction && closureFieldsComplete(selectedAction, selectedFields));
 
   useEffect(() => {
     if (!record) return;
     setStep(result && !["succeeded", "denied", "failed"].includes(result.status) ? "result" : "prepare");
     setMessage(null);
     setDirty(false);
-    setAction("retire-incubation");
+    setAction(null);
     setFields({});
   }, [record?.id]);
 
@@ -95,7 +95,7 @@ export function PrototypeClosureModal({
 
   function chooseAction(next: PrototypeClosureAction) {
     setAction(next);
-    setFields(initialClosureFields(next, ownerEvidence));
+    setFields(initialClosureFields(next, { ...ownerEvidence, accepted_delivery_target_receipt_ref: ownerEvidence.accepted_delivery_target_receipt_ref ?? preparation?.expected_state.accepted_delivery_target_receipt_ref ?? undefined }));
     setDirty(true);
     setMessage(null);
   }
@@ -106,7 +106,7 @@ export function PrototypeClosureModal({
   }
 
   async function submit() {
-    if (!preparation || !complete || busy) return;
+    if (!preparation || !selectedAction || !complete || busy) return;
     setBusy(true);
     setMessage(null);
     try {
@@ -250,7 +250,7 @@ export function PrototypeClosureModal({
             <TerasChoiceGroup ariaLabel="Closure action" frame="tray" label="Action"
               options={available.map((id) => ({ id, label: closureActionLabels[id],
                 tone: id === "retire-incubation" ? "danger" as const : "info" as const }))}
-              selectedId={selectedAction} onSelect={chooseAction} />
+              selectedId={selectedAction ?? ""} onSelect={(id: string) => { if (available.includes(id as PrototypeClosureAction)) chooseAction(id as PrototypeClosureAction); }} />
             {selectedAction === "graduate-source" ? <TerasChoiceGroup
               ariaLabel="Source transfer strategy" frame="tray" label="Source transfer"
               options={[{ id: "transfer", label: "Transfer source", tone: "info" },
@@ -260,8 +260,14 @@ export function PrototypeClosureModal({
                 setFields(({ already_owned_source_proof_ref: _old, ...current }) => ({ ...current, transfer_strategy }));
                 setDirty(true);
               }} /> : null}
+            {!selectedAction ? <TerasEmptyState>Choose the lifecycle change you want to review. Opening this form does not select an action.</TerasEmptyState> : <TerasEmptyState>{selectedAction === "graduate-source"
+              ? "Use the accepted Delivery receipt and reviewed acceptance from the repository that will maintain this source. Studio-recorded references are prefilled when available; the owner verifies every reference at submission."
+              : selectedAction === "retire-incubation"
+                ? "Retirement requires a reviewed Studio retention plan and Platform runtime cleanup plan. If either is missing, prepare that prerequisite before submitting; entering a reference does not create or approve a plan."
+                : selectedAction === "apply-delivery" ? "Complete Delivery application first. These references come from its accepted result and are verified again at submission."
+                  : "Use the prior retirement receipt. The owner checks the retained source before reopening incubation."}</TerasEmptyState>}
             <TerasFieldGrid columns={2} spacing="normal">
-              {closureFieldsForAction(selectedAction, selectedFields).map((spec) =>
+              {(selectedAction ? closureFieldsForAction(selectedAction, selectedFields) : []).map((spec) =>
                 selectedAction === "apply-delivery" ? <TerasReadoutField
                   key={spec.key} label={spec.label} fit="content"
                   value={selectedFields[spec.key] ?? "Complete Delivery ingress first"} /> :
@@ -272,7 +278,7 @@ export function PrototypeClosureModal({
                   <TerasTextField key={spec.key} label={spec.label}
                     value={selectedFields[spec.key] ?? ""}
                     onValueChange={(value) => updateField(spec.key, value)}
-                    placeholder={spec.placeholder} />)}
+                    placeholder={spec.placeholder} helper={spec.helper} maxLength={512} />)}
             </TerasFieldGrid>
             {message ? <TerasEmptyState>{message}</TerasEmptyState> : null}
           </TerasFieldStack> : <TerasEmptyState>
@@ -284,9 +290,9 @@ export function PrototypeClosureModal({
         {step === "review" ? <TerasWizardPanel kicker="Closure Review" title="Confirm the request"
           description="Submission records a request. Approval, source merge, readback, and receipt remain separate steps.">
           <TerasList frame="contained">
-            <TerasStatusItem label="Action" detail={closureActionLabels[selectedAction]}
+            <TerasStatusItem label="Action" detail={selectedAction ? closureActionLabels[selectedAction] : "Choose an action"}
               status="selected" tone="info" />
-            {closureFieldsForAction(selectedAction, selectedFields).map((spec) =>
+            {(selectedAction ? closureFieldsForAction(selectedAction, selectedFields) : []).map((spec) =>
               <TerasStatusItem key={spec.key} label={spec.label}
                 detail={selectedFields[spec.key] ?? "Missing"}
                 status={selectedFields[spec.key] ? "provided" : "needed"}

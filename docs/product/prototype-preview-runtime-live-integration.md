@@ -107,3 +107,5 @@ npm audit --omit=dev
 The operation-runtime suite covers exact command construction, stale-state
 denial, output validation, receipt digest verification, proof binding,
 configuration failure, bounded errors, and visible owner projection.
+
+Current inspection repair and operator review scope: [Prototype Studio maintenance](prototype-inspection-maintenance.md). This batch remains in preview until normal publication and exact-source acceptance.

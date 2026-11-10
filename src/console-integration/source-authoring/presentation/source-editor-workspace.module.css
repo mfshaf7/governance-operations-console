@@ -1,0 +1,54 @@
+.workspace { width:100%; flex:1; min-width:0; display:grid; grid-template-rows:max-content minmax(0,1fr); height:100%; min-height:0; gap:1rem; overflow:hidden; }
+.columns { display:grid; grid-template-columns:minmax(14rem,18rem) minmax(0,1fr) minmax(18rem,22rem); min-width:0; min-height:0; gap:1rem; overflow:hidden; }
+.status { max-height:35vh; overflow:auto; scrollbar-width:thin; }
+.file { overflow-wrap:anywhere; }
+.message { white-space:pre-wrap; overflow-wrap:anywhere; margin:0; font-size:.82rem; line-height:1.5; }
+.editor { display:grid; grid-template-rows:auto minmax(0,1fr); min-height:0; gap:.7rem; overflow:hidden; }
+.editor > :last-child { min-height:0; overflow:auto; scrollbar-width:thin; }
+.context { display:flex; flex-wrap:wrap; gap:.4rem; }
+@media(max-width:1100px) { .columns { grid-template-columns:minmax(12rem, .8fr) minmax(0,2fr); grid-template-rows:minmax(30rem,1fr) minmax(25rem,1fr); align-content:start; overflow:auto; } .columns > :last-child { grid-column:1 / -1; min-height:24rem; } }
+
+.withoutAssistant { grid-template-columns:minmax(14rem,18rem) minmax(0,1fr); }
+.tree { list-style:none; margin:0; padding:.35rem .2rem; min-width:0; border:1px solid var(--line); border-radius:6px; background:rgba(0,0,0,.2); }
+.treeRow { display:flex; align-items:center; min-width:0; gap:.25rem; }
+.treeEntry { display:flex; align-items:center; gap:.4rem; flex:1; min-width:0; min-height:2rem; padding:.3rem .4rem; border:1px solid transparent; border-radius:5px; background:transparent; color:var(--text); text-align:left; font:inherit; font-size:.78rem; cursor:pointer; }
+.treeEntry svg,.treeIndent { flex-shrink:0; }
+.treeIndent { width:13px; }
+.treeEntry:hover { background:rgba(255,193,90,.07); }
+.treeEntry[aria-selected="true"] { background:rgba(255,193,90,.11); border-color:rgba(255,193,90,.25); }
+.treeEntry:focus-visible { outline:2px solid var(--amber); outline-offset:-2px; }
+.treeEntry[aria-disabled="true"] { opacity:.55; cursor:default; }
+.treeName { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fileChange { color:var(--amber); margin-left:auto; font-size:.65rem; }
+.contextCheck { accent-color:var(--amber); width:13px; height:13px; flex-shrink:0; cursor:pointer; }
+.explorerHint { margin:.2rem 0; font-size:.68rem; line-height:1.6; color:var(--muted); }
+.createPath { display:grid; gap:.6rem; padding:.65rem; border:1px solid var(--line); border-radius:8px; }
+@media(max-width:1100px) { .withoutAssistant { grid-template-rows:minmax(30rem,1fr); } .withoutAssistant > :last-child { grid-column:auto; min-height:0; } }
+
+/* Use the workspace's existing trays to group controls by task. */
+.compactGroup { padding:.65rem; }
+.savedDetails { margin-top:.75rem; }
+.importTools { display:grid; gap:.75rem; padding:.1rem 0; }
+.importTools > button { width:100%; }
+.editorToolbar { padding:.55rem .65rem; }
+.editorToolRow { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.65rem; min-width:0; }
+.conversationFrame { border:1px solid var(--line); border-radius:8px; padding:.65rem; background:rgba(0,0,0,.18); }
+.assistantFooter { min-width:0; }
+.composer { padding:.7rem; }
+@media(max-width:1100px) { .columns { grid-template-rows:minmax(32rem,1fr) minmax(30rem,1fr); } .withoutAssistant { grid-template-rows:minmax(32rem,1fr); } }
+
+.assistantPane[data-layout="header-body-footer"] { grid-template-rows:auto minmax(6rem,1fr) auto; }
+
+.editor { container-type:inline-size; container-name:source-editor; }
+.sourceCanvas { display:grid; grid-template-columns:minmax(0,1fr); min-height:0; min-width:0; gap:.75rem; overflow:hidden; }
+.sourceCanvas[data-layout="split"] { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+.codePane,.previewPane { min-width:0; min-height:0; overflow:auto; scrollbar-width:thin; }
+.codePane[hidden],.previewPane[hidden] { display:none; }
+.previewWorkspace { height:100%; min-width:0; min-height:0; display:grid; grid-template-rows:auto minmax(10rem,1fr); gap:.7rem; }
+.previewStatus { padding:.6rem; }
+.previewStatus details { margin-top:.3rem; }
+.previewFrame { width:100%; height:100%; min-height:10rem; border:1px solid var(--line); border-radius:8px; background:#fff; }
+@container source-editor (max-width:760px) { .sourceCanvas[data-layout="split"] { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(20rem,1fr) minmax(24rem,1fr); overflow:auto; } }
+
+.previewFrameHost { position:relative; min-width:0; min-height:10rem; height:100%; }
+.frameOverlay { position:absolute; inset:0; overflow:auto; border:1px solid var(--line); border-radius:8px; background:var(--canvas-soft); padding:.5rem; }

@@ -11,3 +11,5 @@ export {
   provePrototypePreviewRoute,
   readPrototypePreviewRoute,
 } from "./prototype-preview-api-routes.ts";
+
+export { prototypeSourceEditorRoute } from "./prototype-source-editor-api-routes.ts";

@@ -1,3 +1,4 @@
+import type { PrototypeClosurePreparation } from "../../../live-runtime/prototype-closure-live-types.ts";
 import type { TerasTone } from "@/teras";
 
 import type {
@@ -29,10 +30,15 @@ export type PrototypeHistoryTimelineRow = {
 export function prototypeHistoryTimelineRows(
   _record: PrototypeRecord,
   receipts: PrototypeHistoryReceipt[],
+  preparation: PrototypeClosurePreparation | null = null,
 ): PrototypeHistoryTimelineRow[] {
-  return prototypeReceiptsOldestFirst(receipts).map(
-    prototypeHistoryReceiptTimelineRow,
-  );
+  const uniqueReceipts = [...new Map(receipts.map(receipt => [receipt.id, receipt])).values()];
+  return [...prototypeReceiptsOldestFirst(uniqueReceipts).map(prototypeHistoryReceiptTimelineRow),
+    ...(preparation?.history ?? []).map(event => ({
+      detail: `${event.request_ref} / ${event.previous_lifecycle} to ${event.observed_lifecycle}`,
+      label: event.event_type.replaceAll("-", " "), status: event.observed_lifecycle,
+      timestamp: event.recorded_at, tone: "info" as const,
+    }))].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 }
 
 export function prototypeHistoryEvidenceRows(record: PrototypeRecord) {
@@ -144,7 +150,6 @@ export function prototypeHistoryReceiptFacts(
   receipts: PrototypeHistoryReceipt[],
 ) {
   return prototypeReceiptsNewestFirst(receipts)
-    .slice(0, 6)
     .map((receipt) => ({
       label: receipt.label,
       value: `${receipt.resultState} / ${receipt.sourceLabel}`,

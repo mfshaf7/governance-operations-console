@@ -128,15 +128,24 @@ export function TerasWizardModal({
             steps={steps}
           />
           <TerasContentRegion
+            aria-label={typeof title === "string" ? `${title} work` : "Workflow work"}
             data-teras-wizard-body="true"
             fill
-            scroll={false}
+            role="region"
+            scroll
+            tabIndex={0}
           >
             {children}
           </TerasContentRegion>
         </TerasZone>
         {support ? (
-          <TerasZone fit="fill">
+          <TerasZone
+            aria-label={typeof title === "string" ? `${title} support` : "Workflow support"}
+            fit="fill"
+            role="region"
+            scroll
+            tabIndex={0}
+          >
             {support}
           </TerasZone>
         ) : null}

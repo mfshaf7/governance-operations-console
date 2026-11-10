@@ -8,7 +8,7 @@ export async function sourceEditorOwnerFixture(kind, { model = false } = {}) {
   const at = "2026-10-25T00:00:00.000Z", base = "a".repeat(40), sessionId = `source-session:${kind}`, requestId = "prototype-source-request:sample";
   const objective = "Update the accepted sample source through the Console.";
   const prefix = kind === "prototype" ? "prototypes/sample/" : "src/", filePath = `${prefix}app.ts`, original = "\uFEFFexport const complete = false;\r\n";
-  const commands = new Map(), writes = [], reads = [];
+  const commands = new Map(), writes = [], reads = [], assistantRequests = [];
   let revision = at, attempt = null, retainedDraft = null, tamper = null, sequence = 1;
   const sourceRequest = { schema_version: 1, request_id: requestId, prototype_id: "prototype:sample", expected_registry_revision: base, expected_source_revision: base, objective, requested_at: at };
   function realization() {
@@ -48,6 +48,13 @@ export async function sourceEditorOwnerFixture(kind, { model = false } = {}) {
       if (request.method === "POST") {
         const chunks = []; for await (const chunk of request) chunks.push(chunk);
         const body = JSON.parse(Buffer.concat(chunks).toString()), command = kind === "delivery" ? body.realization : body;
+        if (suffix === "assist") {
+          assistantRequests.push(structuredClone(command));
+          value = {schema_version:1, request_id:command.request_id, snapshot_id:command.snapshot_id, session_id:sessionId, revision:command.expected_revision,
+            message:"Synthetic source assistance", created_paths:[], edits:command.mode==="edit"?[{path:command.files[0].path,content:command.files[0].content+"// suggested\n"}]:[],
+            evidence:{profile_id:kind==="prototype"?"prototype-source-authoring-v1":"source-realization-v1",audit_ref:"audit:synthetic",context_ref:"/v1/context/lifecycle/projections/synthetic"},replayed:false};
+          if(tamper)value=tamper(value,"assist");response.writeHead(200,{"Content-Type":"application/json"});response.end(JSON.stringify(value));return;
+        }
         writes.push(command);
         const prior = commands.get(command.command_id);
         if (prior) { if (prior.digest !== digest(command)) { response.writeHead(409); response.end("{}"); return; } value = { ...prior.ack, replayed: true }; }
@@ -79,6 +86,6 @@ export async function sourceEditorOwnerFixture(kind, { model = false } = {}) {
   });
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   const baseUrl = `http://127.0.0.1:${server.address().port}`, config = { baseUrl, callerId: "governance-operations-console", callerSecret: "synthetic-source-secret", operatorId: "operator:test-owner" };
-  return { base, sessionId, requestId, filePath, original, objective, writes, reads, get revision() { return revision; }, get draft() { return retainedDraft; }, setTamper: value => { tamper = value; }, config,
+  return { base, sessionId, requestId, filePath, original, objective, writes, reads, assistantRequests, get revision() { return revision; }, get draft() { return retainedDraft; }, setTamper: value => { tamper = value; }, config,
     env: { OOS_BASE_URL: baseUrl, OOS_CALLER_ID: config.callerId, OOS_CALLER_SECRET: config.callerSecret, GOVERNANCE_CONSOLE_OPERATOR_ID: config.operatorId }, close: () => new Promise(resolve => server.close(resolve)) };
 }

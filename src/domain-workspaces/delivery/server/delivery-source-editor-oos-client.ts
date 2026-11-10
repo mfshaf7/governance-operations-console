@@ -1,3 +1,4 @@
+import { assertAssistantRequest, assertAssistantReply } from "../../../console-integration/source-authoring/source-assistant-contract.ts";
 import { assertOperatorDraftCommand, sourcePathIssue } from "../../../console-integration/source-authoring/source-editor-contract.ts";
 import { SourceEditorUnconfirmedSaveError, sourceBoundedFetch, sourceEditorState, verifySourceCapture, verifySourceDraft, verifySourceSaveAcknowledgement } from "../../../console-integration/source-authoring/server/source-editor-evidence.ts";
 import { readDeliverySourceRealization } from "./delivery-source-realization-oos-client.ts";
@@ -11,12 +12,12 @@ async function binding(workItemId: number, options: Options) {
   if (!session.session_id || !session.source || session.session_id !== realization.session_id) throw new Error("Select the actual prepared source work session.");
   return { sessionId: session.session_id, base: session.source.base_commit, realization };
 }
-async function request(workItemId: number, suffix: string, options: Options, command?: unknown) {
+async function request(workItemId: number, suffix: string, options: Options, command?: unknown, timeout = 75000) {
   const target = deliveryWorkSessionTargetId(workItemId), config = resolveDeliveryOosConfig(options.env);
   return deliveryOosRequest(config, `/v1/delivery-work-items/${target}/work-session/realization/${suffix}`, {
     method: command === undefined ? "GET" : "POST", headers: { "x-oos-operator-id": config.operatorId },
     ...(command === undefined ? {} : { body: JSON.stringify({ realization: command }) }),
-  }, sourceBoundedFetch(options.fetchImpl), 75000, command === undefined ? {
+  }, sourceBoundedFetch(options.fetchImpl), timeout, command === undefined ? {
     authority: "operator-orchestration-service", sourceOwner: "workspace-delivery-art", recordRef: `openproject://work_packages/${target}/source-realization/${suffix.split("?")[0]}`,
   } : undefined);
 }
@@ -38,4 +39,13 @@ export async function saveDeliveryEditorDraft(workItemId: number, value: unknown
     if (current.session_id !== before.sessionId) throw new Error("The owner source session changed during save readback.");
     return { ...acknowledged, current: sourceEditorState(current) };
   } catch { throw new SourceEditorUnconfirmedSaveError(); }
+}
+
+export async function assistDeliveryEditor(workItemId: number, value: unknown, options: Options = {}) {
+ const command=assertAssistantRequest(value), current=await binding(workItemId,options);
+ if(command.files.some(file=>sourcePathIssue(file.path,null)))throw Error("Select supported source paths.");
+ const result=assertAssistantReply(await request(workItemId,"assist",options,command,210000),command);
+ if(result.edits.some(edit=>sourcePathIssue(edit.path,null)))throw Error("Unsupported source proposal path.");
+ if(result.session_id!==current.sessionId)throw Error("The source assistant returned a different session.");
+ return result;
 }

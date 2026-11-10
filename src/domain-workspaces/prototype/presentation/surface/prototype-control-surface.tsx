@@ -26,37 +26,6 @@ export function PrototypeControlSurface({
   const controller = usePrototypeControlController({ entryIntent });
   const selectedRecord = controller.selectedRecord;
 
-  if (!selectedRecord) {
-    return (
-      <TerasRecordControlLayout
-        composition="compact-control"
-        data-prototype-control="true"
-        data-prototype-control-surface="unavailable"
-        mode="overview-register-selected"
-        overview={
-          <PrototypeControlOverviewPanel
-            canRequestPrototype={controller.overview.canRequestPrototype}
-            onOpenPrototypeRequest={controller.overview.onOpenPrototypeRequest}
-            requestSubmittedAt={controller.overview.requestSubmittedAt}
-            summary={controller.overview.summary}
-            unavailable={controller.overview.unavailable}
-            workspaceStatus={controller.overview.workspaceStatus}
-          />
-        }
-        register={
-          controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading prototypes…" /> : <TerasEmptyState fill>
-            {controller.entryError ?? controller.sourceAvailability.error ?? (controller.sourceAvailability.unavailable ? "Canonical Prototype records are unavailable. Fixtures are not used as fallback in live mode." : "No canonical Prototype records yet. Capture and route a Proposal to Prototype.")}
-            <TerasActionButton emphasis="secondary" onClick={() => void controller.sourceAvailability.refresh()}>Refresh canonical records</TerasActionButton>
-          </TerasEmptyState>
-        }
-        selected={
-          controller.sourceAvailability.loading ? <TerasLoadingState fill label="Preparing prototype details…" skeleton="details" /> : <TerasEmptyState fill>
-            {controller.entryError ? "The requested record has not been resolved. No unrelated record actions are available." : "No canonical Prototype record is available to select."}
-          </TerasEmptyState>
-        }
-      />
-    );
-  }
 
   return (
     <>
@@ -114,7 +83,7 @@ export function PrototypeControlSurface({
             statusTone="info"
             title="Prototype register"
           >
-            {controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading matching prototypes…" /> : controller.sourceAvailability.error ? <TerasEmptyState fill><p role="alert">{controller.sourceAvailability.error}</p><TerasActionButton emphasis="secondary" onClick={()=>void controller.sourceAvailability.refresh()}>Retry prototype search</TerasActionButton></TerasEmptyState> : controller.records.filtered.length > 0 ? (
+            {controller.sourceAvailability.loading ? <TerasLoadingState fill label="Loading matching prototypes…" /> : controller.sourceAvailability.error || controller.sourceAvailability.unavailable ? <TerasEmptyState fill><p role="alert">{controller.sourceAvailability.error ?? "Prototype records are unavailable. Retry the current search."}</p><TerasActionButton emphasis="secondary" onClick={()=>void controller.sourceAvailability.refresh()}>Retry prototype search</TerasActionButton></TerasEmptyState> : controller.records.filtered.length > 0 ? (
               <PrototypeWorkspaceRegisterTable
                 onOpenRecord={(record) =>
                   controller.openDialog("dashboard", record)
@@ -154,8 +123,10 @@ export function PrototypeControlSurface({
         activeDialog={controller.activeDialog}
         activeRecord={controller.activeRecord}
         canSubmitRequest={controller.request.canSubmit}
+        canonicalRecords={controller.selectedMaturity.mode === "live"}
         previewReceipts={controller.selectedPreviewReceipts}
         previewOwnerMode={controller.selectedPreviewOwnerMode}
+        previewOwnerError={controller.selectedPreviewOwnerError}
         receipts={controller.selectedReceipts}
         closure={controller.selectedClosure}
         closureActions={controller.workflowActions.closure}

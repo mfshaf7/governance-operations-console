@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import type { CSSProperties, InputHTMLAttributes, ReactNode } from "react";
 
 import styles from "./teras-patterns.module.css";
@@ -16,6 +17,7 @@ export type TerasTextFieldProps = Omit<
   className?: string;
   density?: TerasTextFieldDensity;
   label: ReactNode;
+  helper?: ReactNode;
   labelVisibility?: TerasFieldLabelVisibility;
   onValueChange: (value: string) => void;
   prefix?: ReactNode;
@@ -27,18 +29,22 @@ export function TerasTextField({
   className,
   density = "normal",
   label,
+  helper,
   labelVisibility = "visible",
   onValueChange,
   prefix,
   value,
   ...props
 }: TerasTextFieldProps) {
+  const labelId = useId();
   const hasPrefix = prefix !== undefined && prefix !== null;
   const input = (
     <input
       onChange={(event) => onValueChange(event.target.value)}
       value={value}
       {...props}
+      aria-labelledby={props["aria-labelledby"] ?? (helper && !props["aria-label"] ? labelId : undefined)}
+      aria-describedby={[props["aria-describedby"], helper ? `${labelId}-help` : null].filter(Boolean).join(" ") || undefined}
     />
   );
 
@@ -55,7 +61,7 @@ export function TerasTextField({
           : undefined
       }
     >
-      <span>{label}</span>
+      <span id={labelId}>{label}</span>
       {hasPrefix ? (
         <div className={styles.terasTextFieldControl}>
           <span className={styles.terasTextFieldPrefix}>{prefix}</span>
@@ -64,6 +70,7 @@ export function TerasTextField({
       ) : (
         input
       )}
+      {helper ? <small id={`${labelId}-help`}>{helper}</small> : null}
     </label>
   );
 }

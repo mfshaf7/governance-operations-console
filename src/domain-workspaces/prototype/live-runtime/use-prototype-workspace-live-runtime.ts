@@ -1,6 +1,5 @@
 "use client";
 
-import { prototypeSummaryComplete } from "./prototype-read-coverage.ts";
 import {readRegisterWindow} from '../../../console-integration/registers/read-register-window.ts';
 import {useRegisterPageSize} from '../../../console-integration/registers/use-register-page-size.ts';
 import {useCallback,useEffect,useRef,useState} from "react";
@@ -71,27 +70,27 @@ function check(response:Response,value:{mode?:string;projection?:PrototypeWorksp
 }
 
 
-// Preserve the existing whole-workspace summary independently of a filtered
-// register page. This consumes the already established canonical overview read.
+// Whole-workspace counts stay independent of the selected register page.
+// The owner overview excludes evidence documents and workflow payloads.
 export function usePrototypeWorkspaceOverview(enabled:boolean){
-  const [readModel,setReadModel]=useState<PrototypeWorkspaceLiveProjection["readModel"]|null>(null);
+  const [stats,setStats]=useState<import("../read-model/selectors/prototype-workspace-selectors.ts").PrototypeWorkspaceStats|null>(null);
   const active=useRef<AbortController|null>(null),sequence=useRef(0),pending=useRef(false);
   const refresh=useCallback(async()=>{
     if(!enabled||pending.current)return;
     pending.current=true;const controller=new AbortController();active.current=controller;const ticket=++sequence.current;
     try{
-      const response=await fetch("/api/prototypes/records",{cache:"no-store",signal:AbortSignal.any([controller.signal,AbortSignal.timeout(80000)])});
-      const value=await response.json();check(response,value);
-      if(!prototypeSummaryComplete(value))throw Error("Prototype summary is incomplete.");
-      if(ticket===sequence.current)setReadModel(value.projection.readModel);
-    }catch{if(ticket===sequence.current&&!controller.signal.aborted)setReadModel(null);}
+      const response=await fetch("/api/prototypes/records?view=overview",{cache:"no-store",signal:AbortSignal.any([controller.signal,AbortSignal.timeout(80000)])});
+      const value=await response.json();
+      if(!response.ok||value.mode!=="live"||!value.projection?.counts||!Number.isFinite(Date.parse(value.projection.lastRead))||Date.now()-Date.parse(value.projection.lastRead)>300000)throw Error("Prototype summary is incomplete.");
+      if(ticket===sequence.current)setStats(value.projection.counts);
+    }catch{if(ticket===sequence.current&&!controller.signal.aborted)setStats(null);}
     finally{if(ticket===sequence.current)pending.current=false;}
   },[enabled]);
   useEffect(()=>{
-    if(!enabled){setReadModel(null);return;}
+    if(!enabled){setStats(null);return;}
     void refresh();const visible=()=>{if(document.visibilityState==="visible")void refresh();};
     const timer=setInterval(visible,30000);document.addEventListener("visibilitychange",visible);
     return()=>{sequence.current++;active.current?.abort();pending.current=false;clearInterval(timer);document.removeEventListener("visibilitychange",visible);};
   },[enabled,refresh]);
-  return {readModel,refresh};
+  return {stats,refresh};
 }

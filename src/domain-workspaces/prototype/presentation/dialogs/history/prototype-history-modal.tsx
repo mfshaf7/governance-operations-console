@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   TerasStatusItem,
   TerasActionButton,
   TerasActionRow,
   TerasDialog,
+  TerasContentRegion,
+  TerasTrayStack,
   TerasEmptyState,
   TerasMetadataList,
   TerasPanel,
   TerasPanelHeader,
   TerasList,
+  TerasLoadingState,
   TerasStatusPill,
   TerasTimeline,
   TerasTimelineItem,
@@ -39,12 +42,14 @@ import {
 
 export function PrototypeHistoryModal({
   closure,
+  canonical,
   closureActions,
   onClose,
   onOpenClosure,
   receipts,
   record,
 }: {
+  canonical: boolean;
   closure: PrototypeClosureViewState | null;
   closureActions: PrototypeClosureViewActions;
   onClose: () => void;
@@ -52,12 +57,17 @@ export function PrototypeHistoryModal({
   receipts: PrototypeProjectedReceipt[];
   record: PrototypeRecord | null;
 }) {
+  const receiptReadSequence = useRef(0);
+  const [inspectingRequest, setInspectingRequest] = useState<string | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [inspectedResult, setInspectedResult] = useState<PrototypeClosureResult | null>(null);
 
   useEffect(() => {
+    receiptReadSequence.current++;
+    setInspectingRequest(null);
     setReceiptError(null);
     setInspectedResult(null);
+    return () => { receiptReadSequence.current++; };
   }, [record?.id]);
 
   if (!record) {
@@ -66,14 +76,8 @@ export function PrototypeHistoryModal({
 
   const preparation = closure?.preparation ?? null;
   const sourceHistory = preparation?.history ?? [];
-  const timelineRows = preparation ? sourceHistory.map((event) => ({
-    detail: `${event.request_ref} / ${event.previous_lifecycle} to ${event.observed_lifecycle}`,
-    label: event.event_type.replaceAll("-", " "),
-    status: event.observed_lifecycle,
-    timestamp: event.recorded_at,
-    tone: "info" as const,
-  })) : prototypeHistoryTimelineRows(record, receipts);
-  const evidenceRows = preparation ? [
+  const timelineRows = prototypeHistoryTimelineRows(record, receipts, preparation);
+  const evidenceRows = [...prototypeHistoryEvidenceRows(record), ...(preparation ? [
     { label: "Design baseline", detail: preparation.expected_state.design_baseline_ref ?? "Not recorded",
       status: "source", tone: "info" as const },
     { label: "Delivery packet", detail: preparation.expected_state.delivery_packet_ref ?? "Not recorded",
@@ -82,30 +86,35 @@ export function PrototypeHistoryModal({
       status: "source", tone: "info" as const },
     { label: "Retirement", detail: preparation.expected_state.retirement_ref ?? "Not recorded",
       status: "source", tone: "info" as const },
-  ] : prototypeHistoryEvidenceRows(record);
-  const lifecycleStatus = preparation ? {
+  ] : [])];
+  const lifecycleStatus = preparation && !canonical ? {
     label: preparation.expected_state.lifecycle,
     tone: "info" as const,
   } : prototypeLifecycleStatus(record);
   const terminal =
-    (preparation?.expected_state.lifecycle ?? record.lifecycle) === "retired" ||
-    (preparation?.expected_state.lifecycle ?? record.lifecycle) === "graduated";
-  const receiptTone = (preparation ? sourceHistory.length : receipts.length) > 0 ? "info" : "muted";
+    (canonical ? record.lifecycle : preparation?.expected_state.lifecycle ?? record.lifecycle) === "retired" ||
+    (canonical ? record.lifecycle : preparation?.expected_state.lifecycle ?? record.lifecycle) === "graduated";
+  const receiptTone = sourceHistory.length + receipts.length > 0 ? "info" : "muted";
   const evidencePanelTone = preparation ? "info" : prototypeHistoryRecordEvidenceTone(record);
   const evidenceRowsTone = preparation ? "info" : prototypeHistoryEvidenceRowsTone(evidenceRows);
   const selectedResult = inspectedResult;
   const pendingResult = closure?.result;
 
   async function inspectReceipt(requestId: string) {
+    const ticket = ++receiptReadSequence.current;
+    setInspectingRequest(requestId);
+    setInspectedResult(null);
     setReceiptError(null);
     try {
       const result = await closureActions.inspect(requestId);
       if (result.prototype_id !== preparation?.prototype_id) {
         throw new Error("Closure request belongs to a different Prototype.");
       }
-      setInspectedResult(result);
+      if (ticket === receiptReadSequence.current) setInspectedResult(result);
     } catch (error) {
-      setReceiptError(error instanceof Error ? error.message : "Closure receipt could not be read.");
+      if (ticket === receiptReadSequence.current) setReceiptError(error instanceof Error ? error.message : "Closure receipt could not be read.");
+    } finally {
+      if (ticket === receiptReadSequence.current) setInspectingRequest(null);
     }
   }
 
@@ -115,8 +124,8 @@ export function PrototypeHistoryModal({
       height="fill"
       width="large"
       closeLabel="Close Prototype history"
-      description={preparation ? "Studio source events and OOS Closure receipts." :
-        "Local preview history. Studio Closure authority is not connected for this record."}
+      description={canonical ? "Available Studio lifecycle events and owner receipts." :
+        "Disconnected preview history. These examples are not canonical evidence."}
       kicker="Prototype Archive"
       onClose={onClose}
       open
@@ -138,12 +147,12 @@ export function PrototypeHistoryModal({
                 </TerasStatusPill>
               }
               actionsLayout="inline"
-              description={preparation ? "References recorded in the current Studio source." :
+              description={canonical ? "References retained by the Studio record and available owner evidence." :
                 "Prototype-local preview references, not canonical Closure evidence."}
               kicker="Evidence Archive"
               title="Retained evidence"
             />
-            <TerasList frame="contained">
+            <TerasList frame="contained" scrollHeight="short" ariaLabel="Prototype retained evidence">
               {evidenceRows.map((row) => (
                 <TerasStatusItem
                   tone={row.tone}
@@ -170,11 +179,12 @@ export function PrototypeHistoryModal({
                 </TerasStatusPill>
               }
               actionsLayout="inline"
-              description={preparation ? "Closure events committed to Studio source in retained order." :
+              description={canonical ? "Available Landing, maturity, Preview and Closure events in time order." :
                 "Prototype-local preview events, not canonical Closure history."}
               kicker="Receipt Timeline"
               title="Receipt trail"
             />
+            <TerasContentRegion fill scroll role="region" aria-label="Prototype lifecycle events" tabIndex={0}>
             {timelineRows.length > 0 ? (
               <TerasTimeline ariaLabel="Prototype receipt timeline">
                 {timelineRows.map((row, index) => (
@@ -194,10 +204,13 @@ export function PrototypeHistoryModal({
                 No recorded receipt event is available.
               </TerasEmptyState>
             )}
+            </TerasContentRegion>
           </TerasPanel>
         </TerasZone>
 
-        <TerasZone fit="content">
+        <TerasZone fit="fill">
+          <TerasContentRegion fill scroll role="region" aria-label="Prototype history details" tabIndex={0}>
+          <TerasTrayStack spacing="normal">
           <TerasPanel
             frame="padded"
             treatment="neutral"
@@ -211,10 +224,10 @@ export function PrototypeHistoryModal({
                 </TerasStatusPill>
               }
               actionsLayout="inline"
-              description={preparation ? "Current Studio lifecycle and source custody." :
+              description={canonical ? "Retained Studio lifecycle and available Closure details." :
                 "Fixture lifecycle; Studio authority is not verified."}
               kicker="Archive Posture"
-              title={record.id}
+              title={record.name}
             />
             <TerasMetadataList
               items={preparation ? [
@@ -242,36 +255,40 @@ export function PrototypeHistoryModal({
             <TerasPanelHeader
               actions={
                 <TerasStatusPill tone={receiptTone}>
-                  {preparation ? sourceHistory.length : receipts.length} receipts
+                  {sourceHistory.length + receipts.length} receipts
                 </TerasStatusPill>
               }
               actionsLayout="inline"
-              description={preparation ? "Select a source event to read its OOS request and terminal receipt." :
+              description={canonical ? "Retained owner receipts; select a Closure event to inspect its request." :
                 "Prototype-local preview receipts only."}
+              busy={Boolean(inspectingRequest) || closure?.pending === true}
+              busyLabel={inspectingRequest ? "Loading receipt details…" : "Loading Closure history…"}
               kicker="Receipt Archive"
               title="Receipt sources"
             />
+            {receipts.length ? <TerasList frame="contained" scrollHeight="short">{prototypeHistoryReceiptFacts(receipts).map((item, index) => <TerasStatusItem key={`${item.label}-${index}`} label={item.label} detail={item.value} status="retained" tone="info" />)}</TerasList> : null}
             {preparation ? sourceHistory.length ? <TerasList frame="contained" scrollHeight="short">
               {sourceHistory.map((event) => <TerasStatusItem
                 key={event.event_id}
                 ariaLabel={`Inspect Closure receipt for ${event.event_type}`}
                 onSelect={() => void inspectReceipt(event.request_ref)}
-                selected={selectedResult?.request_id === event.request_ref}
+                selected={inspectingRequest === event.request_ref || selectedResult?.request_id === event.request_ref}
                 label={event.event_type.replaceAll("-", " ")}
                 detail={event.request_ref}
                 status={event.observed_lifecycle}
                 tone="info" />)}
             </TerasList> : <TerasEmptyState>No Studio Closure event is recorded yet.</TerasEmptyState> :
-            receipts.length ? (
-              <TerasMetadataList
-                items={prototypeHistoryReceiptFacts(receipts)}
-                topOffset="compact"
-              />
-            ) : (
+            receipts.length ? null : (
               <TerasEmptyState>
-                {closure?.error?.message ?? "No prototype-local preview receipt is recorded yet."}
+                {closure?.pending ? "Loading Closure evidence…" : canonical ? "No additional Closure receipt is available for this record." : "No preview receipt is recorded yet."}
               </TerasEmptyState>
             )}
+            {!preparation && !closure?.pending && closure?.error ? <TerasEmptyState>
+              {canonical && record.sourceRef.startsWith("record://prototype-captures/")
+                ? "This Proposal has not landed in Studio yet. Its available source references remain visible."
+                : "Additional Closure history could not be loaded. The available earlier receipts remain visible."}
+            </TerasEmptyState> : null}
+            {inspectingRequest ? <TerasLoadingState label="Loading receipt details…" skeleton="details" /> : null}
             {selectedResult && preparation ? <TerasMetadataList
               items={[
                 { label: "Request", value: selectedResult.request_id },
@@ -293,6 +310,8 @@ export function PrototypeHistoryModal({
               </TerasActionRow>
             ) : null}
           </TerasPanel>
+          </TerasTrayStack>
+          </TerasContentRegion>
         </TerasZone>
       </TerasZoneLayout>
     </TerasDialog>

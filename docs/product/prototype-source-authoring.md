@@ -123,3 +123,5 @@ runtime activation. Ordinary Delivery/Prototype parsers remain closed to this
 purpose. The staged [Repository entry](repository-owner-setup.md) consumes its
 own OOS workflow; end-to-end operating proof remains pending. Recognizing an
 authorization is not completing owner setup.
+
+Current inspection repair and operator review scope: [Prototype Studio maintenance](prototype-inspection-maintenance.md). This batch remains in preview until normal publication and exact-source acceptance.

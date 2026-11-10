@@ -536,6 +536,7 @@ read-model/projections/root-projection.ts
 read-model/selectors/delivery-attention-selector.ts
 read-model/selectors/workflow-package-selectors.ts
 read-model/terms/copy.ts
+server/index.ts
 server/delivery-oos-client.ts
 server/architecture-packet-api-routes.ts
 server/architecture-packet-oos-client.ts

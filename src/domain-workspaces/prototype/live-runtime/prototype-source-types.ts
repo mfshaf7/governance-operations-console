@@ -5,7 +5,7 @@ import type { PrototypeDeliverySourceCustody } from "../domain/prototype-deliver
 
 export type PrototypePreviewPreparation = {
   kind: "preview-profile"; port: number; support_profile: "interactive" | "unattended";
-  runtime_activation: boolean; ttl_seconds: number; decision_ref: string;
+  runtime_activation: boolean; ttl_seconds: number; decision_ref: string; embedding_origins?: string[];
 };
 export type PrototypeDeliveryPreparation = {
   kind: "delivery-packet"; work: { title: string; objective: string; included_scope: string[]; excluded_scope: string[]; remaining_work: string[] };

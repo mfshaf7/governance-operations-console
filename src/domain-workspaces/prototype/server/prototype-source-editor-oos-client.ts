@@ -1,3 +1,4 @@
+import { assertAssistantRequest, assertAssistantReply } from "../../../console-integration/source-authoring/source-assistant-contract.ts";
 import { assertOperatorDraftCommand, sourcePathIssue } from "../../../console-integration/source-authoring/source-editor-contract.ts";
 import { SourceEditorUnconfirmedSaveError, sourceBoundedFetch, sourceEditorState, verifySourceCapture, verifySourceSaveAcknowledgement } from "../../../console-integration/source-authoring/server/source-editor-evidence.ts";
 import { resolveConsoleOosOperatorConfiguration, type ConsoleOosOperatorConfiguration } from "../../../console-integration/configuration/console-runtime-configuration.ts";
@@ -6,12 +7,12 @@ import { readPrototypeSource } from "./prototype-source-oos-client.ts";
 import { prototypeSourceRequestId } from "../live-runtime/prototype-source-contract.ts";
 
 type Options = { config?: ConsoleOosOperatorConfiguration; fetchImpl?: typeof fetch };
-async function request(id: string, suffix: string, options: Options, command?: unknown) {
+async function request(id: string, suffix: string, options: Options, command?: unknown, timeout = 75000) {
   const config = options.config ?? resolveConsoleOosOperatorConfiguration(), base = `/v1/prototype-source-requests/${encodeURIComponent(prototypeSourceRequestId(id))}`;
   return prototypeOwnerRequest(`${base}/${suffix}`, { method: command === undefined ? "GET" : "POST", headers: { "x-oos-operator-id": config.operatorId },
     ...(command === undefined ? {} : { body: JSON.stringify(command) }), redirect: "error" }, { ...options, fetchImpl: sourceBoundedFetch(options.fetchImpl), config }, command === undefined ? {
     authority: "operator-orchestration-service", sourceOwner: "operator-orchestration-service", recordRef: `oos://prototype-source-requests/${id}/${suffix.split("?")[0]}`,
-  } : undefined, 2 * 1024 * 1024, 75000);
+  } : undefined, 2 * 1024 * 1024, timeout);
 }
 export async function readPrototypeEditorFiles(id: string, paths: string[], options: Options = {}) {
   const current = await readPrototypeSource(id, options);
@@ -31,4 +32,13 @@ export async function savePrototypeEditorDraft(id: string, value: unknown, optio
     if (!current.realization || current.session_id !== before.session_id) throw new Error("The Prototype source session changed during save readback.");
     return { ...acknowledged, current: sourceEditorState(current.realization) };
   } catch { throw new SourceEditorUnconfirmedSaveError(); }
+}
+
+export async function assistPrototypeEditor(id: string, value: unknown, options: Options = {}) {
+ const command = assertAssistantRequest(value), current = await readPrototypeSource(id, options);
+ if (!current.session_id || current.source_request.owner_preparation || !current.realization || command.files.some(file => sourcePathIssue(file.path, current.source_scope))) throw Error("Select this actual app/design source scope.");
+ const result = assertAssistantReply(await request(id, "assist", options, command, 210000), command);
+ if(result.edits.some(edit=>sourcePathIssue(edit.path,current.source_scope)))throw Error("Assistant output escapes the actual source scope.");
+ if(result.session_id !== current.session_id) throw Error("The source assistant returned a different session.");
+ return result;
 }

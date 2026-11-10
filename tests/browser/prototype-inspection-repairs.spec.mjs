@@ -1,6 +1,7 @@
 import { test, expect } from "../support/filled-surface-layout.mjs";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
+const { getPrototypeWorkspaceStats } = require("../../src/domain-workspaces/prototype/read-model/selectors/prototype-workspace-selectors.ts");
 const { prototypeWorkspaceReadModel } = require("../../src/domain-workspaces/prototype/read-model/prototype-workspace-read-model.ts");
 
 const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:3320";
@@ -17,6 +18,7 @@ async function sourceHarness(page) {
       artifactType: "console-runtime-capability-projection", schemaVersion: 1,
       mode: "live", capabilities: [],
     } });
+    if (path === "/api/prototypes/records" && new URL(request.url()).searchParams.get("view") === "overview") return route.fulfill({json:{mode:"live",projection:{counts:getPrototypeWorkspaceStats(records),lastRead:new Date().toISOString(),readPath:"compact-owner"}}});
     if (path === "/api/prototypes/records") return route.fulfill({ json: {
       mode: "live", projection: {
         sourceRevision: `test-revision-${revision}`, landing: {}, maturity: {}, closure: {},
@@ -24,6 +26,7 @@ async function sourceHarness(page) {
           source: { ...prototypeWorkspaceReadModel.source, lastRead: new Date().toISOString() } },
       },
     } });
+    if (/^\/api\/prototypes\/[^/]+\/preview-runtime$/.test(path) && request.method() === "GET") return route.fulfill({status:503,json:{code:"prototype_preview_live_mode_required",error:"Isolated UI specimen; Preview owner not connected.",retryable:false}});
     // Test responses only; no owner requests or mutations leave this browser.
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method())) {
       if (path !== "/api/prototypes/closures/preparations") writes.push(path);
@@ -150,7 +153,7 @@ test("Dashboard reads preview status without visiting Preview Runtime; unavailab
   await h.control.locator('[data-prototype-open-dashboard-action="true"]').click();
   await expect(previewCard).toContainText("Unavailable");
   await dashboard.getByRole("button", { name: "Open Preview Runtime", exact: true }).click();
-  await expect(runtime.getByText(/Studio preview status is unavailable/)).toBeVisible();
+  await expect(runtime.getByText("Owner unavailable", { exact: true })).toBeVisible();
   await expect(runtime.getByRole("button", { name: /Start Preview|Edit Profile/ })).toHaveCount(0);
   expect(h.writes).toEqual([]);
 });
@@ -183,6 +186,7 @@ test("Dashboard operations layout keeps stages, issues and last actions readable
     const baseline = page.getByRole("dialog", { name: "Baseline Promotion", exact: true });
     await expect(baseline).toBeVisible();
     await baseline.getByRole("button", { name: "Back to Dashboard", exact: true }).click();
+    await expect(dashboard).toBeVisible();
     await content.hover(); await page.mouse.wheel(0, 3000);
     const closure = content.getByRole("button", { name: "Open Closure", exact: true });
     await contained(content, closure);
@@ -190,7 +194,11 @@ test("Dashboard operations layout keeps stages, issues and last actions readable
     const closureDialog = page.getByRole("dialog", { name: "Prototype Closure", exact: true });
     await expect(closureDialog).toBeVisible();
     await closureDialog.getByRole("button", { name: "Back to Dashboard", exact: true }).click();
-    await content.focus(); await page.keyboard.press("End");
+    await expect(dashboard).toBeVisible();
+    await expect(dashboard.locator('[data-prototype-stage="preview"]')).not.toContainText("Checking");
+    // Exercise the region's actual scroll input after the returned dialog is
+    // visible; native End-key targeting is browser-dependent across dialogs.
+    await content.hover(); await page.mouse.wheel(0, 3000);
     const movement = content.getByRole("button", { name: "Open Movement Request status detail", exact: true });
     await contained(content, movement);
     await movement.click();
