@@ -4688,7 +4688,7 @@
 }
 
 .terasContentFrame[data-scroll="true"] {
-  grid-template-rows: auto minmax(max-content, 1fr);
+  grid-template-rows: max-content minmax(max-content, 1fr);
   overflow: auto;
   scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
   scrollbar-width: thin;
@@ -5774,7 +5774,9 @@
   color: rgba(245, 239, 226, 0.7);
 }
 
-.terasSelectField small {
+.terasSelectField small,
+.terasTextField > small,
+.terasNoteField > small {
   margin: 0;
   color: rgba(245, 239, 226, 0.54);
   font-size: 0.64rem;

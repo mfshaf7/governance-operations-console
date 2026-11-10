@@ -1,3 +1,4 @@
+import { prototypeSourceEligibility } from "../../shared/prototype-source-work-display.ts";
 import {
   TerasActionButton, TerasActionRow, TerasDetailGrid, TerasEmptyState,
   TerasFieldStack, TerasList, TerasMetadataList, TerasPanel, TerasPanelHeader,
@@ -50,7 +51,7 @@ export function PrototypeDashboardOperationsPanels({ record, mode, receipts, onI
       ]} />
       <TerasActionRow layout="split" spacing="normal">
         <TerasActionButton emphasis="primary" onClick={onPreview}>Open Preview Runtime</TerasActionButton>
-        {onSourceAuthoring && !terminal ? <TerasActionButton emphasis="primary" onClick={onSourceAuthoring}>Open Source Authoring</TerasActionButton> : null}
+        {onSourceAuthoring && !terminal ? <TerasActionButton emphasis="primary" onClick={onSourceAuthoring}>{prototypeSourceEligibility(record) ? "Inspect source work" : "Open Source Authoring"}</TerasActionButton> : null}
       </TerasActionRow>
     </TerasPanel>
     <TerasPanel frame="padded" treatment="neutral" spacing="normal">

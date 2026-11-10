@@ -241,7 +241,7 @@ async function runJson(context: OwnerContext, actionArgs: readonly string[]) {
     if (error instanceof PrototypePreviewOwnerError) throw error;
     if (error instanceof PrototypePreviewContractError) throw contractFailure(error.message);
     const failure = error as { code?: string; killed?: boolean; stdout?: string };
-    const ownerFailure = parseOwnerFailure(failure.stdout);
+    const ownerFailure = parseOwnerFailure(failure.stdout, context.profilePath);
     if (ownerFailure) throw ownerFailure;
     throw new PrototypePreviewOwnerError(
       failure.killed
@@ -254,14 +254,32 @@ async function runJson(context: OwnerContext, actionArgs: readonly string[]) {
   }
 }
 
-function parseOwnerFailure(stdout: string | undefined) {
+function parseOwnerFailure(stdout: string | undefined, profilePath: string) {
   if (!stdout) return null;
   try {
     const value = JSON.parse(stdout) as Record<string, unknown>;
     if (value.status !== "rejected" || typeof value.code !== "string") return null;
+    if (value.code === "profile_unreadable") {
+      let missing = false;
+      try { lstatSync(profilePath); } catch (error) { missing = (error as NodeJS.ErrnoException).code === "ENOENT"; }
+      return new PrototypePreviewOwnerError(missing
+        ? "No saved Preview profile is available. Complete Landing and prepare a profile only if this prototype needs a runtime."
+        : "The saved Preview profile could not be read. Inspect its Studio configuration before retrying.",
+        missing ? "prototype_preview_profile_missing" : "prototype_preview_profile_unreadable", missing ? 404 : 422);
+    }
+    // Owner diagnostics may contain private paths and raw exception text. Only
+    // closed, operator-safe explanations may cross the browser boundary.
+    const explanations: Record<string, string> = {
+      expected_state_stale: "Preview state changed after review. Check its current status before retrying.",
+      runtime_already_running: "The preview is already running. Check status before starting it again.",
+      runtime_not_running: "The preview is not running.",
+      stale_runtime_state: "The saved preview state needs inspection before another runtime action.",
+      request_replay_conflict: "This request conflicts with its retained preview operation. Inspect the original operation.",
+      request_replay_stale: "This retained request no longer matches current preview state.",
+    };
     return new PrototypePreviewOwnerError(
-      typeof value.message === "string" ? value.message : "Studio Preview Runtime rejected the command.",
-      value.code,
+      explanations[value.code] ?? "Studio rejected the Preview operation. Inspect its profile and current state.",
+      Object.hasOwn(explanations, value.code) ? value.code : "prototype_preview_owner_rejected",
       new Set([
         "expected_state_stale",
         "runtime_already_running",

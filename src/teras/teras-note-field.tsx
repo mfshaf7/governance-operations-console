@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import type { CSSProperties, ReactNode, TextareaHTMLAttributes } from "react";
 
 import styles from "./teras-patterns.module.css";
@@ -16,6 +17,7 @@ type TerasNoteFieldBaseProps = Omit<
   className?: string;
   density?: TerasNoteFieldDensity;
   label: ReactNode;
+  helper?: ReactNode;
   onValueChange: (value: string) => void;
   value: string;
 };
@@ -38,11 +40,13 @@ export function TerasNoteField({
   density = "normal",
   fill = false,
   label,
+  helper,
   minimumHeight = "tall",
   onValueChange,
   value,
   ...props
 }: TerasNoteFieldProps) {
+  const labelId = useId();
   return (
     <label
       className={cx(styles.terasNoteField, className)}
@@ -56,12 +60,15 @@ export function TerasNoteField({
           : undefined
       }
     >
-      <span>{label}</span>
+      <span id={labelId}>{label}</span>
       <textarea
         onChange={(event) => onValueChange(event.target.value)}
         value={value}
         {...props}
+        aria-labelledby={props["aria-labelledby"] ?? (!props["aria-label"] ? labelId : undefined)}
+        aria-describedby={[props["aria-describedby"], helper ? `${labelId}-help` : null].filter(Boolean).join(" ") || undefined}
       />
+      {helper ? <small id={`${labelId}-help`}>{helper}</small> : null}
     </label>
   );
 }

@@ -17,6 +17,7 @@ export type PrototypePreviewOwnerBoundary = Readonly<{
 
 export type PrototypePreviewOwnerProjection = Readonly<{
   boundary: PrototypePreviewOwnerBoundary;
+  embedding?: { allowed_origins: string[] };
   endpoint: string | null;
   instance_id: string | null;
   latest_receipt: PrototypePreviewOwnerReceiptRef | null;

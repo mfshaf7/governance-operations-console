@@ -89,6 +89,13 @@ export function assertPrototypePreviewProjection(
   } else if (endpoint !== null || instanceId !== null) {
     throw invalid("Inactive Preview projection exposes a live endpoint or instance.");
   }
+  if (record.embedding !== undefined) {
+    const embedding = object(record.embedding, "Preview embedding");
+    const origins = embedding.allowed_origins;
+    if (Object.keys(embedding).join(",") !== "allowed_origins" || !Array.isArray(origins) || origins.length > 8 || new Set(origins).size !== origins.length || origins.some(origin => {
+      try { const url = new URL(String(origin)); return typeof origin !== "string" || url.origin !== origin || url.protocol !== "http:" || !["localhost", "127.0.0.1"].includes(url.hostname) || !url.port || Number(url.port) < 1024; } catch { return true; }
+    })) throw invalid("Preview embedding permissions are not exact loopback origins.");
+  }
   return record as PrototypePreviewOwnerProjection;
 }
 

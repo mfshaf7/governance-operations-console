@@ -73,6 +73,37 @@ export async function readCanonicalPrototypeWorkspace(options: RequestOptions = 
   });
 }
 
+export async function readCanonicalPrototypeOverview(options: RequestOptions = {}) {
+  const config = options.config ?? resolveConfig();
+  return concurrentSourceRead("prototype-overview", config, options.fetchImpl ?? fetch, async () => {
+    let body: unknown;
+    try {
+      body = await request("/v1/prototypes?view=overview", {method:"GET"}, {...options,config}, {
+        authority:"operator-orchestration-service",sourceOwner:"workspace-prototype-studio",
+        recordRef:"repo://workspace-prototype-studio/prototypes",sourceRef:"repo://workspace-prototype-studio@main",
+      }, 8192);
+    } catch (error) {
+      // Rolling upgrade compatibility only. A positively identified old route
+      // may still provide canonical counts; unavailable/new malformed owners
+      // never fall back. Remove with the later minimum-owner-version change.
+      if (!(error instanceof PrototypeLandingOosError) || error.status !== 400 || error.code !== "prototype_register_page_invalid") throw error;
+      const legacy = await readCanonicalPrototypeWorkspace({...options,config});
+      const {getPrototypeWorkspaceStats} = await import("../read-model/selectors/prototype-workspace-selectors.ts");
+      return {counts:getPrototypeWorkspaceStats(legacy.readModel.records),sourceRevision:legacy.sourceRevision,lastRead:legacy.readModel.source.lastRead,readPath:"legacy-owner" as const};
+    }
+    const value = body as {schema_version?:number;workflow_id?:string;authority_revision?:string;counts?:Record<string,number>;canonical_mutation?:boolean};
+    const keys = ["total","exploring","candidate","baselineApproved","graduating","graduated","retired","blocked","movementReady"];
+    const counts = value?.counts;
+    if(value?.schema_version!==1 || value.workflow_id!=="prototype-overview" || value.canonical_mutation!==false ||
+      !/^[a-f0-9]{40}$/.test(value.authority_revision??"") || !counts || Object.keys(counts).sort().join()!==[...keys].sort().join() ||
+      keys.some(key=>!Number.isSafeInteger(counts[key])||counts[key]<0||counts[key]>10000) ||
+      counts.total!==counts.exploring+counts.candidate+counts.baselineApproved+counts.graduating+counts.graduated+counts.retired || counts.blocked>counts.total || counts.movementReady>counts.baselineApproved)
+      throw new PrototypeLandingOosError("Prototype overview is incomplete or inconsistent.","prototype_overview_invalid",502);
+    return {counts:counts as unknown as import("../read-model/selectors/prototype-workspace-selectors.ts").PrototypeWorkspaceStats,
+      sourceRevision:value.authority_revision!,lastRead:new Date().toISOString(),readPath:"compact-owner" as const};
+  });
+}
+
 export async function preparePrototypeLanding(
   prototypeId: string,
   options: RequestOptions = {},
@@ -464,7 +495,7 @@ async function request(
           : "OOS rejected the Prototype Landing operation.",
       typeof source.code === "string"
         ? source.code
-        : "prototype_landing_oos_rejected",
+        : typeof source.error === "string" && /^[a-z][a-z0-9_]+$/.test(source.error) ? source.error : "prototype_landing_oos_rejected",
       response.status,
       source.retryable === true || response.status >= 500,
     );

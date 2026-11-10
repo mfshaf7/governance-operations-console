@@ -307,7 +307,9 @@ export const guard = {
       `${prototypeRoot}/presentation/dialogs/history/prototype-history-view-model.ts`,
       [
         "prototypeReceiptsOldestFirst",
-        "return prototypeReceiptsOldestFirst(receipts).map(",
+        "prototypeReceiptsOldestFirst(uniqueReceipts).map(prototypeHistoryReceiptTimelineRow)",
+        "...(preparation?.history ?? []).map(event =>",
+        ".sort((a, b) => a.timestamp.localeCompare(b.timestamp))",
         "prototypeHistoryReceiptTimelineRow",
       ],
     );

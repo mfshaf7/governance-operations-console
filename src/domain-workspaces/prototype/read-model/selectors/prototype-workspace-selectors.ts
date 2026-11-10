@@ -127,10 +127,10 @@ export function getPrototypeWorkspaceStats(
   };
 }
 
-export function getPrototypeLifecycleOptions(records: PrototypeRecord[]) {
+export function getPrototypeLifecycleOptions(_records: PrototypeRecord[]) {
   return [
     { label: "All lifecycle", value: "all" as const },
-    ...Array.from(new Set(records.map((record) => record.lifecycle))).map(
+    ...(["exploring", "candidate", "baseline-approved", "graduating", "graduated", "retired"] as PrototypeLifecycle[]).map(
       (lifecycle) => ({
         label: prototypeLifecycleLabel(lifecycle),
         value: lifecycle,
@@ -139,10 +139,10 @@ export function getPrototypeLifecycleOptions(records: PrototypeRecord[]) {
   ];
 }
 
-export function getPrototypeBaselineOptions(records: PrototypeRecord[]) {
+export function getPrototypeBaselineOptions(_records: PrototypeRecord[]) {
   return [
     { label: "All baseline", value: "all" as const },
-    ...Array.from(new Set(records.map((record) => record.baseline.state))).map(
+    ...(["not-started", "drafting", "needs-evidence", "blocked", "ready-for-movement", "receipt-projected", "returned"] as PrototypeBaselinePacketState[]).map(
       (baseline) => ({
         label: prototypeBaselineLabel(baseline),
         value: baseline,

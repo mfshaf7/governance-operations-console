@@ -70,3 +70,5 @@ disconnected local preview. Source-backed fixtures that do not correspond to a
 current Studio Prototype record cannot be submitted as real Closure work.
 Runtime activation and governed environment changes remain outside this
 Console integration until their separate Platform and Security gates complete.
+
+Current inspection repair and operator review scope: [Prototype Studio maintenance](prototype-inspection-maintenance.md). This batch remains in preview until normal publication and exact-source acceptance.

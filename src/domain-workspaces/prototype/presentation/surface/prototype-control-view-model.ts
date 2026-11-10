@@ -85,9 +85,9 @@ export function prototypeWorkspaceStatus(
         detail: liveAuthority ? "Canonical Studio registry and captures with caller-scoped durable OOS progress; browser-local records are excluded." : "Prototype Control merges registry records with proposal-routed and local-entry records.",
         facts: [
           { label: "Registry", value: readModel.source.registry },
-          { label: "Total Records", value: String(readModel.records.length) },
-          { label: "Proposal Routed", value: String(proposalRoutedCount) },
-          { label: "Local Entries", value: String(localEntryCount) },
+          { label: "Total Records", value: String(stats.total) },
+          { label: liveAuthority ? "Proposal Routed (page)" : "Proposal Routed", value: String(proposalRoutedCount) },
+          { label: liveAuthority ? "Local Entries (page)" : "Local Entries", value: String(localEntryCount) },
           { label: "Last Read", value: readModel.source.lastRead },
         ],
         id: "source-projection",

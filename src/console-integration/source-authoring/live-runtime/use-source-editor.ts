@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { assertOperatorDraftCommand, assertSourceOperations, byteLength, sourcePathIssue, type OperatorDraftCommand, type SourceDraft, type SourceEditorState, type SourceEditorTarget } from "../source-editor-contract.ts";
-import { draftBuffers, replaceSourceBuffer, sourceBufferOperations, sourceDraftFingerprint, sourceEditable, sourceSaveCommand, type SourceBuffer } from "../source-editor-model.ts";
+import { draftBuffers, replaceSourceBuffer, sourceBufferOperations, sourceDraftFingerprint, sourceAssistantFingerprint, sourceEditable, sourceSaveCommand, type SourceBuffer } from "../source-editor-model.ts";
+import { sourceCreationIssue } from "../source-file-tree.ts";
 import { readEditorDraft, readEditorFiles, sourceDefinitiveSaveRejection, sourceEditorRequest, sourceObjectiveDigest, SourceEditorRequestError, type SourceSaveAcknowledgement } from "./source-editor-api.ts";
 
-type EditorData = { current: SourceEditorState; draft: SourceDraft | null; paths: string[]; truncated: boolean; base: string;
+export type EditorData = { current: SourceEditorState; draft: SourceDraft | null; paths: string[]; truncated: boolean; base: string;
   buffers: SourceBuffer[]; selected: string | null; message: string; objective: string; fingerprint: string; origin: "manual" | "import" };
 export function useSourceEditor(target: SourceEditorTarget, onSaved: (draft: SourceDraft) => void) {
   const [data, setData] = useState<EditorData | null>(null), [pending, setPending] = useState(false), [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null);
@@ -53,6 +54,15 @@ export function useSourceEditor(target: SourceEditorTarget, onSaved: (draft: Sou
     if (!file || result.capture.head_commit !== current.base || result.current.sessionId !== current.current.sessionId || result.current.revision !== current.current.revision || existing && existing.expectedDigest !== file.content_digest) throw new Error("The selected source or draft changed. Your edits are retained; refresh and reconcile before saving.");
     return existing ? { ...existing, baseline: file.content } : { path, content: file.content, expectedDigest: file.content_digest, baseline: file.content, changed: false, deleted: false };
   }
+  const addPath = (path: string, folder = false) => run(async () => {
+    const current = latest.current; if (!current || !sourceEditable(current.current.state) || command.current) return;
+    const paths = [...new Set([...current.paths, ...current.buffers.map(row => row.path)])];
+    const issue = sourceCreationIssue(path, paths, current.truncated, target.scope, folder); if (issue) throw new Error(issue);
+    if (sourceBufferOperations(current.buffers).length >= 64) throw new Error("The draft already contains 64 changed files.");
+    const file = folder ? `${path}/.gitkeep` : path;
+    setData({ ...current, selected: file, buffers: replaceSourceBuffer(current.buffers, { path: file, content: "", expectedDigest: null, baseline: null, changed: true, deleted: false }) });
+    setNotice(folder ? "Folder added to your local draft with a .gitkeep file. Save the private draft to retain it." : "File added to your local draft. Save the private draft to retain it.");
+  });
   return { data, pending, dirty, uncertain, error, notice, editable: !!data && sourceEditable(data.current.state) && !pending && !uncertain,
     reload: () => run(() => load()),
     select: (path: string) => run(async () => {
@@ -64,13 +74,8 @@ export function useSourceEditor(target: SourceEditorTarget, onSaved: (draft: Sou
     setMessage: (message: string) => update(current => ({ ...current, message })),
     setObjective: (objective: string) => update(current => ({ ...current, objective })),
     edit: (content: string) => update(current => ({ ...current, buffers: current.buffers.map(row => row.path === current.selected ? { ...row, content, deleted: false, changed: row.expectedDigest === null || row.baseline === undefined || content !== row.baseline } : row) })),
-    add: (path: string) => run(async () => {
-      const current = latest.current; if (!current || !sourceEditable(current.current.state) || command.current) return;
-      const issue = sourcePathIssue(path, target.scope); if (issue) throw new Error(issue);
-      if (current.paths.includes(path) || current.buffers.some(row => row.path === path)) throw new Error("That path exists. Select it to edit the existing file.");
-      if (sourceBufferOperations(current.buffers).length >= 64) throw new Error("The draft already contains 64 changed files.");
-      setData({ ...current, selected: path, buffers: replaceSourceBuffer(current.buffers, { path, content: "", expectedDigest: null, baseline: null, changed: true, deleted: false }) });
-    }),
+    add: (path: string) => addPath(path),
+    addFolder: (path: string) => addPath(path, true),
     remove: () => update(current => ({ ...current, buffers: current.buffers.flatMap(row => row.path !== current.selected ? [row] : row.expectedDigest === null ? [] : [{ ...row, changed: true, deleted: true }]) })),
     undoChange: () => run(async () => {
       const current = latest.current; if (!current || !current.selected || !sourceEditable(current.current.state) || command.current) return;
@@ -108,6 +113,46 @@ export function useSourceEditor(target: SourceEditorTarget, onSaved: (draft: Sou
       if (byteLength(JSON.stringify(operations)) > 1048576) throw new Error("The import exceeds the serialized source wire budget. Select fewer or smaller files.");
       if (alive.current) { setData({ ...current, buffers, selected: files[0]?.path ?? current.selected, origin: "import" }); setNotice(`${files.length} selected files prepared locally. Review the diff, then save the private draft.`); }
     }),
+    assistantSnapshot: async (paths: string[]) => {
+      let snapshot: { fingerprint: string; current: SourceEditorState; files: SourceBuffer[] } | null = null;
+      const success = await run(async () => {
+        const current = latest.current;
+        if (!current || command.current || !sourceEditable(current.current.state) || !paths.length || paths.length > 48) throw Error("Select editable source files first.");
+        const files: SourceBuffer[] = [];
+        for (const path of paths) {
+          const file = await baseline(path, current);
+          if (file.deleted) throw Error("Remove deleted files from AI context, or undo their deletion first.");
+          files.push(file);
+        }
+        if (files.reduce((n, file) => n + byteLength(file.content), 0) > 262144) throw Error("Selected context exceeds 256 KiB. Choose fewer files.");
+        snapshot = { fingerprint: sourceAssistantFingerprint(current.buffers, files), current: current.current, files };
+      });
+      if (!success || !snapshot) throw Error("Selected source context could not be prepared. Your buffers are retained.");
+      return snapshot as { fingerprint: string; current: SourceEditorState; files: SourceBuffer[] };
+    },
+    applyAssistant: (snapshot: { fingerprint: string; current: SourceEditorState; files: SourceBuffer[] }, edits: Array<{path: string; content: string | null}>) => {
+      const current = latest.current;
+      if (!current || busy.current || command.current || !sourceEditable(current.current.state) || current.current.revision !== snapshot.current.revision || sourceAssistantFingerprint(current.buffers, snapshot.files) !== snapshot.fingerprint) throw Error("Your draft changed after this proposal. Ask again using the current files; later edits were preserved.");
+      let buffers = [...current.buffers];
+      for (const edit of edits) {
+        const original = snapshot.files.find(file => file.path === edit.path);
+        if (!original || sourcePathIssue(edit.path, target.scope)) throw Error("The proposal escapes the selected source context.");
+        if (edit.content === null && original.expectedDigest === null) { buffers = buffers.filter(file => file.path !== edit.path); continue; }
+        const file = { ...original, content: edit.content ?? original.content, deleted: edit.content === null,
+          changed: edit.content === null || original.expectedDigest === null || edit.content !== original.baseline };
+        buffers = [...buffers.filter(row => row.path !== file.path), file];
+      }
+      const operations = sourceBufferOperations(buffers); if (operations.length) assertSourceOperations(operations);
+      setData({ ...current, buffers, selected: edits[0]?.path ?? current.selected, origin: "manual" });
+      setNotice("Reviewed AI changes added to your local draft. Save when ready; no source was committed.");
+      const affected = edits.map(edit => buffers.find(file => file.path === edit.path) ?? { ...snapshot.files.find(file => file.path === edit.path)!, deleted: true });
+      return { before: current, files: affected, paths: edits.map(edit => edit.path), after: sourceAssistantFingerprint(buffers, affected) };
+    },
+    undoAssistant: (token: { before: EditorData; after: string; files: SourceBuffer[]; paths: string[] }) => {
+      const current=latest.current;
+      if(!current||busy.current||command.current||current.current.revision!==token.before.current.revision||sourceAssistantFingerprint(current.buffers,token.files)!==token.after)throw Error("Later changes or a save exist. Undo individual edits instead; your newer work was preserved.");
+      setData({...current,buffers:[...current.buffers.filter(file=>!token.paths.includes(file.path)),...token.before.buffers.filter(file=>token.paths.includes(file.path))]});setNotice("AI changes undone. Your earlier draft is restored.");
+    },
     save: () => run(async () => {
       const current = latest.current; if (!current) return;
       if (!command.current) {

@@ -639,3 +639,70 @@ register polls pause; progress tracking for an outstanding original operation
 continues. Existing dirty-draft guards and submission checks remain in force.
 Retained tab data is last-known state until the resumed reader confirms its
 source. It cannot make an action eligible merely because its rows are visible.
+
+### Prototype inspection maintenance preview
+
+Preserve the existing compact register, professional dashboard and per-workspace
+workflow layouts. Search controls survive loading and zero results. History
+retains all available lifecycle events with explicit owner/example provenance.
+Source Authoring uses human task labels and the existing technical disclosure;
+new work is distinct from retained-request recovery and guards unsaved input.
+Closure requires an explicit action choice and uses standard field helper copy
+for evidence prerequisites. Optional text/note-field help follows the existing
+select-field helper treatment and accessible label/description separation.
+This batch requires visual review in preview before publication.
+
+### Source workspace assistance preview
+
+The shared Prototype and Delivery editor uses Files, Editor/diff and AI assistant
+columns in the existing full-viewport modal. Named regions scroll independently;
+saving remains in the fixed footer. The assistant composer and proposal actions
+stay visible, with conversation scrolling above. Explicit file context includes
+selected unsaved buffers only after Send. Questions and edit requests are distinct;
+AI edits appear as reviewable diffs before local application. Later selected-file
+edits block stale proposals while unrelated changes remain intact. Source access
+and exact acceptance/publication remain separate in the calling workflow. No
+layout here grants broader source, model or runtime authority. This approved
+direction remains in preview for operator visual review.
+
+### Source explorer refinement
+
+The shared source workspace shows expandable folders and compact file rows for
+all paths returned within the existing owner scope. Search reveals matching
+ancestor folders; it does not silently stop after 100 files. Partial owner trees
+remain explicitly labelled and cannot prove new paths absent. Folder navigation
+supports arrow keys, Home and End; file checkboxes select explicit AI context.
+
+**New file** and **New folder** start in the selected folder. Folder creation
+adds a visible empty `.gitkeep` file through the normal local buffer and private
+draft save path, because Git does not retain empty directories. The form explains
+this before creation. Existing files/folders, unsafe/out-of-scope paths and a
+file used as an ancestor are rejected. Creation does not publish source.
+
+The Files and assistant columns have bounded desktop widths so the editor uses
+the remaining space. **Hide AI assistant** expands the editor without losing
+the conversation or unsent prompt. The standard compact layout remains in use
+at smaller viewports. This refinement remains unpublished for operator review.
+
+### Source workspace grouping preview
+
+Reuse the existing inner content trays to separate file browsing, import tools
+and private-draft details. The editor has a full-width framed toolbar: view
+selection and file actions remain distinct groups. The AI panel frames its
+conversation area, included-file disclosure and request composer; proposal
+decisions remain separate from sending another request. Preserve the current
+three main panels, independent scroll areas and fixed save footer. Grouping
+changes no source, save, AI or publication authority and remain in preview.
+
+### Embedded application preview
+
+For explicitly connected UI projects, reuse the centre Editor panel for
+Edit/Diff/Preview and code-plus-preview split. Preserve code/editor state and
+existing Files/AI panels; Hide AI assistant provides more space. Split stacks
+inside a narrow editor container instead of clipping either pane. Runtime
+status, version disclosure, unapplied-draft notice and Refresh/Open in browser
+actions sit in an existing content tray above the bounded application frame.
+Show loading, slow-frame, stopped, stale, embedding-denied and error states
+without losing edits or claiming source application. This remains unpublished
+for review. Runtime content stays on its own origin and its owner's controls;
+no preview binding means no invented Preview action.

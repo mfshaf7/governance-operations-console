@@ -80,14 +80,20 @@ export function assertPrototypeSourceRequest(value: unknown): PrototypeSourceReq
 export function assertPrototypeOwnerPreparation(value: unknown): PrototypeOwnerPreparation {
   const item = sourceObject(value);
   if (item.kind === "delivery-packet") return assertPrototypeDeliveryPreparation(value);
-  exact(item, ["kind", "port", "support_profile", "runtime_activation", "ttl_seconds", "decision_ref"]);
+  exact(item, ["kind", "port", "support_profile", "runtime_activation", "ttl_seconds", "decision_ref", ...(Object.hasOwn(item, "embedding_origins") ? ["embedding_origins"] : [])]);
   if (item.kind !== "preview-profile" || !Number.isInteger(item.port) || Number(item.port) < 1024 || Number(item.port) > 65535 ||
       !["interactive", "unattended"].includes(String(item.support_profile)) || typeof item.runtime_activation !== "boolean" ||
       !Number.isInteger(item.ttl_seconds) || Number(item.ttl_seconds) < 300 || Number(item.ttl_seconds) > 86400) invalid();
   const decision = sourceText(item.decision_ref, 512);
   if (!/^record:\/\/[A-Za-z0-9._:/-]+$/.test(decision)) invalid();
+  if (Object.hasOwn(item, "embedding_origins")) {
+    const origins = item.embedding_origins;
+    if (!Array.isArray(origins) || origins.length > 8 || new Set(origins).size !== origins.length || origins.some(origin => {
+      try { const url = new URL(String(origin)); return typeof origin !== "string" || url.origin !== origin || url.protocol !== "http:" || !["localhost", "127.0.0.1"].includes(url.hostname) || !url.port || Number(url.port) < 1024; } catch { return true; }
+    })) invalid();
+  }
   return { kind: "preview-profile", port: Number(item.port), support_profile: item.support_profile as "interactive" | "unattended",
-    runtime_activation: item.runtime_activation, ttl_seconds: Number(item.ttl_seconds), decision_ref: decision };
+    runtime_activation: item.runtime_activation, ttl_seconds: Number(item.ttl_seconds), decision_ref: decision, ...(Object.hasOwn(item, "embedding_origins") ? { embedding_origins: [...item.embedding_origins as string[]] } : {}) };
 }
 function ownerPreparationEvidence(value: unknown): { plan_digest: string; request_digest: string } | null {
   if (value === undefined) return null;

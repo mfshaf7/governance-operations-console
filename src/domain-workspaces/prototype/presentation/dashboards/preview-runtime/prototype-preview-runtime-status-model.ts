@@ -151,7 +151,7 @@ export function prototypePreviewReceiptRows(
     {
       detail:
         record.preview.lastProofRef ??
-        "Created by Record Preview Check in this prototype session.",
+        "The Studio check receipt binds the inspected runtime and source.",
       label: "Receipt identity",
       status: record.preview.lastProofRef ? "saved" : "pending",
       tone: record.preview.lastProofRef ? "ok" : "warn",
@@ -173,7 +173,7 @@ export function prototypePreviewReceiptRows(
     },
     {
       detail:
-        "Receipt review stays in Prototype history until future durable wiring exists.",
+        "Inspect retained references in Prototype History; current runtime checks remain separate.",
       label: "Review path",
       status: "History",
       tone: "info",

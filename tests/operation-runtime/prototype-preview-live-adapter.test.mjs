@@ -511,3 +511,14 @@ function recordFixture() {
     projectionFreshness: "fixture",
   };
 }
+
+test("owner rejection never forwards private paths or raw diagnostics to the browser",async(context)=>{
+ const root=mkdtempSync(join(tmpdir(),"preview-error-safety-"));context.after(()=>rmSync(root,{recursive:true,force:true}));
+ const privateMessage="cannot read /private/operator/source/profile.yaml: filesystem details";
+ const ownerConfig={...config,ownerRepoRoot:root};
+ const reject=code=>async()=>{const error=new Error("process failure");error.stdout=JSON.stringify({status:"rejected",code,message:privateMessage});throw error;};
+ await assert.rejects(readPrototypePreviewOwner("client-review-portal",{config:ownerConfig,runner:reject("profile_unreadable")}),error=>error.code==="prototype_preview_profile_missing"&&error.status===404&&!error.message.includes("/private/"));
+ mkdirSync(join(root,"records/prototype-preview-profiles"),{recursive:true});writeFileSync(join(root,"records/prototype-preview-profiles/client-review-portal.yaml"),"unreadable specimen");
+ await assert.rejects(readPrototypePreviewOwner("client-review-portal",{config:ownerConfig,runner:reject("profile_unreadable")}),error=>error.code==="prototype_preview_profile_unreadable"&&!error.message.includes("/private/"));
+ await assert.rejects(readPrototypePreviewOwner("client-review-portal",{config:ownerConfig,runner:reject("unknown_owner_failure")}),error=>error.code==="prototype_preview_owner_rejected"&&!error.message.includes(privateMessage));
+});

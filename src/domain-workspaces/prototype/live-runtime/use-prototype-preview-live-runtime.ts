@@ -32,6 +32,7 @@ export class PrototypePreviewClientError extends Error {
 }
 
 export function usePrototypePreviewLiveRuntime() {
+  const [errorByRecord, setErrorByRecord] = useState<Record<string, PrototypePreviewClientError>>({});
   const [modeByRecord, setModeByRecord] = useState<Record<string, RuntimeMode>>({});
   const [projectionByRecord, setProjectionByRecord] = useState<
     Record<string, PrototypePreviewOwnerProjection>
@@ -50,11 +51,13 @@ export function usePrototypePreviewLiveRuntime() {
       const projection = projectionValue(
         await api(path(record), { cache: "no-store" }),
       );
+      setErrorByRecord((current) => { const next = {...current}; delete next[record.id]; return next; });
       setProjectionByRecord((current) => ({ ...current, [record.id]: projection }));
       setModeByRecord((current) => ({ ...current, [record.id]: "live" }));
       return projection;
     } catch (error) {
       const failure = clientError(error);
+      setErrorByRecord((current) => ({...current, [record.id]: failure}));
       setModeByRecord((current) => ({
         ...current,
         [record.id]:
@@ -139,6 +142,7 @@ export function usePrototypePreviewLiveRuntime() {
 
   return {
     command,
+    errorByRecord,
     load,
     modeByRecord,
     projectionByRecord,

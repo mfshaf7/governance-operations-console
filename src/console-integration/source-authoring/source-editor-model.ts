@@ -28,3 +28,12 @@ export function replaceSourceBuffer(buffers: SourceBuffer[], next: SourceBuffer)
     const { baseline: _baseline, ...retained } = row; return retained;
   }), next];
 }
+
+// A proposal binds the files it saw. Unrelated edits and a changed commit
+// summary are preserved and must not invalidate an otherwise current proposal.
+export function sourceAssistantFingerprint(buffers: SourceBuffer[], files: SourceBuffer[]) {
+  return JSON.stringify(files.map(original => {
+    const current = buffers.find(file => file.path === original.path);
+    return { path: original.path, content: current?.content ?? original.baseline ?? "", deleted: current ? current.deleted : original.expectedDigest === null, expectedDigest: current ? current.expectedDigest : original.expectedDigest };
+  }));
+}
