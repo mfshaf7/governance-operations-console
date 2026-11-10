@@ -105,7 +105,7 @@ export function ProposalDispositionRoutePanel({
               <TerasChoiceGroup
                 ariaLabel="Proposal repository requirement"
                 frame="tray"
-                label={routeSelectionDraft.routeTarget === "Prototype" ? "Prototype source home" : "Repository requirement"}
+                label={routeSelectionDraft.routeTarget === "Prototype" ? "Incubation source home" : "Main repository"}
                 onSelect={onRepoModeSelect}
                 options={proposalDispositionRepoModeChoiceOptions({
                   dispositionCompleted,
@@ -127,7 +127,7 @@ export function ProposalDispositionRoutePanel({
               actions={!dispositionCompleted && (!repositoriesCurrent || !selectedRepo) && onRefreshRepositories
                 ? <TerasActionButton emphasis="secondary" onClick={onRefreshRepositories}>Refresh repository list</TerasActionButton> : undefined} /> : routeHasRepositoryGate &&
             routeSelectionDraft.repoMode === "existing" ? (
-              dispositionCompleted ? <TerasReadoutField label="Existing responsible repository" value={routeSelectionDraft.repoRef} /> : <>
+              dispositionCompleted ? <TerasReadoutField label={routeSelectionDraft.routeTarget === "Prototype" ? "Incubation repository" : "Main implementation repository"} value={routeSelectionDraft.repoRef} /> : <>
               {repositorySearch ? <TerasTextField label="Search onboarded repositories" value={repositorySearch.query} onValueChange={repositorySearch.onQueryChange} placeholder="Search by repository name" /> : null}
               {repositorySearch?.error ? <TerasContentTray kicker="Repository search unavailable" description={repositorySearch.error} /> : null}
               {repositorySearch?.more ? <TerasContentTray kicker="More repositories available" description="Narrow the search to find the repository you want. Only the current result page is shown." /> : null}
@@ -135,10 +135,12 @@ export function ProposalDispositionRoutePanel({
                 disabled={!repositoriesCurrent}
                 helper={
                   selectedRepo
-                    ? `${selectedRepo.owner} / ${selectedRepo.value}`
-                    : repositoriesCurrent ? "Use an existing repository for this work. Reuse does not create a new-repository request." : "Current repository Inventory is unavailable. Refresh before selecting a repository."
+                    ? routeSelectionDraft.routeTarget === "Prototype"
+                      ? "Use this repository as the incubation source home. A later Delivery handoff reviews the implementation source home."
+                      : "Use this as the initiative's main repository. Delivery planning can assign another onboarded repository to individual work items."
+                    : repositoriesCurrent ? "Choose an onboarded repository. This does not create a new-repository request." : "Current repository Inventory is unavailable. Refresh before selecting a repository."
                 }
-                label="Existing implementation repository"
+                label={routeSelectionDraft.routeTarget === "Prototype" ? "Incubation repository" : "Main implementation repository"}
                 onValueChange={onRegisteredRepoSelect}
                 options={proposalRegisteredRepoSelectOptions(routeSelectionDraft.routeTarget === "Prototype"
                   ? registeredRepositories?.filter(repo => repo.value !== prototypeStudioRepositoryRef && (!repositorySearch?.query || repo.label.includes(repositorySearch.query))) : registeredRepositories?.filter(repo => !repositorySearch?.query || repo.label.includes(repositorySearch.query)))}

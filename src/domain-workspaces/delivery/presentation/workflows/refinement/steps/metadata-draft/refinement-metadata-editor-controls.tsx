@@ -107,7 +107,9 @@ export function MetadataValueControl({
       <TerasSelectField
         ariaLabel="Workbench Value"
         disabled={blocked}
-        helper="Controlled field. Values must come from the backend-backed option list before live apply."
+        helper={field.route_binding.payload_key === "owner_repo"
+          ? "Repository for this selected work item. It can differ from the initiative's main repository; choose an onboarded repository from this list."
+          : "Controlled field. Values must come from the backend-backed option list before live apply."}
         label="Workbench Value"
         onValueChange={onUpdateMetadataDraftValue}
         options={refinementMetadataValueSelectOptions({ draftValue, field })}

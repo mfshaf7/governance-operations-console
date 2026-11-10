@@ -219,7 +219,7 @@ export function proposalHandoffStepProjection({
       ? "Resolve repository before handoff"
       : repositoryGateResolved
         ? "Repository gate resolved"
-        : "Repository selected";
+        : prototypeTarget ? "Incubation repository selected" : "Main repository selected";
   const repositoryCueBody = prototypeWithoutHome ? "The recorded Prototype decision does not identify a source home. Review that decision before continuing; Prototype Studio can hold experimental source without a separate project repository."
     : studioIncubation ? "The existing Studio repository holds this prototype during exploration. This handoff does not request a separate project repository; Landing and later source graduation remain separate actions."
     : !routeHasRepositoryGate
@@ -227,8 +227,12 @@ export function proposalHandoffStepProjection({
     : repositoryGateBlocked
       ? "The selected repository handling requires a repository decision before Proposal can apply this handoff."
       : repositoryGateResolved
-        ? "Repository Control recorded the workspace association and repository reference. Handoff can now be applied from the gate panel."
-        : "The selected responsible repository is available for handoff review.";
+        ? prototypeTarget
+          ? "Repository Control resolved the incubation source home. A later Delivery handoff reviews the implementation source home."
+          : "Repository Control resolved the initiative's main repository. Delivery planning can assign another onboarded repository to individual work items."
+        : prototypeTarget
+          ? "The selected repository is the incubation source home. This does not fix the finished product's repository; review that source home when preparing Delivery."
+          : "The selected repository is the initiative's main repository. Delivery planning can assign another onboarded repository to individual work items.";
   const repositoryCueState = prototypeWithoutHome ? "Blocked" : !routeHasRepositoryGate
     ? "Not required"
     : repositoryGateBlocked

@@ -498,7 +498,7 @@ test('Proposal reuse chooses current Inventory and new-repository choice explain
  const disposition=page.getByRole('dialog',{name:'Proposal Disposition',exact:true});
  await disposition.getByRole('radio',{name:'Accept',exact:true}).click();
  await disposition.getByRole('radio',{name:'Existing Repo',exact:true}).click();
- await disposition.getByRole('button',{name:"Existing implementation repository",exact:true}).click();
+ await disposition.getByRole('button',{name:"Main implementation repository",exact:true}).click();
  await expect(page.getByRole('option',{name:'synthetic-source / repo:synthetic-source',exact:true})).toBeVisible();
  await expect(page.getByRole('option')).toHaveCount(2);
  await page.keyboard.press('Escape');
