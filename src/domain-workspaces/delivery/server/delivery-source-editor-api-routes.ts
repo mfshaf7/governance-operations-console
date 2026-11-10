@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { SourceEditorUnconfirmedSaveError, readSourceSaveBody, sourceFileSelectors } from "../../../console-integration/source-authoring/server/source-editor-evidence.ts";
+import { SourceEditorUnconfirmedSaveError, readSourceAssistantBody, readSourceSaveBody, sourceFileSelectors } from "../../../console-integration/source-authoring/server/source-editor-evidence.ts";
 import { assistDeliveryEditor, readDeliveryEditorDraft, readDeliveryEditorFiles, saveDeliveryEditorDraft } from "./delivery-source-editor-oos-client.ts";
 import { DeliveryOosError, deliveryOosConfigured } from "./delivery-oos-client.ts";
 
 export async function deliverySourceEditorRoute(request: Request, id: string, kind: "draft" | "files" | "assist") {
   try {
     if (!deliveryOosConfigured() || !/^[1-9][0-9]*$/.test(id) || !Number.isSafeInteger(Number(id))) throw new Error("A commissioned, actual Delivery source work item is required.");
-    const result = kind === "assist" ? await assistDeliveryEditor(Number(id), await readSourceSaveBody(request)) : request.method === "POST" ? await saveDeliveryEditorDraft(Number(id), await readSourceSaveBody(request))
+    const result = kind === "assist" ? await assistDeliveryEditor(Number(id), await readSourceAssistantBody(request)) : request.method === "POST" ? await saveDeliveryEditorDraft(Number(id), await readSourceSaveBody(request))
       : kind === "files" ? await readDeliveryEditorFiles(Number(id), sourceFileSelectors(request.url)) : await readDeliveryEditorDraft(Number(id));
     return NextResponse.json({ mode: "live", projection: result, error: null }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {

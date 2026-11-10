@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { assertAssistantRequest, type AssistantRequest } from "../source-assistant-contract.ts";
 import { assertOperatorDraftCommand, assertSourceCapture, assertSourceDraft, sourceDate, sourceEditorLimits, sourceObject, sourcePath, type OperatorDraftCommand, type SourceEditorState } from "../source-editor-contract.ts";
 
 export class SourceEditorUnconfirmedSaveError extends Error {
@@ -34,6 +35,12 @@ export function sourceFileSelectors(url: string) {
   return paths.map(sourcePath);
 }
 export async function readSourceSaveBody(request: Request): Promise<OperatorDraftCommand> {
+  return assertOperatorDraftCommand(await readSourceBody(request));
+}
+export async function readSourceAssistantBody(request: Request): Promise<AssistantRequest> {
+  return assertAssistantRequest(await readSourceBody(request));
+}
+async function readSourceBody(request: Request): Promise<unknown> {
   const reader = request.body?.getReader(); if (!reader) throw new Error("A bounded source draft is required.");
   const chunks: Uint8Array[] = []; let size = 0;
   try {
@@ -41,7 +48,7 @@ export async function readSourceSaveBody(request: Request): Promise<OperatorDraf
   } finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
   const bytes = new Uint8Array(size); let offset = 0;
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  return assertOperatorDraftCommand(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)));
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
 }
 export function verifySourceCapture(value: unknown, expected: { sessionId: string; base: string; ownerRepo?: string }, paths: string[]) {
   const raw = sourceObject(value), { context_digest, ...body } = raw, result = assertSourceCapture(raw);
