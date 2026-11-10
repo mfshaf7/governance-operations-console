@@ -5447,6 +5447,8 @@
 
 .terasDialog[data-content-overflow="auto"] .terasDialogBody {
   overflow: auto;
+  scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
+  scrollbar-width: thin;
 }
 
 .terasDialog[data-content-overflow="hidden"] .terasDialogBody {

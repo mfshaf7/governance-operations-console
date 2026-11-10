@@ -161,3 +161,9 @@ The maintenance Landing Unit is `source-editor-request-parser-20261110`,
 handlers against isolated owner APIs, checking ask/edit dispatch, unchanged
 source, explicit saving, wrong-command rejection and malformed/oversized input.
 Native model invocation remains a separate post-activation check.
+
+The operator also requested the standard scrollbar in Review routing. The
+shared content-sized dialog body now uses the same thin amber scrollbar as
+Teras content regions. Dialog sizing, content, scroll ownership and actions
+are retained. The populated four-fallback routing browser check verifies the
+scrollbar, action reachability and unsaved-draft guard in the isolated preview.
