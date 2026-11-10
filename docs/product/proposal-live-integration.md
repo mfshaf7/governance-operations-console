@@ -38,6 +38,16 @@ machine operator. The Console must not serialize the human session principal or
 display handle as OOS Proposal command attribution while the OOS Proposal
 contract requires caller/operator equality.
 
+### Capture source identity maintenance
+
+New captures use a cryptographically random request identity so opening a new
+browser or reloading the application cannot reuse a previous capture's source
+reference. The current form retains that identity for submission, lookup and
+retry; checking an uncertain outcome never generates a replacement identity.
+Existing source references and captured records remain unchanged. A backend
+duplicate-source refusal must not select an arbitrary older proposal or create
+another proposal to conceal the conflict.
+
 ## Live Behavior
 
 ### Prototype incubation source home

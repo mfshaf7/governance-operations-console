@@ -43,7 +43,6 @@ export {
 };
 
 const captureRecordIdByRequestId = new Map<string, string>();
-let captureRequestSequence = 0;
 
 const proposalCommandRuntime = createLocalOperationRuntimeAdapter<
   ProposalWorkspaceScenario,
@@ -130,8 +129,7 @@ const proposalCommandRuntime = createLocalOperationRuntimeAdapter<
 });
 
 export function createProposalCaptureRequestId() {
-  captureRequestSequence += 1;
-  return `proposal-capture-request-${captureRequestSequence}`;
+  return `proposal-capture-request-${crypto.randomUUID()}`;
 }
 
 export async function submitProposalCaptureCommand({
