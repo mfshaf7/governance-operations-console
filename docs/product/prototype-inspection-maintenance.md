@@ -146,3 +146,24 @@ invented runtime binding. Private sample routes and synthetic replies are
 excluded from release source. Fresh exact-source Security review, owner
 CI-equivalent validation, normal composed activation and native source/model
 readback qualify the release separately from the earlier visual review.
+
+### Assistant HTTP request repair
+
+Native qualification found that both domain assistance routes sent valid
+assistant JSON through the saved-draft command parser, rejecting it before
+owner or model dispatch. Reuse the bounded UTF-8 body reader with separate
+closed assistant and draft validators. Both Prototype and Delivery select
+the assistant validator only for assistance; saving retains its original
+contract. No model, profile, source permission or source effect is added.
+
+The maintenance Landing Unit is `source-editor-request-parser-20261110`,
+`feature_single_landing_unit`. Tests invoke the actual two domain HTTP
+handlers against isolated owner APIs, checking ask/edit dispatch, unchanged
+source, explicit saving, wrong-command rejection and malformed/oversized input.
+Native model invocation remains a separate post-activation check.
+
+The operator also requested the standard scrollbar in Review routing. The
+shared content-sized dialog body now uses the same thin amber scrollbar as
+Teras content regions. Dialog sizing, content, scroll ownership and actions
+are retained. The populated four-fallback routing browser check verifies the
+scrollbar, action reachability and unsaved-draft guard in the isolated preview.

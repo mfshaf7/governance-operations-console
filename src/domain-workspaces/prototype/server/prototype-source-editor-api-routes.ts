@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { SourceEditorUnconfirmedSaveError, readSourceSaveBody, sourceFileSelectors } from "../../../console-integration/source-authoring/server/source-editor-evidence.ts";
+import { SourceEditorUnconfirmedSaveError, readSourceAssistantBody, readSourceSaveBody, sourceFileSelectors } from "../../../console-integration/source-authoring/server/source-editor-evidence.ts";
 import { assistPrototypeEditor, readPrototypeEditorFiles, savePrototypeEditorDraft } from "./prototype-source-editor-oos-client.ts";
 import { consoleOosModeSelected } from "../../../console-integration/configuration/console-runtime-configuration.ts";
 import { PrototypeLandingOosError } from "./prototype-landing-oos-client.ts";
 export async function prototypeSourceEditorRoute(request: Request, id: string, kind: "files" | "assist" = "files") {
   try {
     if (!consoleOosModeSelected()) throw new Error("Use the commissioned live source workflow.");
-    const projection = kind === "assist" ? await assistPrototypeEditor(id, await readSourceSaveBody(request)) : request.method === "POST" ? await savePrototypeEditorDraft(id, await readSourceSaveBody(request)) : await readPrototypeEditorFiles(id, sourceFileSelectors(request.url));
+    const projection = kind === "assist" ? await assistPrototypeEditor(id, await readSourceAssistantBody(request)) : request.method === "POST" ? await savePrototypeEditorDraft(id, await readSourceSaveBody(request)) : await readPrototypeEditorFiles(id, sourceFileSelectors(request.url));
     return NextResponse.json({ mode: "live", projection, error: null }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const known = error instanceof PrototypeLandingOosError || error instanceof SourceEditorUnconfirmedSaveError;
