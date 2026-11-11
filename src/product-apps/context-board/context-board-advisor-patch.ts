@@ -1,6 +1,6 @@
-import type { ContextBoardConnection, ContextBoardCustomItem, ContextBoardSnapshot } from "./context-board-model.ts";
+import { contextBoardCustomKinds, type ContextBoardConnection, type ContextBoardCustomItem, type ContextBoardSnapshot } from "./context-board-model.ts";
 
-const kinds = new Set(["actor", "branch", "c4-component", "c4-container", "c4-external-system", "c4-person", "c4-relationship", "c4-software-system", "c4-system-boundary", "component", "container", "decision", "diagram", "end", "lane", "label-area", "label-field", "label-pill", "label-tag", "lifeline", "note", "process", "sequence-activation", "sequence-fragment", "sequence-message", "sequence-return", "shape-circle", "shape-diamond", "shape-rect", "shape-rounded", "start", "text", "topic", "uml-class", "uml-interface", "uml-package", "uml-state", "uml-usecase"]);
+const kinds = new Set<string>(contextBoardCustomKinds);
 const tones = new Set(["amber", "blue", "default", "green", "neutral", "purple", "red"]);
 const sides = new Set(["bottom", "left", "right", "top"]);
 const tips = new Set(["arrow", "diamond", "filled-diamond", "plain", "triangle"]);

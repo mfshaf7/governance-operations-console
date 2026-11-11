@@ -1,3 +1,4 @@
+import { contextBoardCustomKinds } from "../../../product-apps/context-board/context-board-model.ts";
 import { parseAdvisorReply, type AdvisorScope, type GovernedAdvisorReply } from "../../../agent-console/model/advisor-drafts.ts";
 import { effectiveModelLabel } from "../../../console-integration/governed-ai/model-selection.ts";
 import { assertWorkDesignOosAssistResult } from "./work-design-live-contract.ts";
@@ -14,7 +15,8 @@ export function createWorkDesignAdvisorScope(
   const { packageRef, sourceRef } = deliveryLiveIdentity(deliveryLivePackageRef(deliveryPackage));
   return { ...draft, packageRef, sourceRef, fields: draft.fields.map(field =>
     draft.role === "work-design-context" && field.key === "note"
-      ? { ...field, maxLength: WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH } : field),
+      ? { ...field, maxLength: WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH }
+      : field.kind === "board" ? { ...field, allowedValues: [...contextBoardCustomKinds] } : field),
   };
 }
 

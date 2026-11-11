@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertAdvisorScope, assertAdvisorReply, parseAdvisorReply, advisorScopeSnapshot, advisorScopeIdentity } from "../../src/agent-console/model/advisor-drafts.ts";
+import { assertAdvisorScope, assertAdvisorReply, parseAdvisorReply, advisorDraftInstructions, advisorScopeSnapshot, advisorScopeIdentity } from "../../src/agent-console/model/advisor-drafts.ts";
 import { applyContextBoardAdvisorPatch } from "../../src/product-apps/context-board/context-board-advisor-patch.ts";
 import { applyWorkDesignAdvisorPatch } from "../../src/domain-workspaces/delivery/product-adapters/build-tree/work-design-advisor-patch.ts";
 import { buildAdvisorAgentRequest } from "../../src/agent-console/server/advisor-draft-request.ts";
@@ -48,6 +48,27 @@ test("system-context answers cannot edit a retained architecture; an explicit dr
   assert.deepEqual(next.sketchStrokes, original.sketchStrokes);
   assert.deepEqual(current, original);
   assert.equal(descriptor.fields[0].value, "Existing reviewed architecture");
+});
+
+test("an empty Context board advertises card choices accepted by the real draft consumer", () => {
+  const empty = { ...board(), customItems: [], positions: {}, sketchStrokes: [] };
+  const descriptor = createWorkDesignAdvisorScope({ legacy_epic_id: 1332 }, {
+    role: "work-design-context", ref: "delivery-1332", sourceRevision: "current", context: "System architecture",
+    fields: [{ key: "board", label: "System diagram", kind: "board", value: empty }],
+  });
+  assertAdvisorScope(descriptor);
+  const transmitted = JSON.parse(JSON.stringify(descriptor));
+  const choices = transmitted.fields[0].allowedValues;
+  assert.ok(choices.includes("shape-rect"));
+  assert.ok(!choices.includes("box"));
+  assert.match(advisorDraftInstructions, /allowedValues list gives the exact supported card kind names/);
+  for (const kind of choices) {
+    const value = { addItems: [{ id: "target-system", kind, label: "Target system", detail: "Proposed responsibility", x: 100, y: 100, width: 300, height: 150 }] };
+    const reply = assertAdvisorReply(draft([{ field: "board", value }]), transmitted);
+    assert.equal(applyContextBoardAdvisorPatch(empty, reply.edits[0].value).customItems[0].kind, kind);
+  }
+  assert.throws(() => applyContextBoardAdvisorPatch(empty, { addItems: [{ id: "invalid", kind: "box", label: "Unsupported", detail: "", x: 0, y: 0 }] }));
+  assert.deepEqual(empty.customItems, []);
 });
 
 test("Context note proposals stay consumable by the native 8000-character note contract", () => {

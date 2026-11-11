@@ -12,6 +12,12 @@ draft presentation, same-origin routing, and strict response validation.
 
 ## Context Session: understand the system
 
+The existing advisor draft scope supplies canonical board card choices even when
+the canvas is empty. Those choices and the draft validator use the same model
+vocabulary. Unsupported kinds remain rejected atomically, preserving the note
+and diagram; operators do not need to supply technical card-type names.
+
+
 Context Session explains the system being designed. Build Tree turns that
 understanding into ART work. A list such as "write contracts, implement, test,
 review" is a delivery plan, not an architectural explanation. A runtime sequence
