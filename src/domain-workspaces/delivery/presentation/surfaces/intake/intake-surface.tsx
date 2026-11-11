@@ -198,7 +198,7 @@ export function DeliveryIntakeSurface({
         mode="register-selected"
         register={
           <TerasRegisterPanel
-            description={model.history_scope === "history" ? "Sources already transferred to Delivery. Open history to review the original records." : "Review incoming sources. Transferred sources are in History."}
+            description={model.history_scope === "history" ? "Completed handoffs and their original receipts. Intake needs no repeat approval." : "Proposal and Prototype handoffs complete Intake automatically. Their receipts are in History."}
             filterBar={
               <TerasFilterBar
                 search={{
@@ -252,7 +252,7 @@ export function DeliveryIntakeSurface({
               />
             ) : (
               <TerasEmptyState fill>
-                {nativeHistory ? page.nextCursor ? "No matches yet. Continue searching older sources." : "No sources match these filters." : model.history_scope === "current" ? "No incoming sources. Transferred sources are in History." : model.evidence_coverage?.intake.state === "unavailable" ? "Source history could not be loaded. Try again." : model.evidence_coverage?.intake.complete === false ? "Loading source history…" : "No sources match these filters."}
+                {nativeHistory ? page.nextCursor ? "No matches yet. Continue searching older sources." : "No sources match these filters." : model.history_scope === "current" ? "No sources need Intake. Completed handoffs are in History; newly received work continues in Work Design." : model.evidence_coverage?.intake.state === "unavailable" ? "Source history could not be loaded. Try again." : model.evidence_coverage?.intake.complete === false ? "Loading source history…" : "No sources match these filters."}
               </TerasEmptyState>
             )}
           </TerasRegisterPanel>

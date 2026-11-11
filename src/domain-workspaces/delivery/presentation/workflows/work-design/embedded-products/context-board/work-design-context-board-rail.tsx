@@ -91,7 +91,7 @@ export function WorkDesignContextBoardRail({
           }
           kicker="Context Brief"
           title="Session Handoff"
-          description="Save brainstorming sessions freely. Finalize only the version that should be consumed by the next step."
+          description="Explain the system being designed. Finalize the reviewed note and diagram for Build Tree."
         />
         <div className={styles.contextBoardContextBriefBody}>
           <div className={styles.contextBoardBriefReadiness}>
@@ -150,6 +150,7 @@ export function WorkDesignContextBoardRail({
           maxLength={WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH}
           minimumHeight="short"
           onValueChange={updateContextOperatorNote}
+          placeholder="Current and proposed system, key interactions, evidence and open questions."
           readOnly={contextBriefReadOnly}
           value={contextOperatorNote}
         />
@@ -207,7 +208,7 @@ export function WorkDesignContextBoardRail({
             ? applyCompleted
               ? "Console locked after Apply Draft."
               : "Console locked until Reopen Brief."
-            : "Ask the advisor...",
+            : "Ask about the system or request an architecture draft...",
           readOnly: contextBriefReadOnly,
           rows: 1,
           value: contextAdvisorPrompt,

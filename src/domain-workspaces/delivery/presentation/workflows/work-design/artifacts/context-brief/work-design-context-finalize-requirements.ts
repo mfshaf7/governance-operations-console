@@ -42,7 +42,7 @@ export function workDesignContextFinalizeRequirementProjection({
     {
       detail: contextBriefSnapshotReady
         ? "Board visual state and inventory are captured."
-        : "Finalize captures the board state and inventory as evidence; empty or freeform work is not treated as a failed structure check.",
+        : "Review whether the note and diagram explain the target system. Finalize preserves the board; it does not verify architectural truth. Freeform and non-runtime work remain valid.",
       label: "Board Snapshot",
       ready: contextBriefSnapshotReady,
       status: contextBriefSnapshotReady ? "completed" : "pending",

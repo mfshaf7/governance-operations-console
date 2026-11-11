@@ -109,7 +109,7 @@ The source implements this Delivery flow:
 
 ```text
 Accepted source
-  -> Intake consume
+  -> Delivery ingress and Intake receipt (automatic for supported handoffs)
   -> Delivery package
   -> Work Design context and draft tree
   -> Work Design apply receipt / handoff packet
@@ -238,20 +238,28 @@ truth.
 ## Delivery Ingress Boundary
 
 Every accepted source enters Delivery through a Delivery-owned ingress
-application. Its receipt creates an Intake source with `needs_consume`; no
-source domain writes Delivery Intake directly.
+application; no source domain writes Delivery Intake directly. The supported
+Proposal and Prototype handoffs create or reuse the Delivery shell and record
+their target receipt during that application. The native Intake history projects
+the verified reciprocal handoff as `consumed`. A completed handoff therefore
+appears in Intake History and is available to Work Design without a second
+manual Intake approval.
 
-For Proposal-to-Delivery, that ingress receipt completes the cross-domain
-handoff. Delivery Intake Consume is a later, internal Delivery action that
-creates or links the Delivery package shell and does not determine whether
-Proposal Handoff completed.
+For Proposal-to-Delivery, the ingress receipt completes the cross-domain
+handoff and binds the Proposal backlink to the Delivery Epic. Intake History
+retains that original receipt; Work Design remains the explicit operator
+planning and review step before later delivery readiness and execution.
 
 For Prototype-to-Delivery, OOS application creates or reuses the Delivery shell,
 records the Prototype and Baseline Packet backlinks, and returns the durable
 target receipt. That receipt completes the cross-domain application and allows
-Prototype to project `graduated`. Delivery Intake remains the normal operator
-entry for continuing the admitted Epic; it does not duplicate target creation
-or determine whether Prototype graduation completed.
+Prototype to project `graduated`. Intake History exposes that admitted source
+and target receipt; the operator continues planning in Work Design. Intake does
+not duplicate target creation or determine whether Prototype graduation completed.
+
+Existing pending/retry intake states retain their supported recovery behavior.
+This wording does not turn a prepared, blocked or failed handoff into a received
+source, invent missing receipts, or alter any source or execution gate.
 
 Intake operational states are limited to:
 

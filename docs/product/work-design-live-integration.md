@@ -10,6 +10,36 @@ OOS owns source revision, bounded AI-advice admission, canonical application,
 reconciliation, and durable receipts. The Console owns operator interaction,
 draft presentation, same-origin routing, and strict response validation.
 
+## Context Session: understand the system
+
+Context Session explains the system being designed. Build Tree turns that
+understanding into ART work. A list such as "write contracts, implement, test,
+review" is a delivery plan, not an architectural explanation. A runtime sequence
+such as "user request, interface, service, data, response" can explain architecture.
+
+Use relevant source evidence to distinguish the current system, proposed changes
+and open questions. Explain responsibilities, interactions and boundaries, plus
+data ownership, access, failure and recovery where they matter. For policy,
+documentation or other non-runtime work, explain its actors, rules, information
+and handoffs without inventing services. Reuse an accepted architecture when
+unchanged and describe the relevant delta.
+
+Diagram starters are editable examples, not inspected facts. Replace or remove
+their generic labels. The Work Design application itself is the subject only
+when that is the actual work. Use whichever sketch or note best explains the
+system; no diagram format, node count or keyword gate establishes understanding.
+The default canvas cards identify the project and prompt for current system,
+target change and interactions. Their stable identities preserve saved positions
+and connections. Existing finalized core-card text and diagrams remain historical
+evidence; this guidance does not rewrite them or claim they were re-reviewed.
+
+Before Finalize, review whether the note and diagram explain how the target
+system works and which assumptions remain unverified. Snapshot and receipt
+checks prove custody, not architectural correctness. The advisor asks for missing
+evidence rather than claiming repository/runtime access it does not have. It
+answers questions without edits and drafts only when explicitly asked. Existing
+operator finalization, acceptance and canonical Apply remain separate actions.
+
 ## Runtime Modes
 
 The server configuration selects one explicit mode:

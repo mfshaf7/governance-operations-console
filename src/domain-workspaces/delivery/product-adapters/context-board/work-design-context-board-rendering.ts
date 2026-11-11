@@ -36,42 +36,12 @@ type WorkDesignLegacyCoreNode = {
   tone: DeliveryTone;
 };
 
-function workDesignContextBoardDecisionNodeCopy(
-  decision: WorkDesignContextDecision,
-): {
-  label: string;
-  title: string;
-  tone: DeliveryTone;
-} {
-  switch (decision) {
-    case "attach":
-      return {
-        label: "Link Existing Work",
-        title: "Link To Existing Work",
-        tone: "warn",
-      };
-    case "retire":
-      return {
-        label: "Retire Duplicate",
-        title: "Retire Duplicate Source",
-        tone: "danger",
-      };
-    case "proceed":
-    default:
-      return {
-        label: "Proceed",
-        title: "Proceed With Work Design",
-        tone: "ok",
-      };
-  }
-}
-
 export function workDesignContextBoardCoreNodes(
   deliveryPackage: DeliveryPackageSummary,
-  decision: WorkDesignContextDecision,
+  _decision: WorkDesignContextDecision,
 ): ContextBoardCoreNode[] {
-  const decisionCopy = workDesignContextBoardDecisionNodeCopy(decision);
-
+  // Stable IDs preserve saved positions and connections. These are prompts,
+  // not claims about system components or a substitute for an authored sketch.
   return workDesignLegacyCoreNodesToContextBoard([
     {
       detail: deliveryPackage.source_ref,
@@ -81,28 +51,25 @@ export function workDesignContextBoardCoreNodes(
       tone: "warn",
     },
     {
-      detail: "Session, quality, planning, and source identity packets.",
+      detail: "Describe the proven current responsibilities and interactions; mark missing evidence explicitly.",
       id: "context",
-      kicker: "Context",
-      label: "Context Pack",
+      kicker: "Architecture prompt",
+      label: "Current system",
       tone: "ok",
     },
     {
-      detail: decisionCopy.label,
+      detail: "Explain the intended system behavior and what changes from the current design.",
       id: "decision",
-      kicker: "Decision",
-      label: decisionCopy.title,
-      tone: decisionCopy.tone,
+      kicker: "Architecture prompt",
+      label: "Target change",
+      tone: "info",
     },
     {
-      detail:
-        decision === "proceed"
-          ? "Feature, User story, and Risk draft tree can be prepared next."
-          : "Tree building stays locked for this Work Design session.",
+      detail: "Explain relevant information flows, access and failure/recovery boundaries. Build Tree handles the implementation tasks.",
       id: "output",
-      kicker: "Output",
-      label: decision === "proceed" ? "Draft Tree Builder" : "Decision Record",
-      tone: decision === "proceed" ? "info" : decisionCopy.tone,
+      kicker: "Architecture prompt",
+      label: "Interactions and boundaries",
+      tone: "info",
     },
   ]);
 }

@@ -138,7 +138,7 @@ export function workDesignCurrentMove({
   if (!contextBriefAccepted) {
     return {
       description:
-        "Run the AI-assisted context session before Work Design creates or changes the draft tree.",
+        "Review the target system architecture and accept its context brief before building the work breakdown.",
       label: "context",
       title: "Context Brief Required",
       tone: "warn",

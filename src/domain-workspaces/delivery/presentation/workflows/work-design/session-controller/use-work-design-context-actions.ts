@@ -89,7 +89,7 @@ export function useWorkDesignContextActions({
     disabled: contextBriefReadOnly,
     getScope: () => createWorkDesignAdvisorScope(deliveryPackage, { role: "work-design-context", ref: deliveryPackage.delivery_package_id,
       sourceRevision,
-      context: JSON.stringify({ packageTitle: deliveryPackage.display_name, summary: deliveryPackage.summary, contextDecision, coreNodes, sources }),
+      context: JSON.stringify({ purpose: "Understand the architecture of the system under design. ART records bound the work; they are not the system's components. Distinguish verified current behavior, proposed changes and unknowns. Build Tree handles delivery decomposition.", packageTitle: deliveryPackage.display_name, summary: deliveryPackage.summary, contextDecision, coreNodes, sources }),
       fields: [{ key: "note", label: "Context note", value: contextOperatorNote },
         { key: "board", label: "Context diagram", value: captureBoard(), kind: "board" }],
     }),
