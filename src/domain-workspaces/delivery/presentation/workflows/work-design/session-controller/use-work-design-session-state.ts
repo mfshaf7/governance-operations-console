@@ -113,8 +113,7 @@ export function useWorkDesignSessionState(
     WorkDesignAdvisorTranscriptLine[]
   >([]);
   const [contextOperatorNote, setContextOperatorNote] = useState(
-    initialContextSession?.note ??
-      (readOnly ? "" : "Inspect ART context for duplicate scope, existing package overlap, and the right draft boundary before building the tree."),
+    initialContextSession?.note ?? "",
   );
   const [reviewHandoffNote, setReviewHandoffNote] = useState(() => {
     if (initialContextSession?.initial_step === "build") {
