@@ -27,6 +27,29 @@ const node = (id, kind, children = []) => ({ id, kind, title: id, description: "
 const addition = (id, kind) => { const { tone, ...value } = node(id, kind); return value; };
 const board = () => ({ customItems: [{ id: "manual", kind: "note", label: "Manual note", detail: "Keep this", x: 100, y: 100 }], connections: [], positions: { core: { x: 0, y: 0 } }, removedCoreIds: [], sketchStrokes: [{ id: "manual-sketch" }], templateTrays: [], style: "architecture" });
 
+test("system-context answers cannot edit a retained architecture; an explicit draft keeps manual source and geometry", () => {
+  const current = board();
+  const original = structuredClone(current);
+  const descriptor = createWorkDesignAdvisorScope({ legacy_epic_id: 1332 }, {
+    role: "work-design-context", ref: "delivery-1332", sourceRevision: "version-3",
+    context: "Understand the target system. Current architecture is supplied; unknown runtime evidence remains unknown.",
+    fields: [{ key: "note", label: "Context note", value: "Existing reviewed architecture" },
+      { key: "board", label: "System diagram", kind: "board", value: current }],
+  });
+  const answer = parseAdvisorReply(JSON.stringify({ intent: "answer", message: "A plan/code/test list does not describe how the system works.", edits: [] }), descriptor);
+  assert.deepEqual(answer.edits, []);
+  assert.throws(() => parseAdvisorReply(JSON.stringify({ ...answer, edits: [{ field: "note", value: "Unrequested replacement" }] }), descriptor));
+  const proposed = parseAdvisorReply(JSON.stringify({ intent: "draft", message: "Add the requested system interaction; retain the reviewed note.", edits: [{ field: "board", value: {
+    addItems: [{ id: "system-interface", kind: "component", label: "Application interface", detail: "Proposed request boundary", x: 420.25, y: 100.5 }],
+  } }] }), descriptor);
+  const next = applyContextBoardAdvisorPatch(current, proposed.edits[0].value, ["core"]);
+  assert.deepEqual(next.customItems.find(item => item.id === "manual"), original.customItems[0]);
+  assert.deepEqual(next.positions, original.positions);
+  assert.deepEqual(next.sketchStrokes, original.sketchStrokes);
+  assert.deepEqual(current, original);
+  assert.equal(descriptor.fields[0].value, "Existing reviewed architecture");
+});
+
 test("Context note proposals stay consumable by the native 8000-character note contract", () => {
   const current = "x".repeat(9347);
   const descriptor = createWorkDesignAdvisorScope({ legacy_epic_id: 1332 }, {

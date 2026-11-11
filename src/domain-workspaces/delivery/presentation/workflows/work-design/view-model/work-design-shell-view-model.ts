@@ -51,7 +51,7 @@ export function workDesignSessionShellCopy(
     case "context":
       return {
         description:
-          "Run the AI-assisted context session, inspect bounded ART/OOS sources, and decide whether this package should create a new draft tree.",
+          "Understand the target system, its interactions and boundaries before choosing how this work should proceed. Build Tree handles the work breakdown.",
         title: "Context Session",
       };
     case "history":

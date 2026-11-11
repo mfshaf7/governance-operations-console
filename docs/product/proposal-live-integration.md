@@ -134,6 +134,10 @@ A no-repository decision does not project a fabricated repository-request refere
 9. The Console reports Delivery handoff completion only after OOS returns the
    target record and application receipt. A failed application refreshes the
    canonical blocked state and remains retryable with the same identity.
+   This supported application also completes Delivery Intake automatically:
+   its verified receipt appears under **Delivery → Intake → History**, while
+   the received item continues to **Work Design** for operator planning and
+   review. No second Intake approval or automatic execution is implied.
 10. An accepted Prototype route remains actionable while its handoff is merely
    `ready`; Console no longer treats packet preparation as target application.
 11. The operator starts the Prototype target application from the existing

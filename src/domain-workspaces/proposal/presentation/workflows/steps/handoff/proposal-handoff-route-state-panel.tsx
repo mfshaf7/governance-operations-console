@@ -28,7 +28,9 @@ export function ProposalHandoffRouteStatePanel({
       tone="info"
     >
       <TerasPanelHeader
-        description="Check the destination and repository before handing this proposal over."
+        description={routeSelectionDraft.routeTarget === "Delivery"
+          ? "Delivery handoffs complete Intake automatically. Continue in Work Design; find the receipt in Delivery → Intake → History."
+          : "Check the destination and repository before handing this proposal over."}
         kicker="Handoff Draft"
         title="Route and repository state"
       />

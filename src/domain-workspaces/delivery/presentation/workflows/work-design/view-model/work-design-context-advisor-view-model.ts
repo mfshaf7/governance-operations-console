@@ -32,11 +32,7 @@ export type WorkDesignContextAdvisorResponse = {
 export function workDesignContextAdvisorOpening(
   request: WorkDesignContextAdvisorRequest,
 ) {
-  const decisionCopy = workDesignContextDecisionCopy(
-    request.context_decision ?? "proceed",
-  );
-
-  return `Context mode loaded for ${request.package_ref}. I can inspect source context, duplicate signals, wider ART fit, and whether the operator should ${decisionCopy.label.toLowerCase()}. Advice remains a suggestion until the operator accepts the brief.`;
+  return `Context mode loaded for ${request.package_ref}. We can explain the system being designed using the context supplied here: its current and proposed behavior, interactions, boundaries and open questions. Build Tree handles the ART work breakdown. Advice remains a suggestion until the operator accepts the brief.`;
 }
 
 export function workDesignContextAdvisorTranscript({
@@ -76,7 +72,7 @@ export function workDesignContextAdvisorTranscript({
       role: "advisor",
       text: contextBriefReadOnly
         ? `Accepted decision: ${workDesignContextDecisionCopy(contextDecision).label}. This console is locked until the operator reopens the brief.`
-        : "Guide: ask me to compare source context, duplicate delivery work, wider ART fit, or the correct draft-tree boundary.",
+        : "Guide: ask about the target system or explicitly request an architecture draft. Missing evidence stays an open question; questions do not edit the note or diagram.",
     },
     ...contextAdvisorTurns,
   ];

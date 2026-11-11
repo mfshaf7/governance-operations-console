@@ -80,7 +80,9 @@ export function intakeSelectedSourceProjection(
 ) {
   return {
     description: source
-      ? source.summary
+      ? source.intake_status === "consumed"
+        ? "Delivery has received this source. No further Intake approval is needed."
+        : source.summary
       : "Select a source to review its transfer to Delivery.",
     statusLabel: source?.status_label,
     statusTone: source?.tone ?? ("info" as TerasTone),

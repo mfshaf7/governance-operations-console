@@ -91,10 +91,10 @@ export function WorkDesignContextBoardView({
         readonlySummaryTitle: readOnly && !hasRetainedBrief ? "Current Source Context" : "Finalized Context Snapshot",
         stageAriaLabel: "Work design discussion board",
         summaryDetail:
-          "Inspect source context, sketch options, and shape draft direction.",
+          "Explain the system under design and mark open questions.",
         summaryTitle: "Context Brief Workspace",
         topbarDetail:
-          "Inspect source context, duplicate signals, advisor context sources, and the draft direction before tree building.",
+          "Map the system's responsibilities, interactions and boundaries before breaking down the work.",
         topbarLabel: "Discussion Board",
         topbarTitle: "Context Brief Workspace",
       }}
