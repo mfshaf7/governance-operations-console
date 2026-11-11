@@ -41,45 +41,48 @@ export type ContextBoardToolSection =
 
 export type ContextBoardItemType = "core" | "custom" | "template";
 
-export type ContextBoardCustomKind =
-  | "actor"
-  | "branch"
-  | "c4-component"
-  | "c4-container"
-  | "c4-external-system"
-  | "c4-person"
-  | "c4-relationship"
-  | "c4-software-system"
-  | "c4-system-boundary"
-  | "component"
-  | "container"
-  | "decision"
-  | "diagram"
-  | "end"
-  | "lane"
-  | "label-area"
-  | "label-field"
-  | "label-pill"
-  | "label-tag"
-  | "lifeline"
-  | "note"
-  | "process"
-  | "sequence-activation"
-  | "sequence-fragment"
-  | "sequence-message"
-  | "sequence-return"
-  | "shape-circle"
-  | "shape-diamond"
-  | "shape-rect"
-  | "shape-rounded"
-  | "start"
-  | "text"
-  | "topic"
-  | "uml-class"
-  | "uml-interface"
-  | "uml-package"
-  | "uml-state"
-  | "uml-usecase";
+export const contextBoardCustomKinds = [
+  "actor",
+  "branch",
+  "c4-component",
+  "c4-container",
+  "c4-external-system",
+  "c4-person",
+  "c4-relationship",
+  "c4-software-system",
+  "c4-system-boundary",
+  "component",
+  "container",
+  "decision",
+  "diagram",
+  "end",
+  "lane",
+  "label-area",
+  "label-field",
+  "label-pill",
+  "label-tag",
+  "lifeline",
+  "note",
+  "process",
+  "sequence-activation",
+  "sequence-fragment",
+  "sequence-message",
+  "sequence-return",
+  "shape-circle",
+  "shape-diamond",
+  "shape-rect",
+  "shape-rounded",
+  "start",
+  "text",
+  "topic",
+  "uml-class",
+  "uml-interface",
+  "uml-package",
+  "uml-state",
+  "uml-usecase",
+] as const;
+
+export type ContextBoardCustomKind = typeof contextBoardCustomKinds[number];
 
 export type ContextBoardConnectorShape = "curve" | "straight";
 
