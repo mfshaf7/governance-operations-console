@@ -17,6 +17,7 @@ import { PrototypeControlSelectedPanel } from "./prototype-control-selected-pane
 import { PrototypeWorkspaceRegisterTable } from "./prototype-workspace-register-table.tsx";
 import { usePrototypeControlController } from "./use-prototype-control-controller.ts";
 import { prototypeDialogRouteForCurrentMove } from "./use-prototype-control-state.ts";
+import { useProjectContextChoices } from "@/agent-console";
 
 export function PrototypeControlSurface({
   entryIntent = null,
@@ -25,6 +26,8 @@ export function PrototypeControlSurface({
 }) {
   const controller = usePrototypeControlController({ entryIntent });
   const selectedRecord = controller.selectedRecord;
+  useProjectContextChoices(selectedRecord && controller.sourceAvailability.live && !controller.sourceAvailability.error
+    ? [{ kind: "prototype", id: selectedRecord.id, title: selectedRecord.name }] : []);
 
 
   return (

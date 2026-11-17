@@ -18,6 +18,7 @@ export function DeliveryRefinementSurface({
   model,
   onRequestPackageRegisterFocus,
   onWorkDesignApplied,
+  onCanonicalChanged,
   surface,
 }: {
   focusPackageId?: string | null;
@@ -31,6 +32,7 @@ export function DeliveryRefinementSurface({
     deliveryPackage: DeliveryPackageSummary,
     record: WorkDesignApplyReceipt,
   ) => void;
+  onCanonicalChanged?: () => Promise<void>;
   surface: DeliverySurfaceConfig;
 }) {
   return (
@@ -40,6 +42,7 @@ export function DeliveryRefinementSurface({
       model={model}
       onRequestPackageRegisterFocus={onRequestPackageRegisterFocus}
       onWorkDesignApplied={onWorkDesignApplied}
+      onCanonicalChanged={onCanonicalChanged}
       surface={surface}
     />
   );

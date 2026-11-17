@@ -19,12 +19,13 @@ import {
 } from "./catalog-selectors.ts";
 import {
   catalogRetirementReceiptLabel,
-  catalogRetirementRequiresRequest,
+  catalogRetirementBlocked,
 } from "./catalog-retirement-model.ts";
 
 export function canDraftCatalogMutation(catalog: DeliveryCatalogItem | null) {
   return (
     catalog !== null &&
+    !["read_only", "retired", "stale", "missing"].includes(catalog.lifecycle_state) &&
     catalog.console_capability !== "read_only" &&
     catalog.console_capability !== "owner_routed"
   );
@@ -39,7 +40,7 @@ export function canDraftCatalogValueMutation(
     return false;
   }
 
-  if (value.lifecycle_state === "read_only") {
+  if (["read_only", "stale", "missing"].includes(value.lifecycle_state) || (mode === "retire" && value.usage_count > 0)) {
     return false;
   }
 
@@ -59,6 +60,7 @@ export function catalogValueMutationDisabledReason(
     return undefined;
   }
 
+  if (mode === "retire" && value && value.usage_count > 0) return `Used by ${value.usage_count} records. Reassign their values before retiring this one.`;
   if (!catalog) {
     return "Select a catalog before drafting a mutation.";
   }
@@ -299,19 +301,16 @@ export function applyCatalogMutationDraft({
       catalogValues.find(
         (value) => value.catalog_value_id === mutationDraft.valueId,
       ) ?? null;
+    if (!selectedValue || catalogRetirementBlocked(selectedValue)) return null;
     const nextCatalogValues = catalogValues.map(
       (value): DeliveryCatalogValue =>
         value.catalog_value_id === mutationDraft.valueId
           ? {
               ...value,
               last_projected_at: null,
-              lifecycle_state: catalogRetirementRequiresRequest(value)
-                ? value.lifecycle_state
-                : "retired",
-              tone: catalogRetirementRequiresRequest(value) ? "warn" : "muted",
-              usage_summary: catalogRetirementRequiresRequest(value)
-                ? `${value.usage_count} projected references require migration, replacement, or accepted historical use before final retirement. Projection sync must confirm the catalog and package read models agree.`
-                : "No projected references block retirement. Projection sync must confirm the final catalog state.",
+              lifecycle_state: "retired",
+              tone: "muted",
+              usage_summary: "Retired in this preview; no canonical records were changed.",
             }
           : value,
     );

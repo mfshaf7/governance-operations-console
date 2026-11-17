@@ -471,6 +471,10 @@
   min-height: 6.2rem;
 }
 
+.buildTreeEditorTree[data-draft-notes-size="large"] .buildTreeEditorTreeNoteField textarea {
+  min-height: clamp(12rem, 28vh, 20rem);
+}
+
 .buildTreeEditorTreeDetailActions {
   display: flex;
   justify-content: flex-end;

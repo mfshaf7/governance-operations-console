@@ -53,6 +53,8 @@ export function ControlBoardWorkspaceFrame({
           <TerasPanel
             className={styles.controlBoardSelectedPane}
             frame="padded"
+            layout="header-body"
+            overflow="hidden"
             treatment="rail"
             tone={selectedTone}
           >

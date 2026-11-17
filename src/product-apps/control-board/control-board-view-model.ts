@@ -65,7 +65,7 @@ export function controlBoardPackageProgressLabels(
 
   return {
     progressLabel: `Progress: ${progressPercent}%`,
-    totalLabel: `Total: ${completedChildCount} / ${totalChildCount} Completed`,
+    totalLabel: `${completedChildCount} / ${totalChildCount} completed${packageSummary.progress.retiredChildCount ? ` · ${packageSummary.progress.retiredChildCount} retired` : ""}`,
   };
 }
 

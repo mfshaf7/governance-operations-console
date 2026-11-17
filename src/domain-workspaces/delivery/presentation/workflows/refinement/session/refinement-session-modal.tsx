@@ -27,11 +27,13 @@ export function DeliveryRefinementWorkflowModal(props: SavedRefinementProps) {
 function RefinementWorkflowBody({
   readOnly = false,
   onClose,
+  onCanonicalChanged,
   sourceWorkDesignPackage,
   workflow,
 }: {
   readOnly?: boolean;
   onClose: () => void;
+  onCanonicalChanged?: () => Promise<void>;
   sourceWorkDesignPackage?:
     DeliveryRefinementWorkflow["deliveryPackage"] | null;
   workflow: DeliveryRefinementWorkflow;
@@ -40,6 +42,7 @@ function RefinementWorkflowBody({
     readOnly,
     deliveryPackage: workflow.deliveryPackage,
     onClose,
+    onCanonicalChanged,
     sourceWorkDesignPackage: sourceWorkDesignPackage ?? null,
   });
   const { packet, sessionState } = controller;

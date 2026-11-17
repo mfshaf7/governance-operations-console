@@ -114,7 +114,7 @@ export function useDeliveryChangeLiveRuntime(
   }, [deliveryId, refresh]);
 
   const apply = useCallback(
-    async (operation: DeliveryChangeOperation, acceptanceNote: string) => {
+    async (operation: DeliveryChangeOperation, acceptanceNote: string, reviewedSourceRevision?: string) => {
       if (!deliveryId) {
         throw new DeliveryChangeLiveRuntimeError(
           "The selected package has no Delivery identity.",
@@ -128,6 +128,9 @@ export function useDeliveryChangeLiveRuntime(
           "Canonical Delivery change truth is unavailable.",
           "delivery_change_projection_unavailable",
         );
+      }
+      if (reviewedSourceRevision && current.projection.source_revision !== reviewedSourceRevision) {
+        throw new DeliveryChangeLiveRuntimeError("The package changed after this review opened. Reopen the action and review its current state.", "delivery_change_review_stale");
       }
       const requestKey = JSON.stringify({
         acceptanceNote,

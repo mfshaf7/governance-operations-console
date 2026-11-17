@@ -10,6 +10,7 @@ import {
   TerasModalShell,
   TerasNoteField,
   TerasTrayStack,
+  TerasTechnicalDetails,
 } from "@/teras";
 import type { OperationOwnerRepoCatalogOption } from "@/domain-workspaces/operation-contracts/owner-repository";
 
@@ -71,7 +72,7 @@ export function CatalogRepositoryLinkDialog({
     <>
     <TerasModalShell busy={pending} busyLabel="Linking repository…"
       bodyLayout="scroll"
-      description="Review one atomic OOS command that verifies Repository readiness, applies the Catalog link, updates the Delivery work item, and returns both receipts."
+      description="Link this repository to the selected work item. The system checks readiness, records the Catalog value and then updates Delivery. If only part succeeds, the result shows what needs recovery."
       footer={
         <>
           <TerasActionButton emphasis="secondary" disabled={pending} onClick={requestClose}>
@@ -102,27 +103,20 @@ export function CatalogRepositoryLinkDialog({
           <TerasMetadataList
             items={[
               { label: "Delivery", value: target.packageLabel },
-              { label: "Work Item", value: target.workItemId },
+              { label: "Work Item", value: target.workItemId.replace(/^work-item-/, "Work item ") },
               {
                 label: "Implementation repository",
                 value: repository?.valueKey ?? value?.value_key ?? "Unavailable",
               },
-              {
-                label: "Repository Ref",
-                value: repository?.repoRef ?? "Unavailable",
-              },
+
             ]}
           />
         </TerasContentTray>
 
-        <TerasContentTray kicker="Authority Evidence">
-          <TerasMetadataList
-            items={[
-              {
-                label: "Readiness",
-                tone: readiness ? "ok" : "danger",
-                value: readiness?.receipt.outcome ?? "missing",
-              },
+        <TerasContentTray kicker="Repository readiness">
+          <TerasContentTray description="The system verifies the repository’s active registration and current readiness before linking it." />
+          <TerasTechnicalDetails items={[
+              {label: "Repository reference", value: repository?.repoRef ?? "Unavailable"},
               {
                 label: "WGCF Receipt",
                 value: readiness?.receipt.uri ?? "No readiness receipt",
@@ -135,8 +129,7 @@ export function CatalogRepositoryLinkDialog({
                 label: "Catalog Value",
                 value: value?.catalog_value_id ?? "Unavailable",
               },
-            ]}
-          />
+            ]} />
         </TerasContentTray>
 
         {result ? (
@@ -146,7 +139,7 @@ export function CatalogRepositoryLinkDialog({
                 {
                   label: "Status",
                   tone: applied ? "ok" : "danger",
-                  value: result.status,
+                  value: result.status.replaceAll("_", " "),
                 },
                 { label: "Catalog Receipt", value: catalogReceipt ?? "Unavailable" },
                 { label: "Delivery Receipt", value: result.receipt.ref },
@@ -157,7 +150,7 @@ export function CatalogRepositoryLinkDialog({
         ) : (
           <TerasNoteField
             disabled={pending || Boolean(blockedReason)}
-            label="Operator acceptance note"
+            label="Why this repository?"
             minimumHeight="short"
             onValueChange={onNoteChange}
             placeholder="Why this repository is responsible for implementing the selected work item"

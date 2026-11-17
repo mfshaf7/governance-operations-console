@@ -80,6 +80,7 @@ export function assertCatalogMutationRequest(
       : repositoryReadinessValue(command.repositoryReadiness);
 
   return {
+    expectedSourceRevision: nonEmptyValue(command.expectedSourceRevision, "reviewed Catalog revision"),
     acceptanceId: nonEmptyValue(
       command.acceptanceId,
       "mutation acceptance identity",

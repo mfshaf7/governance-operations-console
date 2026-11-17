@@ -6,6 +6,8 @@ import type {
 import { agentContextMaxListItems } from "../../console-shell/context/agent-context-candidate.ts";
 import type { AgentInteractionMode } from "../model/agent-context-policy.ts";
 import { hasSecretLikeMaterial, inspectAgentInput } from "../model/agent-input-policy.ts";
+import { assertConversationTurns } from "../model/advisor-conversation.ts";
+import { assertSelectedProject, type SelectedProject } from "../model/selected-project-context.ts";
 
 const maxCandidateStringChars = 600;
 const maxCandidateListItems = agentContextMaxListItems;
@@ -149,6 +151,8 @@ function parseSession(value: unknown) {
 }
 
 export type GovernedAgentRequest = Readonly<{
+  selectedProject?: SelectedProject;
+  conversation?: Array<{ role: "operator" | "advisor"; text: string }>;
   candidate: AgentContextCandidate;
   invocationNonce: string;
   message: string;
@@ -176,17 +180,26 @@ export function validateAgentSessionCloseRequest(value: unknown):
 export function validateAgentRequest(body: unknown): AgentRequestValidation {
   const request = isRecord(body) ? body : null;
   if (!request) return { error: "request body is required", ok: false, status: 400 };
-  const allowed = new Set(["context", "invocationNonce", "message", "session"]);
+  const allowed = new Set(["context", "invocationNonce", "message", "session", "conversation", "selectedProject"]);
   const unknownKey = Object.keys(request).find((key) => !allowed.has(key));
   if (unknownKey) return { error: `request contains unsupported field ${unknownKey}`, ok: false, status: 422 };
   const input = inspectAgentInput(request.message);
   if (!input.ok) return input;
+  let conversation: GovernedAgentRequest["conversation"];
+  try { if (request.conversation !== undefined) conversation = assertConversationTurns(request.conversation); }
+  catch { return { error: "Conversation exceeds its complete-message bounds.", ok: false, status: 422 }; }
+  if (conversation && hasSecretLikeMaterial(JSON.stringify(conversation))) return { error: "Secret-like conversation cannot enter model context.", ok: false, status: 422 };
   const context = parseAgentContextRequest(request.context);
   if ("error" in context) return { error: context.error, ok: false, status: 422 };
+  let selectedProject: SelectedProject | undefined;
+  try { if (request.selectedProject !== undefined) selectedProject = assertSelectedProject(request.selectedProject); }
+  catch (error) { return { error: error instanceof Error ? error.message : "Invalid project context.", ok: false, status: 422 }; }
+  if (selectedProject && context.mode !== "focused") return { error: "Selected item context requires Focus mode.", ok: false, status: 422 };
   const session = parseSession(request.session);
   if ("error" in session && session.error) return { error: session.error, ok: false, status: 422 };
   if (typeof request.invocationNonce !== "string" || !uuidPattern.test(request.invocationNonce)) {
     return { error: "invocation nonce is invalid", ok: false, status: 422 };
   }
-  return { candidate: context.candidate, invocationNonce: request.invocationNonce, message: input.message, mode: context.mode, ok: true, session };
+  return { candidate: context.candidate, invocationNonce: request.invocationNonce, message: input.message, mode: context.mode, ok: true, session,
+    ...(conversation ? { conversation } : {}), ...(selectedProject ? { selectedProject } : {}) };
 }

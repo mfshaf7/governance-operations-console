@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 
 import {
@@ -42,6 +42,7 @@ import type {
   WorkDesignNode,
   WorkDesignNodeKind,
 } from "../../model/work-design-model.ts";
+import styles from "@/domain-workspaces/delivery/presentation/workflows/work-design/embedded-products/build-tree/work-design-build-tree-view.module.css";
 
 type WorkDesignAdvisorTranscriptLine = {
   id: string;
@@ -139,13 +140,7 @@ export function WorkDesignBuildTreeView({
   const [
     structuredContextHandoffExpanded,
     setStructuredContextHandoffExpanded,
-  ] = useState(false);
-
-  useEffect(() => {
-    if (buildTreeViewMode !== "structured") {
-      setStructuredContextHandoffExpanded(false);
-    }
-  }, [buildTreeViewMode]);
+  ] = useState(true);
 
   const buildTreePanelStackFill =
     buildTreeViewMode === "structured" && selectedDraftEditorOpen
@@ -165,25 +160,16 @@ export function WorkDesignBuildTreeView({
       return;
     }
 
-    setStructuredContextHandoffExpanded(false);
     setSelectedDraftEditorOpen(true);
   }
 
   function toggleStructuredContextHandoff() {
     const nextExpanded = !structuredContextHandoffExpanded;
 
-    if (nextExpanded) {
-      setSelectedDraftEditorOpen(false);
-    }
-
     setStructuredContextHandoffExpanded(nextExpanded);
   }
 
   function toggleSelectedDraftEditor() {
-    if (buildTreeViewMode === "structured" && !selectedDraftEditorOpen) {
-      setStructuredContextHandoffExpanded(false);
-    }
-
     setSelectedDraftEditorOpen((current) => !current);
   }
 
@@ -282,7 +268,7 @@ export function WorkDesignBuildTreeView({
         />
         {selectedDraftEditorOpen ? (
           <>
-            <TerasFieldStack fill="middle" spacing="comfortable">
+            <TerasFieldStack className={styles.draftEditorFields} fill="middle" spacing="comfortable">
               <TerasTextField
                 disabled={readOnly}
                 {...buildTreeEditorFieldProps}
@@ -427,6 +413,7 @@ export function WorkDesignBuildTreeView({
       sideFill={buildTreePanelStackFill}
       treeContent={
         <BuildTreeEditorTree
+          draftNotesSize="large"
           readOnly={readOnly}
           addMenuNodeId={treeAddMenuNodeId}
           copy={{

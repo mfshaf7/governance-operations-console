@@ -32,7 +32,11 @@ export class RefinementLiveRuntimeError extends Error {
 export function useRefinementLiveRuntime(
   deliveryPackage: Pick<DeliveryPackageSummary, "legacy_epic_id">,
   readOnly = false,
+  onCanonicalChanged?: () => Promise<void>,
 ) {
+  const changed = useRef(onCanonicalChanged); changed.current = onCanonicalChanged;
+  const notifiedReceipt = useRef<string | null>(null);
+  const pendingSourceRevision = useRef<string | null>(null);
   const packageRef = deliveryLivePackageRef(deliveryPackage);
   const [snapshot, setSnapshot] = useState<RefinementProjectionSnapshot | null>(null);
   const [activeRun, setActiveRun] = useState<RefinementOosRun | null>(null);
@@ -54,6 +58,10 @@ export function useRefinementLiveRuntime(
         return assertRefinementProjectionSnapshot(body);
       })
       .then((next) => {
+        if (pendingSourceRevision.current && next.mode === "live" && next.projection && next.projection.source_revision !== pendingSourceRevision.current) {
+          pendingSourceRevision.current = null;
+          void changed.current?.().catch(() => undefined);
+        }
         snapshotRef.current = next;
         setSnapshot(next);
         setActiveRun(next.projection?.active_run ?? next.projection?.latest_run ?? null);
@@ -119,13 +127,24 @@ export function useRefinementLiveRuntime(
         return { mode: current.mode, run: null } as const;
       }
       if (current.projection?.latest_run?.state === "completed") {
+        const receipt = current.projection.latest_run.receipt?.receipt_digest;
+        if (receipt && receipt !== notifiedReceipt.current) { notifiedReceipt.current = receipt; void changed.current?.().catch(() => undefined); }
         return { mode: current.mode, run: current.projection.latest_run } as const;
       }
       const existingRun = current.projection?.active_run;
+      pendingSourceRevision.current = current.projection?.source_revision ?? null;
       const run = existingRun ?? (await startRun(packageRef, command));
       setActiveRun(run);
       const terminalRun = await waitForTerminalRun(packageRef, run, setActiveRun);
+      const completedReceipt = terminalRun.receipt?.receipt_digest;
+      if (completedReceipt && completedReceipt !== notifiedReceipt.current) {
+        notifiedReceipt.current = completedReceipt; pendingSourceRevision.current = null;
+        void changed.current?.().catch(() => undefined);
+      }
       if (terminalRun.state !== "completed") {
+        // Partial effects remain owner facts; refresh their canonical source
+        // without converting a failed run into a successful Apply result.
+        await refresh().catch(() => undefined);
         throw new RefinementLiveRuntimeError(
           terminalRun.failure?.message || `Refinement apply ${terminalRun.state}.`,
           terminalRun.failure?.code || `refinement_apply_${terminalRun.state}`,
@@ -148,6 +167,8 @@ export function useRefinementLiveRuntime(
           "refinement_apply_readback_unavailable",
         );
       }
+      const receipt = projectedRun.receipt?.receipt_digest;
+      if (receipt && receipt !== notifiedReceipt.current) { notifiedReceipt.current = receipt; void changed.current?.().catch(() => undefined); }
       return { mode: current.mode, run: projectedRun } as const;
     },
     [packageRef, refresh, readOnly],

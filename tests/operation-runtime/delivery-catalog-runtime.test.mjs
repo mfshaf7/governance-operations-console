@@ -100,3 +100,9 @@ test("delivery catalog payload changes create distinct receipts", async () => {
   assert.equal(receipts.length, 2);
   assert.notEqual(receipts[0].receiptId, receipts[1].receiptId);
 });
+
+test("preview refuses to manufacture a retirement request for a value still in use", async () => {
+  const {applyCatalogMutationDraft}=await import("../../src/domain-workspaces/delivery/work-model/catalog/catalog-mutation-model.ts");
+  const value={catalog_item_id:activeCatalog.catalog_item_id,catalog_value_id:"used-value",value_key:"used",label:"Used Value",description:"Used by current work",usage_count:1,lifecycle_state:"active"};
+  assert.equal(applyCatalogMutationDraft({activeCatalog,catalogValues:[value],draft:{description:value.description,label:value.label,valueKey:value.value_key},localIdSeed:"retire",mutationDraft:{mode:"retire",valueId:value.catalog_value_id},recordedAt:new Date().toISOString()}),null);
+});

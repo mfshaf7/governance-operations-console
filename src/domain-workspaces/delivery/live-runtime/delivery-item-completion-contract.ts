@@ -28,6 +28,7 @@ export type ItemCompletionContext = {
     planned_business_value: number | null;
     actual_business_value: number | null;
     review_outcome: string | null;
+    review_outcomes?: string[];
     can_review: boolean;
   };
 };
@@ -102,7 +103,8 @@ export function assertCompletionContext(value: unknown): ItemCompletionContext {
   }
   if (body.pi_review !== undefined) {
     const pi = completionObject(body.pi_review);
-    if (typeof pi.delivery_id !== "string" || !/^delivery-[1-9][0-9]*$/.test(pi.delivery_id) ||
+    if ((pi.review_outcomes !== undefined && (!Array.isArray(pi.review_outcomes) || pi.review_outcomes.length > 100 || pi.review_outcomes.some(value => typeof value !== "string" || !value.trim()) || new Set(pi.review_outcomes).size !== pi.review_outcomes.length)) ||
+      typeof pi.delivery_id !== "string" || !/^delivery-[1-9][0-9]*$/.test(pi.delivery_id) ||
       typeof pi.target_pi !== "string" || !pi.target_pi.trim() ||
       [pi.planned_business_value, pi.actual_business_value].some(v => v !== null && (!Number.isSafeInteger(v) || Number(v) < 0)) ||
       !(pi.review_outcome === null || typeof pi.review_outcome === "string") || typeof pi.can_review !== "boolean" ||

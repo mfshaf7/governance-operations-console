@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent } from "react";
+import { useContextBoardDiagrams } from "./use-context-board-diagrams.ts";
 
 import {
   CONTEXT_BOARD_CORE_CARD_HEIGHT,
@@ -120,6 +121,7 @@ type ContextBoardZoomAnchor = {
 };
 
 type UseContextBoardControllerOptions = {
+  multiDiagram?: boolean;
   readOnly?: boolean;
   active: boolean;
   closeGuardOpen: boolean;
@@ -148,6 +150,7 @@ type UseContextBoardControllerOptions = {
 };
 
 export function useContextBoardController({
+  multiDiagram = false,
   readOnly = false,
   active,
   closeGuardOpen,
@@ -252,6 +255,13 @@ export function useContextBoardController({
     useState<ContextBoardTool>("move");
   const [contextBoardZoom, setContextBoardZoom] = useState(1);
 
+  const diagramDocument = useContextBoardDiagrams({ enabled: multiDiagram,
+    getCanvas: captureContextCanvasSnapshot, restoreCanvas: restoreContextCanvasSnapshot,
+    isReadOnly: () => contextBriefReadOnly, markDirty: markBoardDirty,
+    commitHistory: commitContextBoardHistorySnapshot, setType: setContextBoardDiagramType,
+    coreIds: contextBoardCoreNodeInputs.map(node => node.id),
+    center: () => setContextBoardCenterRequest(request => request + 1) });
+
   const contextBoardSelectedKeys = useMemo(
     () => new Set(contextBoardSelectedItems.map(contextBoardSelectionKey)),
     [contextBoardSelectedItems],
@@ -263,15 +273,7 @@ export function useContextBoardController({
   );
   const contextBriefFingerprint = useMemo(
     () =>
-      createContextBoardFingerprint({
-        connections: contextBoardConnections,
-        customItems: contextBoardCustomItems,
-        positions: contextBoardPositions,
-        removedCoreIds: contextBoardRemovedCoreIds,
-        sketchStrokes: contextBoardSketchStrokes,
-        style: contextBoardStyle,
-        templateTrays: contextBoardTemplateTrays,
-      }),
+      createContextBoardFingerprint(diagramDocument.capture()),
     [
       contextBoardConnections,
       contextBoardCustomItems,
@@ -281,6 +283,8 @@ export function useContextBoardController({
       contextBoardStyle,
       contextBoardTemplateTrays,
       createContextBoardFingerprint,
+      diagramDocument.retained,
+      diagramDocument.activeId,
     ],
   );
   const contextBriefSaved =
@@ -569,7 +573,7 @@ export function useContextBoardController({
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
-  function captureContextBoardSnapshot(): ContextBoardSnapshot {
+  function captureContextCanvasSnapshot(): ContextBoardSnapshot {
     return cloneContextBoardSnapshot({
       connections: contextBoardConnections,
       customItems: contextBoardCustomItems,
@@ -581,7 +585,16 @@ export function useContextBoardController({
     });
   }
 
+  function captureContextBoardSnapshot(): ContextBoardSnapshot {
+    return diagramDocument.capture();
+  }
+
   function restoreContextBoardSnapshot(snapshot: ContextBoardSnapshot) {
+    diagramDocument.restore(snapshot);
+    markBoardDirty();
+  }
+
+  function restoreContextCanvasSnapshot(snapshot: ContextBoardSnapshot) {
     const nextSnapshot = cloneContextBoardSnapshot(snapshot);
 
     setContextBoardPositions(nextSnapshot.positions);
@@ -603,7 +616,6 @@ export function useContextBoardController({
     setContextBoardDrag(null);
     contextBoardConnectionDraftRef.current = null;
     setContextBoardConnectionDraft(null);
-    markBoardDirty();
   }
 
   function commitContextBoardHistorySnapshot(snapshot: ContextBoardSnapshot) {
@@ -3253,6 +3265,7 @@ export function useContextBoardController({
     alignContextBoardSelection,
     cancelContextBoardConnection,
     captureContextBoardSnapshot,
+    diagramDocument,
     centerContextBoardViewportAt,
     clearContextBoardSelection,
     commitContextBoardHistorySnapshot,

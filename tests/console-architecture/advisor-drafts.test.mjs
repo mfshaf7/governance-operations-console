@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertAdvisorScope, assertAdvisorReply, parseAdvisorReply, advisorDraftInstructions, advisorScopeSnapshot, advisorScopeIdentity } from "../../src/agent-console/model/advisor-drafts.ts";
+import { advisorRoles, advisorWorkContext, assertAdvisorScope, assertAdvisorReply, parseAdvisorReply, advisorDraftInstructions, advisorScopeSnapshot, advisorScopeIdentity } from "../../src/agent-console/model/advisor-drafts.ts";
 import { applyContextBoardAdvisorPatch } from "../../src/product-apps/context-board/context-board-advisor-patch.ts";
 import { applyWorkDesignAdvisorPatch } from "../../src/domain-workspaces/delivery/product-adapters/build-tree/work-design-advisor-patch.ts";
 import { buildAdvisorAgentRequest } from "../../src/agent-console/server/advisor-draft-request.ts";
@@ -26,6 +26,39 @@ const draft = (edits) => ({ intent: "draft", message: "Requested edits", edits }
 const node = (id, kind, children = []) => ({ id, kind, title: id, description: "Manual description", draftBody: "Manual body", remark: "Manual remark", tone: "info", children });
 const addition = (id, kind) => { const { tone, ...value } = node(id, kind); return value; };
 const board = () => ({ customItems: [{ id: "manual", kind: "note", label: "Manual note", detail: "Keep this", x: 100, y: 100 }], connections: [], positions: { core: { x: 0, y: 0 } }, removedCoreIds: [], sketchStrokes: [{ id: "manual-sketch" }], templateTrays: [], style: "architecture" });
+
+test("work context keeps supplied evidence distinct from references and refuses silent context trimming", () => {
+  const observations = { selectedRoute: "Prototype", repositoryGate: { state: "blocked" }, evidenceRefs: ["receipt:unloaded"] };
+  const raw = advisorWorkContext(observations, { provided: ["Current route and repository-gate observations"], unavailable: ["Referenced receipt contents"] });
+  const context = JSON.parse(raw);
+  assert.deepEqual(context.observations, observations);
+  assert.equal(context.coverage.referencesAreLoadedContents, false);
+  assert.deepEqual(context.coverage.unavailable, ["Referenced receipt contents"]);
+  assert.throws(() => advisorWorkContext({ note: "x".repeat(16001) }, { provided: ["Selected note"], unavailable: [] }), /no evidence was silently removed/);
+  assert.deepEqual(observations.evidenceRefs, ["receipt:unloaded"]);
+});
+
+test("every general draft-advisor role consumes only its selected text field and keeps questions non-mutating", () => {
+  const targets = { "proposal-triage": "summary", "proposal-disposition": "notes", "prototype-candidate": "objective",
+    "prototype-baseline": "baselineStatement", "execution-tree": "title", "execution-architecture": "sectionJson", "work-design-blocker": "justification",
+    "refinement-blocker": "justification", "definition-design": "identityOwnership.purpose" };
+  const generalRoles = advisorRoles.filter(role => !["work-design-context", "work-design-tree", "refinement-metadata"].includes(role));
+  assert.deepEqual([...generalRoles].sort(), Object.keys(targets).sort(), "New roles require an explicit consumer/conformance classification.");
+  assert.match(advisorDraftInstructions, /native draft_reply object/);
+  for (const role of generalRoles) {
+    const key = targets[role], local = assertAdvisorScope({ ...scope(), role,
+      fields: [{ key, label: "Selected explanatory field", value: "Retained manual draft", maxLength: 100 }] });
+    const answer = parseAdvisorReply(JSON.stringify({ intent: "answer", message: "Explanation only.", edits: [] }), local);
+    assert.deepEqual(answer.edits, []);
+    const edit = { field: key, value: "Requested explanatory draft" };
+    assert.deepEqual(parseAdvisorReply(JSON.stringify(draft([edit])), local).edits, [edit]);
+    for (const invalid of [draft([edit, { field: "unselected-field", value: "Must not apply" }]),
+      draft([{ field: key, value: "x".repeat(101) }]), { ...answer, edits: [edit] }])
+      assert.throws(() => parseAdvisorReply(JSON.stringify(invalid), local));
+    assert.throws(() => parseAdvisorReply(JSON.stringify(draft([edit])), { ...local, readOnly: true }));
+    assert.equal(local.fields[0].value, "Retained manual draft");
+  }
+});
 
 test("system-context answers cannot edit a retained architecture; an explicit draft keeps manual source and geometry", () => {
   const current = board();

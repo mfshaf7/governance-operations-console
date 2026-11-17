@@ -74,8 +74,8 @@ export function RefinementStepRouter({
 
   return (
     <>
-      <TerasContentFrame fill variant="standard">
-        {activeStep !== "hub" ? (
+      <TerasContentFrame fill variant={activeStep === "metadata_draft" || activeStep === "hub" ? "single-region" : "standard"}>
+        {activeStep !== "hub" && activeStep !== "metadata_draft" ? (
           <RefinementProgressPanel
             readOnly={readOnly}
             activeReceipt={activeReceipt}

@@ -20,7 +20,7 @@ import type {
   DeliveryIntakeSourceStatus,
 } from "../../domain/delivery-intake.ts";
 import type { DeliveryAuditEvent } from "../../domain/delivery-audit.ts";
-import { getDeliveryEffectivePackagePosture } from "../../domain/delivery-package-posture.ts";
+import { deliveryPackageMatchesWorkflowPhase, getDeliveryEffectivePackagePosture } from "../../domain/delivery-package-posture.ts";
 import type { DeliveryReadModel } from "../delivery-read-model.ts";
 
 export type DeliveryActionDefinition = {
@@ -203,9 +203,10 @@ export function getDeliveryPackagesByWorkflowPhase(
   model: DeliveryReadModel = deliveryReadModel,
 ): DeliveryPackageSummary[] {
   return model.history_scope === "history" ? getDeliveryPackages(model) : getDeliveryPackages(model).filter(
-    (deliveryPackage) => deliveryPackage.workflow_phase === workflowPhase,
+    (deliveryPackage) => deliveryPackageMatchesWorkflowPhase(deliveryPackage, workflowPhase),
   );
 }
+
 
 export function getExecutionBoardPackages(
   model: DeliveryReadModel = deliveryReadModel,
@@ -213,6 +214,7 @@ export function getExecutionBoardPackages(
   return model.history_scope === "history" ? getDeliveryPackages(model) : getDeliveryPackages(model).filter(
     (deliveryPackage) =>
       deliveryPackage.workflow_phase === "execution" ||
+      deliveryPackage.backend_status === "parked" ||
       deliveryPackage.workflow_phase === "audit_only",
   );
 }

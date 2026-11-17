@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useDraftAdvisor } from "@/agent-console";
+import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 
 import type { DeliveryPackageSummary } from "../../../read-model/index.ts";
 
@@ -21,6 +21,7 @@ import {
   executionTreeNodeKindLabel,
   type ExecutionTreeDraftNode,
 } from "./execution-board-view-model.ts";
+import { executionAdvisorUpstreamContext } from "./execution-advisor-context.ts";
 
 type AdvisorLine = {
   id: string;
@@ -29,12 +30,14 @@ type AdvisorLine = {
 };
 
 export function ExecutionTreeEditSupportPanel({
+  sourceTree,
   packageSummary,
   selectedNode,
   onUpdatePlanningInputs,
   onUpdateText,
   disabled = false,
 }: {
+  sourceTree: ExecutionTreeDraftNode | null;
   packageSummary: DeliveryPackageSummary;
   selectedNode: ExecutionTreeDraftNode;
   onUpdatePlanningInputs?: (values: { targetPi?: string; iteration?: string }) => void;
@@ -44,10 +47,19 @@ export function ExecutionTreeEditSupportPanel({
   const [advisorPrompt, setAdvisorPrompt] = useState("");
   const [advisorTurns, setAdvisorTurns] = useState<AdvisorLine[]>([]);
   const advisor = useDraftAdvisor({
+    conversation: { role: "execution-tree", ref: packageSummary.delivery_package_id, sourceRef: packageSummary.source_ref },
     disabled: disabled || !onUpdateText,
     getScope: () => ({ role: "execution-tree", ref: `${packageSummary.delivery_package_id}:${selectedNode.id}`,
       sourceRef: packageSummary.source_ref, sourceRevision: "local-execution-tree-draft",
-      context: JSON.stringify({ package: packageSummary.display_name, selectedNode, boundary: "Local selected node narrative only; no backend status or workflow action." }),
+      context: advisorWorkContext({ package: packageSummary.display_name, packageSummary: packageSummary.summary,
+        sourceRef: packageSummary.source_ref, selectedNode: { id: selectedNode.id, kind: selectedNode.kind,
+          title: selectedNode.title, draftBody: selectedNode.draftBody, remark: selectedNode.remark,
+          backendStatus: selectedNode.backendStatus, legacyWorkPackageId: selectedNode.legacyWorkPackageId },
+        sourceNarratives: executionAdvisorUpstreamContext(sourceTree, selectedNode.id),
+        contextOrigin: "Original work-tree source snapshot captured for this edit, separate from the selected local draft. Includes applied scope/architectural narrative when recorded; separate diagrams and linked proof are not loaded.",
+        boundary: "Local selected node narrative only; no backend status or workflow action." },
+        { provided: ["Selected execution node and its current narrative", "Package scope summary and source identity", "Available original selected-node and ancestor narratives, separate from current local edits"],
+          unavailable: ["Unprovided implementation files, tests and runtime results", "Other work-item contents not supplied here"] }),
       fields: ["title", "draftBody", "remark"].map((key) => ({ key, label: key, value: selectedNode[key as "title" | "draftBody" | "remark"] ?? "" })),
     }),
     apply: (edits) => { onUpdateText?.(Object.fromEntries(edits.map((edit) => [edit.field, edit.value]))); return edits; },

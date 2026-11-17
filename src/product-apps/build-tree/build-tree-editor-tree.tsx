@@ -37,6 +37,7 @@ export type BuildTreeEditorTreeProps<
   TNode extends BuildTreeNodeLike<TNode>,
 > = {
   readOnly?: boolean;
+  draftNotesSize?: "standard" | "large";
   addMenuNodeId: string | null;
   canDeleteNode?: (node: TNode) => boolean;
   copy?: BuildTreeEditorTreeCopy;
@@ -96,6 +97,7 @@ export function BuildTreeEditorTree<
   TNode extends BuildTreeNodeLike<TNode>,
 >({
   readOnly = false,
+  draftNotesSize = "standard",
   addMenuNodeId,
   canDeleteNode,
   copy,
@@ -504,7 +506,7 @@ export function BuildTreeEditorTree<
   }
 
   return (
-    <div className={editorStyles.buildTreeEditorTree} data-view={mode}>
+    <div className={editorStyles.buildTreeEditorTree} data-view={mode} data-draft-notes-size={draftNotesSize}>
       {mode === "structured" ? renderStructuredNode(tree) : renderInlineNode(tree)}
     </div>
   );

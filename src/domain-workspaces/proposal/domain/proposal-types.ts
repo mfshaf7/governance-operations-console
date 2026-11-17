@@ -27,6 +27,7 @@ export type ProposalWorkspaceScenario = {
   sourceStatus?: string;
   backendRecordId: string;
   bodyPreview: string;
+  recordedTriage?: { summary: string; sourceRef: string; sourceRevision: string };
   evidence: ProposalWorkspaceScenarioEvidence[];
   handoffRule: string;
   id: string;

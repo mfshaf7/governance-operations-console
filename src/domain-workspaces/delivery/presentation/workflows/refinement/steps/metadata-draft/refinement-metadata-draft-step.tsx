@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { TerasZoneLayout } from "@/teras";
+import { TerasSubjectHero, TerasZone, TerasZoneLayout } from "@/teras";
+import { deliveryPackagePacketMetadata } from "../../../../shared/delivery-package-metadata.ts";
 import type {
   DeliveryPackageSummary,
   DeliveryRefinementPacket,
@@ -95,7 +96,8 @@ export function RefinementMetadataDraftStep({
   updateMetadataDraftValue: (fieldKey: string, value: string) => void;
   updateMetadataDraftValues: (fieldKeys: string[], value: string) => void;
 }) {
-  const [advisorCollapsed, setAdvisorCollapsed] = useState(true);
+  const [advisorCollapsed, setAdvisorCollapsed] = useState(false);
+  const [metadataEditorCollapsed, setMetadataEditorCollapsed] = useState(false);
   const metadataTargets = refinementMetadataTargets(packet);
   const selectedMetadataTarget =
     metadataTargets.find((target) => target.key === selectedMetadataFieldKey) ??
@@ -116,18 +118,14 @@ export function RefinementMetadataDraftStep({
     ? (metadataDraftValues[selectedMetadataTarget.key] ??
       selectedMetadataTarget.sourceValue)
     : "";
-  const metadataEditorCollapsed =
-    activeStep === "metadata_draft" && !advisorCollapsed;
   const toggleAdvisorCollapsed = () =>
     setAdvisorCollapsed((current) => !current);
 
   return (
     <TerasZoneLayout variant="main-aside">
       <RefinementMetadataWorkbenchView
-        deliveryPackage={deliveryPackage}
         metadataFieldResolutions={metadataFieldResolutions}
         metadataSelectionMode={metadataSelectionMode}
-        onOpenHandoff={onOpenHandoff}
         onSelectMetadataField={setSelectedMetadataFieldKey}
         onSelectMetadataSelectionMode={setMetadataSelectionMode}
         onToggleMetadataBulkNode={toggleMetadataBulkNode}
@@ -135,50 +133,62 @@ export function RefinementMetadataDraftStep({
         selectedMetadataBulkNodeIds={selectedMetadataBulkNodeIds}
         selectedMetadataFieldKey={selectedMetadataFieldKey}
       />
-      <RefinementSelectedMetadataFieldEditor
-            readOnly={readOnly}
-        advisor={
-          <RefinementMetadataAdvisor
-            readOnly={readOnly}
-            sourceRef={deliveryPackage.source_ref}
-            sourceRevision={packet.packet_revision ?? packet.last_saved_at}
-            metadataDraftValues={metadataDraftValues}
-            activeStep={activeStep}
-            advisorTranscript={advisorTranscript}
-            collapsed={advisorCollapsed}
-            deliveryPackageName={deliveryPackage.display_name}
-            draftValue={selectedMetadataDraftValue}
-            markMetadataFieldResolution={markMetadataFieldResolution}
-            markMetadataFieldResolutions={markMetadataFieldResolutions}
-            onToggleCollapsed={toggleAdvisorCollapsed}
-            requestMetadataAdvice={requestMetadataAdvice}
-            runtimeMode={runtimeMode}
-            runtimeStatus={runtimeStatus}
-            selectedSharedMetadataGroup={selectedSharedMetadataGroup}
-            selectedTarget={selectedMetadataTarget}
-            updateMetadataDraftValue={updateMetadataDraftValue}
-            updateMetadataDraftValues={updateMetadataDraftValues}
-          />
-        }
-        draftValue={selectedMetadataDraftValue}
-        editorCollapsed={metadataEditorCollapsed}
-        metadataDraftValues={metadataDraftValues}
-        metadataFieldResolutions={metadataFieldResolutions}
-        metadataSelectionMode={metadataSelectionMode}
-        onToggleEditorCollapsed={toggleAdvisorCollapsed}
-        onMarkMetadataFieldResolution={markMetadataFieldResolution}
-        onMarkMetadataFieldResolutions={markMetadataFieldResolutions}
-        onResetMetadataDraftValue={resetMetadataDraftValue}
-        onResetMetadataDraftValues={resetMetadataDraftValues}
-        onReviewReadiness={onReviewReadiness}
-        onSelectMetadataField={setSelectedMetadataFieldKey}
-        onUpdateMetadataDraftValue={updateMetadataDraftValue}
-        onUpdateMetadataDraftValues={updateMetadataDraftValues}
-        packet={packet}
-        selectedMetadataBulkNodeIds={selectedMetadataBulkNodeIds}
-        selectedMetadataFieldKey={selectedMetadataFieldKey}
-        selectedTarget={selectedMetadataTarget}
-      />
+      <TerasZone fit="fill">
+        <TerasSubjectHero
+          actionDetail="Receipt and finalized brief source"
+          actionLabel="View Work Design Handoff"
+          onAction={onOpenHandoff}
+          subject={{
+            eyebrow: "Selected Package",
+            meta: deliveryPackagePacketMetadata({ deliveryPackage, packetId: packet.packet_id }),
+            title: deliveryPackage.display_name,
+          }}
+        />
+        <RefinementSelectedMetadataFieldEditor
+          readOnly={readOnly}
+          advisor={
+            <RefinementMetadataAdvisor
+              readOnly={readOnly}
+              sourceRef={deliveryPackage.source_ref}
+              sourceRevision={packet.packet_revision ?? packet.last_saved_at}
+              metadataDraftValues={metadataDraftValues}
+              activeStep={activeStep}
+              advisorTranscript={advisorTranscript}
+              collapsed={advisorCollapsed}
+              deliveryPackageName={deliveryPackage.display_name}
+              draftValue={selectedMetadataDraftValue}
+              markMetadataFieldResolution={markMetadataFieldResolution}
+              markMetadataFieldResolutions={markMetadataFieldResolutions}
+              onToggleCollapsed={toggleAdvisorCollapsed}
+              requestMetadataAdvice={requestMetadataAdvice}
+              runtimeMode={runtimeMode}
+              runtimeStatus={runtimeStatus}
+              selectedSharedMetadataGroup={selectedSharedMetadataGroup}
+              selectedTarget={selectedMetadataTarget}
+              updateMetadataDraftValue={updateMetadataDraftValue}
+              updateMetadataDraftValues={updateMetadataDraftValues}
+            />
+          }
+          draftValue={selectedMetadataDraftValue}
+          editorCollapsed={metadataEditorCollapsed}
+          metadataDraftValues={metadataDraftValues}
+          metadataFieldResolutions={metadataFieldResolutions}
+          metadataSelectionMode={metadataSelectionMode}
+          onToggleEditorCollapsed={() => setMetadataEditorCollapsed(current => !current)}
+          onMarkMetadataFieldResolution={markMetadataFieldResolution}
+          onMarkMetadataFieldResolutions={markMetadataFieldResolutions}
+          onResetMetadataDraftValue={resetMetadataDraftValue}
+          onResetMetadataDraftValues={resetMetadataDraftValues}
+          onReviewReadiness={onReviewReadiness}
+          onSelectMetadataField={setSelectedMetadataFieldKey}
+          onUpdateMetadataDraftValue={updateMetadataDraftValue}
+          onUpdateMetadataDraftValues={updateMetadataDraftValues}
+          packet={packet}
+          selectedMetadataBulkNodeIds={selectedMetadataBulkNodeIds}
+          selectedMetadataFieldKey={selectedMetadataFieldKey}
+          selectedTarget={selectedMetadataTarget}
+        />
+      </TerasZone>
     </TerasZoneLayout>
   );
 }

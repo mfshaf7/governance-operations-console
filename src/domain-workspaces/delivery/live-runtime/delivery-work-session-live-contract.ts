@@ -1,3 +1,4 @@
+import type { DeliveryWorkSessionRecovery } from "./delivery-work-session-live-types.ts";
 import type {
   DeliveryWorkSessionDecision,
   DeliveryWorkSessionDecisionInput,
@@ -468,4 +469,35 @@ function workItemId(value: unknown, label: string) {
 function workItemIdList(value: unknown, label: string) {
   if (!Array.isArray(value)) invalid(`${label} is invalid.`);
   for (const item of value as unknown[]) workItemId(item, label);
+}
+
+export function assertDeliveryWorkSessionRecovery(value: unknown, revision: string): DeliveryWorkSessionRecovery {
+  const input = record(value, "recovery decision");
+  const unmerged = input.mode === "archive-unmerged";
+  const keys = ["session_id", "session_revision", "reason", "pull_request", ...(unmerged ? ["mode", "source"] : input.mode === "archive-merged-evidence" ? ["mode"] : [])];
+  if (Object.keys(input).sort().join() !== keys.sort().join() || !/^work-session:delivery-[1-9][0-9]*:[a-z0-9][a-z0-9._:-]*$/.test(String(input.session_id)) ||
+    input.session_revision !== revision || !Number.isFinite(Date.parse(revision)) || typeof input.reason !== "string" || input.reason.trim().length < 20 || input.reason.length > 4000) invalid("Review the exact session and give a substantive recovery reason.");
+  if (unmerged) {
+    const source = record(input.source, "recovery source");
+    if (input.pull_request !== null || Object.keys(source).sort().join() !== "local_branch_head,worktree_head" || !/^[a-f0-9]{40}$/.test(String(source.local_branch_head)) || source.worktree_head !== source.local_branch_head) invalid("Recovery must bind the same exact local branch and worktree head.");
+  } else {
+    const pr = record(input.pull_request, "recovery pull request");
+    if (Object.keys(pr).sort().join() !== "head_commit,merge_commit,url" || typeof pr.url !== "string" || !/^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/[1-9][0-9]*$/.test(pr.url) ||
+      !/^[a-f0-9]{40}$/.test(String(pr.head_commit)) || !/^[a-f0-9]{40}$/.test(String(pr.merge_commit))) invalid("Recovery must bind the exact merged pull request.");
+  }
+  return input as DeliveryWorkSessionRecovery;
+}
+
+export function recoveryFromWorkSession(current: DeliveryWorkSessionProjection, reason: string): DeliveryWorkSessionRecovery {
+  if (current.next_action?.code !== "architecture-recovery-required") invalid("Read the current session before reviewing recovery.");
+  const pr = current.pull_request;
+  const source = current.architecture_supersession?.pristine_proof?.source;
+  const binding = pr?.state === "merged" ? {
+    ...(current.facts?.review_packet === "merge-ready" ? { mode: "archive-merged-evidence" } : {}),
+    pull_request: { url: pr.url, head_commit: pr.head_commit, merge_commit: pr.merge_commit },
+  } : pr?.state === "missing" && source ? {
+    mode: "archive-unmerged", pull_request: null,
+    source: { local_branch_head: source.local_branch_head, worktree_head: source.worktree_head },
+  } : {};
+  return assertDeliveryWorkSessionRecovery({ ...binding, session_id: current.session_id, session_revision: current.session_revision, reason: reason.trim() }, current.session_revision ?? "");
 }

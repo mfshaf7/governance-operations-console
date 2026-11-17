@@ -36,6 +36,7 @@ type UseRefinementSessionControllerParams = {
   readOnly?: boolean;
   deliveryPackage: DeliveryPackageSummary;
   onClose: () => void;
+  onCanonicalChanged?: () => Promise<void>;
   sourceWorkDesignPackage: DeliveryPackageSummary | null;
 };
 
@@ -43,6 +44,7 @@ export function useRefinementSessionController({
   readOnly = false,
   deliveryPackage,
   onClose,
+  onCanonicalChanged,
   sourceWorkDesignPackage,
 }: UseRefinementSessionControllerParams) {
   const [blockerRecoveryOpen, setBlockerRecoveryOpen] = useState(false);
@@ -55,7 +57,7 @@ export function useRefinementSessionController({
     draftKey: string;
   } | null>(null);
   const fixturePacket = refinementPacketForPackage(deliveryPackage);
-  const liveRuntime = useRefinementLiveRuntime(deliveryPackage, readOnly);
+  const liveRuntime = useRefinementLiveRuntime(deliveryPackage, readOnly, onCanonicalChanged);
   const packet = liveRuntime.loading
     ? fixturePacket
     : liveRuntime.mode === "disconnected-preview"
@@ -181,7 +183,7 @@ export function useRefinementSessionController({
       : rawProgressActiveStep;
   const shellWidth =
     activeStep === "metadata_draft"
-      ? ("large" as const)
+      ? ("viewport" as const)
       : activeStep === "hub"
         ? ("medium" as const)
         : ("large" as const);

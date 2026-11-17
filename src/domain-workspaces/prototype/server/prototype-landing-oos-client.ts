@@ -38,6 +38,7 @@ const maxResponseBytes = 2_097_152;
 type PrototypeLandingOosConfig = ConsoleOosConnection;
 
 type RequestOptions = Readonly<{
+  env?: NodeJS.ProcessEnv;
   selection?: {cursor?:string|null;id?:string|null};
   config?: PrototypeLandingOosConfig;
   fetchImpl?: typeof fetch;
@@ -61,7 +62,7 @@ export function prototypeLandingOosConfigured(env = process.env) {
 }
 
 export async function readCanonicalPrototypeWorkspace(options: RequestOptions = {}) {
-  const config=options.config??resolveConfig();
+  const config=options.config??resolveConfig(options.env);
   return concurrentSourceRead(`prototype-workspace:${JSON.stringify(options.selection??null)}`,config,options.fetchImpl??fetch,async()=>{
   const params=options.selection?new URLSearchParams({view:"register",...(options.selection.cursor?{cursor:options.selection.cursor}:{}),...(options.selection.id?{id:options.selection.id}:{})}):null;
   const body = await request(`/v1/prototypes${params?`?${params}`:""}`, { method: "GET" }, {...options,config}, {

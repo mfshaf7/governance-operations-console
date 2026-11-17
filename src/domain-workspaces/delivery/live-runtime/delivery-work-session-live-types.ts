@@ -138,6 +138,10 @@ export type DeliveryWorkSessionCloseout = {
 };
 
 export type DeliveryWorkSessionProjection = {
+  architecture_supersession?: {
+    reconstructable: boolean;
+    pristine_proof?: { source?: { local_branch_head?: string; worktree_head?: string } };
+  };
   source_authorization?: { intent_ref: string; session_id: string; revision?: string; state?: string; operation_ref?: string | null };
   agent_source?: Record<string, unknown> & { state: string };
   cleanup?: DeliveryWorkSessionCleanup;
@@ -200,3 +204,10 @@ export type DeliveryWorkSessionLiveApiError = {
   mode: "live";
   status: "offline";
 };
+
+export type DeliveryWorkSessionRecovery = {
+  session_id: string;
+  session_revision: string;
+  reason: string;
+} & ({ mode: "archive-unmerged"; pull_request: null; source: { local_branch_head: string; worktree_head: string } } |
+  { mode?: "archive-merged-evidence"; pull_request: { url: string; head_commit: string; merge_commit: string } });

@@ -1,5 +1,6 @@
 import type { TerasMetadataItem } from "@/teras";
 import {workDesignContextBoardCoreNodes} from "../../../../../product-adapters/context-board/index.ts";
+import { contextBoardArchitectureContext } from "../../../../../../../product-apps/context-board/context-board-diagrams.ts";
 import type {
   DeliveryPackageSummary,
   DeliveryTone,
@@ -137,9 +138,12 @@ export function workDesignFinalizedBriefView({
     session,
     snapshotArtifact,
   });
+  const diagramContext = savedSession?.snapshot.diagrams
+    ? contextBoardArchitectureContext(savedSession.snapshot) : null;
 
   return {
     boardSnapshotRef,
+    ...(diagramContext ? { diagramContext } : {}),
     carriedMetadata: session?.carried_metadata ?? [
       {
         label: "Decision",
@@ -163,7 +167,12 @@ export function workDesignFinalizedBriefView({
       },
     ],
     decision: resolvedDecision,
-    diagramNodes: session?.board_snapshot?.nodes ?? [
+    diagramNodes: diagramContext?.map((view, index) => ({
+      label: `DIAGRAM ${index + 1}`,
+      title: view.name,
+      summary: view.description || `${view.cards.length} cards and ${view.connections.length} connections.`,
+      tone: "info" as const,
+    })) ?? session?.board_snapshot?.nodes ?? [
       {
         label: "SOURCE",
         summary: deliveryPackage.source_ref,
@@ -184,7 +193,7 @@ export function workDesignFinalizedBriefView({
       },
     ],
     diagramSummary:
-      session?.board_snapshot?.summary ??
+      (diagramContext ? `${diagramContext.length} retained architectural views in this finalized brief.` : undefined) ?? session?.board_snapshot?.summary ??
       "Finalized context captures the selected source, operator decision, finalization checks, and next-step handoff for the tree builder.",
     diagramTitle:
       session?.board_snapshot?.title ??

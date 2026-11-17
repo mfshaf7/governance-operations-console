@@ -33,6 +33,8 @@ export type {
   ContextBoardSketchTone,
   ContextBoardSketchTool,
   ContextBoardSnapshot,
+  ContextBoardCanvasSnapshot,
+  ContextBoardDiagram,
   ContextBoardStyle,
   ContextBoardSubject,
   ContextBoardSurfaceBounds,
@@ -46,6 +48,7 @@ export type {
 } from "./context-board-model";
 
 export * from "./context-board-core";
+export * from "./context-board-diagrams.ts";
 export { applyContextBoardAdvisorPatch } from "./context-board-advisor-patch";
 export * from "./context-board-rendering";
 export * from "./context-board-snapshot-capture-surface";

@@ -1,5 +1,19 @@
 # Governance Operations Console Change Log
 
+## 2026-11-17 — Project membership management preview
+
+Operator-approved extension of the current maintenance batch. Landing Unit
+decision: `feature_single_landing_unit`, existing Context Brief Console branch;
+OOS and Platform retain their separate source/review boundaries. The primary
+instruction is [Catalog integration](refinement-catalog-live-integration.md).
+OpenProject remains canonical. Manage Members provides existing-account and
+project-role selection, reviewed add/change/remove, protected/inherited access,
+bounded browsing, explicit waiting/error/outcome states and exact request
+recovery. Native backend qualification rolls back all temporary data. The
+unpublished UI reuses existing Teras patterns; disconnected examples never
+replace a configured live read. Composed identity review and normal paired
+source acceptance remain prerequisites to live activation.
+
 ## 2026-11-05 — Private registration command recovery
 
 Operator-authorized maintenance, Landing Unit decision `feature_single_landing_unit`,

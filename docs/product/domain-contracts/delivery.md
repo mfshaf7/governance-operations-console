@@ -312,11 +312,15 @@ operator discovers during active Delivery execution that a work item now needs a
 repo owner, the console must not free-text that value into the work item. The
 resolved path is:
 
-1. Repository admits or links the repository record.
-2. The operator uses Delivery Catalog Owner Repo to add the catalog entry, link
-   it to the admitted repository, and then run the backend value sync.
-3. Execution applies the selected Owner Repo value to the live Delivery work
-   item through the OOS work-item update route.
+1. Repository creates or links the repository; Workspace Registry completes
+   onboarding so its registration is active.
+2. Execution opens Delivery Catalog at that exact repository/work-item target.
+   Add a missing Catalog value or select the existing value. The system prepares
+   current readiness; repository identity is derived from its active registration.
+3. Review Link to Work Item. The enclosing command records Catalog and then
+   updates the selected Delivery work item. Inspect both receipts. A partial
+   failure retains the successful stage and names its reconciliation action;
+   there is no separate manual backend Sync step or automatic rollback.
 
 The Owner Repo Catalog request must select an admitted Repository record. It
 must not accept a free-text repository slug as the source of truth. The Catalog
@@ -494,6 +498,12 @@ Source ownership facts:
   Build Tree owns its editor frame, editor tree renderer, read-only viewer,
   target selector, controller helpers, scaffold helpers, scaffold dialog
   surface, and neutral structured tree presentation.
+- Work Design hosts Build Tree in the same viewport-width, filled-height shell
+  as Context Session, with a single-region body and no workflow progress strip.
+  The tree and discussion rail keep their native panels and internal scrolling;
+  Back to Hub and Review Draft stay in the fixed footer. This changes presentation
+  only, including locked history; saved-work, advisor and review/apply authority
+  remain under their existing contracts.
 - Work Design does not use step, session, controller, model, or view-model
   convenience barrels. Consumers import concrete files unless the folder is a
   true public boundary such as the workflow entry point, a shared workflow
@@ -790,6 +800,21 @@ multi-owner helpers, adapters, and styles live under `support/`.
 Package actions are selected-package operations opened from Execution Board
 context. They are not generic workspace actions.
 
+The package rail keeps its compact inspection sections. Lifecycle context shows
+recorded in-progress, blocked and ready work, with named work-item selection.
+These are observed statuses, not eligibility decisions or generated advice.
+Live package controls prepare reviews from the exact current change-control
+projection; the native command remains the authority for apply legality.
+Retirement requires an actual reason. Action reviews retain their opened source
+revision and cannot silently accept a newer projection. Successful commands
+request a fresh global overview; they do not update canonical status locally.
+
+Family Map derives membership from recorded initiative families in the live
+projection and retains unassigned packages. It cannot use fixed example IDs,
+infer families from titles, or omit packages without a membership. Retired work
+is counted separately from completed work. Ready and Done lane descriptions
+describe recorded status, not unverified gate proof.
+
 Rules:
 
 - action availability comes from package posture and backend gates
@@ -912,7 +937,9 @@ projection; `server/` owns authenticated canonical reads.
 
 In configured live mode, the primary collection includes completed and inactive
 packages. **Current** keeps active packages in their current-stage workflows.
-**History** keeps all retained packages discoverable, including completed and
+Current also retains parked packages in Execution's Deferred lane so the explicit
+reviewed Resume route remains reachable. Parked packages stay out of editable
+Work Design and Refinement registers until resumed. **History** keeps all retained packages discoverable, including completed and
 parked work. Work Design and Refinement retain the normal register, filters,
 selection, hub and section navigation. Execution retains its Control Board,
 Family Map, ART hierarchy and package details. These History paths cannot
@@ -989,7 +1016,15 @@ Architecture Packet, Catalog, completion evidence, source-decision and repositor
 link drafts use the existing explicit discard guard. Equivalent refreshes retain
 edits. Changed Catalog/decision source requires review and guarded reload before
 submission. Pending commands prevent closing the owning draft; no owner result
-is fabricated. JSON packet authoring and owner eligibility contracts remain.
+is fabricated. Guided packet fields are a generated presentation snapshot of the
+owner schema, with JSON import/export retained under Technical data. Saved Work
+Design brief/diagrams are read by exact initiative; missing retained material is
+not recreated from current data. Owner eligibility contracts remain unchanged.
+Completion and closeout convert reviewed prose/results to the native evidence
+format without choosing outcomes. Native PI outcome choices come from the owner
+form. Existing-product closeout rereads registration/version/responsibility
+before accepting a new command; workspace-candidate correlation is bound to that
+command by the server.
 
 Home uses the existing governed Agent path through an inline Teras advisor. Its
 context includes only current bounded overview counts, never example records,

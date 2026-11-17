@@ -185,3 +185,27 @@ This extension is unpublished review source. The isolated task-list review
 page exercises the actual Studio static runtime, with simulated source/AI
 actions. It does not prove real Delivery runtime wiring, private draft
 application, Security acceptance or live commissioning.
+
+The advisor work-knowledge repair adds a trusted OOS source-editor guide and
+explicit coverage of the current objective, source binding and selected buffers.
+Select relevant architecture, interface or design files when they affect advice.
+The assistant cannot assume contents from a filename, read unselected files or
+inherit another Codex conversation/skills. It must ask about material missing
+context while helping with bounded supported work. Missing or shortened context
+completeness metadata prevents inference rather than silently dropping selected
+buffers. Ask/Edit, proposed-file inspection and explicit acceptance are unchanged.
+
+The unpublished continuity extension restores the operator's private working
+conversation and unsent message through OOS saved input. Unknown earlier outcomes
+are shown without another model call; source requests expose explicit original
+retry. Conversation save status is separate from source-draft save status.
+New conversation clears working input, not source records or AI audit history.
+
+Included files now expose **Read only** and **May edit** access within AI context.
+The initial editing file may receive proposals; additional files selected as
+supporting context default to read-only. Change their access explicitly if they
+should be edit targets. Read-only files can inform advice while backend, reply
+and local-apply guards reject edits/deletions. This flag changes AI proposal scope,
+not manual editing permission. Scope/forbidden-path/provider admission still apply.
+File contents are read on an explicit request, not by selecting the checkbox.
+Combined preview review and operating qualification remain unfinished.

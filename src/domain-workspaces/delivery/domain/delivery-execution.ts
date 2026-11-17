@@ -33,6 +33,10 @@ export type DeliveryFamilyMapGroup = {
 };
 
 export type DeliveryArtNode = {
+  blocker?: import("./delivery-package.ts").DeliveryActiveBlockerProjection;
+  dependency_blocked?: boolean;
+  depends_on_work_package_ids?: number[];
+  owner_repo?: string | null;
   backend_status: DeliveryBackendStatus;
   children: DeliveryArtNode[];
   component_type: DeliveryComponentType;

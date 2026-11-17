@@ -113,8 +113,8 @@ export function useSourceEditor(target: SourceEditorTarget, onSaved: (draft: Sou
       if (byteLength(JSON.stringify(operations)) > 1048576) throw new Error("The import exceeds the serialized source wire budget. Select fewer or smaller files.");
       if (alive.current) { setData({ ...current, buffers, selected: files[0]?.path ?? current.selected, origin: "import" }); setNotice(`${files.length} selected files prepared locally. Review the diff, then save the private draft.`); }
     }),
-    assistantSnapshot: async (paths: string[]) => {
-      let snapshot: { fingerprint: string; current: SourceEditorState; files: SourceBuffer[] } | null = null;
+    assistantSnapshot: async (paths: string[], readOnlyPaths: string[] = []) => {
+      let snapshot: { fingerprint: string; current: SourceEditorState; files: SourceBuffer[]; readOnlyPaths: string[] } | null = null;
       const success = await run(async () => {
         const current = latest.current;
         if (!current || command.current || !sourceEditable(current.current.state) || !paths.length || paths.length > 48) throw Error("Select editable source files first.");
@@ -125,18 +125,19 @@ export function useSourceEditor(target: SourceEditorTarget, onSaved: (draft: Sou
           files.push(file);
         }
         if (files.reduce((n, file) => n + byteLength(file.content), 0) > 262144) throw Error("Selected context exceeds 256 KiB. Choose fewer files.");
-        snapshot = { fingerprint: sourceAssistantFingerprint(current.buffers, files), current: current.current, files };
+        if(readOnlyPaths.some(path=>!paths.includes(path)))throw Error("Read-only context must name selected files only.");
+        snapshot = { fingerprint: sourceAssistantFingerprint(current.buffers, files), current: current.current, files, readOnlyPaths: [...readOnlyPaths] };
       });
       if (!success || !snapshot) throw Error("Selected source context could not be prepared. Your buffers are retained.");
-      return snapshot as { fingerprint: string; current: SourceEditorState; files: SourceBuffer[] };
+      return snapshot as { fingerprint: string; current: SourceEditorState; files: SourceBuffer[]; readOnlyPaths: string[] };
     },
-    applyAssistant: (snapshot: { fingerprint: string; current: SourceEditorState; files: SourceBuffer[] }, edits: Array<{path: string; content: string | null}>) => {
+    applyAssistant: (snapshot: { fingerprint: string; current: SourceEditorState; files: SourceBuffer[]; readOnlyPaths?: string[] }, edits: Array<{path: string; content: string | null}>) => {
       const current = latest.current;
       if (!current || busy.current || command.current || !sourceEditable(current.current.state) || current.current.revision !== snapshot.current.revision || sourceAssistantFingerprint(current.buffers, snapshot.files) !== snapshot.fingerprint) throw Error("Your draft changed after this proposal. Ask again using the current files; later edits were preserved.");
       let buffers = [...current.buffers];
       for (const edit of edits) {
         const original = snapshot.files.find(file => file.path === edit.path);
-        if (!original || sourcePathIssue(edit.path, target.scope)) throw Error("The proposal escapes the selected source context.");
+        if (!original || snapshot.readOnlyPaths?.includes(edit.path) || sourcePathIssue(edit.path, target.scope)) throw Error("The proposal escapes the selected editable files.");
         if (edit.content === null && original.expectedDigest === null) { buffers = buffers.filter(file => file.path !== edit.path); continue; }
         const file = { ...original, content: edit.content ?? original.content, deleted: edit.content === null,
           changed: edit.content === null || original.expectedDigest === null || edit.content !== original.baseline };

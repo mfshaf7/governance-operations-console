@@ -44,6 +44,7 @@ export function cloneContextBoardSnapshot(
   snapshot: ContextBoardSnapshot,
 ): ContextBoardSnapshot {
   return {
+    ...(snapshot.diagrams ? { diagrams: structuredClone(snapshot.diagrams), activeDiagramId: snapshot.activeDiagramId } : {}),
     connections: snapshot.connections.map((connection) => ({
       ...connection,
       from: { ...connection.from },
@@ -106,6 +107,14 @@ export function contextBoardInventory(
     id: string;
   }> = [],
 ): ContextBoardInventory {
+  if (snapshot.diagrams) {
+    const inventories = snapshot.diagrams.map(view => contextBoardInventory(view.snapshot, coreNodes));
+    const sum = (key: "connectorCount" | "looseCardCount" | "sketchStrokeCount" | "templateCardCount" | "trayCount" | "visibleCoreCount") => inventories.reduce((total, inventory) => total + inventory[key], 0);
+    return { connectorCount: sum("connectorCount"), isEmpty: inventories.every(inventory => inventory.isEmpty),
+      looseCardCount: sum("looseCardCount"), sketchStrokeCount: sum("sketchStrokeCount"),
+      templateCardCount: sum("templateCardCount"), trayCount: sum("trayCount"), visibleCoreCount: sum("visibleCoreCount"),
+      summary: `${snapshot.diagrams.length} diagrams, ${sum("looseCardCount") + sum("templateCardCount") + sum("visibleCoreCount")} cards, ${sum("connectorCount")} connectors` };
+  }
   const visibleCoreCount = coreNodes.filter(
     (node) => !snapshot.removedCoreIds.includes(node.id) && snapshot.positions[node.id],
   ).length;

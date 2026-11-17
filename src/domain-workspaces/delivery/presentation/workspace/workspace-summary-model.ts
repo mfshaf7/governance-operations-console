@@ -55,7 +55,7 @@ export function deliveryWorkspaceSummaryDescription(
 
   return {
     description:
-      "Backend-owned Delivery metadata: Target PI and planning dates, initiative family, lineage role, and architecture anchors. Review current values here and prepare add, edit, or retire requests through the owning route.",
+      "Manage the shared planning periods, teams, classifications and repository choices used by Delivery. Review usage before changing or retiring a value.",
     kicker: "Delivery Catalog",
   };
 }

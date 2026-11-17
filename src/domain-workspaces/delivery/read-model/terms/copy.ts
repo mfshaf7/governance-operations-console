@@ -79,7 +79,7 @@ export const deliveryPostureTerms: Record<
     label: "Deferred",
   },
   Done: {
-    description: "Required descendants are terminal; closeout gates passed.",
+    description: "Recorded as done. Open the package to inspect its completion evidence.",
     label: "Done",
   },
   "In Progress": {
@@ -88,7 +88,7 @@ export const deliveryPostureTerms: Record<
   },
   Ready: {
     description:
-      "Refinement accepted; a next execution target can be selected.",
+      "Recorded as ready. The work session checks prerequisites before work starts.",
     label: "Ready",
   },
   Retired: {

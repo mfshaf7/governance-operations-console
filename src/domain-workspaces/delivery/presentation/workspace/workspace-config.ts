@@ -42,7 +42,7 @@ export const deliverySurfaces: DeliverySurfaceConfig[] = [
 
 export const deliveryCatalogSurface: DeliveryWorkspaceSurfaceConfig = {
   description:
-    "Add, edit, and retire backend-owned Delivery metadata catalogs.",
+    "Manage the planning periods, teams, classifications and repository choices used in Delivery.",
   id: "catalog",
   kicker: "06",
   title: "Delivery Catalog",

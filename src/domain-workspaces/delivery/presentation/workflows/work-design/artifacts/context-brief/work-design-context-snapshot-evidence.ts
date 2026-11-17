@@ -82,6 +82,7 @@ export function workDesignContextSnapshotEvidenceProjection({
       ? contextCanvasScreenshotAttachment
       : contextGeneratedSnapshotAttachment;
   const contextCanCaptureLiveCanvas =
+    (contextFinalizedBoardSnapshot.diagrams?.length ?? 1) === 1 &&
     contextBriefReady &&
     Boolean(contextCurrentSavedSession) &&
     !initialContextSession?.accepted;

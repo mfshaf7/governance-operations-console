@@ -2,7 +2,7 @@
 export const advisorRoles = [
   "proposal-triage", "proposal-disposition", "prototype-candidate", "prototype-baseline",
   "work-design-context", "work-design-tree", "refinement-metadata", "execution-tree",
-  "work-design-blocker", "refinement-blocker", "definition-design",
+  "work-design-blocker", "refinement-blocker", "definition-design", "execution-architecture",
 ] as const;
 export type AdvisorRole = typeof advisorRoles[number];
 export type AdvisorField = {
@@ -49,6 +49,17 @@ const finalFields = new Set([
 ]);
 const dangerousKeys = new Set(["__proto__", "prototype", "constructor"]);
 export const advisorDraftContextChars = 32_000;
+
+/** Carry actual observations and their coverage; never silently trim evidence. */
+export function advisorWorkContext(data: Record<string, unknown>, coverage: {
+  provided: string[]; unavailable: string[];
+}) {
+  const context = JSON.stringify({ contextVersion: 1, observations: data,
+    coverage: { ...coverage, referencesAreLoadedContents: false,
+      boundary: "Only supplied observations are available; linked documents, other chats and repositories are not automatically inspected." } });
+  if (context.length > 16_000) throw Error("The selected work context is too large for one advisor request. Narrow the selected scope; no evidence was silently removed.");
+  return context;
+}
 
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -157,8 +168,8 @@ export function parseAdvisorReply(raw: string, scope: AdvisorScope) {
   catch (error) { throw Error(error instanceof SyntaxError ? "The advisor returned unstructured advice; no draft was changed." : (error as Error).message); }
 }
 
-export const advisorDraftInstructions = `Return your advice text as one JSON object with exactly these keys:
-{"intent":"answer|clarify|draft","message":"readable answer or edit summary","edits":[{"field":"an admitted field key","value":"draft text or a structured board/tree patch"}]}.
+export const advisorDraftInstructions = `Return the provider schema's native draft_reply object with intent, message and edits. Do not encode the reply or any patch as JSON text inside text. The backend serializes the validated structure for existing HTTP clients.
+Each edit names an admitted field and value_type=text, board or tree. Fill exactly its matching text_value, board_patch or tree_patch; the other two are null. The provider schema defines these typed properties. Unchanged optional item/style/update properties use null.
 Interpret the operator's actual chat request. Questions, evaluation, explanation, greetings and requests not to edit require intent=answer and edits=[]. Ambiguous editing requests require intent=clarify and edits=[]. Only an explicit request to draft/create/revise/fill/edit permits intent=draft. Do not treat a question about how something would be changed as a request to change it.
 Work only inside the admitted selected draft. Preserve unrelated content. Never submit, approve, reject, activate, close, execute, publish or merge anything, and never invent a receipt or authority. Explain unavailable context instead of claiming inspection. Your edits are inert local drafts, not final decisions.
-Text fields take strings. Board fields take {addItems:[],updateItems:[],removeItemIds:[],addConnections:[],removeConnectionIds:[]}; items use id,kind,label,detail,x,y and optional width,height,tone; For a board field, its allowedValues list gives the exact supported card kind names; use those rather than display labels or invented names such as box. Plain rectangular cards use kind=shape-rect. Use unique IDs, finite coordinates, and width/height of at least 20 when supplied. Connections use id,from:{endpointType:"port",itemId,itemType:"custom",side:"right"},to:{endpointType:"port",itemId,itemType:"custom",side:"left"},label and optional tone/shape/stroke/tip. Preserve current items unless removal is explicitly requested. Tree fields take {addNodes:[{parentId,node:{id,kind,title,description,draftBody,remark,children:[]}}],updateNodes:[{id,title,description,draftBody,remark}],removeNodeIds:[]}; preserve existing IDs and valid Epic/Feature/User story/Risk hierarchy. Do not invent canonical work-item IDs. Return no markdown around the JSON.`;
+Text fields take strings in text_value. board_patch takes {addItems:[],updateItems:[],removeItemIds:[],addConnections:[],removeConnectionIds:[]}; items use id,kind,label,detail,x,y and nullable width,height,tone,diagramType. For a board field, its allowedValues list gives the exact supported card kind names; use those rather than display labels or invented names such as box. Plain rectangular cards use kind=shape-rect. Use unique IDs, finite coordinates, and width/height of at least 20 when supplied. Connections use the schema's from/to endpoint objects; unused free/port coordinates and IDs are null. Preserve current items unless removal is explicitly requested. tree_patch takes addNodes, updateNodes and removeNodeIds. Add individual Feature/User story/Risk nodes with children=[] and an explicit existing or earlier-added parentId. The Epic root already exists; never insert or remove it. Preserve existing IDs and valid Epic/Feature/User story/Risk hierarchy. Do not invent canonical work-item IDs.`;

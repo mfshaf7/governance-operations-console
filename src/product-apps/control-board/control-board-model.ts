@@ -24,6 +24,7 @@ export type ControlBoardPostureTerms = Record<
 
 export type ControlBoardPackageProgress = {
   completedChildCount: number;
+  retiredChildCount?: number;
   progressPercent: number;
   totalChildCount: number;
 };
@@ -40,6 +41,9 @@ export type ControlBoardPackage = {
 };
 
 export type ControlBoardTreeNode = {
+  workItemId?: number;
+  status?: string;
+  sourceLabel?: string;
   children: ControlBoardTreeNode[];
   componentType: string;
   description: string;

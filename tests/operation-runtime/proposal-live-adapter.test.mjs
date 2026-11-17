@@ -61,6 +61,15 @@ test("Studio incubation submits the existing/resolved owner command; unsupported
     error=>error instanceof ProposalOosError && error.code==="proposal_prototype_source_home_required");
 });
 const handoffRef19 = "proposal-handoff:idea-851:version-19";
+test("recorded triage knowledge retains its canonical version separately from later local disposition fields", () => {
+  const record = proposalCompletionRecord({ triage_summary: "Accepted scope: local-only notes; no cloud synchronization." });
+  const model = projectProposalLiveRecords([record]);
+  const proposal = model[0];
+  assert.deepEqual(proposal.recordedTriage, { summary: record.projection.triage_summary,
+    sourceRef: record.projection.record_ref, sourceRevision: record.projection.record_version });
+  const absent = structuredClone(record); absent.projection.triage_summary = null;
+  assert.equal(projectProposalLiveRecords([absent])[0].recordedTriage, undefined);
+});
 const handoffRef21 = "proposal-handoff:idea-851:version-21";
 
 function registerResponse(records, {selection={query:"",status:"all",ingress:"all"},next_cursor=null,source_total=records.length}={}) {

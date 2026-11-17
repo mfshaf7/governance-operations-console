@@ -44,6 +44,7 @@ export function TerasSurfaceNavButton({
   className,
   current,
   kicker,
+  layout = "inline",
   meta,
   onClick,
   title,
@@ -51,6 +52,7 @@ export function TerasSurfaceNavButton({
   ...buttonProps
 }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "title"> & {
   current: boolean;
+  layout?: "inline" | "stacked";
   kicker: ReactNode;
   meta?: ReactNode;
   title: ReactNode;
@@ -65,6 +67,7 @@ export function TerasSurfaceNavButton({
         current && styles.terasSurfaceNavButtonActive,
         className,
       )}
+      data-layout={layout}
       data-current={current}
       data-tone={tone}
       onClick={onClick}

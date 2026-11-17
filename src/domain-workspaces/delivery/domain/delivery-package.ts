@@ -67,6 +67,20 @@ export type DeliveryAvailableAction = {
 };
 
 export type DeliveryPackageSummary = {
+  work_sessions?: Array<{ session_id: string; work_item_ids: string[]; updated_at: string; state: "recorded" }> | null;
+  execution_navigation?: {
+    authority: "operator-orchestration-service";
+    workflow_phase: DeliveryWorkflowPhase;
+    package_posture: DeliveryPackagePosture;
+    native_status: DeliveryBackendStatus;
+    closeout_pending: boolean;
+    active_work_item_ids: number[];
+    prepared_work_item_ids: number[];
+    blocked_work_item_ids: number[];
+    refinement_work_item_ids: number[];
+    eligibility: "check-selected-work-item";
+  };
+  initiative_family?: string | null;
   active_blocker?: DeliveryActiveBlockerProjection;
   available_actions: DeliveryAvailableAction[];
   backend_status: DeliveryBackendStatus;

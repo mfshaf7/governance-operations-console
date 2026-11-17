@@ -15,6 +15,7 @@ import {
   bindCatalogRepositoryReadiness,
   mutateCatalogValue,
   readCatalogProjection,
+  prepareCatalogRepositoryReadiness,
   readRefinementProjection,
   readRefinementRun,
   requestRefinementAdvice,
@@ -87,6 +88,14 @@ export async function readCatalogProjectionRoute() {
   } catch (error) {
     return deliveryAdapterErrorResponse(error, "catalog_adapter_failed");
   }
+}
+
+export async function prepareCatalogReadinessRoute(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const reference = await prepareCatalogRepositoryReadiness(requiredText(body?.repoName, "repository name"));
+    return NextResponse.json({ repository_readiness_reference: reference }, { headers: noStoreHeaders });
+  } catch (error) { return deliveryAdapterErrorResponse(error, "catalog_repository_readiness_failed"); }
 }
 
 export async function mutateCatalogRoute(

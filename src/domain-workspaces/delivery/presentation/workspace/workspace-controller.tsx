@@ -200,6 +200,7 @@ function AvailableDeliveryWorkspaceController({
       contract={contract}
       entryIntent={entryIntent}
       executionCount={executionCount}
+      onExecutionChanged={onSourceRefresh}
       model={model}
       onRecordScopeChange={allowLocalProjection ? undefined : setRecordScope}
       onActiveSurfaceChange={setActiveWorkspaceSurfaceId}

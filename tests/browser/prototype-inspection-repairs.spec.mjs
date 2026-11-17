@@ -52,6 +52,30 @@ async function sourceHarness(page) {
   } };
 }
 
+test("baseline advisor receives the same evidence assessment and boundaries used by the form", async ({ page }) => {
+  const h = await sourceHarness(page); let sent;
+  await page.route("**/api/advisor-interaction", route => {
+    sent = route.request().postDataJSON();
+    return route.fulfill({ json: { intent: "answer", message: "Synthetic evidence explanation only.", edits: [],
+      evidence: { profileId: "agent-console-assistant-v1", auditRef: "audit:synthetic", contextRef: "context:synthetic" } } });
+  });
+  await h.control.getByRole("row").filter({ hasText: "Workspace Governance Operations Console" }).click();
+  await h.control.getByRole("button", { name: "Open Baseline Promotion", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Baseline Promotion", exact: true });
+  const expand = dialog.getByTitle("Expand advisor", { exact: true }); if (await expand.count()) await expand.click();
+  await dialog.getByRole("textbox", { name: "Baseline Promotion advisor prompt", exact: true }).fill("Which evidence is missing, and what does this baseline decision actually authorize?");
+  await dialog.getByRole("button", { name: "run", exact: true }).click();
+  await expect.poll(() => sent?.scope?.role).toBe("prototype-baseline");
+  const context = JSON.parse(sent.scope.context);
+  expect(context.observations.evidenceAssessment).toHaveProperty("missingRequirements");
+  const { prototypeBaselineEvidenceAssessment } = require("../../src/domain-workspaces/prototype/work-model/workflows/baseline-promotion/prototype-baseline-promotion-model.ts");
+  expect(context.observations.evidenceAssessment).toEqual(prototypeBaselineEvidenceAssessment(h.records.find(record => record.name === "Workspace Governance Operations Console")));
+  expect(context.observations.evidenceChecks.length).toBeGreaterThan(0);
+  expect(context.observations.boundaries.sourceRef).toBeTruthy();
+  expect(context.coverage.unavailable).toContain("Unprovided proof contents");
+  expect(h.writes).toEqual([]);
+});
+
 test("Landing displays its authoritative source home without an ignored destination selector", async ({ page }, info) => {
   const h = await sourceHarness(page);
   await h.control.getByRole("row").filter({ hasText: "Client Review Portal Concept" }).click();

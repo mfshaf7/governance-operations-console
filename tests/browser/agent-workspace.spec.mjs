@@ -1,12 +1,17 @@
 import { test, expect } from "@playwright/test";
 import { bodies } from "../console-architecture/agent-workspace-fixtures.mjs";
+import { proposalCompletionRecord } from "../support/proposal-completion-fixture.mjs";
 const agentContextSources = { continuity: "/api/workspace-continuity", registry: "/api/workspace-registry", repositories: "/api/repositories/custody/requests", proposals: "/api/proposals", prototypes: "/api/prototypes/records", delivery: "/api/delivery/workspace", orchestration: "/api/orchestration", lifecycle: "/api/lifecycle-transitions", platform: "/api/environment-operations", models: "/api/model-operations/runtime/registry" };
 const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:3320";
 test.setTimeout(120_000);
 test.use({ actionTimeout: 15_000, navigationTimeout: 60_000, viewport: { width: 1600, height: 1050 } });
 test.beforeEach(async ({ page }) => {
  for (const [source, path] of Object.entries(agentContextSources)) {
-  await page.route(`**${path}`, route => route.fulfill({ json: source === "repositories" ? { ...bodies[source], schema_version: 1, next_cursor: null } : bodies[source] }));
+  const exactPathWithQuery = new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\?.*)?$');
+  await page.route(exactPathWithQuery, route => route.fulfill({ json: source === "repositories" ? { ...bodies[source], schema_version: 1, next_cursor: null }
+    : source === "proposals" ? {mode:"live",status:"current",observedAt:new Date().toISOString(),records:[{...proposalCompletionRecord({status:"captured",body:"PRIVATE BODY MUST NOT ENTER MODEL"}),summaryOnly:true}],
+      page:{source_total:1,selector:{query:"",status:"all",ingress:"all"},next_cursor:null}}
+    : bodies[source] }));
  }
  await page.route("**/api/agent-interaction*", route => {
   if (route.request().method() === "DELETE") return route.fulfill({ json: { closed: true } });
@@ -36,7 +41,7 @@ async function navigate(page, title) {
  await expect(button).toHaveAttribute("aria-current", "page");
  await expect(dockFor(page)).toBeVisible();
 }
-test("Workspace is usable from home; changing mode preserves transcript and closes old session", async ({ page }) => {
+test("Workspace is usable from home; changing scope restores its own working conversation and closes the old session", async ({ page }) => {
  const embedded = page.locator('[data-agent-console-dock][aria-label="Agent Console"]');
  const mode = embedded.getByRole("button", { name: "Agent context mode", exact: true });
  await mode.click();
@@ -51,7 +56,8 @@ test("Workspace is usable from home; changing mode preserves transcript and clos
  await expect(embedded.locator(".terminal-transcript")).toContainText("9/9 sources current");
  await mode.click();
  await embedded.getByRole("button", { name: "Focus", exact: true }).click();
- await expect(embedded.locator(".terminal-transcript")).toContainText("9/9 sources current");
+ await expect(embedded.locator(".terminal-transcript")).toContainText("Current context:");
+ await expect(embedded.locator(".terminal-transcript")).not.toContainText("9/9 sources current");
  expect(closed).toBe(2);
 });
 for (const [title, id] of [["Dev Integration", "dev-integration"], ["Governed Releases", "governed-releases"], ["Lifecycle Transitions", "lifecycle-transitions"], ["Workspace Registry", "workspace-registry"]]) {
@@ -84,7 +90,7 @@ for (const [title, id] of [["Dev Integration", "dev-integration"], ["Governed Re
 }
 
 test("a nested profile dialog hides the Agent and preserves prompt and native focus", async ({ page }) => {
- await page.route("**/api/environment-operations", route => route.fulfill({ json: { mode: "disconnected-preview", status: "current", catalog: null, operations: [], observedAt: new Date().toISOString(), error: null } }));
+ await page.route(/\/api\/environment-operations(?:\?.*)?$/, route => route.fulfill({ json: { mode: "disconnected-preview", status: "current", catalog: null, operations: [], observedAt: new Date().toISOString(), error: null } }));
  const dock = dockFor(page);
  await dock.getByRole("textbox", { name: "Agent terminal command input", exact: true }).fill("Retain through nested dialog");
  await navigate(page, "Dev Integration");
@@ -124,7 +130,7 @@ test("moving the presentation during a pending invocation keeps one request and 
  completeClose();
  await expect(dock.getByRole("button", { name: "Floating agent context mode", exact: true })).toContainText("Workspace");
  const request = page.waitForRequest(r => r.url().endsWith("/api/agent-interaction") && r.method() === "POST");
- await input.fill("Explain this workspace without taking action"); await input.press("Enter"); await request;
+ await input.fill("Explain this workspace without taking action"); await dock.getByRole("button",{name:"Run agent command",exact:true}).click(); await request;
  await navigate(page, "Workspace Registry");
  await dock.getByRole("button", { name: "Expand agent interaction console", exact: true }).click();
  await expect(dock.getByRole("button", { name: "Cancel agent request", exact: true })).toBeVisible();

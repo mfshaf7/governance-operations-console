@@ -1,0 +1,14 @@
+.workspace { min-width: 0; min-height: 0; }
+.sequenceCanvas { min-width: 0; max-width: 100%; max-height: 32rem; overflow: auto; border: 1px solid rgba(158,175,195,.25); border-radius: .8rem; background: #0d1119; }
+.sequenceCanvas svg { display: block; max-width: none; }
+.sequenceEdge { fill: none; stroke: #b6a27a; stroke-width: 2; color: #b6a27a; }
+.sequenceNode { cursor: pointer; outline: none; }
+.sequenceNode rect { fill: #17202c; stroke: #8197b5; stroke-width: 1.5; }
+.sequenceNode rect[data-kind="approval"] { stroke: #e5b351; }
+.sequenceNode rect[data-selected="true"], .sequenceNode:focus-visible rect { stroke: #ffd17c; stroke-width: 3; }
+.sequenceKicker { fill: #ffcc74; font-size: 11px; font-weight: 700; }
+.sequenceLabel { fill: #f4eee2; font-size: 13px; }
+
+.workspace[data-fit="workspace"] { height: 100%; display: flex; flex-direction: column; overflow: auto; scrollbar-width: thin; scrollbar-color: rgba(255,193,90,.44) rgba(20,14,9,.62); }
+.workspace[data-fit="workspace"] > * { flex-shrink: 0; }
+.workspace[data-fit="workspace"] .sequenceCanvas { flex: 1 0 13rem; min-height: 13rem; max-height: none; }

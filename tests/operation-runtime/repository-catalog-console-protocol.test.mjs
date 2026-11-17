@@ -156,6 +156,7 @@ function repositoryLinkOperation(catalogRequest) {
 
 function catalogMutationCommand() {
   return {
+    expectedSourceRevision: "catalog-version-9",
     acceptanceId: "catalog-acceptance:repository-link-1229",
     acceptedAt: "2026-10-03T17:30:00.000Z",
     draft: {

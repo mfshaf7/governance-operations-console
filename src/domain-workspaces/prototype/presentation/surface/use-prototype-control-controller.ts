@@ -625,6 +625,7 @@ export function usePrototypeControlController({
       filtered: filteredRecords,
     },
     sourceAvailability: {
+      live: !primaryRecordIsolation.fixtureAllowed && Boolean(live.projection),
       error: live.error ?? consoleRuntime.error,
       reasonCode: primaryRecordIsolation.reasonCode,
       unavailable: !primaryRecordIsolation.fixtureAllowed && !live.projection,

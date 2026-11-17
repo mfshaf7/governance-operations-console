@@ -1,4 +1,4 @@
-import type { DeliveryPackagePosture, DeliveryTone } from "./delivery-common.ts";
+import type { DeliveryPackagePosture, DeliveryTone, DeliveryWorkflowPhase } from "./delivery-common.ts";
 import type { DeliveryPackageSummary } from "./delivery-package.ts";
 import type { DeliveryRefinementApplyReceipt } from "./delivery-refinement.ts";
 
@@ -56,4 +56,9 @@ export function getDeliveryEffectivePackagePosture(
   deliveryPackage: DeliveryPackageSummary,
 ): DeliveryPackagePosture {
   return getDeliveryEffectivePackageProjection(deliveryPackage).posture;
+}
+
+export function deliveryPackageMatchesWorkflowPhase(deliveryPackage: DeliveryPackageSummary, workflowPhase: DeliveryWorkflowPhase) {
+  return deliveryPackage.backend_status !== "parked" && (deliveryPackage.workflow_phase === workflowPhase ||
+    workflowPhase === "refinement" && Boolean(deliveryPackage.execution_navigation?.refinement_work_item_ids.length));
 }

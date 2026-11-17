@@ -2,6 +2,7 @@ import { effectiveModelLabel } from "../../console-integration/governed-ai/model
 import { NextRequest, NextResponse } from "next/server";
 
 import { authorizeConsoleMutation } from "../../console-integration/identity/server/console-session-authorization.ts";
+import { readSelectedProjectKnowledge } from "./selected-project-context.ts";
 
 import {
   AgentConsoleOosError,
@@ -60,7 +61,8 @@ async function submitGovernedAgentRequest(request: NextRequest) {
     return NextResponse.json({ error: validation.error }, { headers: noStoreHeaders, status: validation.status });
   }
   try {
-    const result = await invokeGovernedAgent(validation, { signal: request.signal });
+    const selectedProjectKnowledge = validation.selectedProject ? await readSelectedProjectKnowledge(validation.selectedProject, request.signal) : undefined;
+    const result = await invokeGovernedAgent(validation, { signal: request.signal, selectedProjectKnowledge });
     return new Response(result.text, {
       headers: {
         ...noStoreHeaders,
@@ -71,6 +73,8 @@ async function submitGovernedAgentRequest(request: NextRequest) {
         "X-Agent-Context-Artifact": result.contextArtifactDigest,
         "X-Agent-Invocation": result.invocationId,
         "X-Agent-Model": result.modelProfileId,
+        ...(selectedProjectKnowledge ? { "X-Agent-Project-Context": encodeURIComponent(JSON.stringify({ selection: selectedProjectKnowledge.selection,
+          title: selectedProjectKnowledge.title, revision: selectedProjectKnowledge.sourceRevision, coverage: selectedProjectKnowledge.coverage })) } : {}),
         ...(result.effectiveSelection ? {
           "X-Agent-Effective-Model": encodeURIComponent(effectiveModelLabel(result.effectiveSelection)),
           "X-Agent-Selection-Ref": result.effectiveSelection.selection_ref,

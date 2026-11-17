@@ -24,7 +24,7 @@ export function CatalogSelectorPanel({
   catalogs: DeliveryCatalogItem[];
   onSwitchCatalog: (catalogId: string) => void;
   runtimeMode: "disconnected-preview" | "live";
-  runtimeStatus: "current" | "offline";
+  runtimeStatus: "current" | "offline" | "loading" | "stale";
 }) {
   return (
     <TerasPanel
@@ -42,11 +42,11 @@ export function CatalogSelectorPanel({
             ? "preview"
             : runtimeStatus === "current"
               ? "live"
-              : "offline"
+              : runtimeStatus === "loading" ? "loading" : runtimeStatus === "stale" ? "stale" : "offline"
         }
         statusTone={runtimeStatus === "offline" ? "danger" : "warn"}
         title="Metadata Catalogs"
-        description="Select a catalog, review its current values, then add, edit, or retire values through the backend-owned route."
+        description="Manage planning periods, teams, classifications and repository choices used in Delivery."
       />
 
       <TerasSelectorRailList>

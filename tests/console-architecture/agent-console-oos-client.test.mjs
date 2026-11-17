@@ -128,6 +128,25 @@ test("case:agent-console-console-protocol-positive binds session, CGG, profile, 
   );
 });
 
+test("ordinary overview follow-up conversation enters the admitted candidate with its exact current facts",async()=>{
+  const request=input();request.conversation=[{role:"operator",text:"Keep data local."},{role:"advisor",text:"Working context; no approval."}];
+  const calls=[];
+  await invokeGovernedAgent(request,{config,fetchImpl:async(_url,init)=>{calls.push(JSON.parse(init.body));return Response.json(calls.length===1?projection():completedProjection(),{status:calls.length===1?201:200});},now:()=>new Date("2026-10-09T05:00:01.000Z")});
+  const context=JSON.parse(calls[1].candidate.content);
+  assert.deepEqual(context.conversation,request.conversation);assert.equal(context.candidate.id,request.candidate.id);
+  assert.match(context.coverage,/not a full conversation/);assert.equal(calls[1].prompt,request.message);
+});
+
+test("selected project knowledge must match the owner read and enters CGG as complete read-only facts",async()=>{
+ const request={...input(),selectedProject:{kind:"proposal",id:"idea-851"}},calls=[];
+ await assert.rejects(invokeGovernedAgent(request,{config,fetchImpl:async()=>{throw Error("Should fail before dispatch");}}),/exact owner/);
+ const selectedProjectKnowledge={selection:request.selectedProject,title:"Current recorded item",sourceRef:"openproject://work_packages/851",sourceRevision:"version-18",observedAt:"2026-10-09T05:00:01.000Z",observations:{body:"Current scope"},coverage:"Linked documents not loaded."};
+ await invokeGovernedAgent(request,{config,selectedProjectKnowledge,fetchImpl:async(_url,init)=>{calls.push(JSON.parse(init.body));return Response.json(calls.length===1?projection():completedProjection(),{status:calls.length===1?201:200});},now:()=>new Date("2026-10-09T05:00:01.000Z")});
+ assert.deepEqual(JSON.parse(calls[1].candidate.content).selected_project,selectedProjectKnowledge);
+ assert.equal(calls[1].candidate.source_ref,selectedProjectKnowledge.sourceRef);assert.equal(calls[1].candidate.captured_at,selectedProjectKnowledge.observedAt);
+ assert.equal(calls[1].activity.subject_ref,"idea-851");assert.ok(calls[1].budget_tokens>=1024);
+});
+
 test("case:agent-console-console-protocol-negative rejects wrong caller, profile, receipt, and upstream denial", async () => {
   await assert.rejects(
     invokeGovernedAgent(input(), {

@@ -10,9 +10,9 @@ function storage(seed = {}) {
   const data = new Map(Object.entries(seed));
   return { get length() { return data.size; }, getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), key: index => [...data.keys()][index] ?? null, removeItem: key => data.delete(key), clear: () => data.clear() };
 }
-function owner() {
+function owner(kind = "work-design", subjectId = "delivery-42") {
   let record = null; const originals = []; const calls = []; let fail = false; let uncertain = false;
-  const snapshot = () => ({ kind: "work-design", subject_id: "delivery-42", record, recoveries: originals.map((entry, index) => ({ recovery_id: String(index), storage_key: entry.storage_key, content_digest: digest(entry.raw_value), preserved_at: "2026-10-29T00:00:00Z" })) });
+  const snapshot = () => ({ kind, subject_id: subjectId, record, recoveries: originals.map((entry, index) => ({ recovery_id: String(index), storage_key: entry.storage_key, content_digest: digest(entry.raw_value), preserved_at: "2026-10-29T00:00:00Z" })) });
   return { calls, originals, get record() { return record; }, set record(value) { record = value; }, set fail(value) { fail = value; }, set uncertain(value) { uncertain = value; },
     async fetch(url, init) {
       calls.push({ url, ...init }); if (fail) throw new Error("Offline");
@@ -30,6 +30,19 @@ function owner() {
     } };
 }
 function session(local, backend) { return createSavedWorkBrowserSession(key, { storage: local, fetchImpl: backend.fetch, delayMs: 60_000 }); }
+
+test("conversation restores acknowledged server input without importing an unowned browser cache",async()=>{
+  const id=`chat:${"a".repeat(64)}`,chatKey=`advisor-conversation:${id}:v1`,backend=owner("advisor-conversation",id);
+  const foreign="unowned browser conversation",local=storage({[chatKey]:foreign});
+  const first=createSavedWorkBrowserSession(chatKey,{storage:local,fetchImpl:backend.fetch,delayMs:60000});
+  await first.initialize();assert.equal(first.read(),null);assert.equal(backend.originals.length,0);
+  assert.equal(JSON.parse(local.getItem(`console-saved-work-ack:${chatKey}`)).operatorId,"operator:test");
+  first.write({schemaVersion:1,conversationId:id,turns:[{text:"Full working conversation"}]});await first.retry();
+  const saved=backend.record.payload_json;
+  const fresh=createSavedWorkBrowserSession(chatKey,{storage:storage(),fetchImpl:backend.fetch});await fresh.initialize();
+  assert.equal(fresh.read(),saved);assert.equal(backend.originals.length,0);
+  assert.equal(backend.calls.filter(call=>call.method==="POST").length,1,"Restoration reads; it does not invoke AI or issue another save.");
+});
 
 test("legacy raw bytes are preserved before first server save and fresh browser restores exact diagrams", async () => {
   const backend = owner(); const local = storage({ [key]: payload }); const first = session(local, backend);
@@ -96,4 +109,13 @@ test("server-copy conflict choice preserves edits made after the original browse
   backend.record = { ...backend.record, revision: 2, payload_json: payload.replace("diagram", "other tab"), content_digest: digest(payload.replace("diagram", "other tab")) };
   const edits = payload.replace("diagram", "later local edits"); current.write(JSON.parse(edits)); await current.retry(); assert.equal(current.getSnapshot().status, "conflict");
   await current.useServerCopy(); assert.ok(backend.originals.some(original => original.raw_value === edits)); assert.equal(current.read(), backend.record.payload_json);
+});
+
+test("explicit empty server conversation cannot resurrect its older browser cache",async()=>{
+ const id=`chat:${"b".repeat(64)}`,chatKey=`advisor-conversation:${id}:v1`,backend=owner("advisor-conversation",id),local=storage();
+ const first=createSavedWorkBrowserSession(chatKey,{storage:local,fetchImpl:backend.fetch,delayMs:60000});
+ await first.initialize();first.write({working:"Temporary unsent input"});await first.useServerCopy();
+ assert.equal(first.read(),null);assert.equal(local.getItem(chatKey),null);assert.equal(backend.originals.length,1);
+ const fresh=createSavedWorkBrowserSession(chatKey,{storage:local,fetchImpl:backend.fetch});await fresh.initialize();
+ assert.equal(fresh.read(),null);assert.equal(backend.record,null);
 });

@@ -149,10 +149,10 @@ test("Architecture Packet route and surface preserve same-origin identity, no-fi
 
   assert.match(draftRoute, /authorizeConsoleMutation/);
   assert.match(persistRoute, /authorizeConsoleMutation/);
-  assert.match(modal, /Validate Draft/);
-  assert.match(modal, /Approve Candidate/);
-  assert.match(modal, /Persist Approved Packet/);
-  assert.match(modal, /No fixture packet will be persisted/);
+  assert.match(modal, /Validate Plan/);
+  assert.match(modal, /Approve Plan/);
+  assert.match(modal, /Record Approved Plan/);
+  assert.match(modal, /Disconnected preview/);
   assert.doesNotMatch(modal, /NEXT_PUBLIC_|OOS_CALLER_SECRET/);
 });
 

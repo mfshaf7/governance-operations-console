@@ -202,6 +202,7 @@ export function useWorkDesignSessionController({
     [contextDecision, contextOperatorNote, contextSources],
   );
   const contextBoard = useWorkDesignContextBoard({
+    multiDiagram: true,
     readOnly,
     active: activeStep === "context",
     closeGuardOpen,
@@ -591,7 +592,7 @@ export function useWorkDesignSessionController({
   }
 
   const shellWidth =
-    activeStep === "context"
+    activeStep === "context" || activeStep === "build"
       ? ("viewport" as const)
       : activeStep === "hub"
         ? ("medium" as const)

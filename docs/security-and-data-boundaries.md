@@ -554,3 +554,26 @@ The Studio incubation baseline remains context, not acceptance of this new
 ancestor opt-in. Fresh composed Security delta review and normal Platform
 acceptance are required before this unpublished extension is commissioned.
 Isolated native HTTP/browser tests do not qualify a production integration.
+
+
+The package-scoped Technical Plan Advisor extends the existing inert draft-advice
+boundary. `execution-architecture` reuses the Agent Console permission/model
+route, CGG admission and native reply envelope; it has no approval or execution
+tools. Its only editable value is the selected local plan section. Source-revision
+sections are read-only; scope, human decision rationale, identity, custody and
+canonical writes are excluded. Available canonical work narratives must match
+the selected package and exact tree root before they enter context. Saved diagram
+contents/core nodes and unprovided references are identified separately. The UI
+rejects stale replies and unsafe local JSON, preserves manual input/undo, and
+requires independent human review and existing owner validation for recording.
+SVG diagrams derive from escaped recorded data, without arbitrary HTML or script
+execution. Isolated test replies are never installed as live owner fallbacks.
+
+Catalog maintenance preserves the reviewed revision and complete accepted
+request for same-session retry. The Console readiness-preparation adapter uses
+the existing authenticated OOS repository-readiness operation; no browser
+credentials, new provider authority or approval bypass is introduced. Applied
+canonical receipts survive failed list reads, and new changes remain blocked
+while Catalog freshness is unavailable. Owner receipt replay cannot authorize a
+new stale write. Native qualification follows coordinated source publication;
+disconnected browser proofs do not claim live operating acceptance.

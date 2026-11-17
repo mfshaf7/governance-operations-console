@@ -4,6 +4,13 @@ import type {
   DeliveryCloseoutProjection,
   DeliveryCloseoutValidationBehavior,
 } from "../../../../../live-runtime/delivery-closeout-live-types.ts";
+import { derivedIntakeRole } from "../../../../../../../workspace-registry/model/workspace-intake-guidance.ts";
+import { completionEvidenceFromForm, type CompletionResult } from "../../../../../work-model/execution/completion-evidence-form.ts";
+
+function entrantRole(entrant: ExecutionCloseoutDraft["workspaceEntrant"]) {
+  return entrant.entrantKind === "repository" ? entrant.validationWgcfGraphRole
+    : derivedIntakeRole(entrant.entrantKind, entrant.componentClass, entrant.validationPosture) || entrant.validationWgcfGraphRole;
+}
 
 export type ExecutionCloseoutImpactKind =
   | "existing-product-change"
@@ -35,7 +42,9 @@ export type ExecutionCloseoutDraft = {
   inspectSummary: string;
   residualFollowUp: string;
   testResultEvidence: string;
+  testResult: CompletionResult;
   validationEvidence: string;
+  validationResult: CompletionResult;
   workspaceEntrant: {
     candidateRef: string;
     candidateVersion: string;
@@ -80,7 +89,9 @@ export const initialExecutionCloseoutDraft: ExecutionCloseoutDraft = {
   inspectSummary: "",
   residualFollowUp: "",
   testResultEvidence: "",
+  testResult: "",
   validationEvidence: "",
+  validationResult: "",
   workspaceEntrant: {
     candidateRef: "",
     candidateVersion: "",
@@ -120,7 +131,20 @@ const evidenceFields: Array<keyof ExecutionCloseoutDraft> = [
 export function executionCloseoutEvidenceComplete(
   draft: ExecutionCloseoutDraft,
 ) {
-  return evidenceFields.every((field) => present(draft[field] as string));
+  if (!evidenceFields.every((field) => present(draft[field] as string))) return false;
+  try { closeoutCompletionEvidence(draft); return true; } catch { return false; }
+}
+
+function closeoutCompletionEvidence(draft: ExecutionCloseoutDraft) {
+  return completionEvidenceFromForm({ completion_summary: draft.completionSummary,
+    changed_surfaces: draft.changedSurfaces, test_result_evidence: draft.testResultEvidence,
+    validation_evidence: draft.validationEvidence, completion_note: draft.completionNote }, draft.testResult, draft.validationResult);
+}
+
+export function executionCloseoutEvidenceIssue(draft: ExecutionCloseoutDraft): string | null {
+  if (![draft.completionSummary, draft.changedSurfaces, draft.testResultEvidence, draft.validationEvidence].every(present)) return null;
+  try { closeoutCompletionEvidence(draft); return null; }
+  catch (error) { return error instanceof Error ? error.message : "Review the evidence and observed results."; }
 }
 
 export function executionCloseoutImpactComplete(
@@ -132,14 +156,12 @@ export function executionCloseoutImpactComplete(
   }
   const entrant = draft.workspaceEntrant;
   const commonComplete = [
-    entrant.candidateRef,
-    entrant.candidateVersion,
     entrant.canonicalKey,
     entrant.name,
     entrant.sourceOwnerRef,
     entrant.validationNotes,
     entrant.validationPosture,
-    entrant.validationWgcfGraphRole,
+    entrantRole(entrant),
   ].every(present);
   if (!commonComplete) return false;
   if (entrant.entrantKind === "repository") {
@@ -195,6 +217,7 @@ export function executionCloseoutOperation({
   draft: ExecutionCloseoutDraft;
   projection: DeliveryCloseoutProjection;
 }): DeliveryCloseoutOperation {
+  const completion = closeoutCompletionEvidence(draft);
   const optionalEvidence = {
     ...(present(draft.completionNote)
       ? { completion_note: draft.completionNote.trim() }
@@ -206,16 +229,16 @@ export function executionCloseoutOperation({
   return {
     payload: {
       evidence: {
-        changed_surfaces: draft.changedSurfaces.trim(),
-        completion_summary: draft.completionSummary.trim(),
+        changed_surfaces: completion.changed_surfaces,
+        completion_summary: completion.completion_summary,
         demo_evidence: draft.demoEvidence.trim(),
         demo_outcome: draft.demoOutcome.trim(),
         demo_summary: draft.demoSummary.trim(),
         evidence_refs: [...projection.readiness.evidence_refs],
         inspect_action_items: draft.inspectActionItems.trim(),
         inspect_summary: draft.inspectSummary.trim(),
-        test_result_evidence: draft.testResultEvidence.trim(),
-        validation_evidence: draft.validationEvidence.trim(),
+        test_result_evidence: completion.test_result_evidence,
+        validation_evidence: completion.validation_evidence,
         ...optionalEvidence,
       },
       impact: executionCloseoutImpact(draft, projection),
@@ -234,7 +257,7 @@ export function executionCloseoutReadinessRows(
     ["Missing evidence", counts.without_evidence],
     ["Weak evidence", counts.weak_evidence],
     ["Weak done narrative", counts.weak_done_narrative],
-    ["Missing responsible repository", counts.without_owner],
+    ["Missing repository", counts.without_owner],
   ] as const;
 }
 
@@ -260,11 +283,11 @@ function executionCloseoutImpact(
     catalog_refs: entrant.validationCatalogRefs.filter(present).map(trim),
     notes: entrant.validationNotes.trim(),
     posture: entrant.validationPosture.trim(),
-    wgcf_graph_role: entrant.validationWgcfGraphRole.trim(),
+    wgcf_graph_role: entrantRole(entrant).trim(),
   };
   const common = {
-    candidate_ref: entrant.candidateRef.trim(),
-    candidate_version: entrant.candidateVersion.trim(),
+    candidate_ref: entrant.candidateRef.trim() || `oos://delivery-closeout-candidates/${projection.delivery_id}`,
+    candidate_version: entrant.candidateVersion.trim() || projection.source_revision,
     canonical_key: entrant.canonicalKey.trim(),
     correlation_ref: `delivery-closeout:${projection.delivery_id}`,
     evidence_refs: [...projection.readiness.evidence_refs],

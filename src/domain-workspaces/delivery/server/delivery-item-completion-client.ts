@@ -37,7 +37,7 @@ export async function readItemCompletionContext(target: number, options: Options
   if (item.completion_narrative_contract_satisfied !== true) reasons.push("The native done narrative requires correction.");
   if (item.completion_status_transition_available !== true) reasons.push("The native completion transition is unavailable.");
   const piReview = item.type === "PI Objective" ? await readPiReviewMetadata(id, envelope.delivery_id, item, options) : undefined;
-  const pi = piReview ? { ...piReview, can_review: !session.session_id && !["done", "retired"].includes(item.status) } : undefined;
+  const pi = piReview ? { ...piReview, can_review: piReview.review_outcomes.length > 0 && !session.session_id && !["done", "retired"].includes(item.status) } : undefined;
   const revision = `sha256:${createHash("sha256").update(JSON.stringify({ item, open_descendant_count: summary.open_descendant_count, source_session_id: session.session_id, pi_review: pi })).digest("hex")}`;
   return {
     work_item_id: id, record_ref: ref, subject: item.subject, status: item.status,
@@ -73,8 +73,10 @@ async function readPiReviewMetadata(id: number, deliveryId: unknown, item: Recor
     throw new Error("Native PI review value is invalid.");
   }
   if (!(node.pi_objective_review_outcome === null || typeof node.pi_objective_review_outcome === "string")) throw new Error("Native PI review outcome is invalid.");
+  const choices = item.pi_objective_review_outcome_options;
+  if (!Array.isArray(choices) || choices.length > 100 || choices.some(value => typeof value !== "string" || !value.trim()) || new Set(choices).size !== choices.length) throw new Error("Native PI review choices are unavailable. No outcome has been guessed.");
   return { delivery_id: deliveryId, target_pi: node.target_pi, planned_business_value: value(node.planned_business_value),
-    actual_business_value: value(node.actual_business_value), review_outcome: node.pi_objective_review_outcome as string | null };
+    actual_business_value: value(node.actual_business_value), review_outcome: node.pi_objective_review_outcome as string | null, review_outcomes: choices as string[] };
 }
 
 export async function submitItemPiReview(target: number, value: unknown, options: Options = {}) {
@@ -89,6 +91,7 @@ export async function submitItemPiReview(target: number, value: unknown, options
   if (!pi?.can_review || current.revision !== body.expectedRevision) {
     throw new DeliveryOosError("The exact objective changed or cannot be reviewed; read its current state.", "delivery_pi_review_context_changed", 409);
   }
+  if (!pi.review_outcomes?.includes(review.reviewOutcome)) throw new DeliveryOosError("Choose an outcome from the current native review choices.", "delivery_pi_review_outcome_invalid", 422);
   if (pi.actual_business_value === review.actualBusinessValue && pi.review_outcome === review.reviewOutcome) return { outcome: "already-recorded", context: current };
   const result = completionObject(await deliveryOosRequest(resolveDeliveryOosConfig(options.env),
     `/v1/delivery-initiatives/${pi.delivery_id}/pi-review`, { method: "POST", body: JSON.stringify({ input: {

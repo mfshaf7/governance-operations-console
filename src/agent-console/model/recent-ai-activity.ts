@@ -41,6 +41,7 @@ export const aiActivityTasks: Readonly<Record<string, readonly [string, string]>
   "work-design-tree": ["Work breakdown assistance", "Work Design"],
   "refinement-metadata": ["Metadata assistance", "Refinement"],
   "execution-tree": ["Execution tree assistance", "Execution"],
+  "execution-architecture": ["Technical plan assistance", "Execution"],
   "work-design-blocker": ["Blocker assistance", "Work Design"],
   "refinement-blocker": ["Blocker assistance", "Refinement"],
   "definition-design": ["Definition design assistance", "Orchestration"],
@@ -51,6 +52,6 @@ export function aiActivityWorkspace(item: RecentAiActivity): "PROPOSAL" | "PROTO
   if (!item.kind || !item.subjectRef) return null;
   if (item.kind.startsWith("proposal-")) return "PROPOSAL";
   if (item.kind.startsWith("prototype-")) return "PROTOTYPE";
-  if (["work-design-context", "work-design-tree", "refinement-metadata", "execution-tree", "work-design-blocker", "refinement-blocker"].includes(item.kind) && /^(delivery-[1-9][0-9]*|delivery-package:[1-9][0-9]*)$/.test(item.subjectRef)) return "DELIVERY";
+  if (["work-design-context", "work-design-tree", "refinement-metadata", "execution-tree", "execution-architecture", "work-design-blocker", "refinement-blocker"].includes(item.kind) && /^(delivery-[1-9][0-9]*|delivery-package:[1-9][0-9]*)$/.test(item.subjectRef)) return "DELIVERY";
   return item.kind === "definition-design" && item.subjectRef.startsWith("definition:") ? "ORCHESTRATION" : null;
 }

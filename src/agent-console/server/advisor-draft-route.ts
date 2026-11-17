@@ -42,7 +42,7 @@ export async function requestAdvisorDraftRoute(request: NextRequest) {
       const conversation = body.conversation ?? [];
       if (!Array.isArray(conversation) || conversation.length > 8 || conversation.some((turn) =>
         !turn || typeof turn !== "object" || Object.keys(turn).some((key) => !["role", "text"].includes(key)) ||
-        !["operator", "advisor"].includes(turn.role) || typeof turn.text !== "string" || turn.text.length > 2000)) {
+        !["operator", "advisor"].includes(turn.role) || typeof turn.text !== "string" || turn.text.length > 12000)) {
         throw Error("Advisor conversation exceeds its bounded context.");
       }
       if (hasSecretLikeMaterial(JSON.stringify({ scope, prompt: body.prompt, conversation }))) {

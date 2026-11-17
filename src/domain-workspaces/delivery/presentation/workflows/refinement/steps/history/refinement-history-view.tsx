@@ -71,7 +71,7 @@ export function RefinementHistoryView({
         <TerasPanel spacing="normal" frame="padded" treatment="neutral" layout="header-body">
           <TerasPanelHeader
             kicker="Event Timeline"
-            statusLabel={`${timelineRows.length} events`}
+            statusLabel={`${timelineRows.length} ${timelineRows.length === 1 ? "event" : "events"}`}
             statusTone="info"
             title={historyProjection.eventTitle}
             description={historyProjection.eventDescription}

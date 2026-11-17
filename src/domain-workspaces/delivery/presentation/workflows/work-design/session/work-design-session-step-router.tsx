@@ -187,9 +187,9 @@ export function WorkDesignSessionStepRouter({
   return (
     <TerasContentFrame
       relative
-      variant={activeStep === "context" ? "single-region" : "standard"}
+      variant={activeStep === "context" || activeStep === "build" ? "single-region" : "standard"}
     >
-      {activeStep !== "context" && activeStep !== "hub" ? (
+      {activeStep !== "context" && activeStep !== "build" && activeStep !== "hub" ? (
         <WorkDesignProgressPanel
           readOnly={readOnly}
           runtimeMode={applyWorkflow.runtimeMode}

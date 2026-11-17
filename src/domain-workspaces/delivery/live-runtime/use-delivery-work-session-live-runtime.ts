@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   assertDeliveryWorkSessionSnapshot,
+  recoveryFromWorkSession,
   isDeliveryWorkSessionLiveApiError,
 } from "./delivery-work-session-live-contract.ts";
 import type {
@@ -25,10 +26,26 @@ type PendingCommand = {
   requestKey: string;
 };
 
-export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
+export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onCanonicalChanged?: () => Promise<void>) {
   const [snapshot, setSnapshot] =
     useState<DeliveryWorkSessionSnapshot | null>(null);
   const pendingCommands = useRef<Record<string, PendingCommand>>({});
+  const confirmedRevision = useRef<string | null>(null);
+  const changed = useRef(onCanonicalChanged); changed.current = onCanonicalChanged;
+  const publish = useCallback((next: DeliveryWorkSessionSnapshot) => {
+    const revision = next.projection?.session_revision ?? null;
+    if (next.mode === "live" && next.status === "current" && (Object.keys(pendingCommands.current).length > 0 || revision && confirmedRevision.current && revision !== confirmedRevision.current)) {
+      void changed.current?.().catch(() => undefined);
+    }
+    confirmedRevision.current = revision;
+    setSnapshot(next);
+  }, []);
+
+  const publishCommand = useCallback((next: DeliveryWorkSessionSnapshot) => {
+    confirmedRevision.current = next.projection?.session_revision ?? null;
+    setSnapshot(next);
+    void changed.current?.().catch(() => undefined);
+  }, []);
 
   const refresh = useCallback(async () => {
     if (workItemId === null) {
@@ -78,13 +95,14 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
       throw error;
     }
     const next = assertDeliveryWorkSessionSnapshot(body);
-    setSnapshot(next);
+    publish(next);
     return next;
-  }, [workItemId]);
+  }, [workItemId, publish]);
 
   useEffect(() => {
     setSnapshot(null);
     pendingCommands.current = {};
+    confirmedRevision.current = null;
     void refresh().catch(() => undefined);
   }, [refresh]);
 
@@ -99,9 +117,9 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
       },
       path: `${workSessionPath(requiredTarget(workItemId))}/start`,
       pendingCommands,
-      setSnapshot,
+      setSnapshot: next => { confirmedRevision.current = next.projection?.session_revision ?? null; setSnapshot(next); },
     });
-  }, [refresh, snapshot, workItemId]);
+  }, [refresh, snapshot, workItemId, publishCommand]);
 
   const start = useCallback(
     async (decision: DeliveryWorkSessionDecisionInput, sourceIntentRef?: string) => {
@@ -117,13 +135,13 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
         },
         path: `${workSessionPath(requiredTarget(workItemId))}/start`,
         pendingCommands,
-        setSnapshot,
+        setSnapshot: publishCommand,
       });
     },
-    [refresh, snapshot, workItemId],
+    [refresh, snapshot, workItemId, publishCommand],
   );
 
-  const command = useCallback(async (action: "close" | "continue" | "merge", sourceIntentRef?: string) => {
+  const command = useCallback(async (action: "close" | "continue" | "merge" | "reconstruct" | "recover", sourceIntentRef?: string, reason?: string) => {
     const current = await currentSnapshot(snapshot, refresh);
     if (current.mode === "disconnected-preview") return current;
     const revision = current.projection?.session_revision;
@@ -135,22 +153,26 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null) {
     }
     return submitDeliveryWorkSessionCommand({
       action,
-      body: { expectedSessionRevision: revision, ...(sourceIntentRef ? { sourceIntentRef } : {}) },
+      body: { expectedSessionRevision: revision, ...(sourceIntentRef ? { sourceIntentRef } : {}), ...(action === "recover" ? { recovery: recoveryFromWorkSession(current.projection!, reason ?? "") } : {}) },
       path: `${workSessionPath(requiredTarget(workItemId))}/${action}`,
       pendingCommands,
-      setSnapshot,
+      setSnapshot: publishCommand,
     });
-  }, [refresh, snapshot, workItemId]);
+  }, [refresh, snapshot, workItemId, publishCommand]);
 
   const continueWork = useCallback((sourceIntentRef?: string) => command("continue", sourceIntentRef), [command]);
   const mergeWork = useCallback(() => command("merge"), [command]);
   const closeWork = useCallback(() => command("close"), [command]);
+  const reconstructWork = useCallback(() => command("reconstruct"), [command]);
+  const recoverWork = useCallback((reason: string) => command("recover", undefined, reason), [command]);
 
   const projectionStatus: DeliveryWorkSessionSnapshot["status"] | "loading" =
     snapshot?.status ?? "loading";
 
   return {
     closeWork,
+    reconstructWork,
+    recoverWork,
     continueWork,
     mergeWork,
     mode: snapshot?.mode ?? null,
@@ -203,7 +225,7 @@ export async function submitDeliveryWorkSessionCommand({
   body: Record<string, unknown>;
   path: string;
   pendingCommands: React.MutableRefObject<Record<string, PendingCommand>>;
-  setSnapshot: React.Dispatch<React.SetStateAction<DeliveryWorkSessionSnapshot | null>>;
+  setSnapshot: (snapshot: DeliveryWorkSessionSnapshot) => void;
 }) {
   const requestKey = JSON.stringify({ path, body });
   const pending = pendingCommands.current[action];

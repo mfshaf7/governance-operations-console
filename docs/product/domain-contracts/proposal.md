@@ -30,6 +30,11 @@ than SSE/websocket.
 
 ## Source Of Truth
 
+`server/project-context.ts` is the read-only server entry point for explicitly
+selected agent context. It reuses the existing typed, authenticated single-item
+reader; it exposes no mutation or arbitrary URL resolution. This maintenance
+extension remains unpublished pending composed review and activation.
+
 Canonical Proposal state belongs to Workspace Proposals in OpenProject. OOS is
 the only admitted mutation adapter. The Console reads typed OOS projections and
 submits version-bound commands through same-origin server routes; it never

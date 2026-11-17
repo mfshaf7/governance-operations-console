@@ -80,6 +80,6 @@ export function SourceEditorWorkspace({target,onClose,onSaved,onReviewed}:{targe
     </div>
    </div>
   </TerasModalShell>
-  <TerasDraftCloseGuardDialog open={guard!==null} kicker="Unsaved source work" title="Discard local edits?" description="Saved drafts stay with the source service. Unsaved buffers, unreviewed AI proposals and this browser conversation will be lost. An AI request may still finish after you stop waiting." leaveLabel={guard==="reload"?"Discard buffers and reload":"Discard buffers and close"} onKeepEditing={()=>setGuard(null)} onLeave={()=>{const action=guard;setGuard(null);assistant.stopWaiting();assistant.reject();if(action==="reload")void runtime.reload();else onClose();}}/>
+  <TerasDraftCloseGuardDialog open={guard!==null} kicker="Unsaved source work" title="Discard local edits?" description="Saved source drafts and acknowledged conversations stay in private storage. Unsaved buffers and unreviewed AI proposals will be lost. An AI request may still finish after you stop waiting." leaveLabel={guard==="reload"?"Discard buffers and reload":"Discard buffers and close"} onKeepEditing={()=>setGuard(null)} onLeave={()=>{const action=guard;setGuard(null);assistant.stopWaiting();assistant.reject();if(action==="reload")void runtime.reload();else onClose();}}/>
  </>;
 }

@@ -14,7 +14,10 @@ import {
   type AgentInteractionMode,
 } from "../model/agent-context-policy";
 import { inspectAgentInput } from "../model/agent-input-policy";
-import { useFocusedDraftScope } from "./draft-advisor-scope-provider";
+import { useFocusedDraftScope, useAvailableProjectContexts } from "./draft-advisor-scope-provider";
+import { selectedProjectCandidate, selectedProjectKey, type ProjectContextChoice } from "../model/selected-project-context.ts";
+import { useAdvisorConversation } from "./use-advisor-conversation.ts";
+import { advisorConversationWindow, conversationBindingText } from "../model/advisor-conversation.ts";
 import { advisorScopeIdentity } from "../model/advisor-drafts";
 import {
   deriveAgentProviderReadinessState,
@@ -32,6 +35,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -99,12 +103,13 @@ function governedResponseHeaderMismatch(response: Response) {
 }
 
 export function useAgentConsoleController({
-  contextCandidate,
+  contextCandidate: suppliedContextCandidate,
   workspaceContextCandidate,
   contextFallbackLabel,
   listenForOpenEvent,
   placement,
   providerStatus,
+  conversationRole,
 }: {
   contextCandidate: AgentContextCandidate | null;
   workspaceContextCandidate?: AgentContextCandidate | null;
@@ -112,6 +117,7 @@ export function useAgentConsoleController({
   listenForOpenEvent: boolean;
   placement: AgentConsolePlacement;
   providerStatus: AgentProviderStatus | null;
+  conversationRole?: string;
 }) {
   const [dockPosition, setDockPosition] = useState<{ left: number; top: number } | null>(null);
   const {
@@ -139,6 +145,40 @@ export function useAgentConsoleController({
   } = useAgentConsoleSession();
   const contextMode = agentContextMode;
   const focusedDraft = useFocusedDraftScope();
+  const availableProjects = useAvailableProjectContexts();
+  const [projectSelection, setProjectSelection] = useState<{ choice: ProjectContextChoice; chosenAt: string } | null>(null);
+  const selectedProject = contextMode === "focused" && !focusedDraft && projectSelection ? { kind: projectSelection.choice.kind, id: projectSelection.choice.id } : undefined;
+  const requestedContextCandidate = useMemo(() => selectedProject && projectSelection ? selectedProjectCandidate(projectSelection.choice, projectSelection.chosenAt) : suppliedContextCandidate,
+    [selectedProject?.kind, selectedProject?.id, projectSelection, suppliedContextCandidate]);
+  const idleContextCandidate = useRef(requestedContextCandidate);
+  if (!agentBusy) idleContextCandidate.current = requestedContextCandidate;
+  const contextCandidate = agentBusy ? idleContextCandidate.current : requestedContextCandidate;
+  let draftBinding: { role: string; ref: string; sourceRef: string } | null = null;
+  try { if (contextMode === "focused" && focusedDraft) { const scope = focusedDraft.getScope(); draftBinding = { role: scope.role, ref: scope.ref, sourceRef: scope.sourceRef }; } }
+  catch { /* The selected workflow explains its unavailable scope on request. */ }
+  const requestedConversationBinding = { role: `${conversationRole ?? (placement === "floating" ? "console-dock" : "console-primary")}/${draftBinding?.role ?? contextMode}`,
+    ref: draftBinding?.ref ?? contextCandidate?.id ?? "console-overview",
+    sourceRef: draftBinding?.sourceRef ?? contextCandidate?.refs[0] ?? "console://overview" };
+  const idleConversationBinding = useRef(requestedConversationBinding);
+  if (!agentBusy) idleConversationBinding.current = requestedConversationBinding;
+  const conversationBinding = agentBusy ? idleConversationBinding.current : requestedConversationBinding;
+  const memory = useAdvisorConversation(conversationBinding, null);
+  const memoryIdentity = `${conversationBindingText(conversationBinding)}:${memory.restoreVersion}`;
+  const restoredMemoryIdentity = useRef<string | null>(null);
+  const queuedReadOutput = useRef<{ identity: string; entries: AgentTerminalEntry[] }>({ identity: memoryIdentity, entries: [] });
+  if (queuedReadOutput.current.identity !== memoryIdentity) queuedReadOutput.current = { identity: memoryIdentity, entries: [] };
+  useEffect(() => {
+    if (!memory.ready || restoredMemoryIdentity.current === memoryIdentity) return;
+    restoredMemoryIdentity.current = memoryIdentity;
+    if (memory.turns.length) {
+      setAgentConversationTurns(memory.turns.map(turn => ({ role: turn.role === "operator" ? "user" as const : "assistant" as const, content: turn.text })));
+      setAgentTranscript([terminalEntry("system", `Restored working conversation. ${memory.status}. Current source context takes precedence.`),
+        ...memory.transcript.map(turn => terminalEntry(turn.role === "operator" ? "operator" : "agent", turn.text)), ...queuedReadOutput.current.entries]);
+    } else { setAgentConversationTurns([]); setAgentTranscript([terminalEntry("system", `Current context: ${contextCandidate?.title ?? "Console"}. Working conversation is separate from accepted project records.`), ...queuedReadOutput.current.entries]); }
+    queuedReadOutput.current.entries = [];
+    setAgentPrompt(current => current || memory.draftPrompt);
+    if (memory.pendingRequest) appendAgentTranscript([terminalEntry("system", "An earlier request has an unconfirmed outcome. Restoration did not retry it or apply changes.")]);
+  }, [memory.ready, memoryIdentity, memory.turns, memory.transcript, memory.status, memory.pendingRequest]);
   const lastDraftConversationScope = useRef<string | null>(null);
   const [contextModeChanging, setContextModeChanging] = useState(false);
   const [pendingOpenCommand, setPendingOpenCommand] = useState<{ command: string; mode: AgentInteractionMode } | null>(null);
@@ -227,10 +267,10 @@ export function useAgentConsoleController({
   // Run after the provider has committed the mode and rotated session binding.
   // An awaited mode-close handler still holds its previous render's values.
   useEffect(() => {
-    if (!pendingOpenCommand || agentBusy || contextModeChanging || pendingOpenCommand.mode !== contextMode) return;
+    if (!pendingOpenCommand || !memory.ready || agentBusy || contextModeChanging || pendingOpenCommand.mode !== contextMode) return;
     setPendingOpenCommand(null);
     void runAgentCommand(pendingOpenCommand.command, pendingOpenCommand.mode);
-  }, [pendingOpenCommand, agentBusy, contextModeChanging, contextMode, agentSessionBinding.nonce, contextCandidate]);
+  }, [pendingOpenCommand, memory.ready, agentBusy, contextModeChanging, contextMode, agentSessionBinding.nonce, contextCandidate]);
 
   useEffect(() => {
     const floatingDockConstrainedByModal = isFloatingDock && modalSurfaceOpen;
@@ -289,6 +329,8 @@ export function useAgentConsoleController({
   ]);
 
   function appendAgentTranscript(entries: AgentTerminalEntry[]) {
+    if (restoredMemoryIdentity.current !== memoryIdentity && queuedReadOutput.current.identity === memoryIdentity)
+      queuedReadOutput.current.entries = [...queuedReadOutput.current.entries, ...entries].slice(-80);
     setAgentTranscript((current) => [...current, ...entries].slice(-80));
   }
 
@@ -382,6 +424,7 @@ export function useAgentConsoleController({
     }
 
     if (command === "reset") {
+      if (!memory.ready) { appendAgentTranscript([terminalEntry("system", "Saved conversation is still opening. Reset it when history is ready.")]); return false; }
       if (requestedMode === "focused" || requestedMode === "workspace") {
         const response = await fetch("/api/agent-interaction", {
           body: JSON.stringify({ mode: requestedMode, session: agentSessionBinding }),
@@ -393,10 +436,13 @@ export function useAgentConsoleController({
           appendAgentTranscript([
             terminalEntry("error", payload?.error ?? "governed session could not be closed"),
           ]);
-          return true;
+          return false;
         }
       }
+      setAgentPrompt("");
+      setPendingOpenCommand(null);
       rotateAgentSession();
+      memory.clear();
       setAgentConversationTurns([]);
       setAgentHistory([]);
       setAgentHistoryCursor(null);
@@ -405,7 +451,7 @@ export function useAgentConsoleController({
         terminalEntry("system", "terminal reset"),
         terminalEntry(
           "system",
-          "transcript, session context, and command history cleared",
+          "new working conversation; source records and AI activity history are retained",
         ),
         terminalEntry(
           "system",
@@ -522,7 +568,7 @@ export function useAgentConsoleController({
     requestedMode: AgentInteractionMode = contextMode,
   ) {
     if (!command || agentBusy || contextModeChanging) {
-      return;
+      return false;
     }
 
     const normalizedCommand = command.toLowerCase();
@@ -534,8 +580,7 @@ export function useAgentConsoleController({
         appendAgentTranscript([terminalEntry("operator", command)]);
       }
 
-      await handleLocalTerminalCommand(normalizedCommand, requestedMode);
-      return;
+      return await handleLocalTerminalCommand(normalizedCommand, requestedMode);
     }
 
     const requestedMessage = normalizedCommand.startsWith("ask ")
@@ -549,6 +594,7 @@ export function useAgentConsoleController({
     }
 
     const message = input.message;
+    if (!memory.ready) { appendAgentTranscript([terminalEntry("system", "Opening saved conversation. Your prompt is retained; send it when history is ready.")]); return; }
     setAgentHistory((current) => [...current, command].slice(-30));
     setAgentHistoryCursor(null);
     appendAgentTranscript([terminalEntry("operator", command)]);
@@ -561,16 +607,19 @@ export function useAgentConsoleController({
       const invocation = createAgentInvocation({ contextDecision, id: `agent-invocation-${crypto.randomUUID()}`, model: null, provider: "governed-workflow-advisor" });
       const signal = beginAgentRequest(invocation.id);
       if (!signal) { appendAgentTranscript([terminalEntry("error", "another agent request is already running")]); return; }
+      memory.pending({ prompt: message, requestedAt: new Date().toISOString(), state: "unconfirmed" });
       setCurrentInvocation(invocation);
       try {
         const scope = focusedDraft.getScope();
         const identity = advisorScopeIdentity(scope);
-        const conversation = lastDraftConversationScope.current === identity ? agentConversationTurns.slice(-6) : [];
+        const conversation = advisorConversationWindow(memory.turns);
         if (lastDraftConversationScope.current !== identity) setAgentConversationTurns([]);
         lastDraftConversationScope.current = identity;
         appendAgentTranscript([terminalEntry("system", `Using the active ${scope.role} local draft. Waiting for governed context and model evidence; final workflow decisions remain yours.`)]);
         const reply = await focusedDraft.run(message, { signal, session: agentSessionBinding,
-          conversation: conversation.map((turn) => ({ role: turn.role === "user" ? "operator" : "advisor", text: turn.content })) });
+          conversation: conversation.turns });
+        memory.complete(message, reply.message);
+        if (conversation.omitted) appendAgentTranscript([terminalEntry("system", `${conversation.omitted} earlier working messages were outside this request's context; no individual message was cut.`)]);
         appendAgentTranscript([terminalEntry("agent", reply.message, reply.evidence.effectiveModel ?? reply.evidence.profileId),
           terminalEntry("system", `CGG projection: ${reply.evidence.contextRef}\nGoverned audit: ${reply.evidence.auditRef}${reply.evidence.receiptRef ? `\nOOS receipt: ${reply.evidence.receiptRef}` : ""}`)]);
         setCurrentInvocation((current) => current?.id === invocation.id ? { ...current, contextAttached: true,
@@ -639,6 +688,9 @@ export function useAgentConsoleController({
 
     let received = "";
     let responseStarted = false;
+    const conversationWindow = advisorConversationWindow(memory.turns);
+    memory.pending({ prompt: message, invocationNonce, requestedAt: new Date().toISOString(), state: "unconfirmed" });
+    if (conversationWindow.omitted) appendAgentTranscript([terminalEntry("system", `${conversationWindow.omitted} earlier working messages are outside this request's context; no individual message was cut.`)]);
     setCurrentInvocation(invocation);
 
     try {
@@ -657,6 +709,8 @@ export function useAgentConsoleController({
           },
           invocationNonce,
           message,
+          conversation: conversationWindow.turns,
+          ...(selectedProject ? { selectedProject } : {}),
           session: agentSessionBinding,
         }),
         headers: {
@@ -676,6 +730,16 @@ export function useAgentConsoleController({
       if (decisionMismatch) {
         await response.body?.cancel();
         throw new Error(decisionMismatch);
+      }
+
+      if (selectedProject) {
+        const header = response.headers.get("X-Agent-Project-Context");
+        const readback = header ? JSON.parse(decodeURIComponent(header)) as { selection?: {kind:string;id:string}; title?:string;revision?:string;coverage?:string } : null;
+        if (!readback?.selection || selectedProjectKey(readback.selection as typeof selectedProject) !== selectedProjectKey(selectedProject) ||
+            typeof readback.title !== "string" || typeof readback.revision !== "string" || typeof readback.coverage !== "string") {
+          await response.body?.cancel(); throw Error("The selected item's context readback is incomplete. The reply was not displayed.");
+        }
+        appendAgentTranscript([terminalEntry("system", `Item context: ${readback.title} · ${readback.revision}\n${readback.coverage}`)]);
       }
 
       if (!response.body) {
@@ -737,6 +801,7 @@ export function useAgentConsoleController({
           state: "failed",
         });
       } else {
+        memory.complete(message, received.trim());
         appendAgentTranscript([
           terminalEntry(
             "system",
@@ -822,7 +887,13 @@ export function useAgentConsoleController({
       return;
     }
 
+    if (!memory.ready && !localTerminalCommands.has(command.toLowerCase())) {
+      appendAgentTranscript([terminalEntry("system", "Conversation history is unavailable. Retry loading it or choose current context only. Your message is retained.")]);
+      return;
+    }
+
     setAgentPrompt("");
+    if (localTerminalCommands.has(command.toLowerCase())) memory.setDraftPrompt("");
     await runAgentCommand(command);
   }
 
@@ -1034,6 +1105,13 @@ export function useAgentConsoleController({
         }
       : undefined;
 
+  function showEarlierConversation() {
+    memory.showEarlier();
+    const count = memory.transcript.length + 50;
+    setAgentTranscript([terminalEntry("system", "Earlier working conversation. Current project context takes precedence."),
+      ...memory.turns.slice(-count).map(turn => terminalEntry(turn.role === "operator" ? "operator" : "agent", turn.text))]);
+  }
+
   return {
     contextModeChanging,
     agentBusy,
@@ -1063,8 +1141,31 @@ export function useAgentConsoleController({
     providerState,
     providerStateLabel,
     providerStatusLabel,
-    setAgentPrompt,
+    setAgentPrompt: (value: string) => { setPendingOpenCommand(null); setAgentPrompt(value); memory.setDraftPrompt(value); },
     setModeMenuOpen,
     setModelDockExpanded,
+    savedConversationStatus: memory.status,
+    canSubmitConversation: memory.ready || localTerminalCommands.has(agentPrompt.trim().toLowerCase()),
+    effectiveContext: contextCandidate,
+    conversationControls: { ready: memory.ready, draftPrompt: memory.draftPrompt,
+      onDraftPromptChange: memory.setDraftPrompt, status: memory.status, hasEarlier: memory.hasEarlier,
+      onShowEarlier: showEarlierConversation, onNew: async () => {
+        try { return await runAgentCommand("reset"); }
+        catch { appendAgentTranscript([terminalEntry("error", "The session could not be closed. Your current conversation and unsent input are retained.")]); return false; }
+      },
+      saveError: memory.saveError, conflict: memory.conflict, onRetrySave: () => { void memory.retry(); },
+      onUseServer: () => { void memory.useServerCopy(); }, onKeepLocal: () => { void memory.keepBrowserEdits(); },
+      onUseCurrentContext: memory.useCurrentContextOnly },
+    projectContext: { available: availableProjects, selected: projectSelection?.choice ?? null,
+      enabled: contextMode === "focused" && !focusedDraft, choose: (key: string) => {
+        if (agentBusy) return;
+        const choice = availableProjects.find(item => selectedProjectKey(item) === key);
+        setProjectSelection(choice ? { choice, chosenAt: new Date().toISOString() } : null);
+      } },
+    conversationRecovery: { ready: memory.ready, error: memory.saveError, conflict: memory.conflict,
+      retry: memory.retry, useServer: memory.useServerCopy, keepBrowser: memory.keepBrowserEdits,
+      useCurrentContext: memory.useCurrentContextOnly },
+    hasEarlierConversation: memory.hasEarlier,
+    showEarlierConversation,
   };
 }

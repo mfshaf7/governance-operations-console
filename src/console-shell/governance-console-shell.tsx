@@ -2,6 +2,7 @@
 
 import {
   AgentConsoleSessionProvider,
+  AgentConnectionStatusProvider,
   type AgentProviderStatus,
   type AgentRuntimeIdentity,
   AgentRuntimePresenceProvider,
@@ -52,11 +53,13 @@ export function GovernanceConsoleShell() {
 
   return (
     <AgentRuntimePresenceProvider>
+      <AgentConnectionStatusProvider status={providerStatus}>
       <DraftAdvisorScopeProvider>
       <WorkspaceViewStateProvider>
         <GovernanceConsoleContent providerStatus={providerStatus} />
       </WorkspaceViewStateProvider>
       </DraftAdvisorScopeProvider>
+      </AgentConnectionStatusProvider>
     </AgentRuntimePresenceProvider>
   );
 }

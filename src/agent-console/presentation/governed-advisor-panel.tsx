@@ -1,11 +1,11 @@
 "use client";
 
-import { TerasAdvisorPanel, TerasTechnicalDetails } from "@/teras";
+import { TerasAdvisorPanel, TerasSelectField } from "@/teras";
 import type { AgentContextModelProjection } from "../model/agent-context-policy";
 import type { AgentRuntimeIdentity } from "../model/agent-runtime-presence";
 import { AgentConsoleSessionProvider } from "../state/agent-console-session-provider";
 import { useAgentConsoleController } from "../state/use-agent-console-controller";
-import { useAgentProviderStatus } from "../state/use-agent-provider-status";
+import { useAgentConnectionStatus } from "../state/agent-connection-status-provider";
 import type { AgentProviderStatus } from "../model/agent-provider-status";
 
 // A workspace presentation of the same governed Agent session/controller.
@@ -15,7 +15,7 @@ export function GovernedAdvisorPanel({ context, identity, title }: {
   identity: AgentRuntimeIdentity;
   title: string;
 }) {
-  const providerStatus = useAgentProviderStatus();
+  const { providerStatus } = useAgentConnectionStatus();
   return <AgentConsoleSessionProvider initialContextMode="focused" providerStatus={providerStatus} runtimeIdentity={identity}>
     <AdvisorContent context={context} providerStatus={providerStatus} title={title} />
   </AgentConsoleSessionProvider>;
@@ -24,24 +24,22 @@ export function GovernedAdvisorPanel({ context, identity, title }: {
 function AdvisorContent({ context, providerStatus, title }: {
   context: AgentContextModelProjection; providerStatus: AgentProviderStatus | null; title: string;
 }) {
+  const { connection } = useAgentConnectionStatus();
   const agent = useAgentConsoleController({ contextCandidate: context, contextFallbackLabel: "Delivery context unavailable",
-    listenForOpenEvent: false, placement: "embedded", providerStatus });
+    listenForOpenEvent: false, placement: "embedded", providerStatus, conversationRole: "delivery-home" });
   const transcript = agent.agentTranscript.filter(entry => !["boot", "mode", "help"].includes(entry.id));
+  const lines = transcript.map(entry => ({ id: entry.id, role: entry.kind === "operator" ? "operator" as const : "advisor" as const,
+    text: `${entry.kind === "error" ? "Error: " : entry.kind === "system" ? "Status: " : ""}${entry.text}${entry.model ? `\nModel: ${entry.model}` : ""}` }));
   return <TerasAdvisorPanel fill density="compact" profileLabel={title}
-    draftControls={{ busy: agent.agentBusy, canUndo: false, onUndo: () => {},
-      onCancel: agent.handleAgentCancel, notice: null, evidenceLabel: null }}
-    statusLabel={agent.agentBusy ? "Working" : agent.providerStateLabel}
-    statusTitle={agent.providerStatusLabel} statusTone={agent.agentBusy ? "info" : agent.providerOnline ? "ok" : "warn"}
-    transcript={transcript.length ? transcript.map(entry => ({ id: entry.id,
-      role: entry.kind === "operator" ? "operator" : "advisor",
-      text: `${entry.kind === "error" ? "Error: " : entry.kind === "system" ? "Status: " : ""}${entry.text}${entry.model ? `\nModel: ${entry.model}` : ""}`,
-    })) : [{ id: "guidance", role: "advisor", text: "Ask about the current Delivery overview or where to continue. A reply is generated only after you send a request." }]}
+    draftControls={{ connection, busy: agent.agentBusy, canUndo: false, onUndo: () => {},
+      onCancel: agent.handleAgentCancel, notice: null, evidenceLabel: null,
+      history: { ...agent.conversationControls, transcript: lines } }}
+    statusLabel={agent.agentBusy ? "Working" : "Read-only advice"}
+    statusTitle="Advice does not submit workflow decisions." statusTone={agent.agentBusy ? "info" : "muted"}
+    transcript={lines}
     prompt={{ ariaLabel: `${title} prompt`, value: agent.agentPrompt, onChange: agent.setAgentPrompt,
       onSubmit: agent.handleAgentSubmit, placeholder: "Ask about Delivery…", rows: 2 }}
-    footer={<TerasTechnicalDetails summary="Delivery context" items={[
-        { label: "Coverage", value: context.status ?? "Unavailable" },
-        { label: "Context", value: context.summary },
-        { label: "Observed", value: context.observedAt ?? "Not observed" },
-        { label: "Boundary", value: context.boundary },
-      ]} />} />;
+    footer={agent.projectContext.enabled && agent.projectContext.available.length ? <TerasSelectField label="Item context" ariaLabel="Delivery advisor item context" disabled={agent.agentBusy}
+      value={agent.projectContext.selected ? `${agent.projectContext.selected.kind}:${agent.projectContext.selected.id}` : ""} onValueChange={agent.projectContext.choose}
+      options={[{ value: "", label: "Delivery overview" }, ...agent.projectContext.available.map(item => ({ value: `${item.kind}:${item.id}`, label: item.title }))]} /> : undefined} />;
 }

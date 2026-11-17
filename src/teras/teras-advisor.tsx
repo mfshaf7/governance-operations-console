@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent, ReactNode } from "react";
+import { useEffect } from "react";
 import { TerasLoadingState } from "./teras-loading-state";
 import {
   ChevronDown,
@@ -15,6 +16,9 @@ import { TerasStatusPill } from "./teras-status-pill";
 import type { TerasTone } from "./teras-types";
 import { cx } from "./teras-utils";
 import { TerasActionButton, TerasActionRow } from "./teras-action";
+import { TerasTechnicalDetails } from "./teras-technical-details";
+import { TerasNewConversationButton } from "./teras-new-conversation-button";
+import { TerasAdvisorStatusBar, type TerasAdvisorConnection } from "./teras-advisor-status-bar";
 
 type TerasAdvisorPromptConfig = {
   ariaLabel: string;
@@ -33,6 +37,7 @@ export function TerasAdvisorPanel({
   density = "standard",
   draftControls,
   fill = false,
+  fit,
   footer,
   onToggleCollapsed,
   prompt,
@@ -44,10 +49,17 @@ export function TerasAdvisorPanel({
 }: {
   className?: string;
   collapsed?: boolean;
+  fit?: "content" | "fill";
   density?: "compact" | "standard";
   draftControls?: {
+    connection?: TerasAdvisorConnection;
     busy: boolean; canUndo: boolean; onUndo: () => void; onCancel: () => void;
     notice: string | null; evidenceLabel: string | null;
+    supportingContext?: { label: string; choices: Array<{ id: string; label: string; selected: boolean }>; onToggle: (id: string) => void };
+    history?: { transcript: Array<{ id: string; role: "operator" | "advisor"; text: string }>; status: string;
+      hasEarlier: boolean; onShowEarlier: () => void; onNew: () => void | boolean | Promise<void | boolean>; onRetrySave: () => void;
+      saveError: boolean; conflict: boolean; onUseServer: () => void; onKeepLocal: () => void;
+      ready: boolean; draftPrompt: string; onDraftPromptChange: (value: string) => void; onUseCurrentContext: () => void };
   };
   fill?: boolean;
   footer?: ReactNode;
@@ -63,6 +75,19 @@ export function TerasAdvisorPanel({
     text: string;
   }>;
 }) {
+  const visibleTranscript = draftControls?.history?.transcript ?? transcript;
+  const hasHistoryActions = Boolean(draftControls?.history && (
+    draftControls.history.hasEarlier || draftControls.history.saveError || draftControls.history.conflict
+  ));
+  const hasFooterSupport = Boolean(draftControls && (
+    draftControls.notice || draftControls.evidenceLabel || draftControls.canUndo || hasHistoryActions
+  ));
+  useEffect(() => {
+    if (draftControls?.history?.ready && draftControls.history.draftPrompt && prompt && !prompt.value && !prompt.disabled && !prompt.readOnly)
+      prompt.onChange(draftControls.history.draftPrompt);
+    // Restore only into an empty composer. Keystrokes save through onChange below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftControls?.history?.ready, draftControls?.history?.draftPrompt, prompt?.disabled, prompt?.readOnly]);
   return (
     <TerasPanel
       className={cx(
@@ -73,6 +98,7 @@ export function TerasAdvisorPanel({
         className,
       )}
       frame="flush"
+      fit={fit}
       treatment="neutral"
     >
       <div className={styles.advisorHeader}>
@@ -119,8 +145,15 @@ export function TerasAdvisorPanel({
           className={styles.advisorTerminalShell}
           data-has-prompt={prompt ? "true" : "false"}
         >
+          <TerasAdvisorStatusBar connection={draftControls?.connection}
+            actions={draftControls?.history ? <TerasNewConversationButton
+              disabled={draftControls.busy || !draftControls.history.ready}
+              onClick={async () => { if (await draftControls.history!.onNew() !== false) prompt?.onChange(""); }} /> : undefined}
+            conversationStatus={draftControls?.history?.status ?? "Conversation not selected"} />
           <div aria-live="polite" className={styles.advisorTerminalTranscript}>
-            {transcript.map((line) => (
+            {draftControls?.supportingContext?.choices.length ? <TerasTechnicalDetails summary={`${draftControls.supportingContext.label} · ${draftControls.supportingContext.choices.filter(choice => choice.selected).length} included`}
+              items={draftControls.supportingContext.choices.map(choice => ({ label: choice.label, value: <label><input type="checkbox" aria-label={`Use ${choice.label} as read-only context`} checked={choice.selected} disabled={draftControls.busy} onChange={() => draftControls.supportingContext!.onToggle(choice.id)} /> Read only</label> }))} /> : null}
+            {visibleTranscript.map((line) => (
               <div
                 className={styles.advisorTerminalEntry}
                 data-role={line.role}
@@ -146,7 +179,10 @@ export function TerasAdvisorPanel({
             {draftControls?.busy ? <TerasLoadingState inline label="Preparing response…" /> : null}
           </div>
           {prompt ? (
-            <form className={styles.advisorTerminalForm} onSubmit={prompt.onSubmit}>
+            <form className={styles.advisorTerminalForm} onSubmit={(event) => {
+              if (draftControls?.history && !draftControls.history.ready) { event.preventDefault(); return; }
+              prompt.onSubmit?.(event);
+            }}>
               <div className={styles.advisorTerminalActiveLine}>
                 <span className={styles.advisorTerminalPrompt}>
                   operator@workspace:~$
@@ -155,7 +191,7 @@ export function TerasAdvisorPanel({
                   aria-label={prompt.ariaLabel}
                   className={styles.advisorTerminalInput}
                   disabled={prompt.disabled || draftControls?.busy}
-                  onChange={(event) => prompt.onChange(event.target.value)}
+                  onChange={(event) => { prompt.onChange(event.target.value); draftControls?.history?.onDraftPromptChange(event.target.value); }}
                   placeholder={prompt.placeholder}
                   readOnly={prompt.readOnly}
                   rows={prompt.rows ?? 2}
@@ -164,7 +200,7 @@ export function TerasAdvisorPanel({
                 <button
                   className={styles.advisorTerminalRunButton}
                   disabled={
-                    prompt.disabled || prompt.readOnly || (!draftControls?.busy && !prompt.value.trim())
+                    prompt.disabled || prompt.readOnly || (!draftControls?.busy && (!prompt.value.trim() || draftControls?.history && !draftControls.history.ready))
                   }
                   type={draftControls?.busy ? "button" : "submit"}
                   onClick={draftControls?.busy ? draftControls.onCancel : undefined}
@@ -178,13 +214,21 @@ export function TerasAdvisorPanel({
         </div>
       )}
       {collapsed ? null : footer}
-      {collapsed || !draftControls ? null : (
-        <div aria-live="polite">
-          {draftControls.notice ? <p>{draftControls.notice}</p> : null}
+      {collapsed || !draftControls || !hasFooterSupport ? null : (
+        <div aria-live="polite" className={styles.advisorFeedback}>
+          {draftControls.notice || draftControls.canUndo ? <div className={styles.advisorFeedbackPrimary}>
+            {draftControls.notice ? <p>{draftControls.notice}</p> : null}
+            {draftControls.canUndo ? <TerasActionButton size="table-compact" disabled={draftControls.busy} onClick={draftControls.onUndo} emphasis="secondary">Undo advisor edit</TerasActionButton> : null}
+          </div> : null}
           {draftControls.evidenceLabel ? <small>{draftControls.evidenceLabel}</small> : null}
-          {draftControls.canUndo ? <TerasActionRow spacing="compact"><TerasActionButton
-            disabled={draftControls.busy} onClick={draftControls.onUndo} emphasis="secondary"
-          >Undo advisor edit</TerasActionButton></TerasActionRow> : null}
+          {hasHistoryActions ? <TerasActionRow spacing="compact">
+            {draftControls.history ? <>
+              {draftControls.history.hasEarlier ? <TerasActionButton emphasis="secondary" onClick={draftControls.history.onShowEarlier}>Earlier messages</TerasActionButton> : null}
+              {draftControls.history.saveError && !draftControls.history.conflict ? <TerasActionButton disabled={draftControls.busy} emphasis="secondary" onClick={draftControls.history.onRetrySave}>Retry conversation save</TerasActionButton> : null}
+              {!draftControls.history.ready && draftControls.history.saveError ? <TerasActionButton emphasis="secondary" onClick={draftControls.history.onUseCurrentContext}>Use current context only</TerasActionButton> : null}
+              {draftControls.history.conflict ? <><TerasActionButton disabled={draftControls.busy} emphasis="secondary" onClick={draftControls.history.onUseServer}>Use server conversation</TerasActionButton><TerasActionButton disabled={draftControls.busy} emphasis="secondary" onClick={draftControls.history.onKeepLocal}>Keep browser conversation</TerasActionButton></> : null}
+            </> : null}
+          </TerasActionRow> : null}
         </div>
       )}
     </TerasPanel>

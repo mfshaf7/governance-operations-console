@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   TerasEmptyState,
+  TerasStatusPill,
   TerasUtilityButton,
 } from "@/teras";
 import {
@@ -18,8 +19,10 @@ import styles from "./control-board.module.css";
 
 export function ControlBoardArtTreeView({
   tree,
+  onOpenWorkItem,
 }: {
   tree: ControlBoardTreeNode | null;
+  onOpenWorkItem?: (node: ControlBoardTreeNode) => void;
 }) {
   const expandableNodeIds = useMemo(
     () => (tree ? collectExpandableTreeNodeIds(tree) : []),
@@ -63,6 +66,7 @@ export function ControlBoardArtTreeView({
         <TreeNode
           collapsedNodeIds={collapsedNodeIdSet}
           node={tree}
+          onOpenWorkItem={onOpenWorkItem}
           onToggleNode={(nodeId) =>
             setCollapsedNodeIds((current) =>
               current.includes(nodeId)
@@ -82,11 +86,13 @@ function TreeNode({
   node,
   onToggleNode,
   selected = false,
+  onOpenWorkItem,
 }: {
   collapsedNodeIds: Set<string>;
   node: ControlBoardTreeNode;
   onToggleNode: (nodeId: string) => void;
   selected?: boolean;
+  onOpenWorkItem?: (node: ControlBoardTreeNode) => void;
 }) {
   const terminalNode = ["Milestone", "Risk", "User story"].includes(
     node.componentType,
@@ -99,7 +105,8 @@ function TreeNode({
       <BuildTreeNodeCard
         childrenCount={terminalNode ? undefined : node.totalChildCount}
         control={
-          expandable ? (
+          <>
+          {expandable ? (
             <BuildTreeNodeToggle
               expanded={expanded}
               label={`${expanded ? "Collapse" : "Expand"} ${node.title}`}
@@ -107,12 +114,20 @@ function TreeNode({
                 onToggleNode(node.id);
               }}
             />
-          ) : null
+          ) : null}
+          {onOpenWorkItem && node.workItemId ? <TerasUtilityButton variant="subtle"
+            aria-label={`Open ${node.sourceLabel ?? node.componentType}: ${node.title}`}
+            onClick={() => onOpenWorkItem(node)}>Open</TerasUtilityButton> : null}
+          </>
         }
         dataKind={node.componentType}
         description={node.description}
         indexLabel={node.componentType.slice(0, 2).toUpperCase()}
-        kind={node.componentType}
+        kind={node.sourceLabel ?? node.componentType}
+        meta={node.status ? <span className={styles.controlBoardTreeBadges}>
+          <TerasStatusPill tone={node.status === "blocked" ? "danger" : node.status === "done" ? "ok" : ["retired", "parked"].includes(node.status) ? "muted" : "info"}>{node.status.replaceAll("-", " ")}</TerasStatusPill>
+          {!terminalNode ? <TerasStatusPill tone="muted">{node.totalChildCount} work items</TerasStatusPill> : null}
+        </span> : undefined}
         selected={selected}
         title={node.title}
       />
@@ -123,6 +138,7 @@ function TreeNode({
               collapsedNodeIds={collapsedNodeIds}
               key={child.id}
               node={child}
+              onOpenWorkItem={onOpenWorkItem}
               onToggleNode={onToggleNode}
             />
           ))}

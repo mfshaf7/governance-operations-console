@@ -46,7 +46,7 @@ export function SharedMetadataEmptyState({
   sharedFieldCount: number;
 }) {
   return (
-    <TerasPanelStack scroll fill={editorCollapsed ? "last" : "first"}>
+    <TerasPanelStack scroll minimumFillHeight="medium" fill="last">
       <RefinementMetadataEditorPanel
         area="field"
         collapsed={editorCollapsed}

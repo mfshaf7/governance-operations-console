@@ -23,6 +23,11 @@ the packet from the local Prototype fixture.
 
 ## Ingress
 
+`server/project-context.ts` exposes the existing typed owner reader to explicit
+selected-item AI context without loading route handlers or exposing mutations.
+Reads must select the exact item; no collection scan or implicit export occurs.
+This maintenance extension remains unpublished pending composed review.
+
 ### Canonical Live Register
 
 Configured live mode reads the owner-backed Studio collection, including

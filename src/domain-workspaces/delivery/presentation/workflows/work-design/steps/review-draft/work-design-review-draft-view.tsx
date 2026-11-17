@@ -22,7 +22,6 @@ import {
   TerasActionRow,
   TerasSubjectCard,
   TerasActionButton,
-  TerasContentTray,
   TerasMediaSnapshot,
   TerasNoteField,
   TerasSubjectHero,
@@ -31,7 +30,7 @@ import {
   TerasPanel,
   TerasStatGroup,
   TerasStatItem,
-  TerasTrayStack,
+  TerasPanelStack,
   TerasDetailGrid,
   TerasEmptyState,
   TerasZoneLayout,
@@ -116,6 +115,7 @@ export function WorkDesignReviewDraftView({
           }}
         />
         <TerasPanel
+          fit="fill"
           frame="padded"
           treatment="state"
           layout="header-body"
@@ -132,6 +132,7 @@ export function WorkDesignReviewDraftView({
           <TerasDetailGrid variant="media">
             {briefUnavailable ? <TerasEmptyState>No retained finalized snapshot is available. Current package metadata is not an original diagram.</TerasEmptyState> : <TerasMediaSnapshot
               density="compact"
+              fit="fill"
               facts={briefUnavailable ? [{label:"Original snapshot",value:"Not retained"},{label:"Preview",value:"Current local board preview"}] : workDesignReviewSnapshotFacts(contextSnapshotAttachment)}
               imageAlt={`${contextSnapshotAttachment.title} snapshot preview`}
               imageSrc={contextSnapshotAttachment.dataUrl}
@@ -157,7 +158,7 @@ export function WorkDesignReviewDraftView({
                 },
               ]}
             />}
-            <TerasTrayStack spacing="compact">
+            <TerasPanelStack fill="last">
               <TerasStatGroup offset="none">
                 <TerasStatItem
                   detail={!briefUnavailable && contextFinalizedBrief.systemChecks.length ? `${reviewSystemCheckPassCount}/${contextFinalizedBrief.systemChecks.length} finalization checks accepted` : "Original finalization checks were not retained."}
@@ -178,11 +179,18 @@ export function WorkDesignReviewDraftView({
                   value={`${metrics.features} Feature / ${metrics.stories} Stories`}
                 />
               </TerasStatGroup>
-              <TerasContentTray
-                description="Full branch detail opens in a read-only tree viewer."
-                kicker="Tree Summary"
-                title={workDesignNodeDisplayTitle(tree)}
+              <TerasPanel
+                fit="fill"
+                frame="padded"
+                layout="header-body-footer"
+                spacing="compact"
+                treatment="neutral"
               >
+                <TerasPanelHeader
+                  description="Full branch detail opens in a read-only tree viewer."
+                  kicker="Tree Summary"
+                  title={workDesignNodeDisplayTitle(tree)}
+                />
                 <TerasStatGroup offset="none">
                   <TerasStatItem label="Epic" value="1" />
                   <TerasStatItem label="Features" value={metrics.features} />
@@ -194,53 +202,54 @@ export function WorkDesignReviewDraftView({
                     View Full Tree
                   </TerasUtilityButton>
                 </TerasActionRow>
-              </TerasContentTray>
-            </TerasTrayStack>
+              </TerasPanel>
+            </TerasPanelStack>
           </TerasDetailGrid>
         </TerasPanel>
       </TerasZone>
-      <TerasPanel
-        fit="fill"
-        frame="padded"
-        treatment="rail"
-        overflow="auto"
-        spacing="compact"
-        tone={reviewGateProjection.gateTone}
-      >
-        <TerasPanelHeader
-          kicker="Operator Review Gate"
-          title={reviewGateProjection.gateTitle}
-          description="Apply Draft stays locked until the operator confirms the tree is the intended draft."
-        />
-        <TerasSubjectCard
-          description="This covers the finalized brief snapshot, draft tree, finalization checks, and any handoff note recorded below."
-          facts={workDesignReviewApprovalFacts({
-            reviewHandoffNoteReady,
-            reviewSnapshotHandoffLabel,
-          })}
-          kicker="Approval Scope"
-          title="Accept current draft for Apply Draft."
-        />
-        <TerasNoteField
-          {...workDesignEditorFieldProps}
-          label="Package Handoff Note"
-          onValueChange={onChangeOperatorDraft}
-          placeholder="Summarize the intended tree, known gaps, and why this can move to Apply Draft."
-          readOnly={applyCompleted}
-          value={reviewHandoffNote}
-        />
-        <TerasActionRow>
-          <TerasActionButton
-            disabled={applyCompleted || !reviewReady || draftReviewAccepted}
-            onClick={onMarkReviewed}
-            tone={
-              reviewGateProjection.actionTone === "danger" ? "danger" : "accent"
-            }
-          >
-            {reviewGateProjection.actionLabel}
-          </TerasActionButton>
-        </TerasActionRow>
-      </TerasPanel>
+      <TerasZone scroll fit="fill">
+        <TerasPanel
+          fit="content"
+          frame="padded"
+          treatment="rail"
+          spacing="compact"
+          tone={reviewGateProjection.gateTone}
+        >
+          <TerasPanelHeader
+            kicker="Operator Review Gate"
+            title={reviewGateProjection.gateTitle}
+            description="Apply Draft stays locked until the operator confirms the tree is the intended draft."
+          />
+          <TerasSubjectCard
+            description="This covers the finalized brief snapshot, draft tree, finalization checks, and any handoff note recorded below."
+            facts={workDesignReviewApprovalFacts({
+              reviewHandoffNoteReady,
+              reviewSnapshotHandoffLabel,
+            })}
+            kicker="Approval Scope"
+            title="Accept current draft for Apply Draft."
+          />
+          <TerasNoteField
+            {...workDesignEditorFieldProps}
+            label="Package Handoff Note"
+            onValueChange={onChangeOperatorDraft}
+            placeholder="Summarize the intended tree, known gaps, and why this can move to Apply Draft."
+            readOnly={applyCompleted}
+            value={reviewHandoffNote}
+          />
+          <TerasActionRow>
+            <TerasActionButton
+              disabled={applyCompleted || !reviewReady || draftReviewAccepted}
+              onClick={onMarkReviewed}
+              tone={
+                reviewGateProjection.actionTone === "danger" ? "danger" : "accent"
+              }
+            >
+              {reviewGateProjection.actionLabel}
+            </TerasActionButton>
+          </TerasActionRow>
+        </TerasPanel>
+      </TerasZone>
     </TerasZoneLayout>
   );
 }

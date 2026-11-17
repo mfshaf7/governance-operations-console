@@ -16,6 +16,7 @@ import {
 import type { ControlBoardTreeNode } from "@/product-apps/control-board";
 import type { TerasMetadataItem } from "@/teras";
 import type { DeliveryChangeNode } from "../../../live-runtime/delivery-change-live-types.ts";
+import { executionBlockerApproach, executionPackageWorkGroups } from "../../../work-model/execution/execution-package-content.ts";
 
 import type {
   DeliveryActiveBlockerProjection,
@@ -57,11 +58,14 @@ export function executionSelectedPackageMetadata({
   childCounts,
   details,
   packageSummary,
+  packageTree,
 }: {
   childCounts: ReturnType<typeof getChildCounts> | null;
   details: ReturnType<typeof getPackageDetailsById>;
   packageSummary: DeliveryPackageSummary;
+  packageTree?: DeliveryArtNode | null;
 }): TerasMetadataItem[] {
+  const groups = executionPackageWorkGroups(packageTree ?? null);
   return [
     {
       label: "Target PI",
@@ -69,20 +73,15 @@ export function executionSelectedPackageMetadata({
     },
     {
       label: "Implementation repository",
-      value: details?.owner_repo ?? "Projected source unavailable",
+      value: details ? details.owner_repo?.trim() || "Not assigned" : "Repository information unavailable",
     },
     {
-      label: "Open Children",
+      label: "Open work items",
       value: String(
         childCounts?.open_child_count ?? packageSummary.open_child_count ?? "Details not loaded",
       ),
     },
-    {
-      label: "Advisor",
-      value:
-        details?.advisor_summary ??
-        "No advisor packet projected for this package.",
-    },
+    ...groups.map(group => ({ label: group.label, value: group.count === null ? "Not loaded" : String(group.count) })),
   ];
 }
 
@@ -106,7 +105,7 @@ export function executionPackageDetailsMetadata({
       value: details?.owner_repo ?? "Unavailable",
     },
     {
-      label: "Open Children",
+      label: "Open work items",
       value: String(
         childCounts?.open_child_count ?? packageSummary.open_child_count ?? "Details not loaded",
       ),
@@ -141,16 +140,16 @@ export function executionActiveBlockerMetadata(
   blocker: DeliveryActiveBlockerProjection,
 ): TerasMetadataItem[] {
   return [
-    { label: "Resolution responsibility", value: blocker.owner },
+    { label: "Responsible for resolution", value: blocker.owner.trim() || "Not assigned" },
     {
-      label: "Decision Path",
-      value: blocker.decision_path.replace("-", " "),
+      label: "Agreed approach",
+      value: executionBlockerApproach(blocker),
     },
-    { label: "Discovered", value: blocker.discovered_on },
     {
-      label: "Review",
-      value: blocker.review_date ?? "Remove path",
+      label: "Review date",
+      value: blocker.review_date?.trim() || "Not scheduled",
     },
+    ...(blocker.follow_up_owner ? [{ label: "Follow-up responsibility", value: blocker.follow_up_owner }] : []),
   ];
 }
 

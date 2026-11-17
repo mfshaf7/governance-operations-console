@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   assertDeliveryWorkSessionDecisionInput,
+  assertDeliveryWorkSessionRecovery,
   deliveryWorkSessionTargetId,
 } from "../live-runtime/delivery-work-session-live-contract.ts";
 import {
   closeDeliveryWorkSession,
+  reconstructDeliveryWorkSession,
+  recoverDeliveryWorkSession,
   continueDeliveryWorkSession,
   deliveryWorkSessionOosConfigured,
   mergeDeliveryWorkSession,
@@ -131,6 +134,23 @@ async function commandDeliveryWorkSessionRoute(
   } catch (error) {
     return workSessionErrorResponse(error);
   }
+}
+
+export async function reconstructDeliveryWorkSessionRoute(request: NextRequest, workItemId: string) {
+  return commandDeliveryWorkSessionRoute(request, workItemId, reconstructDeliveryWorkSession);
+}
+
+export async function recoverDeliveryWorkSessionRoute(request: NextRequest, workItemId: string) {
+  try {
+    requireLiveMode();
+    const target = routeWorkItemId(workItemId);
+    const body = record(await request.json().catch(() => null));
+    const revision = requiredDateTime(body.expectedSessionRevision, "expected session revision");
+    const recovery = assertDeliveryWorkSessionRecovery(body.recovery, revision);
+    return currentProjection(await recoverDeliveryWorkSession(target, {
+      commandId: commandIdentity(body.commandId), expectedSessionRevision: revision, recovery,
+    }));
+  } catch (error) { return workSessionErrorResponse(error); }
 }
 
 function commandIdentity(value: unknown) {

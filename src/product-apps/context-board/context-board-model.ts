@@ -231,7 +231,7 @@ export type ContextBoardConnection = {
 
 export type ContextBoardConnectionSide = "from" | "to";
 
-export type ContextBoardSnapshot = {
+export type ContextBoardCanvasSnapshot = {
   connections: ContextBoardConnection[];
   customItems: ContextBoardCustomItem[];
   positions: Record<string, ContextBoardPosition>;
@@ -239,6 +239,26 @@ export type ContextBoardSnapshot = {
   sketchStrokes: ContextBoardSketchStroke[];
   style: ContextBoardStyle;
   templateTrays: ContextBoardTemplateTray[];
+};
+
+export type ContextBoardDiagram = {
+  id: string;
+  name: string;
+  description: string;
+  diagramType: ContextBoardDiagramType;
+  snapshot: ContextBoardCanvasSnapshot;
+};
+
+/** Legacy single canvases remain valid without rewriting finalized originals. */
+export type ContextBoardSnapshot = ContextBoardCanvasSnapshot & {
+  diagrams?: ContextBoardDiagram[];
+  activeDiagramId?: string;
+};
+
+export type ContextBoardArchitectureView = Pick<ContextBoardDiagram, "id" | "name" | "description" | "diagramType"> & {
+  cards: Array<Pick<ContextBoardCustomItem, "id" | "kind" | "label" | "detail">>;
+  connections: Array<Pick<ContextBoardConnection, "id" | "from" | "to" | "label" | "relationship">>;
+  groups: Array<Pick<ContextBoardTemplateTray, "id" | "label" | "itemIds">>;
 };
 
 export type ContextBoardCoreNode = {

@@ -613,6 +613,7 @@ function refinementRun(request = null) {
 
 function catalogMutationCommand() {
   return {
+    expectedSourceRevision: "catalog-version-9",
     acceptanceId: "catalog-acceptance:owner-repo",
     acceptedAt: "2026-08-26T08:10:00.000Z",
     draft: {
@@ -754,3 +755,23 @@ function jsonResponse(body, status = 200) {
     status,
   });
 }
+
+
+test("Catalog server preserves reviewed revision and retry identity when its own projection advances", () => {
+  const command = catalogMutationCommand(), reviewed = catalogProjection();
+  const original = buildCatalogMutationRequest("catalog-owner-repo", reviewed, command, {env});
+  const later = buildCatalogMutationRequest("catalog-owner-repo", {...reviewed, source_revision:"later-server-revision"}, command, {env});
+  assert.equal(later.source_revision, command.expectedSourceRevision);
+  assert.equal(later.idempotency_key, original.idempotency_key);
+  assert.throws(() => assertCatalogMutationRequest({...command, expectedSourceRevision:undefined}), /reviewed Catalog revision/);
+});
+
+test("Catalog readiness adapter sends only the selected repository and rejects a foreign binding", async t => {
+  const {requestCatalogRepositoryReadiness}=await import("../../src/domain-workspaces/delivery/live-runtime/use-catalog-live-runtime.ts");
+  const calls=[];let reference=repositoryReadiness();
+  t.mock.method(globalThis,"fetch",async(path,init)=>{calls.push({path,body:JSON.parse(init.body)});return jsonResponse({repository_readiness_reference:reference});});
+  const result=await requestCatalogRepositoryReadiness("operator-orchestration-service");
+  assert.equal(result.repo_name,"operator-orchestration-service");assert.deepEqual(calls[0],{path:"/api/delivery/catalog/repository-readiness",body:{repoName:"operator-orchestration-service"}});
+  reference={...reference,repo_name:"foreign",repo_ref:"repo://foreign",catalog_value_key:"foreign",receipt:{...reference.receipt,target_scope:"repo:foreign"}};
+  await assert.rejects(requestCatalogRepositoryReadiness("operator-orchestration-service"),/different repository/);
+});

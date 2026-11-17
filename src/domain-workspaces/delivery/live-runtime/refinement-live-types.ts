@@ -175,6 +175,7 @@ export type RefinementProjectionSnapshot = {
 };
 
 export type RefinementAssistCommand = {
+  conversation?: Array<{ role: "operator" | "advisor"; text: string }>;
   allowedValues: string[];
   draftValue: string;
   fieldKey: string;

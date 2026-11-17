@@ -3,12 +3,10 @@
 import {
   TerasPanel,
   TerasPanelHeader,
-  TerasSubjectHero,
   TerasTrayStack,
   TerasZone,
 } from "@/teras";
 import type {
-  DeliveryPackageSummary,
   DeliveryRefinementPacket,
 } from "../../../../../read-model/index.ts";
 
@@ -21,13 +19,10 @@ import {
   MetadataSelectionModeSwitch,
   MetadataTargetTree,
 } from "./refinement-metadata-workbench-tree.tsx";
-import { deliveryPackagePacketMetadata } from "../../../../shared/delivery-package-metadata.ts";
 
 export function RefinementMetadataWorkbenchView({
-  deliveryPackage,
   metadataFieldResolutions,
   metadataSelectionMode,
-  onOpenHandoff,
   onSelectMetadataField,
   onSelectMetadataSelectionMode,
   onToggleMetadataBulkNode,
@@ -35,10 +30,8 @@ export function RefinementMetadataWorkbenchView({
   selectedMetadataBulkNodeIds,
   selectedMetadataFieldKey,
 }: {
-  deliveryPackage: DeliveryPackageSummary;
   metadataFieldResolutions: RefinementMetadataFieldResolutionMap;
   metadataSelectionMode: RefinementMetadataSelectionMode;
-  onOpenHandoff: () => void;
   onSelectMetadataField: (fieldKey: string) => void;
   onSelectMetadataSelectionMode: (
     mode: RefinementMetadataSelectionMode,
@@ -56,24 +49,10 @@ export function RefinementMetadataWorkbenchView({
 
   return (
     <TerasZone scroll fit="fill">
-      <TerasSubjectHero
-        actionDetail="Receipt and finalized brief source"
-        actionLabel="View Work Design Handoff"
-        onAction={onOpenHandoff}
-        subject={{
-          eyebrow: "Selected Package",
-          meta: deliveryPackagePacketMetadata({
-            deliveryPackage,
-            packetId: packet.packet_id,
-          }),
-          title: deliveryPackage.display_name,
-        }}
-      />
-
       <TerasPanel
         frame="padded"
         treatment="state"
-        layout="header-body-footer"
+        layout="header-body"
         overflow="hidden"
         spacing="compact"
         tone="info"

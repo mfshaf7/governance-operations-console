@@ -7,6 +7,7 @@ import {
   TerasActionRow,
   TerasRecordCellText,
   TerasRecordMetricText,
+  TerasRecordMetaText,
   TerasRecordStatusStack,
   TerasRecordTable,
   TerasStatusPill,
@@ -20,7 +21,7 @@ import type {
 import {
   catalogLifecycleLabel,
   catalogLifecycleTone,
-  catalogRetirementTableActionLabel,
+  canDraftCatalogValueMutation,
   catalogValueMutationDisabledReason,
   parentTargetPiValueKey,
   planningWindowForTargetPi,
@@ -91,7 +92,7 @@ function catalogColumns({
   onEdit: (value: DeliveryCatalogValue) => void;
   onRetire: (value: DeliveryCatalogValue) => void;
 }): Array<TerasRecordTableColumn<DeliveryCatalogValue>> {
-  return [
+  const columns: Array<TerasRecordTableColumn<DeliveryCatalogValue>> = [
     {
       header: "Current Value",
       intent: "primary",
@@ -140,6 +141,7 @@ function catalogColumns({
       render: (value) => {
         const editAvailable = canEdit(value);
         const retireAvailable = canRetire(value);
+        if (!canDraftCatalogValueMutation(activeCatalog, value, "edit")) return <TerasRecordMetaText>—</TerasRecordMetaText>;
 
         return (
           <TerasActionRow spacing="none">
@@ -163,6 +165,7 @@ function catalogColumns({
             >
               Edit
             </TerasActionButton>
+            {canDraftCatalogValueMutation(activeCatalog, value, "retire") ? (
             <TerasActionButton
               disabled={!retireAvailable}
               onClick={(event) => {
@@ -181,13 +184,16 @@ function catalogColumns({
               }
               emphasis="secondary"
             >
-              {catalogRetirementTableActionLabel(activeCatalog, value)}
+              Retire
             </TerasActionButton>
+            ) : null}
           </TerasActionRow>
         );
       },
     },
   ];
+  const editable = activeCatalog && ["create", "request"].includes(activeCatalog.console_capability);
+  return columns.filter(column => column.key !== "action" || editable);
 }
 
 function catalogCurrentValueMeta(

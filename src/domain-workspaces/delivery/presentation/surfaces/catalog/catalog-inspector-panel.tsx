@@ -23,7 +23,8 @@ import {
   catalogLifecycleLabel,
   catalogLifecycleTone,
   catalogRelatedContextMetadata,
-  catalogRetirementActionLabel,
+  canDraftCatalogValueMutation,
+  isOwnerRepoCatalog,
   catalogValueMutationDisabledReason,
   catalogValueMetadata,
   type CatalogLocalDraftReceipt,
@@ -31,6 +32,7 @@ import {
 
 export function CatalogInspectorPanel({
   activeCatalog,
+  preview = false,
   canEditSelectedValue,
   canRetireSelectedValue,
   deliveryLinkTarget,
@@ -43,6 +45,7 @@ export function CatalogInspectorPanel({
   selectedValue,
 }: {
   activeCatalog: DeliveryCatalogItem | null;
+  preview?: boolean;
   canEditSelectedValue: boolean;
   canRetireSelectedValue: boolean;
   deliveryLinkTarget: CatalogDeliveryLinkTarget | null;
@@ -54,6 +57,9 @@ export function CatalogInspectorPanel({
   selectedTargetPiPlanningFacetSummary: string | null;
   selectedValue: DeliveryCatalogValue | null;
 }) {
+  const canShowEdit = canDraftCatalogValueMutation(activeCatalog, selectedValue, "edit");
+  const canShowRetire = canDraftCatalogValueMutation(activeCatalog, selectedValue, "retire");
+  const showLink = Boolean(deliveryLinkTarget && isOwnerRepoCatalog(activeCatalog));
   return (
     <TerasPanel
       density="normal"
@@ -80,10 +86,9 @@ export function CatalogInspectorPanel({
 
           <TerasTrayStack scroll>
             {selectedDraftReceipt ? (
-              <TerasContentTray kicker="Local Draft">
-                <TerasMetadataList
-                  items={catalogDraftReceiptMetadata(selectedDraftReceipt)}
-                />
+              <TerasContentTray kicker={selectedDraftReceipt.canonical ? "Change applied" : "Preview result"} description={selectedDraftReceipt.actionLabel}>
+                <TerasMetadataList items={[{label:"Recorded", value:selectedDraftReceipt.recordedAt}]} />
+                <TerasTechnicalDetails items={catalogDraftReceiptMetadata(selectedDraftReceipt)} />
               </TerasContentTray>
             ) : null}
 
@@ -93,14 +98,16 @@ export function CatalogInspectorPanel({
               />
             </TerasContentTray>
 
-            <TerasContentTray kicker="Authority">
-              <TerasMetadataList
-                items={catalogAuthorityMetadata(activeCatalog, selectedValue).slice(0, 2)}
-              />
-              <TerasTechnicalDetails items={catalogAuthorityMetadata(activeCatalog, selectedValue).slice(2)} />
+            <TerasContentTray kicker="Changes">
+              {["read_only", "owner_routed"].includes(activeCatalog.console_capability) || ["read_only", "retired"].includes(selectedValue.lifecycle_state) ? (
+                <TerasTechnicalDetails items={catalogAuthorityMetadata(activeCatalog, selectedValue).slice(1)} />
+              ) : <>
+                <TerasMetadataList items={catalogAuthorityMetadata(activeCatalog, selectedValue).slice(0, 2)} />
+                <TerasTechnicalDetails items={catalogAuthorityMetadata(activeCatalog, selectedValue).slice(2)} />
+              </>}
             </TerasContentTray>
 
-            <TerasContentTray kicker="Related Context">
+            <TerasContentTray kicker="Usage">
               <TerasMetadataList
                 items={catalogRelatedContextMetadata({
                   catalog: activeCatalog,
@@ -111,10 +118,11 @@ export function CatalogInspectorPanel({
             </TerasContentTray>
           </TerasTrayStack>
 
-          <TerasActionRow spacing="compact">
-            {deliveryLinkTarget ? (
+          {linkBlockedReason && showLink ? <TerasContentTray kicker="Before linking" description={linkBlockedReason} /> : null}
+          {showLink || canShowEdit || canShowRetire ? <TerasActionRow spacing="compact">
+            {showLink ? (
               <TerasActionButton
-                disabled={Boolean(linkBlockedReason)}
+                disabled={Boolean(linkBlockedReason) && !preview}
                 emphasis="primary"
                 onClick={onLinkToDelivery}
                 title={linkBlockedReason ?? undefined}
@@ -122,6 +130,7 @@ export function CatalogInspectorPanel({
                 Link to Work Item
               </TerasActionButton>
             ) : null}
+            {canShowRetire ? (
             <TerasActionButton
               disabled={!canRetireSelectedValue}
               onClick={() => onRetire(selectedValue)}
@@ -132,8 +141,10 @@ export function CatalogInspectorPanel({
               )}
               emphasis="secondary"
             >
-              {catalogRetirementActionLabel(selectedValue)}
+              Retire
             </TerasActionButton>
+            ) : null}
+            {canShowEdit ? (
             <TerasActionButton
               disabled={!canEditSelectedValue}
               onClick={() => onEdit(selectedValue)}
@@ -146,7 +157,8 @@ export function CatalogInspectorPanel({
             >
               Edit
             </TerasActionButton>
-          </TerasActionRow>
+            ) : null}
+          </TerasActionRow> : null}
         </>
       ) : (
         <TerasEmptyState>

@@ -99,6 +99,7 @@ import type {
   ContextBoardTone as ContextBoardColorTone,
 } from "./context-board-model";
 import type { ContextBoardController } from "./use-context-board-controller";
+import { ContextBoardDiagramsToolbar } from "./context-board-diagrams-toolbar.tsx";
 
 type ContextBoardColorCopy = {
   label: string;
@@ -491,15 +492,18 @@ export function ContextBoardWorkbenchView({
               className={styles.contextBoardStage}
               data-read-only={contextBriefReadOnly ? "true" : "false"}
               data-style={contextBoardStyle}
+              data-multiple-diagrams={board.diagramDocument.enabled ? "true" : "false"}
               aria-label={copy.stageAriaLabel}
             >
               <div className={styles.contextBoardTopbar}>
                 <div>
                   <p>{copy.topbarLabel}</p>
-                  <h3>{copy.topbarTitle}</h3>
+                  <h3>{board.diagramDocument.enabled ? board.diagramDocument.entries.find(view => view.id === board.diagramDocument.activeId)?.name : copy.topbarTitle}</h3>
                   <span>{copy.topbarDetail}</span>
                 </div>
               </div>
+
+              <ContextBoardDiagramsToolbar board={board} />
 
               <div
                 className={styles.contextBoardCanvas}

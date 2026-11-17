@@ -26,11 +26,13 @@ export function ControlBoardView({
   packages,
   postureTerms,
   selectedPackageId,
+  hiddenEmptyPostures = [],
 }: {
   onSelectPackage: (packageId: string) => void;
   packages: ControlBoardPackage[];
   postureTerms: ControlBoardPostureTerms;
   selectedPackageId: string | null;
+  hiddenEmptyPostures?: ControlBoardPackage["posture"][];
 }) {
   const [queries, setQueries] = useState<Record<string, string>>({});
   const groupedPackages = controlBoardPostureOrder.map((posture) => ({
@@ -38,7 +40,7 @@ export function ControlBoardView({
     packages: packages.filter(
       (controlPackage) => controlPackage.posture === posture,
     ),
-  }));
+  })).filter(group => group.packages.length > 0 || !hiddenEmptyPostures.includes(group.posture));
 
   return (
     <ControlBoardLaneRow>

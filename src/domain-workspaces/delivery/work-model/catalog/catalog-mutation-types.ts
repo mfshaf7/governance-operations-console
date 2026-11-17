@@ -19,6 +19,7 @@ export type CatalogMutationSubmit = {
 };
 
 export type CatalogLocalDraftReceipt = {
+  canonical?: boolean;
   actionLabel: string;
   linkedRepository?: OperationOwnerRepoCatalogOption | null;
   recordedAt: string;

@@ -167,6 +167,7 @@ export function ExecutionActionModal({
             <TerasList frame="contained">
               {auditEvents.map((event) => (
                 <TerasSignalItem
+                  textOverflow="wrap"
                   detail={event.detail}
                   key={event.event_id}
                   label={event.category}
