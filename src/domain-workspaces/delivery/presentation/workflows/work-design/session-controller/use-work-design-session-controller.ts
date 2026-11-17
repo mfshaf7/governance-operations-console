@@ -277,14 +277,14 @@ export function useWorkDesignSessionController({
     sourceWorkDesignComplete && contextDecision === "proceed";
   const applyCompleted = readOnly || applyReceiptRecorded || sourceWorkDesignClosed;
   const requestTreeAdvice = useCallback<AdvisorTransport>(
-    async (scope, operatorPrompt, _signal, conversation) => {
+    async (scope, operatorPrompt, signal, conversation) => {
       const context = JSON.parse(scope.context);
       const live = await liveRuntime.treeAdvice({
         operatorPrompt,
         selectedNodeId: context.selectedNodeId,
         tree: scope.fields.find((field) => field.key === "tree")!.value as typeof initialTree,
         draftScope: { scope, conversation },
-      });
+      }, signal);
       if (!live.result) throw Error("A live governed advisor is required. Manual drafting remains available.");
       return normalizeWorkDesignDraftAdvice(live.result, scope);
     },
@@ -327,16 +327,20 @@ export function useWorkDesignSessionController({
     deliveryPackage,
     sourceRevision: liveRuntime.projection?.source.revision ?? "disconnected-preview",
     captureBoard: contextBoard.captureContextBoardSnapshot,
+    getBoardVisibleArea: () => {
+      const canvas = contextBoard.contextBoardCanvasRef.current;
+      return canvas ? { width: canvas.clientWidth, height: canvas.clientHeight } : null;
+    },
     commitBoard: contextBoard.commitCurrentContextBoardHistorySnapshot,
     restoreBoard: contextBoard.restoreContextBoardSnapshot,
     setContextOperatorNote,
-    requestContextAdvice: async (scope, operatorPrompt, _signal, conversation) => {
+    requestContextAdvice: async (scope, operatorPrompt, signal, conversation) => {
       const live = await liveRuntime.contextAdvice({
         contextDecision,
         contextNote: String(scope.fields.find((field) => field.key === "note")!.value),
         operatorPrompt,
         draftScope: { scope, conversation },
-      });
+      }, signal);
       if (!live.result) throw Error("A live governed advisor is required. Manual drafting remains available.");
       return normalizeWorkDesignDraftAdvice(live.result, scope);
     },

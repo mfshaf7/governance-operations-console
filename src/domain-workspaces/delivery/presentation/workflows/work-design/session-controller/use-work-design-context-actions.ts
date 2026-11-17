@@ -1,11 +1,12 @@
 "use client";
 
 import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { workDesignAdvisorBrowserBudgetMs, workDesignAdvisorProviderBudgetMs, workDesignAdvisorContextChars } from "../../../../live-runtime/work-design-advisor-policy.ts";
 import { createWorkDesignAdvisorScope } from "../../../../live-runtime/work-design-draft-advisor.ts";
 import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 import type { AdvisorTransport, AdvisorEdit } from "@/agent-console/model/advisor-drafts";
-import { applyContextBoardAdvisorPatch, type ContextBoardSnapshot } from "@/product-apps/context-board";
+import { applyContextBoardAdvisorPatch, contextBoardAdvisorEditorFacts, type ContextBoardSnapshot } from "@/product-apps/context-board";
 
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
 
@@ -33,6 +34,7 @@ type UseWorkDesignContextActionsParams = {
   requestContextAdvice: AdvisorTransport;
   sourceRevision: string;
   captureBoard: () => ContextBoardSnapshot;
+  getBoardVisibleArea: () => { width: number; height: number } | null;
   restoreBoard: (snapshot: ContextBoardSnapshot) => void;
   commitBoard: () => void;
   setContextOperatorNote: Dispatch<SetStateAction<string>>;
@@ -62,7 +64,7 @@ export function useWorkDesignContextActions({
   contextOperatorNote,
   deliveryPackage,
   requestContextAdvice,
-  sourceRevision, captureBoard, restoreBoard, commitBoard, setContextOperatorNote,
+  sourceRevision, captureBoard, getBoardVisibleArea, restoreBoard, commitBoard, setContextOperatorNote,
   setActiveStep,
   setApplyReceiptRecorded,
   setApplyRunStartedAt,
@@ -98,22 +100,25 @@ export function useWorkDesignContextActions({
     setDraftValidationAccepted(false); setDraftReviewAccepted(false);
     return edits.map((edit) => edit.field === "board" ? { field: "board", value: contextBoardCanvasSnapshot(nextBoard!) } : edit);
   }
+  const initialVisibleArea = useRef<{ diagramId: string; area: { width: number; height: number } | null } | null>(null);
   const advisor = useDraftAdvisor({
+    requestBudgetMs: workDesignAdvisorBrowserBudgetMs, providerBudgetMs: workDesignAdvisorProviderBudgetMs, stopWaitingOnly: true,
     conversation: { role: "work-design-context", ref: deliveryPackage.delivery_package_id, sourceRef: deliveryPackage.source_ref, sourceRevision },
     active,
     disabled: contextBriefReadOnly,
     getScope: () => {
       const document = captureBoard(), activeId = document.activeDiagramId ?? legacyContextDiagramId;
       const diagrams = contextBoardDiagrams(document), selected = diagrams.find(view => view.id === activeId)!;
+      if (initialVisibleArea.current?.diagramId !== activeId) initialVisibleArea.current = { diagramId: activeId, area: getBoardVisibleArea() };
       return createWorkDesignAdvisorScope(deliveryPackage, { role: "work-design-context", ref: `${deliveryPackage.delivery_package_id}/${activeId}`,
       sourceRevision,
       context: advisorWorkContext({ purpose: "Understand the architecture of the system under design. ART records bound the work; they are not the system's components. Distinguish verified current behavior, proposed changes and unknowns. Build Tree handles delivery decomposition. Edit only the selected diagram. Explicitly included supporting diagrams provide read-only knowledge; remaining views are an index, not inspected content.", selectedDiagram: activeId,
         diagrams: diagrams.map(view => ({ id: view.id, name: view.name, diagramType: view.diagramType })),
         readOnlySupportingDiagrams: contextBoardSupportingDiagrams(document, supportingDiagramIds),
-        canvas: { width: 5600, height: 3600 },
+        editor: contextBoardAdvisorEditorFacts(selected.diagramType, initialVisibleArea.current.area),
         packageTitle: deliveryPackage.display_name, summary: deliveryPackage.summary, contextDecision, coreNodes, sources },
         { provided: ["Overall context note", "Selected diagram contents and explanation", "Other-view index", "Explicitly included read-only supporting diagrams", "Supplied source metadata"],
-          unavailable: ["Unselected other diagram contents beyond their index", "Unprovided repository files, runtime evidence and linked document contents"] }),
+          unavailable: ["Unselected other diagram contents beyond their index", "Unprovided repository files, runtime evidence and linked document contents"] }, workDesignAdvisorContextChars),
       fields: [{ key: "note", label: "Context note", value: contextOperatorNote },
         { key: "diagramName", label: "Selected diagram name", value: selected.name, maxLength: 200 },
         { key: "diagramDescription", label: "Selected diagram explanation", value: selected.description, maxLength: 8000 },

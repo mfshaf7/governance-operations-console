@@ -7,7 +7,7 @@ import {
   CONTEXT_BOARD_CUSTOM_NOTE_WIDTH,
   CONTEXT_BOARD_HEIGHT,
   CONTEXT_BOARD_WIDTH,
-} from "./context-board-core";
+} from "./context-board-core.ts";
 import type {
   ContextBoardTone,
   ContextBoardConnectorShape,

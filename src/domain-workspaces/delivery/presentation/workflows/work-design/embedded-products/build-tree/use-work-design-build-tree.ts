@@ -5,6 +5,7 @@ import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { createWorkDesignAdvisorScope } from "../../../../../live-runtime/work-design-draft-advisor.ts";
 import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 import type { AdvisorTransport } from "@/agent-console/model/advisor-drafts";
+import { workDesignAdvisorBrowserBudgetMs, workDesignAdvisorProviderBudgetMs, workDesignAdvisorContextChars } from "../../../../../live-runtime/work-design-advisor-policy.ts";
 import { applyWorkDesignAdvisorPatch } from "../../../../../product-adapters/build-tree/index.ts";
 
 import type { DeliveryPackageSummary } from "../../../../../read-model/index.ts";
@@ -103,6 +104,7 @@ export function useWorkDesignBuildTree({
     [selectedNodeId, tree],
   );
   const advisor = useDraftAdvisor({
+    requestBudgetMs: workDesignAdvisorBrowserBudgetMs, providerBudgetMs: workDesignAdvisorProviderBudgetMs, stopWaitingOnly: true,
     conversation: { role: "work-design-tree", ref: deliveryPackage.delivery_package_id, sourceRef: deliveryPackage.source_ref, sourceRevision },
     active,
     disabled: applyCompleted,
@@ -116,7 +118,7 @@ export function useWorkDesignBuildTree({
             .map(({ heading, owner, placeholder }) => ({ heading, owner, guidance: placeholder })) })),
         posture: "Local planning draft; no canonical apply or PI commitment. Retained architecture is context, not an execution checklist or approval." },
         { provided: ["Finalized architecture note and all retained semantic views when present", "Current tree and selected node", "Current scaffold section names, ownership and guidance for each node kind"],
-          unavailable: ["Unprovided source files or runtime inspection", "Refinement planning commitments or completion evidence"] }),
+          unavailable: ["Unprovided source files or runtime inspection", "Refinement planning commitments or completion evidence"] }, workDesignAdvisorContextChars),
       fields: [{ key: "tree", label: "Work Design tree", value: tree, kind: "tree" }],
     }),
     apply: (edits) => {

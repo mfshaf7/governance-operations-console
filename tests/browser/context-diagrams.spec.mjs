@@ -24,7 +24,7 @@ async function open(page, options = {}) {
   });
   await page.goto(base, { waitUntil: "domcontentloaded" });
   await waitForShell(page);
-  await page.getByText("Shape governed delivery.", { exact: true }).click();
+  await page.getByTitle("Open DELIVERY", { exact: true }).click();
   await page.getByRole("button", { name: /03.*Work Design/i }).click();
   await page.getByRole("row").filter({ hasText: "Context Admission Work Design" }).click();
   await page.getByRole("button", { name: "Open Design Hub", exact: true }).click();
@@ -32,6 +32,110 @@ async function open(page, options = {}) {
   return { errors, writes };
 }
 const current = page => page.getByRole("dialog").last();
+
+// Isolated transport outcomes exercise the actual advisor UI; these are not
+// evidence of model quality, authenticated inference or canonical application.
+async function openReasoningAdvisor(page, role) {
+  const at = new Date().toISOString();
+  const result = await open(page, { workDesignProjection: { mode: "live", status: "current", error: null, observedAt: at,
+    projection: { schema_version: 1, package_ref: "delivery-package:712", source: { ref: "openproject://work_packages/712", revision: "version-17" },
+      state: "not-applied", pending_application_id: null, latest_application: null, history: [], projected_at: at } } });
+  await current(page).getByRole("textbox", { name: "Work Design context note", exact: true }).fill("Retain the complete architecture and its private source custody, runtime boundaries and recovery evidence.");
+  if (role === "tree") {
+    await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+    await current(page).getByRole("textbox", { name: "Session Name", exact: true }).fill("Isolated complete architecture");
+    await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+    await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+    await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+    await page.getByRole("button", { name: "Close finalized brief", exact: true }).click();
+    await current(page).getByRole("button", { name: "Build From Brief", exact: true }).click();
+  }
+  return result;
+}
+
+function isolatedAdvice(body, edit = false) {
+  return { schema_version: 1, request_id: "synthetic-request:waiting", correlation_id: "synthetic:waiting",
+    response_id: "synthetic-response:waiting", task_kind: body.taskKind, status: "ready", confidence: "high",
+    required_operator_action: "review", affected_node_id: null, patch_proposal: null,
+    text: JSON.stringify({ intent: edit ? "draft" : "answer", message: "Isolated complete response; no provider invoked.",
+      edits: edit ? [{ field: "note", value: "Late response must not replace manual work." }] : [] }),
+    evidence: { generated_at: new Date().toISOString(), model_profile_id: "delivery-work-design-advisor-v1",
+      task_contract_ref: "oos.delivery-work-design.v1", output_schema_ref: "platform-engineering/security/schemas/delivery-work-design-advice.schema.json",
+      cgg_packet_ref: "/v1/context/packets/synthetic-waiting", redaction_receipt_ref: "/v1/context/receipts/synthetic-waiting", gateway_audit_ref: "audit:synthetic-waiting" } };
+}
+
+for (const role of ["context", "tree"]) for (const ending of ["stopped", "timeout"]) {
+  test(`${role} advisor retains a single unconfirmed turn after ${ending}, with the longer allowance`, async ({ page }) => {
+    const { errors } = await openReasoningAdvisor(page, role);
+    let received = 0, release;
+    const held = new Promise(resolve => { release = resolve; });
+    await page.route("**/api/delivery/work-design/**/assist", async route => {
+      received++; await held;
+      await route.fulfill({ json: isolatedAdvice(route.request().postDataJSON()) }).catch(() => {});
+    });
+    const d = current(page), prompt = `Inspect the full ${role} without changing it.`;
+    const before = (await saved(page)).context;
+    await page.clock.install();
+    await d.getByRole("textbox", { name: `Work Design ${role} advisor prompt`, exact: true }).fill(prompt);
+    await d.getByRole("button", { name: "run", exact: true }).click();
+    await expect.poll(() => received).toBe(1);
+    await expect(d.getByText(/10-minute reasoning allowance/)).toBeVisible();
+    if (ending === "timeout") await page.clock.fastForward(181000);
+    else await page.clock.runFor(500);
+    await expect(d.getByRole("button", { name: "stop waiting", exact: true })).toBeVisible();
+    await page.screenshot({ path: test.info().outputPath(`${role}-long-wait.png`) });
+    if (ending === "stopped") await d.getByRole("button", { name: "stop waiting", exact: true }).click();
+    else await page.clock.fastForward(540000);
+    await expect(d.getByText(/provider.*may still be running/i).first()).toBeVisible();
+    const retained = await page.evaluate(() => Object.entries(localStorage).filter(([key]) => key.startsWith("advisor-conversation:")).map(([, raw]) => JSON.parse(raw)));
+    const conversation = retained.find(value => value.binding.role === `work-design-${role}`);
+    expect(conversation.turns.filter(turn => turn.text === prompt)).toHaveLength(1);
+    expect(conversation.pending.waitingEnded).toBe(ending);
+    expect(conversation.pending.state).toBe("unconfirmed");
+    release();
+    expect((await saved(page)).context).toEqual(before);
+    if (role === "context" && ending === "stopped") {
+      await page.clock.setSystemTime(Date.now());
+      await open(page);
+      await expect(current(page).getByRole("button", { name: "New conversation", exact: true })).toBeEnabled({ timeout: 15000 });
+      await expect(current(page).getByText(/Earlier request outcome is unconfirmed/)).toBeVisible();
+      await expect(current(page).getByRole("textbox", { name: "Work Design context note", exact: true })).toHaveValue("Retain the complete architecture and its private source custody, runtime boundaries and recovery evidence.");
+    }
+    expect(received).toBe(1); expect(errors).toEqual([]);
+  });
+}
+
+test("a late context proposal cannot overwrite a newer manual architecture note", async ({ page }) => {
+  await openReasoningAdvisor(page, "context");
+  let received = 0, release;
+  const held = new Promise(resolve => { release = resolve; });
+  await page.route("**/api/delivery/work-design/**/assist", async route => {
+    received++; await held; await route.fulfill({ json: isolatedAdvice(route.request().postDataJSON(), true) });
+  });
+  const d = current(page), note = d.getByRole("textbox", { name: "Work Design context note", exact: true });
+  await d.getByRole("textbox", { name: "Work Design context advisor prompt", exact: true }).fill("Draft an architecture note from supplied evidence.");
+  await d.getByRole("button", { name: "run", exact: true }).click(); await expect.poll(() => received).toBe(1);
+  await note.fill("Newer manual architecture must survive."); release();
+  await expect(d.getByText(/draft or selected context changed/i).first()).toBeVisible();
+  await expect(note).toHaveValue("Newer manual architecture must survive.");
+  expect(received).toBe(1);
+});
+
+test("closing an answering context surface preserves the unconfirmed request without applying a late draft", async ({ page }) => {
+  await openReasoningAdvisor(page, "context");
+  let received = 0, release;
+  const held = new Promise(resolve => { release = resolve; });
+  await page.route("**/api/delivery/work-design/**/assist", async route => {
+    received++; await held;
+    await route.fulfill({ json: isolatedAdvice(route.request().postDataJSON(), true) }).catch(() => {});
+  });
+  const d = current(page), before = (await saved(page)).context;
+  await d.getByRole("textbox", { name: "Work Design context advisor prompt", exact: true }).fill("Draft from the complete architecture.");
+  await d.getByRole("button", { name: "run", exact: true }).click(); await expect.poll(() => received).toBe(1);
+  await d.getByRole("button", { name: "Back to Hub", exact: true }).click(); release();
+  await expect.poll(async () => page.evaluate(() => Object.entries(localStorage).filter(([key]) => key.startsWith("advisor-conversation:")).map(([, value]) => JSON.parse(value)).find(value => value.binding.role === "work-design-context")?.pending?.waitingEnded)).toBe("stopped");
+  expect((await saved(page)).context).toEqual(before); expect(received).toBe(1);
+});
 async function choose(page, label, option) {
   await current(page).getByRole("button", { name: label, exact: true }).click();
   await page.getByRole("option", { name: option, exact: true }).click();

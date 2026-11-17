@@ -5,6 +5,8 @@ import { applyContextBoardAdvisorPatch } from "../../src/product-apps/context-bo
 import { applyWorkDesignAdvisorPatch } from "../../src/domain-workspaces/delivery/product-adapters/build-tree/work-design-advisor-patch.ts";
 import { buildAdvisorAgentRequest } from "../../src/agent-console/server/advisor-draft-request.ts";
 import { createWorkDesignAdvisorScope } from "../../src/domain-workspaces/delivery/live-runtime/work-design-draft-advisor.ts";
+import { contextBoardAdvisorEditorFacts } from "../../src/product-apps/context-board/context-board-advisor-guidance.ts";
+import { contextBoardCustomKindHasDetail } from "../../src/product-apps/context-board/context-board-template-helpers.ts";
 
 test("public Delivery register identity cannot substitute for native Work Design package binding", () => {
   const record = { delivery_package_id: "delivery-1332", legacy_epic_id: 1332 };
@@ -36,6 +38,29 @@ test("work context keeps supplied evidence distinct from references and refuses 
   assert.deepEqual(context.coverage.unavailable, ["Referenced receipt contents"]);
   assert.throws(() => advisorWorkContext({ note: "x".repeat(16001) }, { provided: ["Selected note"], unavailable: [] }), /no evidence was silently removed/);
   assert.deepEqual(observations.evidenceRefs, ["receipt:unloaded"]);
+});
+
+test("larger complete architecture scopes are restricted to both Work Design roles", () => {
+  const content = { architecture: "All architectural responsibilities and recovery boundaries. ".repeat(700), tail: "ARCHITECTURE_END" };
+  const context = advisorWorkContext(content, { provided: ["Complete architecture"], unavailable: [] }, 64000);
+  assert.deepEqual(JSON.parse(context).observations, content);
+  for (const role of ["work-design-context", "work-design-tree"])
+    assert.equal(assertAdvisorScope({ ...scope(), role, context }).context, context);
+  assert.throws(() => assertAdvisorScope({ ...scope(), context }));
+  assert.throws(() => advisorWorkContext({ architecture: "x".repeat(64001) }, { provided: [], unavailable: [] }, 64000), /no evidence was silently removed/);
+});
+
+test("advisor editor facts distinguish drawing extent from viewport and use the real card renderer", () => {
+  for (const type of ["freeform", "c4", "sequence"] ) {
+    const facts = contextBoardAdvisorEditorFacts(type, { width: 980, height: 620 });
+    assert.equal(facts.units, "CSS pixels");
+    assert.deepEqual(facts.initialVisibleArea, { width: 980, height: 620 });
+    assert.ok(facts.canvas.width > facts.initialVisibleArea.width);
+    for (const card of facts.cardKinds) assert.equal(card.displaysDetail, contextBoardCustomKindHasDetail(card.kind, type));
+    assert.equal(facts.cardKinds.find(card => card.kind === "component").displaysDetail, true);
+    assert.equal(facts.cardKinds.find(card => card.kind === "shape-rect").displaysDetail, false);
+    assert.ok(facts.defaultComponentSize.width < facts.initialVisibleArea.width);
+  }
 });
 
 test("every general draft-advisor role consumes only its selected text field and keeps questions non-mutating", () => {

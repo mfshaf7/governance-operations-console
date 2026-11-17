@@ -83,7 +83,8 @@ export function useWorkDesignLiveRuntime(
   }, [packageRef, refresh]);
 
   const contextAdvice = useCallback(
-    async (command: Omit<WorkDesignContextAssistCommand, "sourceRevision">) => {
+    async (command: Omit<WorkDesignContextAssistCommand, "sourceRevision">, signal?: AbortSignal) => {
+      signal?.throwIfAborted();
       if (readOnly) throw new Error("Completed work is read-only.");
       const current = await currentSnapshot(snapshotRef.current, refresh);
       if (current.mode === "disconnected-preview") {
@@ -95,11 +96,12 @@ export function useWorkDesignLiveRuntime(
           ...command,
           sourceRevision: requiredSourceRevision(current),
           taskKind: "context_advice",
-        });
+        }, signal);
       } catch (error) {
-        await refresh().catch(() => undefined);
+        if (!signal?.aborted) await refresh().catch(() => undefined);
         throw error;
       }
+      signal?.throwIfAborted();
       rememberAdvisorEvidence(result, setAdvisorEvidence);
       return { mode: current.mode, result } as const;
     },
@@ -107,7 +109,8 @@ export function useWorkDesignLiveRuntime(
   );
 
   const treeAdvice = useCallback(
-    async (command: Omit<WorkDesignTreeAssistCommand, "sourceRevision">) => {
+    async (command: Omit<WorkDesignTreeAssistCommand, "sourceRevision">, signal?: AbortSignal) => {
+      signal?.throwIfAborted();
       if (readOnly) throw new Error("Completed work is read-only.");
       const current = await currentSnapshot(snapshotRef.current, refresh);
       if (current.mode === "disconnected-preview") {
@@ -119,11 +122,12 @@ export function useWorkDesignLiveRuntime(
           ...command,
           sourceRevision: requiredSourceRevision(current),
           taskKind: "tree_advice",
-        });
+        }, signal);
       } catch (error) {
-        await refresh().catch(() => undefined);
+        if (!signal?.aborted) await refresh().catch(() => undefined);
         throw error;
       }
+      signal?.throwIfAborted();
       rememberAdvisorEvidence(result, setAdvisorEvidence);
       return { mode: current.mode, result } as const;
     },
@@ -202,13 +206,16 @@ async function currentSnapshot(
 async function postAdvice(
   packageRef: string,
   command: Record<string, unknown>,
+  signal?: AbortSignal,
 ) {
+  signal?.throwIfAborted();
   const response = await fetch(
     `/api/delivery/work-design/${encodeURIComponent(packageRef)}/assist`,
     {
       body: JSON.stringify(command),
       headers: { "Content-Type": "application/json" },
       method: "POST",
+      signal,
     },
   );
   const body: unknown = await response.json().catch(() => null);

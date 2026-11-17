@@ -291,6 +291,7 @@ live-runtime/use-delivery-change-live-runtime.ts
 live-runtime/use-delivery-work-session-live-runtime.ts
 live-runtime/use-refinement-live-runtime.ts
 live-runtime/use-work-design-live-runtime.ts
+live-runtime/work-design-advisor-policy.ts
 live-runtime/work-design-live-contract.ts
 live-runtime/work-design-live-types.ts
 live-runtime/work-design-draft-advisor.ts
@@ -570,6 +571,7 @@ server/membership-api-routes.ts
 server/refinement-catalog-oos-client.ts
 server/work-design-api-routes.ts
 server/work-design-oos-client.ts
+server/work-design-long-response-transport.ts
 work-model/catalog/catalog-draft-model.ts
 work-model/catalog/catalog-mutation-model.ts
 work-model/catalog/catalog-mutation-types.ts

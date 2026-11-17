@@ -118,10 +118,11 @@ attribution are assembled server-side.
 8. Advice or apply rejection refreshes source truth. A successful apply remains
    successful if only its follow-up projection refresh is temporarily
    unavailable because the returned receipt already proves the mutation.
-9. Projection reads retain a 12-second deadline. Synchronous advice and apply
-   commands have a bounded 180-second deadline; the existing advice provider
-   permits 60 seconds and one retry, so a 12-second browser-server read budget
-   cannot represent its completion. This does not change model limits or
+9. Projection reads retain a 12-second deadline and canonical Apply retains
+   180 seconds. The staged Context and Build Tree reasoning repair gives the
+   provider 600 seconds, OOS 630 seconds, the Console server 690 seconds and
+   the browser 720 seconds. Native server HTTP transport avoids an independent
+   five-minute fetch header cutoff. This does not extend other advisors or
    introduce automatic retries. Each explicit advice action has its own
    invocation identity, since OOS binds a fresh request time into the CGG
    projection. Accepted canonical apply retains its original stable identity.
@@ -177,7 +178,7 @@ Still separate:
 
 ## Validation
 
-In the approved unpublished advisor repair, Context advice receives the selected
+Context advice receives the selected
 architectural view, its actual canvas and an index of other views. That index is
 not treated as loaded diagram contents. Build Tree receives semantic multi-view
 architecture, the finalized brief binding, actual draft tree and owner-defined
@@ -187,14 +188,36 @@ evidence remain distinct; a task checklist does not substitute for architecture.
 CGG rejects shortened editable draft context before issuing a ready projection.
 The existing source/session, transaction and explicit acceptance checks remain.
 
-The same unpublished batch adds **Supporting diagrams** in the Context advisor.
-Choose relevant other views explicitly as read-only knowledge. Only the active
+**Supporting diagrams** in the Context advisor let the operator
+choose relevant other views explicitly as read-only knowledge. Only the active
 view remains an editable board/name/description; supporting views cannot be
 changed through their inclusion. Unselected views remain an index, not loaded
 contents. Selection is request context, not a diagram edit or save. Current
 source/scope fingerprints include supplied support so later changes invalidate
 a stale proposal. The existing complete context budget refuses oversize input
 without cutting a view. Read-only history navigation remains separate from edits.
+
+The staged reasoning maintenance extends Work Design context to 64,000
+characters and complete scope to 128,000, with a 32,000-token CGG budget. Other
+advisor roles keep their existing bounds. Limits compose rather than promising
+all maximum fields fit together; an oversized request is refused without
+discarding architecture. Renderer-derived facts identify detail-displaying
+cards, default CSS-pixel size and the initial visible area. The viewport sample
+is explicitly historical, so panning or resizing alone does not invalidate an
+otherwise matching draft proposal.
+
+Both advisors show elapsed waiting and the ten-minute reasoning allowance.
+**Stop waiting** aborts browser/server waiting, preserves the draft and original
+unconfirmed conversation turn, and does not claim provider cancellation. Closing
+the active surface stops waiting too. A timeout, reload or late reply cannot
+apply stale edits or replay a provider request. Busy accounts and input-capacity
+refusals remain distinct from offline connections. The Context and Build Tree
+effort overrides are independently managed through existing Model Operations;
+source defaults do not silently change unrelated routing.
+
+The longer deadlines and work-guide changes remain pending paired activation
+and detailed real-provider qualification. Isolated HTTP/browser tests verify
+transport and editing behavior; they do not attest actual architecture quality.
 
 Run:
 

@@ -116,5 +116,5 @@ export type WorkDesignLiveApiError = {
   code: string;
   error: string;
   mode: "live";
-  status: "offline";
+  status: "offline" | "busy" | "unconfirmed" | "context-required";
 };
