@@ -12,8 +12,8 @@ test("plain evidence is formatted only after explicit result selection",()=>{
   assert.equal(result.completion_summary,notes.completion_summary);
 });
 test("preformatted evidence retains its outcome and contradictory selections are rejected",()=>{
-  const original={...notes,test_result_evidence:"- FAIL: Regression remains unresolved.",validation_evidence:"- CHECK: Readback still pending."};
+  const original={...notes,test_result_evidence:"- FAIL: Regression remains unresolved.",validation_evidence:"- PASS: Original readback verified."};
   assert.equal(completionEvidenceFromForm(original,"","").test_result_evidence,original.test_result_evidence);
-  assert.throws(()=>completionEvidenceFromForm(original,"PASS","CHECK"),/conflicts/);
-  assert.equal(completionEvidenceFromForm(original,"FAIL","CHECK").validation_evidence,original.validation_evidence);
+  assert.throws(()=>completionEvidenceFromForm(original,"PASS","PASS"),/conflicts/);
+  assert.equal(completionEvidenceFromForm(original,"FAIL","PASS").validation_evidence,original.validation_evidence);
 });
