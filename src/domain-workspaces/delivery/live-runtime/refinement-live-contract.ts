@@ -1,4 +1,5 @@
 import { assertEffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
+import { assertConversationTurns } from "../../../agent-console/model/advisor-conversation.ts";
 import type {
   DeliveryRefinementApplyReceipt,
   DeliveryRefinementDraftGroup,
@@ -131,6 +132,7 @@ export function assertRefinementAssistCommand(
 ): RefinementAssistCommand {
   const command = record(value, "Refinement assist command");
   const result: RefinementAssistCommand = {
+    ...(command.conversation !== undefined ? { conversation: assertConversationTurns(command.conversation) } : {}),
     allowedValues:
       command.allowedValues === undefined
         ? []

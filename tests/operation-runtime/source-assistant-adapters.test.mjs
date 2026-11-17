@@ -20,6 +20,12 @@ test("assistant input and output stay bounded and answer-only mode cannot change
  assert.throws(()=>assertAssistantReply({...reply,edits:[{path:"src/a.ts",content:"changed"}]},request));
  assert.throws(()=>assertAssistantRequest({...request,files:[{path:"../a.ts",content:"bad",expected_digest:null}]}));
  assert.throws(()=>assertAssistantRequest({...request,operator_id:"forged"}));
+ const readOnly=assertAssistantRequest({...request,mode:"edit",read_only_paths:["src/a.ts"]});
+ for(const content of ["changed",null])assert.throws(()=>assertAssistantReply({...reply,edits:[{path:"src/a.ts",content}]},readOnly));
+ assert.throws(()=>assertAssistantReply({...reply,created_paths:["src/a.ts"],edits:[{path:"src/a.ts",content:"fake new file"}]},readOnly));
+ assert.throws(()=>assertAssistantRequest({...request,read_only_paths:["src/missing.ts"]}));
+ assert.throws(()=>assertAssistantRequest({...request,read_only_paths:["src/a.ts","src/a.ts"]}));
+ assertAssistantReply(reply,readOnly);
 });
 
 test("source proposals bind selected content while preserving unrelated work",async()=>{

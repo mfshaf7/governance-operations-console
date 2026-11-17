@@ -1,4 +1,5 @@
 import { createBrowserOperationDraftStore } from "../../../operation-runtime/index.ts";
+import { assertContextBoardDiagrams } from "../../../../product-apps/context-board/context-board-diagrams.ts";
 
 import type {
   WorkDesignBlockerDispositionReceipt,
@@ -74,6 +75,8 @@ export function normalizeWorkDesignContextSavedSession(
   if (!valid || !snapshot) {
     return null;
   }
+
+  try { assertContextBoardDiagrams(snapshot as WorkDesignBoardSnapshot); } catch { return null; }
 
   return {
     decision: candidate.decision as WorkDesignContextDecision,

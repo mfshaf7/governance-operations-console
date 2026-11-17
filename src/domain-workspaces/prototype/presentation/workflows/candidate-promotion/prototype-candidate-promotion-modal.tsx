@@ -4,7 +4,7 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { usePrototypeWorkflowDraftSource } from "../shared/use-prototype-workflow-draft-source.ts";
 import { PrototypeWorkflowSourceWarning } from "../shared/prototype-workflow-source-warning.tsx";
-import { useDraftAdvisor } from "@/agent-console";
+import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 import { candidateAdvisorFields, applyCandidateAdvisorEdits } from "../shared/prototype-advisor-fields.ts";
 
 import {
@@ -79,6 +79,7 @@ export function PrototypeCandidatePromotionModal({
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const advisor = useDraftAdvisor({
+    conversation: record ? { role: "prototype-candidate", ref: record.id, sourceRef: record.sourceRef, sourceRevision: record.projectionVersion } : undefined,
     active: Boolean(record),
     disabled: sourceStale || !record || submitting || ownerProgress?.pending === true ||
       prototypeMaturityRequestPending(ownerProgress) || Boolean(record && getPrototypeCommandView(record, "record-candidate-promotion").disabledReason),
@@ -86,7 +87,15 @@ export function PrototypeCandidatePromotionModal({
       if (!record) throw Error("Select a Prototype record first.");
       return { role: "prototype-candidate", ref: record.id, sourceRef: record.sourceRef,
         sourceRevision: record.projectionVersion,
-        context: JSON.stringify({ name: record.name, summary: record.summary, candidate: record.candidate, decision: draft.decision }),
+        context: advisorWorkContext({ name: record.name, summary: record.summary, lifecycle: record.lifecycle,
+          candidate: record.candidate, decision: draft.decision, sourceStale,
+          boundaries: { account: record.owner, sourceRef: record.sourceRef, sourcePath: record.sourcePath,
+            visibility: record.visibilityTier, dataMode: record.dataMode, mutation: record.mutationBoundary },
+          checks: { boundaryReady: candidatePromotionBoundaryReady(record), issues: candidatePromotionIssueProjection(record),
+            draftComplete: candidatePromotionDraftComplete(draft) },
+          landingReceipt: record.landing.lastLandingReceiptRef, evidence: record.evidence, openIssues: record.openIssues },
+          { provided: ["Candidate brief and editable scope/proof fields", "Current boundary and issue checks", "Retained evidence observations"],
+            unavailable: ["Contents of referenced evidence not supplied here", "Repository/runtime inspection", "Canonical promotion approval"] }),
         fields: candidateAdvisorFields(draft) };
     },
     apply: (edits) => { const next = applyCandidateAdvisorEdits(draft, edits); setDraft(next);

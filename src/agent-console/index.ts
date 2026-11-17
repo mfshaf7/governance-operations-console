@@ -5,7 +5,10 @@ export { selectRecentAiActivity, type AiActivitySource } from "./read-model/rece
 import type { ConsoleBoundary } from "../console-architecture";
 
 export { useDraftAdvisor } from "./state/use-draft-advisor";
+export { AgentConnectionStatusProvider, useAgentConnectionStatus } from "./state/agent-connection-status-provider";
 export { DraftAdvisorScopeProvider } from "./state/draft-advisor-scope-provider";
+export { useProjectContextChoices } from "./state/draft-advisor-scope-provider";
+export { advisorWorkContext } from "./model/advisor-drafts.ts";
 export type { AdvisorScope, AdvisorField, AdvisorEdit, AdvisorReply, GovernedAdvisorReply } from "./model/advisor-drafts";
 
 export { ModelInteractionDock } from "./presentation/model-interaction-dock";

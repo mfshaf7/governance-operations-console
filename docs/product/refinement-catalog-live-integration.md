@@ -120,3 +120,74 @@ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types -
 npm run architecture:delivery
 npm run check
 ```
+
+## Catalog maintenance: reviewed changes and recovery
+
+Catalog manages values used by Delivery, not repository creation or workspace
+onboarding. Add Value, Save Changes and Retire Value submit reviewed changes;
+they are not draft-save or separate approval-request actions. Values still in
+use cannot retire. Reassign their records first. Policy-fixed lists remain
+read-only; project membership stays under OpenProject authority through the
+separate Manage Members workflow described below.
+
+The browser binds the exact reviewed Catalog revision and retains the complete
+accepted request, including prepared readiness, for retries in that open session.
+A server read must never replace the reviewed revision. Readiness preparation
+uses the existing OOS endpoint through the Console server; the browser has no
+WGCF or OpenProject credentials. An uncertain response freezes the draft and
+Retry same change resends the same acceptance. Closing does not cancel a change
+that may already have applied. If that browser session was lost, inspect the
+canonical outcome before making a replacement decision.
+
+An OOS applied receipt already includes canonical owner readback. Failure of a
+subsequent list refresh retains that applied outcome and receipt, marks the list
+unavailable and blocks new changes until Retry loading succeeds. Source refresh
+preserves selected value and receipt. Stale, partial and unavailable projections
+do not authorize new changes. Fixture values appear only in explicit preview.
+
+Execution's repository action retains its concrete work-item target even when
+Start Work is unavailable. Linking records the Catalog value and then updates
+Delivery, with separate receipts and explicit partial-failure reconciliation;
+it is not a transactional rollback boundary or a separate manual Sync step.
+
+Values use the shared pagination and page-size preference. Lifecycle filtering
+keeps retired records inspectable while retired planning parents are excluded
+from new iterations. Counts describe the loaded values, including retained
+history, not just currently available choices.
+
+Read-only Catalog categories do not render an Action column or disabled pretend
+actions. Fixed or retired values within an editable list retain their status,
+with no edit/retire controls. A value still in use retains Edit but has no Retire
+action. Transient connection restrictions can still disable a real action.
+
+Policy definitions and selecting those definitions are different operations:
+blocker outcomes, Committed/Stretch objective types and lineage roles can be
+used in their Delivery workflows but cannot be redefined as arbitrary labels.
+The unpublished membership extension provides **Assignee / Responsible → Manage
+Members**. It lists project members, supports existing user/group selection and
+native project roles, and reviews add/change/remove decisions. Accounts,
+invitations and global roles remain in OpenProject. Protected installation and
+group-inherited access are identified rather than exposed as unsafe edit actions.
+The existing verified Console session and server-derived OOS operator binding
+remain required. POST additionally requires this Console origin and JSON input.
+
+The native membership change and receipt share the existing OpenProject
+transaction store. Uncertain outcomes freeze the original request; Retry same
+change or Recover pending change reuses that exact decision. Closing does not
+undo it or enable a replacement. Reopening after browser restart reads recorded
+outcomes and current members. A receipt survives a failed list refresh, while
+new changes stay blocked until the section reloads. Initial read failure uses
+full-section Retry loading and never substitutes sample members. Disconnected
+preview changes explicitly report that no live membership changed.
+
+Member browsing uses server search and shared 25/50/100 pagination. Available
+existing-account choices preserve native visibility and are search-bounded.
+The workflow, permission, rollback and recovery contract lives in the
+[OOS operator surface](https://github.com/mfshaf7/operator-orchestration-service/blob/main/docs/operations/delivery-project-members.md).
+Native rollback-only qualification and isolated browser checks are distinct
+from final composed Security acceptance and activation of this preview batch.
+
+The operator-facing status for fixed Catalog values is System managed. Detailed
+policy or membership explanations stay in technical disclosure. This is a
+presentation label; canonical read_only/owner_routed capability tokens and their
+permissions remain unchanged. Do not render this status as an action button.

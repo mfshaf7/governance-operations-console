@@ -51,11 +51,11 @@ test("cold reads retain original admissions across pages and Current/History kee
  assert.equal(model.audit_events[0].occurred_at,at);assert.equal(model.packages[0].source_custody.owner,"original-owner");
  assert.ok(model.packages.every(p=>p.available_actions.length===0));assert.deepEqual(model.apply_intents,[]);
  const current=deliveryModelForScope(model,"current"), retained=deliveryModelForScope(model,"history");
- assert.deepEqual(current.packages.map(p=>p.delivery_package_id),["delivery-72","delivery-74"]);
- assert.equal(current.intake_sources.length,0);assert.equal(current.audit_events.length,0);
- assert.equal(current.art_tree.roots.length,2);assert.ok(current.packages.some(p=>p.delivery_package_id===current.selected_delivery_package_id));
+ assert.deepEqual(current.packages.map(p=>p.delivery_package_id),["delivery-72","delivery-73","delivery-74"]);
+ assert.equal(current.intake_sources.length,0);assert.equal(current.audit_events.length,1);
+ assert.equal(current.art_tree.roots.length,3);assert.ok(current.packages.some(p=>p.delivery_package_id===current.selected_delivery_package_id));
  assert.equal(getDeliveryPackagesByWorkflowPhase("work_design",current).length,1);
- assert.equal(getExecutionBoardPackages(current).length,1);
+ assert.equal(getExecutionBoardPackages(current).length,2);
  assert.equal(retained.packages.length,4);assert.equal(retained.intake_sources.length,2);
  for(const stage of ["work_design","refinement","execution"])assert.equal(getDeliveryPackagesByWorkflowPhase(stage,retained).length,4);
  const stats=deliveryOverviewStats(retained,4);assert.equal(stats.find(s=>s.id==="done").value,"1");assert.equal(stats.find(s=>s.id==="inactive").value,"1");

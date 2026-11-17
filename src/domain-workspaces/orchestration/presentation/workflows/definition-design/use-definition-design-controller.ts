@@ -32,6 +32,7 @@ import type {
 } from "../../../work-model/definition-design/definition-design-types.ts";
 import {
   initialDefinitionAdvisorTranscript,
+  definitionAdvisorWorkContext,
   type DefinitionAdvisorTranscriptLine,
 } from "./support/definition-advisor-context.ts";
 import {
@@ -46,9 +47,11 @@ export type DefinitionDesignDraftEditor = (
 export function useDefinitionDesignController({
   onClose,
   record,
+  definitions = [],
 }: {
   onClose: () => void;
   record: OrchestrationDefinitionRecord | null;
+  definitions?: OrchestrationDefinitionRecord[];
 }) {
   const initial = useMemo(() => definitionDesignInitialState(record), [record]);
   const [draft, setDraft] = useState(initial.draft);
@@ -70,11 +73,12 @@ export function useDefinitionDesignController({
   const [closeGuardOpen, setCloseGuardOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const draftAdvisor = useDraftAdvisor({
+    conversation: { role: "definition-design", ref: draft.draftId, sourceRef: draft.baselineRecordId ?? draft.draftId },
     active: draft.activeStage !== "review-request" && !receipt,
     disabled: Boolean(receipt) || draft.activeStage === "review-request",
     getScope: () => ({ role: "definition-design", ref: `${draft.draftId}:${draft.activeStage}:${draft.activeSection}:${selectedNodeId}`,
       sourceRef: draft.baselineRecordId ?? draft.draftId, sourceRevision: "local-definition-draft",
-      context: JSON.stringify({ draft, boundary: "Local definition drafting only. Qualification classification, approval, admission and request routing are operator decisions." }),
+      context: definitionAdvisorWorkContext(draft, selectedNodeId, definitions),
       fields: definitionDraftAdvisorFields(draft, selectedNodeId),
     }),
     apply: (edits) => { setDraft(applyDefinitionDraftAdvisorEdits(draft, selectedNodeId, edits)); return edits; },

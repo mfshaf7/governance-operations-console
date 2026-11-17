@@ -6,6 +6,9 @@ export type {
   TerasActionTreatment,
 } from "./teras-action";
 export { TerasAdvisorPanel } from "./teras-advisor";
+export { TerasNewConversationButton } from "./teras-new-conversation-button";
+export { TerasAdvisorStatusBar } from "./teras-advisor-status-bar";
+export type { TerasAdvisorConnection } from "./teras-advisor-status-bar";
 export { TerasCardGrid } from "./teras-card-grid";
 export { TerasChoiceGroup, TerasSelectableRow } from "./teras-choice";
 export type {
@@ -16,7 +19,9 @@ export {
   TerasContentFrame,
   TerasContentRegion,
 } from "./teras-content-layout";
+export { TerasConceptFlow } from "./teras-concept-flow";
 export { TerasContentTray } from "./teras-content-tray";
+export { TerasSectionEditorLayout } from "./teras-section-editor-layout";
 export { TerasDetailGrid } from "./teras-detail-grid";
 export {
   TerasDialog,

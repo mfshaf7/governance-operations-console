@@ -4,7 +4,7 @@ import { deliveryFieldDisplayLabel } from "../../../../../read-model/terms/copy.
 
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { useDraftAdvisor } from "@/agent-console";
+import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 import { effectiveModelLabel } from "@/console-integration/governed-ai/model-selection";
 
 import { TerasAdvisorPanel } from "@/teras";
@@ -83,22 +83,26 @@ export function RefinementMetadataAdvisor({
   const advisorLines = [...advisorTranscript, ...advisorExchange];
   const targets = selectedSharedMetadataGroup?.targets ?? (selectedTarget ? [selectedTarget] : []);
   const advisor = useDraftAdvisor({
+    conversation: { role: "refinement-metadata", ref: sourceRef, sourceRef, sourceRevision },
     disabled: readOnly || activeStep !== "metadata_draft" || runtimeStatus !== "current" || runtimeMode !== "live",
     getScope: () => ({ role: "refinement-metadata", ref: `${sourceRef}:${targets.map((target) => target.key).join(",")}`,
       sourceRef, sourceRevision,
-      context: JSON.stringify({ package: deliveryPackageName, targets: targets.map((target) => ({ key: target.key, sourceValue: target.sourceValue, field: target.field })) }),
+      context: advisorWorkContext({ package: deliveryPackageName, sourceRevision,
+        targets: targets.map((target) => ({ key: target.key, sourceValue: target.sourceValue, field: target.field })) },
+        { provided: ["Current selected field metadata, allowed values and source values", "Canonical selected-field packet through Refinement assist"],
+          unavailable: ["Operator intent not stated in this request", "Unprovided implementation or completion evidence"] }),
       fields: targets.map((target) => ({ key: target.key, label: target.field.label,
         value: metadataDraftValues[target.key] ?? target.sourceValue, allowedValues: target.field.allowed_values ?? [] })),
     }),
     apply: (edits) => { for (const edit of edits) { updateMetadataDraftValue(edit.field, String(edit.value)); markMetadataFieldResolution(edit.field, "ai_drafted"); } return edits; },
     restore: (edits) => { for (const edit of edits) updateMetadataDraftValue(edit.field, String(edit.value)); },
-    transport: async (scope, prompt) => {
+    transport: async (scope, prompt, _signal, conversation) => {
       const target = targets[0];
       if (!target) throw Error("Select a metadata field first.");
       const live = await requestMetadataAdvice({ allowedValues: target.field.allowed_values ?? [],
         draftValue: String(scope.fields[0].value), fieldKey: target.field.field_key ?? target.field.backend_field,
         fieldKind: target.field.field_kind, fieldLabel: target.field.label, operatorPrompt: prompt,
-        required: target.field.required, selectedNodeIds: targets.map((item) => item.node.id), sourceValue: target.sourceValue });
+        required: target.field.required, selectedNodeIds: targets.map((item) => item.node.id), sourceValue: target.sourceValue, conversation });
       if (!live.result) throw Error("A live governed advisor is required. Manual drafting remains available.");
       const result = live.result;
       const edits = result.required_operator_action === "review" && result.suggestion.value !== null
@@ -162,6 +166,7 @@ export function RefinementMetadataAdvisor({
 
   return (
     <TerasAdvisorPanel
+      fit={activeStep === "metadata_draft" && collapsed ? "content" : undefined}
       draftControls={advisor.panelControls}
       collapsed={activeStep === "metadata_draft" ? collapsed : false}
       density={activeStep === "metadata_draft" ? "compact" : "standard"}

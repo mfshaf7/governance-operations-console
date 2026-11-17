@@ -9,9 +9,12 @@ import { TerasLoadingState,
   TerasDraftCloseGuardDialog,
   TerasEmptyState,
   TerasFieldGrid,
+  TerasFieldStack,
+  TerasTechnicalDetails,
   TerasList,
   TerasMetadataList,
   TerasNoteField,
+  TerasSelectField,
   TerasPanel,
   TerasPanelHeader,
   TerasSignalItem,
@@ -29,6 +32,7 @@ import {
 import {
   executionCloseoutDraftDirty,
   executionCloseoutEvidenceComplete,
+  executionCloseoutEvidenceIssue,
   executionCloseoutImpactComplete,
   executionCloseoutOperation,
   executionCloseoutReadinessRows,
@@ -229,7 +233,11 @@ export function ExecutionCloseoutModal({
             evidenceComplete={evidenceComplete}
             impactComplete={impactComplete}
             onDraftChange={setDraft}
-            onOpenImpact={() => setImpactDialogOpen(true)}
+            onOpenImpact={() => {
+              setDraft(current => ({ ...current, workspaceEntrant: { ...current.workspaceEntrant,
+                validationNotes: current.workspaceEntrant.validationNotes || current.validationEvidence } }));
+              setImpactDialogOpen(true);
+            }}
             projection={projection}
             result={result}
             runtime={runtime}
@@ -275,6 +283,11 @@ export function ExecutionCloseoutModal({
                 placeholder="List the source surfaces covered by this closeout."
                 value={draft.changedSurfaces}
               />
+              <TerasFieldStack spacing="compact">
+              <TerasSelectField label="Test result" value={draft.testResult}
+                options={[{ value: "", label: "Choose the observed result" }, { value: "PASS", label: "Passed" }, { value: "FAIL", label: "Failed" },
+                  { value: "NOT APPLICABLE", label: "Not applicable — explain below" }, { value: "Attached artifact", label: "Result recorded in the linked artifact" }]}
+                onValueChange={value => setDraft(current => ({ ...current, testResult: value as ExecutionCloseoutDraft["testResult"] }))} />
               <TerasNoteField
                 label="Test result evidence"
                 minimumHeight="short"
@@ -284,9 +297,16 @@ export function ExecutionCloseoutModal({
                     testResultEvidence: value,
                   }))
                 }
-                placeholder="Record the passing test evidence."
+                placeholder="Describe the observed test evidence or explain why tests do not apply."
                 value={draft.testResultEvidence}
               />
+              </TerasFieldStack>
+              <TerasFieldStack spacing="compact">
+              <TerasSelectField label="Validation result" value={draft.validationResult}
+                options={[{ value: "", label: "Choose the observed result" }, { value: "PASS", label: "Passed" }, { value: "FAIL", label: "Failed" },
+                  { value: "CHECK", label: "Needs checking" }, { value: "NOT APPLICABLE", label: "Not applicable — explain below" },
+                  { value: "Attached artifact", label: "Result recorded in the linked artifact" }]}
+                onValueChange={value => setDraft(current => ({ ...current, validationResult: value as ExecutionCloseoutDraft["validationResult"] }))} />
               <TerasNoteField
                 label="Validation evidence"
                 minimumHeight="short"
@@ -296,10 +316,12 @@ export function ExecutionCloseoutModal({
                     validationEvidence: value,
                   }))
                 }
-                placeholder="Record the passing validation evidence."
+                placeholder="Describe the validation result and link its evidence."
                 value={draft.validationEvidence}
               />
+              </TerasFieldStack>
             </TerasFieldGrid>
+            {executionCloseoutEvidenceIssue(draft) ? <TerasEmptyState>{executionCloseoutEvidenceIssue(draft)}</TerasEmptyState> : null}
           </TerasWizardPanel>
         ) : null}
         {activeStep === "review" ? (
@@ -308,13 +330,13 @@ export function ExecutionCloseoutModal({
             kicker="Apply Review"
             title="Closeout Decision"
           >
+            <TerasFieldStack spacing="normal">
             <TerasMetadataList
               items={[
-                { label: "Delivery", value: projection?.delivery_id ?? "Unavailable" },
-                { label: "Source Revision", value: projection?.source_revision ?? "Unavailable" },
+                { label: "Delivery", value: `Epic ${packageSummary.legacy_epic_id}` },
                 { label: "Readiness", value: projection?.projection_state.replaceAll("_", " ") ?? "Unavailable" },
                 { label: "Impact", value: draft.impactKind.replaceAll("-", " ") },
-                { label: "Evidence Refs", value: String(projection?.readiness.evidence_refs.length ?? 0) },
+                { label: "Evidence records", value: projection ? String(projection.readiness.evidence_refs.length) : "Not loaded" },
                 { label: "Next Action", value: projection?.next_action.label ?? "Unavailable" },
               ]}
             />
@@ -349,6 +371,8 @@ export function ExecutionCloseoutModal({
               placeholder="Record why this exact closeout should be applied."
               value={draft.acceptanceNote}
             />
+            <TerasTechnicalDetails items={[{ label: "Reviewed source revision", value: projection?.source_revision ?? "Not loaded" }]} />
+            </TerasFieldStack>
           </TerasWizardPanel>
         ) : null}
         {activeStep === "result" ? (
@@ -380,6 +404,7 @@ export function ExecutionCloseoutModal({
         open={evidenceDialogOpen}
       />
       <ExecutionCloseoutImpactDialog
+        live={runtime.mode === "live"}
         draft={draft}
         onClose={() => setImpactDialogOpen(false)}
         onDraftChange={setDraft}
@@ -477,6 +502,7 @@ function ExecutionCloseoutSupport({
         <TerasList columns={2} fit="content" frame="contained">
           {executionCloseoutReadinessRows(projection).map(([label, value]) => (
             <TerasSignalItem
+              textOverflow="wrap"
               key={label}
               label="Gate"
               statusLabel={String(value)}

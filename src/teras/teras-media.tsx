@@ -76,6 +76,7 @@ export function TerasMediaSnapshot({
   actions,
   className,
   density = "normal",
+  fit = "content",
   facts,
   imageAlt,
   imageSrc,
@@ -88,6 +89,7 @@ export function TerasMediaSnapshot({
   actions?: TerasMediaSnapshotAction[];
   className?: string;
   density?: "compact" | "normal";
+  fit?: "content" | "fill";
   facts: TerasMetadataItem[];
   imageAlt: string;
   imageSrc: string;
@@ -126,6 +128,7 @@ export function TerasMediaSnapshot({
     <TerasContentTray
       className={cx(styles.terasMediaSnapshot, className)}
       data-density={density}
+      fit={fit}
       kicker={kicker}
       title={title}
     >

@@ -1,8 +1,9 @@
 "use client";
 
 import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useState } from "react";
 import { createWorkDesignAdvisorScope } from "../../../../live-runtime/work-design-draft-advisor.ts";
-import { useDraftAdvisor } from "@/agent-console";
+import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 import type { AdvisorTransport, AdvisorEdit } from "@/agent-console/model/advisor-drafts";
 import { applyContextBoardAdvisorPatch, type ContextBoardSnapshot } from "@/product-apps/context-board";
 
@@ -17,6 +18,7 @@ import type {
 } from "../model/work-design-model.ts";
 
 import { WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH } from "../../../../work-model/work-design/work-design-session-model.ts";
+import { assertContextBoardDiagrams, captureContextBoardDiagrams, contextBoardCanvasSnapshot, contextBoardDiagrams, contextBoardSupportingDiagrams, legacyContextDiagramId } from "../../../../../../product-apps/context-board/context-board-diagrams.ts";
 
 type UseWorkDesignContextActionsParams = {
   active: boolean;
@@ -74,25 +76,49 @@ export function useWorkDesignContextActions({
   setDraftValidationAccepted,
   treeDraftStale,
 }: UseWorkDesignContextActionsParams) {
+  const [supportingDiagramIds, setSupportingDiagramIds] = useState<string[]>([]);
   function applyDraft(edits: AdvisorEdit[], undo = false) {
+    const current = captureBoard();
     const boardEdit = edits.find((edit) => edit.field === "board");
-    const nextBoard = boardEdit ? (undo ? boardEdit.value as ContextBoardSnapshot : applyContextBoardAdvisorPatch(captureBoard(), boardEdit.value, coreNodes.map((node) => node.id))) : null;
-    if (nextBoard) { commitBoard(); restoreBoard(nextBoard); }
+    let nextBoard = boardEdit ? (undo ? captureContextBoardDiagrams(boardEdit.value as ContextBoardSnapshot,
+      current.diagrams ?? null, current.activeDiagramId ?? legacyContextDiagramId)
+      : applyContextBoardAdvisorPatch(current, boardEdit.value, coreNodes.map((node) => node.id))) : null;
+    const name = edits.find(edit => edit.field === "diagramName"), description = edits.find(edit => edit.field === "diagramDescription");
+    if (name || description) {
+      const content = nextBoard ?? current, activeId = content.activeDiagramId ?? legacyContextDiagramId;
+      const diagrams = contextBoardDiagrams(content).map(view => view.id === activeId ? { ...view,
+        ...(name ? { name: String(name.value) } : {}), ...(description ? { description: String(description.value) } : {}),
+        snapshot: contextBoardCanvasSnapshot(content) } : view);
+      nextBoard = { ...content, diagrams, activeDiagramId: activeId };
+    }
+    if (nextBoard) { assertContextBoardDiagrams(nextBoard); commitBoard(); restoreBoard(nextBoard); }
     for (const edit of edits) if (edit.field === "note") setContextOperatorNote(String(edit.value));
     setContextBriefAccepted(false); setHasUnsavedSessionChanges(true);
     setApplyReceiptRecorded(false); setApplyRunStartedAt(null);
     setDraftValidationAccepted(false); setDraftReviewAccepted(false);
-    return edits.map((edit) => edit.field === "board" ? { field: "board", value: nextBoard } : edit);
+    return edits.map((edit) => edit.field === "board" ? { field: "board", value: contextBoardCanvasSnapshot(nextBoard!) } : edit);
   }
   const advisor = useDraftAdvisor({
+    conversation: { role: "work-design-context", ref: deliveryPackage.delivery_package_id, sourceRef: deliveryPackage.source_ref, sourceRevision },
     active,
     disabled: contextBriefReadOnly,
-    getScope: () => createWorkDesignAdvisorScope(deliveryPackage, { role: "work-design-context", ref: deliveryPackage.delivery_package_id,
+    getScope: () => {
+      const document = captureBoard(), activeId = document.activeDiagramId ?? legacyContextDiagramId;
+      const diagrams = contextBoardDiagrams(document), selected = diagrams.find(view => view.id === activeId)!;
+      return createWorkDesignAdvisorScope(deliveryPackage, { role: "work-design-context", ref: `${deliveryPackage.delivery_package_id}/${activeId}`,
       sourceRevision,
-      context: JSON.stringify({ purpose: "Understand the architecture of the system under design. ART records bound the work; they are not the system's components. Distinguish verified current behavior, proposed changes and unknowns. Build Tree handles delivery decomposition.", packageTitle: deliveryPackage.display_name, summary: deliveryPackage.summary, contextDecision, coreNodes, sources }),
+      context: advisorWorkContext({ purpose: "Understand the architecture of the system under design. ART records bound the work; they are not the system's components. Distinguish verified current behavior, proposed changes and unknowns. Build Tree handles delivery decomposition. Edit only the selected diagram. Explicitly included supporting diagrams provide read-only knowledge; remaining views are an index, not inspected content.", selectedDiagram: activeId,
+        diagrams: diagrams.map(view => ({ id: view.id, name: view.name, diagramType: view.diagramType })),
+        readOnlySupportingDiagrams: contextBoardSupportingDiagrams(document, supportingDiagramIds),
+        canvas: { width: 5600, height: 3600 },
+        packageTitle: deliveryPackage.display_name, summary: deliveryPackage.summary, contextDecision, coreNodes, sources },
+        { provided: ["Overall context note", "Selected diagram contents and explanation", "Other-view index", "Explicitly included read-only supporting diagrams", "Supplied source metadata"],
+          unavailable: ["Unselected other diagram contents beyond their index", "Unprovided repository files, runtime evidence and linked document contents"] }),
       fields: [{ key: "note", label: "Context note", value: contextOperatorNote },
-        { key: "board", label: "Context diagram", value: captureBoard(), kind: "board" }],
-    }),
+        { key: "diagramName", label: "Selected diagram name", value: selected.name, maxLength: 200 },
+        { key: "diagramDescription", label: "Selected diagram explanation", value: selected.description, maxLength: 8000 },
+        { key: "board", label: "Selected context diagram", value: contextBoardCanvasSnapshot(document), kind: "board" }],
+    }); },
     apply: (edits) => applyDraft(edits), restore: (edits) => { applyDraft(edits, true); },
     transport: requestContextAdvice,
   });
@@ -156,8 +182,8 @@ export function useWorkDesignContextActions({
           role: "advisor",
           text:
             error instanceof Error
-              ? `Governed advisor unavailable: ${error.message}`
-              : "Governed advisor unavailable.",
+              ? `Advisor request failed: ${error.message}`
+              : "The advisor request failed. No draft was changed.",
         },
       ]);
     }
@@ -189,8 +215,12 @@ export function useWorkDesignContextActions({
     setActiveStep("history");
   }
 
+  const diagramDocument = captureBoard();
   return {
-    contextAdvisorControls: advisor.panelControls,
+    contextAdvisorControls: { ...advisor.panelControls, supportingContext: {
+      label: "Supporting diagrams", choices: contextBoardDiagrams(diagramDocument).filter(view => view.id !== (diagramDocument.activeDiagramId ?? legacyContextDiagramId)).map(view => ({ id: view.id, label: view.name, selected: supportingDiagramIds.includes(view.id) })),
+      onToggle: (id: string) => setSupportingDiagramIds(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]),
+    } },
     acceptContextBrief,
     submitContextAdvisorPrompt,
     updateContextDecision,

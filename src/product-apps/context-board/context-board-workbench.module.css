@@ -174,6 +174,10 @@
     0 20px 56px rgba(0, 0, 0, 0.28);
 }
 
+.contextBoardStage[data-multiple-diagrams="true"] {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
 .contextBoardTopbar {
   display: flex;
   align-items: flex-start;
@@ -301,6 +305,7 @@
 
 .contextBoardCanvas {
   position: relative;
+  container-type: size;
   min-height: 0;
   overflow: auto;
   background-color: #06090e;
@@ -357,10 +362,15 @@
 }
 
 .contextBoardToolDock {
-  top: 10.8rem;
+  --tool-dock-top: min(10.8rem, 20cqh);
+  top: var(--tool-dock-top);
   left: 0.72rem;
   width: 15.6rem;
-  overflow: hidden;
+  max-height: calc(100cqh - var(--tool-dock-top) - 0.72rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-color: rgba(255, 193, 90, 0.46) rgba(10, 13, 19, 0.8);
+  scrollbar-width: thin;
   background:
     linear-gradient(180deg, rgba(255, 193, 90, 0.052), rgba(139, 181, 255, 0.028)),
     rgba(5, 7, 10, 0.7);

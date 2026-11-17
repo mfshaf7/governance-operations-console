@@ -25,6 +25,7 @@ import {
   proposalSelectedPanelMetadata,
 } from "../shared/proposal-display-model.ts";
 import { useProposalControlController } from "./use-proposal-control-controller.ts";
+import { useProjectContextChoices } from "@/agent-console";
 
 export function ProposalControlSurface({
   entryIntent = null,
@@ -35,6 +36,8 @@ export function ProposalControlSurface({
 }) {
   const controller = useProposalControlController({ entryIntent });
   const selectedProposal = controller.selectedProposal;
+  useProjectContextChoices(selectedProposal?.projectionState === "current" && !controller.capture.previewMode
+    ? [{ kind: "proposal", id: selectedProposal.id, title: selectedProposal.title }] : []);
   const selectedProposalHubProjection =
     controller.selectedProposalHubProjection;
   const selectedProposalMove = selectedProposalHubProjection?.currentMove;

@@ -13,10 +13,21 @@ owner-generated default.
 
 This is the primary Console instruction surface for running a governed Delivery
 work session from Execution Board. The board keeps its approved package and
-action presentation. `Start Work` opens the package-bound target, while
-`Open Work Item` accepts an exact ART reference for work that is not yet
-represented by a Delivery package. Both routes switch to authoritative OOS
-state only when live integration is configured.
+action presentation. **Choose Work Item** opens a searchable list of recorded
+names, types, numbers and statuses. Selecting a node in **ART Tree** opens that
+same chooser with its exact work item selected. Choose **Code or content
+changes** for source work, or **Complete work without file changes** for an
+actual completed planning/review outcome. An explicit number entry remains for
+work not loaded in the current inventory. Opening a target starts no work.
+Both routes read authoritative OOS state when live integration is configured.
+
+Current includes deferred packages in the **Deferred** lane. **Resume Work**
+opens a reviewed return-status/reason form; the service checks prerequisites
+and records the result. History remains read-only. Defer, retirement and blocker
+controls likewise open reviews rather than grant eligibility. Package review
+requires a current owner read, retains its reviewed source revision and never
+replaces a missing live result with a local receipt. Successful package actions
+refresh the overview before the updated posture is presented.
 
 OOS owns session semantics, exact next action, revisions, source observations,
 evidence acquisition, merge and closeout legality, terminal cleanup, command
@@ -57,45 +68,111 @@ Work-session reads and commands use a bounded 75-second server timeout because
 the local ART backend may perform sequential authoritative reads. Other OOS
 Console calls retain their shorter timeout.
 
-## Architecture Packet Authoring
+## Technical Plan & Approval
 
-Execution Board exposes one `Architecture Packet` action beside direct work-item
-entry. It is the primary operator surface for the packet transition that must
-finish before architecture-bound source work starts.
+Open **Technical Plan** under the selected package's **Manage Package** panel.
+Its status explains when to use it: Open Technical Plan is inspection/drafting;
+a missing-plan owner gate makes Prepare Technical Plan the primary next action.
+An existing binding requirement asks for review and linkage of the approved plan.
+Choose Work Item opens the existing work-item workflow. No missing record
+or generated decision default establishes an exemption. Not required and covered
+are shown only after an owner-confirmed implementation-ready check for that work.
+The workspace is titled Technical Plan & Approval. The global Architecture Packet toolbar entry is removed. When the current
+source session reports a missing or unbound architecture requirement, Next Action
+also opens the same package-scoped workspace and identifies the affected work.
+No package-wide permission is inferred from one work item's requirement.
 
-The workflow has three distinct steps:
+Overview includes a purpose diagram and a labelled example, independent of live
+plan contents. Next Action uses the primary rail treatment with descriptions and
+visible disabled reasons. Leaving an edited plan to check work uses the normal
+discard guard. The workspace separates five jobs, with ordinary navigation rather
+than a wizard:
 
-1. Author editable scope, exact repository revisions, architecture design,
-   conformance plan, and rationale. `Validate Draft` sends only those fields to
-   the same-origin Console route. OOS binds fresh ART truth, server-held
-   operator identity, current supersession, fingerprints, timestamps, custody
-   posture, and the content digest. The result is still a local candidate.
-2. Inspect the complete canonical candidate in the Console. `Approve Candidate`
-   re-authors the reviewed input with `architecture-ready`; changing any editor
-   field invalidates the candidate and requires fresh validation.
-3. `Persist Approved Packet` submits that exact OOS-authored candidate. OOS
-   rechecks caller, operator, ART snapshot, supersession, semantics, and digest;
-   WGCF issues durable custody; OOS projects the accepted reference to ART.
+- **Overview** explains applicability, the selected package, covered work and
+  current recorded-plan availability. Missing, unavailable and historical records
+  are distinct. A missing plan never means approval is unnecessary. The current
+  work-session owner remains the authority for whether architecture is required.
+- **Prepare Plan** starts with a compact scope summary. Use Edit Scope to change
+  covered work and Edit Summary for the overall justification. Work & Changes,
+  Sequence & Handoffs, Operation & Recovery, Approvals & Decisions and Verification
+  are freely navigable planning areas. Open a named entry to edit it; other entries
+  stay compact. Local Empty/Draft/Needs attention indicators do not certify
+  readiness. Verification required is an explicit existing plan decision. Written
+  explanations remain free text; structured plan data uses guided fields.
+  It uses named work and section guidance from the existing v6
+  contract. Selecting work fills recorded type, parent and repository observations
+  where available, preserving explicit edits. Verification applicability, change
+  grouping, source pins and approval are not invented as form defaults. Verified
+  source observations can be read from the existing work-session endpoint; JSON
+  import/export stays under Technical data for specialist use.
+- **System Architecture** reads the exact selected package's saved finalized Work
+  Design brief and retained diagrams. Multiple diagrams can be inspected
+  individually or together using the existing zoomable viewer. Missing original
+  data remains unavailable. Changes to that underlying design belong in Work
+  Design; this workspace does not silently rewrite it.
+- **Implementation Sequence** is derived from the current draft, validated
+  candidate or recorded plan, labelled accordingly. Change landing order, work
+  dependencies and required approvals remain distinguishable. Select a node for
+  complete readable details, zoom or open the full diagram. Unknown references
+  and dependency cycles are visible; the drawing grants no execution permission.
+  No second manually maintained diagram or execution engine is introduced.
+- **Review Plan** presents the covered work, responsibilities, ordering,
+  verification, approvals and recovery in readable sections. Canonical JSON,
+  identity and custody receipts remain inspectable under Technical details.
 
-`Inspect Current` reads the immutable packet and custody posture currently
-projected for one Delivery initiative. `Use as Starting Point` copies only its
-editable design fields into the editor; it does not copy operator authority,
-integrity, timestamps, or custody as new input.
+**Validate Plan** authors a local candidate through OOS. Explicit operator
+acceptance enables **Approve Plan**, which rebinds the reviewed input to fresh ART
+truth. A change in the reviewed work/source snapshot requires validation and
+review again. **Record Approved Plan** records that exact approved candidate
+through the existing OOS/WGCF custody path. Approval is visibly unrecorded until
+that owner result is confirmed. A recording failure retains the approved candidate
+for retry; it is not a successful result. Editing input invalidates the candidate.
+Recording does not start execution or grant release authority. Existing approved
+plans require an explicit **Revise Current Plan** action before manual revision.
 
-The Console performs an early completeness check for ownership, Landing Units,
-source topology, execution order, evidence handoffs, runtime boundaries, human
-gates, rollback and terminal conditions, conformance dimensions and cases, exact
-repository revisions, and the operator rationale. That check improves the
-operator experience but does not replace OOS validation against the canonical
-schema-v6 Workspace Governance contract and fresh ART topology.
+The standard **Technical Plan Advisor** uses the existing Agent Console AI
+capability, permission profile and model routing configured in Model Operations
+(`agent-console-assistant-v1`). Its role is `execution-architecture`, with normal
+CGG admission, native structured replies, receipt evidence, private conversations,
+new conversation, cancellation and undo. No separate provider or default model is
+hard-coded for this workspace.
 
-Disconnected preview is read-only for this workflow. It never creates or
-persists a fixture packet. Missing or malformed input, unavailable OOS, stale
-ART truth, contradictory topology, an unapproved decision, or failed WGCF
-custody remains visible as a blocked request. The Console does not retain a
-parallel packet ledger or report success from browser state.
+Only manual chat requests invoke it. Questions do not edit. An explicit draft
+request can modify only the selected local `sectionJson`, preserving other
+sections, scope, human justification, source revisions and approval. Repository
+revision assistance is read-only. Context contains the actual selected-section
+schema, supplied covered-work records and available canonical ancestor narratives,
+the saved finalized brief and selected diagram's contents, including supplied core
+nodes. The advisor's Context controls identify related plan sections and the
+selected diagram. Unselected diagrams and linked evidence are references rather
+than loaded knowledge. Oversized context fails visibly and can be narrowed; no
+source content is silently cut. Late replies cannot overwrite a changed scope or
+changed local draft. The advisor can propose plan data that produces a sequence,
+but cannot approve, record, start work, grant permission or fabricate source proof.
+
+History uses the same workspace with editing and approval locked. Its recorded
+plan read is labelled as the current owner record, not invented as a frozen
+historical snapshot. Disconnected preview permits local inspection/preparation
+and never creates a fixture approved packet or reports a live model result.
+Composed live proof requires current OOS, CGG, model and custody services; source
+and isolated browser tests do not replace that qualification.
 
 ## Operator Flow
+
+The package panel's Work Overview distinguishes hierarchy-wide open work from
+story/defect/task status counts. View work or View all opens the same named work
+picker, scoped to that package and selected status; switching to All work keeps
+the package scope. History offers work-structure inspection only. The global
+Open Work Item entry continues to cover all loaded packages.
+
+What’s Blocking Progress shows the recorded issue, impact, responsible team or
+service, agreed approach and review date. Original descriptions and rationale
+remain under Blocker details. Review Blocker uses the existing owner command.
+Next Action points to blocked/deferred review, recorded closeout, or current
+work as appropriate; it does not infer execution approval from status counts.
+Manage Package retains secondary operations with clearer labels. Recent Activity
+shows the latest loaded event, readable time and an explicit coverage note;
+original timestamps, receipt references and source text remain under details.
 
 For planning-stage hierarchy maintenance, choose `Open Work Item`, enter an
 exact canonical initiative or child id, then choose `Inspect ART Tree`.
@@ -210,18 +287,21 @@ scope review; unavailable or stale authority never enables continuation.
 
 ## Evidence-Only Completion And Completed Parents
 
-In live Execution Board, choose `Open Work Item`, enter the exact ART id and
-select the `Non-source completion` work path. `Open Completion` reads current
+In live Execution Board, choose `Open Work Item`, select the named item or enter
+its exact ART id, and select `Complete work without file changes`.
+`Open Completion` reads current
 native continuation context and any source session before presenting a review.
 Use this path only when the outcome requires no source change. A source-backed
 outcome must use its existing governed work session, merged evidence and close
 command; an existing source session blocks this form.
 
-Review the exact subject, owner, status and blocking reasons. Enter the four
-native evidence fields: a paragraph completion summary, explained flat changed-
-outcome bullets (for example `- Product admission: actual change and evidence`),
-and test and validation bullets with their displayed prefixes. Code-format or
-link paths and receipt URIs in changed outcomes. Confirm the non-source
+Review the exact subject, responsible repository, status and blocking reasons.
+Describe the completion, changes and evidence in ordinary notes; explicitly
+choose test and validation results. The form converts these notes to the native
+paragraph/bullet format without changing their facts or choosing a result.
+Existing formatted evidence retains its recorded outcome; contradicting a
+selected result is rejected. Code-format or link paths and receipt URIs in
+changed outcomes when applicable. Confirm the non-source
 outcome. The optional completion note adds context; it does not replace proof.
 The server rereads the target before submitting the existing OOS completion
 operation. It reports completion only after native success and canonical
@@ -249,8 +329,18 @@ value, native review outcome and optional evidence note, then explicitly approve
 choose `Record earned PI review`. The existing OOS initiative `pi-review`
 operation records those fields; it does not complete the objective or create
 source work. Re-read and separately approve normal completion evidence afterward.
-Native choices currently include `Met`, `Partially met` and `Not met`; OOS
-validates the actual form options. No planning value is copied into earned value.
+The outcome selector uses choices read from that objective's native OpenProject
+form; unavailable choices do not enable review. OOS validates those current
+options again. No planning value is copied into earned value.
+
+Existing-product closeout searches active Workspace Registry products and fills
+the registration reference/version from the selected record. Responsibility is
+chosen from its registered repositories. OOS rechecks current version and
+responsibility before accepting a new command; stale or unavailable registration
+cannot become success. Existing command replays retain their historical receipt.
+Workspace-entrant closeout uses the Registry's responsibility/check options;
+the server binds candidate correlation and provenance to the exact closeout
+command and reviewed revision. Users do not manufacture internal references.
 
 An uncertain PI-review response retains the original target and locks another
 write. `Read current target` verifies the same earned fields; an unresolved read
@@ -390,3 +480,54 @@ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types -
 npm run architecture:delivery
 npm run check
 ```
+
+
+## Execution routing, resumption and closeout
+
+OOS supplies read-only `execution_navigation` from current ART facts. Native
+New remains New in ART; prepared work is routed into Execution for inspection,
+without an automatic status transition or permission to start. Open packages
+with completed or retired executable children stay visible for closeout.
+**Closeout Pending** means review the remaining parent work, evidence and gates;
+it does not certify completion. Unfinished planning scope stays available in
+Refinement alongside execution already underway. No historical receipt is
+invented for older records.
+
+The normal Execution board omits an empty New lane. During a mixed-version
+rollout it retains any real New records rather than hiding them. Other boards
+keep their existing lane policy. Source sessions are read from existing OOS
+custody, scoped to the authenticated caller. A recorded session keeps open work
+visible even when ART status has not changed; open it for current progress and
+permissions. The overview does not perform Git or provider inspection per item.
+
+Choose Work Item lists saved sessions first, then active ART work and prepared
+candidates. No item is selected or started automatically. Dependencies and
+blocker details are attached to their exact work item. A child blocker is never
+presented as a blocker recorded on the package itself. The owner preflight
+continues checking exact source coverage and dependency legality.
+
+The session follows known owner actions: retry retained partial Landing Unit
+closeout, continue to remaining work, review package closeout, rebuild an
+eligible session binding, or review superseded-session archival. Archival
+requires an explicit reason and binds the already reviewed session/source/PR
+facts; users do not transcribe Git hashes. Retries retain the exact command
+identity and payload. Archival preserves evidence and does not close ART work.
+Human PR review opens the current PR in a new tab. It never auto-approves it.
+Unknown next actions remain explicitly unresolved and are not executable shell
+commands.
+
+Confirmed source, non-source, Refinement and closeout effects refresh connected
+Delivery views. A verified read after an uncertain result also refreshes the
+board while preserving the original command for safe retry. No refresh is
+triggered merely by opening a dialog. The board retains last verified rows with
+stale status if that refresh fails; a successful command is not fabricated.
+Application preview/runtime integration remains separate from these workflow
+repairs.
+
+
+Choose Work Item opens the existing picker and execution review; it does not run
+a separate requirement check. In the selected package, the button appears in
+Next Action when that is the current move, otherwise once in Manage Package.
+Technical Plan remains a separate inspection/planning entry. For a blocked
+package, address the stated blocker before trying to start work. Requirement
+results come from the existing work-start review, not from opening the picker.

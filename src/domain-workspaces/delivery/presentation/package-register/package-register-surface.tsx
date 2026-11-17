@@ -38,6 +38,7 @@ import type { DeliveryPackageRegisterPackage } from "./package-register-types.ts
 import { DeliveryPackageWorkflowRouter } from "./package-workflow-router.tsx";
 import { DeliveryPackageRegisterTable } from "./package-register-table.tsx";
 import { DeliveryPackageRegisterSelectedPanel } from "./package-register-selected-panel.tsx";
+import { useProjectContextChoices } from "@/agent-console";
 
 export function DeliveryPackageRegisterSurface({
   focusPackageId,
@@ -45,6 +46,7 @@ export function DeliveryPackageRegisterSurface({
   model,
   onRequestPackageRegisterFocus,
   onWorkDesignApplied,
+  onCanonicalChanged,
   surface,
 }: {
   focusPackageId?: string | null;
@@ -58,6 +60,7 @@ export function DeliveryPackageRegisterSurface({
     deliveryPackage: DeliveryPackageSummary,
     record: WorkDesignApplyReceipt,
   ) => void;
+  onCanonicalChanged?: () => Promise<void>;
   surface: DeliverySurfaceConfig;
 }) {
   const [packageAction, setPackageAction] =
@@ -138,6 +141,8 @@ export function DeliveryPackageRegisterSurface({
   const focusedOriginal=page.original?.packages[0];
   const selectedOriginal=focusedOriginal&&selectedPackageId===focusedOriginal.delivery_package_id?projectDeliveryPackageRegisterPackage(surface,focusedOriginal,model.history_scope==="history"?null:loadWorkDesignSessionDraft(focusedOriginal.delivery_package_id)):null;
   const displayedPackage=selectedOriginal??selectedPackage;
+  useProjectContextChoices(live && displayedPackage && !page.error
+    ? [{ kind: "delivery", id: displayedPackage.delivery_package_id, title: displayedPackage.display_name }] : []);
   const packageActionSummary = displayedPackage
     ? packageActionForSurface(surface, displayedPackage)
     : null;
@@ -258,6 +263,7 @@ export function DeliveryPackageRegisterSurface({
           if(live)void page.refresh();
         }}
         onWorkDesignApplied={onWorkDesignApplied}
+      onCanonicalChanged={onCanonicalChanged}
         packageAction={packageAction}
       />
     </>

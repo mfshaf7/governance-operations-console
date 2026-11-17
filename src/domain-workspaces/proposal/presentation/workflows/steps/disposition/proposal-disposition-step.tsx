@@ -4,7 +4,7 @@ import { proposalWorkflowTextLimit } from "../../../../work-model/proposal-text-
 
 import { useProposalExistingRepositories } from "../../../../../operation-integrations/use-proposal-existing-repositories.ts";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useDraftAdvisor } from "@/agent-console";
+import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 
 import {
   TerasAdvisorPanel,
@@ -266,12 +266,20 @@ export function ProposalDispositionStep({
   }
 
   const advisor = useDraftAdvisor({
+    conversation: { role: "proposal-disposition", ref: proposal.id, sourceRef: proposal.backendRecordId, sourceRevision: proposal.recordVersion },
     disabled: dispositionCompleted,
     getScope: () => ({ role: "proposal-disposition", ref: proposal.id, sourceRef: proposal.backendRecordId,
       sourceRevision: proposal.recordVersion,
-      context: JSON.stringify({ title: proposal.title, body: proposal.bodyPreview, status: proposal.status,
+      context: advisorWorkContext({ title: proposal.title, body: proposal.bodyPreview, status: proposal.status,
+        recordedTriage: proposal.recordedTriage ?? null,
         selectedOutcome: decisionDraft.outcome, selectedRoute: routeSelectionDraft.routeTarget,
-        boundary: "Outcome and route are operator decisions; only their explanatory drafts are editable." }),
+        projectionState: proposal.projectionState, handoffRule: proposal.handoffRule,
+        repositoryGate: proposal.repoGate, sourceCustody: { mode: routeSelectionDraft.repoMode, ref: routeSelectionDraft.repoRef, account: routeSelectionDraft.repoOwner },
+        checks: { canApply, routeSupportsRepository, routeHasRepositoryGate, repositoryChoicesCurrent: repositories.ready }, evidence: proposal.evidence,
+        boundary: "Outcome and route are operator decisions; only their explanatory drafts are editable." },
+        { provided: ["Selected proposal and outcome/route/custody choices", "Current workflow and repository-gate checks", "Owner-projected evidence",
+            ...(proposal.recordedTriage ? ["Recorded triage summary with source version; separate from current decision drafts"] : [])],
+          unavailable: [...(proposal.recordedTriage ? [] : ["Recorded triage summary"]), "Repository file contents", "Target implementation or runtime proof beyond supplied evidence"] }),
       fields: [{ key: "notes", label: "Decision notes", value: decisionDraft.notes, maxLength: proposalWorkflowTextLimit },
         ...(accepting ? [{ key: "rationale", label: "Route rationale", value: routeSelectionDraft.rationale, maxLength: proposalWorkflowTextLimit }] : [])] }),
     apply: (edits) => {

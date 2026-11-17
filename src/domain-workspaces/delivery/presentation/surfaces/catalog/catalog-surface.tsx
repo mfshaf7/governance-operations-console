@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 
 import type { DeliveryReadModel } from "../../../read-model/index.ts";
 import type { CatalogDeliveryLinkTarget } from "../../../live-runtime/catalog-live-types.ts";
@@ -11,6 +12,7 @@ import { CatalogRepositoryLinkDialog } from "./catalog-repository-link-dialog.ts
 import { CatalogSelectorPanel } from "./catalog-selector-panel.tsx";
 import { CatalogValuesPanel } from "./catalog-values-panel.tsx";
 import { useCatalogControlState } from "./use-catalog-control-state.ts";
+import { CatalogMembershipDialog } from "./catalog-membership-dialog.tsx";
 
 export function DeliveryCatalogSurface({
   deliveryLinkTarget = null,
@@ -21,6 +23,7 @@ export function DeliveryCatalogSurface({
   model: DeliveryReadModel;
   repositoryFocusId?: string | null;
 }) {
+  const [membersOpen, setMembersOpen] = useState(false);
   const catalogState = useCatalogControlState(
     model,
     deliveryLinkTarget,
@@ -47,8 +50,12 @@ export function DeliveryCatalogSurface({
           canMutate={catalogState.canMutateActiveCatalog}
           canRetire={catalogState.canRetireCatalogValue}
           catalogValues={catalogState.catalogValues}
-          emptyMessage={catalogState.projectionError ?? undefined}
+          emptyMessage={catalogState.projectionError ?? (catalogState.runtimeStatus === "stale" ? "Catalog values need a fresh read before changes can be made." : undefined)}
+          loading={catalogState.loading}
+          recoveryRequired={catalogState.recoveryRequired}
+          onRetry={catalogState.refresh}
           onAdd={catalogState.openAddDraft}
+          onManageMembers={() => setMembersOpen(true)}
           onEdit={catalogState.openEditDraft}
           onRetire={catalogState.openRetireDraft}
           onSearchChange={catalogState.setSearch}
@@ -60,6 +67,7 @@ export function DeliveryCatalogSurface({
       }
       inspector={
         <CatalogInspectorPanel
+          preview={catalogState.runtimeMode === "disconnected-preview"}
           activeCatalog={catalogState.activeCatalog}
           canEditSelectedValue={catalogState.canEditSelectedValue}
           canRetireSelectedValue={catalogState.canRetireSelectedValue}
@@ -76,11 +84,13 @@ export function DeliveryCatalogSurface({
         />
       }
     >
+      <CatalogMembershipDialog open={membersOpen} preview={catalogState.runtimeMode === "disconnected-preview"} onClose={() => setMembersOpen(false)} onApplied={catalogState.refresh}/>
       <CatalogMutationDialog
         catalog={catalogState.activeCatalog}
         catalogValues={catalogState.catalogValues}
         mode={catalogState.mutationDraft?.mode ?? null}
         mutationError={catalogState.mutationError}
+        recoveryRequired={catalogState.recoveryRequired}
         onClose={catalogState.closeMutationDraft}
         onSubmit={catalogState.submitCatalogDraft}
         open={Boolean(catalogState.mutationDraft)}

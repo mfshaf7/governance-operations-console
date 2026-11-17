@@ -1,5 +1,6 @@
 "use client";
 import { useWorkspaceViewState } from "../../../../../console-integration/registers/workspace-view-state.ts";
+import { useProjectContextChoices } from "@/agent-console";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -45,6 +46,7 @@ import {
   type ExecutionActionSubmission,
 } from "./action-session/use-execution-action-session.ts";
 import { ExecutionSelectedPackagePanel } from "./execution-selected-package-panel.tsx";
+import type { ExecutionWorkFilter } from "../../../work-model/execution/execution-package-content.ts";
 import {
   executionTreeDraftFromArtNode,
   executionTreeDraftFromChangeNode,
@@ -83,7 +85,9 @@ import {
 } from "../../../work-model/execution/execution-change-operation.ts";
 import { ExecutionCloseoutModal } from "./action-session/closeout/execution-closeout-modal.tsx";
 import type { CatalogDeliveryLinkTarget } from "../../../live-runtime/catalog-live-types.ts";
+import { technicalPlanRequirement } from "../../../work-model/execution/technical-plan-requirement.ts";
 import { ArchitecturePacketAuthoringModal } from "./architecture-packet/architecture-packet-authoring-modal.tsx";
+import { executionReviewActions } from "../../../work-model/execution/execution-review-actions.ts";
 
 export type ExecutionTreeEditState = {
   active: boolean;
@@ -97,12 +101,14 @@ export function DeliveryExecutionBoard({
   onOpenCatalog,
   onTreeEditStateChange,
   showIntro = true,
+  onCanonicalChanged,
 }: {
   focusPackageId?: string | null;
   model: DeliveryReadModel;
   onOpenCatalog?: (target: CatalogDeliveryLinkTarget | null) => void;
   onTreeEditStateChange?: (state: ExecutionTreeEditState) => void;
   showIntro?: boolean;
+  onCanonicalChanged?: () => Promise<void>;
 }) {
   const readOnly = model.history_scope === "history";
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -151,6 +157,16 @@ export function DeliveryExecutionBoard({
     useState(false);
   const [closeoutOpen, setCloseoutOpen] = useState(false);
   const [architecturePacketOpen, setArchitecturePacketOpen] = useState(false);
+  const [workItemEntryId, setWorkItemEntryId] = useState<number | null>(null);
+  const [workItemFilter, setWorkItemFilter] = useState<ExecutionWorkFilter>("all");
+  const [workItemPackageId, setWorkItemPackageId] = useState<string | null>(null);
+  const workItemPackage = workItemPackageId ? model.packages.find(item => item.delivery_package_id === workItemPackageId) : null;
+  const workItemTree = workItemPackageId ? getPackageTree(workItemPackageId, model) : null;
+  function closeWorkItemPicker() { setWorkSessionTargetDialogOpen(false); setWorkItemFilter("all"); setWorkItemPackageId(null); }
+  function browsePackageWork(status: ExecutionWorkFilter = "all") {
+    setWorkItemEntryId(null); setWorkItemPackageId(selectedPackage?.delivery_package_id ?? null); setWorkItemFilter(status); setWorkSessionTargetDialogOpen(true);
+  }
+  const [actionReviewRevision, setActionReviewRevision] = useState<string | null>(null);
 
   useEffect(() => {
     if (
@@ -174,6 +190,8 @@ export function DeliveryExecutionBoard({
     [model],
   );
   const selectedPackage = getExecutionBoardSelectedPackage(selectedPackageId, model);
+  useProjectContextChoices(model.source_truth === "OpenProject-backed OOS" && selectedPackage
+    ? [{ kind: "delivery", id: selectedPackage.delivery_package_id, title: selectedPackage.display_name }] : []);
   const selectedDetails = selectedPackage
     ? getPackageDetailsById(selectedPackage.delivery_package_id, model)
     : null;
@@ -185,6 +203,7 @@ export function DeliveryExecutionBoard({
   );
   const deliveryCloseoutRuntime = useDeliveryCloseoutLiveRuntime(
     !readOnly && closeoutOpen ? (selectedPackage?.legacy_epic_id ?? null) : null,
+    onCanonicalChanged,
   );
   const submitLiveExecutionAction = useCallback(
     async (submission: ExecutionActionSubmission) => {
@@ -205,20 +224,22 @@ export function DeliveryExecutionBoard({
           submission.action,
           submission.applyIntent,
         ),
+        submission.applyIntent.source_revision,
       );
-      if (!result) return null;
+      if (!result) throw new Error("The live owner did not return an action result. No local receipt was created.");
       if (result.status !== "applied" && result.status !== "routed") {
         throw new Error(
           `${result.next_action.label}: the Delivery change was ${result.status.replaceAll("_", " ")}.`,
         );
       }
+      await onCanonicalChanged?.();
       return executionActionReceiptFromDeliveryChange({
         ...submission,
         packageId: submission.packageSummary.delivery_package_id,
         result,
       });
     },
-    [deliveryChangeRuntime.apply, deliveryChangeRuntime.mode, readOnly],
+    [deliveryChangeRuntime.apply, deliveryChangeRuntime.mode, readOnly, onCanonicalChanged],
   );
   const actionSession = useExecutionActionSession({
     submitLive: submitLiveExecutionAction,
@@ -291,7 +312,9 @@ export function DeliveryExecutionBoard({
     };
   }, [onTreeEditStateChange]);
   const selectedActions = selectedPackage
-    ? getAvailableActions(selectedPackage.delivery_package_id, model)
+    ? model.source_truth === "OpenProject-backed OOS"
+      ? executionReviewActions(deliveryChangeRuntime.projection, selectedPackage)
+      : getAvailableActions(selectedPackage.delivery_package_id, model)
     : [];
   const selectedStartIntent = selectedPackage
     ? model.apply_intents.find(
@@ -302,7 +325,10 @@ export function DeliveryExecutionBoard({
     : null;
   const selectedWorkItemId = selectedStartIntent?.target_work_item_id ?? null;
   const workSessionRuntime =
-    useDeliveryWorkSessionLiveRuntime(readOnly ? null : workSessionTarget?.workItemId ?? null);
+    useDeliveryWorkSessionLiveRuntime(readOnly ? null : workSessionTarget?.workItemId ?? null, onCanonicalChanged);
+
+  const planRequirement = technicalPlanRequirement({deliveryId:selectedPackage?.legacy_epic_id ? `delivery-${selectedPackage.legacy_epic_id}` : "",projection:workSessionRuntime.projection,
+    workItemId:workSessionTarget?.workItemId,available:model.source_truth === "OpenProject-backed OOS" && !workSessionRuntime.projectionError && workSessionRuntime.projectionStatus !== "offline"});
 
   useEffect(() => {
     if (
@@ -361,14 +387,7 @@ export function DeliveryExecutionBoard({
       <TerasActionButton
         disabled={readOnly || Boolean(treeEditActive)}
         emphasis="secondary"
-        onClick={() => setArchitecturePacketOpen(true)}
-      >
-        Architecture Packet
-      </TerasActionButton>
-      <TerasActionButton
-        disabled={readOnly || Boolean(treeEditActive)}
-        emphasis="secondary"
-        onClick={() => setWorkSessionTargetDialogOpen(true)}
+        onClick={() => { setWorkItemEntryId(null); setWorkSessionTargetDialogOpen(true); }}
       >
         Open Work Item
       </TerasActionButton>
@@ -484,13 +503,16 @@ export function DeliveryExecutionBoard({
   async function handleActionSelect(action: DeliveryAvailableAction) {
     if (readOnly) return;
     if (action.action_type === "sync-owner-repo") {
+      const repositoryIntent = selectedPackage ? model.apply_intents.find(intent =>
+        intent.delivery_package_id === selectedPackage.delivery_package_id && intent.action_type === action.action_type) : null;
+      const repositoryTargetId = repositoryIntent?.target_work_item_id ?? selectedPackage?.legacy_epic_id;
       if (onOpenCatalog) {
         onOpenCatalog(
-          selectedPackage?.legacy_epic_id && selectedWorkItemId
+          selectedPackage?.legacy_epic_id && repositoryTargetId
             ? {
                 deliveryId: String(selectedPackage.legacy_epic_id),
                 packageLabel: selectedPackage.display_name,
-                workItemId: `work-item-${selectedWorkItemId}`,
+                workItemId: `work-item-${repositoryTargetId}`,
               }
             : null,
         );
@@ -532,6 +554,7 @@ export function DeliveryExecutionBoard({
       return;
     }
 
+    setActionReviewRevision(deliveryChangeRuntime.projection?.source_revision ?? null);
     actionSession.openAction(action);
   }
 
@@ -653,13 +676,14 @@ export function DeliveryExecutionBoard({
         <ControlBoardView
           packages={boardPackages}
           postureTerms={deliveryControlBoardPostureTerms}
+          hiddenEmptyPostures={["New"]}
           selectedPackageId={selectedPackage?.delivery_package_id ?? null}
           onSelectPackage={handleSelectedPackageChange}
         />
       ) : null}
       {activeView === "family-map" ? (
         <ControlBoardFamilyMapView
-          familyGroups={deliveryControlBoardFamilyGroups}
+          familyGroups={deliveryControlBoardFamilyGroups(model, packages)}
           packages={boardPackages}
           postureTerms={deliveryControlBoardPostureTerms}
           selectedPackageId={selectedPackage?.delivery_package_id ?? null}
@@ -683,7 +707,11 @@ export function DeliveryExecutionBoard({
             tree={treeEditActive}
           />
         ) : (
-          readOnly && !selectedBoardTreeWithDraft ? historyTreeRead.error || deliveryChangeRuntime.projectionError ? <TerasEmptyState>{historyTreeRead.error ?? deliveryChangeRuntime.projectionError}</TerasEmptyState> : deliveryChangeRuntime.loading ? <TerasLoadingState label="Loading selected work tree…" skeleton="details" /> : <TerasEmptyState>No verified work tree is available for this item.</TerasEmptyState> : <ControlBoardArtTreeView tree={selectedBoardTreeWithDraft} />
+          readOnly && !selectedBoardTreeWithDraft ? historyTreeRead.error || deliveryChangeRuntime.projectionError ? <TerasEmptyState>{historyTreeRead.error ?? deliveryChangeRuntime.projectionError}</TerasEmptyState> : deliveryChangeRuntime.loading ? <TerasLoadingState label="Loading selected work tree…" skeleton="details" /> : <TerasEmptyState>No verified work tree is available for this item.</TerasEmptyState> : <ControlBoardArtTreeView tree={selectedBoardTreeWithDraft}
+            onOpenWorkItem={!readOnly ? (node) => {
+              const id = node.workItemId;
+              if (id && Number.isSafeInteger(id) && id > 0) { setWorkItemEntryId(id); setWorkSessionTargetDialogOpen(true); }
+            } : undefined} />
         )
       ) : null}
     </>
@@ -691,6 +719,7 @@ export function DeliveryExecutionBoard({
   const selectedContent =
     selectedPackage && treeEditActive && selectedTreeEditNode ? (
       <ExecutionTreeEditSupportPanel
+        sourceTree={treeDraftBaseline}
         disabled={treeChangeSubmitting || treeChangeReviewOpen}
         onUpdateText={(values) => handleTreeDraftChange(updateExecutionTreeNode(
           treeEditActive, selectedTreeEditNode.id, (node) => ({ ...node, ...values }),
@@ -706,9 +735,18 @@ export function DeliveryExecutionBoard({
       />
     ) : selectedPackage ? (
       <ExecutionSelectedPackagePanel
+        onInspectTechnicalPlan={() => setArchitecturePacketOpen(true)}
+        technicalPlanRequirement={readOnly ? undefined : planRequirement}
+        live={model.source_truth === "OpenProject-backed OOS"}
+        actionLoading={deliveryChangeRuntime.loading}
+        actionError={deliveryChangeRuntime.projectionError}
+        onChooseWorkItem={!readOnly ? browsePackageWork : undefined}
+        onBrowseWorkItems={browsePackageWork}
         readOnly={readOnly}
         onInspectHistory={model.source_truth === "OpenProject-backed OOS" ? () => setHistoryOpen(true) : undefined}
-        historyDetail={ownerHistory.loading?"Reading selected-item history…":ownerHistory.error??ownerHistory.projection?.activity?.detail??"Only the currently loaded evidence is shown. Open Original Source evidence for item activity and coverage."}
+        historyLoading={ownerHistory.loading}
+        historyError={ownerHistory.error}
+        historyDetail={ownerHistory.projection?.activity?.detail ?? (ownerHistory.projection ? "Latest loaded event. Open Original source evidence for activity and coverage." : undefined)}
         onInspectCloseout={!readOnly && model.source_truth === "OpenProject-backed OOS"
           ? () => setCloseoutOpen(true) : undefined}
         onEditCanonicalTree={
@@ -762,6 +800,7 @@ export function DeliveryExecutionBoard({
             actionSession.canSubmit &&
             (deliveryChangeRuntime.mode === "disconnected-preview" ||
               (deliveryChangeRuntime.mode === "live" &&
+                Boolean(actionReviewRevision) &&
                 deliveryChangeRuntime.projectionStatus === "current" &&
                 Boolean(deliveryChangeRuntime.projection)))
           }
@@ -776,7 +815,7 @@ export function DeliveryExecutionBoard({
           receipt={actionSession.receipt}
           sourceRevision={
             deliveryChangeRuntime.mode === "live"
-              ? deliveryChangeRuntime.projection?.source_revision
+              ? actionReviewRevision ?? undefined
               : undefined
           }
           submitting={actionSession.applying}
@@ -784,6 +823,18 @@ export function DeliveryExecutionBoard({
       ) : null}
       {!readOnly && workSessionTarget && workSessionOpen ? (
         <ExecutionWorkSessionModal
+          onNavigate={(destination, deliveryId, requiredWorkId) => {
+            const item = model.packages.find(item => item.delivery_package_id === deliveryId);
+            if (!item) { setTreeEditEntryError("The session package is not loaded. Refresh the Delivery workspace before following this action."); return; }
+            setWorkSessionOpen(false); setSelectedPackageId(item.delivery_package_id);
+            if (destination === "closeout") setCloseoutOpen(true);
+            else if (destination === "architecture") { setWorkItemEntryId(workSessionTarget.workItemId); setArchitecturePacketOpen(true); }
+            else {
+              let scope: string | null = item.delivery_package_id;
+              if (requiredWorkId) { try { scope = executionInspectionPackage(requiredWorkId, model).delivery_package_id; } catch { scope = null; } }
+              setWorkItemPackageId(scope); setWorkItemFilter("all"); setWorkItemEntryId(requiredWorkId ?? null); setWorkSessionTargetDialogOpen(true);
+            }
+          }}
           onClose={() => {
             setWorkSessionOpen(false);
             setWorkSessionTarget(null);
@@ -792,37 +843,58 @@ export function DeliveryExecutionBoard({
           target={workSessionTarget}
         />
       ) : null}
-      {!readOnly && architecturePacketOpen ? (
+      {selectedPackage && architecturePacketOpen ? (
         <ArchitecturePacketAuthoringModal
+          requirement={planRequirement}
+          onChooseWorkItem={!readOnly ? () => {setArchitecturePacketOpen(false);browsePackageWork("all");} : undefined}
+          sourceContext={deliveryChangeRuntime.projection?.delivery_id === selectedPackage.delivery_package_id && deliveryChangeRuntime.projection.package.execution_tree.id === selectedPackage.legacy_epic_id && !deliveryChangeRuntime.projectionError ? { tree: deliveryChangeRuntime.projection.package.execution_tree, revision: deliveryChangeRuntime.projection.source_revision } : undefined}
+          key={selectedPackage.delivery_package_id}
+          readOnly={readOnly}
+          onCanonicalChanged={onCanonicalChanged}
+          model={model}
           defaultDeliveryId={
             selectedPackage?.legacy_epic_id
               ? `delivery-${selectedPackage.legacy_epic_id}`
               : null
           }
-          defaultWorkItemId={selectedWorkItemId}
-          onClose={() => setArchitecturePacketOpen(false)}
+          defaultWorkItemId={workItemEntryId ?? selectedWorkItemId}
+          onClose={() => { setArchitecturePacketOpen(false); if (workSessionTarget) void workSessionRuntime.refresh().catch(() => undefined); }}
         />
       ) : null}
       <ExecutionWorkSessionTargetDialog
+        sessionWorkIds={[...new Set((workItemPackage ? [workItemPackage] : model.packages).flatMap(item => item.work_sessions?.flatMap(session => session.work_item_ids.map(id => Number(id.replace("work-item-", "")))) ?? []))]}
+        activeWorkIds={(workItemPackage ? [workItemPackage] : model.packages).flatMap(item => item.execution_navigation?.active_work_item_ids ?? [])}
+        preparedWorkIds={(workItemPackage ? [workItemPackage] : model.packages).flatMap(item => item.execution_navigation?.prepared_work_item_ids ?? [])}
+        defaultWorkItemId={workItemEntryId}
+        items={workItemPackageId ? (workItemTree ? [workItemTree] : []) : model.art_tree.roots}
+        initialStatus={workItemFilter}
+        scopeLabel={workItemPackage?.display_name}
+        readOnly={readOnly}
         onCompleteTarget={model.source_truth === "OpenProject-backed OOS" ? (workItemId) => {
-          setWorkSessionTargetDialogOpen(false);
+          closeWorkItemPicker();
           setCompletionTarget(workItemId);
         } : undefined}
-        onInspectTarget={model.source_truth === "OpenProject-backed OOS" ? (workItemId) => {
+        onInspectTarget={model.source_truth === "OpenProject-backed OOS" || workItemPackageId ? (workItemId) => {
           const target = executionInspectionPackage(workItemId, model);
           handleSelectedPackageChange(target.delivery_package_id);
           setActiveView("art-tree");
-          setWorkSessionTargetDialogOpen(false);
+          closeWorkItemPicker();
         } : undefined}
-        onClose={() => setWorkSessionTargetDialogOpen(false)}
+        onClose={closeWorkItemPicker}
         onOpenTarget={(workItemId) => {
-          setWorkSessionTarget(directExecutionWorkSessionTarget(workItemId));
-          setWorkSessionTargetDialogOpen(false);
+          setWorkSessionTarget(directExecutionWorkSessionTarget(workItemId, model));
+          closeWorkItemPicker();
           setWorkSessionOpen(true);
         }}
         open={workSessionTargetDialogOpen}
       />
-      {!readOnly && completionTarget !== null ? <ExecutionItemCompletionModal workItemId={completionTarget} onClose={() => setCompletionTarget(null)} /> : null}
+      {!readOnly && completionTarget !== null ? <ExecutionItemCompletionModal workItemId={completionTarget} onClose={() => setCompletionTarget(null)}
+        onCanonicalChanged={onCanonicalChanged}
+        onOpenSourceSession={() => {
+          if (completionTarget === null) return;
+          setWorkSessionTarget(directExecutionWorkSessionTarget(completionTarget, model));
+          setCompletionTarget(null); setWorkSessionOpen(true);
+        }} /> : null}
       {!readOnly && selectedPackage && closeoutOpen ? (
         <ExecutionCloseoutModal
           onClose={() => setCloseoutOpen(false)}

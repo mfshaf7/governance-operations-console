@@ -24,7 +24,7 @@ export function projectDeliveryIntakeHistory(model: DeliveryReadModel, records: 
 }
 
 export function deliveryModelForScope(model:DeliveryReadModel,scope:"current"|"history"):DeliveryReadModel{
-  const packages=scope==="history"?model.packages:model.packages.filter(p=>!["done","retired","parked"].includes(p.backend_status));
+  const packages=scope==="history"?model.packages:model.packages.filter(p=>!["done","retired"].includes(p.backend_status));
   const ids=new Set(packages.map(p=>p.delivery_package_id));
   return {...model,history_scope:scope,packages,selected_packages:model.selected_packages.filter(p=>ids.has(p.delivery_package_id)),
     selected_delivery_package_id:ids.has(model.selected_delivery_package_id)?model.selected_delivery_package_id:packages[0]?.delivery_package_id??"",

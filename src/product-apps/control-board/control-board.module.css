@@ -41,7 +41,7 @@
   scrollbar-width: thin;
 }
 
-.controlBoardMainPane {
+.controlBoardWorkspace .controlBoardMainPane {
   border-color: rgba(255, 240, 216, 0.34);
   background:
     linear-gradient(rgba(9, 11, 15, 0.035) 1px, transparent 1px),
@@ -60,7 +60,7 @@
     0 18px 42px rgba(0, 0, 0, 0.18);
 }
 
-.controlBoardMainPaneDark {
+.controlBoardWorkspace .controlBoardMainPaneDark {
   border-color: rgba(255, 240, 216, 0.18);
   background:
     linear-gradient(180deg, rgba(255, 247, 231, 0.035), rgba(255, 255, 255, 0.012)),
@@ -415,6 +415,14 @@
 .controlBoardTreeToolbar {
   display: flex;
   justify-content: flex-end;
+}
+
+.controlBoardTreeBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.34rem;
 }
 
 @media (max-width: 1180px) {

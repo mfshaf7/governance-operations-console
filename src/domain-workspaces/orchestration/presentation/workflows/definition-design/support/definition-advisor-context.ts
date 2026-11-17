@@ -3,6 +3,26 @@ import type {
   OrchestrationDefinitionDesignDraft,
 } from "../../../../work-model/definition-design/definition-design-types.ts";
 import { definitionDesignSectionLabel } from "../definition-design-view-model.ts";
+import { advisorWorkContext } from "../../../../../../agent-console/model/advisor-drafts.ts";
+import type { OrchestrationDefinitionRecord } from "../../../../domain/orchestration-definition-types.ts";
+import { orchestrationDefinitionDesignReadiness } from "../../../../work-model/definition-design/definition-design-model.ts";
+
+export function definitionAdvisorWorkContext(draft: OrchestrationDefinitionDesignDraft,
+  selectedNodeId: string, definitions: OrchestrationDefinitionRecord[]) {
+  return advisorWorkContext({ draft, selectedNodeId,
+    qualificationAndDefinitionChecks: orchestrationDefinitionDesignReadiness(draft),
+    definitionExamples: definitions.map(record => ({ id: record.id, version: record.version,
+      purpose: record.purpose, sourceDomain: record.sourceDomain, sourceRecordType: record.sourceRecordType,
+      lifecycle: record.lifecycle, startAllowed: record.startAllowed,
+      source: { authority: record.source.authority, freshness: record.source.freshness,
+        mode: record.source.mode, ref: record.source.ref, version: record.source.sourceVersion },
+      admissionChecks: record.admissionChecks.map(({ id, state, detail, evidenceRefs }) => ({ id, state, detail, evidenceRefs })),
+      nodes: record.executionNodes.map(({ id, label, type, adapter, owner, dependencies, inputRefs, outputRefs }) =>
+        ({ id, label, type, adapter, owner, dependencies, inputRefs, outputRefs })) })),
+    boundary: "Local definition drafting only. Supplied definitions are scoped examples, not a universal adapter registry. Qualification acceptance, approval, admission and request routing are operator decisions." },
+    { provided: ["Current definition and qualification inputs", "Current form validation findings", "Supplied owner-projected definition examples with their source mode, freshness and admission state"],
+      unavailable: ["Other activity implementations or repository contents", "Activation of a new definition", "Unprovided proof of a proposed adapter"] });
+}
 
 export type DefinitionAdvisorTranscriptLine = {
   id: string;

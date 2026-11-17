@@ -12,6 +12,30 @@ draft presentation, same-origin routing, and strict response validation.
 
 ## Context Session: understand the system
 
+### Multiple diagrams — approved preview batch
+
+One Context Brief can contain ordered named diagrams. Use **Add diagram** for a
+new view; **Diagram details** changes its name, type and architectural explanation,
+duplicates it, reorders it or explicitly deletes it. Selecting a diagram is
+navigation, including in read-only history. It does not accept, stale or finalize
+the architectural content. Each view reuses the existing canvas and diagram tools.
+
+The shared Context note explains the overall system. Individual descriptions
+explain the scope, interactions, evidence and open questions of their view.
+Save Session and Finalize Brief cover the complete diagram collection, rather
+than just the visible canvas. Existing single-board records remain readable with
+their original saved content and finalized fingerprints. No migration rewrites
+historical finalized versions.
+
+Advisor edits bind to the selected diagram and its exact captured local draft.
+The advisor receives the overall note, the selected view and an index of other
+views; the index is not evidence of their contents. Selecting a different view
+while a request is running prevents the old reply from changing the new view.
+Question-only requests remain non-mutating. Final decisions stay explicit.
+
+This batch is local source/preview work pending operator visual review and exact
+backend/provider qualification; it is not a claim that live already runs it.
+
 The existing advisor draft scope supplies canonical board card choices even when
 the canvas is empty. Those choices and the draft validator use the same model
 vocabulary. Unsupported kinds remain rejected atomically, preserving the note
@@ -152,6 +176,25 @@ Still separate:
 - platform deployment and security acceptance
 
 ## Validation
+
+In the approved unpublished advisor repair, Context advice receives the selected
+architectural view, its actual canvas and an index of other views. That index is
+not treated as loaded diagram contents. Build Tree receives semantic multi-view
+architecture, the finalized brief binding, actual draft tree and owner-defined
+scaffold sections/field ownership. OOS supplies the corresponding Context or
+Build Tree work guide. Architectural understanding, proposed work and missing
+evidence remain distinct; a task checklist does not substitute for architecture.
+CGG rejects shortened editable draft context before issuing a ready projection.
+The existing source/session, transaction and explicit acceptance checks remain.
+
+The same unpublished batch adds **Supporting diagrams** in the Context advisor.
+Choose relevant other views explicitly as read-only knowledge. Only the active
+view remains an editable board/name/description; supporting views cannot be
+changed through their inclusion. Unselected views remain an index, not loaded
+contents. Selection is request context, not a diagram edit or save. Current
+source/scope fingerprints include supplied support so later changes invalidate
+a stale proposal. The existing complete context budget refuses oversize input
+without cutting a view. Read-only history navigation remains separate from edits.
 
 Run:
 

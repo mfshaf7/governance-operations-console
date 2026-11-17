@@ -3,7 +3,7 @@
 import { proposalWorkflowTextLabel, proposalWorkflowTextLength, proposalWorkflowTextLimit } from "../../../../work-model/proposal-text-limits.ts";
 
 import { useRef, type FormEvent } from "react";
-import { useDraftAdvisor } from "@/agent-console";
+import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 
 import {
   TerasActionRow,
@@ -82,9 +82,14 @@ export function ProposalTriageStep({
   }
 
   const advisor = useDraftAdvisor({
+    conversation: { role: "proposal-triage", ref: proposal.id, sourceRef: proposal.backendRecordId, sourceRevision: proposal.recordVersion },
     disabled: triageLocked,
     getScope: () => ({ role: "proposal-triage", ref: proposal.id, sourceRef: proposal.backendRecordId,
-      sourceRevision: proposal.recordVersion, context: JSON.stringify({ title: proposal.title, body: proposal.bodyPreview, status: proposal.status }),
+      sourceRevision: proposal.recordVersion, context: advisorWorkContext({ title: proposal.title, body: proposal.bodyPreview, status: proposal.status,
+        stage: "triage", projectionState: proposal.projectionState,
+        handoffRule: proposal.handoffRule, evidence: proposal.evidence },
+        { provided: ["Selected proposal content and current source observations", "Editable summary"],
+          unavailable: ["Repository contents", "Unprovided business evidence or implementation results"] }),
       fields: [{ key: "summary", label: "Triage summary", value: draft.summary, maxLength: proposalWorkflowTextLimit }] }),
     apply: (edits) => {
       const summary = edits.find((edit) => edit.field === "summary");

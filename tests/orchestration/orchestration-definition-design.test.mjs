@@ -20,7 +20,24 @@ import {
 } from "../../src/domain-workspaces/orchestration/presentation/workflows/definition-design/definition-design-view-model.ts";
 import {
   createDefinitionAdvisorTurn,
+  definitionAdvisorWorkContext,
 } from "../../src/domain-workspaces/orchestration/presentation/workflows/definition-design/support/definition-advisor-context.ts";
+
+test("advisor qualification and capability context uses real checks and source state without refresh timestamp churn", () => {
+  const draft = createDefinitionDesignInitialDraft({ record: null, savedAt: "2026-07-16T12:00:00.000Z" });
+  const record = structuredClone(orchestrationDefinitionRecords.find(record => record.executionNodes.length && record.admissionChecks.length));
+  assert.ok(record);
+  record.source.mode = "live-authority"; record.source.freshness = "current";
+  const raw = definitionAdvisorWorkContext(draft, "", [record]), context = JSON.parse(raw);
+  assert.deepEqual(context.observations.qualificationAndDefinitionChecks, orchestrationDefinitionDesignReadiness(draft));
+  assert.equal(context.observations.definitionExamples[0].nodes[0].adapter, record.executionNodes[0].adapter);
+  assert.equal(context.observations.definitionExamples[0].source.version, record.source.sourceVersion);
+  assert.ok(context.coverage.unavailable.includes("Unprovided proof of a proposed adapter"));
+  record.source.observedAt = "2026-07-16T12:10:00.000Z";
+  assert.equal(definitionAdvisorWorkContext(draft, "", [record]), raw, "Equivalent polling observations must not invalidate a pending reply.");
+  record.admissionChecks[0].state = record.admissionChecks[0].state === "ready" ? "blocked" : "ready";
+  assert.notEqual(definitionAdvisorWorkContext(draft, "", [record]), raw, "An actual admission change must invalidate the captured context.");
+});
 
 test("definition design entry derives stable draft identity and lifecycle stage", () => {
   const candidate = orchestrationDefinitionRecords.find(

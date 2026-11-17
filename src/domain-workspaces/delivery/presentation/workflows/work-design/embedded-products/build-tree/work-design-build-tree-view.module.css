@@ -1,0 +1,3 @@
+.draftEditorFields[data-fill="middle"] {
+  min-height: clamp(24rem, 48vh, 34rem);
+}

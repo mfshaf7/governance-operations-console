@@ -87,11 +87,45 @@ current model/effort selection.
 For those advisors, `/api/advisor-interaction` verifies the operator session and
 submits the actual bounded local draft and response format as digest-bound CGG
 context through existing OOS sessions. It does not put raw draft bytes into the
-operator prompt. The provider returns inert advice text; strict product
-validation checks its intent, selected fields and complete board/tree transaction
-before a domain setter runs. Existing Work Design assist carries an optional
+operator prompt. In the approved unpublished advisor repair, the provider returns
+a native `draft_reply` with intent, message and typed edit payloads. OOS validates
+the native structure and selected fields before recording a usable result, then
+serializes it into the existing client envelope. Strict product validation checks
+the exact captured source and complete board/tree transaction before a domain
+setter runs. Existing Work Design assist carries an optional
 `draft_scope` through its own CGG path; no canonical command is added. Refinement
 uses its existing typed selected-field response, including answer-only `none`.
+
+The shared Agent Console repair covers Proposal triage and disposition,
+Prototype Candidate and Baseline drafting, Execution selected-node text,
+Work Design and Refinement blocker justifications, and Orchestration Definition
+drafting. Work Design Context and Build Tree use the dedicated Work Design route
+with the same native reply shape. Questions carry no edits; unavailable or
+malformed native replies leave the draft intact. An identical failed invocation
+replays its recorded failure without another model call. Source-editor assistance
+retains its separate structured file-edit protocol and explicit Ask/Edit modes.
+These changes remain in the preview batch pending publication and exact composed
+operating verification.
+
+The same batch closes workflow-knowledge gaps. OOS injects source-owned guides
+for each supported advisor, with canonical Prototype maturity requirements and
+registered Orchestration implementation examples where applicable. Console
+provides selected observations, current workflow checks and explicit context
+coverage. Proposal custody/handoff gates, Prototype boundary/evidence findings,
+Execution/blocker scope and Definition qualification findings are actual current
+workflow data, not invented readiness explanations. Loaded observations stay
+separate from unavailable implementation, diagnostics or decision evidence.
+
+References and another diagram's index do not supply their contents. Advisors
+do not inherit Codex chat, repository instructions, skills or unselected files.
+Relevant missing context must be identified when it could change advice; a small
+supported edit remains possible without unrelated documentation. The source
+editor asks the operator to select relevant architecture/interface/design files.
+Context beyond existing size limits is refused for narrowing, not silently cut.
+CGG/OOS completeness guards prevent shortened editable context reaching a model.
+Questions, draft edits, final decisions and canonical actions retain their
+existing separate controls. Conformance/browser tests prove the request wiring;
+real model judgment remains an explicit post-activation qualification step.
 
 Work Design scopes use the existing canonical Delivery identity adapter. A public
 register ID such as `delivery-1332` remains the local selection reference; the
@@ -125,6 +159,17 @@ still requires `gate:agent-console-operating-acceptance` and the Platform
 commissioning proof owned by work item #1246.
 
 ## Focus and Workspace
+
+In the approved unpublished continuity checkpoint, the OOS overview instruction
+also explains the product's workflow roles and handoffs. This orientation is
+separate from current operational availability. Proposal Disposition receives
+the owner-recorded triage summary and source version, separately from local
+decision drafts. Execution narrative advice receives the original selected-node
+and ancestor source narratives, separately from local edits and without sibling
+branches. Refinement's paired OOS/CGG path supplies canonical selected-item and
+ancestor narratives. Separate diagrams and proof contents are not loaded merely
+because a handoff contains their references. Conversation recovery and read-only
+supporting-file selection are implemented in the unpublished continuation described below.
 
 Workbench Focus reads the same current owner collections as Workspace, scoped
 to the selected domain. Its summary distinguishes retained Delivery history from
@@ -187,3 +232,54 @@ local preview on port 3320 with
 `npx playwright test tests/browser/agent-workspace.spec.mjs --workers=1`. Final commissioning also
 requires real Console interaction and OOS/CGG/model receipts on the accepted
 source revision; passing synthetic browser tests cannot establish that proof.
+
+The approved unpublished continuity extension supplies complete recent working
+turns on ordinary primary/docked/Home requests and native Refinement advice.
+Each operator/advisor/project/source binding restores private OOS saved input,
+with unsent text and inert pending markers. Restoration makes no model call and
+never applies a previous proposal. Current source facts override old discussion;
+separate primary/docked conversations do not become accepted project knowledge.
+Omitted earlier messages are reported; selected turns are never cut mid-text.
+
+Conversation status, explicit Retry, New conversation and server/browser conflict
+choices distinguish acknowledged storage from temporary input. A failed initial
+read blocks history-backed sending while preserving typed text; explicit current
+context only keeps the source/admission controls and clearly has no server save.
+New conversation is not deletion of canonical records or immutable model activity.
+Selected-project detail is described below. Security acceptance, publication and
+real-provider qualification remain pending; this source is not live activation.
+
+### Explicit selected-item context — unpublished maintenance
+
+Visit a live Proposal, Prototype or Delivery item, then select it under **Item
+context** in the primary or docked Agent. The last visited selection's ID/title
+stays available after its modal closes; content is not preloaded or automatically
+exported. Each Agent explicitly selects its own item. **Page overview** removes
+the attachment. Workspace mode retains the bounded overview; an active draft
+keeps its existing exact edit scope. Merely selecting a context makes no model call.
+
+Sending re-reads that exact item through the existing authenticated owner reader.
+The browser supplies only an allowlisted kind/identifier, never project contents,
+arbitrary URLs, identity or model permission. Proposal supplies its recorded body,
+triage and decision/handoff; Prototype its current projected candidate/baseline
+and issues; Delivery its summary/posture and projected Context Brief if present.
+These are bounded facts, not complete repository, diagram, proof or runtime reads.
+Oversized, unavailable, mismatched or secret-like detail fails before inference.
+Delivery selected reads cannot fall back to scanning the complete inventory.
+
+OOS receives the current source/revision/coverage in the digest-bound CGG packet.
+Any truncated selected detail or conversation prevents inference. Existing model
+and data permissions remain; item selection grants no workflow mutation. A reply
+shows the actual item revision and coverage readback. Primary, docked, Home and
+different project/mode contexts retain separate working conversations.
+
+History hydration preserves diagnostic command output issued while loading.
+Existing explicit open-and-run intent waits for its correctly scoped history;
+ordinary restoration issues no inference. Editing that queued prompt cancels the
+queued intent. In-flight advice retains its original context/conversation while
+the operator navigates; completion is saved there before the new scope restores.
+
+Isolated native browser requests prove selection, scope separation, readback,
+loading/recovery and presentation movement. Typed owner-reader tests prove exact
+IDs, current revision, unavailable/secret/budget denial and no global fallback.
+These checks do not establish live model judgment or composed Security acceptance.

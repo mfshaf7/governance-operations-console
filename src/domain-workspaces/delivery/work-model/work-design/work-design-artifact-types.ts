@@ -10,6 +10,7 @@ import type {
 } from "./work-design-types.ts";
 
 export type WorkDesignFinalizedBrief = {
+  diagramContext?: import("../../../../product-apps/context-board/context-board-model.ts").ContextBoardArchitectureView[];
   boardSnapshotRef: string;
   carriedMetadata: Array<{
     label: string;

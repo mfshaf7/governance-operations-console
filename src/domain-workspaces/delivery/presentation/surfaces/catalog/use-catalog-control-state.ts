@@ -10,12 +10,12 @@ import {
   getDeliveryCatalogRuntimeCapabilities,
   submitCatalogMutationCommand,
 } from "../../../local-runtime/commands/catalog-mutation-runtime.ts";
-import { useCatalogLiveRuntime } from "../../../live-runtime/use-catalog-live-runtime.ts";
+import { requestCatalogRepositoryReadiness, useCatalogLiveRuntime } from "../../../live-runtime/use-catalog-live-runtime.ts";
 import {
   catalogRepositoryReadiness,
   catalogUnavailableReadModel,
 } from "../../../live-runtime/catalog-live-contract.ts";
-import type { CatalogDeliveryLinkTarget } from "../../../live-runtime/catalog-live-types.ts";
+import type { CatalogDeliveryLinkTarget, CatalogRepositoryReadiness } from "../../../live-runtime/catalog-live-types.ts";
 import { useDeliveryChangeLiveRuntime } from "../../../live-runtime/use-delivery-change-live-runtime.ts";
 import type { DeliveryChangeResult } from "../../../live-runtime/delivery-change-live-types.ts";
 
@@ -52,24 +52,26 @@ export function useCatalogControlState(
     acceptedAt: string;
     draftKey: string;
   } | null>(null);
+  const repositoryLinkReviewRef = useRef<{catalogRevision: string; deliveryRevision: string; valueId: string} | null>(null);
   const repositoryLinkAcceptanceRef = useRef<{
+    readiness?: CatalogRepositoryReadiness;
     acceptanceId: string;
     acceptedAt: string;
     key: string;
   } | null>(null);
   const appliedRepositoryFocusRef = useRef<string | null>(null);
   const sourceCatalog = liveRuntime.loading
-    ? model.catalog
+    ? catalogUnavailableReadModel()
     : liveRuntime.mode === "disconnected-preview"
       ? model.catalog
-      : liveRuntime.projectionStatus === "current" && liveRuntime.readModel
+      : liveRuntime.readModel
         ? liveRuntime.readModel
         : catalogUnavailableReadModel();
-  const canSubmit = !liveRuntime.loading && (
+  const canSubmit = !liveRuntime.loading && !liveRuntime.recoveryRequired && (
     liveRuntime.mode === "disconnected-preview"
       ? localRuntimeCapabilities.canSubmit
       : liveRuntime.projectionStatus === "current" &&
-        liveRuntime.readModel !== null);
+        liveRuntime.projection?.projection_status === "ready");
   const sourceKey = `${liveRuntime.mode}:${sourceCatalog.source_revision ?? sourceCatalog.generated_at}`;
   const [catalogValues, setCatalogValues] = useState(sourceCatalog.values);
   const catalogs = useMemo(
@@ -98,8 +100,7 @@ export function useCatalogControlState(
 
   useEffect(() => {
     setCatalogValues(sourceCatalog.values);
-    setLocalDraftReceipt(null);
-    setMutationError(null);
+
     const nextCatalogs = editableCatalogItems(sourceCatalog.items);
     const nextActiveCatalog =
       nextCatalogs.find((catalog) => catalog.catalog_item_id === activeCatalogId) ??
@@ -111,7 +112,7 @@ export function useCatalogControlState(
         (value) =>
           value.catalog_item_id === nextActiveCatalog.catalog_item_id,
       );
-      setSelectedValueId(nextValue?.catalog_value_id ?? "");
+      setSelectedValueId(previous => sourceCatalog.values.some(value => value.catalog_value_id === previous && value.catalog_item_id === nextActiveCatalog.catalog_item_id) ? previous : nextValue?.catalog_value_id ?? "");
     }
   }, [sourceKey]);
 
@@ -160,19 +161,17 @@ export function useCatalogControlState(
   const repositoryLinkBlockedReason = !deliveryLinkTarget
     ? "Open Catalog from an Execution Board Implementation repository action to link a work item."
     : liveRuntime.mode !== "live" || liveRuntime.projectionStatus !== "current"
-      ? "Canonical Catalog truth is unavailable."
+      ? "A live Catalog connection is required to link a repository. This preview only shows the form."
       : deliveryChangeRuntime.mode !== "live" ||
           deliveryChangeRuntime.projectionStatus !== "current"
-        ? "Canonical Delivery change truth is unavailable."
+        ? "The Delivery connection is unavailable. Restore it before linking a repository."
         : !isOwnerRepoCatalog(activeCatalog)
           ? "Select the Implementation repository Catalog."
           : !selectedValue
             ? "Select an Implementation repository value."
             : !selectedOwnerRepository
               ? "The Catalog value does not match an admitted Repository record."
-              : !selectedOwnerRepositoryReadiness
-                ? "The selected Implementation repository has no current WGCF readiness receipt."
-                : null;
+              : null;
   const mutationValue = mutationDraft?.valueId
     ? (catalogValues.find(
         (value) => value.catalog_value_id === mutationDraft.valueId,
@@ -309,6 +308,7 @@ export function useCatalogControlState(
   ]);
 
   function switchCatalog(catalogId: string) {
+    setSearch("");
     setActiveCatalogId(catalogId);
     const firstValue = catalogValues.find(
       (value) => value.catalog_item_id === catalogId,
@@ -325,7 +325,7 @@ export function useCatalogControlState(
     planningWindowStartDate,
     valueKey,
   }: CatalogMutationSubmit) {
-    if (!canSubmit || !activeCatalog || !mutationDraft) {
+    if ((!canSubmit && !liveRuntime.recoveryRequired) || !activeCatalog || !mutationDraft) {
       return;
     }
 
@@ -344,7 +344,7 @@ export function useCatalogControlState(
       mutationDraft,
       sourceRevision: sourceCatalog.source_revision,
     });
-    if (pendingAcceptanceRef.current?.draftKey !== draftKey) {
+    if (!liveRuntime.recoveryRequired && pendingAcceptanceRef.current?.draftKey !== draftKey) {
       pendingAcceptanceRef.current = {
         acceptanceId: `catalog-acceptance:${crypto.randomUUID()}`,
         acceptedAt: new Date().toISOString(),
@@ -352,6 +352,7 @@ export function useCatalogControlState(
       };
     }
     const acceptance = pendingAcceptanceRef.current;
+    if (!acceptance) return;
     setMutationError(null);
     let result;
     try {
@@ -364,6 +365,7 @@ export function useCatalogControlState(
               mutationDraft,
             })
           : await liveRuntime.mutate(activeCatalog.catalog_item_id, {
+              expectedSourceRevision: sourceCatalog.source_revision ?? "",
               acceptanceId: acceptance.acceptanceId,
               acceptedAt: acceptance.acceptedAt,
               draft,
@@ -389,6 +391,19 @@ export function useCatalogControlState(
     pendingAcceptanceRef.current = null;
   }
 
+  async function recoverCatalogChange() {
+    setMutationError(null);
+    try {
+      const result = await liveRuntime.recover();
+      if (!result) return;
+      const value = result.catalogValues.find(value => value.catalog_value_id === result.selectedValueId);
+      if (value) setActiveCatalogId(value.catalog_item_id);
+      setCatalogValues(result.catalogValues); setSelectedValueId(result.selectedValueId);
+      setSearch(result.search); setLocalDraftReceipt(result.localDraftReceipt);
+      setMutationDraft(null); pendingAcceptanceRef.current = null;
+    } catch (error) { setMutationError(error instanceof Error ? error.message : "The original change could not be recovered."); }
+  }
+
   async function submitRepositoryLink() {
     if (
       repositoryLinkBlockedReason ||
@@ -396,7 +411,6 @@ export function useCatalogControlState(
       !activeCatalog ||
       !selectedValue ||
       !selectedOwnerRepository ||
-      !selectedOwnerRepositoryReadiness ||
       !repositoryLinkNote.trim()
     ) {
       return;
@@ -405,10 +419,14 @@ export function useCatalogControlState(
     setRepositoryLinkPending(true);
     setRepositoryLinkError(null);
     try {
+      const review = repositoryLinkReviewRef.current;
+      if (!review || review.catalogRevision !== sourceCatalog.source_revision || review.valueId !== selectedValue.catalog_value_id || review.deliveryRevision !== deliveryChangeRuntime.projection?.source_revision) {
+        throw new Error("The repository or work item changed after review. Close this form and review the current link again.");
+      }
       const acceptanceKey = JSON.stringify({
         catalogItemId: activeCatalog.catalog_item_id,
         note: repositoryLinkNote.trim(),
-        readinessReceipt: selectedOwnerRepositoryReadiness.receipt.uri,
+        reviewedCatalogRevision: review.catalogRevision,
         target: deliveryLinkTarget,
         valueId: selectedValue.catalog_value_id,
       });
@@ -420,11 +438,13 @@ export function useCatalogControlState(
         };
       }
       const acceptance = repositoryLinkAcceptanceRef.current;
+      acceptance.readiness ??= await requestCatalogRepositoryReadiness(selectedOwnerRepository.valueKey);
       const result = await deliveryChangeRuntime.apply(
         {
           payload: {
             catalog_item_id: activeCatalog.catalog_item_id,
             catalog_request: {
+              expectedSourceRevision: sourceCatalog.source_revision ?? "",
               acceptanceId: acceptance.acceptanceId,
               acceptedAt: acceptance.acceptedAt,
               draft: {
@@ -436,7 +456,7 @@ export function useCatalogControlState(
                 valueKey: selectedValue.value_key,
               },
               mode: "edit",
-              repositoryReadiness: selectedOwnerRepositoryReadiness,
+              repositoryReadiness: acceptance.readiness,
               targetValueId: selectedValue.catalog_value_id,
             },
             owner_repo: selectedValue.value_key,
@@ -445,6 +465,7 @@ export function useCatalogControlState(
           type: "link_repository",
         },
         repositoryLinkNote.trim(),
+        review.deliveryRevision,
       );
       if (!result) {
         throw new Error(
@@ -502,6 +523,8 @@ export function useCatalogControlState(
       note: repositoryLinkNote,
       onNoteChange: setRepositoryLinkNote,
       onOpen: () => {
+        repositoryLinkReviewRef.current = sourceCatalog.source_revision && deliveryChangeRuntime.projection?.source_revision && selectedValue
+          ? {catalogRevision: sourceCatalog.source_revision, deliveryRevision: deliveryChangeRuntime.projection.source_revision, valueId: selectedValue.catalog_value_id} : null;
         setRepositoryLinkError(null);
         setRepositoryLinkResult(null);
         setRepositoryLinkOpen(true);
@@ -511,12 +534,15 @@ export function useCatalogControlState(
       pending: repositoryLinkPending,
       readiness: selectedOwnerRepositoryReadiness,
       repository: selectedOwnerRepository,
-      result: repositoryLinkResult,
+      result: repositoryLinkResult ?? deliveryChangeRuntime.lastResult,
       target: deliveryLinkTarget,
     },
     projectionError: liveRuntime.projectionError,
     runtimeMode: liveRuntime.mode,
-    runtimeStatus: liveRuntime.projectionStatus,
+    runtimeStatus: liveRuntime.loading ? "loading" as const : liveRuntime.projectionStatus === "offline" ? "offline" as const : liveRuntime.projection && liveRuntime.projection.projection_status !== "ready" ? "stale" as const : "current" as const,
+    loading: liveRuntime.loading,
+    refresh: liveRuntime.recoveryRequired ? recoverCatalogChange : liveRuntime.refresh,
+    recoveryRequired: liveRuntime.recoveryRequired,
     search,
     selectedDraftReceipt,
     selectedTargetPiPlanningFacetSummary,

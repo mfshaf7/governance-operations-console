@@ -179,6 +179,7 @@ export function OrchestrationDefinitionsSurface({
           key={controller.design.session.key}
           onClose={controller.design.close}
           record={controller.design.session.record}
+          definitions={records}
         />
       ) : null}
     </>

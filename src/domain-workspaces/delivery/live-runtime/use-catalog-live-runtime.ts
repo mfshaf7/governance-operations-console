@@ -6,9 +6,9 @@ import type { DeliveryCatalogReadModel } from "../read-model/index.ts";
 import type { CatalogDraftApplyResult } from "../work-model/catalog/catalog-mutation-types.ts";
 import {
   assertCatalogOosMutationResult,
+  assertCatalogRepositoryReadiness,
   assertCatalogProjectionSnapshot,
   catalogReadModelFromProjection,
-  catalogRepositoryReadiness,
   isCatalogLiveApiError,
 } from "./catalog-live-contract.ts";
 import type {
@@ -28,6 +28,8 @@ export class CatalogLiveRuntimeError extends Error {
 export function useCatalogLiveRuntime() {
   const [snapshot, setSnapshot] = useState<CatalogProjectionSnapshot | null>(null);
   const snapshotRef = useRef<CatalogProjectionSnapshot | null>(null);
+  const [recoveryRequired, setRecoveryRequired] = useState(false);
+  const pendingCommands = useRef(new Map<string, { catalogItemId: string; command: CatalogMutationCommand & { acceptanceId: string; acceptedAt: string } }>());
   const pendingRefresh = useRef<Promise<CatalogProjectionSnapshot> | null>(null);
 
   const refresh = useCallback(async () => {
@@ -42,6 +44,11 @@ export function useCatalogLiveRuntime() {
         snapshotRef.current = next;
         setSnapshot(next);
         return next;
+      })
+      .catch(error => {
+        const next: CatalogProjectionSnapshot = { mode: "live", status: "offline", observedAt: new Date().toISOString(),
+          projection: snapshotRef.current?.projection ?? null, error: error instanceof Error ? error.message : "Catalog values could not be loaded." };
+        snapshotRef.current = next; setSnapshot(next); throw error;
       })
       .finally(() => {
         pendingRefresh.current = null;
@@ -72,52 +79,63 @@ export function useCatalogLiveRuntime() {
         acceptedAt: string;
       },
     ): Promise<CatalogDraftApplyResult | null> => {
-      const current = await currentSnapshot(snapshotRef.current, refresh);
+      const pending = pendingCommands.current.get(command.acceptanceId)?.command;
+      const current = snapshotRef.current ?? await refresh();
       if (current.mode === "disconnected-preview") return null;
-      const repositoryReadiness = command.draft.linkedRepository
-        ? catalogRepositoryReadiness(
-            current.projection?.values.find(
-              (value) =>
-                value.value_key === command.draft.linkedRepository?.valueKey &&
-                value.repository_binding?.repo_ref ===
-                  `repo://${command.draft.linkedRepository.valueKey}`,
-            ),
-          )
-        : null;
-      const response = await fetch(
-        `/api/delivery/catalog/${encodeURIComponent(catalogItemId)}/mutations`,
-        {
-          body: JSON.stringify({ ...command, repositoryReadiness }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        },
-      );
-      const body: unknown = await response.json().catch(() => null);
-      if (!response.ok) {
-        await refresh().catch(() => undefined);
-        throw catalogClientError(body);
+      if (!pending && (current.status !== "current" || current.projection?.projection_status !== "ready" ||
+          current.projection.source_revision !== command.expectedSourceRevision)) {
+        throw new CatalogLiveRuntimeError("Reload current Catalog values and review this change again.", "source_revision_stale");
       }
-      const result = assertCatalogOosMutationResult(body);
-      const next = await refresh();
-      if (
-        !next.projection ||
-        next.projection.source_revision !== result.source_revision ||
-        !next.projection.values.some(
-          (value) =>
-            value.catalog_value_id === result.value.catalog_value_id &&
-            value.catalog_item_id === result.value.catalog_item_id &&
-            value.value_key === result.value.value_key,
-        )
-      ) {
-        throw new CatalogLiveRuntimeError(
-          "Catalog mutation completed but exact canonical readback is unavailable.",
-          "catalog_readback_unavailable",
-        );
+      let accepted = pending;
+      if (!accepted) {
+        const repositoryReadiness = command.draft.linkedRepository
+          ? await requestCatalogRepositoryReadiness(command.draft.linkedRepository.valueKey)
+          : null;
+        accepted = { ...command, repositoryReadiness };
+        pendingCommands.current.set(command.acceptanceId, { catalogItemId, command: accepted });
       }
-      const readModel = catalogReadModelFromProjection(next.projection);
+      let result;
+      try {
+        const response = await fetch(`/api/delivery/catalog/${encodeURIComponent(catalogItemId)}/mutations`, {
+          body: JSON.stringify(accepted), headers: { "Content-Type": "application/json" }, method: "POST",
+        });
+        const body: unknown = await response.json().catch(() => null);
+        if (!response.ok) {
+          if (response.status < 500) {
+            pendingCommands.current.delete(command.acceptanceId); setRecoveryRequired(false);
+            await refresh().catch(() => undefined);
+          }
+          throw catalogClientError(body);
+        }
+        result = assertCatalogOosMutationResult(body);
+      } catch (error) {
+        if (pendingCommands.current.has(command.acceptanceId)) {
+          setRecoveryRequired(true);
+          const next: CatalogProjectionSnapshot = { ...current, status: "offline", error: "The change outcome is unconfirmed. Retry the same change to recover its original result." };
+          snapshotRef.current = next; setSnapshot(next);
+        }
+        throw error;
+      }
+      pendingCommands.current.delete(command.acceptanceId); setRecoveryRequired(false);
+      let next = await refresh().catch(() => null);
+      if (!next?.projection || next.status !== "current") {
+        // OOS already attests canonical readback in this applied receipt. Retain
+        // that outcome even if the subsequent list read fails. Other values
+        // stay visibly stale and no new change is enabled.
+        const prior = current.projection!;
+        const changed = [result.value, ...result.related_values];
+        const ids = new Set(changed.map(value => value.catalog_value_id));
+        next = { mode: "live", status: "offline", observedAt: new Date().toISOString(),
+          error: "Change applied. The latest value list could not be refreshed. Retry loading before another change.",
+          projection: { ...prior, source_revision: result.source_revision, projection_status: "stale", projected_at: result.applied_at,
+            values: [...prior.values.filter(value => !ids.has(value.catalog_value_id)), ...changed] } };
+        snapshotRef.current = next; setSnapshot(next);
+      }
+      const readModel = catalogReadModelFromProjection(next.projection!);
       return {
         catalogValues: readModel.values,
         localDraftReceipt: {
+          canonical: true,
           actionLabel: `${command.mode === "retire" ? "Retired" : command.mode === "edit" ? "Updated" : "Added"} ${result.value.label}`,
           linkedRepository: command.draft.linkedRepository,
           recordedAt: result.applied_at,
@@ -136,6 +154,8 @@ export function useCatalogLiveRuntime() {
     : null;
 
   return {
+    recover: async () => { const saved = pendingCommands.current.values().next().value; return saved ? mutate(saved.catalogItemId, saved.command) : null; },
+    recoveryRequired,
     loading: snapshot === null,
     mode: snapshot?.mode ?? "live",
     mutate,
@@ -147,23 +167,20 @@ export function useCatalogLiveRuntime() {
   };
 }
 
-async function currentSnapshot(
-  current: CatalogProjectionSnapshot | null,
-  refresh: () => Promise<CatalogProjectionSnapshot>,
-) {
-  const snapshot = current ?? (await refresh());
-  if (snapshot.mode === "live" && snapshot.status !== "current") {
-    throw new CatalogLiveRuntimeError(
-      snapshot.error || "Canonical Catalog projection is unavailable.",
-      "catalog_projection_unavailable",
-    );
-  }
-  return snapshot;
-}
-
 function catalogClientError(value: unknown) {
   return new CatalogLiveRuntimeError(
     isCatalogLiveApiError(value) ? value.error : "Governed Catalog request failed.",
     isCatalogLiveApiError(value) ? value.code : undefined,
   );
+}
+
+export async function requestCatalogRepositoryReadiness(repoName: string) {
+  const response = await fetch("/api/delivery/catalog/repository-readiness", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({repoName}),
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) throw catalogClientError(body);
+  const reference = assertCatalogRepositoryReadiness(body?.repository_readiness_reference);
+  if (reference.repo_name !== repoName || reference.repo_ref !== `repo://${repoName}`) throw new CatalogLiveRuntimeError("Repository readiness returned a different repository.");
+  return reference;
 }

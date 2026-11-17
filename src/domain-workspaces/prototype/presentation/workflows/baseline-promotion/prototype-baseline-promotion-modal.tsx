@@ -4,7 +4,7 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { usePrototypeWorkflowDraftSource } from "../shared/use-prototype-workflow-draft-source.ts";
 import { PrototypeWorkflowSourceWarning } from "../shared/prototype-workflow-source-warning.tsx";
-import { useDraftAdvisor } from "@/agent-console";
+import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 import { baselineAdvisorFields, applyBaselineAdvisorEdits } from "../shared/prototype-advisor-fields.ts";
 
 import {
@@ -78,6 +78,7 @@ export function PrototypeBaselinePromotionModal({
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const advisor = useDraftAdvisor({
+    conversation: record ? { role: "prototype-baseline", ref: record.id, sourceRef: record.sourceRef, sourceRevision: record.projectionVersion } : undefined,
     active: Boolean(record),
     disabled: sourceStale || !record || submitting || ownerProgress?.pending === true ||
       prototypeMaturityRequestPending(ownerProgress) || Boolean(record && getPrototypeCommandView(record, "record-baseline-promotion").disabledReason),
@@ -85,7 +86,14 @@ export function PrototypeBaselinePromotionModal({
       if (!record) throw Error("Select a Prototype record first.");
       return { role: "prototype-baseline", ref: record.id, sourceRef: record.sourceRef,
         sourceRevision: record.projectionVersion,
-        context: JSON.stringify({ name: record.name, summary: record.summary, candidate: record.candidate, baseline: record.baseline, decision: draft.decision }),
+        context: advisorWorkContext({ name: record.name, summary: record.summary, lifecycle: record.lifecycle,
+          candidate: record.candidate, baseline: record.baseline, decision: draft.decision, sourceStale,
+          boundaries: { account: record.owner, sourceRef: record.sourceRef, sourcePath: record.sourcePath,
+            visibility: record.visibilityTier, dataMode: record.dataMode, mutation: record.mutationBoundary },
+          evidenceAssessment: prototypeBaselineEvidenceAssessment(record), evidenceChecks: baselineEvidenceChecklistRows(record),
+          evidence: record.evidence, openIssues: record.openIssues },
+          { provided: ["Candidate and baseline scope", "Actual baseline evidence assessment and missing requirements", "Retained evidence and visible issues"],
+            unavailable: ["Unprovided proof contents", "New runtime or code inspection", "Final operator baseline decision"] }),
         fields: baselineAdvisorFields(draft) };
     },
     apply: (edits) => { setDraft(applyBaselineAdvisorEdits(draft, edits)); return edits; },

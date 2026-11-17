@@ -15,6 +15,7 @@ import { TerasLoadingState,
   TerasSelectField,
   TerasSignalItem,
   TerasTextField,
+  TerasTechnicalDetails,
   TerasZone,
   TerasZoneLayout,
 } from "@/teras";
@@ -22,13 +23,15 @@ import type {
   DeliveryWorkSessionDecisionInput,
   DeliveryWorkSessionProjection,
 } from "../../../../live-runtime/delivery-work-session-live-types.ts";
-import type { ExecutionWorkSessionTarget } from "./execution-work-session-target.ts";
+import { workSessionCommand, workSessionCommandLabel, workSessionReviewUrl, type ExecutionWorkSessionTarget } from "./execution-work-session-target.ts";
 import { ExecutionSourceRealizationPanel } from "./execution-source-realization-panel.tsx";
 import { canContinueApprovedSourceAccess } from "./execution-source-access.ts";
 import { SourceAuthorizationPanel } from "../../../../../../environment-lifecycle/presentation/source-authorization-panel.tsx";
 import { assertDeliveryWorkSessionDecision } from "../../../../live-runtime/delivery-work-session-live-contract.ts";
 
 type WorkSessionRuntime = {
+  reconstructWork?: () => Promise<unknown>;
+  recoverWork?: (reason: string) => Promise<unknown>;
   closeWork: () => Promise<unknown>;
   continueWork: (sourceIntentRef?: string) => Promise<unknown>;
   mergeWork: () => Promise<unknown>;
@@ -45,10 +48,12 @@ export function ExecutionWorkSessionModal({
   onClose,
   runtime,
   target,
+  onNavigate,
 }: {
   onClose: () => void;
   runtime: WorkSessionRuntime;
   target: ExecutionWorkSessionTarget;
+  onNavigate?: (destination: "work" | "closeout" | "architecture" | "records", deliveryId: string | null, workItemId?: number) => void;
 }) {
   const draft = runtime.projection?.decision_draft ?? null;
   const [decision, setDecision] = useState<DeliveryWorkSessionDecisionInput | null>(
@@ -57,6 +62,7 @@ export function ExecutionWorkSessionModal({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [sourceIntent, setSourceIntent] = useState<string | null>(null);
+  const [recoveryReason, setRecoveryReason] = useState("");
 
   const [closeGuard, setCloseGuard] = useState<"close" | "reload" | null>(null);
   const [sourceChanged, setSourceChanged] = useState(false);
@@ -106,6 +112,13 @@ export function ExecutionWorkSessionModal({
     landing_unit: { ...draft.landing_unit, branch: decision.branch, decision: decision.landingUnitDecision, id: decision.landingUnitId, rollback_boundary: decision.rollbackBoundary, split_reason: decision.splitReason },
   } : null;
   const nextAction = projection?.next_action ?? null;
+  const reviewUrl = workSessionReviewUrl(projection?.pull_request?.url);
+  const prerequisite = nextAction && ["architecture-prerequisite-required", "architecture-human-gate-required"].includes(nextAction.code);
+  const requiredWorkRef = nextAction?.inputs?.work_item_id;
+  const requiredWorkId = typeof requiredWorkRef === "string" && /^work-item-[1-9][0-9]*$/.test(requiredWorkRef) ? Number(requiredWorkRef.replace("work-item-", "")) : undefined;
+  const followUp = nextAction && ["initiative-closeout-required", "initiative-closeout-gates-required"].includes(nextAction.code) ? "closeout" :
+    prerequisite || nextAction && ["initiative-work-remains", "initiative-follow-up-required", "art-blocker-review-required"].includes(nextAction.code) ? "work" :
+    nextAction && ["architecture-packet-required", "architecture-binding-required"].includes(nextAction.code) ? "architecture" : null;
   const projectedCommand = workSessionCommand(nextAction?.code);
   const canPrepare =
     runtime.mode === "live" &&
@@ -139,6 +152,10 @@ export function ExecutionWorkSessionModal({
   }
 
   function runProjectedCommand() {
+    if (projectedCommand === "reconstruct") {
+      if (!runtime.reconstructWork) throw new Error("Session reconstruction is unavailable.");
+      return runtime.reconstructWork();
+    }
     if (projectedCommand === "merge") return runtime.mergeWork();
     if (projectedCommand === "close") return runtime.closeWork();
     return runtime.continueWork(sourceIntent ?? undefined);
@@ -463,12 +480,32 @@ export function ExecutionWorkSessionModal({
                   tone="info"
                 />
               </TerasList>
+            ) : nextAction?.code === "architecture-recovery-required" ? (
+              <TerasFieldStack spacing="normal">
+                <TerasSignalItem label="Review recovery" title="Archive superseded session" detail="Preserve this attempt and its evidence before preparing current work. Archiving does not complete ART work or approve a release." tone="warn" />
+                {reviewUrl ? <a href={reviewUrl} target="_blank" rel="noopener noreferrer">Review Bound Pull Request ↗</a> : null}
+                <TerasTechnicalDetails summary="Recovery evidence" items={[
+                  { label: "Session", value: projection?.session_id ?? "Unavailable" },
+                  { label: "Source head", value: String(projection?.pull_request?.head_commit ?? projection?.source?.head_commit ?? "Unavailable") },
+                  { label: "Merge commit", value: String(projection?.pull_request?.merge_commit ?? "Unmerged source") },
+                ]} />
+                <TerasNoteField label="Reason for archiving" value={recoveryReason} onValueChange={setRecoveryReason} placeholder="Explain why the superseded attempt should be retained as history." />
+                <TerasActionButton disabled={submitting || runtime.mode !== "live" || runtime.projectionStatus !== "current" || !runtime.recoverWork || recoveryReason.trim().length < 20}
+                  onClick={() => run(() => runtime.recoverWork!(recoveryReason))}>Archive Superseded Session</TerasActionButton>
+              </TerasFieldStack>
+            ) : followUp && onNavigate ? (
+              <TerasList frame="contained"><TerasSignalItem label="Next action" title={followUp === "closeout" ? "Review package closeout" : followUp === "architecture" ? "Review architecture" : prerequisite ? "Review required work or approval" : "Choose remaining work"}
+                detail={nextAction!.reason} tone="info" actions={<TerasActionButton onClick={() => onNavigate(followUp, projection?.delivery_id ?? null, requiredWorkId)}>
+                  {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? "Review Architecture" : prerequisite ? "Open Required Work" : "Choose Remaining Work"}</TerasActionButton>} /></TerasList>
+            ) : nextAction?.code === "pull-request-review-required" ? (
+              <TerasList frame="contained"><TerasSignalItem label="Human review" title="Review the current source changes" detail={nextAction.reason} tone="warn"
+                actions={reviewUrl ? <a href={reviewUrl} target="_blank" rel="noopener noreferrer">Open Pull Request ↗</a> : undefined} /></TerasList>
             ) : nextAction ? (
               <TerasList frame="contained">
                 <TerasSignalItem
                   detail={nextAction.reason}
                   label={nextAction.authority}
-                  statusLabel="Waiting"
+                  statusLabel={nextAction.code === "work-complete" ? "Complete" : "Action required"}
                   title={nextActionLabel(nextAction.code)}
                   tone="warn"
                 />
@@ -610,41 +647,6 @@ function nextActionLabel(code: string) {
     .join(" ");
 }
 
-const continueCommandLabels: Record<string, string> = {
-  "agent-source-publish-required": "Publish Source",
-  "draft-finalization": "Prepare Final Evidence",
-  "draft-review-packet": "Draft Review Packet",
-  "draft-work-start": "Draft Work Start",
-  "evaluate-work-start": "Evaluate Work Start",
-  "finalize-review-packet": "Finalize Review Packet",
-  "issue-operating-readiness": "Evaluate Operating Readiness",
-  "mark-merge-ready": "Evaluate Merge Readiness",
-  "owner-evidence-acquisition-required": "Run Evidence Checks",
-  "persist-architecture": "Persist Architecture",
-  "project-review-evidence": "Project Evidence",
-  "source-worktree-required": "Prepare Source Workspace",
-};
-
-function workSessionCommand(code: string | null | undefined) {
-  if (!code) return null;
-  if (code === "source-merge-approval-required") return "merge" as const;
-  if (
-    ["art-closeout-required", "cleanup-required", "cleanup-retry-required"].includes(
-      code,
-    )
-  ) {
-    return "close" as const;
-  }
-  return continueCommandLabels[code] ? ("continue" as const) : null;
-}
-
-function workSessionCommandLabel(code: string) {
-  if (code === "source-merge-approval-required") return "Merge Source";
-  if (code === "art-closeout-required") return "Close Landing Unit";
-  if (code === "cleanup-required") return "Finish Cleanup";
-  if (code === "cleanup-retry-required") return "Retry Cleanup";
-  return continueCommandLabels[code] ?? "Continue";
-}
 
 function workSessionScope(projection: DeliveryWorkSessionProjection | null, selected?: string[]) {
   const workItemIds =

@@ -80,6 +80,7 @@ export type CatalogProjectionSnapshot = {
 };
 
 export type CatalogMutationCommand = {
+  expectedSourceRevision: string;
   draft: CatalogMutationSubmit;
   mode: DeliveryCatalogMutationMode;
   repositoryReadiness?: CatalogRepositoryReadiness | null;

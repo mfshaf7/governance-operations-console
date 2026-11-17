@@ -11,7 +11,7 @@ export function savedWorkPreviewResponse() { return NextResponse.json({ mode: "d
 
 export async function savedWorkRoute(request: Request, kind: string, subjectId: string) {
   try {
-    if (!["work-design", "refinement", "orchestration"].includes(kind) || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,200}$/.test(subjectId))
+    if (!["work-design", "refinement", "orchestration", "advisor-conversation"].includes(kind) || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,200}$/.test(subjectId))
       return NextResponse.json({ error: "Invalid saved-work subject." }, { status: 400, headers });
     const config = resolveConsoleOosOperatorConfiguration();
     const url = new URL(request.url);

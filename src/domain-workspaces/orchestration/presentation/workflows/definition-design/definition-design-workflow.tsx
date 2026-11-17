@@ -22,7 +22,7 @@ import { DefinitionReviewRequestStep } from "./steps/review-request-step.tsx";
 import { DefinitionDesignSupport } from "./support/definition-design-support.tsx";
 import { useDefinitionDesignController } from "./use-definition-design-controller.ts";
 
-type DefinitionWorkflowProps = { onClose: () => void; record: OrchestrationDefinitionRecord | null };
+type DefinitionWorkflowProps = { onClose: () => void; record: OrchestrationDefinitionRecord | null; definitions?: OrchestrationDefinitionRecord[] };
 export function DefinitionDesignWorkflow(props: DefinitionWorkflowProps) {
   return <SavedWorkBoundary storageKey={`orchestration-definition-design:${definitionDesignDraftId(props.record)}:v1`} onClose={props.onClose} normalize={normalizeOrchestrationDefinitionDraft}>
     <DefinitionDesignWorkflowBody {...props}/>
@@ -32,11 +32,9 @@ export function DefinitionDesignWorkflow(props: DefinitionWorkflowProps) {
 function DefinitionDesignWorkflowBody({
   onClose,
   record,
-}: {
-  onClose: () => void;
-  record: OrchestrationDefinitionRecord | null;
-}) {
-  const controller = useDefinitionDesignController({ onClose, record });
+  definitions,
+}: DefinitionWorkflowProps) {
+  const controller = useDefinitionDesignController({ onClose, record, definitions });
   const { draft, readiness, receipt } = controller;
   const durable = draft.qualification.classification === "durable-candidate";
   const reviewReady = durable

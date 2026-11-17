@@ -84,6 +84,28 @@ test("Empty owner catalog still offers draft design with an explicit endpoint", 
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 
+test("definition advisor receives owner examples and actual qualification findings without claiming a universal activity catalog", async ({ page }) => {
+  const h = await setup(page, ownerWorkspace()); let sent;
+  await page.route("**/api/advisor-interaction", route => {
+    sent = route.request().postDataJSON();
+    return route.fulfill({ json: { intent: "answer", message: "Synthetic qualification explanation only.", edits: [],
+      evidence: { profileId: "agent-console-assistant-v1", auditRef: "audit:synthetic", contextRef: "context:synthetic" } } });
+  });
+  await h.section("definitions");
+  await h.workspace.getByRole("button", { name: "Design Orchestration", exact: true }).click();
+  const draft = page.getByRole("dialog", { name: "Design Orchestration", exact: true });
+  await draft.getByRole("textbox", { name: "Definition advisor prompt", exact: true }).fill("Is this operation justified as a durable workflow?");
+  await draft.getByRole("button", { name: "run", exact: true }).click();
+  await expect.poll(() => sent?.scope?.role).toBe("definition-design");
+  const context = JSON.parse(sent.scope.context).observations;
+  expect(context.qualificationAndDefinitionChecks.findings.length).toBeGreaterThan(0);
+  expect(context.definitionExamples).toHaveLength(1);
+  expect(context.definitionExamples[0].source.mode).toBe("live-authority");
+  expect(context.definitionExamples[0].nodes[0].adapter).toBeTruthy();
+  expect(context.boundary).toContain("not a universal adapter registry");
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+
 test("Run-control close protects the entered reason without submitting a command", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const h = await setup(page);

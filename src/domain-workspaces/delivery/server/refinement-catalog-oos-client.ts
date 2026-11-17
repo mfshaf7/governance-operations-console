@@ -109,6 +109,7 @@ export async function requestRefinementAdvice(
       allowed_values: command.allowedValues,
     },
     operator_prompt: command.operatorPrompt,
+    ...(command.conversation ? { conversation: command.conversation } : {}),
   };
   const result = assertRefinementOosAssistResult(
     await deliveryOosRequest(
@@ -377,6 +378,7 @@ export function buildCatalogMutationRequest(
     env?: NodeJS.ProcessEnv;
   } = {},
 ) {
+  if (!command.expectedSourceRevision?.trim()) throw new DeliveryOosError("Review the current Catalog values before applying a change.", "catalog_review_revision_required", 400);
   const config = resolveDeliveryOosConfig(options.env);
   if (command.draft.linkedRepository && !command.repositoryReadiness) {
     throw new DeliveryOosError(
@@ -412,10 +414,10 @@ export function buildCatalogMutationRequest(
       catalogItemId,
       draft: command.draft,
       mode: command.mode,
-      sourceRevision: projection.source_revision,
+      sourceRevision: command.expectedSourceRevision,
       targetValueId: command.targetValueId,
     }),
-    source_revision: projection.source_revision,
+    source_revision: command.expectedSourceRevision,
     catalog_item_id: catalogItemId,
     mode: command.mode,
     target_value_id: command.targetValueId,

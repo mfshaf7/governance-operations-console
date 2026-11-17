@@ -16,6 +16,25 @@ export type AgentProviderStatus = {
 
 export type AgentProviderReadinessState = "offline" | "online" | "probing";
 
+export function agentConnectionPresentation(status: AgentProviderStatus | null): {
+  state: "online" | "offline" | "checking" | "stale" | "unavailable";
+  label: string;
+  description: string;
+} {
+  const readiness = deriveAgentProviderReadinessState(status);
+  const state = readiness !== "probing" ? readiness
+    : !status ? "checking" : status.observedAt ? "stale" : "unavailable";
+  const labels = { online: "Online", offline: "Offline", checking: "Checking", stale: "Stale", unavailable: "Unavailable" };
+  const observations = {
+    online: "The assistant service is reachable.",
+    offline: "The assistant service is offline.",
+    checking: "Assistant connection has not been checked.",
+    stale: "The last assistant connection observation is stale.",
+    unavailable: "The assistant connection could not be checked.",
+  };
+  return { state, label: labels[state], description: `${observations[state]} The selected model is checked when you send a request.` };
+}
+
 export function deriveAgentProviderReadinessState(
   providerStatus: AgentProviderStatus | null,
 ): AgentProviderReadinessState {

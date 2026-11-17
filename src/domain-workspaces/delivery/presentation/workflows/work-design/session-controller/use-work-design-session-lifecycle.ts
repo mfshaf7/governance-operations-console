@@ -245,6 +245,8 @@ export function useWorkDesignSessionLifecycle({
     buildTreeViewMode,
     captureContextBoardSnapshot,
     contextBoardAutosaveDependencies: [
+      contextBoard.diagramDocument.retained,
+      contextBoard.diagramDocument.activeId,
       contextBoardConnections,
       contextBoardCustomItems,
       contextBoardPositions,

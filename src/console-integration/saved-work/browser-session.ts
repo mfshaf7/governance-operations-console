@@ -1,12 +1,14 @@
-export type SavedWorkKind = "work-design" | "refinement" | "orchestration";
+export type SavedWorkKind = "work-design" | "refinement" | "orchestration" | "advisor-conversation";
 export type SavedWorkRecovery = { recovery_id: string; storage_key: string; content_digest: string; preserved_at: string };
 type RecordValue = { revision: number; payload_json: string; content_digest: string; acknowledgement_id: string; saved_at: string };
 type Snapshot = { kind: SavedWorkKind; subject_id: string; record: RecordValue | null; recoveries: SavedWorkRecovery[]; recovery?: { storage_key: string; raw_value: string } | null };
 export type SavedWorkState = { hydrated: boolean; generation: number; status: "loading" | "ready" | "saving" | "saved" | "local" | "error" | "conflict";
   message: string; recoveries: SavedWorkRecovery[] };
-type CacheMeta = { operatorId: string; digest: string };
+type CacheMeta = { operatorId: string; digest: string | null };
 
 export function savedWorkIdentity(key: string): { kind: SavedWorkKind; subjectId: string } | null {
+  const conversation = /^advisor-conversation:(chat:[a-f0-9]{64}):v1$/.exec(key);
+  if (conversation) return { kind: "advisor-conversation", subjectId: conversation[1] };
   const match = /^(delivery-work-design-session|delivery-refinement-session|orchestration-definition-design):(.+):v\d+$/.exec(key);
   if (!match) return null;
   return { kind: match[1] === "delivery-work-design-session" ? "work-design" : match[1] === "delivery-refinement-session" ? "refinement" : "orchestration", subjectId: match[2] };
@@ -41,6 +43,9 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
   function update(next: Partial<SavedWorkState>) { state = { ...state, ...next }; for (const listener of listeners) listener(); }
   function originals() {
     const values = new Map<string, string>();
+    // Chat has no legacy browser originals to import into another operator's
+    // recovery store. Its current cache is usable only after operator matching.
+    if (identity!.kind === "advisor-conversation") return values;
     if (!storage) return values;
     const prefix = key.replace(/:v\d+$/, ":v");
     try {
@@ -65,7 +70,7 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
     if (!response.ok) throw new SaveFailure(typeof value.error === "string" ? value.error : "Server save is unavailable.", response.status === 409);
     if (value.mode === "disconnected-preview") return value;
     const snapshot = value.snapshot as Snapshot;
-    if (value.mode !== "live" || typeof value.operatorId !== "string" || snapshot?.kind !== identity!.kind || snapshot.subject_id !== identity!.subjectId || !Array.isArray(snapshot.recoveries) ||
+    if (value.mode !== "live" || typeof value.operatorId !== "string" || operatorId && value.operatorId !== operatorId || snapshot?.kind !== identity!.kind || snapshot.subject_id !== identity!.subjectId || !Array.isArray(snapshot.recoveries) ||
         (snapshot.record && (!Number.isSafeInteger(snapshot.record.revision) || snapshot.record.revision < 1 || typeof snapshot.record.payload_json !== "string" ||
           await digest(snapshot.record.payload_json) !== snapshot.record.content_digest)))
       throw new SaveFailure("The saved-work acknowledgement could not be verified.");
@@ -73,7 +78,7 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
   }
   function acknowledge(record: RecordValue | null) {
     revision = record?.revision ?? 0; confirmed = record?.payload_json ?? null;
-    if (record) writeLocal(metaPrefix + key, JSON.stringify({ operatorId, digest: record.content_digest }));
+    if (record || identity!.kind === "advisor-conversation") writeLocal(metaPrefix + key, JSON.stringify({ operatorId, digest: record?.content_digest ?? null }));
   }
   async function flush() {
     if (timer) { clearTimeout(timer); timer = null; }
@@ -102,7 +107,7 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
     readOnly = locked;
     if (normalizeValue) normalize = normalizeValue;
     initializing = (async () => {
-      const previousRaw = raw; const local = state.hydrated ? previousRaw : readLocal(key);
+      const previousRaw = raw; let local = state.hydrated ? previousRaw : readLocal(key);
       const preserved = originals(); update({ status: "loading", message: "Reading saved work…" });
       try {
         const result = await request();
@@ -110,6 +115,7 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
         mode = "live"; operatorId = result.operatorId;
         let snapshot = result.snapshot;
         let meta: CacheMeta | null = null; try { meta = JSON.parse(readLocal(metaPrefix + key) ?? "null"); } catch { /* Legacy cache has no acknowledgement. */ }
+        if (identity!.kind === "advisor-conversation" && !meta?.operatorId) local = null;
         if (local !== null && meta?.operatorId && meta.operatorId !== operatorId)
           throw new SaveFailure("This browser copy belongs to a different operator. It was preserved locally and has not been imported.");
         if (!readOnly) for (const [storageKey, rawValue] of preserved) {
@@ -120,6 +126,8 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
         if (confirmed !== null && normalize && normalize(JSON.parse(confirmed)) === null)
           throw new SaveFailure("The saved draft cannot be read by this version. Its original content is retained; no empty draft was substituted.");
         if (!readOnly && local !== null && confirmed !== null && local !== confirmed && !localAcknowledged) {
+          if (identity!.kind === "advisor-conversation" && normalize && normalize(JSON.parse(local)) === null)
+            throw new SaveFailure("This browser conversation cannot be read. Its original content is retained; choose the server copy explicitly.");
           raw = local; update({ hydrated: true, status: "conflict", message: "Browser edits differ from the server copy. Choose which copy to continue with.", recoveries: snapshot.recoveries }); return;
         }
         raw = confirmed ?? local;
@@ -157,12 +165,16 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
     },
     async retry() { if (!state.hydrated || mode === null) await initialize(readOnly, normalize); else await flush(); },
     async useServerCopy() {
+      if (timer) { clearTimeout(timer); timer = null; }
       const result = await request();
+      if (result.snapshot.record && normalize && normalize(JSON.parse(result.snapshot.record.payload_json)) === null)
+        throw new SaveFailure("The server copy cannot be read by this version. Original content is retained.");
       if (!readOnly && raw !== null && raw !== result.snapshot.record?.payload_json)
         await request("?action=preserve", { storage_key: key, raw_value: raw });
       acknowledge(result.snapshot.record); pending = null; raw = confirmed;
       if (raw !== null) writeLocal(key, raw);
-      update({ generation: state.generation + 1, status: raw !== null ? "saved" : "ready", message: raw !== null ? "Saved to server" : "No saved draft yet" });
+      else { try { storage?.removeItem(key); } catch { /* Preserved original remains available from private recovery. */ } }
+      update({ hydrated: true, generation: state.generation + 1, status: raw !== null ? "saved" : "ready", message: raw !== null ? "Saved to server" : "No saved draft yet" });
     },
     async keepBrowserEdits() {
       if (readOnly) return;
@@ -170,6 +182,7 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
       update({ status: "ready", message: "Saving the selected browser edits…" }); await flush();
     },
     async recovery(id: string) { return (await request(`?recovery_id=${encodeURIComponent(id)}`)).snapshot.recovery; },
+    async preserveWorking(value: unknown) { await request("?action=preserve", { storage_key: key, raw_value: JSON.stringify(value) }); },
     async restoreRecovery(id: string) {
       if (readOnly) throw new SaveFailure("Open active drafting to restore an original; historical content stays read-only.");
       const result = await request(`?recovery_id=${encodeURIComponent(id)}`); const original = result.snapshot.recovery;

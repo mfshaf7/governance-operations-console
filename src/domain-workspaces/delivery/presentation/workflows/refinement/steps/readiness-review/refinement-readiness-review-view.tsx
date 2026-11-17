@@ -171,58 +171,59 @@ export function RefinementReadinessReviewView({
         </TerasPanel>
       </TerasZone>
 
-      <TerasPanel
-        fit="fill"
-        frame="padded"
-        treatment="rail"
-        spacing="compact"
-        overflow="auto"
-        tone={reviewProjection.reviewTone}
-      >
-        <TerasPanelHeader
-          kicker="Apply Review Gate"
-          title={reviewProjection.applyGateTitle}
-          description={reviewProjection.applyGateDescription}
-        />
-        <TerasSubjectCard
-          description="This review covers the Work Design handoff tree, item-scoped metadata decisions, AI-drafted values, readiness gates, and bounded OOS apply routes."
-          facts={refinementApplyReviewGateFacts({
-            canApply,
-            metadataWorkbenchSummary,
-          })}
-          kicker="Review Scope"
-          title="Confirm refinement can move to Apply."
-        />
-        <TerasStatGroup offset="none">
-          <TerasStatItem
-            label="Draft Ready"
-            value={reviewProjection.draftReadyGateCount}
+      <TerasZone scroll fit="fill">
+        <TerasPanel
+          fit="content"
+          frame="padded"
+          treatment="rail"
+          spacing="compact"
+          tone={reviewProjection.reviewTone}
+        >
+          <TerasPanelHeader
+            kicker="Apply Review Gate"
+            title={reviewProjection.applyGateTitle}
+            description={reviewProjection.applyGateDescription}
           />
-          <TerasStatItem label="Open" value={reviewProjection.openGateCount} />
-          <TerasStatItem
-            label="Blocked"
-            value={reviewProjection.blockedGateCount}
+          <TerasSubjectCard
+            description="This review covers the Work Design handoff tree, item-scoped metadata decisions, AI-drafted values, readiness gates, and bounded OOS apply routes."
+            facts={refinementApplyReviewGateFacts({
+              canApply,
+              metadataWorkbenchSummary,
+            })}
+            kicker="Review Scope"
+            title="Confirm refinement can move to Apply."
           />
-          <TerasStatItem
-            label="Routes"
-            value={reviewProjection.applyRouteCount}
-          />
-        </TerasStatGroup>
-        <TerasActionRow>
-          <TerasActionButton
-            data-refinement-action="review-apply-plan"
-            disabled={!canApply}
-            onClick={onOpenApplyPlan}
-            tone={
-              reviewProjection.applyGateActionTone === "danger"
-                ? "danger"
-                : "accent"
-            }
-          >
-            Review Apply Plan
-          </TerasActionButton>
-        </TerasActionRow>
-      </TerasPanel>
+          <TerasStatGroup offset="none">
+            <TerasStatItem
+              label="Draft Ready"
+              value={reviewProjection.draftReadyGateCount}
+            />
+            <TerasStatItem label="Open" value={reviewProjection.openGateCount} />
+            <TerasStatItem
+              label="Blocked"
+              value={reviewProjection.blockedGateCount}
+            />
+            <TerasStatItem
+              label="Routes"
+              value={reviewProjection.applyRouteCount}
+            />
+          </TerasStatGroup>
+          <TerasActionRow>
+            <TerasActionButton
+              data-refinement-action="review-apply-plan"
+              disabled={!canApply}
+              onClick={onOpenApplyPlan}
+              tone={
+                reviewProjection.applyGateActionTone === "danger"
+                  ? "danger"
+                  : "accent"
+              }
+            >
+              Review Apply Plan
+            </TerasActionButton>
+          </TerasActionRow>
+        </TerasPanel>
+      </TerasZone>
     </TerasZoneLayout>
   );
 }

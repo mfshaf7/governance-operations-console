@@ -4,6 +4,8 @@ import test from "node:test";
 
 import {
   assertDeliveryWorkSessionDecision,
+  recoveryFromWorkSession,
+  assertDeliveryWorkSessionRecovery,
   assertDeliveryWorkSessionDecisionInput,
   assertDeliveryWorkSessionProjection,
   assertDeliveryWorkSessionSnapshot,
@@ -11,6 +13,8 @@ import {
 } from "../../src/domain-workspaces/delivery/live-runtime/delivery-work-session-live-contract.ts";
 import {
   closeDeliveryWorkSession,
+  recoverDeliveryWorkSession,
+  reconstructDeliveryWorkSession,
   continueDeliveryWorkSession,
   deliveryWorkSessionOperator,
   mergeDeliveryWorkSession,
@@ -21,6 +25,9 @@ import {
 import { DeliveryOosError } from "../../src/domain-workspaces/delivery/server/delivery-oos-client.ts";
 import {
   directExecutionWorkSessionTarget,
+  workSessionCommand,
+  workSessionCommandLabel,
+  workSessionReviewUrl,
   packageExecutionWorkSessionTarget,
   parseExecutionWorkItemReference,
 } from "../../src/domain-workspaces/delivery/presentation/surfaces/execution-board/work-session/execution-work-session-target.ts";
@@ -318,7 +325,7 @@ test("Delivery work-session target entry normalizes exact ART references without
     entry: "direct",
     sourceLabel: "Entry route",
     sourceValue: "Direct ART target",
-    title: "ART Work Item #1175",
+    title: "Work Item 1175",
     workItemId: 1175,
   });
   assert.deepEqual(
@@ -370,13 +377,14 @@ test("case:delivery-execution-end-to-end-negative keeps browser authority bounde
   assert.match(hookSource, /command\("merge"\)/);
   assert.match(hookSource, /command\("close"\)/);
   assert.match(modalSource, /projection\.command_receipt/);
-  assert.match(modalSource, /source-merge-approval-required/);
-  assert.match(modalSource, /art-closeout-required/);
-  assert.match(modalSource, /draft-finalization/);
-  assert.match(modalSource, /project-review-evidence/);
-  assert.match(modalSource, /cleanup-required/);
-  assert.match(modalSource, /cleanup-retry-required/);
-  assert.match(modalSource, /Close Landing Unit/);
+  const actionSource = readFileSync(new URL("../../src/domain-workspaces/delivery/presentation/surfaces/execution-board/work-session/execution-work-session-target.ts", import.meta.url), "utf8");
+  assert.match(actionSource, /source-merge-approval-required/);
+  assert.match(actionSource, /art-closeout-required/);
+  assert.match(actionSource, /draft-finalization/);
+  assert.match(actionSource, /project-review-evidence/);
+  assert.match(actionSource, /cleanup-required/);
+  assert.match(actionSource, /cleanup-retry-required/);
+  assert.match(actionSource, /Close Landing Unit/);
   assert.match(modalSource, /projection\.closeout/);
 });
 
@@ -613,3 +621,31 @@ function jsonResponse(body, status = 200) {
     status,
   });
 }
+
+test("typed session actions cover retained partial closeout and reconstruction without executing owner command strings",()=>{
+  assert.equal(workSessionCommand("landing-unit-closeout-retry-required"),"close");
+  assert.equal(workSessionCommandLabel("landing-unit-closeout-retry-required"),"Retry Landing Unit Closeout");
+  assert.equal(workSessionCommand("architecture-reconstruction-required"),"reconstruct");
+  assert.equal(workSessionCommand("source-binding-reconstruction-required"),"reconstruct");
+  assert.equal(workSessionCommand("architecture-compatible-refresh-required"),"continue");
+  for(const code of ["initiative-closeout-required","initiative-work-remains","architecture-recovery-required","pull-request-review-required","unknown-shell-command"])
+    assert.equal(workSessionCommand(code),null,"Navigation and human decisions cannot become generic commands");
+  assert.equal(workSessionReviewUrl("https://github.com/example/repo/pull/1"),"https://github.com/example/repo/pull/1");
+  for(const url of ["javascript:alert(1)","https://evil.example/repo/pull/1","https://secret@github.com/org/repo/pull/1","https://github.com/org/repo/settings"])
+    assert.equal(workSessionReviewUrl(url),null);
+});
+test("recovery uses reviewed owner bindings and preserves exact replay input without a fresh read blocking lost acknowledgements",async()=>{
+  const current=projection();current.next_action={authority:"operator-orchestration-service",code:"architecture-recovery-required",reason:"Superseded architecture"};
+  current.pull_request={state:"merged",url:"https://github.com/example/repo/pull/1",head_commit:"a".repeat(40),merge_commit:"b".repeat(40)};
+  const recovery=recoveryFromWorkSession(current,"Preserve this completed source attempt while replacing its superseded architecture.");
+  const calls=[],command={commandId:"work-session-command:reviewed-recovery",expectedSessionRevision:current.session_revision,recovery};
+  const fetchImpl=async(url,init)=>{calls.push({url:String(url),body:JSON.parse(init.body),method:init.method});return jsonResponse(projection());};
+  await recoverDeliveryWorkSession(714,command,{env,fetchImpl});await recoverDeliveryWorkSession(714,command,{env,fetchImpl});
+  assert.deepEqual(calls[0],calls[1]);assert.equal(calls[0].method,"POST");assert.match(calls[0].url,/work-session\/recover$/);
+  assert.deepEqual(calls[0].body.command.recovery,recovery);
+  assert.throws(()=>assertDeliveryWorkSessionRecovery({...recovery,session_revision:"2020-01-01T00:00:00Z"},command.expectedSessionRevision));
+  assert.throws(()=>recoveryFromWorkSession({...current,pull_request:{state:"missing"}},command.recovery.reason));
+  const before=calls.length;await assert.rejects(recoverDeliveryWorkSession(714,{...command,recovery:{...recovery,reason:"short"}},{env,fetchImpl}));assert.equal(calls.length,before);
+  await reconstructDeliveryWorkSession(714,{commandId:"work-session-command:reconstruct",expectedSessionRevision:current.session_revision},{env,fetchImpl});
+  assert.match(calls.at(-1).url,/work-session\/reconstruct$/);
+});

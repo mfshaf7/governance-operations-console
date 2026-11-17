@@ -6,14 +6,8 @@ import type {
   ArchitecturePacketRepoRevision,
 } from "../../../../live-runtime/architecture-packet-live-types.ts";
 
-export type ArchitecturePacketEditor = {
-  architectureJson: string;
-  conformanceJson: string;
-  coveredWorkItemIds: string[];
-  deliveryId: string;
-  rationale: string;
-  repoRevisionsJson: string;
-};
+export type { TechnicalPlanDraft as ArchitecturePacketEditor } from "../../../../work-model/execution/technical-plan-model.ts";
+import type { TechnicalPlanDraft as ArchitecturePacketEditor } from "../../../../work-model/execution/technical-plan-model.ts";
 
 export function emptyArchitecturePacketEditor({
   deliveryId = "",

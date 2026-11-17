@@ -8,11 +8,13 @@ import {
 } from "./delivery-oos-client.ts";
 import {
   assertDeliveryWorkSessionDecision,
+  assertDeliveryWorkSessionRecovery,
   assertDeliveryWorkSessionProjection,
   deliveryWorkSessionTargetId,
 } from "../live-runtime/delivery-work-session-live-contract.ts";
 import type {
   DeliveryWorkSessionDecision,
+  DeliveryWorkSessionRecovery,
   DeliveryWorkSessionDecisionInput,
   DeliveryWorkSessionProjection,
 } from "../live-runtime/delivery-work-session-live-types.ts";
@@ -122,6 +124,23 @@ export async function closeDeliveryWorkSession(
   return commandDeliveryWorkSession(workItemId, "close", command, options);
 }
 
+export async function reconstructDeliveryWorkSession(workItemId: number, command: {
+  commandId: string; expectedSessionRevision: string;
+}, options: DeliveryWorkSessionClientOptions = {}) {
+  return commandDeliveryWorkSession(workItemId, "reconstruct", command, options);
+}
+
+export async function recoverDeliveryWorkSession(workItemId: number, command: {
+  commandId: string; expectedSessionRevision: string; recovery: DeliveryWorkSessionRecovery;
+}, options: DeliveryWorkSessionClientOptions = {}) {
+  // Preserve the exact reviewed binding on retries, including after an accepted
+  // archive loses its HTTP acknowledgement. OOS owns revision/identity/replay.
+  assertDeliveryWorkSessionRecovery(command.recovery, command.expectedSessionRevision);
+  return requestWorkSession(workItemId, "/recover", { method: "POST", body: JSON.stringify({ command: {
+    command_id: command.commandId, expected_session_revision: command.expectedSessionRevision, recovery: command.recovery,
+  } }) }, options);
+}
+
 export function deliveryWorkSessionOperator(
   env: NodeJS.ProcessEnv = process.env,
 ) {
@@ -185,7 +204,7 @@ function preparationCommandIdentity(commandId: string) {
 
 function commandDeliveryWorkSession(
   workItemId: number,
-  action: "close" | "merge",
+  action: "close" | "merge" | "reconstruct",
   command: {
     commandId: string;
     expectedSessionRevision: string;

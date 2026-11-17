@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { advisorConversationWindow, type ConversationBinding } from "../model/advisor-conversation.ts";
+import { useAdvisorConversation } from "./use-advisor-conversation.ts";
+import { useAgentConnectionStatus } from "./agent-connection-status-provider";
 import { useDraftScopeRegistration, type AdvisorRunContext } from "./draft-advisor-scope-provider";
 import {
   advisorScopeIdentity, advisorScopeSnapshot, assertAdvisorReply, assertAdvisorScope,
@@ -10,6 +13,7 @@ import {
 type Turn = { role: "advisor" | "operator"; text: string };
 type Undo = { identity: string; before: AdvisorEdit[]; after: AdvisorEdit[] };
 type Options = {
+  conversation?: ConversationBinding & { sourceRevision?: string | null };
   getScope: () => AdvisorScope;
   apply: (edits: AdvisorEdit[]) => AdvisorEdit[];
   restore?: (edits: AdvisorEdit[]) => void;
@@ -19,7 +23,12 @@ type Options = {
 };
 
 export function useDraftAdvisor(options: Options) {
+  const { connection } = useAgentConnectionStatus();
   const current = useRef(options);
+  const binding = options.active === false ? undefined : options.conversation;
+  const memory = useAdvisorConversation(binding ? { role: binding.role, ref: binding.ref, sourceRef: binding.sourceRef } : null,
+    binding?.sourceRevision ?? null);
+  const [coverageNotice, setCoverageNotice] = useState<string | null>(null);
   current.current = options;
   const session = useRef<{ nonce: string; openedAt: string } | null>(null);
   const history = useRef<Turn[]>([]);
@@ -35,6 +44,7 @@ export function useDraftAdvisor(options: Options) {
   async function run(prompt: string, external: AdvisorRunContext = {}) {
     if (!surfaceIsOpen()) throw Error("Open the draft surface before asking its advisor.");
     if (!prompt.trim()) throw Error("Ask the advisor a question or request a draft edit.");
+    if (binding && !memory.ready) throw Error("Saved conversation is still opening. Your draft is retained; try again when it is ready.");
     if (active.current) throw Error("The advisor is already answering this request.");
     // Native snapshots may carry absent optional properties as undefined. Capture
     // their ordinary JSON wire representation before validating and binding it.
@@ -50,7 +60,10 @@ export function useDraftAdvisor(options: Options) {
     const timeout = setTimeout(() => controller.abort(), 180_000);
     try {
       session.current ??= { nonce: crypto.randomUUID(), openedAt: new Date().toISOString() };
-      const conversation = (external.conversation ?? history.current).slice(-6).map((turn) => ({ ...turn, text: turn.text.slice(0, 2000) }));
+      const window = advisorConversationWindow(external.conversation ?? (binding ? memory.turns : history.current));
+      const conversation = window.turns;
+      setCoverageNotice(window.omitted ? `${window.omitted} earlier messages are outside this request's context. No message was cut mid-text.` : null);
+      if (!external.conversation) memory.pending({ prompt, scopeRef: scope.ref, requestedAt: new Date().toISOString(), state: "unconfirmed" });
       async function invoke(): Promise<GovernedAdvisorReply> {
         if (current.current.transport) return current.current.transport(scope, prompt, controller.signal, conversation);
         const response = await fetch("/api/advisor-interaction", { method: "POST", cache: "no-store", signal: controller.signal,
@@ -70,7 +83,10 @@ export function useDraftAdvisor(options: Options) {
         throw Error("The advisor returned no matching governed evidence. No draft was changed.");
       }
       setEvidence(result.evidence);
-      if (!external.conversation) history.current = [...history.current, { role: "operator", text: prompt }, { role: "advisor", text: reply.message }].slice(-8) as Turn[];
+      if (!external.conversation) {
+        history.current = [...history.current, { role: "operator", text: prompt }, { role: "advisor", text: reply.message }].slice(-1000) as Turn[];
+        memory.complete(prompt, reply.message);
+      }
       if (reply.intent === "draft") {
         if (current.current.disabled || advisorScopeSnapshot({ ...current.current.getScope(), readOnly: false }) !== captured) {
           setNotice("The draft or selected context changed while the advisor answered. Its proposal was not applied.");
@@ -107,7 +123,14 @@ export function useDraftAdvisor(options: Options) {
   const cancel = () => active.current?.abort();
   useDraftScopeRegistration({ getScope: () => ({ ...current.current.getScope(), readOnly: Boolean(current.current.disabled) }), run, undo }, options.active !== false);
   return { busy, run, undo, canUndo: Boolean(undoRecord), evidence, notice, cancel,
-    panelControls: { busy, canUndo: Boolean(undoRecord), onUndo: undo, onCancel: cancel, notice,
+    panelControls: { connection, busy, canUndo: Boolean(undoRecord), onUndo: undo, onCancel: cancel,
+      notice: [notice, coverageNotice].filter(Boolean).join(" ") || null,
+      ...(binding ? { history: { transcript: memory.transcript, status: memory.status, hasEarlier: memory.hasEarlier,
+        ready: memory.ready, draftPrompt: memory.draftPrompt, onDraftPromptChange: memory.setDraftPrompt,
+        onUseCurrentContext: memory.useCurrentContextOnly,
+        onShowEarlier: memory.showEarlier, onNew: () => { memory.clear(); history.current = []; },
+        onRetrySave: memory.retry, saveError: memory.saveError, conflict: memory.conflict,
+        onUseServer: memory.useServerCopy, onKeepLocal: memory.keepBrowserEdits } } : {}),
       evidenceLabel: evidence ? `Last governed reply: ${evidence.effectiveModel ?? evidence.profileId}` : null },
   };
 }

@@ -44,6 +44,7 @@ type PendingRefresh = {
 
 export function useDeliveryCloseoutLiveRuntime(
   deliveryIdInput: number | string | null,
+  onCanonicalChanged?: () => Promise<void>,
 ) {
   const deliveryId =
     deliveryIdInput === null
@@ -55,6 +56,7 @@ export function useDeliveryCloseoutLiveRuntime(
   const snapshotRef = useRef<DeliveryCloseoutSnapshot | null>(null);
   const pendingRefresh = useRef<PendingRefresh | null>(null);
   const pendingCommands = useRef<Record<string, PendingCommand>>({});
+  const changed = useRef(onCanonicalChanged); changed.current = onCanonicalChanged;
 
   const refresh = useCallback(async () => {
     if (!deliveryId) {
@@ -75,6 +77,8 @@ export function useDeliveryCloseoutLiveRuntime(
         return assertDeliveryCloseoutSnapshot(body);
       })
       .then((next) => {
+        if (Object.keys(pendingCommands.current).length && next.mode === "live" && next.projection && snapshotRef.current?.projection &&
+          next.projection.source_revision !== snapshotRef.current.projection.source_revision) void changed.current?.().catch(() => undefined);
         if (activeDeliveryId.current === deliveryId) {
           snapshotRef.current = next;
           setSnapshot(next);
@@ -155,6 +159,7 @@ export function useDeliveryCloseoutLiveRuntime(
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) throw clientError(body);
       const commandResult = assertDeliveryCloseoutCommandResult(body);
+      void changed.current?.().catch(() => undefined);
       if (activeDeliveryId.current === deliveryId) {
         setLastResult(commandResult.result);
       }

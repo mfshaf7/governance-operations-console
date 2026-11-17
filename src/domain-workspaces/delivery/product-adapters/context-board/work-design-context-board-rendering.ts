@@ -14,6 +14,7 @@ import {
   contextBoardTemplateTraySvg,
 } from "../../../../product-apps/context-board/index.ts";
 import type { ContextBoardCoreNode } from "../../../../product-apps/context-board/index.ts";
+import { workDesignDiagramCollectionAttachment } from "./work-design-diagram-collection-rendering.ts";
 
 import {
   workDesignBoardToneFromDeliveryTone,
@@ -98,6 +99,8 @@ export function workDesignSnapshotAttachment({
   summary: string;
   title: string;
 }): WorkDesignSnapshotAttachment {
+  if (snapshot.diagrams && snapshot.diagrams.length > 1) return workDesignDiagramCollectionAttachment(
+    { artifact, coreNodes, ref, snapshot, summary, title }, workDesignSnapshotAttachment);
   const surfaces = contextBoardSnapshotSurfaceBoxes(snapshot);
   const surfaceBounds =
     surfaces.length > 0 ? contextBoardSurfaceBounds(surfaces) : null;

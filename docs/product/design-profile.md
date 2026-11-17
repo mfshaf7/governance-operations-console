@@ -2,6 +2,128 @@
 
 Status: graduated baseline design profile.
 
+### Execution Delivery Package panel — preview
+
+Use Work Overview, What’s Blocking Progress, Next Action, Manage Package and
+Recent Activity as section labels. Keep numeric counts in overview cards;
+separate named work lists with package-scoped status-filtered browsing. Explain
+that open work counts every descendant, while status summaries count stories,
+defects and tasks. History browsing exposes inspection only. Blockers separate
+statement, impact, resolution responsibility, agreed approach and review date;
+missing dates are Not scheduled. Preserve original wording/rationale in details.
+Next Action follows recorded status and closeout posture, never count-based
+permission. Activity shows readable time with references in a disclosure.
+
+The Execution repair retains this compact composition. Show recorded in-progress,
+blocked and ready work in lifecycle metadata; label the open count as work items
+because it covers all descendant levels. Replace the false Advisor attribution
+with those observed facts. Primary work selection uses names and numbers, with
+the same picker available from ART Tree. Source session, completion and package
+reviews keep their original owner authority. Latest Loaded Activity explicitly
+describes a bounded read rather than the whole timeline. Deferred work remains
+reachable under Current; History stays locked. Family Map covers the same
+packages using recorded membership or Unassigned. No completion/readiness gate
+claim may be inferred from a status or a retired descendant.
+
+Architecture Packet keeps technical approval separate from the saved Work Design
+brief. Default authoring uses named work and sectioned fields; raw JSON stays in
+Technical data. Saved finalized diagrams reuse the existing zoomable snapshot.
+Completion and closeout evidence use ordinary notes and explicit result choices;
+formatting is supplied by the adapter, while facts and approval stay operator
+decisions. Closeout product selection reads registered identity/version and
+responsibilities; unavailable reads show retry and never an empty success.
+
+Control Board and Family Map retain the existing off-white grid canvas; ART Tree
+retains its existing dark canvas. Scope those theme rules to the Control Board
+workspace so shared panel/loading styles cannot override them through CSS load
+order. This preserves the existing palette and board geometry.
+
+Retain the established compact package rail, two-column lifecycle metadata,
+inspection-section dividers, small signal cards and existing specialized action
+buttons. The expanded replacement made of large titled panels was rejected;
+it is not the approved direction. Keep package identity/posture above one internal
+scroll area, with section content at natural height and scroll reset on package
+selection. Use standard compact action-row/field-stack gaps between related
+controls and existing metadata top offsets below the blocker card.
+
+The existing Signal Item has an explicit full-text wrapping option for selected
+Execution details and the package Audit Trail. Its default compact truncation
+stays unchanged elsewhere. Wrapping retains the original card typography,
+colors, labels and button placement; it does not introduce larger nested panels.
+Long statements, reasons, event titles, times and receipt references remain
+readable in this detail scope. Keep actual history pending/error/empty states
+separate and retain every existing action/inspection route and read-only gate.
+This compact repair is preview-only and awaits operator review.
+
+### Refinement workspace layout — preview
+
+Metadata Workbench uses the same viewport-width, filled-height shell and
+single-region body as Build Tree, without a progress strip. Its handoff tree
+fills the main zone; Selected Package and the existing handoff inspection action
+move to the right zone for this step only. The field editor and advisor both
+start expanded and have independent collapse controls. Neither silently hides
+the other. The metadata field panel fits its actual content; the advisor owns the
+remaining height with the shared usable minimum. Do not widen the field list or
+cap the advisor to the old secondary slot. Long forms and short windows scroll
+within the rail while preserving both sets of controls. Editors without actions
+omit the empty footer track. Keep the native Single/Shared editors, empty selection guidance,
+review/confirm controls and saved drafts. Scroll the existing rail/tree regions
+at shorter desktop heights; footer navigation remains fixed.
+
+Hub, Readiness Review, Apply and History retain their own layout proportions and
+package placement. Readiness's Apply Review Gate fits its content inside the
+shared bounded scroll zone, matching Work Design's accepted gate pattern. Main
+review and log panels keep their useful fill behavior. No metadata, permission,
+advice, acceptance, apply or historical evidence semantics change.
+
+### Work Design Build Tree workspace — preview
+
+Build Tree shares Context Session's viewport-width, filled-height workspace shell
+and single-region body. Omit the workflow progress strip here so the hierarchy,
+selected draft details and discussion advisor use the available space. Keep the
+existing framed tree and support rail, their internal scrolling, Structured/Inline
+views and advisor controls. Back to Hub and Review Draft remain in the fixed
+footer; changing the shell does not change review/apply gates, saved-work scope,
+advisor permissions or read-only history. Hub, Review and Apply retain their own
+existing layouts. This presentation change awaits preview review.
+
+Context Handoff starts expanded in Structured Tree. Its explicit collapse choice
+is independent of opening the draft editor/advisor and survives view switching
+within the session. Draft Notes receive a generous viewport-aware minimum in the
+selected-item editor and Inline Tree; the support rail/tree own overflow in short
+windows. The shared tree's large-notes option is selected by Work Design only;
+Execution retains its existing compact sizing. Text and saved-work behavior stay
+unchanged.
+
+In Work Design Review Draft, the operator review gate fits its content at the
+top of the support column. Its enclosing shared scroll zone handles short-window
+overflow; the panel does not stretch to match the snapshot column. Approval
+controls, note entry and footer routing retain their existing behavior.
+The Draft Review Packet fills the remaining main-column height. Its snapshot and
+summary column stretch with it: the snapshot preview receives the extra image
+space, while the brief/count summary keeps natural height above a filled Tree
+Summary panel with its inspection action at the bottom. Do not shrink the outer
+packet or leave unframed gaps between its inner panels. The separate operator
+review gate remains content-sized. Snapshot, export, finalized brief and full
+tree inspection remain available through their existing controls.
+
+### Context Brief diagrams — approved preview batch
+
+Keep the current Context Session canvas, right-hand brief/advisor rail and fixed
+footer. A compact diagram selector and Add diagram/Diagram details actions sit
+above the canvas. Views have independent names, descriptions, types and content;
+reuse the existing canvas tools and shared fields/dialogs. Diagram details uses
+one standard-sized form, with explicit duplicate/order/delete actions. Deletion
+requires confirmation and cannot remove the last diagram. Readonly views retain
+diagram navigation and inspection with mutation controls disabled.
+
+The shared note explains the system across views. Saved/finalized versions cover
+the entire collection, and exported review content includes every retained view.
+View switching does not change architectural content or invalidate finalization.
+Existing single-board records keep their exact historical data. An advisor can
+only edit the bound selected view and explicitly requested local fields; its
+scope and evidence remain visible. This batch awaits operator visual review.
+
 ### Model usability maintenance preview
 
 The Model Profile Dashboard explains purpose, permitted workflows, policy
@@ -706,3 +828,156 @@ Show loading, slow-frame, stopped, stale, embedding-denied and error states
 without losing edits or claiming source application. This remains unpublished
 for review. Runtime content stays on its own origin and its owner's controls;
 no preview binding means no invented Preview action.
+
+### Advisor context and continuity maintenance
+
+Retain the existing Agent/draft panels and source editor. Conversation state is
+visible separately from workflow/source save state, with compact New/Earlier/
+Retry and explicit server/browser choices. History reading never claims model
+work; unknown outcomes retain explicit original retry. Keep the composer usable
+for unsent input while history is unavailable, and disable model submission until
+history is ready or current-context-only is chosen. Local diagnostic commands
+remain usable. Existing native modal movement and independent scroll areas stay.
+
+Primary/docked item context uses a compact selector in the existing context card,
+defaulting to page overview. The item is read only after a request; disclose that
+data choice, actual version and incomplete coverage. Draft advisors retain their
+exact edit scope. Context diagrams may include other views read-only through a
+collapsed Supporting diagrams list. The source editor uses Included files for
+Read only/May edit choices; added supporting files default to read-only. No new
+dashboard, agent roster or competing editor is introduced. These controls remain
+unpublished until operator visual review and normal composed source acceptance.
+
+All agents use the same compact connection badge and muted 10px monospace
+conversation status bar: primary, docked, workflow advisors, Delivery Home and
+both source editors. Keep conversation information outside the scrolling
+transcript, once per agent, with full status on hover and conditional recovery
+actions. Bars at most 360px wide show only the connection dot; the full label
+remains accessible and available on hover. Wider bars retain the status word.
+Connection observations come from the shell's single existing service check,
+without extra polling per advisor. Online means the assistant service is reachable;
+model eligibility is checked on send. Checking, offline, stale and unavailable
+stay distinct. Draft permissions and workflow/source save state remain separate.
+
+The source assistant gives Conversation its own inner panel and scroll region.
+New conversation is a compact labelled icon at the left of the request action
+row, with Ask assistant or Propose changes on the right. Conversation keeps its
+heading and frame; Included files remains a separate panel above it. Workflow
+advisors keep the same glyph and button styling at a slightly smaller 28px height
+in their existing status line, separate from Run. No empty footer or dedicated row
+is created for this action; recovery and undo controls remain conditional. The
+editor retains its 32px action-row button.
+Left-align the content-sized Ask/Propose control so its pill has no unused
+trailing space. Empty conversation guidance begins at the top; longer replies scroll
+inside the message region. Both editor consumers use this same presentation.
+
+On short desktop viewports, the source columns retain a readable minimum height
+and scroll inside the fixed modal body; messages are not squeezed to zero height.
+
+Delivery Home uses the shared advisor without a separate Delivery context
+inspection block. Keep Item context when available, and retain the controller’s
+actual context, permission checks and unavailable-context messages. No empty
+footer remains when there is no item selector or recovery action to show.
+
+The primary and docking Agent Console expose the same New conversation icon in
+their existing status line. Reuse the controller’s reset path: successful session
+closure clears working input and conversation, preserving mode and source records.
+A failed close retains the unsent input and conversation. Disable the icon during
+a request, mode change or initial history read. No additional row is introduced.
+
+
+### Execution workflow navigation
+
+Keep the compact package rail, white board/family canvas and dark ART tree.
+Current Execution omits only an empty New lane; it never drops legacy records.
+Owner-projected board posture is distinct from native ART status and from
+permission to execute. Closeout Pending remains visible after the final child
+finishes, with a separate reviewed closeout action. Recorded sessions and
+prepared candidates guide explicit work selection. Child blockers retain exact
+scope. Session follow-up actions use the existing action rows and read-only
+history locks; human PR review remains a link. Confirmed effects refresh
+connected data without resetting local drafts or refreshing on modal entry.
+
+
+### Package-scoped technical planning
+
+Technical Plan & Approval lives under Manage Package and as an exact scoped
+Next Action when the source owner requires it. Keep the package identity visible;
+Overview, Prepare Plan, System Architecture, Implementation Sequence and Review
+Plan are ordinary views without a wizard progress bar. Preserve source diagrams
+separately from the derived delivery sequence. Use the shared context-board
+renderer and zoom/full-diagram viewer. Canonical JSON is a specialist disclosure;
+readable review and explicit human approval are primary. The standard advisor
+stays open with usable prompt space at both supported desktop sizes. Missing
+checks belong with the form rather than consuming the advisor's entire rail.
+History retains the same layout with mutation locked.
+
+
+Prepare Plan keeps scope and justification in one compact summary tray, with
+explicit Edit Scope and Edit Summary controls. Five freely navigable planning
+areas share one focused section editor. The desktop area rail becomes a standard
+selector on narrower desktops; the advisor keeps its own usable prompt space.
+Empty, Draft and Needs attention describe local input, never owner readiness or
+approval. The Verification area exposes the existing explicit verification-required
+decision alongside applicability; neither is inferred by the form.
+
+Scalar fields use shared field grids instead of per-property trays. Nested
+structures use inspection dividers. Repeated entries are named compact rows,
+with one open editor per list. Simple text lists reuse the shared compact
+add/remove field instead of wrapping each string in an entry tray. Work type, parent and repository details start as
+metadata with explicit editing. Repository search appears only for sections that
+use repositories. Written reasoning remains free text; identifiers, references,
+choices and repeatable structures keep their distinct controls. Specialist JSON
+and validation checks stay in disclosures; they do not replace guided fields.
+Review Plan uses the same planning areas and readable sections. No schema,
+applicability, source evidence, approval or storage authority changes.
+
+
+### Technical Plan workspace clarification — approved preview redesign
+
+Overview explains the conditional purpose with a four-part concept diagram:
+system design → technical plan → human approval → execution checks. This is
+explanatory content, without progress semantics. A clearly labelled API/UI
+example shows ordering, verification and recovery; it is separate from the
+selected package's real plan. The checked-work requirement, record availability,
+covered scope and saved-design availability remain distinct facts.
+
+The Execution Board entry explains when to open the plan and offers the existing
+work-item check path. Missing records and generated draft booleans remain Not
+checked. Only the owner-confirmed implementation-ready work-start result can
+establish Not required or an approved bound plan for that exact work item.
+Required-plan, existing-plan binding and recovery are distinct. History offers
+inspection without claiming current eligibility. No applicability classifier or
+new execution gate is introduced.
+
+Next Action uses the existing rail panel treatment at natural height. Every
+state has a purpose/outcome description and disabled controls have a visible
+reason. Long check lists stay in Prepare Plan, preserving advisor height. The
+Overview's primary action opens work selection to inspect its requirements; drafting remains freely
+available through Prepare Plan. Leaving a dirty plan to inspect work uses the
+existing discard guard.
+
+Prepare Plan has one framed selected-section container, with named nested groups
+and flat scalar fields. Scope editing, area/section navigation, field content,
+lookup utilities and specialist JSON have distinct places. Review uses framed
+planning areas with source-derived summaries and full retained details; counts
+are not readiness claims. Saved architecture brief and diagram context use
+separate readable containers with preserved line breaks and provenance disclosure.
+Implementation Sequence protects canvas height, keeps selected-element details
+compact and explicitly identifies plan source rather than claiming execution
+progress. Both supported desktop sizes retain readable controls and advisor input.
+
+Compact advisor feedback uses secondary typography and short gaps for notices,
+evidence labels and retained Undo/history actions. It preserves the prompt after
+an applied draft at short desktop heights; feedback remains visible and is not
+folded into or confused with the conversation. Existing compact advisor consumers
+share this treatment, with no change to history, permissions or reply handling.
+
+
+The board offers one work-picker action per selected package. When Next Action
+already owns Choose Work Item, Manage Package omits its duplicate. When another
+move owns Next Action, or that read is unavailable, Manage Package retains the
+work picker for inspection. Technical Plan has its own inspection entry and no
+second work-picker button. Its workspace uses Choose Work Item for the same
+picker; the label never implies a separate check operation. Package blockers
+retain priority, and only work-start responses establish execution requirements.

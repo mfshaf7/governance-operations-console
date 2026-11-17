@@ -74,10 +74,16 @@ export async function submitDeliveryCloseoutCommand(
   const deliveryId = deliveryCloseoutDeliveryId(deliveryIdInput);
   const config = resolveDeliveryOosConfig(options.env);
   const operator = deliveryOosOperator(config);
-  const operation = assertDeliveryCloseoutOperation(command.operation);
+  const operation = structuredClone(assertDeliveryCloseoutOperation(command.operation));
   const expectedSourceRevision = assertDeliveryCloseoutSourceRevision(
     command.expectedSourceRevision,
   );
+  if (operation.payload.impact.kind === "workspace_entrant") {
+    const candidate = operation.payload.impact.candidate;
+    candidate.correlation_ref = command.commandId;
+    candidate.candidate_ref = `oos://delivery-closeout-candidates/${command.commandId}`;
+    candidate.candidate_version = expectedSourceRevision;
+  }
   const result = assertDeliveryCloseoutResult(
     await deliveryOosRequest(
       config,

@@ -12,6 +12,7 @@ type TerasSignalItemBaseProps = TerasDataAttributes & {
   label: ReactNode;
   meta?: ReactNode;
   title: ReactNode;
+  textOverflow?: "truncate" | "wrap";
   tone?: TerasTone;
 };
 
@@ -44,6 +45,7 @@ export function TerasSignalItem({
   onSelect,
   statusLabel,
   title,
+  textOverflow = "truncate",
   tone = "info",
   ...dataAttributes
 }: TerasSignalItemProps) {
@@ -76,6 +78,7 @@ export function TerasSignalItem({
           className={cx(styles.terasSignalItem, styles.terasSignalItemInteractive)}
           data-has-action-label="true"
           data-tone={tone}
+          data-text-overflow={textOverflow}
           onClick={onSelect}
           type="button"
         >
@@ -88,6 +91,7 @@ export function TerasSignalItem({
           data-has-actions={actions ? "true" : "false"}
           data-has-status={statusLabel ? "true" : "false"}
           data-tone={tone}
+          data-text-overflow={textOverflow}
         >
           {content}
         </article>

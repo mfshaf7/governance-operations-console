@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   agentProviderSafetyMode,
+  agentConnectionPresentation,
   deriveAgentProviderReadinessState,
   isAgentProviderStatus,
   retainStaleAgentProviderObservation,
@@ -76,6 +77,21 @@ test("Agent provider transport failure without prior truth is unavailable, not o
   assert.equal(unavailable.freshness, "stale");
   assert.equal(unavailable.observedAt, null);
   assert.equal(deriveAgentProviderReadinessState(unavailable), "probing");
+});
+
+test("shared agent badges never present retained or missing observations as online", () => {
+  assert.equal(agentConnectionPresentation(null).state, "checking");
+  assert.equal(agentConnectionPresentation(providerStatus()).label, "Online");
+  assert.equal(agentConnectionPresentation(providerStatus({ status: "offline" })).label, "Offline");
+  const stale = retainStaleAgentProviderObservation({
+    checkedAt: "2026-07-28T04:00:10.000Z", error: "connection failed", previous: providerStatus(),
+  });
+  assert.equal(agentConnectionPresentation(stale).label, "Stale");
+  assert.equal(agentConnectionPresentation(retainStaleAgentProviderObservation({
+    checkedAt: stale.checkedAt, error: "connection failed", previous: null,
+  })).label, "Unavailable");
+  assert.match(agentConnectionPresentation(providerStatus()).description, /service is reachable/);
+  assert.match(agentConnectionPresentation(providerStatus()).description, /model is checked when you send/);
 });
 
 test("Agent provider observations require source and freshness timestamps", () => {

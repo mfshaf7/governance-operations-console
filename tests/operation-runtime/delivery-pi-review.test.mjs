@@ -6,7 +6,7 @@ import { canonicalSourceResponse } from "../support/console-source-projection.mj
 
 const env = { OOS_BASE_URL: "http://127.0.0.1:8080", OOS_CALLER_ID: "governance-operations-console", OOS_CALLER_SECRET: "test-only", GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:test-owner" };
 const review = { actualBusinessValue: 8, reviewOutcome: "Met", reviewNote: "Actual accepted product and original owner receipts were independently verified." };
-function owner({ activeSource = false, wrongMetadata = false, wrongResult = false, lostResponse = false, reject = false, already = false } = {}) {
+function owner({ activeSource = false, wrongMetadata = false, wrongResult = false, lostResponse = false, reject = false, already = false, choices = ["Met", "Not met"] } = {}) {
   const calls = [];
   let actual = already ? 8 : null, outcome = already ? "Met" : null, updated = "2026-01-01T00:00:00.000Z";
   function node() { return { id: wrongMetadata ? 43 : 42, record_ref: "openproject://work_packages/42", type: "PI Objective", subject: "Deliver an actual product", status: "new", updated_at: updated,
@@ -18,7 +18,7 @@ function owner({ activeSource = false, wrongMetadata = false, wrongResult = fals
       state: activeSource ? "source-work" : "decision-required", next_action: null }, { recordRef: "openproject://work_packages/42", sourceOwner: "workspace-delivery-art" });
     if (path.endsWith("/continuation-context")) return Response.json({ workflow_id: "delivery-work-item-continuation-context", delivery_id: "delivery-40",
       work_item_id: "work-item-42", work_item_record_ref: "openproject://work_packages/42",
-      continuation_context: { target_item: { ...node(), id: 42, blocked: false, dependency_blocked: false, ready_contract_satisfied: actual !== null,
+      continuation_context: { target_item: { ...node(), id: 42, pi_objective_review_outcome_options: choices, blocked: false, dependency_blocked: false, ready_contract_satisfied: actual !== null,
         completion_narrative_contract_satisfied: true, completion_status_transition_available: true, completion_evidence_present: false, completion_evidence_formatting_valid: false },
       summary: { open_descendant_count: 0, open_child_count: 0, completed_related_count: 1 } } });
     if (path.endsWith("/change-control")) return canonicalSourceResponse({ schema_version: 1, delivery_id: "delivery-40", record_ref: "openproject://work_packages/40",
@@ -40,6 +40,7 @@ const request = context => ({ expectedRevision: context.revision, reviewConfirme
 test("earned review uses the exact native objective and PI without completing source or ART", async () => {
   const runtime = owner(); const context = await readItemCompletionContext(42, runtime.options);
   assert.equal(context.can_complete, false); assert.equal(context.pi_review.can_review, true);
+  assert.deepEqual(context.pi_review.review_outcomes, ["Met", "Not met"]);
   const result = await submitItemPiReview(42, request(context), runtime.options);
   assert.equal(result.context.status, "new"); assert.equal(result.context.pi_review.actual_business_value, 8); assert.equal(result.context.can_complete, true);
   assert.deepEqual(runtime.calls.filter(x => x.method === "POST"), [{ path: "/v1/delivery-initiatives/delivery-40/pi-review", method: "POST", body: { input: {
@@ -61,11 +62,23 @@ test("foreign objective metadata, stale revision and source sessions prevent rev
 test("explicit review and native values are validated before mutation", async () => {
   const runtime = owner(); const context = await readItemCompletionContext(42, runtime.options);
   await assert.rejects(submitItemPiReview(42, { ...request(context), reviewConfirmed: false }, runtime.options), /Approve/);
+  await assert.rejects(submitItemPiReview(42, { ...request(context), review: { ...review, reviewOutcome: "Unconfigured result" } }, runtime.options), /current native review choices/);
   for (const patch of [{ actualBusinessValue: -1 }, { actualBusinessValue: 1.5 }, { actualBusinessValue: "8" }, { reviewOutcome: "" }, { reviewNote: 42 }, { status: "done" }]) {
     assert.throws(() => itemPiReview({ ...review, ...patch }), /Review requires/);
   }
   assert.equal(runtime.calls.filter(x => x.method === "POST").length, 0);
   assert.equal(itemPiReview({ actualBusinessValue: 0, reviewOutcome: "Not met" }).reviewNote, "");
+});
+
+test("unavailable or malformed native PI outcomes never become guessed choices", async () => {
+  for (const choices of [null, ["Met", "Met"], [""], [42]]) {
+    const runtime = owner({ choices });
+    await assert.rejects(readItemCompletionContext(42, runtime.options), /choices are unavailable/);
+    assert.equal(runtime.calls.filter(call => call.method === "POST").length, 0);
+  }
+  const context = await readItemCompletionContext(42, owner({ choices: [] }).options);
+  assert.equal(context.pi_review.can_review, false);
+  assert.deepEqual(context.pi_review.review_outcomes, []);
 });
 
 test("native review denials and foreign write responses never become success or retries", async () => {

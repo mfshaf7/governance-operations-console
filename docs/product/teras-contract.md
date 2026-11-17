@@ -301,10 +301,21 @@ mutable/final aliases, or child-level stack markers. Opt-in `scroll` preserves
 the fill child's natural minimum height and makes the stack the scroll owner;
 an expanded advisor retains usable input and transcript space. Existing callers
 retain their constrained layout unless they opt in.
+`minimumFillHeight="medium"` lets a scrolling panel stack keep its fill pane at
+an 18rem minimum while distributing remaining height, instead of forcing the
+pane's entire natural content height. Use it when that pane already owns an
+internal scroll area and shares the stack with a bounded secondary panel.
 
 `TerasContentTray` keeps natural height by default. Use `fit="fill"` only when
 its body must consume the remaining height allocated by its parent. Tray
 callers must not expose the tray's internal row-track sequence.
+`TerasMediaSnapshot` uses the same opt-in `fit` vocabulary. Fill stretches its
+frame and preview image area while retaining contained image proportions and
+natural metadata/action heights. Existing callers remain content-sized unless
+they opt in; short windows retain a readable preview minimum and internal scroll.
+`TerasAdvisorPanel` accepts the standard panel `fit` choice for callers that need
+a collapsed advisor to keep its natural header height inside a fill slot. Existing
+callers keep their current alignment unless they opt in.
 
 `TerasFullscreenSurfaceFrame` owns fullscreen workspace shells with a summary/header
 slot, nav rail slot, and active surface viewport. Domain code supplies the
@@ -614,6 +625,11 @@ expansion and exact reference wrapping. Current health, warnings and required
 actions remain outside the disclosure. Governance Activity retains its separate
 primary-console evidence presentation.
 
+The same disclosure may include domain-owned technical editors or receipt JSON
+after its metadata. Those children retain their original fields and authority;
+expanding the disclosure does not validate, approve or submit them. Empty
+metadata is omitted when the disclosure only contains those editors.
+
 ## Operation Hub Rules
 
 Use `TerasHubFrame` when a domain hub follows the selected-record,
@@ -823,3 +839,29 @@ Technical/evidence columns retain a readable minimum; domain code does not set
 column widths. Keep any necessary overflow inside the table region. Long purpose descriptions can reuse the existing
 `value-stack` two-line preview while retaining the complete text in record details.
 Environment surfaces compose these patterns without local CSS.
+
+
+### Focused section editor
+
+`TerasSectionEditorLayout` places a compact desktop navigation rail beside an
+editor. Below 1450px the area selector and section selector share one row, leaving
+room for fields in short desktop windows. `TerasSurfaceNavButton`'s explicit
+stacked layout wraps full labels in narrow rails; its existing inline layout is
+unchanged. Use shared field grids for scalar controls, inspection sections for
+nested structures and named entry trays for repeated values. These patterns do
+not impose wizard ordering, validity or approval semantics.
+
+
+`TerasConceptFlow` renders a labelled conceptual relationship diagram using
+ordered cards and arrows. It has no selection, progress or completion states;
+examples must be visibly distinguished from actual workflow data. Content Tray's
+`descriptionFormat="lines"` preserves source prose line breaks without changing
+the default flowing-description treatment. These shared presentation extensions
+do not introduce workflow authority.
+
+Technical Plan uses the existing `TerasPanelStack` medium minimum and panel-owned
+scrolling for its action/advisor column. Compact advisor feedback places the
+notice and Undo in one row, with evidence below; additional history actions retain
+their controls in a bounded feedback scroll region. Compact spacing protects the
+composer while keeping both panel boundaries visible in the normal short-window
+state. No new sizing token or workflow authority is added.

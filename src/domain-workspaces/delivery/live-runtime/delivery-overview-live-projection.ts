@@ -21,18 +21,20 @@ export function projectCanonicalDeliveryOverview(value: unknown, revision: strin
   const seen = new Set<number>(), deferred = new Set(v.deferred_history_refs);
   const packages: DeliveryReadModel["packages"] = [], selected: DeliveryReadModel["selected_packages"] = [];
   for (const item of v.roots) {
-    const root=item as {id:number;record_ref:string;subject:string;status:DeliveryBackendStatus;owner_repo:string|null;target_pi:string|null;architecture_anchor_ref:string|null;required_upstream_ref:string|null};
+    const root=item as {id:number;record_ref:string;subject:string;status:DeliveryBackendStatus;owner_repo:string|null;target_pi:string|null;architecture_anchor_ref:string|null;required_upstream_ref:string|null;initiative_family?:string|null};
     if(!root||!Number.isSafeInteger(root.id)||root.id<1||seen.has(root.id)||root.record_ref!==`openproject://work_packages/${root.id}`||
        typeof root.subject!=="string"||!root.subject.trim()||!Object.hasOwn(postures,root.status)||
        [root.owner_repo,root.target_pi,root.architecture_anchor_ref,root.required_upstream_ref].some(x=>x!==null&&typeof x!=="string"))throw Error("Invalid Delivery root identity.");
     seen.add(root.id);
     const id=`delivery-${root.id}`, current=activeById.get(root.id), inactive=["done","retired"].includes(root.status);
     if(inactive ? current!==undefined || !deferred.has(root.record_ref) : !current || deferred.has(root.record_ref))throw Error("Global Delivery scope is incomplete or conflicting.");
+    if(root.initiative_family !== undefined && root.initiative_family !== null && (typeof root.initiative_family !== "string" || !root.initiative_family.trim())) throw Error("Invalid Delivery family identity.");
     if(current){
       if(current.backend_status!==root.status||current.source_ref!==root.record_ref)throw Error("Active Delivery changed during its read.");
-      packages.push(current);selected.push(activeDetails.get(id)!);
+      packages.push({...current, initiative_family: root.initiative_family ?? current.initiative_family ?? null});selected.push(activeDetails.get(id)!);
     }else{
       packages.push({delivery_package_id:id,legacy_epic_id:root.id,display_name:root.subject,backend_status:root.status,
+        initiative_family:root.initiative_family??null,
         package_posture:postures[root.status],open_child_count:null,source_custody:null,source_ref:root.record_ref,target_pi:root.target_pi,
         summary:"Retained package posture. Archived child counts and original workflow outcomes require the exact owner read; no empty tree is inferred.",
         tone:root.status==="done"?"ok":"muted",tree_root_id:`work-item-${root.id}`,workflow_phase:"audit_only",available_actions:[]});

@@ -60,6 +60,7 @@ export function DeliveryWorkspaceModal({
   contract,
   entryIntent,
   executionCount,
+  onExecutionChanged,
   model,
   onActiveSurfaceChange,
   onRecordScopeChange,
@@ -73,6 +74,7 @@ export function DeliveryWorkspaceModal({
   contract: OperationWorkbenchDomainContract;
   entryIntent: ConsoleSurfaceEntryIntent | null;
   executionCount: number;
+  onExecutionChanged?: () => Promise<void>;
   model: DeliveryReadModel;
   onActiveSurfaceChange: (surfaceId: DeliveryWorkspaceSurfaceId) => void;
   onClose: () => void;
@@ -331,6 +333,7 @@ export function DeliveryWorkspaceModal({
         }
       >
         <DeliveryWorkspaceSurfaceContent
+          onExecutionChanged={onExecutionChanged}
           key={`${activeSurfaceId}:${model.history_scope??"preview"}`}
           activeSurfaceId={activeSurfaceId}
           catalogDeliveryLinkTarget={catalogDeliveryLinkTarget}
@@ -400,6 +403,7 @@ export function DeliveryWorkspaceModal({
 }
 
 function DeliveryWorkspaceSurfaceContent({
+  onExecutionChanged,
   activeSurfaceId,
   catalogDeliveryLinkTarget,
   catalogRepositoryFocusId,
@@ -417,6 +421,7 @@ function DeliveryWorkspaceSurfaceContent({
   onWorkDesignApplied,
   packageRegisterFocus,
 }: {
+  onExecutionChanged?: () => Promise<void>;
   activeSurfaceId: DeliveryWorkspaceSurfaceId;
   catalogDeliveryLinkTarget: CatalogDeliveryLinkTarget | null;
   catalogRepositoryFocusId: string | null;
@@ -478,6 +483,7 @@ function DeliveryWorkspaceSurfaceContent({
   if (activeSurface.id === "execution-board") {
     return (
       <DeliveryExecutionBoard
+        onCanonicalChanged={onExecutionChanged}
         focusPackageId={executionFocusPackageId}
         model={model}
         onOpenCatalog={onOpenCatalogForDelivery}
@@ -531,6 +537,7 @@ function DeliveryWorkspaceSurfaceContent({
       focusPackageId={focusedPackageId}
       focusToken={focusedToken}
       model={model}
+      onCanonicalChanged={onExecutionChanged}
       onRequestPackageRegisterFocus={onRequestPackageRegisterFocus}
       onWorkDesignApplied={onWorkDesignApplied}
       surface={activeSurface}

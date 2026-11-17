@@ -51,6 +51,9 @@ export function executionActionOperatorFieldSpecs(
   action: DeliveryAvailableAction,
 ): ExecutionActionOperatorFieldSpec[] {
   switch (action.action_type) {
+    case "retire":
+      return [{ id: "retirement_reason", kind: "note", label: "Retirement reason",
+        placeholder: "Explain why this work is superseded or no longer valid, and what happens to its remaining scope." }];
     case "continue-remaining-work":
     case "start-work":
       return [
@@ -186,7 +189,7 @@ function buildFallbackActionIntent({
     action_type: action.action_type,
     artifacts: [],
     advisor_reason:
-      "No package-scoped action intent fixture is projected yet; this fallback keeps the route, target, and gate contract visible.",
+      "This prepares a review of the selected package. The service checks prerequisites and the exact source revision when you confirm.",
     current_backend_status: packageSummary.backend_status,
     current_package_posture: getDeliveryEffectivePackagePosture(packageSummary),
     delivery_package_id: packageSummary.delivery_package_id,
@@ -244,6 +247,7 @@ function executionFallbackOperatorPayload(
   action: DeliveryAvailableAction,
 ): Record<string, string> {
   switch (action.action_type) {
+    case "retire": return { retirement_reason: "" };
     case "clear-blocker":
       return {
         action: "clear",
@@ -282,6 +286,7 @@ function executionFallbackRequiredPayloadFields(
   }
 
   switch (action.action_type) {
+    case "retire": return ["retirement_reason"];
     case "clear-blocker":
       return ["action", "resume_status"];
     case "continue-remaining-work":

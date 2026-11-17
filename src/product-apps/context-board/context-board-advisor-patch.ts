@@ -1,4 +1,5 @@
 import { contextBoardCustomKinds, type ContextBoardConnection, type ContextBoardCustomItem, type ContextBoardSnapshot } from "./context-board-model.ts";
+import { captureContextBoardDiagrams } from "./context-board-diagrams.ts";
 
 const kinds = new Set<string>(contextBoardCustomKinds);
 const tones = new Set(["amber", "blue", "default", "green", "neutral", "purple", "red"]);
@@ -101,5 +102,5 @@ export function applyContextBoardAdvisorPatch(base: ContextBoardSnapshot, value:
     connectionIds.add(raw.id); next.connections.push(entry as unknown as ContextBoardConnection);
   }
   if (next.customItems.length > 250 || next.connections.length > 400) throw Error("Resulting board exceeds its draft bound.");
-  return next;
+  return next.diagrams ? captureContextBoardDiagrams(next, next.diagrams, next.activeDiagramId!) : next;
 }

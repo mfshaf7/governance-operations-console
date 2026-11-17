@@ -93,9 +93,10 @@ export function SelectedMetadataEditor({
     : status;
 
   return (
-    <TerasPanelStack scroll fill={editorCollapsed ? "last" : "first"}>
+    <TerasPanelStack scroll minimumFillHeight="medium" fill="last">
       <RefinementMetadataEditorPanel
         area="field"
+        hasActions={showActionRow}
         collapsed={editorCollapsed}
         tone={statusTone}
       >

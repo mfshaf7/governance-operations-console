@@ -9,6 +9,7 @@ import {
 import { consoleMutationAttributionHeaders } from "../../console-integration/identity/server/console-session-authorization.ts";
 import { projectAgentContextCandidate } from "../model/agent-context-policy.ts";
 import type { GovernedAgentRequest } from "./agent-request-policy.ts";
+import { selectedProjectKey, type SelectedProjectKnowledge } from "../model/selected-project-context.ts";
 import { advisorDraftInstructions, assertAdvisorScope, type AdvisorScope } from "../model/advisor-drafts.ts";
 
 const maxResponseBytes = 1_048_576;
@@ -32,6 +33,7 @@ export class AgentConsoleOosError extends Error {
 }
 
 type Options = Readonly<{
+  selectedProjectKnowledge?: SelectedProjectKnowledge;
   config?: ConsoleOosOperatorConfiguration;
   fetchImpl?: typeof fetch;
   now?: () => Date;
@@ -75,6 +77,9 @@ export async function invokeGovernedAgent(
 ): Promise<GovernedAgentInvocationResult> {
   const config = options.config ?? resolveConfig();
   const ids = requestIds(input);
+  if (input.selectedProject && (!options.selectedProjectKnowledge || selectedProjectKey(input.selectedProject) !== selectedProjectKey(options.selectedProjectKnowledge.selection)) ||
+      options.selectedProjectKnowledge && (!input.selectedProject || options.draftContext))
+    throw new AgentConsoleOosError("Selected item context must be read from its exact owner before sending.", "agent_selected_context_unavailable", 422);
   const created = assertSessionProjection(
     await request("/v1/agent-console/sessions", {
       body: JSON.stringify({
@@ -97,7 +102,10 @@ export async function invokeGovernedAgent(
     operator_draft: assertAdvisorScope(options.draftContext.scope),
     conversation: options.draftContext.conversation,
     requested_response_format: advisorDraftInstructions,
-  } : projectAgentContextCandidate(input.candidate));
+  } : input.conversation?.length || options.selectedProjectKnowledge ? { candidate: projectAgentContextCandidate(input.candidate), conversation: input.conversation ?? [],
+    ...(options.selectedProjectKnowledge ? { selected_project: options.selectedProjectKnowledge } : {}),
+    coverage: "Complete selected recent working messages, not a full conversation or accepted project authority. Current supplied source observations take precedence." }
+    : projectAgentContextCandidate(input.candidate));
   const invoked = assertSessionProjection(
     await request(`/v1/agent-console/sessions/${encodeURIComponent(ids.sessionId)}/invocations`, {
       body: JSON.stringify({
@@ -112,20 +120,21 @@ export async function invokeGovernedAgent(
           scope: input.candidate.scope,
           source_authority: "governance-operations-console",
           source_mode: input.candidate.sourceMode,
-          source_ref: input.candidate.refs[0] ?? `console://agent-context/${encodeURIComponent(input.candidate.id)}`,
+          source_ref: options.selectedProjectKnowledge?.sourceRef ?? input.candidate.refs[0] ?? `console://agent-context/${encodeURIComponent(input.candidate.id)}`,
           source_revision: digest(content),
-          captured_at: input.candidate.observedAt ?? input.candidate.projectedAt,
+          captured_at: options.selectedProjectKnowledge?.observedAt ?? input.candidate.observedAt ?? input.candidate.projectedAt,
           content,
           content_digest: digest(content),
         },
         activity: {
           kind: options.draftContext?.scope.role ?? "assistant-response",
           subject_ref: (() => {
-            const ref = options.draftContext?.scope.packageRef ?? options.draftContext?.scope.ref;
+            const ref = input.selectedProject?.id ?? options.draftContext?.scope.packageRef ?? options.draftContext?.scope.ref;
             return ref && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(ref) && !/(?:sk-|gh[pousr]_|github_pat_|Bearer|PRIVATE KEY)/i.test(ref) ? ref : null;
           })(),
         },
-        budget_tokens: options.draftContext ? 8000 : 1024,
+        budget_tokens: options.draftContext ? 8000 : input.conversation?.length || options.selectedProjectKnowledge
+          ? Math.min(8000, Math.max(1024, Math.ceil(content.length / 4) + 512)) : 1024,
       }),
       method: "POST",
     }, { ...options, config }),

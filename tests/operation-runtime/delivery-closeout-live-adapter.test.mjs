@@ -308,11 +308,39 @@ function completeDraft() {
   };
 }
 
+test("closeout accepts ordinary evidence only with explicit results and rejects contradictory outcomes", () => {
+  const draft = completeDraft();
+  draft.testResultEvidence = "The retained operation passed its tests.";
+  draft.validationEvidence = "The recorded outcome was inspected.";
+  assert.equal(executionCloseoutEvidenceComplete(draft), false);
+  draft.testResult = "PASS"; draft.validationResult = "PASS";
+  assert.equal(executionCloseoutEvidenceComplete(draft), true);
+  const evidence = executionCloseoutOperation({ draft, projection: projection() }).payload.evidence;
+  assert.equal(evidence.test_result_evidence, "- PASS: The retained operation passed its tests.");
+  draft.testResultEvidence = "FAIL: A required test failed.";
+  assert.equal(executionCloseoutEvidenceComplete(draft), false);
+  assert.throws(() => executionCloseoutOperation({ draft, projection: projection() }), /conflicts/);
+});
+
+test("workspace registration closeout binds generated references to the exact server command", async () => {
+  const draft=completeDraft();draft.impactKind="workspace-entrant";Object.assign(draft.workspaceEntrant,{entrantKind:"repository",repoClass:"product-source",requiresSecurityBindings:"no",securityOwner:"",candidateRef:"",candidateVersion:""});
+  assert.equal(executionCloseoutImpactComplete(draft),true);
+  const operation=executionCloseoutOperation({draft,projection:projection()}),original=structuredClone(operation),bodies=[];
+  await submitDeliveryCloseoutCommand("delivery-886",{acceptanceNote:"Record this reviewed registration handoff.",commandId:"delivery-closeout-command:registered-1",expectedSourceRevision:revision("a"),operation},{env,fetchImpl:async(_url,init)=>{
+    const body=JSON.parse(init.body);bodies.push(body);return jsonResponse(result({commandId:body.command_id}),201);
+  }});
+  const candidate=bodies[0].operation.payload.impact.candidate;
+  assert.equal(candidate.correlation_ref,bodies[0].command_id);
+  assert.equal(candidate.candidate_version,revision("a"));
+  assert.equal(candidate.candidate_ref,`oos://delivery-closeout-candidates/${bodies[0].command_id}`);
+  assert.deepEqual(operation,original);
+});
+
 function closeoutOperation() {
   return {
     payload: {
       evidence: {
-        changed_surfaces: "Delivery closeout API.",
+        changed_surfaces: "- Delivery closeout API.",
         completion_summary: "Delivery work is complete.",
         demo_evidence: "System demo receipt.",
         demo_outcome: "reviewed",
@@ -320,8 +348,8 @@ function closeoutOperation() {
         evidence_refs: ["review-packet://delivery-886/final"],
         inspect_action_items: "No remaining closeout actions.",
         inspect_summary: "Closeout evidence was inspected.",
-        test_result_evidence: "PASS: npm test",
-        validation_evidence: "PASS: composed closeout proof",
+        test_result_evidence: "- PASS: npm test",
+        validation_evidence: "- PASS: composed closeout proof",
       },
       impact: { kind: "none" },
     },

@@ -8,6 +8,7 @@ export function TerasContentTray({
   children,
   className,
   description,
+  descriptionFormat = "flow",
   fit = "content",
   kicker,
   title,
@@ -18,6 +19,7 @@ export function TerasContentTray({
   children?: ReactNode;
   className?: string;
   description?: ReactNode;
+  descriptionFormat?: "flow" | "lines";
   fit?: "content" | "fill";
   kicker?: ReactNode;
   title?: ReactNode;
@@ -26,6 +28,7 @@ export function TerasContentTray({
   return (
     <section
       className={cx(styles.terasContentTray, className)}
+      data-description-format={descriptionFormat}
       data-fit={fit}
       data-tone={tone}
       {...props}

@@ -10,12 +10,13 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useAgentModalPresentation } from "../state/use-agent-modal-presentation.ts";
-import { TerasLoadingIndicator, TerasLoadingState, TerasModalFoundation } from "@/teras";
+import { TerasAdvisorStatusBar, TerasLoadingState, TerasModalFoundation, TerasNewConversationButton } from "@/teras";
 import { useAgentConsoleSession } from "../state/agent-console-session-provider";
 import { useAgentDockPortal } from "../state/use-agent-dock-portal";
 import type { AgentContextCandidate } from "../../console-shell/context/agent-context-candidate";
 import type { AgentInteractionMode } from "../model/agent-context-policy";
 import type { AgentProviderStatus } from "../model/agent-provider-status";
+import { agentConnectionPresentation } from "../model/agent-provider-status";
 import type { AgentConsolePlacement } from "../state/agent-console-session-provider";
 import { useAgentConsoleController } from "../state/use-agent-console-controller";
 
@@ -66,13 +67,16 @@ export function ModelInteractionDock({
     isFloatingDock,
     modeLabel,
     modelDockExpanded,
-    providerOnline,
-    providerState,
-    providerStateLabel,
-    providerStatusLabel,
     setAgentPrompt,
     setModeMenuOpen,
     setModelDockExpanded,
+    savedConversationStatus,
+    canSubmitConversation,
+    conversationRecovery,
+    conversationControls,
+    projectContext,
+    hasEarlierConversation,
+    showEarlierConversation,
   } = useAgentConsoleController({
     contextCandidate,
     workspaceContextCandidate,
@@ -140,9 +144,6 @@ export function ModelInteractionDock({
             <div className="model-dock-identity-copy min-w-0">
               <p id={modalTitleId} className="model-dock-title mono text-[11px] font-bold uppercase">
                 {title}
-              </p>
-              <p className="model-dock-subtitle mt-1 truncate text-xs">
-                {providerStatusLabel}
               </p>
             </div>
           </div>
@@ -226,18 +227,27 @@ export function ModelInteractionDock({
           <p className="model-dock-context-summary mt-1 text-xs" title={contextSummary}>
             {contextSummary}
           </p>
+          {projectContext.enabled && (projectContext.available.length || projectContext.selected) ? <div className="mt-2 flex min-w-0 items-center gap-2 text-xs">
+            <label htmlFor={`project-context-${placement}`}>Item context</label>
+            <select id={`project-context-${placement}`} aria-label="Item context" className="model-dock-mode-select min-w-0 flex-1" disabled={agentBusy}
+              value={projectContext.selected ? `${projectContext.selected.kind}:${projectContext.selected.id}` : ""} onChange={event => projectContext.choose(event.target.value)}>
+              <option value="">Page overview</option>
+              {[...projectContext.available,...(projectContext.selected && !projectContext.available.some(item => item.kind === projectContext.selected!.kind && item.id === projectContext.selected!.id) ? [projectContext.selected] : [])].map(item => <option key={`${item.kind}:${item.id}`} value={`${item.kind}:${item.id}`}>{item.title} · {item.kind}</option>)}
+            </select>
+          </div> : null}
         </div>
         <div className="model-dock-input-shell terminal-shell rounded-2xl p-3">
-          <div className="terminal-topbar mb-3 flex items-center justify-between gap-3">
-            <span className="terminal-runtime-status" data-state={providerState} title="Connection to the assistant service. The selected model is checked when you send a request.">
-              {!providerStatus ? <TerasLoadingIndicator /> : null}
-              <span className="terminal-runtime-status-dot" />
-              <span>{providerStateLabel}</span>
-            </span>
-            <span className="terminal-provider-label mono text-[10px] uppercase">
-              {providerStatusLabel}
-            </span>
-          </div>
+          {hasEarlierConversation || conversationRecovery.error || conversationRecovery.conflict ? <div className="mb-2 flex flex-wrap items-center justify-end gap-2 text-xs">
+            {hasEarlierConversation ? <button className="model-dock-mode-select" type="button" onClick={showEarlierConversation}>Earlier messages</button> : null}
+            {conversationRecovery.error && !conversationRecovery.conflict ? <button className="model-dock-mode-select" type="button" disabled={agentBusy} onClick={() => void conversationRecovery.retry()}>Retry conversation</button> : null}
+            {!conversationRecovery.ready && conversationRecovery.error ? <button className="model-dock-mode-select" type="button" disabled={agentBusy} onClick={conversationRecovery.useCurrentContext}>Use current context only</button> : null}
+            {conversationRecovery.conflict ? <>
+              <button className="model-dock-mode-select" type="button" disabled={agentBusy} onClick={() => void conversationRecovery.useServer()}>Use server conversation</button>
+              <button className="model-dock-mode-select" type="button" disabled={agentBusy} onClick={() => void conversationRecovery.keepBrowser()}>Keep browser conversation</button>
+            </> : null}
+          </div> : null}
+          <TerasAdvisorStatusBar connection={agentConnectionPresentation(providerStatus)} conversationStatus={savedConversationStatus}
+            actions={<TerasNewConversationButton disabled={agentBusy || contextModeChanging || !conversationControls.ready} onClick={conversationControls.onNew} />} />
           <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleAgentSubmit}>
             <div
               ref={agentTranscriptRef}
@@ -296,7 +306,7 @@ export function ModelInteractionDock({
               <button
                 aria-label={contextModeChanging ? "Changing agent mode" : agentBusy ? "Cancel agent request" : "Run agent command"}
                 className="model-dock-send terminal-run-button rounded-full px-3 py-1.5 text-xs"
-                disabled={contextModeChanging || (!agentBusy && !agentPrompt.trim())}
+                disabled={contextModeChanging || (!agentBusy && (!agentPrompt.trim() || !canSubmitConversation))}
                 type={agentBusy ? "button" : "submit"}
                 onClick={agentBusy ? handleAgentCancel : undefined}
               >

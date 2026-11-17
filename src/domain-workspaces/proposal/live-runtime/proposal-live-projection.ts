@@ -53,6 +53,8 @@ export function projectProposalLiveRecord(
     sourceStatus: projection.status,
     backendRecordId: projection.record_ref,
     bodyPreview: projection.body ?? "No supporting context was recorded.",
+    ...(projection.triage_summary ? { recordedTriage: { summary: projection.triage_summary,
+      sourceRef: projection.record_ref, sourceRevision: projection.record_version } } : {}),
     evidence: [
       {
         detail: `${projection.record_project} / ${projection.record_version}`,

@@ -184,7 +184,7 @@ export function catalogDraftStandardError({
 
   if (isOwnerRepoCatalog(catalog)) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizedLabel)) {
-      return "Owner Repo must come from an admitted repository slug.";
+      return "Implementation repository must come from an admitted repository slug.";
     }
   }
 
@@ -209,7 +209,7 @@ export function catalogDraftStandardHelp(catalog: DeliveryCatalogItem | null) {
   }
 
   if (isOwnerRepoCatalog(catalog)) {
-    return "Select an admitted Repository record; the Owner Repo key is derived from the repository slug.";
+    return "Select an admitted Repository record; the Implementation repository key is derived from the repository slug.";
   }
 
   return "Canonical key will be derived from the structured fields.";

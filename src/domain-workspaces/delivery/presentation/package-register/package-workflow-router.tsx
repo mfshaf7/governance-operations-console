@@ -24,9 +24,11 @@ export function DeliveryPackageWorkflowRouter({
   onOpenRefinementPackage,
   onRefreshRegister,
   onWorkDesignApplied,
+  onCanonicalChanged,
   packageAction,
 }: {
   model: DeliveryReadModel;
+  onCanonicalChanged?: () => Promise<void>;
   onCloseRefinement: () => void;
   onCloseWorkDesign: () => void;
   onOpenRefinementPackage?: (
@@ -82,6 +84,7 @@ export function DeliveryPackageWorkflowRouter({
   if (packageAction.route === "refinement") {
     return (
       <DeliveryRefinementWorkflowModal
+        onCanonicalChanged={async () => { onRefreshRegister(); await onCanonicalChanged?.(); }}
         readOnly={model.history_scope === "history" || ["done", "retired"].includes(packageAction.deliveryPackage.backend_status)}
         key={packageAction.deliveryPackage.delivery_package_id}
         onClose={onCloseRefinement}
