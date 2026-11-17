@@ -114,7 +114,7 @@ test("case:work-design-assist-positive binds context and tree advice to canonica
     "a new explicit non-mutating invocation must not collide with an earlier CGG timestamp binding");
   assert.notEqual(calls[2].body.correlation_id, calls[0].body.correlation_id);
   assert.deepEqual(calls[2].body.context_draft, calls[0].body.context_draft);
-  assert.deepEqual(deadlines, [180_000, 180_000, 180_000]);
+  assert.deepEqual(deadlines, [690_000, 690_000, 690_000]);
 });
 
 test("native Context and Build Tree HTTP requests retain the public-record draft scope and format", async (t) => {
@@ -174,6 +174,28 @@ test("Work Design advice survives the short-read boundary over real delayed HTTP
     operatorPrompt: "Inspect metadata, not app source.", sourceRevision: "version-17",
   }, { env: { ...env, OOS_BASE_URL: `http://127.0.0.1:${server.address().port}` } });
   assert.equal(result.task_kind, "context_advice");
+});
+
+test("both native advice operations propagate stop-waiting and never replay an unconfirmed turn", async t => {
+  let received, calls = 0;
+  const server = http.createServer(async request => {
+    for await (const _chunk of request) { /* body has reached OOS */ }
+    calls++; received();
+  });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
+  for (const kind of ["context", "tree"]) {
+    const submitted = new Promise(resolve => { received = resolve; });
+    const controller = new AbortController();
+    const options = { env: { ...env, OOS_BASE_URL: `http://127.0.0.1:${server.address().port}` }, signal: controller.signal };
+    const common = { sourceRevision: "version-17", operatorPrompt: "Review only" };
+    const result = kind === "context"
+      ? requestWorkDesignContextAdvice("delivery-package:908", { ...common, contextDecision: "proceed", contextNote: "Keep manual source" }, options)
+      : requestWorkDesignTreeAdvice("delivery-package:908", { ...common, selectedNodeId: "epic-908", tree: consoleTree() }, options);
+    const failure = assert.rejects(result, error => error.code === "ai_completion_unknown" && /provider may still be running/.test(error.message));
+    await submitted; controller.abort(); await failure;
+  }
+  assert.equal(calls, 2, "one provider-facing request per explicit operation");
 });
 
 test("case:work-design-apply-positive preserves stable acceptance, exact draft, and durable receipt", async (t) => {

@@ -49,15 +49,17 @@ const finalFields = new Set([
 ]);
 const dangerousKeys = new Set(["__proto__", "prototype", "constructor"]);
 export const advisorDraftContextChars = 32_000;
+export const workDesignDraftContextChars = 128_000;
+const isWorkDesignRole = (role: unknown) => role === "work-design-context" || role === "work-design-tree";
 
 /** Carry actual observations and their coverage; never silently trim evidence. */
 export function advisorWorkContext(data: Record<string, unknown>, coverage: {
   provided: string[]; unavailable: string[];
-}) {
+}, maxChars = 16_000) {
   const context = JSON.stringify({ contextVersion: 1, observations: data,
     coverage: { ...coverage, referencesAreLoadedContents: false,
       boundary: "Only supplied observations are available; linked documents, other chats and repositories are not automatically inspected." } });
-  if (context.length > 16_000) throw Error("The selected work context is too large for one advisor request. Narrow the selected scope; no evidence was silently removed.");
+  if (!Number.isInteger(maxChars) || maxChars < 1 || maxChars > 64_000 || context.length > maxChars) throw Error("The selected work context is too large for one advisor request. Narrow the selected scope; no evidence was silently removed.");
   return context;
 }
 
@@ -95,7 +97,7 @@ export function assertAdvisorScope(value: unknown): AdvisorScope {
   exact(value, ["role", "ref", "sourceRef", "sourceRevision", "context", "fields", "packageRef", "readOnly"]);
   if (!(advisorRoles as readonly unknown[]).includes(value.role)) throw Error("Unknown advisor role.");
   text(value.ref, 1024); text(value.sourceRef, 1024); text(value.sourceRevision, 256);
-  text(value.context, 16_000, true);
+  text(value.context, isWorkDesignRole(value.role) ? 64_000 : 16_000, true);
   if (value.packageRef !== undefined) text(value.packageRef, 256);
   if (value.readOnly !== undefined && typeof value.readOnly !== "boolean") throw Error("Invalid advisor read-only posture.");
   if (!Array.isArray(value.fields) || value.fields.length > 80) throw Error("Advisor field scope exceeds its bound.");
@@ -121,7 +123,7 @@ export function assertAdvisorScope(value: unknown): AdvisorScope {
       throw Error("Malformed advisor field limit.");
     }
   }
-  if (JSON.stringify(value).length > advisorDraftContextChars) throw Error("The selected draft is too large; select a smaller draft scope.");
+  if (JSON.stringify(value).length > (isWorkDesignRole(value.role) ? workDesignDraftContextChars : advisorDraftContextChars)) throw Error("The selected draft is too large; select a smaller draft scope.");
   return value as AdvisorScope;
 }
 

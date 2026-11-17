@@ -178,7 +178,7 @@ export function isWorkDesignLiveApiError(value: unknown): value is WorkDesignLiv
   return (
     isRecord(value) &&
     value.mode === "live" &&
-    value.status === "offline" &&
+    ["offline", "busy", "unconfirmed", "context-required"].includes(String(value.status)) &&
     typeof value.code === "string" &&
     typeof value.error === "string"
   );

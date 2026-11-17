@@ -3,6 +3,7 @@
 import type { FormEvent, ReactNode } from "react";
 import { useEffect } from "react";
 import { TerasLoadingState } from "./teras-loading-state";
+import { TerasAdvisorWaiting } from "./teras-advisor-waiting";
 import {
   ChevronDown,
   LockKeyhole,
@@ -54,6 +55,8 @@ export function TerasAdvisorPanel({
   draftControls?: {
     connection?: TerasAdvisorConnection;
     busy: boolean; canUndo: boolean; onUndo: () => void; onCancel: () => void;
+    waiting?: { startedAt: number; timeoutMs: number; providerBudgetMs?: number } | null;
+    cancelLabel?: string;
     notice: string | null; evidenceLabel: string | null;
     supportingContext?: { label: string; choices: Array<{ id: string; label: string; selected: boolean }>; onToggle: (id: string) => void };
     history?: { transcript: Array<{ id: string; role: "operator" | "advisor"; text: string }>; status: string;
@@ -176,7 +179,9 @@ export function TerasAdvisorPanel({
                 )}
               </div>
             ))}
-            {draftControls?.busy ? <TerasLoadingState inline label="Preparing response…" /> : null}
+            {draftControls?.busy ? draftControls.waiting
+              ? <TerasAdvisorWaiting {...draftControls.waiting} />
+              : <TerasLoadingState inline label="Preparing response…" /> : null}
           </div>
           {prompt ? (
             <form className={styles.advisorTerminalForm} onSubmit={(event) => {
@@ -203,10 +208,14 @@ export function TerasAdvisorPanel({
                     prompt.disabled || prompt.readOnly || (!draftControls?.busy && (!prompt.value.trim() || draftControls?.history && !draftControls.history.ready))
                   }
                   type={draftControls?.busy ? "button" : "submit"}
-                  onClick={draftControls?.busy ? draftControls.onCancel : undefined}
+                  onClick={draftControls?.busy ? (event) => {
+                    // Stopping may synchronously turn this back into a submit
+                    // button. Cancel the original click's form default first.
+                    event.preventDefault(); draftControls.onCancel();
+                  } : undefined}
                 >
                   <SendHorizonal aria-hidden="true" size={14} />
-                  {draftControls?.busy ? "cancel" : "run"}
+                  {draftControls?.busy ? draftControls.cancelLabel ?? "cancel" : "run"}
                 </button>
               </div>
             </form>

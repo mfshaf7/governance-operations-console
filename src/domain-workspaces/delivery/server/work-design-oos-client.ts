@@ -1,4 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
+import { workDesignJsonFetch } from "./work-design-long-response-transport.ts";
+import { workDesignAdvisorServerBudgetMs } from "../live-runtime/work-design-advisor-policy.ts";
 
 import {
   consoleOosModeSelected,
@@ -87,7 +89,7 @@ export async function readWorkDesignProjection(
 export async function requestWorkDesignContextAdvice(
   packageRef: string,
   command: WorkDesignContextAssistCommand,
-  options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+  options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; signal?: AbortSignal } = {},
 ): Promise<WorkDesignOosAssistResult> {
   return requestWorkDesignAdvice(
     packageRef,
@@ -108,7 +110,7 @@ export async function requestWorkDesignContextAdvice(
 export async function requestWorkDesignTreeAdvice(
   packageRef: string,
   command: WorkDesignTreeAssistCommand,
-  options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+  options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; signal?: AbortSignal } = {},
 ): Promise<WorkDesignOosAssistResult> {
   const tree = workDesignOosNode(command.tree);
   return requestWorkDesignAdvice(
@@ -210,8 +212,9 @@ async function requestWorkDesignAdvice(
   input: WorkDesignAdviceInput,
   {
     env = process.env,
-    fetchImpl = fetch,
-  }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+    fetchImpl = workDesignJsonFetch,
+    signal,
+  }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; signal?: AbortSignal } = {},
 ) {
   const config = resolveWorkDesignOosConfig(env);
   const identity = workDesignLiveIdentity(packageRef);
@@ -243,7 +246,7 @@ async function requestWorkDesignAdvice(
     await workDesignOosRequest(
       config,
       `/v1/delivery-work-design/${encodeURIComponent(packageRef)}/assist`,
-      { body: JSON.stringify(request), method: "POST" },
+      { body: JSON.stringify(request), method: "POST", signal },
       fetchImpl,
     ),
   );
@@ -309,10 +312,15 @@ async function workDesignOosRequest(
         "x-oos-caller-id": config.callerId,
         "x-oos-caller-secret": config.callerSecret,
       },
-      signal: AbortSignal.timeout(init.method === "POST"
-        ? workDesignCommandTimeoutMs : workDesignOosTimeoutMs),
+      signal: AbortSignal.any([...(init.signal ? [init.signal] : []), AbortSignal.timeout(
+        path.endsWith("/assist") ? workDesignAdvisorServerBudgetMs : init.method === "POST"
+          ? workDesignCommandTimeoutMs : workDesignOosTimeoutMs)]),
     });
   } catch (error) {
+    if (path.endsWith("/assist") && error instanceof Error && "requestSubmitted" in error && error.requestSubmitted) {
+      throw new WorkDesignOosError("The original advisor response was not confirmed. Your draft is retained; the provider may still be running. Review its activity before making a new request.",
+        "ai_completion_unknown", 503);
+    }
     throw new WorkDesignOosError(
       error instanceof Error ? error.message : "OOS request failed.",
       "work_design_oos_unavailable",

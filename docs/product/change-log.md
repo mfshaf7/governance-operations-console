@@ -1,5 +1,19 @@
 # Governance Operations Console Change Log
 
+## 2026-11-18 — Context and Build Tree reasoning repair
+
+Operator-approved maintenance, Landing Unit `feature_single_landing_unit`,
+`maintenance-work-design-advisor-experience-20261118`. Both advisors preserve
+larger complete architecture context, receive owner-defined work/rendering
+guidance and show elapsed waiting with the ten-minute provider allowance. Stop
+waiting and close/reload retain the original unconfirmed turn without replay;
+late proposals cannot overwrite newer manual work. The shared cancel/run button
+prevents its original click from becoming a form submission when waiting ends.
+Normal reads, Apply, other advisor deadlines and final operator authority remain.
+See [Work Design integration](work-design-live-integration.md) for the primary
+operator contract. Exact paired activation and real Extra High qualification
+remain separate from isolated source/browser validation.
+
 ## 2026-11-17 — Project membership management preview
 
 Operator-approved extension of the current maintenance batch. Landing Unit

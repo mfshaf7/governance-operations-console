@@ -89,7 +89,7 @@ export async function requestWorkDesignAdviceRoute(
             operatorPrompt,
             sourceRevision,
             draftScope,
-          } satisfies WorkDesignContextAssistCommand)
+          } satisfies WorkDesignContextAssistCommand, { signal: request.signal })
         : taskKind === "tree_advice"
           ? await requestWorkDesignTreeAdvice(packageRef, {
               operatorPrompt,
@@ -100,7 +100,7 @@ export async function requestWorkDesignAdviceRoute(
               sourceRevision,
               draftScope,
               tree: assertWorkDesignNode(body.tree),
-            } satisfies WorkDesignTreeAssistCommand)
+            } satisfies WorkDesignTreeAssistCommand, { signal: request.signal })
           : invalid("Work Design assist task is invalid.");
     return NextResponse.json(result, { headers: noStoreHeaders });
   } catch (error) {
@@ -153,7 +153,9 @@ function workDesignErrorResponse(error: unknown) {
       : "work_design_adapter_request_invalid";
   const message = error instanceof Error ? error.message : "Work Design adapter failed.";
   return NextResponse.json(
-    { code, error: message, mode: "live", status: "offline" },
+    { code, error: message, mode: "live", status: code === "ai_provider_busy" ? "busy"
+      : code === "ai_completion_unknown" ? "unconfirmed"
+      : code === "ai_context_capacity_exceeded" || status === 413 ? "context-required" : "offline" },
     { headers: noStoreHeaders, status },
   );
 }

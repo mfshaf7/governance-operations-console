@@ -17,12 +17,14 @@ export function TerasLoadingState({
   inline = false,
   fill = false,
   skeleton = "rows",
+  showSlowHint = true,
 }: {
   label?: string;
   detail?: ReactNode;
   inline?: boolean;
   fill?: boolean;
   skeleton?: "rows" | "details" | "none";
+  showSlowHint?: boolean;
 }) {
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -37,7 +39,7 @@ export function TerasLoadingState({
       <div className={styles.terasLoadingMessage} role="status" aria-live="polite" aria-atomic="true">
         <div className={styles.terasLoadingHeading}><TerasLoadingIndicator /><span>{label}</span></div>
         {detail ? <div className={styles.terasLoadingDetail}>{detail}</div> : null}
-        {slow ? <p className={styles.terasLoadingDetail}>Still waiting for a response.</p> : null}
+        {slow && showSlowHint ? <p className={styles.terasLoadingDetail}>Still waiting for a response.</p> : null}
       </div>
       {!inline && skeleton !== "none" ? <div className={styles.terasLoadingSkeleton} data-layout={skeleton} aria-hidden="true">
         {[0, 1, 2].map(row => <div className={styles.terasLoadingRow} key={row}><span /><div><span /><span /></div><span /></div>)}

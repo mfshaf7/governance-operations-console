@@ -19,6 +19,9 @@ type Options = {
   restore?: (edits: AdvisorEdit[]) => void;
   disabled?: boolean;
   active?: boolean;
+  requestBudgetMs?: number;
+  providerBudgetMs?: number;
+  stopWaitingOnly?: boolean;
   transport?: (scope: AdvisorScope, prompt: string, signal: AbortSignal, conversation: Turn[]) => Promise<GovernedAdvisorReply>;
 };
 
@@ -38,7 +41,9 @@ export function useDraftAdvisor(options: Options) {
   const [undoRecord, setUndoRecord] = useState<Undo | null>(null);
   const [evidence, setEvidence] = useState<GovernedAdvisorReply["evidence"] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [waiting, setWaiting] = useState<{ startedAt: number; timeoutMs: number; providerBudgetMs?: number } | null>(null);
   useEffect(() => () => active.current?.abort(), []);
+  useEffect(() => { if (options.active === false) active.current?.abort("surface-closed"); }, [options.active]);
   const surfaceIsOpen = () => current.current.active !== false;
 
   async function run(prompt: string, external: AdvisorRunContext = {}) {
@@ -53,11 +58,20 @@ export function useDraftAdvisor(options: Options) {
     const identity = advisorScopeIdentity(scope);
     if (historyScope.current !== identity) { history.current = []; historyScope.current = identity; setUndoRecord(null); }
     const controller = new AbortController();
-    const abortExternal = () => controller.abort();
+    const abortExternal = () => controller.abort("external-cancel");
     if (external.signal?.aborted) throw Error("Advisor request cancelled. No draft was changed.");
     external.signal?.addEventListener("abort", abortExternal, { once: true });
     active.current = controller; setBusy(true); setNotice(null); setEvidence(null);
-    const timeout = setTimeout(() => controller.abort(), 180_000);
+    const timeoutMs = current.current.requestBudgetMs ?? 180_000;
+    const stopWaitingOnly = Boolean(current.current.stopWaitingOnly);
+    const interrupted = () => Error(stopWaitingOnly
+      ? controller.signal.reason === "request-timeout"
+        ? "The advisor response was not confirmed within its allowance. Your draft is retained; the provider may still be running. No request was automatically repeated."
+        : "Stopped waiting. Your draft is unchanged; provider completion is unconfirmed and it may still be running. No request was automatically repeated."
+      : "Advisor request cancelled or timed out. No draft was changed.");
+    const startedAt = Date.now();
+    setWaiting({ startedAt, timeoutMs, providerBudgetMs: current.current.providerBudgetMs });
+    const timeout = setTimeout(() => controller.abort("request-timeout"), timeoutMs);
     try {
       session.current ??= { nonce: crypto.randomUUID(), openedAt: new Date().toISOString() };
       const window = advisorConversationWindow(external.conversation ?? (binding ? memory.turns : history.current));
@@ -73,9 +87,9 @@ export function useDraftAdvisor(options: Options) {
         return data;
       }
       const result = await Promise.race([invoke(), new Promise<never>((_, reject) => {
-        controller.signal.addEventListener("abort", () => reject(Error("Advisor request cancelled or timed out. No draft was changed.")), { once: true });
+        controller.signal.addEventListener("abort", () => reject(interrupted()), { once: true });
       })]);
-      if (controller.signal.aborted) throw Error("Advisor request cancelled. No draft was changed.");
+      if (controller.signal.aborted) throw interrupted();
       if (!surfaceIsOpen()) throw Error("The draft surface was closed. No edits were applied.");
       if (advisorScopeIdentity(current.current.getScope()) !== identity) throw Error("The selected record changed. The previous reply was not applied to this record.");
       const reply = assertAdvisorReply({ intent: result.intent, message: result.message, edits: result.edits }, scope);
@@ -101,10 +115,14 @@ export function useDraftAdvisor(options: Options) {
       }
       return result;
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Advisor unavailable. No draft was changed.");
-      throw error;
+      if (controller.signal.aborted && stopWaitingOnly && !external.conversation) {
+        memory.endWaiting(controller.signal.reason === "request-timeout" ? "timeout" : "stopped");
+      }
+      const failure = controller.signal.aborted ? interrupted() : error;
+      setNotice(failure instanceof Error ? failure.message : "Advisor unavailable. No draft was changed.");
+      throw failure;
     } finally {
-      clearTimeout(timeout); active.current = null; setBusy(false);
+      clearTimeout(timeout); active.current = null; setBusy(false); setWaiting(null);
       external.signal?.removeEventListener("abort", abortExternal);
     }
   }
@@ -120,10 +138,11 @@ export function useDraftAdvisor(options: Options) {
     else current.current.apply(undoRecord.before);
     setUndoRecord(null); setNotice("Advisor draft edits undone.");
   }
-  const cancel = () => active.current?.abort();
+  const cancel = () => active.current?.abort("operator-stop");
   useDraftScopeRegistration({ getScope: () => ({ ...current.current.getScope(), readOnly: Boolean(current.current.disabled) }), run, undo }, options.active !== false);
   return { busy, run, undo, canUndo: Boolean(undoRecord), evidence, notice, cancel,
     panelControls: { connection, busy, canUndo: Boolean(undoRecord), onUndo: undo, onCancel: cancel,
+      ...(options.requestBudgetMs ? { waiting, cancelLabel: options.stopWaitingOnly ? "stop waiting" : "cancel" } : {}),
       notice: [notice, coverageNotice].filter(Boolean).join(" ") || null,
       ...(binding ? { history: { transcript: memory.transcript, status: memory.status, hasEarlier: memory.hasEarlier,
         ready: memory.ready, draftPrompt: memory.draftPrompt, onDraftPromptChange: memory.setDraftPrompt,

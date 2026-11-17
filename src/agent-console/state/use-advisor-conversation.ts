@@ -46,6 +46,12 @@ export function useAdvisorConversation(binding: ConversationBinding | null, sour
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; unsubscribe(); const previous = current.current;
       if (draftTimer.current) { clearTimeout(draftTimer.current); draftTimer.current = null; }
+      // Persist the original turn before a different/closed surface unbinds
+      // this conversation. Cleanup stops waiting, not confirmed inference.
+      if (previous?.identity === identity && !previous.volatile && previous.session.getSnapshot().hydrated && previous.value.pending && !previous.value.pending.waitingEnded) {
+        previous.value = { ...previous.value, pending: { ...previous.value.pending, waitingEnded: "stopped" } };
+        previous.session.write(previous.value);
+      }
       if (previous?.identity === identity && !previous.volatile && previous.session.getSnapshot().hydrated && draftText.current !== null) {
         previous.value = { ...previous.value, draftPrompt: draftText.current }; previous.session.write(previous.value);
       }
@@ -82,6 +88,11 @@ export function useAdvisorConversation(binding: ConversationBinding | null, sour
     write({ ...state.value, sourceRevision, pending: null, draftPrompt: "", turns: [...state.value.turns,
       ...(hasPendingTurn ? [] : [{ id: crypto.randomUUID(), role: "operator" as const, text: prompt, createdAt, sourceRevision }]),
       { id: crypto.randomUUID(), role: "advisor", text: reply, createdAt, sourceRevision }] });
+  }
+  function endWaiting(waitingEnded: "timeout" | "stopped") {
+    const state = current.current;
+    if (!state || state.identity !== identity || !state.value.pending) return;
+    write({ ...state.value, pending: { ...state.value.pending, state: "unconfirmed", waitingEnded } });
   }
   async function recover(action: () => Promise<void>) {
     setRecoveryError(false);
@@ -127,7 +138,7 @@ export function useAdvisorConversation(binding: ConversationBinding | null, sour
   return { turns: value?.turns ?? [], pendingRequest: value?.pending ?? null, status, loading, restoreVersion,
     ready: current.current?.identity === identity && (current.current.volatile || current.current.session.getSnapshot().hydrated),
     saveError: recoveryError || ["error", "conflict"].includes(current.current?.session.getSnapshot().status ?? ""),
-    pending, complete, retry: () => recover(retry), useServerCopy: () => recover(useServerCopy), draftPrompt: value?.draftPrompt ?? "", setDraftPrompt,
+    pending, complete, endWaiting, retry: () => recover(retry), useServerCopy: () => recover(useServerCopy), draftPrompt: value?.draftPrompt ?? "", setDraftPrompt,
     keepBrowserEdits: () => recover(async () => { const state = current.current; if (!state || state.identity !== identity) return;
       if (state.volatile) { await state.session.initialize(); if (!state.session.getSnapshot().hydrated) return;
         if (current.current !== state) return;
