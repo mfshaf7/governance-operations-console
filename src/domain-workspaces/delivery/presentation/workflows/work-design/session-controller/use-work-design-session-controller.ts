@@ -327,10 +327,9 @@ export function useWorkDesignSessionController({
     deliveryPackage,
     sourceRevision: liveRuntime.projection?.source.revision ?? "disconnected-preview",
     captureBoard: contextBoard.captureContextBoardSnapshot,
-    getBoardVisibleArea: () => {
-      const canvas = contextBoard.contextBoardCanvasRef.current;
-      return canvas ? { width: canvas.clientWidth, height: canvas.clientHeight } : null;
-    },
+    getBoardViewport: contextBoard.getContextBoardAdvisorViewport,
+    getBoardStarterExample: contextBoard.describeContextBoardStarter,
+    fitBoardContent: contextBoard.fitContextBoardContent,
     commitBoard: contextBoard.commitCurrentContextBoardHistorySnapshot,
     restoreBoard: contextBoard.restoreContextBoardSnapshot,
     setContextOperatorNote,

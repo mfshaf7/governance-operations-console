@@ -6,7 +6,7 @@ import { workDesignAdvisorBrowserBudgetMs, workDesignAdvisorProviderBudgetMs, wo
 import { createWorkDesignAdvisorScope } from "../../../../live-runtime/work-design-draft-advisor.ts";
 import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 import type { AdvisorTransport, AdvisorEdit } from "@/agent-console/model/advisor-drafts";
-import { applyContextBoardAdvisorPatch, contextBoardAdvisorEditorFacts, type ContextBoardSnapshot } from "@/product-apps/context-board";
+import { applyContextBoardAdvisorPatch, contextBoardAdvisorEditorFacts, contextBoardAdvisorSurfaces, contextBoardSurfaceBounds, contextBoardDiagramTypes, type ContextBoardSnapshot, type ContextBoardAdvisorViewport, type ContextBoardDiagramType } from "@/product-apps/context-board";
 
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
 
@@ -34,7 +34,9 @@ type UseWorkDesignContextActionsParams = {
   requestContextAdvice: AdvisorTransport;
   sourceRevision: string;
   captureBoard: () => ContextBoardSnapshot;
-  getBoardVisibleArea: () => { width: number; height: number } | null;
+  getBoardViewport: () => ContextBoardAdvisorViewport | null;
+  getBoardStarterExample: () => unknown;
+  fitBoardContent: () => void;
   restoreBoard: (snapshot: ContextBoardSnapshot) => void;
   commitBoard: () => void;
   setContextOperatorNote: Dispatch<SetStateAction<string>>;
@@ -64,7 +66,7 @@ export function useWorkDesignContextActions({
   contextOperatorNote,
   deliveryPackage,
   requestContextAdvice,
-  sourceRevision, captureBoard, getBoardVisibleArea, restoreBoard, commitBoard, setContextOperatorNote,
+  sourceRevision, captureBoard, getBoardViewport, getBoardStarterExample, fitBoardContent, restoreBoard, commitBoard, setContextOperatorNote,
   setActiveStep,
   setApplyReceiptRecorded,
   setApplyRunStartedAt,
@@ -79,29 +81,46 @@ export function useWorkDesignContextActions({
   treeDraftStale,
 }: UseWorkDesignContextActionsParams) {
   const [supportingDiagramIds, setSupportingDiagramIds] = useState<string[]>([]);
+  const undoLegacyCanvas = useRef(false);
+  const requestViewport = useRef<ContextBoardAdvisorViewport | null>(null);
+  const fitBoard = useRef(fitBoardContent); fitBoard.current = fitBoardContent;
   function applyDraft(edits: AdvisorEdit[], undo = false) {
     const current = captureBoard();
+    const typeEdit = edits.find(edit => edit.field === "diagramType");
+    const selectedType = (typeEdit ? String(typeEdit.value) : contextBoardDiagrams(current).find(view => view.id === (current.activeDiagramId ?? legacyContextDiagramId))!.diagramType) as ContextBoardDiagramType;
     const boardEdit = edits.find((edit) => edit.field === "board");
     let nextBoard = boardEdit ? (undo ? captureContextBoardDiagrams(boardEdit.value as ContextBoardSnapshot,
       current.diagrams ?? null, current.activeDiagramId ?? legacyContextDiagramId)
-      : applyContextBoardAdvisorPatch(current, boardEdit.value, coreNodes.map((node) => node.id))) : null;
+      : applyContextBoardAdvisorPatch(current, boardEdit.value, coreNodes.map((node) => node.id), { viewport: requestViewport.current, diagramType: selectedType })) : null;
     const name = edits.find(edit => edit.field === "diagramName"), description = edits.find(edit => edit.field === "diagramDescription");
-    if (name || description) {
+    if (name || description || typeEdit) {
       const content = nextBoard ?? current, activeId = content.activeDiagramId ?? legacyContextDiagramId;
       const diagrams = contextBoardDiagrams(content).map(view => view.id === activeId ? { ...view,
         ...(name ? { name: String(name.value) } : {}), ...(description ? { description: String(description.value) } : {}),
+        ...(typeEdit ? { diagramType: selectedType } : {}),
         snapshot: contextBoardCanvasSnapshot(content) } : view);
       nextBoard = { ...content, diagrams, activeDiagramId: activeId };
     }
-    if (nextBoard) { assertContextBoardDiagrams(nextBoard); commitBoard(); restoreBoard(nextBoard); }
+    if (undo && undoLegacyCanvas.current && nextBoard?.diagrams?.length === 1 &&
+      nextBoard.activeDiagramId === legacyContextDiagramId) nextBoard = contextBoardCanvasSnapshot(nextBoard);
+    if (nextBoard) {
+      assertContextBoardDiagrams(nextBoard); commitBoard(); restoreBoard(nextBoard);
+      const viewport = requestViewport.current, now = getBoardViewport();
+      const surfaces = contextBoardAdvisorSurfaces(nextBoard, coreNodes.map(node => node.id));
+      const bounds = surfaces.length ? contextBoardSurfaceBounds(surfaces) : null;
+      // A pan while reasoning is view state, not permission to steal focus.
+      if (!undo && viewport && now && bounds && !contextBoardAdvisorSurfaces(current, coreNodes.map(node => node.id)).length &&
+        Math.abs(now.x - viewport.x) < 1 && Math.abs(now.y - viewport.y) < 1 && Math.abs(now.zoom - viewport.zoom) < 0.001 &&
+        (bounds.maxX - bounds.minX > viewport.width || bounds.maxY - bounds.minY > viewport.height)) requestAnimationFrame(() => fitBoard.current());
+    }
     for (const edit of edits) if (edit.field === "note") setContextOperatorNote(String(edit.value));
     setContextBriefAccepted(false); setHasUnsavedSessionChanges(true);
     setApplyReceiptRecorded(false); setApplyRunStartedAt(null);
     setDraftValidationAccepted(false); setDraftReviewAccepted(false);
     return edits.map((edit) => edit.field === "board" ? { field: "board", value: contextBoardCanvasSnapshot(nextBoard!) } : edit);
   }
-  const initialVisibleArea = useRef<{ diagramId: string; area: { width: number; height: number } | null } | null>(null);
   const advisor = useDraftAdvisor({
+    captureRequestContext: () => { requestViewport.current = getBoardViewport(); },
     requestBudgetMs: workDesignAdvisorBrowserBudgetMs, providerBudgetMs: workDesignAdvisorProviderBudgetMs, stopWaitingOnly: true,
     conversation: { role: "work-design-context", ref: deliveryPackage.delivery_package_id, sourceRef: deliveryPackage.source_ref, sourceRevision },
     active,
@@ -109,22 +128,24 @@ export function useWorkDesignContextActions({
     getScope: () => {
       const document = captureBoard(), activeId = document.activeDiagramId ?? legacyContextDiagramId;
       const diagrams = contextBoardDiagrams(document), selected = diagrams.find(view => view.id === activeId)!;
-      if (initialVisibleArea.current?.diagramId !== activeId) initialVisibleArea.current = { diagramId: activeId, area: getBoardVisibleArea() };
       return createWorkDesignAdvisorScope(deliveryPackage, { role: "work-design-context", ref: `${deliveryPackage.delivery_package_id}/${activeId}`,
       sourceRevision,
       context: advisorWorkContext({ purpose: "Understand the architecture of the system under design. ART records bound the work; they are not the system's components. Distinguish verified current behavior, proposed changes and unknowns. Build Tree handles delivery decomposition. Edit only the selected diagram. Explicitly included supporting diagrams provide read-only knowledge; remaining views are an index, not inspected content.", selectedDiagram: activeId,
         diagrams: diagrams.map(view => ({ id: view.id, name: view.name, diagramType: view.diagramType })),
         readOnlySupportingDiagrams: contextBoardSupportingDiagrams(document, supportingDiagramIds),
-        editor: contextBoardAdvisorEditorFacts(selected.diagramType, initialVisibleArea.current.area),
+        editor: contextBoardAdvisorEditorFacts(selected.diagramType, requestViewport.current, getBoardStarterExample()),
+        resolvedObjects: contextBoardAdvisorSurfaces(document, coreNodes.map(node => node.id))
+          .map(({ id, itemType, x, y, width, height }) => ({ id, itemType, x, y, width, height })),
         packageTitle: deliveryPackage.display_name, summary: deliveryPackage.summary, contextDecision, coreNodes, sources },
         { provided: ["Overall context note", "Selected diagram contents and explanation", "Other-view index", "Explicitly included read-only supporting diagrams", "Supplied source metadata"],
           unavailable: ["Unselected other diagram contents beyond their index", "Unprovided repository files, runtime evidence and linked document contents"] }, workDesignAdvisorContextChars),
       fields: [{ key: "note", label: "Context note", value: contextOperatorNote },
         { key: "diagramName", label: "Selected diagram name", value: selected.name, maxLength: 200 },
+        { key: "diagramType", label: "Selected diagram type", value: selected.diagramType, allowedValues: ["freeform", ...contextBoardDiagramTypes] },
         { key: "diagramDescription", label: "Selected diagram explanation", value: selected.description, maxLength: 8000 },
         { key: "board", label: "Selected context diagram", value: contextBoardCanvasSnapshot(document), kind: "board" }],
     }); },
-    apply: (edits) => applyDraft(edits), restore: (edits) => { applyDraft(edits, true); },
+    apply: (edits) => { undoLegacyCanvas.current = !captureBoard().diagrams; return applyDraft(edits); }, restore: (edits) => { applyDraft(edits, true); },
     transport: requestContextAdvice,
   });
   function updateContextOperatorNote(value: string) {

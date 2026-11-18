@@ -4,12 +4,12 @@ import {
   contextBoardConnectorMidpoint,
   contextBoardEndpointIsFree,
   contextBoardPortPoint,
-} from "./context-board-core";
+} from "./context-board-core.ts";
 import {
   contextBoardCustomItemResolvedSize,
   contextBoardCustomItemSize,
   contextBoardDiagramCopy,
-} from "./context-board-template-helpers";
+} from "./context-board-template-helpers.ts";
 import type {
   ContextBoardConnection,
   ContextBoardConnectionEndpoint,
@@ -337,6 +337,7 @@ export function contextBoardTemplateTrayFromItems(
   type: ContextBoardDiagramType,
   items: ContextBoardCustomItem[],
   timestamp: number,
+  options: { constrainToCanvas?: boolean; fitContents?: boolean } = {},
 ): ContextBoardTemplateTray {
   const bounds = items.reduce(
     (accumulator, item) => {
@@ -355,18 +356,23 @@ export function contextBoardTemplateTrayFromItems(
       minY: Number.POSITIVE_INFINITY,
     },
   );
-  const trayMetrics = contextBoardTemplateTrayMetrics(type);
-  const x = Math.max(16, bounds.minX - trayMetrics.padX);
-  const y = Math.max(16, bounds.minY - trayMetrics.padTop);
+  const constrainToCanvas = options.constrainToCanvas !== false;
+  const trayMetrics = options.fitContents
+    ? { minWidth: 240, minHeight: 160, padX: 32, padRight: 32, padTop: 64, padBottom: 32 }
+    : contextBoardTemplateTrayMetrics(type);
+  // Advisor drafts can start near the origin and translate the complete group
+  // afterward. Fitting before that translation must retain its full padding.
+  const x = constrainToCanvas ? Math.max(16, bounds.minX - trayMetrics.padX) : bounds.minX - trayMetrics.padX;
+  const y = constrainToCanvas ? Math.max(16, bounds.minY - trayMetrics.padTop) : bounds.minY - trayMetrics.padTop;
   const width = Math.min(
-    CONTEXT_BOARD_WIDTH - x - 16,
+    constrainToCanvas ? CONTEXT_BOARD_WIDTH - x - 16 : Infinity,
     Math.max(
       trayMetrics.minWidth,
       bounds.maxX - bounds.minX + trayMetrics.padX + trayMetrics.padRight,
     ),
   );
   const height = Math.min(
-    CONTEXT_BOARD_HEIGHT - y - 16,
+    constrainToCanvas ? CONTEXT_BOARD_HEIGHT - y - 16 : Infinity,
     Math.max(
       trayMetrics.minHeight,
       bounds.maxY - bounds.minY + trayMetrics.padTop + trayMetrics.padBottom,

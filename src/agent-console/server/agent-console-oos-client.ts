@@ -146,10 +146,11 @@ export async function invokeGovernedAgent(
   }
   if (latest.state !== "completed") {
     const failure = isRecord(latest.failure) ? latest.failure : {};
+    const code = typeof failure.code === "string" ? failure.code : "agent_console_invocation_failed";
     throw new AgentConsoleOosError(
       typeof failure.message === "string" ? failure.message : "Governed Agent Console invocation did not complete.",
-      typeof failure.code === "string" ? failure.code : "agent_console_invocation_failed",
-      502,
+      code,
+      code === "agent_console_ai_provider_busy" ? 429 : code === "agent_console_ai_context_capacity_exceeded" ? 413 : code === "agent_console_ai_completion_unknown" ? 503 : 502,
       failure.retryable === true,
     );
   }

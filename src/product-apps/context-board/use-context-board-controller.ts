@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent } from "react";
 import { useContextBoardDiagrams } from "./use-context-board-diagrams.ts";
+import { contextBoardArrangementTargets } from "./context-board-arrangement.ts";
 
 import {
   CONTEXT_BOARD_CORE_CARD_HEIGHT,
@@ -1178,6 +1179,18 @@ export function useContextBoardController({
     markBoardDirty();
   }
 
+  function describeContextBoardStarter() {
+    // The same injected factories as manual insertion. Fixed example identity
+    // keeps a source snapshot stable while the operator pans or waits.
+    const items = createDiagramStarterItems(contextBoardDiagramType, 0, 0);
+    const connections = createDiagramStarterConnections(contextBoardDiagramType, items, 0);
+    const labels = contextBoardDiagramStarterLabelItems(contextBoardDiagramType, items, connections, 0);
+    return { exampleOnly: true, diagramType: contextBoardDiagramType,
+      items: [...items, ...labels], connections,
+      tray: contextBoardTemplateTrayFromItems(contextBoardDiagramType, [...items, ...labels], 0),
+      meaning: "Existing tool example, not this project's architecture or evidence. Use real supplied project responsibilities and content." };
+  }
+
   function updateContextBoardStyle(style: ContextBoardStyle) {
     if (contextBriefReadOnly) {
       return;
@@ -1648,39 +1661,13 @@ export function useContextBoardController({
     }
 
     commitCurrentContextBoardHistorySnapshot();
-    const bounds = contextBoardSurfaceBounds(surfaces);
-    const groupCenterX = bounds.minX + (bounds.maxX - bounds.minX) / 2;
-    const groupCenterY = bounds.minY + (bounds.maxY - bounds.minY) / 2;
     const deltas = new Map<string, ContextBoardPosition>();
-
+    const targets = contextBoardArrangementTargets(surfaces, action);
     for (const surface of surfaces) {
-      let nextX = surface.x;
-      let nextY = surface.y;
-
-      switch (action) {
-        case "align-bottom":
-          nextY = bounds.maxY - surface.height;
-          break;
-        case "align-center-x":
-          nextX = groupCenterX - surface.width / 2;
-          break;
-        case "align-center-y":
-          nextY = groupCenterY - surface.height / 2;
-          break;
-        case "align-left":
-          nextX = bounds.minX;
-          break;
-        case "align-right":
-          nextX = bounds.maxX - surface.width;
-          break;
-        case "align-top":
-          nextY = bounds.minY;
-          break;
-      }
-
+      const target = targets.get(contextBoardSelectionKey(surface))!;
       deltas.set(
         contextBoardSelectionKey(surface),
-        buildContextBoardSurfaceDelta(surface, { x: nextX, y: nextY }),
+        buildContextBoardSurfaceDelta(surface, target),
       );
     }
 
@@ -1702,35 +1689,10 @@ export function useContextBoardController({
     }
 
     commitCurrentContextBoardHistorySnapshot();
-    const bounds = contextBoardSurfaceBounds(surfaces);
     const deltas = new Map<string, ContextBoardPosition>();
-
-    if (action === "distribute-horizontal") {
-      const sorted = [...surfaces].sort((left, right) => left.x - right.x);
-      const totalWidth = sorted.reduce((sum, surface) => sum + surface.width, 0);
-      const gap = (bounds.maxX - bounds.minX - totalWidth) / (sorted.length - 1);
-      let cursorX = bounds.minX;
-
-      for (const surface of sorted) {
-        deltas.set(
-          contextBoardSelectionKey(surface),
-          buildContextBoardSurfaceDelta(surface, { x: cursorX, y: surface.y }),
-        );
-        cursorX += surface.width + gap;
-      }
-    } else {
-      const sorted = [...surfaces].sort((top, bottom) => top.y - bottom.y);
-      const totalHeight = sorted.reduce((sum, surface) => sum + surface.height, 0);
-      const gap = (bounds.maxY - bounds.minY - totalHeight) / (sorted.length - 1);
-      let cursorY = bounds.minY;
-
-      for (const surface of sorted) {
-        deltas.set(
-          contextBoardSelectionKey(surface),
-          buildContextBoardSurfaceDelta(surface, { x: surface.x, y: cursorY }),
-        );
-        cursorY += surface.height + gap;
-      }
+    const targets = contextBoardArrangementTargets(surfaces, action);
+    for (const surface of surfaces) {
+      deltas.set(contextBoardSelectionKey(surface), buildContextBoardSurfaceDelta(surface, targets.get(contextBoardSelectionKey(surface))!));
     }
 
     applyContextBoardSurfaceDeltas(deltas);
@@ -3172,6 +3134,11 @@ export function useContextBoardController({
   }
 
   return {
+    describeContextBoardStarter,
+    getContextBoardAdvisorViewport: () => {
+      const area = getContextBoardViewportSurface();
+      return area ? { ...area, zoom: contextBoardZoom } : null;
+    },
     contextBoardActiveToolDrawer,
     setContextBoardActiveToolDrawer,
     contextBoardCanvasRef,

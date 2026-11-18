@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useDraftAdvisor } from "@/agent-console";
 import { definitionDraftAdvisorFields, applyDefinitionDraftAdvisorEdits } from "./support/definition-draft-advisor-fields.ts";
+import { createDefinitionExecutionNode } from "../../../work-model/definition-design/definition-execution-node.ts";
 
 import type { OrchestrationDefinitionRecord } from "@/domain-workspaces/orchestration/domain/orchestration-definition-types";
 import {
@@ -76,12 +77,19 @@ export function useDefinitionDesignController({
     conversation: { role: "definition-design", ref: draft.draftId, sourceRef: draft.baselineRecordId ?? draft.draftId },
     active: draft.activeStage !== "review-request" && !receipt,
     disabled: Boolean(receipt) || draft.activeStage === "review-request",
-    getScope: () => ({ role: "definition-design", ref: `${draft.draftId}:${draft.activeStage}:${draft.activeSection}:${selectedNodeId}`,
+    // Auto-selecting a newly drafted first step must not change the draft's
+    // identity and discard undo. Selection/content still enter its snapshot.
+    getScope: () => ({ role: "definition-design", ref: `${draft.draftId}:${draft.activeStage}:${draft.activeSection}`,
       sourceRef: draft.baselineRecordId ?? draft.draftId, sourceRevision: "local-definition-draft",
       context: definitionAdvisorWorkContext(draft, selectedNodeId, definitions),
       fields: definitionDraftAdvisorFields(draft, selectedNodeId),
     }),
-    apply: (edits) => { setDraft(applyDefinitionDraftAdvisorEdits(draft, selectedNodeId, edits)); return edits; },
+    apply: (edits) => {
+      const next = applyDefinitionDraftAdvisorEdits(draft, selectedNodeId, edits);
+      setDraft(next);
+      const fields = definitionDraftAdvisorFields(next, selectedNodeId);
+      return edits.map(edit => ({ field: edit.field, value: fields.find(field => field.key === edit.field)!.value }));
+    },
   });
 
   useEffect(() => {
@@ -303,20 +311,7 @@ export function useDefinitionDesignController({
     }
 
     editDraft((next) => {
-      next.executionPlan.nodes.push({
-        adapter: "",
-        branchCondition: "",
-        dependencies: [],
-        id: nextNodeId,
-        idempotency: "",
-        label: "",
-        optional: false,
-        owner: "",
-        parallelGroup: "",
-        skipReason: "",
-        timeout: "",
-        type: "activity",
-      });
+      next.executionPlan.nodes.push(createDefinitionExecutionNode(nextNodeId));
     });
     setSelectedNodeId(nextNodeId);
   }

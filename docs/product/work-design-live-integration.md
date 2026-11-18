@@ -234,3 +234,33 @@ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types -
 npm run architecture:delivery
 npm run check
 ```
+
+## Advisor diagram tools
+
+Ask for architecture in ordinary language. The selected diagram's current
+renderer facts, resolved object sizes, supported operations and native template
+example accompany the request. A template explains the editor; its generic
+example labels are not project architecture or evidence. Questions produce no
+edits. Other diagrams provide read-only context only when explicitly included.
+
+Requested drafts can create and edit named trays, retain their actual member
+identities, move a group, arrange selected objects and update existing connectors
+without replacing their identities. Removing a frame preserves its cards;
+deleting cards requires an explicit card-removal proposal. Removing a member
+also updates group membership. Decorative frames and populated groups differ.
+Sketch annotations remain human-authored. These operations affect the local
+draft, never ART, source, runtime execution or final acceptance.
+
+New text cards use the renderer's automatic height. An existing fixed height can
+return to automatic sizing. A modest new diagram starts around the actual
+visible center in board coordinates, accounting for zoom and scroll. Large
+diagrams can extend and use the existing fit/navigation controls. An explicit
+positioning request can retain authored coordinates. Established manual layouts
+are preserved unless rearrangement was requested. Panning during reasoning does
+not invalidate the architecture or grant permission to steal the operator's view.
+
+This is coordinated maintenance with the existing native OOS/Platform reply
+grammar. Historical completed replies retain compatibility. Owner validation,
+preview application/rendering, exact-source Security acceptance and real-model
+operating checks are distinct evidence; passing the schema alone does not prove
+that an architecture diagram is useful.

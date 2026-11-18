@@ -9,9 +9,16 @@ import { orchestrationDefinitionDesignReadiness } from "../../../../work-model/d
 
 export function definitionAdvisorWorkContext(draft: OrchestrationDefinitionDesignDraft,
   selectedNodeId: string, definitions: OrchestrationDefinitionRecord[]) {
+  const example = definitions.find(record => record.id === draft.baselineRecordId) ?? definitions.find(record => record.executionNodes.length > 0);
   return advisorWorkContext({ draft, selectedNodeId,
+    definitionIndex: definitions.map(({ id, version, purpose, sourceDomain, lifecycle }) => ({ id, version, purpose, sourceDomain, lifecycle })),
+    exampleCoverage: { indexedCount: definitions.length, includedIds: example ? [example.id] : [],
+      selection: "The current baseline definition, otherwise the first supplied example with execution nodes. Other definitions are indexed metadata only; their steps and evidence have not been included." },
+    stepDrafting: { field: "executionPlan.nodesJson", format: "JSON text containing an array of step objects, never lines of prose",
+      properties: ["id", "label", "type", "adapter", "owner", "dependencies", "branchCondition", "idempotency", "optional", "parallelGroup", "skipReason", "timeout"],
+      rules: "Preserve existing step IDs and unrelated steps. Include the complete retained array when editing it. A new step can omit id; the editor assigns it. Missing implementation facts stay blank; new steps use the same defaults as manual creation. Do not invent an available adapter. Use existing selected-step fields for a small edit. Classification, approval and activation are not editable." },
     qualificationAndDefinitionChecks: orchestrationDefinitionDesignReadiness(draft),
-    definitionExamples: definitions.map(record => ({ id: record.id, version: record.version,
+    definitionExamples: (example ? [example] : []).map(record => ({ id: record.id, version: record.version,
       purpose: record.purpose, sourceDomain: record.sourceDomain, sourceRecordType: record.sourceRecordType,
       lifecycle: record.lifecycle, startAllowed: record.startAllowed,
       source: { authority: record.source.authority, freshness: record.source.freshness,
@@ -20,8 +27,8 @@ export function definitionAdvisorWorkContext(draft: OrchestrationDefinitionDesig
       nodes: record.executionNodes.map(({ id, label, type, adapter, owner, dependencies, inputRefs, outputRefs }) =>
         ({ id, label, type, adapter, owner, dependencies, inputRefs, outputRefs })) })),
     boundary: "Local definition drafting only. Supplied definitions are scoped examples, not a universal adapter registry. Qualification acceptance, approval, admission and request routing are operator decisions." },
-    { provided: ["Current definition and qualification inputs", "Current form validation findings", "Supplied owner-projected definition examples with their source mode, freshness and admission state"],
-      unavailable: ["Other activity implementations or repository contents", "Activation of a new definition", "Unprovided proof of a proposed adapter"] });
+    { provided: ["Current definition and qualification inputs", "Current form validation findings", "Index of supplied definitions and the explicitly identified baseline or first executable example with source mode, freshness and admission state"],
+      unavailable: ["Unselected definition steps and evidence beyond the supplied index", "Other activity implementations or repository contents", "Activation of a new definition", "Unprovided proof of a proposed adapter"] });
 }
 
 export type DefinitionAdvisorTranscriptLine = {
