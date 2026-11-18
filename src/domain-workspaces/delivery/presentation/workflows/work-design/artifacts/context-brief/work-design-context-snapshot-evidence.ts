@@ -48,9 +48,10 @@ export function workDesignContextSnapshotEvidenceProjection({
   deliveryPackage: DeliveryPackageSummary;
   initialContextSession: WorkDesignInitialContextSession;
 }) {
+  const retained = readOnly || contextBriefReady;
   const contextFinalizedBoardSnapshot =
-    retainedSnapshot ?? contextCurrentSavedSession?.snapshot ??
-    (readOnly && !initialContextSession ? {connections:[],customItems:[],positions:{},removedCoreIds:[],sketchStrokes:[],style:"plain" as const,templateTrays:[]} : workDesignFinalizedContextBoardSnapshot({
+    (retained ? retainedSnapshot : undefined) ?? contextCurrentSavedSession?.snapshot ??
+    (!retained || (readOnly && !initialContextSession) ? {connections:[],customItems:[],positions:{},removedCoreIds:[],sketchStrokes:[],style:"plain" as const,templateTrays:[]} : workDesignFinalizedContextBoardSnapshot({
       deliveryPackage,
     }));
   const currentCoreNodes = workDesignContextBoardCoreNodes(
@@ -77,7 +78,7 @@ export function workDesignContextSnapshotEvidenceProjection({
     title: contextFinalizedBrief.diagramTitle,
   });
   const contextSnapshotAttachment =
-    contextCanvasScreenshotAttachment?.fingerprint ===
+    retained && contextCanvasScreenshotAttachment?.fingerprint ===
     contextFinalizedFingerprint
       ? contextCanvasScreenshotAttachment
       : contextGeneratedSnapshotAttachment;

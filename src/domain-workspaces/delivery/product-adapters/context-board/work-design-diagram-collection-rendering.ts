@@ -34,11 +34,11 @@ export function workDesignDiagramCollectionAttachment(
     return svg;
   });
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img"><title>Complete Context Brief — ${views.length} diagrams</title>${children.join("")}</svg>`;
-  return { ...pages[0], artifactId: input.artifact?.artifact_id ?? null,
+  return { ...pages[0], diagramPreviews: pages, artifactId: input.artifact?.artifact_id ?? null,
     attachmentStatus: input.artifact?.attachment_status ?? "local_preview",
     boardSnapshotRef: input.ref, ref: input.ref, title: input.title, summary: input.summary,
     description: `Complete retained Context Brief containing ${views.length} named diagrams. Each view remains editable in its working brief.`,
-    contentType: "image/svg+xml", fileName: "context-brief-diagrams.svg", width, height,
+    contentType: "image/svg+xml", fileName: "context-brief-diagrams.png", width, height,
     itemCount: pages.reduce((total, page) => total + page.itemCount, 0),
     connectorCount: pages.reduce((total, page) => total + page.connectorCount, 0),
     dataUrl: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, svg };

@@ -1,7 +1,8 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, MouseEvent, PointerEvent, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { TerasLoadingIndicator } from "./teras-loading-state";
 
 import styles from "./teras-patterns.module.css";
@@ -25,6 +26,25 @@ type TerasMediaSnapshotAction = {
   onClick: () => void;
   tone?: TerasActionTone;
 };
+
+function useSnapshotOverlayVisibility() {
+  const [suppressed, setSuppressed] = useState(false);
+  const reveal = () => setSuppressed(false);
+  return {
+    "data-controls-suppressed": suppressed,
+    onPointerEnter: reveal,
+    onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
+      if (event.movementX || event.movementY) reveal();
+    },
+    onFocusCapture: reveal,
+    onKeyDownCapture: reveal,
+    onClickCapture: (event: MouseEvent<HTMLDivElement>) => {
+      const button = event.target instanceof Element
+        ? event.target.closest('[aria-label="Diagram navigation"] button') : null;
+      if (button instanceof HTMLButtonElement && !button.disabled) setSuppressed(true);
+    },
+  };
+}
 
 function SnapshotImage({ src, alt, style }: { src: string; alt: string; style?: CSSProperties }) {
   const image = useRef<HTMLImageElement>(null);
@@ -71,6 +91,25 @@ function TerasMediaSnapshotActionButton({
   );
 }
 
+export function TerasMediaSnapshotNavigation({
+  index, total, title, onSelect,
+}: { index: number; total: number; title: string; onSelect: (index: number) => void }) {
+  if (total < 2) return null;
+  return (
+    <div className={styles.terasMediaSnapshotNavigation} role="group" aria-label="Diagram navigation">
+      <TerasActionButton aria-label="Previous diagram" title="Previous diagram" size="table-compact"
+        disabled={index === 0} onClick={() => onSelect(index - 1)} treatment="tonal">
+        <ChevronLeft aria-hidden="true" size={16} />
+      </TerasActionButton>
+      <span title={title}>{title}</span>
+      <TerasActionButton aria-label="Next diagram" title="Next diagram" size="table-compact"
+        disabled={index === total - 1} onClick={() => onSelect(index + 1)} treatment="tonal">
+        <ChevronRight aria-hidden="true" size={16} />
+      </TerasActionButton>
+    </div>
+  );
+}
+
 export function TerasMediaSnapshot({
   previewDisabled = false,
   actions,
@@ -83,6 +122,7 @@ export function TerasMediaSnapshot({
   kicker,
   onPreview,
   previewAriaLabel = "View media snapshot",
+  previewOverlay,
   title,
 }: {
   previewDisabled?: boolean;
@@ -96,8 +136,10 @@ export function TerasMediaSnapshot({
   kicker?: ReactNode;
   onPreview: () => void;
   previewAriaLabel?: string;
+  previewOverlay?: ReactNode;
   title?: ReactNode;
 }) {
+  const overlayVisibility = useSnapshotOverlayVisibility();
   const previewButton = (
     <button
       aria-label={previewAriaLabel}
@@ -110,6 +152,12 @@ export function TerasMediaSnapshot({
     </button>
   );
   const factsGrid = <TerasMetadataList items={facts} />;
+  const preview = previewOverlay ? (
+    <div className={styles.terasMediaSnapshotViewport} {...overlayVisibility}>
+      {previewButton}
+      <div className={styles.terasMediaSnapshotOverlay}>{previewOverlay}</div>
+    </div>
+  ) : previewButton;
   const actionRow = actions?.length ? (
     <TerasActionRow
       className={styles.terasMediaSnapshotActions}
@@ -135,13 +183,13 @@ export function TerasMediaSnapshot({
       <div className={styles.terasMediaSnapshotGrid}>
         {density === "compact" ? (
           <>
-            {previewButton}
+            {preview}
             <div className={styles.terasMediaSnapshotContent}>{factsGrid}</div>
             {actionRow}
           </>
         ) : (
           <>
-            {previewButton}
+            {preview}
             <div className={styles.terasMediaSnapshotContent}>
               {factsGrid}
               {actionRow}
@@ -165,6 +213,7 @@ export function TerasMediaSnapshotViewerDialog({
   open,
   title,
   toolbarTitle,
+  navigation,
 }: {
   closeLabel?: string;
   description?: ReactNode;
@@ -177,9 +226,12 @@ export function TerasMediaSnapshotViewerDialog({
   open: boolean;
   title: ReactNode;
   toolbarTitle: ReactNode;
+  navigation?: ReactNode;
 }) {
   const snapshotViewerFullscreenRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
+  const overlayVisibility = useSnapshotOverlayVisibility();
+  useEffect(() => setZoom(1), [imageSrc]);
 
   function openFullscreenViewer() {
     void snapshotViewerFullscreenRef.current?.requestFullscreen?.();
@@ -217,10 +269,12 @@ export function TerasMediaSnapshotViewerDialog({
         <div
           className={styles.terasMediaSnapshotFullscreenCanvas}
           ref={snapshotViewerFullscreenRef}
+          {...overlayVisibility}
         >
           <div className={styles.terasMediaSnapshotViewerCanvas} style={{overflow:"auto",display:"block"}}>
             <SnapshotImage alt={imageAlt} src={imageSrc} style={{width:`${zoom * 100}%`,maxWidth:"none",maxHeight:"none",height:"auto"}} />
           </div>
+          {navigation ? <div className={styles.terasMediaSnapshotOverlay}>{navigation}</div> : null}
         </div>
       </div>
     </TerasDialog>

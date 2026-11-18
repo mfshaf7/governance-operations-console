@@ -117,6 +117,25 @@ one standard-sized form, with explicit duplicate/order/delete actions. Deletion
 requires confirmation and cannot remove the last diagram. Readonly views retain
 diagram navigation and inspection with mutation controls disabled.
 
+Finalized Brief uses one retained-diagram preview headed Diagram N of M. A
+translucent bar inside the image, at its bottom edge, shows the current name and
+Previous/Next icon controls on hover or keyboard focus. Touch layouts keep the
+bar visible. After navigation, the bar fades until the pointer moves or keyboard
+interaction resumes. The expanded viewer uses the same image-overlay controls and retains
+zoom; complete collection export stays separate from browsing. Single-image records do not show redundant navigation. Long handoff
+notes use a bounded excerpt followed by a bottom-right Read full note action and a separate standard
+scrolling read-only dialog that preserves paragraphs. The preview panel fits its
+content within the parent scroll region, including at shorter desktop heights.
+
+Finalize Brief reuses the complete review modal before and after confirmation.
+Before confirmation show the current saved diagrams/note, draft identity and
+pending checks with Finalize Brief in the footer. Do not label draft content as
+locked or show old finalized snapshots in place of the new saved revision. The
+same layout becomes read-only after finalization; evidence/history stay locked.
+The compact Context note has a small expand icon inside the field’s upper-right corner, with text padding reserved beside it. Its large filled
+editor shares the same controlled draft, limit and read-only state; closing it
+retains edits, and named Save Session remains explicit.
+
 The shared note explains the system across views. Saved/finalized versions cover
 the entire collection, and exported review content includes every retained view.
 View switching does not change architectural content or invalidate finalization.

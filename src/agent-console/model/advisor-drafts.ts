@@ -50,6 +50,7 @@ const finalFields = new Set([
 const dangerousKeys = new Set(["__proto__", "prototype", "constructor"]);
 export const advisorDraftContextChars = 32_000;
 export const workDesignDraftContextChars = 128_000;
+export const advisorDraftReplyChars = 128_000;
 const isWorkDesignRole = (role: unknown) => role === "work-design-context" || role === "work-design-tree";
 
 /** Carry actual observations and their coverage; never silently trim evidence. */
@@ -159,7 +160,7 @@ export function assertAdvisorReply(value: unknown, scope: AdvisorScope): Advisor
       jsonValue(edit.value);
     }
   }
-  if (JSON.stringify(value).length > 48_000) throw Error("Advisor draft response exceeds its bound.");
+  if (JSON.stringify(value).length > advisorDraftReplyChars) throw Error("Advisor draft response exceeds its bound.");
   return value as AdvisorReply;
 }
 

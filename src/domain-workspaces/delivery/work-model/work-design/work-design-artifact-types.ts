@@ -42,6 +42,8 @@ export type WorkDesignFinalizedBrief = {
 };
 
 export type WorkDesignSnapshotAttachment = {
+  /** Derived from the retained collection for browsing; not a replacement artifact. */
+  diagramPreviews?: WorkDesignSnapshotAttachment[];
   artifactId: string | null;
   attachmentStatus: DeliveryWorkDesignSnapshotAttachmentDisplayStatus;
   boardSnapshotRef: string;

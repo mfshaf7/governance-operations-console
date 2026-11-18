@@ -2493,9 +2493,42 @@
   gap: 0.28rem;
 }
 
-.terasNoteField[data-density="compact"] > span {
+.terasNoteField[data-density="compact"] > span,
+.terasNoteField[data-density="compact"] > label {
   font-size: 0.52rem;
   letter-spacing: 0.11em;
+}
+
+.terasNoteFieldInputFrame {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+}
+
+.terasNoteField .terasNoteFieldInputFrame > textarea {
+  padding-inline-end: 3.25rem;
+}
+
+.terasNoteFieldActions {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+}
+
+.terasNoteFieldActions > button[data-size] {
+  width: 1.625rem;
+  height: 1.625rem;
+  min-width: 1.625rem;
+  min-height: 1.625rem;
+  padding: 0.25rem;
+  border-radius: 0.4rem;
+}
+
+.terasNoteFieldActions > button > svg {
+  flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .terasNoteField textarea {
@@ -2503,6 +2536,8 @@
   min-width: 0;
   min-height: 7rem;
   resize: vertical;
+  scrollbar-color: rgba(var(--teras-field-accent-rgb), 0.44) rgba(20, 14, 9, 0.62);
+  scrollbar-width: thin;
   border: 1px solid rgba(255, 193, 90, 0.22);
   border-radius: 0.84rem;
   padding: 0.72rem 0.8rem;
@@ -2531,6 +2566,10 @@
   padding: 0.62rem 0.72rem;
   font-size: 0.74rem;
   line-height: 1.36;
+}
+
+.terasNoteField[data-density="compact"] .terasNoteFieldInputFrame > textarea {
+  padding-inline-end: 3.25rem;
 }
 
 .terasNoteField[data-accented="true"] textarea {
@@ -2722,6 +2761,83 @@
   object-fit: contain;
 }
 
+.terasMediaSnapshotViewport {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 0.78rem;
+}
+
+.terasMediaSnapshotViewport > .terasMediaSnapshotPreviewButton {
+  width: 100%;
+  height: 100%;
+  transform: none;
+}
+
+.terasMediaSnapshotOverlay {
+  position: absolute;
+  inset: auto 0.45rem 0.45rem;
+  z-index: 2;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.25rem);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.terasMediaSnapshotViewport:hover > .terasMediaSnapshotOverlay,
+.terasMediaSnapshotViewport:focus-within > .terasMediaSnapshotOverlay,
+.terasMediaSnapshotFullscreenCanvas:hover > .terasMediaSnapshotOverlay,
+.terasMediaSnapshotFullscreenCanvas:focus-within > .terasMediaSnapshotOverlay {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+@media (hover: hover) {
+  .terasMediaSnapshotViewport[data-controls-suppressed="true"] > .terasMediaSnapshotOverlay,
+  .terasMediaSnapshotFullscreenCanvas[data-controls-suppressed="true"] > .terasMediaSnapshotOverlay {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(0.25rem);
+  }
+}
+
+.terasMediaSnapshotNavigation {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.42rem;
+  border: 1px solid rgba(255, 240, 216, 0.18);
+  border-radius: 0.58rem;
+  background: rgba(6, 9, 15, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.terasMediaSnapshotNavigation > span {
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+@media (hover: none) {
+  .terasMediaSnapshotOverlay {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terasMediaSnapshotOverlay {
+    transition: none;
+  }
+}
+
 .terasMediaSnapshot[data-density="compact"] .terasMediaSnapshotPreviewButton img {
   height: 12rem;
 }
@@ -2818,6 +2934,7 @@
 }
 
 .terasMediaSnapshotFullscreenCanvas {
+  position: relative;
   display: grid;
   min-width: 0;
   min-height: 0;
@@ -5657,6 +5774,7 @@
 }
 
 .terasNoteField span,
+.terasNoteField > label,
 .terasReadoutField > span,
 .terasSelectField > span,
 .terasTextField > span {

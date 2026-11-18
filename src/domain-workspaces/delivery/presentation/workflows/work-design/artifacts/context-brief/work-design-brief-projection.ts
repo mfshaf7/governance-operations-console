@@ -163,7 +163,7 @@ export function workDesignFinalizedBriefView({
       {
         label: "Next Surface",
         tone: "warn",
-        value: "Build Tree",
+        value: resolvedDecision === "proceed" ? "Build Tree" : resolvedDecision === "attach" ? "Existing Work Link" : "Retirement Record",
       },
     ],
     decision: resolvedDecision,
@@ -369,7 +369,7 @@ export function workDesignSnapshotAttachmentMetadata({
       value: contextBoardInventory.summary,
     },
     {
-      label: "Image Size",
+      label: contextSnapshotAttachment.diagramPreviews?.length ? "Collection Size" : "Image Size",
       value: `${contextSnapshotAttachment.width} x ${contextSnapshotAttachment.height}`,
     },
   ];

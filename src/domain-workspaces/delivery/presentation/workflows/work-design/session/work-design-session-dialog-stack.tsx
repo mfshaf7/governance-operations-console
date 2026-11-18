@@ -30,7 +30,7 @@ import {
   WorkDesignDeleteGuardDialog,
   WorkDesignScaffoldDialog,
 } from "../embedded-products/build-tree/index.ts";
-import { TerasMediaSnapshotViewerDialog } from "@/teras";
+import { WorkDesignSnapshotViewerDialog } from "../artifacts/context-brief/work-design-snapshot-preview.tsx";
 
 type WorkDesignSnapshotViewerDialogProps = {
   contextSnapshotAttachment: WorkDesignSnapshotAttachment;
@@ -99,7 +99,8 @@ export function WorkDesignSessionDialogStack({
       <WorkDesignApplyLogDialog {...applyLogDialog} />
       <WorkDesignFinalizedBriefDialog {...finalizedBriefDialog} />
       <WorkDesignReviewTreeDialog {...reviewTreeDialog} />
-      <TerasMediaSnapshotViewerDialog
+      <WorkDesignSnapshotViewerDialog
+        attachment={snapshotViewerDialog.contextSnapshotAttachment}
         description={
           snapshotViewerDialog.contextSnapshotAttachment.source ===
           "canvas_screenshot"
@@ -112,13 +113,10 @@ export function WorkDesignSessionDialogStack({
           onClick: snapshotViewerDialog.exportContextSnapshotAttachment,
           tone: "warn",
         }}
-        imageAlt={`${snapshotViewerDialog.contextSnapshotAttachment.title} full snapshot attachment`}
-        imageSrc={snapshotViewerDialog.contextSnapshotAttachment.dataUrl}
         kicker={snapshotViewerDialog.contextSnapshotAttachmentSourceLabel}
         onClose={snapshotViewerDialog.onClose}
         open={snapshotViewerDialog.open}
         title="Context Snapshot Viewer"
-        toolbarTitle={snapshotViewerDialog.contextSnapshotAttachment.fileName}
       />
       <WorkDesignFinalizedBriefDetailsDialog {...finalizedBriefDetailsDialog} />
       <WorkDesignSaveSessionDialog {...saveSessionDialog} />

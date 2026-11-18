@@ -278,10 +278,10 @@ export function useWorkDesignSessionController({
   const applyCompleted = readOnly || applyReceiptRecorded || sourceWorkDesignClosed;
   const requestTreeAdvice = useCallback<AdvisorTransport>(
     async (scope, operatorPrompt, signal, conversation) => {
-      const context = JSON.parse(scope.context);
+      const { observations } = JSON.parse(scope.context);
       const live = await liveRuntime.treeAdvice({
         operatorPrompt,
-        selectedNodeId: context.selectedNodeId,
+        selectedNodeId: observations.selectedNodeId,
         tree: scope.fields.find((field) => field.key === "tree")!.value as typeof initialTree,
         draftScope: { scope, conversation },
       }, signal);
