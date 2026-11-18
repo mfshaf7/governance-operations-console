@@ -215,6 +215,13 @@ refusals remain distinct from offline connections. The Context and Build Tree
 effort overrides are independently managed through existing Model Operations;
 source defaults do not silently change unrelated routing.
 
+Native Context and Build Tree requests use the shared complete-message
+conversation validator: at most eight turns, each at most 12,000 characters.
+The browser's bounded recent-message window and total context budgets still
+apply. A supported retained message is forwarded intact; it is not reduced to
+the shorter manual-prompt limit. Invalid conversation input requires reviewing
+the supplied context and does not establish that the backend is offline.
+
 The longer deadlines and work-guide changes remain pending paired activation
 and detailed real-provider qualification. Isolated HTTP/browser tests verify
 transport and editing behavior; they do not attest actual architecture quality.
@@ -223,6 +230,7 @@ Run:
 
 ```bash
 node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/operation-runtime/work-design-live-adapter.test.mjs
+node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/operation-runtime/work-design-http-routes.test.mjs
 npm run architecture:delivery
 npm run check
 ```
