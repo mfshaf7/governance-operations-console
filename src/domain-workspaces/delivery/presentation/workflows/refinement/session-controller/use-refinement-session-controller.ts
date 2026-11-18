@@ -359,6 +359,7 @@ export function useRefinementSessionController({
     openGateCount,
     packet,
     packetLoading: liveRuntime.loading,
+    retryPacket: liveRuntime.retryProjection,
     packetUnavailableReason:
       liveRuntime.projectionError ??
       (liveRuntime.loading

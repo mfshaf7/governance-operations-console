@@ -298,3 +298,9 @@ Operator-approved publication repair, Landing Unit Decision
 Agent Gary authors and the standing delegated human reviews/merges. Publication
 requires the existing exact composed Security acceptance and normal activation.
 No Work Design or Refinement Apply is replayed by qualification.
+
+Loading and failed reads use the Hub-width shell, selected package name and one
+full-width state frame. Loading keeps the shared animated signal and skeleton.
+Failure shows one plain-language message with an in-place Retry loading action;
+raw diagnostics stay in technical disclosure. Retry performs only the same GET,
+returns to loading, retains the package and cannot replay Apply or advice.

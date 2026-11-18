@@ -8,12 +8,13 @@ const base = process.env.CONSOLE_TEST_BASE_URL ?? "http://127.0.0.1:4317";
 if (new URL(base).port === "3317") throw Error("Use isolated preview for synthetic workbench tests.");
 test.use({ actionTimeout: 15000, navigationTimeout: 60000 }); test.setTimeout(120000);
 const modal = page => page.getByRole("dialog").last();
-async function openWorkbench(page, { saved = false, projectionHold = null, assist = null, configure = null } = {}) {
+async function openWorkbench(page, { saved = false, projectionHold = null, assist = null, configure = null, openMetadata = true, projectionResponse = null } = {}) {
   const adviceRequests = [];
   const model = structuredClone(deliveryReadModel), projection = refinementWorkbenchProjection(), writes = [], errors = [], saves = [];
   model.source_truth = "OpenProject-backed OOS"; model.generated_at = new Date().toISOString(); model.projection_state.checked_at = model.generated_at;
   configure?.(projection);
   let record = null;
+  let packetReads = 0;
   page.on("pageerror", e => errors.push(e.message));
   await page.route("**/api/**", async route => {
     const req = route.request(), url = new URL(req.url()), path = url.pathname;
@@ -27,7 +28,7 @@ async function openWorkbench(page, { saved = false, projectionHold = null, assis
       if (req.method() === "POST") { const body = req.postDataJSON(); saves.push(body); record = { revision: (record?.revision ?? 0) + 1, payload_json: body.payload_json, content_digest: "sha256:" + createHash("sha256").update(body.payload_json).digest("hex"), acknowledgement_id: "ack:synthetic", saved_at: new Date().toISOString() }; }
       return route.fulfill({ json: { mode: "live", operatorId: "operator:synthetic", snapshot: { kind: "refinement", subject_id: decodeURIComponent(path.split("/").at(-1)), record, recoveries: [] } } });
     }
-    if (path.includes("/api/delivery/refinement/") && path.endsWith("/projection")) { if (projectionHold) await projectionHold; return route.fulfill({ json: { mode: "live", status: "current", error: null, observedAt: new Date().toISOString(), projection } }); }
+    if (path.includes("/api/delivery/refinement/") && path.endsWith("/projection")) { packetReads++; if (projectionHold) await projectionHold; if (projectionResponse) return route.fulfill(await projectionResponse(packetReads, projection)); return route.fulfill({ json: { mode: "live", status: "current", error: null, observedAt: new Date().toISOString(), projection } }); }
     if (assist && path.includes("/api/delivery/refinement/") && path.endsWith("/assist")) {
       const body = req.postDataJSON(); adviceRequests.push(body);
       return route.fulfill({ json: await assist(body) });
@@ -41,8 +42,8 @@ async function openWorkbench(page, { saved = false, projectionHold = null, assis
   await page.getByRole("button", { name: /04.*Refinement/i }).click();
   await page.getByRole("row").filter({ hasText: "Adapter Contract Metadata Repair" }).click();
   await page.getByRole("button", { name: "Open Refinement Hub", exact: true }).click();
-  await modal(page).getByRole("group", { name: "Refinement steps", exact: true }).getByRole("button", { name: /Metadata Workbench/i }).click();
-  return { model, projection, writes, errors, saves, adviceRequests, record: () => record };
+  if (openMetadata) await modal(page).getByRole("group", { name: "Refinement steps", exact: true }).getByRole("button", { name: /Metadata Workbench/i }).click();
+  return { model, projection, writes, errors, saves, adviceRequests, record: () => record, packetReads: () => packetReads };
 }
 
 for (const width of [1280, 1700]) test(`long real-shaped work tree is navigable and full descriptions are safely formatted at ${width}`, async ({ page }) => {
@@ -150,7 +151,7 @@ test("a slow live packet shows loading without exposing sample fields", async ({
   const held = new Promise(resolve => { release = resolve; });
   const opening = openWorkbench(page, { projectionHold: held });
   try {
-    await expect(page.getByText("Reading Refinement fields…", { exact: true })).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText("Loading Refinement…", { exact: true })).toBeVisible({ timeout: 30000 });
     await expect(page.locator('[data-structure-locked="true"]')).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Open Metadata Workbench", exact: true })).toHaveCount(0);
     release();
@@ -243,4 +244,37 @@ test("native per-item choices survive individual and shared review while integer
  await d.getByRole("button",{name:"Mark 2 items reviewed",exact:true}).click();
  await page.screenshot({path:test.info().outputPath("native-choice-review.png")});
  expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
+});
+
+
+for (const width of [1280,2560]) test(`Refinement read states fill their shell and retry in place without mutation at ${width}`, async({page})=>{
+ await page.setViewportSize({width,height:width===1280?800:1337});
+ let release;const held=new Promise(resolve=>{release=resolve;});
+ const h=await openWorkbench(page,{openMetadata:false,projectionResponse:async count=>{
+  if(count===1)return {status:502,json:{code:"delivery_oos_unavailable",error:"The operation was aborted due to timeout",mode:"live",status:"offline"}};
+  await held;return {json:{mode:"live",status:"current",error:null,observedAt:new Date().toISOString(),projection:h.projection}};
+ }});
+ try{
+  const d=modal(page),shell=d.locator('[data-teras-modal="delivery-refinement-unavailable"]');
+  await expect(d.getByRole("heading",{name:"Refinement couldn’t load",exact:true})).toBeVisible();
+  await expect(shell).toHaveAttribute("data-width","medium");
+  await expect(d.getByText("Missing Packet",{exact:true})).toHaveCount(0);
+  await expect(d.getByText("not ready",{exact:true})).toHaveCount(0);
+  await expect(d.getByText("The operation was aborted due to timeout",{exact:true})).toBeHidden();
+  const frame=d.locator('[class*="terasEmptyStateFill"]'),a=await shell.boundingBox(),b=await frame.boundingBox();
+  expect(b.width/a.width).toBeGreaterThan(.9);
+  await page.screenshot({path:test.info().outputPath("refinement-read-error.png")});
+  await d.getByText("Technical details",{exact:true}).click();
+  await expect(d.getByText("The operation was aborted due to timeout",{exact:true})).toBeVisible();
+  await d.getByRole("button",{name:"Retry loading",exact:true}).click();
+  await expect(d.getByRole("status").filter({hasText:"Loading Refinement…"})).toBeVisible();
+  await expect(d.getByRole("button",{name:"Retry loading",exact:true})).toHaveCount(0);
+  await expect(d.getByText("Missing Packet",{exact:true})).toHaveCount(0);
+  const loader=d.locator('[data-teras-loading="panel"]'),c=await loader.boundingBox();expect(c.width/a.width).toBeGreaterThan(.9);
+  await expect(loader.locator('[data-teras-loading-signal="true"]')).toBeVisible();
+  await page.screenshot({path:test.info().outputPath("refinement-read-loading.png")});
+  expect(h.packetReads()).toBe(2);release();
+  await expect(d.getByRole("heading",{name:"Refinement Hub",exact:true})).toBeVisible();
+  expect(h.packetReads()).toBe(2);expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
+ }finally{release();}
 });
