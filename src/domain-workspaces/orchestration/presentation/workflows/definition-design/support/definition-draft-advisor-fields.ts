@@ -1,5 +1,6 @@
 import type { AdvisorEdit, AdvisorField } from "@/agent-console/model/advisor-drafts";
 import type { OrchestrationDefinitionDesignDraft } from "../../../../work-model/definition-design/definition-design-types.ts";
+import { definitionAdvisorNodes } from "../../../../work-model/definition-design/definition-execution-node.ts";
 
 const groups = {
   "delivery-versioning": "deliveryVersioning", "evidence-security": "evidenceSecurity",
@@ -13,6 +14,11 @@ export function definitionDraftAdvisorFields(draft: OrchestrationDefinitionDesig
   function add(value: Record<string, unknown>, prefix: string) {
     for (const [key, item] of Object.entries(value)) {
       if (decisions.has(key)) continue;
+      if (prefix === "executionPlan" && key === "nodes") {
+        fields.push({ key: "executionPlan.nodesJson", label: "Execution steps (JSON array of step objects; preserve existing IDs and unrelated steps)",
+          value: JSON.stringify(item), maxLength: 24_000 });
+        continue;
+      }
       if (typeof item === "string") fields.push({ key: `${prefix}.${key}`, label: key, value: item,
         ...(prefix.startsWith("node:") && key === "type" ? { allowedValues: ["activity", "subworkflow", "wait"] } : {}) });
       else if (typeof item === "boolean") fields.push({ key: `${prefix}.${key}`, label: key, value: String(item), allowedValues: ["true", "false"] });
@@ -32,6 +38,11 @@ export function applyDefinitionDraftAdvisorEdits(draft: OrchestrationDefinitionD
   const next = structuredClone(draft);
   for (const edit of edits) {
     if (!allowed.some((field) => field.key === edit.field)) throw Error("This Definition field is outside the selected local draft scope.");
+    if (edit.field === "executionPlan.nodesJson") {
+      if (typeof edit.value !== "string") throw Error("Execution steps must be JSON text.");
+      next.executionPlan.nodes = definitionAdvisorNodes(edit.value, next.executionPlan.nodes);
+      continue;
+    }
     const dot = edit.field.lastIndexOf(".");
     const group = edit.field.slice(0, dot), key = edit.field.slice(dot + 1);
     const target = (group.startsWith("node:") ? next.executionPlan.nodes.find((node) => node.id === group.slice(5)) : next[group as keyof OrchestrationDefinitionDesignDraft]) as unknown as Record<string, unknown> | undefined;

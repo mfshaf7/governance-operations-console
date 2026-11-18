@@ -22,6 +22,7 @@ type Options = {
   requestBudgetMs?: number;
   providerBudgetMs?: number;
   stopWaitingOnly?: boolean;
+  captureRequestContext?: () => void;
   transport?: (scope: AdvisorScope, prompt: string, signal: AbortSignal, conversation: Turn[]) => Promise<GovernedAdvisorReply>;
 };
 
@@ -51,9 +52,15 @@ export function useDraftAdvisor(options: Options) {
     if (!prompt.trim()) throw Error("Ask the advisor a question or request a draft edit.");
     if (binding && !memory.ready) throw Error("Saved conversation is still opening. Your draft is retained; try again when it is ready.");
     if (active.current) throw Error("The advisor is already answering this request.");
-    // Native snapshots may carry absent optional properties as undefined. Capture
-    // their ordinary JSON wire representation before validating and binding it.
-    const scope = assertAdvisorScope(JSON.parse(JSON.stringify({ ...current.current.getScope(), readOnly: Boolean(current.current.disabled) })));
+    let scope: AdvisorScope;
+    try {
+      current.current.captureRequestContext?.();
+      // Capture the ordinary wire representation of optional undefined fields.
+      scope = assertAdvisorScope(JSON.parse(JSON.stringify({ ...current.current.getScope(), readOnly: Boolean(current.current.disabled) })));
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The selected advisor context is unavailable. No draft was changed.");
+      throw error;
+    }
     const captured = advisorScopeSnapshot(scope);
     const identity = advisorScopeIdentity(scope);
     if (historyScope.current !== identity) { history.current = []; historyScope.current = identity; setUndoRecord(null); }

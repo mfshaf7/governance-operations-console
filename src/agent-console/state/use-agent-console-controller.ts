@@ -18,7 +18,7 @@ import { useFocusedDraftScope, useAvailableProjectContexts } from "./draft-advis
 import { selectedProjectCandidate, selectedProjectKey, type ProjectContextChoice } from "../model/selected-project-context.ts";
 import { useAdvisorConversation } from "./use-advisor-conversation.ts";
 import { advisorConversationWindow, conversationBindingText } from "../model/advisor-conversation.ts";
-import { advisorScopeIdentity } from "../model/advisor-drafts";
+import { advisorScopeIdentity, type AdvisorScope } from "../model/advisor-drafts";
 import {
   deriveAgentProviderReadinessState,
   isAgentProviderStatus,
@@ -153,9 +153,12 @@ export function useAgentConsoleController({
   const idleContextCandidate = useRef(requestedContextCandidate);
   if (!agentBusy) idleContextCandidate.current = requestedContextCandidate;
   const contextCandidate = agentBusy ? idleContextCandidate.current : requestedContextCandidate;
+  let focusedDraftScope: AdvisorScope | null = null, focusedDraftScopeError: string | null = null;
   let draftBinding: { role: string; ref: string; sourceRef: string } | null = null;
-  try { if (contextMode === "focused" && focusedDraft) { const scope = focusedDraft.getScope(); draftBinding = { role: scope.role, ref: scope.ref, sourceRef: scope.sourceRef }; } }
-  catch { /* The selected workflow explains its unavailable scope on request. */ }
+  try { if (contextMode === "focused" && focusedDraft) {
+    focusedDraftScope = focusedDraft.getScope();
+    draftBinding = { role: focusedDraftScope.role, ref: focusedDraftScope.ref, sourceRef: focusedDraftScope.sourceRef };
+  } } catch (error) { focusedDraftScopeError = error instanceof Error ? error.message : "The selected advisor context is unavailable."; }
   const requestedConversationBinding = { role: `${conversationRole ?? (placement === "floating" ? "console-dock" : "console-primary")}/${draftBinding?.role ?? contextMode}`,
     ref: draftBinding?.ref ?? contextCandidate?.id ?? "console-overview",
     sourceRef: draftBinding?.sourceRef ?? contextCandidate?.refs[0] ?? "console://overview" };
@@ -1047,7 +1050,6 @@ export function useAgentConsoleController({
             ? "Stale"
             : "Unavailable"
           : "Checking";
-  const focusedDraftScope = contextMode === "focused" ? focusedDraft?.getScope() : null;
   const providerStatusLabel = focusedDraftScope ? "governed workflow advisor / checked on request" :
     providerState === "online"
       ? `governed AI / ${providerStatus?.model}`
@@ -1063,12 +1065,12 @@ export function useAgentConsoleController({
     mode: contextMode,
   });
   const contextSummary =
-    focusedDraftScope ? `Selected local draft fields: ${focusedDraftScope.fields.map((field) => field.label).join(", ")}. Questions do not edit; final decisions remain yours.` : contextMode === "focused"
+    focusedDraftScopeError ?? (focusedDraftScope ? `Selected local draft fields: ${focusedDraftScope.fields.map((field) => field.label).join(", ")}. Questions do not edit; final decisions remain yours.` : contextMode === "focused"
       ? contextCandidate?.summary ??
         "Ask generally; no console context candidate is available."
       : contextMode === "workspace"
         ? contextCandidate?.summary ?? "Workspace mode requires a current workspace context candidate."
-        : "General mode selected; workspace and active UI context will not be attached.";
+        : "General mode selected; workspace and active UI context will not be attached.");
   const contextTitle =
     focusedDraftScope ? `${focusedDraftScope.role} / local draft` : contextMode === "focused"
       ? contextCandidateBadgeLabel(contextCandidate, contextFallbackLabel)

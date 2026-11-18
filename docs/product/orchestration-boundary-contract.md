@@ -274,6 +274,16 @@ The Definitions surface creates qualification and implementation packets. It
 must not present itself as a low-code runtime builder or activate executable
 workflows.
 
+## Advisor step drafts
+
+The definition advisor can draft execution steps when explicitly asked. It uses
+the same object model and blank defaults as manual step creation, preserves
+existing identities and unrelated fields, and rejects malformed or cyclic
+dependencies before changing the draft. Missing adapter, responsible component
+or timeout information remains unknown; a draft does not prove implementation
+or admission. Step IDs can be assigned by the editor for new steps. The operator
+still owns qualification, implementation-request review, admission and activation.
+
 ## Sources
 
 - `durable-orchestration-standard.md`
@@ -282,3 +292,8 @@ workflows.
 - `system-design.md`
 - `operation-workbench-contract.md`
 - `domain-contracts/orchestration.md`
+
+The advisor receives an index of supplied definitions and the full current baseline
+(or the first supplied executable example for a new draft), with explicit coverage.
+Other indexed definitions do not imply that their step contents were loaded. An
+oversized context blocks that advisor request with an explanation; the form stays usable.
