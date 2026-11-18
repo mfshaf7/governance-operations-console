@@ -15,6 +15,7 @@ import type {
   WorkDesignApplyCommand,
   WorkDesignContextAssistCommand,
   WorkDesignOosAssistResult,
+  WorkDesignOosApplyResult,
   WorkDesignProjectionSnapshot,
   WorkDesignTreeAssistCommand,
 } from "./work-design-live-types.ts";
@@ -135,7 +136,7 @@ export function useWorkDesignLiveRuntime(
   );
 
   const apply = useCallback(
-    async (command: Omit<WorkDesignApplyCommand, "advisorEvidence" | "sourceRevision">) => {
+    async (command: Omit<WorkDesignApplyCommand, "advisorEvidence" | "sourceRevision">, observed?: { submitted: () => void; confirmed: (result: WorkDesignOosApplyResult) => void }) => {
       if (readOnly) throw new Error("Completed work is read-only.");
       const current = await currentSnapshot(snapshotRef.current, refresh);
       if (current.mode === "disconnected-preview") {
@@ -153,6 +154,7 @@ export function useWorkDesignLiveRuntime(
           "work_design_apply_pending",
         );
       }
+      observed?.submitted();
       const response = await fetch(
         `/api/delivery/work-design/${encodeURIComponent(packageRef)}/apply`,
         {
@@ -171,6 +173,7 @@ export function useWorkDesignLiveRuntime(
         throw workDesignClientError(body);
       }
       const result = assertWorkDesignOosApplyResult(body);
+      observed?.confirmed(result);
       await refresh().catch(() => undefined);
       return { mode: current.mode, result } as const;
     },

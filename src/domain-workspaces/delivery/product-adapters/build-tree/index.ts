@@ -47,3 +47,6 @@ export {
 } from "./work-design-tree-model.ts";
 export type { WorkDesignGeneratedSeedMetrics } from "./work-design-tree-model.ts";
 export { applyWorkDesignAdvisorPatch } from "./work-design-advisor-patch.ts";
+
+export { refinementBuildTreeNode, refinementBuildTreeRole, refinementBuildTreeLayout } from "./refinement-build-tree.ts";
+export type { RefinementBuildTreeNode } from "./refinement-build-tree.ts";

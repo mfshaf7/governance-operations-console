@@ -74,7 +74,7 @@ export function DeliveryPackageRegisterSurface({
   const [packageSearch, setPackageSearch] = useWorkspaceViewState(`delivery-register:${surface.id}:packageSearch`, "");
   const [registerRevision, setRegisterRevision] = useState(0);
   const live=model.source_truth==="OpenProject-backed OOS";
-  const page=useDeliveryRegisterPage({surface:surface.id,scope:model.history_scope??"current",query:packageSearch.trim().toLowerCase(),status:packagePostureFilter},live,focusPackageId);
+  const page=useDeliveryRegisterPage({surface:surface.id,scope:model.history_scope??"current",query:packageSearch.trim().toLowerCase(),status:packagePostureFilter},live,packageAction?.deliveryPackage.delivery_package_id ?? focusPackageId);
   const registerModel=useMemo(()=>{
     const base=live?page.model??{...model,packages:[],selected_packages:[],art_tree:{...model.art_tree,roots:[]}}:model;
     const exact=page.original;

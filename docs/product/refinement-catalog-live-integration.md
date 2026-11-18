@@ -12,6 +12,24 @@ Catalog projection and mutation, backend readback, and receipts. The Console
 owns operator interaction, semantic-to-visual mapping, strict validation, and
 same-origin routing.
 
+## Apply feedback
+
+Apply Refinement immediately shows a busy action and the shared loading
+indicator, including while the first backend acknowledgement is pending.
+The reviewed plan remains visible until submission; the active view then
+distinguishes acknowledgement, backend operations and canonical receipt/readback.
+It reports observed progress without assigning unreported completion to an
+individual planned operation. Navigation and repeated Apply are guarded while
+the request is pending.
+
+The run log preserves owner event timestamps, including events retained in the
+canonical receipt. A receipt summary does not replace that timeline. Older
+receipts without events show their recorded receipt time and explicitly state
+that historical step times are unavailable. A missing reply is unconfirmed,
+not proof that the backend failed or made no changes; inspect the original run
+before another action. These presentation repairs require normal source
+publication and activation before they describe live deployed behavior.
+
 ## Runtime Modes
 
 - `disconnected-preview`: `OOS_BASE_URL` is absent. Existing synthetic data and
@@ -40,6 +58,34 @@ The bounded security decision is the
 [Refinement and Catalog dev-integration boundary review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-08-26-refinement-catalog-dev-integration-boundary.md).
 
 ## Refinement
+
+In Metadata Workbench, use **One item** to select one work item, or **Multiple
+items** to select an explicit shared set. Search the tree by name, number or
+description; **Needs review** narrows it to outstanding fields while keeping
+their parent context. Filtering does not remove selected items. Use **Read
+work item** for the complete formatted description.
+
+Refinement reuses Work Design's shared structured Build Tree with its structure
+locked. Select an item to see its context; its fields appear directly beneath
+it, with fields needing attention first. Select a field row to open that field's
+editor on the right. Field rows are view details, not ART children, and never
+change work-item counts. Add, delete and rename controls are absent here.
+The input below the selected work item edits that field's value. Its label, Required/Optional hint,
+current value and draft status explain what is being reviewed. Controlled
+choices come from the owner packet; a free-text field without supplied choices
+must say so. **Mark reviewed** confirms the draft value; it does not write to
+OpenProject. Shared review identifies the exact selected items and uses only
+common choices and compatible field types. Select the shared field from
+**Fields for selected items** above the tree. Changing the selected set returns
+to its context view; select a field again before editing or requesting advice. Changed or invalid values need
+review before Apply, even if their original values were complete.
+
+Drafts save automatically after actual persisted state changes. An idle render
+or a new save timestamp alone is not an edit. **Saved to server** acknowledges
+draft storage, independently of the later **Apply Refinement** receipt. The
+workbench waits for a live packet rather than showing sample fields during a
+live read. These repairs remain preview source until normal publication and
+activation qualify the deployed behavior.
 
 1. The Console reads the canonical packet and durable run projection before an
    advice or apply command.
@@ -191,3 +237,45 @@ The operator-facing status for fixed Catalog values is System managed. Detailed
 policy or membership explanations stay in technical disclosure. This is a
 presentation label; canonical read_only/owner_routed capability tokens and their
 permissions remain unchanged. Do not render this status as an action button.
+
+### Paired advisor and governed-field repair
+
+The existing Delivery Catalog supplies PI/Iteration, repository, team and account
+choices, further narrowed by native permissions. Backend String storage does not
+make those identifiers free-entry fields. Reserved roadmap buckets are not PI
+choices. Iteration choices follow the selected item's effective PI and the OOS
+planning rules; blank optional controls retain their saved source values.
+Dates and Delivery references have typed validation, while narrative and business
+responsibility text remain editable prose. Create missing values through Catalog,
+membership or repository onboarding rather than typing an unregistered name.
+
+Advice sends the exact selected set and related edited fields on those items and
+their ancestors. Mixed shared values are preserved per item; selecting two items
+does not silently target an entire metadata group. OOS loads canonical planning
+facts and current constraints, distinguishes unsaved drafts, and admits the
+complete context through CGG. A changed related draft invalidates a late proposed
+edit. Advice and Apply retain the packet/source revision the operator reviewed;
+the proxy rejects changed source or choices rather than silently rebinding input. AI values stay visibly unreviewed until the operator marks review; existing
+final Apply acceptance remains required. The default High model route is retained.
+
+UI transport tests use controlled replies; they do not qualify native model
+quality. Publish compatible CGG first, OOS next and this Console batch last, then
+perform exact-source acceptance/activation and native qualification. Until then,
+the current live backend retains its previous behavior.
+
+
+Current completion and run feedback must bind the packet's Work Design handoff.
+Older completed runs remain owner history and cannot block a newer pass. A changed
+post-Apply source revision does not erase the matching handoff receipt. Apply
+always submits its own reviewed command to the owner rather than borrowing any
+retained active/completed run as acknowledgement. Canonical receipts expose the
+original accepted-draft digest and events; `applied_payload` is null when the
+owner has not exposed original accepted values. Current metadata must not be
+presented as an historical accepted payload. Canonical receipts are re-read from
+OOS, while local sample receipts retain their existing payload shape.
+
+Per-record choice maps drive individual controls; shared controls intersect only
+the selected records. Optional native numeric typing sets whole-number controls
+and validation while preserving decimal fields. The same selected constraints
+are enforced by OOS before advice/Apply and by the native integer writer before
+mutation. Publication is operator-approved; live operating claims still require the accepted composition and native verification.

@@ -65,6 +65,7 @@ export function assertRefinementOosPacket(value: unknown): RefinementOosPacket {
   for (const key of ["package_ref", "source_ref", "source_revision", "source_work_design_receipt_id", "tree_snapshot_ref", "finalized_brief_ref"]) {
     nonEmpty(source[key], `packet source ${key}`);
   }
+  if (packet.planning_rules !== undefined) { const rules = record(packet.planning_rules, "planning rules"); string(rules.backlog_iteration_label, "backlog label"); stringList(rules.iteration_prefix_templates, "iteration compatibility rules"); }
   assertRefinementTreeNode(packet.target_tree);
   array(packet.draft_groups, "packet draft groups").forEach(assertDraftGroup);
   array(packet.readiness_gates, "packet readiness gates").forEach(assertReadinessGate);
@@ -78,6 +79,7 @@ export function assertRefinementOosRun(value: unknown): RefinementOosRun {
   exact(run.schema_version, 1, "run schema version");
   for (const key of ["request_id", "correlation_id", "run_id"]) stableId(run[key], `run ${key}`);
   oneOf(run.state, ["accepted", "running", "completed", "failed", "cancelled"], "run state");
+  if (run.source_work_design_receipt_id !== undefined) nonEmpty(run.source_work_design_receipt_id, "run source handoff");
   boolean(run.replayed, "run replay marker");
   dateTime(run.submitted_at, "run submission time");
   dateTime(run.updated_at, "run update time");
@@ -131,7 +133,16 @@ export function assertRefinementAssistCommand(
   value: unknown,
 ): RefinementAssistCommand {
   const command = record(value, "Refinement assist command");
+  const relatedDrafts = command.relatedDrafts === undefined ? undefined : array(command.relatedDrafts, "related draft fields", 256).map(value => {
+    const draft = record(value, "related draft field");
+    const text = stringValue(draft.value, "related draft value");
+    if (text.length > 16000) invalid("Related draft value exceeds its limit.");
+    return { field_key: nonEmptyValue(draft.field_key, "related field identity"), node_id: nonEmptyValue(draft.node_id, "related node identity"), value: text };
+  });
   const result: RefinementAssistCommand = {
+    ...(command.packetRevision !== undefined ? { packetRevision: nonEmptyValue(command.packetRevision, "reviewed packet revision") } : {}),
+    ...(command.sourceRevision !== undefined ? { sourceRevision: nonEmptyValue(command.sourceRevision, "reviewed source revision") } : {}),
+    ...(relatedDrafts ? { relatedDrafts } : {}),
     ...(command.conversation !== undefined ? { conversation: assertConversationTurns(command.conversation) } : {}),
     allowedValues:
       command.allowedValues === undefined
@@ -168,6 +179,8 @@ export function assertRefinementApplyCommand(
   assertApplyPlan(applyPlan);
 
   return {
+    ...(command.packetRevision !== undefined ? { packetRevision: nonEmptyValue(command.packetRevision, "reviewed packet revision") } : {}),
+    ...(command.sourceRevision !== undefined ? { sourceRevision: nonEmptyValue(command.sourceRevision, "reviewed source revision") } : {}),
     acceptanceId: nonEmptyValue(
       command.acceptanceId,
       "apply acceptance identity",
@@ -187,16 +200,26 @@ export function assertRefinementApplyCommand(
   };
 }
 
+export function refinementRunMatchesHandoff(packet: RefinementOosPacket, run: RefinementOosRun | null | undefined) {
+  if (!run) return false;
+  const handoff = run.receipt?.source_work_design_receipt_id ?? run.source_work_design_receipt_id;
+  return handoff === packet.source.source_work_design_receipt_id &&
+    (!run.receipt || run.receipt.target.delivery_ref === packet.source.source_ref);
+}
+
 export function refinementPacketFromProjection(
   projection: RefinementOosProjection,
 ): DeliveryRefinementPacket {
   const packet = projection.packet;
-  const completedRun = projection.latest_run?.state === "completed"
-    ? projection.latest_run
-    : projection.history.find((run) => run.state === "completed") ?? null;
+  // Retained history belongs to the package, but completion belongs to one
+  // Work Design handoff. Source versions change during Apply; the handoff does not.
+  const completedRun = [projection.latest_run, ...projection.history].find((run) =>
+    run?.state === "completed" && refinementRunMatchesHandoff(packet, run),
+  ) ?? null;
 
   return {
     active_step: packet.active_step,
+    ...(packet.planning_rules ? { planning_rules: packet.planning_rules } : {}),
     apply_plan: packet.apply_plan,
     draft_groups: packet.draft_groups.map(refinementDraftGroup),
     handoff: {
@@ -213,7 +236,7 @@ export function refinementPacketFromProjection(
     packet_revision: packet.packet_revision,
     readiness_gates: packet.readiness_gates.map(refinementReadinessGate),
     receipt: completedRun?.receipt
-      ? refinementReceiptFromRun(packet, completedRun)
+      ? refinementReceiptFromRun(completedRun)
       : null,
     status: packet.status,
     target_tree: refinementTreeNode(packet.target_tree),
@@ -242,6 +265,7 @@ function refinementTreeNode(node: RefinementOosTreeNode): DeliveryRefinementTree
   return {
     children: node.children.map(refinementTreeNode),
     description: node.description,
+    ...(node.planning ? { planning: node.planning } : {}),
     draft_body: node.draft_body,
     id: node.id,
     kind: node.kind,
@@ -252,12 +276,10 @@ function refinementTreeNode(node: RefinementOosTreeNode): DeliveryRefinementTree
 }
 
 function refinementReceiptFromRun(
-  packet: RefinementOosPacket,
   run: RefinementOosRun,
 ): DeliveryRefinementApplyReceipt {
   const receipt = run.receipt;
   if (!receipt) invalid("Completed Refinement run has no receipt.");
-  const fields = packet.draft_groups.flatMap((group) => group.fields);
   return {
     applied_at: receipt.applied_at,
     canonical_evidence: {
@@ -271,12 +293,9 @@ function refinementReceiptFromRun(
       source_revision: receipt.target.source_revision,
       events: run.events,
     },
-    applied_payload: {
-      apply_plan: packet.apply_plan,
-      metadata_resolutions: Object.fromEntries(fields.map((field) => [field.field_key, "accepted"])),
-      metadata_values: Object.fromEntries(fields.map((field) => [field.field_key, field.value])),
-      packet_id: packet.packet_id,
-    },
+    // OOS exposes the immutable accepted-draft digest, not the original values.
+    // Current packet values cannot reconstruct an historical accepted payload.
+    applied_payload: null,
     command_name: "delivery.refinement.apply",
     lines: run.events.map((event) => event.message),
     outcome: "accepted",
@@ -308,6 +327,7 @@ function assertRefinementTreeNode(value: unknown) {
   oneOf(node.kind, ["Epic", "Feature", "User story", "Defect", "Task", "Risk", "Milestone", "PI Objective"], "tree node kind");
   nonEmpty(node.title, "tree node title");
   for (const key of ["description", "draft_body", "remark"]) string(node[key], `tree node ${key}`);
+  if (node.planning !== undefined) { const state = record(node.planning, "canonical planning snapshot"); for (const key of ["status", "target_pi", "iteration", "owner_repo"]) string(state[key], `planning ${key}`); }
   array(node.children, "tree node children", 250).forEach(assertRefinementTreeNode);
 }
 
@@ -330,6 +350,14 @@ function assertDraftField(value: unknown) {
   oneOf(field.status, ["blocked", "complete", "dirty", "missing", "stale"], "draft field status");
   string(field.value, "draft field value");
   if (field.allowed_values !== undefined) stringList(field.allowed_values, "draft field allowed values");
+  if (field.numeric_type !== undefined) oneOf(field.numeric_type, ["integer", "decimal"], "native numeric type");
+  if (field.target_allowed_values !== undefined) {
+    const choices = record(field.target_allowed_values, "per-item allowed values");
+    Object.entries(choices).forEach(([id, values]) => {
+      if (!Array.isArray(field.target_node_ids) || !field.target_node_ids.includes(id)) invalid("Choices must bind a projected field target.");
+      stringList(values, "per-item allowed values");
+    });
+  }
   if (field.target_kinds !== undefined) array(field.target_kinds, "draft field target kinds").forEach((kind) => oneOf(kind, ["Epic", "Feature", "User story", "Defect", "Task", "Risk", "Milestone"], "draft field target kind"));
   if (field.target_node_ids !== undefined) stringList(field.target_node_ids, "draft field target nodes");
   if (field.target_values !== undefined) stringRecord(field.target_values, "draft field target values");

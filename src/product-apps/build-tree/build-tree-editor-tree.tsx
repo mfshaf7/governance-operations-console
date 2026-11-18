@@ -36,6 +36,13 @@ export type BuildTreeEditorTreeCopy = {
 export type BuildTreeEditorTreeProps<
   TNode extends BuildTreeNodeLike<TNode>,
 > = {
+  structureLocked?: boolean;
+  expansionLocked?: boolean;
+  branchLayout?: "columns" | "stacked";
+  selectedNodeIds?: string[];
+  visibleNodeIds?: string[];
+  getNodeMeta?: (node: TNode) => ReactNode;
+  renderNodeDetails?: (node: TNode) => ReactNode;
   readOnly?: boolean;
   draftNotesSize?: "standard" | "large";
   addMenuNodeId: string | null;
@@ -96,6 +103,13 @@ const defaultEditorTreeCopy = {
 export function BuildTreeEditorTree<
   TNode extends BuildTreeNodeLike<TNode>,
 >({
+  structureLocked = false,
+  expansionLocked = false,
+  branchLayout = "columns",
+  selectedNodeIds,
+  visibleNodeIds,
+  getNodeMeta,
+  renderNodeDetails,
   readOnly = false,
   draftNotesSize = "standard",
   addMenuNodeId,
@@ -137,9 +151,10 @@ export function BuildTreeEditorTree<
     ...copy,
   };
   const resolveCanDeleteNode =
-    canDeleteNode ?? ((node: TNode) => getNodeRole(node) !== "root");
+    structureLocked ? () => false : canDeleteNode ?? ((node: TNode) => getNodeRole(node) !== "root");
 
   function renderAddActions(node: TNode, displayTitle: string) {
+    if (structureLocked) return null;
     const addActions = getAddActions(node);
 
     if (addActions.length === 0) {
@@ -257,6 +272,7 @@ export function BuildTreeEditorTree<
                 aria-label={`${expanded ? "Collapse" : "Expand"} ${displayTitle}`}
                 aria-expanded={expanded}
                 className={editorStyles.buildTreeEditorSimpleToggle}
+                disabled={expansionLocked}
                 onClick={() => onToggleNode(node)}
                 type="button"
               >
@@ -334,11 +350,13 @@ export function BuildTreeEditorTree<
   }
 
   function renderStructuredNode(node: TNode, depth = 0, position = 0) {
-    const selected = selectedNodeId === node.id;
+    if (visibleNodeIds && !visibleNodeIds.includes(node.id)) return null;
+    const selected = (selectedNodeIds ?? [selectedNodeId]).includes(node.id);
     const layout = getStructuredLayout(node);
     const childCount = layout.childCount;
     const expanded = expandedNodeIds.includes(node.id);
-    const expandable = childCount > 0;
+    const details = renderNodeDetails?.(node);
+    const expandable = childCount > 0 || Boolean(details);
     const role = getNodeRole(node);
     const supportChildren = layout.supportChildren;
     const groupedLeafChildren = layout.groupedLeafChildren;
@@ -358,6 +376,7 @@ export function BuildTreeEditorTree<
         >
           <button
             className={structuredStyles.buildTreeStructuredTreeSelect}
+            aria-pressed={selectedNodeIds ? selected : undefined}
             onClick={() =>
               onStructuredNodeSelect(node, {
                 expandable,
@@ -376,7 +395,7 @@ export function BuildTreeEditorTree<
               <small>{getSummary(node)}</small>
             </span>
           </button>
-          {role !== "leaf" ? (
+          {getNodeMeta ? <div className={structuredStyles.buildTreeStructuredTreeMeta}>{getNodeMeta(node)}</div> : role !== "leaf" ? (
             <div className={structuredStyles.buildTreeStructuredTreeMeta}>
               <span>{getChildCountLabel(node)}</span>
               <span>{node.draftBody.trim() ? "drafted" : "needs draft"}</span>
@@ -388,6 +407,7 @@ export function BuildTreeEditorTree<
                 aria-label={`${expanded ? "Collapse" : "Expand"} ${displayTitle}`}
                 aria-expanded={expanded}
                 className={structuredStyles.buildTreeTreeToggle}
+                disabled={expansionLocked}
                 onClick={() => onToggleNode(node)}
                 type="button"
               >
@@ -414,6 +434,7 @@ export function BuildTreeEditorTree<
             </div>
           </div>
         </div>
+        {expanded && details ? <div className={structuredStyles.buildTreeStructuredTreeChildren}>{details}</div> : null}
         {expanded && role === "group" ? (
           <div className={structuredStyles.buildTreeStructuredTreeChildren}>
             <div
@@ -426,6 +447,7 @@ export function BuildTreeEditorTree<
               <div className={structuredStyles.buildTreeStructuredStoryGroupCard}>
                 <button
                   className={structuredStyles.buildTreeStructuredStoryGroupButton}
+                  disabled={expansionLocked}
                   onClick={() => onStructuredGroupSelect(node)}
                   type="button"
                 >
@@ -457,6 +479,7 @@ export function BuildTreeEditorTree<
                     aria-label={`${groupExpanded ? "Collapse" : "Expand"} ${resolvedCopy.groupedLeafLabel} under ${displayTitle}`}
                     aria-expanded={groupExpanded}
                     className={structuredStyles.buildTreeTreeToggle}
+                    disabled={expansionLocked}
                     onClick={() => onToggleStructuredGroup(node)}
                     type="button"
                   >
@@ -506,7 +529,7 @@ export function BuildTreeEditorTree<
   }
 
   return (
-    <div className={editorStyles.buildTreeEditorTree} data-view={mode} data-draft-notes-size={draftNotesSize}>
+    <div className={`${editorStyles.buildTreeEditorTree} ${branchLayout === "stacked" ? structuredStyles.buildTreeStructuredTreeStacked : ""}`} data-view={mode} data-structure-locked={structureLocked ? "true" : undefined} data-draft-notes-size={draftNotesSize}>
       {mode === "structured" ? renderStructuredNode(tree) : renderInlineNode(tree)}
     </div>
   );

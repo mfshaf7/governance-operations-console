@@ -5,6 +5,7 @@ import { TerasActionButton } from "@/teras";
 import type { DeliveryRefinementModalStep } from "../model/refinement-model.ts";
 
 type RefinementSessionFooterProps = {
+  applyInFlight: boolean;
   readOnly?: boolean;
   activeStep: DeliveryRefinementModalStep;
   blocked: boolean;
@@ -16,6 +17,7 @@ type RefinementSessionFooterProps = {
 };
 
 export function RefinementSessionFooter({
+  applyInFlight,
   readOnly = false,
   activeStep,
   blocked,
@@ -33,6 +35,7 @@ export function RefinementSessionFooter({
   return (
     <>
       <TerasActionButton
+        disabled={applyInFlight}
         data-refinement-action={
           activeStep === "hub" ? "return-to-register" : "return-to-hub"
         }
@@ -62,10 +65,11 @@ export function RefinementSessionFooter({
       ) : activeStep === "apply_refinement" ? (
         <TerasActionButton
           data-refinement-action="apply-refinement"
-          disabled={readOnly || blocked || !canApply}
+          busy={applyInFlight}
+          disabled={readOnly || blocked || !canApply || applyInFlight}
           onClick={onApplyRefinement}
         >
-          Apply Refinement
+          {applyInFlight ? "Applying…" : "Apply Refinement"}
         </TerasActionButton>
       ) : (
         <TerasActionButton

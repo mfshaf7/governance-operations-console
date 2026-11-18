@@ -17,7 +17,6 @@ import {
 import {
   refinementFieldStatusTone,
   refinementMetadataCollapsedValue,
-  refinementMetadataResolutionLabel,
   refinementSelectedMetadataEditorDescription,
   type RefinementMetadataTarget,
 } from "../../view-model/refinement-metadata-model.ts";
@@ -26,13 +25,15 @@ import type {
   RefinementMetadataFieldResolutionMap,
 } from "../../model/refinement-model.ts";
 import {
-  MetadataFieldSelectorButton,
   MetadataEditorHeaderActions,
   MetadataValueControl,
 } from "./refinement-metadata-editor-controls.tsx";
 import { RefinementMetadataEditorPanel } from "./refinement-metadata-editor-panel.tsx";
+import { RefinementWorkItemDetails } from "./refinement-work-item-details.tsx";
+import { refinementFieldReviewLabel, refinementItemLabel, refinementValueError, refinementPlanningValueError, refinementPlanningField } from "../../view-model/refinement-workbench-model.ts";
 
 export function SelectedMetadataEditor({
+  metadataDraftValues,
   readOnly = false,
   advisor,
   draftValue,
@@ -41,13 +42,12 @@ export function SelectedMetadataEditor({
   onMarkMetadataFieldResolution,
   onResetMetadataDraftValue,
   onReviewReadiness,
-  onSelectMetadataField,
   onToggleEditorCollapsed,
   onUpdateMetadataDraftValue,
-  selectedMetadataFieldKey,
-  selectedNodeTargets,
   selectedTarget,
+  targets, planningRules,
 }: {
+  metadataDraftValues: Record<string, string>;
   readOnly?: boolean;
   advisor: ReactNode;
   draftValue: string;
@@ -59,12 +59,11 @@ export function SelectedMetadataEditor({
   ) => void;
   onResetMetadataDraftValue: (fieldKey: string, value: string) => void;
   onReviewReadiness: () => void;
-  onSelectMetadataField: (fieldKey: string) => void;
   onToggleEditorCollapsed: () => void;
   onUpdateMetadataDraftValue: (fieldKey: string, value: string) => void;
-  selectedMetadataFieldKey: string;
-  selectedNodeTargets: RefinementMetadataTarget[];
   selectedTarget: RefinementMetadataTarget;
+  targets: RefinementMetadataTarget[];
+  planningRules?: { backlog_iteration_label: string; iteration_prefix_templates: string[] };
 }) {
   const { field, key, node, sourceValue, status } = selectedTarget;
   const fieldNeedsAction = status !== "complete";
@@ -76,8 +75,10 @@ export function SelectedMetadataEditor({
   });
   const edited = draftValue.trim() !== sourceValue.trim();
   const aiDrafted = resolution === "ai_drafted";
+  const valueError = refinementValueError(field, draftValue) ?? refinementPlanningValueError(selectedTarget, targets, metadataDraftValues, planningRules);
   const workbenchValueCanConfirm =
     !blocked &&
+    !valueError &&
     draftValue.trim().length > 0 &&
     (fieldNeedsAction || edited) &&
     (field.field_kind !== "generated" || !edited);
@@ -88,9 +89,7 @@ export function SelectedMetadataEditor({
     : "accepted";
   const showActionRow =
     blocked || workbenchValueCanConfirm || canResetWorkbenchValue;
-  const statusLabel = resolution
-    ? refinementMetadataResolutionLabel(resolution)
-    : status;
+  const statusLabel = refinementFieldReviewLabel(selectedTarget, metadataFieldResolutions, metadataDraftValues);
 
   return (
     <TerasPanelStack scroll minimumFillHeight="medium" fill="last">
@@ -101,43 +100,35 @@ export function SelectedMetadataEditor({
         tone={statusTone}
       >
         <TerasPanelHeader
-          actions={
-            <MetadataEditorHeaderActions
+            actions={<MetadataEditorHeaderActions
               collapsed={editorCollapsed}
               onToggleCollapsed={onToggleEditorCollapsed}
-              statusLabel={refinementMetadataCollapsedValue({
-                collapsed: editorCollapsed,
-                value: statusLabel,
-              })}
+              statusLabel={refinementMetadataCollapsedValue({ collapsed: editorCollapsed, value: statusLabel })}
               statusTone={statusTone}
-            />
-          }
-          actionsLayout="inline"
-          kicker="Selected Metadata Field"
-          statusTone={statusTone}
-          title={deliveryFieldDisplayLabel(field.label)}
-          description={refinementMetadataCollapsedValue({
-            collapsed: editorCollapsed,
-            value: refinementSelectedMetadataEditorDescription({
-              blocked,
-              resolution,
-            }),
-          })}
-        />
+            />}
+            actionsLayout="inline"
+            kicker="Selected field"
+            statusTone={statusTone}
+            title={deliveryFieldDisplayLabel(field.label)}
+            description={refinementMetadataCollapsedValue({ collapsed: editorCollapsed, value: refinementSelectedMetadataEditorDescription({ blocked, resolution }) })}
+          />
 
         {editorCollapsed ? null : (
           <>
             <TerasTrayStack align="start" scroll spacing="loose">
               <TerasSubjectCard
-                kicker="Target Record"
-                description={node.description}
+                kicker="Selected work item"
+                description={refinementItemLabel(node)}
                 title={node.title}
+                actions={<RefinementWorkItemDetails node={node} />}
               />
+
+              {valueError && draftValue.trim() ? <TerasContentTray kicker="Check this value" description={valueError} /> : null}
 
               <MetadataValueControl
                 blocked={readOnly || blocked}
                 draftValue={draftValue}
-                field={field}
+                field={refinementPlanningField(selectedTarget, targets, metadataDraftValues, planningRules)}
                 onUpdateMetadataDraftValue={(value) =>
                   onUpdateMetadataDraftValue(key, value)
                 }
@@ -150,37 +141,6 @@ export function SelectedMetadataEditor({
                 />
               ) : null}
 
-              <TerasTrayStack
-                align="start"
-                frame="thin"
-                scroll
-                scrollHeight="short"
-                spacing="compact"
-              >
-                {selectedNodeTargets.map((target) => {
-                  const targetResolution = metadataFieldResolutions[target.key];
-                  const targetTone = refinementFieldStatusTone({
-                    resolution: targetResolution,
-                    status: target.status,
-                  });
-
-                  return (
-                    <MetadataFieldSelectorButton
-                      detail={target.group.title}
-                      key={target.key}
-                      label={deliveryFieldDisplayLabel(target.field.label)}
-                      onSelect={() => onSelectMetadataField(target.key)}
-                      selected={selectedMetadataFieldKey === target.key}
-                      status={
-                        targetResolution
-                          ? refinementMetadataResolutionLabel(targetResolution)
-                          : target.status
-                      }
-                      tone={targetTone}
-                    />
-                  );
-                })}
-              </TerasTrayStack>
             </TerasTrayStack>
 
             {showActionRow ? (
@@ -213,7 +173,7 @@ export function SelectedMetadataEditor({
                       }
                       emphasis="primary"
                     >
-                      Confirm
+                      Mark reviewed
                     </TerasActionButton>
                   </>
                 )}

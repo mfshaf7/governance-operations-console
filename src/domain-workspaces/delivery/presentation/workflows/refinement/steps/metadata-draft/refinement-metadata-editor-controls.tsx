@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { deliveryFieldDisplayLabel } from "../../../../../read-model/terms/copy.ts";
+import { refinementFieldHelp } from "../../view-model/refinement-workbench-model.ts";
 
 import {
   TerasActionRow,
@@ -92,11 +94,13 @@ export function MetadataValueControl({
   field: DeliveryRefinementDraftField;
   onUpdateMetadataDraftValue: (value: string) => void;
 }) {
+  const label = deliveryFieldDisplayLabel(field.label);
+  const helper = refinementFieldHelp(field);
   if (field.field_kind === "generated") {
     return (
       <TerasContentTray
         description="Generated from Work Design and plan/apply source. Reopen the source tree when this shape is wrong."
-        kicker="Workbench Value"
+        kicker="Generated value · read-only"
         title={draftValue}
       />
     );
@@ -105,12 +109,10 @@ export function MetadataValueControl({
   if (field.field_kind === "select") {
     return (
       <TerasSelectField
-        ariaLabel="Workbench Value"
-        disabled={blocked}
-        helper={field.route_binding.payload_key === "owner_repo"
-          ? "Repository for this selected work item. It can differ from the initiative's main repository; choose an onboarded repository from this list."
-          : "Controlled field. Values must come from the backend-backed option list before live apply."}
-        label="Workbench Value"
+        ariaLabel={label}
+        disabled={blocked || !field.allowed_values?.length}
+        helper={!field.allowed_values?.length ? "The connected source supplied no available choices for this field and selection." : helper}
+        label={label}
         onValueChange={onUpdateMetadataDraftValue}
         options={refinementMetadataValueSelectOptions({ draftValue, field })}
         value={draftValue}
@@ -122,11 +124,13 @@ export function MetadataValueControl({
     return (
       <TerasTextField
         {...editorFieldProps}
-        aria-label="Workbench Value"
+        aria-label={label}
+        helper={helper}
         disabled={blocked}
         inputMode="numeric"
-        label="Workbench Value"
+        label={label}
         min={0}
+        step={(field.numeric_type ?? (["planned_business_value", "actual_business_value"].includes(field.backend_field) ? "integer" : "decimal")) === "integer" ? 1 : "any"}
         onValueChange={onUpdateMetadataDraftValue}
         type="number"
         value={draftValue}
@@ -138,11 +142,13 @@ export function MetadataValueControl({
     return (
       <TerasTextField
         {...editorFieldProps}
-        aria-label="Workbench Value"
+        aria-label={label}
+        helper={helper}
         disabled={blocked}
-        label="Workbench Value"
+        label={label}
         maxLength={field.value_limit}
         onValueChange={onUpdateMetadataDraftValue}
+        type={field.route_binding.payload_key === "risk_review_date" ? "date" : "text"}
         value={draftValue}
       />
     );
@@ -151,9 +157,10 @@ export function MetadataValueControl({
   return (
     <TerasNoteField
       {...editorFieldProps}
-      aria-label="Workbench Value"
+      aria-label={label}
+      helper={helper}
       disabled={blocked}
-      label="Workbench Value"
+      label={label}
       maxLength={field.value_limit}
       onValueChange={onUpdateMetadataDraftValue}
       value={draftValue}

@@ -40,6 +40,23 @@ Long handoff notes show an excerpt followed by **Read full note** at the bottom
 right. The full-note reader preserves the
 complete original text and paragraph breaks in a read-only dialog.
 
+Review Draft reuses this same retained-diagram preview and expanded viewer.
+Each preview shows one diagram with the same navigation and zoom behavior;
+it must not render the complete collection export as a tall thumbnail.
+Browsing stays read-only, and Export Preview still includes the whole collection.
+
+Apply feedback records actual browser submission and confirmed receipt events at
+their observed times. While awaiting the backend, show Applying with the shared
+loading indicator, prevent duplicate submission and keep the Apply view open.
+The live checklist groups backend validation/update into one processing step;
+the API does not stream intermediate stages. An interrupted or rejected response
+does not establish rollback: Check Apply Status reads the original application
+before another explicit submission. A confirmed receipt remains successful if
+the subsequent summary refresh fails. Refresh the selected Delivery projection
+after confirmation, including a package that has moved to Refinement. Retained
+historical receipts do not fabricate detailed stage timestamps. Diagram retention
+in saved Work Design is separate from uploading an ART attachment.
+
 **Expand context note**, inside the note field’s upper-right corner, opens the
 same current note in a large editor. Edits are
 shared with the compact field; Done or Close returns without discarding them.
@@ -307,3 +324,12 @@ read-only, unchanged-context and atomic tree/board validation still apply.
 A reply that exceeds the aggregate bound is rejected without partial edits or
 an automatic model retry. Finalized brief history remains unchanged by a tree
 suggestion or its undo. This repair remains pending until composed activation.
+
+The maintenance batch also contains the approved Refinement advisor repair:
+current Catalog-backed choices, exact selected-set advice, typed related drafts,
+canonical planning counterparts, review-needed AI values and pinned reviewed
+source/packet identity. OOS and CGG use their separate owner maintenance units
+`refinement-advisor-context-20261119`; this Console keeps the existing unit.
+See [Refinement operations](refinement-catalog-live-integration.md) and the
+[paired source review](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/components/2026-11-19-refinement-advisor-context.md).
+No publication or activation is implied by preview completion.

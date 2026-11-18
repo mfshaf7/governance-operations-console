@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type { DeliveryPackageSummary } from "../../../../read-model/index.ts";
-import { createLocalWorkDesignApplyReceipt } from "../../../../local-runtime/index.ts";
+import { useWorkDesignApplyCommand } from "./use-work-design-apply-command.ts";
 import type { WorkDesignApplyReceipt } from "../../../../work-model/work-design/work-design-types.ts";
 import { useWorkDesignLiveRuntime } from "../../../../live-runtime/use-work-design-live-runtime.ts";
 
@@ -46,6 +46,7 @@ type UseWorkDesignSessionControllerParams = {
   retainedTree?: import("../model/work-design-model.ts").WorkDesignNode;
   deliveryPackage: DeliveryPackageSummary;
   onApplied?: (record: WorkDesignApplyReceipt) => void;
+  onCanonicalChanged?: () => Promise<void>;
   onClose: () => void;
 };
 
@@ -54,17 +55,12 @@ export function useWorkDesignSessionController({
   retainedTree,
   deliveryPackage,
   onApplied,
+  onCanonicalChanged,
   onClose,
 }: UseWorkDesignSessionControllerParams) {
   const modalState = useWorkDesignSessionState(deliveryPackage, retainedTree, readOnly);
   const liveRuntime = useWorkDesignLiveRuntime(deliveryPackage, readOnly);
   const [hasCurrentSessionEdits, setHasCurrentSessionEdits] = useState(false);
-  const applyInFlightRef = useRef(false);
-  const pendingAcceptanceRef = useRef<{
-    acceptedAt: string;
-    acceptanceId: string;
-    treeKey: string;
-  } | null>(null);
   const {
     activeBriefVersionId,
     activeStep,
@@ -181,6 +177,7 @@ export function useWorkDesignSessionController({
   };
   const interactionModalState = {
     ...modalState,
+    setActiveStep: (step: Parameters<typeof setActiveStep>[0]) => { if (!applyState.applyFeedback.pending) setActiveStep(step); },
     setHasUnsavedSessionChanges: setHasUnsavedSessionChangesFromUser,
   };
   const contextBoardCoreNodes = useMemo(
@@ -302,7 +299,6 @@ export function useWorkDesignSessionController({
     deliveryPackage,
     initialTree,
     onTreeDirty: () => {
-      pendingAcceptanceRef.current = null;
       applyState.setApplyRuntimeError(null);
       setHasUnsavedSessionChangesFromUser(true);
       setApplyReceiptRecorded(false);
@@ -422,7 +418,7 @@ export function useWorkDesignSessionController({
         matchingBlockerDispositionReceipt,
       })
     : null;
-  const currentMove = workDesignCurrentMove({
+  const baseCurrentMove = workDesignCurrentMove({
     runtimeMode: liveRuntime.mode,
     activeStep,
     applyReceiptRecorded,
@@ -437,6 +433,11 @@ export function useWorkDesignSessionController({
     sourceWorkDesignClosed,
     workDesignBlocked,
   });
+  const currentMove = applyState.applyFeedback.pending ? {
+    title: applyCompleted ? "Refreshing Delivery" : "Applying Work Design", description: applyCompleted ? "Application is confirmed. Reading current Delivery status." : "Waiting for the confirmed backend result. Intermediate backend stages are not streamed.", tone: "info" as const,
+  } : applyState.applyFeedback.needsCheck && !applyCompleted ? {
+    title: "Check Apply Status", description: "The original result is unconfirmed. Read its backend state before submitting again.", tone: "warn" as const,
+  } : baseCurrentMove;
   const designHubProjection = workDesignDesignHubProjection({
     activeBlockerIssue,
     applyReceiptRecorded,
@@ -530,6 +531,7 @@ export function useWorkDesignSessionController({
   });
 
   function requestClose() {
+    if (applyState.applyFeedback.pending) return;
     if (hasCurrentSessionEdits && !applyCompleted) {
       setCloseGuardOpen(true);
       return;
@@ -542,57 +544,11 @@ export function useWorkDesignSessionController({
     onClose();
   }
 
-  async function runApplyDraft() {
-    if (readOnly) return;
-    if (
-      !applyActionReady ||
-      workDesignBlocked ||
-      contextDecision !== "proceed" ||
-      sourceWorkDesignClosed
-    ) {
-      return;
-    }
-    if (applyInFlightRef.current) return;
-    applyInFlightRef.current = true;
-    applyState.setApplyRuntimeError(null);
-    try {
-      const treeKey = JSON.stringify(tree);
-      if (pendingAcceptanceRef.current?.treeKey !== treeKey) {
-        pendingAcceptanceRef.current = {
-          acceptedAt: new Date().toISOString(),
-          acceptanceId: `work-design-acceptance:${crypto.randomUUID()}`,
-          treeKey,
-        };
-      }
-      const acceptance = pendingAcceptanceRef.current;
-      const live = await liveRuntime.apply({
-        acceptanceId: acceptance.acceptanceId,
-        acceptedAt: acceptance.acceptedAt,
-        note: reviewHandoffNote,
-        tree,
-      });
-      const receipt: WorkDesignApplyReceipt = live.result
-        ? {
-            appliedAt: live.result.applied_at,
-            appliedBy: live.result.applied_by,
-            receiptId: live.result.receipt.ref,
-            targetTree: tree,
-          }
-        : createLocalWorkDesignApplyReceipt({
-            deliveryPackage,
-            targetTree: tree,
-          });
-      recordApplyDraft(receipt);
-      setHasCurrentSessionEdits(false);
-      if (!live.result) onApplied?.(receipt);
-    } catch (error) {
-      applyState.setApplyRuntimeError(
-        error instanceof Error ? error.message : "Work Design apply failed.",
-      );
-    } finally {
-      applyInFlightRef.current = false;
-    }
-  }
+  const runApplyDraft = useWorkDesignApplyCommand({ readOnly,
+    ready: applyActionReady && !workDesignBlocked && contextDecision === "proceed" && !sourceWorkDesignClosed,
+    liveRuntime, state: applyState, tree, note: reviewHandoffNote, deliveryPackage,
+    record: recordApplyDraft, onApplied, onCanonicalChanged, clearEdits: () => setHasCurrentSessionEdits(false),
+  });
 
   const shellWidth =
     activeStep === "context" || activeStep === "build"
@@ -615,6 +571,8 @@ export function useWorkDesignSessionController({
       sessionLifecycle,
     },
     footerProps: {
+      applyPending: applyState.applyFeedback.pending,
+      applyNeedsCheck: applyState.applyFeedback.needsCheck,
       readOnly,
       activeStep,
       applyReceiptRecorded,
@@ -626,7 +584,7 @@ export function useWorkDesignSessionController({
       onRequestClose: requestClose,
       onReturnToRegister: returnToRegister,
       onRunApplyDraft: runApplyDraft,
-      onSelectStep: setActiveStep,
+      onSelectStep: (step: typeof activeStep) => { if (!applyState.applyFeedback.pending) setActiveStep(step); },
       reviewRouteReady,
       validateReady,
       workDesignClosed: designHubProjection.workDesignClosed,

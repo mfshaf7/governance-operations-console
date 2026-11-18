@@ -21,6 +21,8 @@ type WorkDesignProgressStepItem = {
 };
 
 type WorkDesignProgressPanelProps = {
+  applyPending?: boolean;
+  applyNeedsCheck?: boolean;
   readOnly?: boolean;
   activeStep: WorkDesignStep;
   applyReceiptRecorded: boolean;
@@ -40,6 +42,8 @@ type WorkDesignProgressPanelProps = {
 };
 
 export function WorkDesignProgressPanel({
+  applyPending = false,
+  applyNeedsCheck = false,
   readOnly = false,
   activeStep,
   applyReceiptRecorded,
@@ -83,7 +87,7 @@ export function WorkDesignProgressPanel({
         steps={workDesignSteps.map((item, index) => {
           const nextStep = workDesignSteps[index + 1];
           const archiveStep = item.id === "history";
-          const available = readOnly || archiveStep || !workDesignBlocked;
+          const available = !applyPending && (readOnly || archiveStep || !workDesignBlocked);
           const stepTone =
             workDesignBlocked && !archiveStep
               ? "muted"
@@ -120,7 +124,9 @@ export function WorkDesignProgressPanel({
             available,
             connectsToNext: nextStep ? nextStep.id !== "history" : false,
             detail:
-              workDesignBlocked && !archiveStep
+              item.id === "apply" && applyPending ? applyReceiptRecorded ? "refreshing Delivery" : "processing"
+              : item.id === "apply" && applyNeedsCheck && !applyReceiptRecorded ? "result unconfirmed"
+              : workDesignBlocked && !archiveStep
                 ? "locked"
                 : workDesignStepStatusLabel(item.id, {
                     runtimeMode,
@@ -135,7 +141,7 @@ export function WorkDesignProgressPanel({
                   }),
             id: item.id,
             label: item.label,
-            stateLabel: stepStateLabel,
+            stateLabel: item.id === "apply" && applyPending ? applyReceiptRecorded ? "Refreshing" : "Processing" : stepStateLabel,
             tone: stepTone,
           };
         })}

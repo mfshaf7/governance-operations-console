@@ -24,6 +24,7 @@ type DeliveryWorkDesignWorkflow = {
 type WorkDesignModalProps = {
   readOnly?: boolean;
   onApplied?: (record: WorkDesignApplyReceipt) => void;
+  onCanonicalChanged?: () => Promise<void>;
   onClose: () => void;
   workflow: DeliveryWorkDesignWorkflow;
 };
@@ -55,6 +56,7 @@ function WorkDesignSession({
   readOnly = false,
   retainedTree,
   onApplied,
+  onCanonicalChanged,
   onClose,
   workflow,
 }: WorkDesignModalProps & {retainedTree?:WorkDesignNode}) {
@@ -63,6 +65,7 @@ function WorkDesignSession({
     retainedTree,
     deliveryPackage: workflow.deliveryPackage,
     onApplied,
+    onCanonicalChanged,
     onClose,
   });
 

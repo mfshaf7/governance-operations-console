@@ -50,6 +50,9 @@ export function useRefinementSessionController({
   const [blockerRecoveryOpen, setBlockerRecoveryOpen] = useState(false);
   const [closeGuardOpen, setCloseGuardOpen] = useState(false);
   const [applyInFlight, setApplyInFlight] = useState(false);
+  const applyLock = useRef(false);
+  const [applyStartedAt, setApplyStartedAt] = useState<string | null>(null);
+  const [runtimeErrorAt, setRuntimeErrorAt] = useState<string | null>(null);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const pendingAcceptanceRef = useRef<{
     acceptedAt: string;
@@ -58,9 +61,7 @@ export function useRefinementSessionController({
   } | null>(null);
   const fixturePacket = refinementPacketForPackage(deliveryPackage);
   const liveRuntime = useRefinementLiveRuntime(deliveryPackage, readOnly, onCanonicalChanged);
-  const packet = liveRuntime.loading
-    ? fixturePacket
-    : liveRuntime.mode === "disconnected-preview"
+  const packet = liveRuntime.mode === "disconnected-preview"
       ? fixturePacket
       : liveRuntime.projectionStatus === "current"
         ? liveRuntime.packet
@@ -81,6 +82,7 @@ export function useRefinementSessionController({
   } = sessionState;
   const metadataWorkbenchSummary = packet
     ? refinementMetadataWorkbenchSummary({
+        draftValues: metadataDraftValues,
         packet,
         resolutions: metadataFieldResolutions,
       })
@@ -97,7 +99,7 @@ export function useRefinementSessionController({
       })
     : false;
   const canApply = !readOnly && packet
-    ? refinementCanApplyWithMetadataReview({
+    ? Boolean(metadataWorkbenchSummary?.ready) && refinementCanApplyWithMetadataReview({
         metadataReady: metadataWorkbenchSummary?.ready ?? false,
         packet,
       }) &&
@@ -218,10 +220,13 @@ export function useRefinementSessionController({
 
   async function applyRefinement() {
     if (readOnly) return;
-    if (!packet || !canApply || applyInFlight) return;
+    if (!packet || !canApply || applyLock.current) return;
 
+    applyLock.current = true;
     setApplyInFlight(true);
+    setApplyStartedAt(new Date().toISOString());
     setRuntimeError(null);
+    setRuntimeErrorAt(null);
     try {
       if (liveRuntime.mode === "disconnected-preview") {
         const receipt = createLocalRefinementApplyReceipt({
@@ -265,10 +270,12 @@ export function useRefinementSessionController({
       }
       setActiveStep("receipt");
     } catch (error) {
+      setRuntimeErrorAt(new Date().toISOString());
       setRuntimeError(
         error instanceof Error ? error.message : "Refinement apply failed.",
       );
     } finally {
+      applyLock.current = false;
       setApplyInFlight(false);
     }
   }
@@ -295,6 +302,7 @@ export function useRefinementSessionController({
   }
 
   function requestClose() {
+    if (applyLock.current) return;
     if (readOnly) { onClose(); return; }
     if (hasUnappliedSessionChanges && !activeReceipt) {
       setCloseGuardOpen(true);
@@ -305,7 +313,12 @@ export function useRefinementSessionController({
   }
 
   function returnToRegister() {
+    if (applyLock.current) return;
     onClose();
+  }
+
+  function selectStep(step: typeof activeStep) {
+    if (!applyLock.current) setActiveStep(step);
   }
 
   function runHubAction() {
@@ -331,10 +344,11 @@ export function useRefinementSessionController({
     advisorStatus: liveRuntime.projectionStatus,
     applyRefinement,
     applyInFlight,
+    applyStartedAt,
     blockerRecoveryOpen,
     canApply,
     closeGuardOpen,
-    confirmClose: onClose,
+    confirmClose: () => { if (!applyLock.current) onClose(); },
     closeBlockerRecovery: () => setBlockerRecoveryOpen(false),
     closeCloseGuard: () => setCloseGuardOpen(false),
     deliveryPackage,
@@ -344,6 +358,7 @@ export function useRefinementSessionController({
     returnToRegister,
     openGateCount,
     packet,
+    packetLoading: liveRuntime.loading,
     packetUnavailableReason:
       liveRuntime.projectionError ??
       (liveRuntime.loading
@@ -354,9 +369,10 @@ export function useRefinementSessionController({
     requestMetadataAdvice,
     refinementBlocked,
     runHubAction,
-    sessionState,
+    sessionState: { ...sessionState, setActiveStep: selectStep },
     shellWidth,
     runtimeError,
+    runtimeErrorAt,
     runtimeRun: liveRuntime.activeRun,
     sourceWorkDesignPackage,
     shellCopy: {

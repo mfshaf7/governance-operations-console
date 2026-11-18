@@ -47,6 +47,8 @@ export type DeliveryRefinementHandoffState = {
 
 export type DeliveryRefinementDraftField = {
   allowed_values?: string[];
+  target_allowed_values?: Record<string, string[]>;
+  numeric_type?: "integer" | "decimal";
   backend_field: string;
   field_key?: string;
   field_kind: DeliveryRefinementFieldKind;
@@ -120,7 +122,7 @@ export type DeliveryRefinementApplyReceipt = {
     metadata_resolutions: Record<string, DeliveryRefinementMetadataResolution>;
     metadata_values: Record<string, string>;
     packet_id: string;
-  };
+  } | null;
   applied_at: string;
   command_name: "delivery.refinement.apply";
   lines: string[];
@@ -133,6 +135,7 @@ export type DeliveryRefinementApplyReceipt = {
 };
 
 export type DeliveryRefinementTreeNode = {
+  planning?: { status: string; target_pi: string; iteration: string; owner_repo: string };
   children?: DeliveryRefinementTreeNode[];
   description: string;
   draft_body: string;
@@ -144,6 +147,7 @@ export type DeliveryRefinementTreeNode = {
 };
 
 export type DeliveryRefinementPacket = {
+  planning_rules?: { backlog_iteration_label: string; iteration_prefix_templates: string[] };
   active_step: DeliveryRefinementStepId;
   apply_plan: DeliveryRefinementApplyPlan;
   draft_groups: DeliveryRefinementDraftGroup[];

@@ -154,6 +154,7 @@ export function useWorkDesignApplyWorkflow({
     setDraftValidationAccepted,
   });
   const applyDraftViewModel = workDesignApplyDraftViewModel({
+    feedback: applyState.applyFeedback,
     applyReceiptId,
     applyReceiptRecorded,
     applyReady,

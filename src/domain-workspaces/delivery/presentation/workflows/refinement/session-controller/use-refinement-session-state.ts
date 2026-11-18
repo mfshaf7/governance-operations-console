@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { refinementSessionContentKey } from "../../../../local-runtime/persistence/refinement-session-persistence.ts";
 
 import type {
   DeliveryRefinementApplyReceipt,
@@ -70,7 +71,10 @@ export function useRefinementSessionState(
   );
   const [persistenceLoaded, setPersistenceLoaded] = useState(false);
   const hydratedPackage = useRef(packageId);
-  const activeReceipt = localReceipt ?? packet?.receipt ?? null;
+  const lastPersistedContent = useRef<string | null>(null);
+  const activeReceipt = [packet?.receipt, localReceipt].find(receipt =>
+    receipt && receipt.source_work_design_receipt_id === packet?.handoff.source_work_design_receipt_id,
+  ) ?? null;
   const hasUnappliedSessionChanges = refinementSessionHasUnappliedChanges({
     draftValues: metadataDraftValues,
     fieldResolutions: metadataFieldResolutions,
@@ -91,6 +95,8 @@ export function useRefinementSessionState(
         (packet?.packet_revision ?? "")
         ? persistedSession
         : null;
+
+    lastPersistedContent.current = matchingSession ? refinementSessionContentKey(matchingSession) : null;
 
     // A late packet read must not send an inspector back to the hub after
     // they have already opened History or another read-only section.
@@ -142,7 +148,10 @@ export function useRefinementSessionState(
       schemaVersion: 1,
     };
 
+    const contentKey = refinementSessionContentKey(persistedSession);
+    if (contentKey === lastPersistedContent.current) return;
     saveRefinementSessionDraft(packageId, persistedSession);
+    lastPersistedContent.current = contentKey;
   }, [
     readOnly,
     activeReceipt,

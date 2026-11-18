@@ -31,12 +31,16 @@ import {
   refinementApplyLogPanelProjection,
   refinementApplyLogRows,
   refinementApplyOperationTone,
+  refinementApplyProgressRows,
   refinementApplyRouteSummary,
   refinementApplyRuntimeLines,
 } from "../../view-model/refinement-apply-model.ts";
 import { deliveryPackagePacketMetadata } from "../../../../shared/delivery-package-metadata.ts";
 
 export function RefinementApplyView({
+  applyInFlight,
+  applyStartedAt,
+  runtimeErrorAt,
   activeReceipt,
   canApply,
   deliveryPackage,
@@ -45,6 +49,9 @@ export function RefinementApplyView({
   runtimeError,
   runtimeRun,
 }: {
+  applyInFlight: boolean;
+  applyStartedAt: string | null;
+  runtimeErrorAt: string | null;
   activeReceipt: DeliveryRefinementApplyReceipt | null;
   canApply: boolean;
   deliveryPackage: DeliveryPackageSummary;
@@ -57,20 +64,25 @@ export function RefinementApplyView({
   const routeSummary = refinementApplyRouteSummary(uniqueRoutes);
   const applyRecorded = Boolean(activeReceipt ?? packet.receipt);
   const headerProjection = refinementApplyHeaderProjection({
+    applyInFlight,
     applyRecorded,
     canApply,
   });
   const inputsProjection = refinementApplyInputsProjection({
+    applyInFlight,
     applyRecorded,
     canApply,
   });
   const logProjection = refinementApplyLogPanelProjection({
+    applyInFlight,
     applyRecorded,
     canApply,
     runtimeError,
     runtimeRun,
   });
   const runtimeLines = refinementApplyRuntimeLines({
+    applyStartedAt,
+    runtimeErrorAt,
     activeReceipt,
     canApply,
     packet,
@@ -149,7 +161,9 @@ export function RefinementApplyView({
               kicker="Apply Boundary"
             />
             <TerasList fit="fill">
-              {packet.apply_plan.operations.map((operation, index) => {
+              {applyStartedAt || runtimeRun || applyRecorded ? refinementApplyProgressRows({
+                applyInFlight, applyRecorded, runtimeError, runtimeRun,
+              }).map((row, index) => <TerasStatusItem key={row.label} {...row} index={String(index + 1).padStart(2, "0")} />) : packet.apply_plan.operations.map((operation, index) => {
                 const operationTone = refinementApplyOperationTone(operation);
 
                 return (

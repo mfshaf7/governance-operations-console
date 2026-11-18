@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type { DeliveryPackageSummary } from "../read-model/index.ts";
@@ -11,6 +11,7 @@ import {
   assertRefinementProjectionSnapshot,
   isRefinementLiveApiError,
   refinementPacketFromProjection,
+  refinementRunMatchesHandoff,
 } from "./refinement-live-contract.ts";
 import type {
   RefinementApplyCommand,
@@ -64,7 +65,8 @@ export function useRefinementLiveRuntime(
         }
         snapshotRef.current = next;
         setSnapshot(next);
-        setActiveRun(next.projection?.active_run ?? next.projection?.latest_run ?? null);
+        const projection = next.projection;
+        setActiveRun(projection ? [projection.active_run, projection.latest_run].find(run => refinementRunMatchesHandoff(projection.packet, run)) ?? null : null);
         return next;
       })
       .finally(() => {
@@ -102,7 +104,7 @@ export function useRefinementLiveRuntime(
       const response = await fetch(
         `/api/delivery/refinement/${encodeURIComponent(packageRef)}/assist`,
         {
-          body: JSON.stringify(command),
+          body: JSON.stringify({ ...command, packetRevision: current.projection?.packet.packet_revision, sourceRevision: current.projection?.source_revision }),
           headers: { "Content-Type": "application/json" },
           method: "POST",
         },
@@ -126,14 +128,10 @@ export function useRefinementLiveRuntime(
       if (current.mode === "disconnected-preview") {
         return { mode: current.mode, run: null } as const;
       }
-      if (current.projection?.latest_run?.state === "completed") {
-        const receipt = current.projection.latest_run.receipt?.receipt_digest;
-        if (receipt && receipt !== notifiedReceipt.current) { notifiedReceipt.current = receipt; void changed.current?.().catch(() => undefined); }
-        return { mode: current.mode, run: current.projection.latest_run } as const;
-      }
-      const existingRun = current.projection?.active_run;
       pendingSourceRevision.current = current.projection?.source_revision ?? null;
-      const run = existingRun ?? (await startRun(packageRef, command));
+      // A previous terminal run must not look like acknowledgement of this request.
+      setActiveRun(null);
+      const run = await startRun(packageRef, { ...command, packetRevision: current.projection?.packet.packet_revision, sourceRevision: current.projection?.source_revision });
       setActiveRun(run);
       const terminalRun = await waitForTerminalRun(packageRef, run, setActiveRun);
       const completedReceipt = terminalRun.receipt?.receipt_digest;
@@ -174,6 +172,9 @@ export function useRefinementLiveRuntime(
     [packageRef, refresh, readOnly],
   );
 
+  const packet = useMemo(() => snapshot?.projection
+    ? refinementPacketFromProjection(snapshot.projection) : null, [snapshot?.projection]);
+
   return {
     activeRun,
     advisorEvidence,
@@ -181,9 +182,7 @@ export function useRefinementLiveRuntime(
     apply,
     loading: snapshot === null,
     mode: snapshot?.mode ?? "live",
-    packet: snapshot?.projection
-      ? refinementPacketFromProjection(snapshot.projection)
-      : null,
+    packet,
     projection: snapshot?.projection ?? null,
     projectionError: snapshot?.error ?? null,
     projectionStatus: snapshot?.status ?? "offline",

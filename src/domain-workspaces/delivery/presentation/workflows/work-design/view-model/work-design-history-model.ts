@@ -196,11 +196,11 @@ export function workDesignHistoryReceiptRows({
       },
       {
         detail: runtimeMode === "live"
-          ? "Source completion does not prove a backend snapshot upload; context snapshot files remain browser-local."
+          ? "Source completion does not prove an ART attachment upload. Diagram availability comes from retained Work Design evidence."
           : snapshotAction,
         label: "Snapshot Evidence",
         tone: runtimeMode === "live" ? "info" : "ok",
-        value: runtimeMode === "live" ? "Browser-local evidence" : "Retained",
+        value: runtimeMode === "live" ? "Separate diagram evidence" : "Retained",
       },
       {
         detail: "Projection proof comes from the completed source read model.",
@@ -246,12 +246,12 @@ export function workDesignHistoryReceiptRows({
     },
     {
       detail: runtimeMode === "live"
-        ? "Context snapshot files are browser-local; the OOS application receipt does not prove a backend snapshot upload."
+        ? "Diagram availability comes from retained Work Design evidence; the application receipt does not prove an ART attachment upload."
         : snapshotAction,
       label: "Snapshot Evidence",
       tone: runtimeMode === "live" ? "info" : localReceiptRecorded ? "ok" : snapshotTone,
       value: runtimeMode === "live"
-        ? "Browser-local evidence"
+        ? "Separate diagram evidence"
         : localReceiptRecorded ? "Attached In Preview" : snapshotLabel,
     },
     {

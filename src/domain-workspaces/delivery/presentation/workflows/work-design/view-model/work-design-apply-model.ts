@@ -5,6 +5,7 @@ import type {
 } from "../../../../read-model/index.ts";
 import { formatWorkDesignDateTime } from "./work-design-display-formatters.ts";
 import type { WorkDesignLiveMode } from "../../../../live-runtime/work-design-live-types.ts";
+import { workDesignLiveApplyChecklist, workDesignLiveApplyLog, type WorkDesignApplyFeedback } from "./work-design-live-apply-feedback.ts";
 
 export function workDesignApplyReadinessRows({
   applyTargetRecordRef,
@@ -50,7 +51,7 @@ export function workDesignApplyReadinessRows({
       },
       {
         detail: runtimeMode === "live"
-          ? "Context snapshot files remain browser-local; source completion does not prove a backend upload."
+          ? "Saved diagrams remain in Work Design. This application does not upload an ART attachment."
           : `${snapshotAction} is retained with the source completion evidence.`,
         label: "Snapshot Action",
         status: runtimeMode === "live" ? "local only" : "complete",
@@ -83,7 +84,7 @@ export function workDesignApplyReadinessRows({
     },
     {
       detail: runtimeMode === "live"
-        ? "Context snapshot files remain browser-local, separate from the canonical apply."
+        ? "Saved diagrams remain in Work Design, separate from canonical ART attachments."
         : `${snapshotAction} during the apply run.`,
       label: "Snapshot Action",
       status: snapshotReady ? "ready" : "blocked",
@@ -100,7 +101,14 @@ export function workDesignApplyReadinessRows({
   ];
 }
 
-export function workDesignApplyBackendChecklistRows({
+export function workDesignApplyBackendChecklistRows(input: Parameters<typeof previewApplyBackendChecklistRows>[0]) {
+  return input.runtimeMode === "live"
+    ? workDesignLiveApplyChecklist({ complete: input.applyReceiptRecorded || input.sourceApplyComplete, ready: input.applyReady, feedback: input.feedback, error: input.runtimeError })
+    : previewApplyBackendChecklistRows(input);
+}
+
+function previewApplyBackendChecklistRows({
+  feedback,
   applyReceiptRecorded,
   applyReady,
   applyTargetRecordRef,
@@ -109,6 +117,7 @@ export function workDesignApplyBackendChecklistRows({
   runtimeError,
   runtimeMode,
 }: {
+  feedback?: WorkDesignApplyFeedback;
   applyReceiptRecorded: boolean;
   applyReady: boolean;
   applyTargetRecordRef: string;
@@ -290,7 +299,14 @@ export function workDesignApplyBackendChecklistRows({
   ];
 }
 
-export function workDesignApplyExecutionLogLines({
+export function workDesignApplyExecutionLogLines(input: Parameters<typeof previewApplyExecutionLogLines>[0]) {
+  return input.runtimeMode === "live"
+    ? workDesignLiveApplyLog({ complete: input.applyReceiptRecorded || input.sourceApplyComplete, feedback: input.feedback, recordedAt: input.recordedAt, target: input.applyTargetRecordRef })
+    : previewApplyExecutionLogLines(input);
+}
+
+function previewApplyExecutionLogLines({
+  feedback,
   applyReceiptRecorded,
   applyReady,
   applyTargetRecordRef,
@@ -301,6 +317,7 @@ export function workDesignApplyExecutionLogLines({
   runtimeError,
   runtimeMode,
 }: {
+  feedback?: WorkDesignApplyFeedback;
   applyReceiptRecorded: boolean;
   applyReady: boolean;
   applyTargetRecordRef: string;
@@ -486,7 +503,7 @@ export function workDesignApplyHeaderProjection({
       : sourceApplyComplete
         ? "Source read model already marks this Work Design pass Done. This view is read-only evidence."
         : applyReady
-          ? "One operator approval starts validation, backend update, snapshot attach, and receipt return."
+          ? "Apply the reviewed tree and wait for the confirmed result. Diagram retention is separate from canonical ART application."
           : "Resolve the apply inputs before the update can start.",
     statusLabel: applyReceiptRecorded
       ? "receipt"
@@ -531,7 +548,7 @@ export function workDesignApplyLogPanelProjection({
 }) {
   return {
     description: applyReceiptRecorded
-      ? "Live apply events stream here."
+      ? "Observed submission and receipt events. Intermediate backend steps are not streamed."
       : sourceApplyComplete
         ? "Source completion events are shown as a read-only proof trail."
         : applyReady

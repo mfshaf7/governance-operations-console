@@ -191,6 +191,8 @@ export function WorkDesignSessionStepRouter({
     >
       {activeStep !== "context" && activeStep !== "build" && activeStep !== "hub" ? (
         <WorkDesignProgressPanel
+          applyPending={applyWorkflow.applyFeedback.pending}
+          applyNeedsCheck={applyWorkflow.applyFeedback.needsCheck}
           readOnly={readOnly}
           runtimeMode={applyWorkflow.runtimeMode}
           activeStep={activeStep}
@@ -327,7 +329,6 @@ export function WorkDesignSessionStepRouter({
           }}
           onOpenFinalizedBrief={() => setContextFinalizeDialogOpen(true)}
           onOpenReviewTree={openReviewTreeDialog}
-          onOpenSnapshot={() => setContextSnapshotDialogOpen(true)}
           reviewHandoffNote={reviewHandoffNote}
           draftReviewAccepted={effectiveDraftReviewAccepted}
           reviewHandoffNoteReady={reviewHandoffNoteReady}
@@ -339,6 +340,7 @@ export function WorkDesignSessionStepRouter({
         />
       ) : activeStep === "apply" ? (
         <WorkDesignApplyDraftView
+          feedback={applyWorkflow.applyFeedback}
           runtimeMode={applyWorkflow.runtimeMode}
           applyReceiptRecorded={applyReceiptRecorded}
           applyBackendChecklistRows={applyBackendChecklistRows}

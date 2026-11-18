@@ -188,7 +188,7 @@ export function workDesignCurrentMove({
     return {
       description: applyReady
         ? runtimeMode === "live"
-          ? "Approve the reviewed tree for OOS validation, canonical application and receipt return. Context snapshot files remain browser-local."
+          ? "Approve the reviewed tree for backend validation, canonical application and receipt return. Saved diagrams remain separate from ART attachments."
           : "Approve the update. Validation, backend update, snapshot attach, and receipt return run in the same apply sequence."
         : "Resolve the review and apply inputs before the work-design update can start.",
       label: "apply",

@@ -160,6 +160,8 @@ export function ExecutionCloseoutModal({
   return (
     <>
       <TerasWizardModal
+        busy={applying}
+        busyLabel="Applying the reviewed closeout and checking its result…"
         activeStepId={activeStep}
         description="Prepare bounded completion evidence, review downstream impact, and apply closeout through OOS."
         footer={
@@ -177,6 +179,7 @@ export function ExecutionCloseoutModal({
               activeStep === "review"
                 ? {
                     emphasis: "secondary",
+                    disabled: applying,
                     label: "Back",
                     onClick: () => setActiveStep("evidence"),
                   }
@@ -209,6 +212,7 @@ export function ExecutionCloseoutModal({
         kicker="Execution Action"
         onClose={requestClose}
         onStepSelect={(stepId) => {
+          if (applying) return;
           if (
             stepId === "evidence" ||
             (stepId === "review" && evidenceComplete) ||
@@ -219,7 +223,7 @@ export function ExecutionCloseoutModal({
         }}
         statusLabel={closeoutStatusLabel(runtime)}
         statusTone={closeoutStatusTone(runtime)}
-        steps={steps}
+        steps={applying ? steps.map(step => ({ ...step, available: false })) : steps}
         subject={{
           detail: packageSummary.source_ref,
           eyebrow: "Selected Package",

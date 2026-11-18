@@ -13,6 +13,8 @@ import {
 import { TerasActionButton } from "@/teras";
 
 type WorkDesignSessionFooterProps = {
+  applyPending?: boolean;
+  applyNeedsCheck?: boolean;
   readOnly?: boolean;
   activeStep: WorkDesignStep;
   applyReceiptRecorded: boolean;
@@ -31,6 +33,8 @@ type WorkDesignSessionFooterProps = {
 };
 
 export function WorkDesignSessionFooter({
+  applyPending = false,
+  applyNeedsCheck = false,
   readOnly = false,
   activeStep,
   applyReceiptRecorded,
@@ -92,6 +96,7 @@ export function WorkDesignSessionFooter({
   return (
     <>
       <TerasActionButton
+        disabled={applyPending}
         data-work-design-action={footerProjection.returnAction.dataAction}
         onClick={() => handleFooterAction(footerProjection.returnAction.kind)}
         emphasis={footerProjection.returnAction.emphasis}
@@ -100,10 +105,11 @@ export function WorkDesignSessionFooter({
       </TerasActionButton>
       {footerProjection.primaryAction ? (
         <TerasActionButton
+          busy={applyPending}
           data-work-design-action={footerProjection.primaryAction.dataAction}
-          disabled={readOnly ? ["accept-context-brief", "run-apply-draft"].includes(footerProjection.primaryAction.kind) : footerProjection.primaryAction.disabled}
+          disabled={applyPending || (readOnly ? ["accept-context-brief", "run-apply-draft"].includes(footerProjection.primaryAction.kind) : applyNeedsCheck && activeStep === "apply" && !workDesignClosed ? false : footerProjection.primaryAction.disabled)}
           onClick={() =>
-            handleFooterAction(footerProjection.primaryAction!.kind)
+            applyNeedsCheck && activeStep === "apply" && !workDesignClosed ? onRunApplyDraft() : handleFooterAction(footerProjection.primaryAction!.kind)
           }
           emphasis={footerProjection.primaryAction.emphasis}
           tone={
@@ -112,7 +118,7 @@ export function WorkDesignSessionFooter({
               : "accent"
           }
         >
-          {footerProjection.primaryAction.label}
+          {applyPending ? applyReceiptRecorded || workDesignClosed ? "Refreshing…" : applyNeedsCheck ? "Checking…" : "Applying…" : applyNeedsCheck && activeStep === "apply" && !workDesignClosed ? "Check Apply Status" : footerProjection.primaryAction.label}
         </TerasActionButton>
       ) : null}
     </>

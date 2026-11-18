@@ -7,6 +7,7 @@ import {
   TerasModalShell,
   TerasPanel,
   TerasPanelHeader,
+  TerasLoadingState,
 } from "@/teras";
 
 import { RefinementSessionFooter } from "./refinement-session-footer.tsx";
@@ -65,7 +66,7 @@ function RefinementWorkflowBody({
         title="Refinement"
         width="large"
       >
-        <TerasPanel frame="padded" treatment="state" tone="warn">
+        {controller.packetLoading ? <TerasLoadingState label="Reading Refinement fields…" skeleton="details" /> : <TerasPanel frame="padded" treatment="state" tone="warn">
           <TerasPanelHeader
             kicker="Missing Packet"
             statusLabel="not ready"
@@ -73,7 +74,7 @@ function RefinementWorkflowBody({
             title="Refinement cannot start"
             description={controller.packetUnavailableReason}
           />
-        </TerasPanel>
+        </TerasPanel>}
       </TerasModalShell>
     );
   }
@@ -81,12 +82,15 @@ function RefinementWorkflowBody({
   return (
     <>
       <TerasModalShell
+        busy={controller.applyInFlight}
+        busyLabel={controller.runtimeRun ? "Applying Refinement and checking its receipt…" : "Submitting reviewed Refinement…"}
         height={sessionState.activeStep === "hub" ? "content" : "fill"}
         width={controller.shellWidth}
         description={controller.shellCopy.description}
         footer={
           <><SavedWorkStatus/>
           <RefinementSessionFooter
+            applyInFlight={controller.applyInFlight}
             readOnly={readOnly}
             activeStep={sessionState.activeStep}
             blocked={controller.refinementBlocked}
