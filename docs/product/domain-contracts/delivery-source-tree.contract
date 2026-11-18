@@ -379,6 +379,7 @@ presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-edito
 presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-editor-panel.tsx
 presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-field-editor.tsx
 presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-workbench-tree.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-work-item-details.tsx
 presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-workbench-view.tsx
 presentation/workflows/refinement/steps/metadata-draft/refinement-selected-metadata-editor.tsx
 presentation/workflows/refinement/steps/metadata-draft/refinement-shared-metadata-editor.tsx
@@ -393,6 +394,8 @@ presentation/workflows/refinement/view-model/refinement-gate-model.ts
 presentation/workflows/refinement/view-model/refinement-history-model.ts
 presentation/workflows/refinement/view-model/refinement-hub-model.ts
 presentation/workflows/refinement/view-model/refinement-metadata-model.ts
+presentation/workflows/refinement/view-model/refinement-advisor-context.ts
+presentation/workflows/refinement/view-model/refinement-workbench-model.ts
 presentation/workflows/refinement/view-model/refinement-packet-model.ts
 presentation/workflows/refinement/view-model/refinement-readiness-model.ts
 presentation/workflows/refinement/view-model/refinement-shell-view-model.ts
@@ -453,6 +456,7 @@ presentation/workflows/work-design/session-controller/use-work-design-context-br
 presentation/workflows/work-design/session-controller/use-work-design-context-session-actions.ts
 presentation/workflows/work-design/session-controller/use-work-design-export-actions.ts
 presentation/workflows/work-design/session-controller/use-work-design-session-controller.ts
+presentation/workflows/work-design/session-controller/use-work-design-apply-command.ts
 presentation/workflows/work-design/session-controller/use-work-design-session-lifecycle.ts
 presentation/workflows/work-design/session-controller/use-work-design-session-persistence.ts
 presentation/workflows/work-design/session-controller/use-work-design-session-state.ts
@@ -478,6 +482,7 @@ presentation/workflows/work-design/steps/review-draft/work-design-review-draft-v
 presentation/workflows/work-design/steps/review-draft/work-design-review-tree-dialog.tsx
 presentation/workflows/work-design/support/blocker-recovery/work-design-blocker-model.ts
 presentation/workflows/work-design/view-model/work-design-apply-model.ts
+presentation/workflows/work-design/view-model/work-design-live-apply-feedback.ts
 presentation/workflows/work-design/view-model/work-design-blocker-disposition-model.ts
 presentation/workflows/work-design/view-model/work-design-blocker-recovery-view-model.ts
 presentation/workflows/work-design/view-model/work-design-context-advisor-view-model.ts
@@ -503,6 +508,7 @@ presentation/workspace/workspace-types.ts
 presentation/workspace/workspace-view-model.ts
 presentation/workspace/workspace.tsx
 product-adapters/build-tree/index.ts
+product-adapters/build-tree/refinement-build-tree.ts
 product-adapters/build-tree/work-design-advisor-patch.ts
 product-adapters/build-tree/work-design-build-tree-advisor.ts
 product-adapters/build-tree/work-design-build-tree-scaffold.ts

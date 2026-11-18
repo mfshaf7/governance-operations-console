@@ -32,7 +32,6 @@ export function RefinementSelectedMetadataFieldEditor({
   onResetMetadataDraftValue,
   onResetMetadataDraftValues,
   onReviewReadiness,
-  onSelectMetadataField,
   onToggleEditorCollapsed,
   onUpdateMetadataDraftValues,
   onUpdateMetadataDraftValue,
@@ -59,7 +58,6 @@ export function RefinementSelectedMetadataFieldEditor({
   onResetMetadataDraftValue: (fieldKey: string, value: string) => void;
   onResetMetadataDraftValues: (values: Record<string, string>) => void;
   onReviewReadiness: () => void;
-  onSelectMetadataField: (fieldKey: string) => void;
   onToggleEditorCollapsed: () => void;
   onUpdateMetadataDraftValues: (fieldKeys: string[], value: string) => void;
   onUpdateMetadataDraftValue: (fieldKey: string, value: string) => void;
@@ -81,19 +79,15 @@ export function RefinementSelectedMetadataFieldEditor({
         onMarkMetadataFieldResolutions={onMarkMetadataFieldResolutions}
         onReviewReadiness={onReviewReadiness}
         onResetMetadataDraftValues={onResetMetadataDraftValues}
-        onSelectMetadataField={onSelectMetadataField}
         onToggleEditorCollapsed={onToggleEditorCollapsed}
         onUpdateMetadataDraftValues={onUpdateMetadataDraftValues}
         selectedMetadataBulkNodeIds={selectedMetadataBulkNodeIds}
         selectedMetadataFieldKey={selectedMetadataFieldKey}
         targets={targets}
+        planningRules={packet.planning_rules}
       />
     );
   }
-
-  const selectedNodeTargets = selectedTarget
-    ? targets.filter((target) => target.node.id === selectedTarget.node.id)
-    : [];
 
   if (!selectedTarget) {
     return (
@@ -107,7 +101,8 @@ export function RefinementSelectedMetadataFieldEditor({
 
   return (
     <SelectedMetadataEditor
-        readOnly={readOnly}
+      metadataDraftValues={metadataDraftValues}
+      readOnly={readOnly}
       advisor={advisor}
       draftValue={draftValue}
       editorCollapsed={editorCollapsed}
@@ -115,12 +110,11 @@ export function RefinementSelectedMetadataFieldEditor({
       onMarkMetadataFieldResolution={onMarkMetadataFieldResolution}
       onResetMetadataDraftValue={onResetMetadataDraftValue}
       onReviewReadiness={onReviewReadiness}
-      onSelectMetadataField={onSelectMetadataField}
       onToggleEditorCollapsed={onToggleEditorCollapsed}
       onUpdateMetadataDraftValue={onUpdateMetadataDraftValue}
-      selectedMetadataFieldKey={selectedMetadataFieldKey}
-      selectedNodeTargets={selectedNodeTargets}
       selectedTarget={selectedTarget}
+      targets={targets}
+      planningRules={packet.planning_rules}
     />
   );
 }
@@ -155,7 +149,7 @@ function NoSelectedMetadataTarget({
           description={
             editorCollapsed
               ? undefined
-              : "Select an ART item from the Work Design handoff tree to inspect and edit its backend-safe metadata field."
+              : "Select a field beneath a work item to inspect its value and guidance."
           }
         />
         {editorCollapsed ? null : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Maximize2 } from "lucide-react";
+import { Download } from "lucide-react";
 import type {
   DeliveryPackageSummary,
   DeliveryTone,
@@ -10,6 +10,7 @@ import type {
   WorkDesignFinalizedBrief,
   WorkDesignSnapshotAttachment,
 } from "../../artifacts/context-brief/index.ts";
+import { WorkDesignSnapshotPreview } from "../../artifacts/context-brief/work-design-snapshot-preview.tsx";
 import { workDesignNodeDisplayTitle } from "../../../../../product-adapters/build-tree/index.ts";
 import type { WorkDesignNode } from "../../model/work-design-model.ts";
 import {
@@ -22,7 +23,6 @@ import {
   TerasActionRow,
   TerasSubjectCard,
   TerasActionButton,
-  TerasMediaSnapshot,
   TerasNoteField,
   TerasSubjectHero,
   TerasUtilityButton,
@@ -62,7 +62,6 @@ type WorkDesignReviewDraftViewProps = {
   onMarkReviewed: () => void;
   onOpenFinalizedBrief: () => void;
   onOpenReviewTree: () => void;
-  onOpenSnapshot: () => void;
   reviewHandoffNote: string;
   draftReviewAccepted: boolean;
   reviewHandoffNoteReady: boolean;
@@ -86,7 +85,6 @@ export function WorkDesignReviewDraftView({
   onMarkReviewed,
   onOpenFinalizedBrief,
   onOpenReviewTree,
-  onOpenSnapshot,
   reviewHandoffNote,
   draftReviewAccepted,
   reviewHandoffNoteReady,
@@ -130,33 +128,19 @@ export function WorkDesignReviewDraftView({
             description="Review the context handoff and tree shape before accepting this draft for Apply Draft."
           />
           <TerasDetailGrid variant="media">
-            {briefUnavailable ? <TerasEmptyState>No retained finalized snapshot is available. Current package metadata is not an original diagram.</TerasEmptyState> : <TerasMediaSnapshot
+            {briefUnavailable ? <TerasEmptyState>No retained finalized snapshot is available. Current package metadata is not an original diagram.</TerasEmptyState> : <WorkDesignSnapshotPreview
+              attachment={contextSnapshotAttachment}
               density="compact"
               fit="fill"
-              facts={briefUnavailable ? [{label:"Original snapshot",value:"Not retained"},{label:"Preview",value:"Current local board preview"}] : workDesignReviewSnapshotFacts(contextSnapshotAttachment)}
-              imageAlt={`${contextSnapshotAttachment.title} snapshot preview`}
-              imageSrc={contextSnapshotAttachment.dataUrl}
+              facts={workDesignReviewSnapshotFacts(contextSnapshotAttachment)}
               kicker="Context Snapshot"
-              onPreview={onOpenSnapshot}
-              previewDisabled={briefUnavailable}
               previewAriaLabel="View finalized context snapshot"
-              title={briefUnavailable ? "Original snapshot not retained" : contextSnapshotAttachment.title}
-              actions={[
-                {
-                  icon: <Maximize2 aria-hidden="true" size={14} />,
-                  label: "View Snapshot",
-                  disabled: briefUnavailable,
-                  onClick: onOpenSnapshot,
-                  tone: "warn",
-                },
-                {
-                  icon: <Download aria-hidden="true" size={14} />,
-                  label: contextSnapshotAttachmentExportLabel,
-                  disabled: briefUnavailable,
-                  onClick: onExportSnapshot,
-                  tone: "warn",
-                },
-              ]}
+              exportAction={{
+                icon: <Download aria-hidden="true" size={14} />,
+                label: contextSnapshotAttachmentExportLabel,
+                onClick: onExportSnapshot,
+                tone: "warn",
+              }}
             />}
             <TerasPanelStack fill="last">
               <TerasStatGroup offset="none">
@@ -218,7 +202,7 @@ export function WorkDesignReviewDraftView({
           <TerasPanelHeader
             kicker="Operator Review Gate"
             title={reviewGateProjection.gateTitle}
-            description="Apply Draft stays locked until the operator confirms the tree is the intended draft."
+            description={reviewGateProjection.gateDescription}
           />
           <TerasSubjectCard
             description="This covers the finalized brief snapshot, draft tree, finalization checks, and any handoff note recorded below."

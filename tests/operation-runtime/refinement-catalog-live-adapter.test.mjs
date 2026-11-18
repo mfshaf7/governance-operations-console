@@ -18,6 +18,7 @@ import { refinementHubViewProjection, refinementHubStatusSummary } from "../../s
 import {
   assertRefinementApplyCommand,
   refinementPacketFromProjection,
+  refinementRunMatchesHandoff,
 } from "../../src/domain-workspaces/delivery/live-runtime/refinement-live-contract.ts";
 import {
   assertCatalogMutationRequest,
@@ -419,6 +420,7 @@ test("case:refinement-catalog-negative rejects stale identity, missing readiness
 
 function refinementAssistCommand() {
   return {
+    packetRevision: refinementProjection().packet.packet_revision, sourceRevision: refinementProjection().source_revision,
     allowedValues: ["PI-2026-03", "PI-2026-04"],
     draftValue: "PI-2026-03",
     fieldKey: "target_pi",
@@ -433,6 +435,7 @@ function refinementAssistCommand() {
 
 function refinementApplyCommand() {
   return {
+    packetRevision: refinementProjection().packet.packet_revision, sourceRevision: refinementProjection().source_revision,
     acceptanceId: "refinement-acceptance:846",
     acceptedAt: "2026-08-26T08:00:00.000Z",
     applyPlan: refinementPacket().apply_plan,
@@ -774,4 +777,41 @@ test("Catalog readiness adapter sends only the selected repository and rejects a
   assert.equal(result.repo_name,"operator-orchestration-service");assert.deepEqual(calls[0],{path:"/api/delivery/catalog/repository-readiness",body:{repoName:"operator-orchestration-service"}});
   reference={...reference,repo_name:"foreign",repo_ref:"repo://foreign",catalog_value_key:"foreign",receipt:{...reference.receipt,target_scope:"repo:foreign"}};
   await assert.rejects(requestCatalogRepositoryReadiness("operator-orchestration-service"),/different repository/);
+});
+
+
+test("Refinement advice and Apply cannot substitute fresh source for the operator's reviewed packet",async()=>{
+ for(const [call,command] of [[requestRefinementAdvice,refinementAssistCommand()],[applyRefinementDraft,refinementApplyCommand()]]){
+  for(const patch of [{packetRevision:"old-packet"},{sourceRevision:"old-source"},{packetRevision:undefined}]){
+   await assert.rejects(call("delivery-package:846",refinementProjection(),{...command,...patch},{env,fetchImpl:async()=>assert.fail("No dispatch for a stale reviewed packet")}),e=>e instanceof DeliveryOosError&&e.code==="packet_stale"&&e.status===409);
+  }
+ }
+});
+
+
+test("old handoff completion remains history and does not complete a new Refinement packet", () => {
+ const run=refinementRun(), projection=refinementProjection();
+ projection.latest_run=run; projection.history=[run];
+ projection.packet.source.source_work_design_receipt_id="work-design-receipt:new-handoff";
+ projection.packet.packet_revision="packet:new-handoff";
+ const packet=refinementPacketFromProjection(projection);
+ assert.equal(packet.receipt,null);
+ assert.equal(projection.history[0].receipt.receipt_id,run.receipt.receipt_id);
+ // Ordinary post-Apply source/packet revisions change, without replacing the handoff.
+ projection.packet.source.source_work_design_receipt_id=run.receipt.source_work_design_receipt_id;
+ const applied=refinementPacketFromProjection(projection).receipt;
+ assert.equal(applied.receipt_id,run.receipt.receipt_id);
+ assert.equal(applied.applied_payload,null,"Current metadata cannot be presented as the original accepted payload");
+ assert.equal(applied.canonical_evidence.accepted_draft_digest,run.receipt.accepted_draft_digest);
+});
+
+
+test("running and failed status belongs only to the current handoff; legacy unknown runs remain retained history",()=>{
+ const projection=refinementProjection(),run=refinementRun();
+ const running={...run,state:"running",receipt:null,source_work_design_receipt_id:projection.packet.source.source_work_design_receipt_id};
+ assert.equal(refinementRunMatchesHandoff(projection.packet,running),true);
+ assert.equal(refinementRunMatchesHandoff(projection.packet,{...running,source_work_design_receipt_id:"older-handoff"}),false);
+ const {source_work_design_receipt_id,...legacy}=running;
+ assert.equal(refinementRunMatchesHandoff(projection.packet,legacy),false);
+ assert.equal(refinementRunMatchesHandoff(projection.packet,run),true,"Original receipts bind historical completed runs without an added marker");
 });

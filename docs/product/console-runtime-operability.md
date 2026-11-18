@@ -146,6 +146,14 @@ Platform-operation catalog plus retained OOS operation readback. It does not
 reuse the separate Runtime Readiness telemetry surface or invent a Console
 health authority.
 
+Submitting a shared Platform action shows the existing inline loading indicator
+until the submission returns. Destructive confirmation keeps that indicator in
+the foreground dialog and disables repeat confirmation and Back. This pending
+state is not an operation result: only the returned owner record can report
+submission or completion. On an unavailable reply, inspect the original
+operation in history before another action. Source presentation changes require
+normal activation before they describe deployed behavior.
+
 The projection is `ready` only while the integration is live, both owner
 sources are current, the catalog observation is within the 60-second operating
 window, and no latest retained operation is active, blocked, or failed.

@@ -9,11 +9,14 @@ import type {
 export type RefinementLiveMode = "disconnected-preview" | "live";
 
 export type RefinementOosPacket = {
+  planning_rules?: { backlog_iteration_label: string; iteration_prefix_templates: string[] };
   active_step: DeliveryRefinementPacket["active_step"];
   apply_plan: DeliveryRefinementApplyPlan;
   draft_groups: Array<{
     fields: Array<{
       allowed_values?: string[];
+      target_allowed_values?: Record<string, string[]>;
+      numeric_type?: "integer" | "decimal";
       backend_field: string;
       field_key: string;
       field_kind: DeliveryRefinementFieldKind;
@@ -65,6 +68,7 @@ export type RefinementOosPacket = {
 };
 
 export type RefinementOosTreeNode = {
+  planning?: { status: string; target_pi: string; iteration: string; owner_repo: string };
   children: RefinementOosTreeNode[];
   description: string;
   draft_body: string;
@@ -94,6 +98,7 @@ export type RefinementOosApplyReceipt = {
 };
 
 export type RefinementOosRun = {
+  source_work_design_receipt_id?: string;
   correlation_id: string;
   events: Array<{
     event_id: string;
@@ -175,6 +180,8 @@ export type RefinementProjectionSnapshot = {
 };
 
 export type RefinementAssistCommand = {
+  packetRevision?: string; sourceRevision?: string;
+  relatedDrafts?: Array<{ field_key: string; node_id: string; value: string }>;
   conversation?: Array<{ role: "operator" | "advisor"; text: string }>;
   allowedValues: string[];
   draftValue: string;
@@ -188,6 +195,7 @@ export type RefinementAssistCommand = {
 };
 
 export type RefinementApplyCommand = {
+  packetRevision?: string; sourceRevision?: string;
   acceptanceId: string;
   acceptedAt: string;
   applyPlan: DeliveryRefinementApplyPlan;

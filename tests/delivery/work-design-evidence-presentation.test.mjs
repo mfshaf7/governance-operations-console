@@ -68,7 +68,9 @@ test("live completion and cold recovered projection retain exact receipt and app
     assert.doesNotMatch(result.applyLogDescription, /mock|preview|will replace/);
     assert.match(result.historyTimelineRows.at(-1).detail, /Durable OOS receipt/);
     assert.doesNotMatch(result.historyTimelineRows.at(-1).detail, /99|Feature branches/);
-    assert.match(result.applyExecutionLogLines.map((item) => item.text).join("\n"), /OOS accepted apply intent/);
+    assert.equal(result.applyExecutionLogLines.length, 1);
+    assert.match(result.applyExecutionLogLines[0].text, /Retained application receipt/);
+    assert.match(result.applyExecutionLogLines[0].text, /Intermediate event times were not retained/);
   }
 });
 
@@ -76,14 +78,10 @@ test("all live apply surfaces distinguish local snapshot files from canonical mu
   for (const sourceApplyComplete of [false, true]) {
     const result = view({ sourceApplyComplete });
     const history = row(result.historyReceiptRows, "Snapshot Evidence");
-    const checklist = row(result.applyBackendChecklistRows, "Attach Snapshot Evidence");
-    assert.equal(history.value, "Browser-local evidence");
+    assert.equal(history.value, "Separate diagram evidence");
     assert.equal(history.tone, "info");
-    assert.match(history.detail, /does not prove a backend snapshot upload/);
-    assert.equal(checklist.status, "local only");
-    assert.equal(checklist.tone, "info");
-    assert.match(checklist.detail, /browser-local/);
-    assert.match(result.applyExecutionLogLines.map((item) => item.text).join("\n"), /does not prove a backend upload/);
+    assert.match(history.detail, /does not prove an ART attachment upload/);
+    assert.deepEqual(result.applyBackendChecklistRows.map(item => item.label), ["Review Apply Input", "Apply Reviewed Tree", "Confirm Receipt"]);
     const readiness = workDesignApplyReadinessRows({
       applyTargetRecordRef: "openproject://work_packages/908",
       hasUnsavedSessionChanges: false,
@@ -93,7 +91,7 @@ test("all live apply surfaces distinguish local snapshot files from canonical mu
       snapshotStatus: "local_preview",
       sourceApplyComplete,
     });
-    assert.match(row(readiness, "Snapshot Action").detail, /browser-local/);
+    assert.match(row(readiness, "Snapshot Action").detail, /Saved diagrams remain in Work Design/);
   }
 });
 
@@ -126,15 +124,15 @@ test("configured live mode without a receipt cannot claim canonical application"
 test("source-only completion does not invent a receipt or backend snapshot upload", () => {
   const result = view({ applyReceiptId: null, applyReceiptRecorded: false });
   assert.equal(row(result.historyReceiptRows, "Receipt State").value, "Source Done");
-  assert.equal(row(result.historyReceiptRows, "Snapshot Evidence").value, "Browser-local evidence");
+  assert.equal(row(result.historyReceiptRows, "Snapshot Evidence").value, "Separate diagram evidence");
   assert.equal(row(result.historyReceiptRows, "Receipt ID"), undefined);
 });
 
 test("validated receipt remains successful when follow-up projection refresh is unavailable", () => {
   const result = view({ sourceApplyComplete: false, runtimeError: "Refresh unavailable" });
   assert.equal(row(result.historyReceiptRows, "Receipt ID").value, receiptRef);
-  assert.match(result.applyExecutionLogLines[0].text, /OOS accepted/);
-  assert.equal(row(result.applyBackendChecklistRows, "Submit Apply Request").status, "complete");
+  assert.match(result.applyExecutionLogLines[0].text, /Retained application receipt/);
+  assert.equal(row(result.applyBackendChecklistRows, "Apply Reviewed Tree").status, "complete");
 });
 
 test("real UI compositions pass runtime mode and log description without hardcoded mock claims", () => {

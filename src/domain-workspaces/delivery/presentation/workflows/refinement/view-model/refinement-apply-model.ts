@@ -15,6 +15,8 @@ export type RefinementApplyRuntimeLine = {
 };
 
 export function refinementApplyRuntimeLines({
+  applyStartedAt = null,
+  runtimeErrorAt = null,
   activeReceipt,
   canApply,
   packet,
@@ -23,6 +25,8 @@ export function refinementApplyRuntimeLines({
   runtimeRun,
   uniqueRoutes,
 }: {
+  applyStartedAt?: string | null;
+  runtimeErrorAt?: string | null;
   activeReceipt: DeliveryRefinementApplyReceipt | null;
   canApply: boolean;
   packet: DeliveryRefinementPacket;
@@ -32,26 +36,19 @@ export function refinementApplyRuntimeLines({
   uniqueRoutes: string[];
 }): RefinementApplyRuntimeLine[] {
   const recordedReceipt = activeReceipt ?? packet.receipt;
-
-  if (recordedReceipt) {
-    return [
-      {
-        marker: "[ok]",
-        text: `Receipt ${recordedReceipt.receipt_id} accepted the Refinement apply run.`,
-        timestamp: recordedReceipt.applied_at,
-        tone: "ok",
-      },
-      ...recordedReceipt.lines.map<RefinementApplyRuntimeLine>((line) => ({
-        marker: "[ok]",
-        text: line,
-        timestamp: recordedReceipt.applied_at,
-        tone: "ok",
-      })),
-    ];
-  }
-
-  if (runtimeRun?.events.length) {
-    return runtimeRun.events.map((event) => ({
+  // Retained receipts already contain the original owner event timestamps.
+  // Receipt summaries are not a substitute for those events.
+  const retainedEvents = recordedReceipt?.canonical_evidence?.events;
+  const events = recordedReceipt
+    ? retainedEvents?.length ? retainedEvents
+      : recordedReceipt.canonical_evidence?.run_id === runtimeRun?.run_id
+        ? runtimeRun?.events ?? [] : []
+    : runtimeRun?.events ?? [];
+  const lines: RefinementApplyRuntimeLine[] = applyStartedAt ? [{
+    marker: "[send]", text: "Apply requested; waiting for backend acknowledgement.",
+    timestamp: applyStartedAt, tone: "info",
+  }] : [];
+  lines.push(...events.map<RefinementApplyRuntimeLine>((event) => ({
       marker:
         event.status === "completed"
           ? "[ok]"
@@ -66,19 +63,29 @@ export function refinementApplyRuntimeLines({
           : event.status === "failed"
             ? "danger"
             : "info",
-    }));
+    })));
+
+  if (recordedReceipt) {
+    lines.push({
+      marker: "[receipt]",
+      text: events.length
+        ? `Receipt ${recordedReceipt.receipt_id} recorded. Original event times are retained above.`
+        : `Receipt ${recordedReceipt.receipt_id} recorded. Historical step times are unavailable.`,
+      timestamp: recordedReceipt.applied_at,
+      tone: recordedReceipt.tone,
+    });
   }
 
   if (runtimeError) {
-    return [
-      {
+    lines.push({
         marker: "[fail]",
         text: runtimeError,
-        timestamp: new Date().toISOString(),
+        timestamp: runtimeErrorAt ?? runtimeRun?.updated_at ?? packet.last_saved_at,
         tone: "danger",
-      },
-    ];
+      });
   }
+
+  if (lines.length) return lines;
 
   return [
     {
@@ -123,12 +130,19 @@ export function refinementApplyOperationTone(
 }
 
 export function refinementApplyHeaderProjection({
+  applyInFlight = false,
   applyRecorded,
   canApply,
 }: {
+  applyInFlight?: boolean;
   applyRecorded: boolean;
   canApply: boolean;
 }) {
+  if (applyInFlight) return {
+    description: "The reviewed request is being applied. Progress below reports only observed backend state.",
+    statusLabel: "processing", statusTone: "info" as const,
+    title: "Applying Refinement…", tone: "info" as const,
+  };
   const applyTone: DeliveryTone = applyRecorded
     ? "ok"
     : canApply
@@ -149,12 +163,20 @@ export function refinementApplyHeaderProjection({
 }
 
 export function refinementApplyInputsProjection({
+  applyInFlight = false,
   applyRecorded,
   canApply,
 }: {
+  applyInFlight?: boolean;
   applyRecorded: boolean;
   canApply: boolean;
 }) {
+  if (applyInFlight) return {
+    readinessDetail: "The reviewed metadata was submitted. Waiting for the original run and receipt.",
+    readinessStatus: "reviewed", readinessTone: "info" as const,
+    statusLabel: "submitted", statusTone: "info" as const,
+    title: "Reviewed Inputs", tone: "info" as const,
+  };
   const tone: DeliveryTone = applyRecorded
     ? "ok"
     : canApply
@@ -179,11 +201,13 @@ export function refinementApplyInputsProjection({
 }
 
 export function refinementApplyLogPanelProjection({
+  applyInFlight = false,
   applyRecorded,
   canApply,
   runtimeError,
   runtimeRun,
 }: {
+  applyInFlight?: boolean;
   applyRecorded: boolean;
   canApply: boolean;
   runtimeError: string | null;
@@ -193,7 +217,7 @@ export function refinementApplyLogPanelProjection({
     ? "danger"
     : applyRecorded
       ? "ok"
-      : runtimeRun
+      : applyInFlight || runtimeRun
         ? "info"
         : canApply
           ? "warn"
@@ -201,18 +225,21 @@ export function refinementApplyLogPanelProjection({
 
   return {
     description: runtimeError
-      ? "The governed apply stopped without reporting local success."
+      ? "The Apply result could not be confirmed here. Retained run events remain visible; inspect the original run before assuming no changes occurred."
       : applyRecorded
       ? "Receipt events are available in History."
+      : applyInFlight && !runtimeRun
+        ? "Request submitted. Waiting for the backend to acknowledge the original run."
       : runtimeRun
         ? "Durable OOS run events are updating from canonical runtime truth."
       : canApply
         ? "Press Apply Refinement in the footer to submit the reviewed draft."
         : "Runtime log is idle until apply inputs are ready.",
     statusLabel: runtimeError
-      ? "failed"
+      ? runtimeRun?.state === "failed" || runtimeRun?.state === "cancelled" ? runtimeRun.state : "unconfirmed"
       : applyRecorded
         ? "complete"
+        : applyInFlight && !runtimeRun ? "submitting"
         : runtimeRun
           ? runtimeRun.state
           : canApply
@@ -221,6 +248,32 @@ export function refinementApplyLogPanelProjection({
     statusTone: tone,
     tone,
   };
+}
+
+export function refinementApplyProgressRows({
+  applyInFlight, applyRecorded, runtimeError, runtimeRun,
+}: {
+  applyInFlight: boolean;
+  applyRecorded: boolean;
+  runtimeError: string | null;
+  runtimeRun: RefinementOosRun | null;
+}) {
+  const acknowledged = Boolean(runtimeRun) || applyRecorded;
+  const readback = applyRecorded || Boolean(runtimeRun?.events.some(event =>
+    event.event_type === "readback_completed" && event.status === "completed"));
+  const failed = runtimeRun?.state === "failed" || runtimeRun?.state === "cancelled";
+  const operationsFinished = readback || runtimeRun?.state === "completed";
+  return [
+    { label: "Submit reviewed request", status: acknowledged ? "acknowledged" : applyInFlight ? "submitting" : "unconfirmed",
+      detail: acknowledged ? "The backend run is recorded." : "Waiting for backend acknowledgement; no operation completion is inferred.",
+      tone: acknowledged ? "ok" as const : applyInFlight ? "info" as const : "warn" as const },
+    { label: "Apply metadata operations", status: operationsFinished ? "confirmed" : failed ? runtimeRun!.state : runtimeRun?.state === "accepted" ? "queued" : runtimeRun ? "processing" : "waiting",
+      detail: runtimeRun?.events.at(-1)?.message ?? "Planned operations are not yet confirmed as started.",
+      tone: operationsFinished ? "ok" as const : failed ? "danger" as const : "info" as const },
+    { label: "Confirm receipt and readback", status: applyRecorded ? "recorded" : readback ? "readback confirmed" : runtimeError ? "unconfirmed" : "waiting",
+      detail: applyRecorded ? "The canonical receipt is recorded." : readback ? "Backend readback completed; waiting for receipt projection." : "Completion requires the canonical receipt and readback.",
+      tone: applyRecorded ? "ok" as const : runtimeError ? "warn" as const : "info" as const },
+  ];
 }
 
 export function refinementApplyLogFacts({

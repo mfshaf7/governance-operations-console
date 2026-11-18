@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 
-import { TerasSubjectHero, TerasZone, TerasZoneLayout } from "@/teras";
-import { deliveryPackagePacketMetadata } from "../../../../shared/delivery-package-metadata.ts";
+import { TerasContentTray, TerasPanelHeader, TerasPanelStack, TerasSubjectHero, TerasZone, TerasZoneLayout } from "@/teras";
 import type {
   DeliveryPackageSummary,
   DeliveryRefinementPacket,
@@ -11,6 +10,7 @@ import type {
 
 import {
   refinementMetadataTargets,
+  refinementTargetNodes,
   refinementSharedMetadataTargetGroups,
 } from "../../view-model/refinement-metadata-model.ts";
 import type {
@@ -24,6 +24,9 @@ import type {
   RefinementLiveMode,
   RefinementOosAssistResult,
 } from "../../../../../live-runtime/refinement-live-types.ts";
+import { RefinementMetadataEditorPanel } from "./refinement-metadata-editor-panel.tsx";
+import { RefinementWorkItemDetails } from "./refinement-work-item-details.tsx";
+import { refinementItemLabel, refinementItemSummary } from "../../view-model/refinement-workbench-model.ts";
 import { RefinementMetadataAdvisor } from "./refinement-metadata-advisor.tsx";
 import { RefinementMetadataWorkbenchView } from "./refinement-metadata-workbench-view.tsx";
 import { RefinementSelectedMetadataFieldEditor } from "./refinement-metadata-field-editor.tsx";
@@ -100,8 +103,16 @@ export function RefinementMetadataDraftStep({
   const [metadataEditorCollapsed, setMetadataEditorCollapsed] = useState(false);
   const metadataTargets = refinementMetadataTargets(packet);
   const selectedMetadataTarget =
-    metadataTargets.find((target) => target.key === selectedMetadataFieldKey) ??
-    metadataTargets[0];
+    metadataTargets.find((target) => target.key === selectedMetadataFieldKey);
+  const [focusedItemId, setFocusedItemId] = useState(selectedMetadataTarget?.node.id ?? packet.target_tree.id);
+  const [fieldSelected, setFieldSelected] = useState(false);
+  const focusedItem = refinementTargetNodes(packet.target_tree).find(item => item.node.id === focusedItemId)?.node ?? packet.target_tree;
+  const selectItem = (nodeId: string) => { setFocusedItemId(nodeId); setFieldSelected(false); };
+  const selectField = (key: string) => {
+    const target = metadataTargets.find(item => item.key === key);
+    if (!target) return;
+    setSelectedMetadataFieldKey(key); setFocusedItemId(target.node.id); setFieldSelected(true); setMetadataEditorCollapsed(false);
+  };
   const selectedSharedMetadataGroups = refinementSharedMetadataTargetGroups(
     metadataTargets,
     selectedMetadataBulkNodeIds,
@@ -112,8 +123,9 @@ export function RefinementMetadataDraftStep({
           group.targets.some(
             (target) => target.key === selectedMetadataFieldKey,
           ),
-        ) ?? selectedSharedMetadataGroups[0])
+        ))
       : undefined;
+  const hasSelectedField = fieldSelected && Boolean(metadataSelectionMode === "shared" ? selectedSharedMetadataGroup : selectedMetadataTarget);
   const selectedMetadataDraftValue = selectedMetadataTarget
     ? (metadataDraftValues[selectedMetadataTarget.key] ??
       selectedMetadataTarget.sourceValue)
@@ -121,17 +133,45 @@ export function RefinementMetadataDraftStep({
   const toggleAdvisorCollapsed = () =>
     setAdvisorCollapsed((current) => !current);
 
+  const advisor = (
+    <RefinementMetadataAdvisor
+      readOnly={readOnly}
+      sourceRef={deliveryPackage.source_ref}
+      sourceRevision={packet.packet_revision ?? packet.last_saved_at}
+      metadataDraftValues={metadataDraftValues}
+      contextTargets={metadataTargets}
+      activeStep={activeStep}
+      advisorTranscript={advisorTranscript}
+      collapsed={advisorCollapsed}
+      deliveryPackageName={deliveryPackage.display_name}
+      draftValue={selectedMetadataDraftValue}
+      markMetadataFieldResolution={markMetadataFieldResolution}
+      markMetadataFieldResolutions={markMetadataFieldResolutions}
+      onToggleCollapsed={toggleAdvisorCollapsed}
+      requestMetadataAdvice={requestMetadataAdvice}
+      runtimeMode={runtimeMode}
+      runtimeStatus={runtimeStatus}
+      selectedSharedMetadataGroup={hasSelectedField && metadataSelectionMode === "shared" ? selectedSharedMetadataGroup : undefined}
+      selectedTarget={hasSelectedField && metadataSelectionMode === "single" ? selectedMetadataTarget : undefined}
+      updateMetadataDraftValue={updateMetadataDraftValue}
+      updateMetadataDraftValues={updateMetadataDraftValues}
+    />
+  );
+
   return (
     <TerasZoneLayout variant="main-aside">
       <RefinementMetadataWorkbenchView
+        metadataDraftValues={metadataDraftValues}
         metadataFieldResolutions={metadataFieldResolutions}
         metadataSelectionMode={metadataSelectionMode}
-        onSelectMetadataField={setSelectedMetadataFieldKey}
-        onSelectMetadataSelectionMode={setMetadataSelectionMode}
-        onToggleMetadataBulkNode={toggleMetadataBulkNode}
+        onSelectMetadataField={selectField}
+        onSelectMetadataSelectionMode={mode => { setMetadataSelectionMode(mode); setFieldSelected(false); }}
+        onToggleMetadataBulkNode={id => { toggleMetadataBulkNode(id); selectItem(id); }}
         packet={packet}
         selectedMetadataBulkNodeIds={selectedMetadataBulkNodeIds}
-        selectedMetadataFieldKey={selectedMetadataFieldKey}
+        selectedMetadataFieldKey={hasSelectedField ? selectedMetadataFieldKey : null}
+        focusedItemId={focusedItemId}
+        onSelectItem={selectItem}
       />
       <TerasZone fit="fill">
         <TerasSubjectHero
@@ -140,35 +180,13 @@ export function RefinementMetadataDraftStep({
           onAction={onOpenHandoff}
           subject={{
             eyebrow: "Selected Package",
-            meta: deliveryPackagePacketMetadata({ deliveryPackage, packetId: packet.packet_id }),
+            meta: [{ label: "Epic", value: `#${deliveryPackage.legacy_epic_id}` }],
             title: deliveryPackage.display_name,
           }}
         />
-        <RefinementSelectedMetadataFieldEditor
+        {hasSelectedField ? <RefinementSelectedMetadataFieldEditor
           readOnly={readOnly}
-          advisor={
-            <RefinementMetadataAdvisor
-              readOnly={readOnly}
-              sourceRef={deliveryPackage.source_ref}
-              sourceRevision={packet.packet_revision ?? packet.last_saved_at}
-              metadataDraftValues={metadataDraftValues}
-              activeStep={activeStep}
-              advisorTranscript={advisorTranscript}
-              collapsed={advisorCollapsed}
-              deliveryPackageName={deliveryPackage.display_name}
-              draftValue={selectedMetadataDraftValue}
-              markMetadataFieldResolution={markMetadataFieldResolution}
-              markMetadataFieldResolutions={markMetadataFieldResolutions}
-              onToggleCollapsed={toggleAdvisorCollapsed}
-              requestMetadataAdvice={requestMetadataAdvice}
-              runtimeMode={runtimeMode}
-              runtimeStatus={runtimeStatus}
-              selectedSharedMetadataGroup={selectedSharedMetadataGroup}
-              selectedTarget={selectedMetadataTarget}
-              updateMetadataDraftValue={updateMetadataDraftValue}
-              updateMetadataDraftValues={updateMetadataDraftValues}
-            />
-          }
+          advisor={advisor}
           draftValue={selectedMetadataDraftValue}
           editorCollapsed={metadataEditorCollapsed}
           metadataDraftValues={metadataDraftValues}
@@ -180,14 +198,22 @@ export function RefinementMetadataDraftStep({
           onResetMetadataDraftValue={resetMetadataDraftValue}
           onResetMetadataDraftValues={resetMetadataDraftValues}
           onReviewReadiness={onReviewReadiness}
-          onSelectMetadataField={setSelectedMetadataFieldKey}
           onUpdateMetadataDraftValue={updateMetadataDraftValue}
           onUpdateMetadataDraftValues={updateMetadataDraftValues}
           packet={packet}
           selectedMetadataBulkNodeIds={selectedMetadataBulkNodeIds}
           selectedMetadataFieldKey={selectedMetadataFieldKey}
           selectedTarget={selectedMetadataTarget}
-        />
+        /> : <TerasPanelStack scroll minimumFillHeight="medium" fill="last">
+          <RefinementMetadataEditorPanel area="field" collapsed={false} tone="info">
+            <TerasPanelHeader kicker={metadataSelectionMode === "shared" ? "Shared edit" : refinementItemLabel(focusedItem)}
+              title={metadataSelectionMode === "shared" ? `${selectedMetadataBulkNodeIds.length} work items selected` : focusedItem.title}
+              actions={metadataSelectionMode === "single" ? <RefinementWorkItemDetails node={focusedItem} /> : undefined}
+              description={metadataSelectionMode === "shared" ? "Choose a common field from Fields for selected items. Only that selection will receive the draft value." : refinementItemSummary(focusedItem.description)} />
+            <TerasContentTray kicker="Review fields" description={metadataSelectionMode === "shared" ? "Select at least two items, then choose a shared field on the left. Changes stay in your draft until Apply Refinement." : "Select a field beneath this item in the tree. Required and review statuses show what needs attention; current and optional values remain available."} />
+          </RefinementMetadataEditorPanel>
+          {advisor}
+        </TerasPanelStack>}
       </TerasZone>
     </TerasZoneLayout>
   );

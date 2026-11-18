@@ -19,6 +19,7 @@ import type {
 } from "../artifacts/context-brief/index.ts";
 import type { WorkDesignContextDecision } from "../model/work-design-model.ts";
 import type { WorkDesignLiveMode } from "../../../../live-runtime/work-design-live-types.ts";
+import type { WorkDesignApplyFeedback } from "./work-design-live-apply-feedback.ts";
 
 type WorkDesignMetricsSummary = {
   features: number;
@@ -136,6 +137,7 @@ export function workDesignReviewGateProjection({
     actionLabel: draftReviewAccepted ? "Reviewed" : "Mark Reviewed",
     actionTone: reviewReady ? ("ok" as DeliveryTone) : ("warn" as DeliveryTone),
     gateTitle: draftReviewAccepted ? "Draft Reviewed" : "Review Required",
+    gateDescription: draftReviewAccepted ? "The current draft is reviewed and can proceed to Apply Draft." : "Apply Draft stays locked until the operator confirms the tree is the intended draft.",
     gateTone: draftReviewAccepted
       ? ("ok" as DeliveryTone)
       : ("warn" as DeliveryTone),
@@ -143,6 +145,7 @@ export function workDesignReviewGateProjection({
 }
 
 export function workDesignApplyDraftViewModel({
+  feedback,
   applyReceiptId,
   applyReceiptRecorded,
   applyReady,
@@ -159,6 +162,7 @@ export function workDesignApplyDraftViewModel({
   sourceApplyComplete,
   sourceRecordRef,
 }: {
+  feedback?: WorkDesignApplyFeedback;
   applyReceiptId: string | null;
   applyReceiptRecorded: boolean;
   applyReady: boolean;
@@ -192,6 +196,7 @@ export function workDesignApplyDraftViewModel({
   const historyRecordedAt =
     applyRunStartedAt ?? contextRecordedAt ?? "Unknown time";
   const applyBackendChecklistRows = workDesignApplyBackendChecklistRows({
+    feedback,
     applyReceiptRecorded,
     applyReady,
     applyTargetRecordRef,
@@ -201,6 +206,7 @@ export function workDesignApplyDraftViewModel({
     runtimeMode,
   });
   const applyExecutionLogLines = workDesignApplyExecutionLogLines({
+    feedback,
     applyReceiptRecorded,
     applyReady,
     applyTargetRecordRef,
@@ -246,7 +252,7 @@ export function workDesignApplyDraftViewModel({
     historyTimelineRows,
     runtimeMode,
     applyLogDescription: runtimeMode === "live"
-      ? "Read-only summary of validated OOS apply evidence, not a streamed backend event log. Context snapshot files remain browser-local unless separately persisted."
+      ? "Observed submission and confirmed receipt events, not a streamed backend event log. Retained receipts do not supply intermediate stage times. Diagram retention is separate from ART attachment upload."
       : "Timestamped disconnected-preview record. These local rows are not canonical Delivery evidence.",
   };
 }

@@ -567,3 +567,44 @@
   flex: 0 0 auto;
   align-self: center;
 }
+
+/* The same structured cards in a narrow workbench pane. The authoring canvas
+   keeps its existing column composition by default. */
+.buildTreeStructuredTreeStacked {
+  min-width: 0;
+}
+
+.buildTreeStructuredTreeStacked .buildTreeStructuredTreeBranch {
+  min-width: 0;
+}
+
+.buildTreeStructuredTreeStacked .buildTreeStructuredTreeChildren
+  > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.buildTreeStructuredTreeStacked .buildTreeStructuredTreeChildren
+  > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"])
+  > .buildTreeStructuredTreeChildren {
+  grid-column: 1;
+  margin-left: 1.28rem;
+  padding-left: 1.24rem;
+}
+
+.buildTreeStructuredTreeStacked .buildTreeStructuredTreeChildren
+  > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"])
+  > .buildTreeStructuredTreeNode[data-role="group"] {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.buildTreeStructuredTreeStacked .buildTreeStructuredTreeChildren
+  > .buildTreeStructuredTreeBranch:has(> .buildTreeStructuredTreeNode[data-role="group"])
+  > .buildTreeStructuredTreeNode[data-role="group"]
+  > .buildTreeStructuredTreeMeta {
+  display: grid;
+}
+
+.buildTreeStructuredTreeStacked .buildTreeStructuredTreeMeta {
+  min-width: 0;
+  max-width: 8rem;
+}

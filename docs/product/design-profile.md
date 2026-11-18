@@ -66,9 +66,39 @@ the other. The metadata field panel fits its actual content; the advisor owns th
 remaining height with the shared usable minimum. Do not widen the field list or
 cap the advisor to the old secondary slot. Long forms and short windows scroll
 within the rail while preserving both sets of controls. Editors without actions
-omit the empty footer track. Keep the native Single/Shared editors, empty selection guidance,
-review/confirm controls and saved drafts. Scroll the existing rail/tree regions
+omit the empty footer track. Keep individual and shared editing, empty selection guidance,
+review controls and saved drafts. Scroll the existing rail/tree regions
 at shorter desktop heights; footer navigation remains fixed.
+
+The work-item tree is a selector with short readable summaries, canonical item
+numbers when available, explicit field-review counts, branch collapse and search.
+Search and Needs review retain matching ancestry and never change the selected
+shared set. Hidden selections remain counted and can be cleared explicitly.
+Full descriptions belong in Read work item, preserving headings, paragraphs,
+lists, emphasis and code; source HTML is text and links permit only HTTP(S).
+Reuse the Work Design Read full note viewer composition: one standard dialog
+with a single Teras content tray and its native close control. Work-item content
+keeps formatted headings and paragraphs inside that same frame; do not add
+per-section cards, a second explanatory header or a separate footer action.
+Do not truncate or rewrite the stored work description to make the tree fit.
+
+One item and Multiple items describe the existing selection modes. Reuse the
+Work Design structured Build Tree cards and controls, with stacked branches in
+the narrower Refinement pane. Lock structure editing: no add, delete or title
+inputs. Clicking an item shows its context on the right and reveals named fields
+beneath it, ordered by review need. Clicking a field opens only its value editor,
+guidance and scoped advisor. Do not add Choose field or Change field menus.
+Fields are presentation details, never ART children or work-item counts. Shared
+selection exposes common fields in one framed list above the same tree; changing
+the selected set clears the active field until explicitly selected again.
+Show Required/Optional, current values,
+optional blanks and reviewed drafts distinctly. Mark reviewed records draft
+review; it does not Apply. New edits revoke review, and invalid or unreviewed
+edits cannot make the package ready. Shared controls use common allowed choices
+and the strictest limit for the exact selection, excluding incompatible types.
+Only explicit disconnected preview can show sample fields. While live fields
+are being read, show loading instead. Idle renders and timestamp-only changes
+must not produce another draft save or cycle the footer save indicator.
 
 Hub, Readiness Review, Apply and History retain their own layout proportions and
 package placement. Readiness's Apply Review Gate fits its content inside the
@@ -106,6 +136,23 @@ Summary panel with its inspection action at the bottom. Do not shrink the outer
 packet or leave unframed gaps between its inner panels. The separate operator
 review gate remains content-sized. Snapshot, export, finalized brief and full
 tree inspection remain available through their existing controls.
+
+Review Draft uses the same single-diagram preview, hover navigation and zoomable
+viewer as Finalized Brief. Complete collection export is not a preview image.
+
+Apply uses the existing busy action and inline loading indicator immediately on
+submission. Keep the input/checklist/log visible. Group non-streamed backend work
+under one processing step, append actual observed events, and show unconfirmed
+outcomes with Check Apply Status. Receipt confirmation and current Delivery
+summary are distinct; failed summary refresh must not erase successful Apply.
+
+Use this same feedback discipline in Refinement and shared Platform operation
+controls. Refinement distinguishes request acknowledgement, backend processing
+and receipt/readback; planned operations are not observed completion events.
+Keep original owner event timestamps when a receipt arrives or is reopened.
+If historical step times were not retained, show that limitation rather than
+stamping summary lines as runtime events. Publication and Delivery Closeout
+reuse the shared busy treatment and lock workflow navigation while applying.
 
 ### Context Brief diagrams — approved preview batch
 
@@ -1000,3 +1047,10 @@ work picker for inspection. Technical Plan has its own inspection entry and no
 second work-picker button. Its workspace uses Choose Work Item for the same
 picker; the label never implies a separate check operation. Package blockers
 retain priority, and only work-start responses establish execution requirements.
+
+Refinement identifier fields consume owner-supplied choices even when native
+storage is text. Iteration controls follow the effective PI and supplied rules;
+never turn uncommitted/retired roadmap buckets into PI assignments. Show unavailable
+choices honestly and direct missing values to their existing Catalog/membership/
+onboarding workflow. AI-filled values retain an explicit review-needed state.
+Related unsaved metadata is context, never canonical approval.

@@ -222,3 +222,5 @@ export { TerasModalFoundation } from "./teras-modal-foundation.tsx";
 
 export { TerasRegisterPagination } from "./teras-register-pagination";
 export { useRegisterPage } from "./use-register-page";
+
+export { TerasDocument } from "./teras-document.tsx";

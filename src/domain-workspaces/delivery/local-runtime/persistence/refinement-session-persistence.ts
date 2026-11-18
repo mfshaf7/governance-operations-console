@@ -17,6 +17,11 @@ import type {
 
 const refinementDraftStore = createBrowserOperationDraftStore();
 
+export function refinementSessionContentKey(session: RefinementPersistedSession) {
+  // A timestamp is an observation of a real edit, never an edit by itself.
+  return JSON.stringify({ ...session, lastSavedAt: undefined });
+}
+
 export function refinementSessionPersistenceKey(packageId: string) {
   return `delivery-refinement-session:${packageId}:v1`;
 }

@@ -1,0 +1,14 @@
+.description { font-size: inherit; line-height: inherit; overflow-wrap: anywhere; }
+.description h4 { color: var(--text); font-size: 0.95rem; font-weight: 760; line-height: 1.2; margin: 1.1rem 0 0.5rem; }
+.description strong { font-weight: 700; }
+.description > :first-child { margin-top: 0; }
+.description > :last-child { margin-bottom: 0; }
+.description p, .description ul, .description ol, .description blockquote { margin: 0.65rem 0; }
+.description ul, .description ol { padding-left: 1.5rem; }
+.description ul { list-style: disc; }
+.description ol { list-style: decimal; }
+.description li + li { margin-top: 0.35rem; }
+.description pre { overflow: auto; padding: 0.8rem; border: 1px solid rgba(255, 247, 231, 0.16); border-radius: 0.65rem; white-space: pre-wrap; }
+.description code { font-family: "IBM Plex Mono", monospace; font-size: 0.85em; }
+.description a { color: #8bb5ff; text-decoration: underline; }
+.description blockquote { border-left: 2px solid rgba(255, 193, 90, 0.55); padding-left: 0.9rem; }

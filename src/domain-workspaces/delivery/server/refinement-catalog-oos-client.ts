@@ -70,6 +70,7 @@ export async function requestRefinementAdvice(
   options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
 ): Promise<RefinementOosAssistResult> {
   const config = resolveDeliveryOosConfig(options.env);
+  assertReviewedRefinement(command, projection);
   const packet = projection.packet;
   const identity = deliveryLiveIdentity(packageRef);
   const requestId = stableDigestId("console-refinement-assist", {
@@ -109,6 +110,7 @@ export async function requestRefinementAdvice(
       allowed_values: command.allowedValues,
     },
     operator_prompt: command.operatorPrompt,
+    ...(command.relatedDrafts ? { related_drafts: command.relatedDrafts } : {}),
     ...(command.conversation ? { conversation: command.conversation } : {}),
   };
   const result = assertRefinementOosAssistResult(
@@ -137,6 +139,7 @@ export async function applyRefinementDraft(
   options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
 ): Promise<RefinementOosRun> {
   const config = resolveDeliveryOosConfig(options.env);
+  assertReviewedRefinement(command, projection);
   const packet = projection.packet;
   const identity = deliveryLiveIdentity(packageRef);
   const acceptedDraft = {
@@ -442,4 +445,9 @@ export function buildCatalogMutationRequest(
         : command.repositoryReadiness ?? null,
     },
   };
+}
+
+function assertReviewedRefinement(command: { packetRevision?: string; sourceRevision?: string }, projection: RefinementOosProjection) {
+  if (command.packetRevision !== projection.packet.packet_revision || command.sourceRevision !== projection.source_revision)
+    throw new DeliveryOosError("The Refinement source or choices changed. Refresh and review the current packet before continuing.", "packet_stale", 409);
 }

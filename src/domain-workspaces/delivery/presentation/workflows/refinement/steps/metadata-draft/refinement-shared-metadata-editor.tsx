@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import {
   TerasActionButton,
+  TerasContentTray,
   TerasActionRow,
   TerasSummaryCard,
   TerasSummaryCardGrid,
@@ -39,12 +40,12 @@ import type {
   RefinementMetadataFieldResolutionMap,
 } from "../../model/refinement-model.ts";
 import {
-  MetadataFieldSelectorButton,
   MetadataEditorHeaderActions,
   MetadataValueControl,
 } from "./refinement-metadata-editor-controls.tsx";
 import { SharedMetadataEmptyState } from "./refinement-shared-metadata-state.tsx";
 import { RefinementMetadataEditorPanel } from "./refinement-metadata-editor-panel.tsx";
+import { refinementItemLabel, refinementValueError, refinementPlanningValueError, refinementPlanningField } from "../../view-model/refinement-workbench-model.ts";
 
 export function SharedMetadataEditor({
   readOnly = false,
@@ -55,12 +56,12 @@ export function SharedMetadataEditor({
   onMarkMetadataFieldResolutions,
   onReviewReadiness,
   onResetMetadataDraftValues,
-  onSelectMetadataField,
   onToggleEditorCollapsed,
   onUpdateMetadataDraftValues,
   selectedMetadataBulkNodeIds,
   selectedMetadataFieldKey,
   targets,
+  planningRules,
 }: {
   readOnly?: boolean;
   advisor: ReactNode;
@@ -73,12 +74,12 @@ export function SharedMetadataEditor({
   ) => void;
   onReviewReadiness: () => void;
   onResetMetadataDraftValues: (values: Record<string, string>) => void;
-  onSelectMetadataField: (fieldKey: string) => void;
   onToggleEditorCollapsed: () => void;
   onUpdateMetadataDraftValues: (fieldKeys: string[], value: string) => void;
   selectedMetadataBulkNodeIds: string[];
   selectedMetadataFieldKey: string;
   targets: RefinementMetadataTarget[];
+  planningRules?: { backlog_iteration_label: string; iteration_prefix_templates: string[] };
 }) {
   const sharedGroups = refinementSharedMetadataTargetGroups(
     targets,
@@ -157,6 +158,7 @@ export function SharedMetadataEditor({
     return draftValue.trim() !== target.sourceValue.trim();
   });
   const statusTone = refinementSharedMetadataGroupTone({
+    draftValues: metadataDraftValues,
     group: selectedGroup,
     resolutions: metadataFieldResolutions,
   });
@@ -168,8 +170,14 @@ export function SharedMetadataEditor({
       (target) =>
         target.status !== "missing" && target.sourceValue.trim().length > 0,
     );
+  const planningIssue = selectedGroup.targets.map(target => refinementPlanningValueError(target, targets, metadataDraftValues, planningRules)).find(Boolean);
+  const choices = selectedGroup.targets.map(target => refinementPlanningField(target, targets, metadataDraftValues, planningRules).allowed_values ?? []);
+  const editingField = selectedGroup.field.field_kind === "select" ? { ...selectedGroup.field,
+    allowed_values: (selectedGroup.field.allowed_values ?? []).filter(value => choices.every(list => list.includes(value))) } : selectedGroup.field;
   const sharedValueCanConfirm =
     !blocked &&
+    !planningIssue &&
+    !refinementValueError(editingField, sharedDraftValue) &&
     sharedDraftValue.trim().length > 0 &&
     (canAcceptSharedCurrentValues || edited || mixedDraftValues) &&
     (selectedGroup.field.field_kind !== "generated" || !edited);
@@ -193,29 +201,18 @@ export function SharedMetadataEditor({
           collapsed={editorCollapsed}
           tone={statusTone}
         >
-          <TerasPanelHeader
-            actions={
-              <MetadataEditorHeaderActions
-                collapsed={editorCollapsed}
-                onToggleCollapsed={onToggleEditorCollapsed}
-                statusLabel={refinementMetadataCollapsedValue({
-                  collapsed: editorCollapsed,
-                  value: statusLabel,
-                })}
-                statusTone={statusTone}
-              />
-            }
+        <TerasPanelHeader
+            actions={<MetadataEditorHeaderActions
+              collapsed={editorCollapsed}
+              onToggleCollapsed={onToggleEditorCollapsed}
+              statusLabel={refinementMetadataCollapsedValue({ collapsed: editorCollapsed, value: statusLabel })}
+              statusTone={statusTone}
+            />}
             actionsLayout="inline"
-            kicker="Selected Metadata Field"
+            kicker="Selected field"
             statusTone={statusTone}
             title={deliveryFieldDisplayLabel(selectedGroup.field.label)}
-            description={refinementMetadataCollapsedValue({
-              collapsed: editorCollapsed,
-              value: refinementSharedMetadataEditorDescription({
-                blocked,
-                mixedDraftValues,
-              }),
-            })}
+            description={refinementMetadataCollapsedValue({ collapsed: editorCollapsed, value: refinementSharedMetadataEditorDescription({ blocked, mixedDraftValues }) })}
           />
 
           {editorCollapsed ? null : (
@@ -226,52 +223,24 @@ export function SharedMetadataEditor({
                     <TerasUtilityButton
                       onClick={() => setDetailDialog("selected-set")}
                     >
-                      Review
+                      Review selection
                     </TerasUtilityButton>
                   }
-                  description="Review item and current value mapping before shared apply."
-                  kicker="Selected Set Review"
-                  title={`${selectedGroup.targets.length} items mapped to ${deliveryFieldDisplayLabel(selectedGroup.field.label)}`}
+                  description="This draft value targets only the listed items. Review the set before marking it reviewed; backend changes wait for Apply Refinement."
+                  kicker={mixedDraftValues ? "Different current values" : "Shared edit"}
+                  title={`${selectedGroup.targets.length} selected items · ${deliveryFieldDisplayLabel(selectedGroup.field.label)}`}
                 />
 
+                {planningIssue ? <TerasContentTray kicker="Check planning" description={planningIssue} /> : null}
                 <MetadataValueControl
                   blocked={readOnly || blocked}
                   draftValue={sharedDraftValue}
-                  field={selectedGroup.field}
+                  field={editingField}
                   onUpdateMetadataDraftValue={(value) =>
                     onUpdateMetadataDraftValues(selectedFieldKeys, value)
                   }
                 />
 
-                <TerasTrayStack
-                  align="start"
-                  frame="thin"
-                  scroll
-                  scrollHeight="short"
-                  spacing="compact"
-                >
-                  {sharedGroups.map((group) => {
-                    const groupTone = refinementSharedMetadataGroupTone({
-                      group,
-                      resolutions: metadataFieldResolutions,
-                    });
-                    const selected = group.identity === selectedGroup.identity;
-
-                    return (
-                      <MetadataFieldSelectorButton
-                        detail={group.group.title}
-                        key={group.identity}
-                        label={deliveryFieldDisplayLabel(group.field.label)}
-                        onSelect={() =>
-                          onSelectMetadataField(group.targets[0].key)
-                        }
-                        selected={selected}
-                        status={`${group.targets.length} items`}
-                        tone={groupTone}
-                      />
-                    );
-                  })}
-                </TerasTrayStack>
               </TerasTrayStack>
 
               {showActionRow ? (
@@ -314,7 +283,7 @@ export function SharedMetadataEditor({
                         }
                         emphasis="primary"
                       >
-                        Confirm
+                        Mark {selectedGroup.targets.length} items reviewed
                       </TerasActionButton>
                     </>
                   )}
@@ -334,7 +303,7 @@ export function SharedMetadataEditor({
         kicker="Shared Target Set"
         onClose={() => setDetailDialog(null)}
         open={detailDialog === "selected-set"}
-        title="Selected Set Review"
+        title="Selected items"
       >
         <TerasTrayStack spacing="loose">
           <TerasSummaryCardGrid density="compact">
@@ -367,7 +336,7 @@ export function SharedMetadataEditor({
                   statusLabel={sourceValueRow.action}
                   detail={sourceValueRow.detail}
                   key={`selected-${target.key}`}
-                  label={target.group.title}
+                  label={refinementItemLabel(target.node)}
                   meta={`${target.path.map((item) => item.kind).join(" / ")} / ${deliveryFieldDisplayLabel(selectedGroup.field.label)}`}
                   title={target.node.title}
                   tone={sourceValueRow.tone}

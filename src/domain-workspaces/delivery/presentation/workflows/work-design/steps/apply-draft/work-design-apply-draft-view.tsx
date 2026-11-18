@@ -1,6 +1,7 @@
 "use client";
 
 import { Download } from "lucide-react";
+import type { WorkDesignApplyFeedback } from "../../view-model/work-design-live-apply-feedback.ts";
 import type { WorkDesignLiveMode } from "../../../../../live-runtime/work-design-live-types.ts";
 import type {
   DeliveryPackageSummary,
@@ -19,6 +20,7 @@ import type { WorkDesignSnapshotAttachment } from "../../artifacts/context-brief
 import { deliveryPackageSourceMetadata } from "../../../../shared/delivery-package-metadata.ts";
 import {
   TerasActivityLogPanel,
+  TerasLoadingState,
   TerasStatusItem,
   TerasList,
   TerasActionButton,
@@ -45,6 +47,7 @@ type WorkDesignApplyExecutionLogLine = {
 };
 
 type WorkDesignApplyDraftViewProps = {
+  feedback: WorkDesignApplyFeedback;
   runtimeMode: WorkDesignLiveMode;
   applyReceiptRecorded: boolean;
   applyBackendChecklistRows: WorkDesignApplyChecklistRow[];
@@ -64,6 +67,7 @@ type WorkDesignApplyDraftViewProps = {
 };
 
 export function WorkDesignApplyDraftView({
+  feedback,
   runtimeMode,
   applyReceiptRecorded,
   applyBackendChecklistRows,
@@ -121,11 +125,12 @@ export function WorkDesignApplyDraftView({
           >
             <TerasPanelHeader
               kicker="Apply Review"
-              statusLabel={headerProjection.statusLabel}
+              statusLabel={feedback.pending ? applyComplete ? "refreshing" : "processing" : feedback.needsCheck && !applyComplete ? "unconfirmed" : headerProjection.statusLabel}
               statusTone="info"
-              title={headerProjection.title}
-              description={headerProjection.description}
+              title={feedback.pending ? applyComplete ? "Refreshing Delivery" : "Applying Work Design" : feedback.needsCheck && !applyComplete ? "Check Apply Status" : headerProjection.title}
+              description={feedback.needsCheck && !applyComplete ? "The result is not confirmed. Check the original application before submitting again." : headerProjection.description}
             />
+            {feedback.pending ? <TerasLoadingState inline skeleton="none" label={applyComplete ? "Refreshing Delivery…" : feedback.needsCheck ? "Checking original application…" : "Applying reviewed tree…"} detail={applyComplete ? "Application is confirmed. Reading current Delivery status." : "Waiting for the backend response; intermediate stages are not streamed."} /> : null}
             <TerasList>
               {applyBackendChecklistRows.map((item, index) => (
                 <TerasStatusItem
@@ -177,7 +182,7 @@ export function WorkDesignApplyDraftView({
             </TerasList>
           </TerasPanel>
           <TerasActivityLogPanel
-            description={logProjection.description}
+            description={feedback.pending ? "Submission is recorded below. Waiting for the confirmed backend result." : feedback.needsCheck && !applyComplete ? "The result is unconfirmed. Check the original application; no automatic retry is made." : logProjection.description}
             fullLog={{
               actions: (
                 <TerasActionButton onClick={exportApplyLog}>
@@ -197,7 +202,7 @@ export function WorkDesignApplyDraftView({
               title: "Apply Run Log",
             }}
             rows={applyLogRows}
-            statusLabel={logProjection.statusLabel}
+            statusLabel={feedback.pending ? "processing" : feedback.needsCheck && !applyComplete ? "unconfirmed" : logProjection.statusLabel}
             statusTone={logProjection.statusTone}
             title="Apply Run Log"
             tone={logProjection.tone}

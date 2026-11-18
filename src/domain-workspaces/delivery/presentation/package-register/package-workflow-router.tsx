@@ -53,6 +53,7 @@ export function DeliveryPackageWorkflowRouter({
   if (packageAction.route === "work-design") {
     return (
       <DeliveryWorkDesignSessionModal
+        onCanonicalChanged={async () => { onRefreshRegister(); await onCanonicalChanged?.(); }}
         readOnly={model.history_scope === "history" || ["done", "retired"].includes(packageAction.deliveryPackage.backend_status)}
         key={packageAction.deliveryPackage.delivery_package_id}
         onApplied={(record) => {
@@ -76,7 +77,7 @@ export function DeliveryPackageWorkflowRouter({
 
           onRefreshRegister();
         }}
-        workflow={packageAction}
+        workflow={{ ...packageAction, deliveryPackage: [...model.packages].reverse().find(row => row.delivery_package_id === packageAction.deliveryPackage.delivery_package_id) ?? packageAction.deliveryPackage }}
       />
     );
   }

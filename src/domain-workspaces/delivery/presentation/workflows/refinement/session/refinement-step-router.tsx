@@ -25,6 +25,9 @@ export function RefinementStepRouter({
   advisorMode,
   advisorStatus,
   canApply,
+  applyInFlight,
+  applyStartedAt,
+  runtimeErrorAt,
   deliveryPackage,
   hubAction,
   metadataWorkbenchSummary,
@@ -77,6 +80,7 @@ export function RefinementStepRouter({
       <TerasContentFrame fill variant={activeStep === "metadata_draft" || activeStep === "hub" ? "single-region" : "standard"}>
         {activeStep !== "hub" && activeStep !== "metadata_draft" ? (
           <RefinementProgressPanel
+            applyInFlight={applyInFlight}
             readOnly={readOnly}
             activeReceipt={activeReceipt}
             activeStep={activeStep}
@@ -141,6 +145,9 @@ export function RefinementStepRouter({
           />
         ) : activeStep === "apply_refinement" && packet ? (
           <RefinementApplyView
+            applyInFlight={applyInFlight}
+            applyStartedAt={applyStartedAt}
+            runtimeErrorAt={runtimeErrorAt}
             activeReceipt={activeReceipt}
             canApply={canApply}
             deliveryPackage={deliveryPackage}

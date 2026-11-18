@@ -12,6 +12,7 @@ import type {
   RefinementMetadataFieldResolutionMap,
   RefinementMetadataSelectionMode,
 } from "../model/refinement-model.ts";
+import { refinementTargetNeedsReview, refinementPlanningValueError } from "./refinement-workbench-model.ts";
 
 export function refinementMetadataFieldKey(
   groupId: string,
@@ -81,7 +82,7 @@ export function refinementMetadataTargets(
           }),
         )
         .map((field) => ({
-          field,
+          field: { ...field, ...(field.target_allowed_values ? { allowed_values: field.target_allowed_values[node.id] ?? [] } : {}) },
           group,
           key: refinementMetadataFieldKey(group.group_id, field, node.id),
           node,
@@ -131,9 +132,18 @@ export function refinementSharedMetadataTargetGroups(
         return [];
       }
 
+      const sourceFields = orderedTargets.map(target => target.field);
+      if (new Set(sourceFields.map(field => field.field_kind)).size !== 1) return [];
+      const allowedValues = sourceFields[0].field_kind === "select"
+        ? (sourceFields[0].allowed_values ?? []).filter(value => sourceFields.every(field => field.allowed_values?.includes(value)))
+        : sourceFields[0].allowed_values;
+      const limits = sourceFields.flatMap(field => field.value_limit ? [field.value_limit] : []);
+
       return [
         {
-          field: orderedTargets[0].field,
+          field: { ...sourceFields[0], allowed_values: allowedValues,
+            required: sourceFields.some(field => field.required),
+            value_limit: limits.length ? Math.min(...limits) : undefined },
           group: orderedTargets[0].group,
           identity,
           targets: orderedTargets,
@@ -274,10 +284,10 @@ export function refinementSharedMetadataEditorDescription({
   }
 
   if (mixedDraftValues) {
-    return "Selected items currently have mixed values. Choose one reviewed value to apply to this shared field.";
+    return "These items have different values. Entering a shared value changes the draft for every selected item.";
   }
 
-  return "Selected items share this field. Review the value before applying it to the selected set.";
+  return "Review one draft value for the selected items. Backend changes wait for Apply Refinement.";
 }
 
 export function refinementSharedMetadataStatusLabel({
@@ -299,9 +309,11 @@ export function refinementSharedMetadataStatusLabel({
 }
 
 export function refinementSharedMetadataGroupTone({
+  draftValues = {},
   group,
   resolutions,
 }: {
+  draftValues?: Record<string, string>;
   group: RefinementSharedMetadataTargetGroup;
   resolutions: RefinementMetadataFieldResolutionMap;
 }) {
@@ -311,7 +323,7 @@ export function refinementSharedMetadataGroupTone({
 
   if (
     group.targets.some(
-      (target) => target.status !== "complete" && !resolutions[target.key],
+      (target) => refinementTargetNeedsReview(target, resolutions, draftValues),
     )
   ) {
     return "warn" as const;
@@ -398,18 +410,18 @@ export function refinementSelectedMetadataEditorDescription({
   }
 
   if (resolution === "repaired") {
-    return "The edited workbench value is recorded for readiness review and apply.";
+    return "This edited draft is reviewed. Backend changes wait for Apply Refinement.";
   }
 
   if (resolution === "accepted") {
-    return "The workbench value is accepted as reviewed and will not be changed by Refinement.";
+    return "The current value is reviewed. No replacement value has been entered.";
   }
 
   if (resolution === "ai_drafted") {
     return "The advisor drafted a local value. Review it, then record the edited value if it is correct.";
   }
 
-  return "Review or edit the workbench value, then confirm it for readiness review.";
+  return "Review this field and mark any change reviewed. Saving a draft does not apply it to the backend.";
 }
 
 export function refinementMetadataResolutionLabel(
@@ -426,9 +438,11 @@ export function refinementMetadataResolutionLabel(
 }
 
 export function refinementMetadataWorkbenchSummary({
+  draftValues = {},
   packet,
   resolutions,
 }: {
+  draftValues?: Record<string, string>;
   packet: DeliveryRefinementPacket;
   resolutions: RefinementMetadataFieldResolutionMap;
 }): {
@@ -444,14 +458,14 @@ export function refinementMetadataWorkbenchSummary({
 } {
   const targets = refinementMetadataTargets(packet);
   const actionableFields = targets.filter(
-    ({ status }) => status !== "complete",
+    target => target.status !== "complete" || (draftValues[target.key] ?? target.sourceValue).trim() !== target.sourceValue.trim(),
   );
   const blockedFields = actionableFields.filter(
     ({ status }) => status === "blocked",
   );
-  const resolvedFields = actionableFields.filter(({ key }) => resolutions[key]);
+  const resolvedFields = actionableFields.filter(target => resolutions[target.key] && !refinementTargetNeedsReview(target, resolutions, draftValues) && !refinementPlanningValueError(target, targets, draftValues, packet.planning_rules));
   const openFields = actionableFields.filter(
-    ({ key, status }) => status !== "blocked" && !resolutions[key],
+    target => target.status !== "blocked" && (refinementTargetNeedsReview(target, resolutions, draftValues) || Boolean(refinementPlanningValueError(target, targets, draftValues, packet.planning_rules))),
   );
 
   if (blockedFields.length > 0) {

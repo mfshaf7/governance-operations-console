@@ -17,6 +17,7 @@ import { refinementProgressPanelProjection } from "../view-model/refinement-shel
 import type { DeliveryRefinementModalStep } from "../model/refinement-model.ts";
 
 export function RefinementProgressPanel({
+  applyInFlight,
   readOnly = false,
   activeReceipt,
   activeStep,
@@ -26,6 +27,7 @@ export function RefinementProgressPanel({
   progressActiveStep,
   refinementBlocked,
 }: {
+  applyInFlight: boolean;
   readOnly?: boolean;
   activeReceipt: DeliveryRefinementApplyReceipt | null;
   activeStep: DeliveryRefinementModalStep;
@@ -52,10 +54,10 @@ export function RefinementProgressPanel({
     <TerasPanel frame="padded" treatment="rail" tone={panelProjection.tone}>
       <TerasPanelHeader
         kicker={panelProjection.kicker}
-        statusLabel={panelProjection.statusLabel}
-        statusTone={panelProjection.statusTone}
-        title={panelProjection.title}
-        description={panelProjection.description}
+        statusLabel={applyInFlight ? "processing" : panelProjection.statusLabel}
+        statusTone={applyInFlight ? "info" : panelProjection.statusTone}
+        title={applyInFlight ? "Applying reviewed metadata…" : panelProjection.title}
+        description={applyInFlight ? "Waiting for the backend run and canonical receipt. This does not start execution work." : panelProjection.description}
       />
       <TerasProgressStepList
         activeStepId={activeStep}
@@ -63,7 +65,7 @@ export function RefinementProgressPanel({
         offset="normal"
         onSelectStep={onSelectStep}
         steps={refinementProgressRoutes.map((step, index) => {
-          const available = readOnly || step.archive || !refinementBlocked;
+          const available = !applyInFlight && (readOnly || step.archive || !refinementBlocked);
           const nextStep = refinementProgressRoutes[index + 1];
           const tone =
             refinementBlocked && !step.archive
@@ -80,11 +82,11 @@ export function RefinementProgressPanel({
           return {
             available,
             connectsToNext: nextStep ? !nextStep.archive : false,
-            detail: refinementBlocked && !step.archive ? "locked" : step.detail,
+            detail: applyInFlight && step.id === "apply_refinement" ? "processing" : refinementBlocked && !step.archive ? "locked" : step.detail,
             id: step.id,
             label: step.label,
             stateLabel:
-              refinementBlocked && !step.archive
+              applyInFlight && step.id === "apply_refinement" ? "Processing" : refinementBlocked && !step.archive
                 ? "Locked"
                 : step.archive
                   ? "Archive"

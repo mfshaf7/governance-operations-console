@@ -290,6 +290,54 @@ test("independent diagrams survive checkpoint/reload and complete finalization r
   expect(errors).toEqual([]); expect(writes).toEqual([]);
 });
 
+test("Review Draft reuses the finalized diagram preview, selected-view zoom and complete export without changing retained work", async ({ page }) => {
+  const { errors, writes } = await open(page);
+  await addCard(page, "Console entry");
+  await current(page).getByRole("button", { name: "Add diagram", exact: true }).click();
+  await current(page).getByRole("textbox", { name: "Diagram name", exact: true }).fill("Runtime interactions");
+  await current(page).getByRole("button", { name: "Add diagram", exact: true }).click();
+  await addCard(page, "Runtime runner");
+  await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+  await current(page).getByRole("textbox", { name: "Session Name", exact: true }).fill("Review parity architecture");
+  await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+  await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+  await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+  await expect.poll(async () => (await saved(page))?.briefVersions?.length).toBe(1);
+  const referenceImage = await current(page).locator("img").getAttribute("src");
+  const frozen = (await saved(page)).briefVersions;
+  await current(page).getByRole("button", { name: "Close finalized brief", exact: true }).click();
+  await current(page).getByRole("button", { name: "Build From Brief", exact: true }).click();
+  await current(page).getByRole("button", { name: "Review Draft", exact: true }).click();
+  const review = current(page);
+  await expect(review.locator("img")).toHaveCount(1);
+  await expect(review.locator("img")).toHaveAttribute("src", referenceImage);
+  await expect(review.getByRole("status").filter({ hasText: "Diagram 1 of 2" })).toBeVisible();
+  await review.getByRole("button", { name: "View finalized context snapshot", exact: true }).hover();
+  await review.getByRole("button", { name: "Next diagram", exact: true }).click();
+  await expect(review.getByRole("status").filter({ hasText: "Diagram 2 of 2" })).toBeVisible();
+  const selectedImage = await review.locator("img").getAttribute("src");
+  expect(decodeURIComponent(selectedImage)).toContain("Runtime runner");
+  expect(selectedImage).not.toBe(referenceImage);
+  await review.getByRole("button", { name: "View Snapshot", exact: true }).click();
+  await expect(current(page).locator("img")).toHaveAttribute("src", selectedImage);
+  await current(page).getByRole("button", { name: "Zoom in snapshot", exact: true }).click();
+  await expect(current(page).getByRole("button", { name: "Fit snapshot", exact: true })).toContainText("125%");
+  await current(page).getByRole("button", { name: "Close snapshot viewer", exact: true }).click();
+  const downloadReady = page.waitForEvent("download");
+  await review.getByRole("button", { name: "Export Preview", exact: true }).click();
+  const download = await downloadReady;
+  expect(download.suggestedFilename()).toBe("context-brief-diagrams.png");
+  const stream = await download.createReadStream(), chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  const png = Buffer.concat(chunks);
+  expect(png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))).toBe(true);
+  expect(png.readUInt32BE(20)).toBeGreaterThan(png.readUInt32BE(16));
+  expect((await saved(page)).briefVersions).toEqual(frozen);
+  expect((await saved(page)).applyReceiptRecorded).not.toBe(true);
+  await page.screenshot({ path: test.info().outputPath("review-draft-diagram-parity.png") });
+  expect(errors).toEqual([]); expect(writes).toEqual([]);
+});
+
 test("other architecture views are included only as explicit read-only knowledge, with no diagram mutation on denied advice",async({page})=>{
  const at=new Date().toISOString(),sourceRef='openproject://work_packages/712',seen=[];
  const workDesignProjection={mode:'live',status:'current',error:null,observedAt:at,projection:{schema_version:1,package_ref:'delivery-package:712',source:{ref:sourceRef,revision:'version-17'},state:'not-applied',pending_application_id:null,latest_application:null,history:[],projected_at:at}};

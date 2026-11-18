@@ -176,7 +176,7 @@ function deliverySourceEvents(
       },
       causationId: receipt.source_work_design_receipt_id,
       category: "receipt" as const,
-      correlationId: receipt.applied_payload.packet_id,
+      correlationId: receipt.applied_payload?.packet_id ?? receipt.canonical_evidence?.run_id ?? receipt.receipt_id,
       durability: "prototype-local" as const,
       eventId: receipt.receipt_id,
       evidenceRefs: [],

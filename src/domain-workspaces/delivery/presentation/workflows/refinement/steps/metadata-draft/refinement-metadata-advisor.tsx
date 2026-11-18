@@ -4,6 +4,7 @@ import { deliveryFieldDisplayLabel } from "../../../../../read-model/terms/copy.
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { refinementAdvisorDraftContext } from "../../view-model/refinement-advisor-context.ts";
 import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 import { effectiveModelLabel } from "@/console-integration/governed-ai/model-selection";
 
@@ -42,6 +43,7 @@ export function RefinementMetadataAdvisor({
   runtimeStatus,
   selectedSharedMetadataGroup,
   selectedTarget,
+  contextTargets,
   updateMetadataDraftValue,
   updateMetadataDraftValues,
 }: {
@@ -73,6 +75,7 @@ export function RefinementMetadataAdvisor({
   runtimeStatus: "current" | "offline";
   selectedSharedMetadataGroup: RefinementSharedMetadataTargetGroup | undefined;
   selectedTarget: RefinementMetadataTarget | undefined;
+  contextTargets: RefinementMetadataTarget[];
   updateMetadataDraftValue: (fieldKey: string, value: string) => void;
   updateMetadataDraftValues: (fieldKeys: string[], value: string) => void;
 }) {
@@ -84,10 +87,11 @@ export function RefinementMetadataAdvisor({
   const targets = selectedSharedMetadataGroup?.targets ?? (selectedTarget ? [selectedTarget] : []);
   const advisor = useDraftAdvisor({
     conversation: { role: "refinement-metadata", ref: sourceRef, sourceRef, sourceRevision },
-    disabled: readOnly || activeStep !== "metadata_draft" || runtimeStatus !== "current" || runtimeMode !== "live",
+    disabled: readOnly || !targets.length || activeStep !== "metadata_draft" || runtimeStatus !== "current" || runtimeMode !== "live",
     getScope: () => ({ role: "refinement-metadata", ref: `${sourceRef}:${targets.map((target) => target.key).join(",")}`,
       sourceRef, sourceRevision,
       context: advisorWorkContext({ package: deliveryPackageName, sourceRevision,
+        relatedDrafts: refinementAdvisorDraftContext(contextTargets, targets, metadataDraftValues),
         targets: targets.map((target) => ({ key: target.key, sourceValue: target.sourceValue, field: target.field })) },
         { provided: ["Current selected field metadata, allowed values and source values", "Canonical selected-field packet through Refinement assist"],
           unavailable: ["Operator intent not stated in this request", "Unprovided implementation or completion evidence"] }),
@@ -99,10 +103,13 @@ export function RefinementMetadataAdvisor({
     transport: async (scope, prompt, _signal, conversation) => {
       const target = targets[0];
       if (!target) throw Error("Select a metadata field first.");
-      const live = await requestMetadataAdvice({ allowedValues: target.field.allowed_values ?? [],
-        draftValue: String(scope.fields[0].value), fieldKey: target.field.field_key ?? target.field.backend_field,
-        fieldKind: target.field.field_kind, fieldLabel: target.field.label, operatorPrompt: prompt,
-        required: target.field.required, selectedNodeIds: targets.map((item) => item.node.id), sourceValue: target.sourceValue, conversation });
+      const field = selectedSharedMetadataGroup?.field ?? target.field;
+      const common = (values: string[]) => new Set(values).size === 1 ? values[0] : "";
+      const live = await requestMetadataAdvice({ allowedValues: field.allowed_values ?? [],
+        relatedDrafts: refinementAdvisorDraftContext(contextTargets, targets, metadataDraftValues),
+        draftValue: common(scope.fields.map(field => String(field.value))), fieldKey: target.field.field_key ?? target.field.backend_field,
+        fieldKind: field.field_kind, fieldLabel: field.label, operatorPrompt: prompt,
+        required: field.required, selectedNodeIds: targets.map((item) => item.node.id), sourceValue: common(targets.map(item => item.sourceValue)), conversation });
       if (!live.result) throw Error("A live governed advisor is required. Manual drafting remains available.");
       const result = live.result;
       const edits = result.required_operator_action === "review" && result.suggestion.value !== null
@@ -179,14 +186,14 @@ export function RefinementMetadataAdvisor({
         activeStep === "metadata_draft"
           ? {
               ariaLabel: "Refinement metadata advisor prompt",
-              disabled: readOnly, readOnly,
+              disabled: readOnly || !targets.length, readOnly,
               onChange: setAdvisorPrompt,
               onSubmit: submitAdvisorPrompt,
               placeholder: selectedSharedMetadataGroup
                 ? `Ask about shared ${deliveryFieldDisplayLabel(selectedSharedMetadataGroup.field.label)}...`
                 : selectedTarget
                   ? `Ask about ${deliveryFieldDisplayLabel(selectedTarget.field.label)}...`
-                  : "Ask about the selected metadata field...",
+                  : "Select a field in the tree first…",
               rows: 1,
               value: advisorPrompt,
             }

@@ -122,7 +122,7 @@ export function ProductPublicationSessionModal({
   }
 
   async function applyDecision() {
-    if (!validation.allowed) {
+    if (applying || !validation.allowed) {
       return;
     }
 
@@ -151,6 +151,7 @@ export function ProductPublicationSessionModal({
   }
 
   function selectStep(stepId: string) {
+    if (applying) return;
     const step = steps.find((candidate) => candidate.id === stepId);
     if (step?.available === false) return;
 
@@ -160,6 +161,8 @@ export function ProductPublicationSessionModal({
   return (
     <>
       <TerasWizardModal
+        busy={applying}
+        busyLabel="Applying the reviewed publication decision…"
         activeStepId={activeStep}
         description="Review source-backed product requirements and record either a disconnected-preview result or the exact OOS source receipt for a governed action."
         footer={
@@ -177,6 +180,7 @@ export function ProductPublicationSessionModal({
                 : undefined
             }
             back={{
+              disabled: applying,
               label:
                 activeStep === "result" || previousStep === null
                   ? "Back to Publication"
@@ -215,7 +219,7 @@ export function ProductPublicationSessionModal({
         onStepSelect={selectStep}
         statusLabel={status.label}
         statusTone={status.tone}
-        steps={steps}
+        steps={applying ? steps.map(step => ({ ...step, available: false })) : steps}
         subject={{
           detail: productPublicationRecordDescription(record),
           eyebrow: "Selected Candidate",

@@ -31,7 +31,7 @@ export function refinementSessionShellCopy(
     case "metadata_draft":
       return {
         description:
-          "Repair or accept backend-safe metadata from the applied Work Design handoff.",
+          "Review work item fields. Drafts save automatically; Apply Refinement sends reviewed changes to the backend.",
         title: "Metadata Workbench",
       };
     case "readiness_review":

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { WorkDesignApplyFeedback } from "../../view-model/work-design-live-apply-feedback.ts";
 
 import type { WorkDesignAdvisorTranscriptLine } from "../../view-model/work-design-context-advisor-view-model.ts";
 import type {
@@ -9,6 +10,7 @@ import type {
 } from "../../model/work-design-model.ts";
 
 export function useWorkDesignApplyState() {
+  const [applyFeedback, setApplyFeedback] = useState<WorkDesignApplyFeedback>({ pending: false, needsCheck: false, events: [] });
   const [applyLogDialogOpen, setApplyLogDialogOpen] = useState(false);
   const [applyRunStartedAt, setApplyRunStartedAt] = useState<string | null>(
     null,
@@ -32,6 +34,8 @@ export function useWorkDesignApplyState() {
   >([]);
 
   return {
+    applyFeedback,
+    setApplyFeedback,
     applyLogDialogOpen,
     applyRunStartedAt,
     applyRuntimeError,
