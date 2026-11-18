@@ -74,3 +74,11 @@ export function contextBoardArchitectureContext(snapshot: ContextBoardSnapshot):
     connections: view.snapshot.connections.map(({ id, from, to, label, relationship }) => ({ id, from, to, label, relationship })),
     groups: view.snapshot.templateTrays.map(({ id, label, itemIds }) => ({ id, label, itemIds: [...itemIds] })) }));
 }
+
+/** Drop an advisor-created legacy wrapper only when no later metadata needs it. */
+export function restoreLegacyContextBoardCanvas(snapshot: ContextBoardSnapshot, wasLegacyCanvas: boolean): ContextBoardSnapshot {
+  const view = snapshot.diagrams?.[0];
+  return wasLegacyCanvas && snapshot.diagrams?.length === 1 && snapshot.activeDiagramId === legacyContextDiagramId &&
+    view?.id === legacyContextDiagramId && view.name === "Diagram 1" && view.description === "" && view.diagramType === "freeform"
+    ? contextBoardCanvasSnapshot(snapshot) : snapshot;
+}

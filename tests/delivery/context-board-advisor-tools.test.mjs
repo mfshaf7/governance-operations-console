@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { applyContextBoardAdvisorPatch } from "../../src/product-apps/context-board/context-board-advisor-patch.ts";
 import { contextBoardCustomItemResolvedSize } from "../../src/product-apps/context-board/context-board-template-helpers.ts";
-import { contextBoardArchitectureContext, captureContextBoardDiagrams } from "../../src/product-apps/context-board/context-board-diagrams.ts";
+import { contextBoardArchitectureContext, captureContextBoardDiagrams, restoreLegacyContextBoardCanvas } from "../../src/product-apps/context-board/context-board-diagrams.ts";
 import { contextBoardAdvisorEditorFacts } from "../../src/product-apps/context-board/context-board-advisor-guidance.ts";
 
 const empty = () => ({ customItems: [], connections: [], templateTrays: [], positions: {}, removedCoreIds: [], sketchStrokes: [], style: "architecture" });
@@ -118,4 +118,16 @@ test("requested frame fitting uses member positions after arrangements in the sa
   const frame = next.templateTrays[0];
   assert.equal(next.customItems[0].y, next.customItems[1].y);
   assert.equal(frame.height, contextBoardCustomItemResolvedSize(next.customItems[0]).height + 96);
+});
+
+
+test("undo of legacy canvas migration preserves a later manual diagram name or explanation", () => {
+  const original = empty(), view = { id: "diagram-main", name: "Diagram 1", description: "", diagramType: "freeform", snapshot: original };
+  const restored = { ...original, activeDiagramId: view.id, diagrams: [view] };
+  assert.deepEqual(restoreLegacyContextBoardCanvas(restored, true), original);
+  for (const metadata of [{ name: "My manual architecture name" }, { description: "Manual explanation after the advisor turn" }]) {
+    const changed = { ...restored, diagrams: [{ ...view, ...metadata }] };
+    assert.deepEqual(restoreLegacyContextBoardCanvas(changed, true), changed);
+  }
+  assert.deepEqual(restoreLegacyContextBoardCanvas(restored, false), restored);
 });

@@ -19,7 +19,7 @@ import type {
 } from "../model/work-design-model.ts";
 
 import { WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH } from "../../../../work-model/work-design/work-design-session-model.ts";
-import { assertContextBoardDiagrams, captureContextBoardDiagrams, contextBoardCanvasSnapshot, contextBoardDiagrams, contextBoardSupportingDiagrams, legacyContextDiagramId } from "../../../../../../product-apps/context-board/context-board-diagrams.ts";
+import { assertContextBoardDiagrams, captureContextBoardDiagrams, contextBoardCanvasSnapshot, contextBoardDiagrams, contextBoardSupportingDiagrams, legacyContextDiagramId, restoreLegacyContextBoardCanvas } from "../../../../../../product-apps/context-board/context-board-diagrams.ts";
 
 type UseWorkDesignContextActionsParams = {
   active: boolean;
@@ -101,8 +101,7 @@ export function useWorkDesignContextActions({
         snapshot: contextBoardCanvasSnapshot(content) } : view);
       nextBoard = { ...content, diagrams, activeDiagramId: activeId };
     }
-    if (undo && undoLegacyCanvas.current && nextBoard?.diagrams?.length === 1 &&
-      nextBoard.activeDiagramId === legacyContextDiagramId) nextBoard = contextBoardCanvasSnapshot(nextBoard);
+    if (undo && nextBoard) nextBoard = restoreLegacyContextBoardCanvas(nextBoard, undoLegacyCanvas.current);
     if (nextBoard) {
       assertContextBoardDiagrams(nextBoard); commitBoard(); restoreBoard(nextBoard);
       const viewport = requestViewport.current, now = getBoardViewport();
