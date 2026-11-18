@@ -264,3 +264,7 @@ grammar. Historical completed replies retain compatibility. Owner validation,
 preview application/rendering, exact-source Security acceptance and real-model
 operating checks are distinct evidence; passing the schema alone does not prove
 that an architecture diagram is useful.
+
+When undo restores a legacy single canvas, a later manual diagram name or
+explanation remains in its retained view document. The editor removes the
+compatibility wrapper only if its original default metadata still applies.
