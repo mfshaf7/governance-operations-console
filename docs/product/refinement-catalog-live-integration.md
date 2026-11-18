@@ -279,3 +279,22 @@ the selected records. Optional native numeric typing sets whole-number controls
 and validation while preserving decimal fields. The same selected constraints
 are enforced by OOS before advice/Apply and by the native integer writer before
 mutation. Publication is operator-approved; live operating claims still require the accepted composition and native verification.
+
+
+### Packet reads during ordinary navigation
+
+The packet GET reads the admitted hierarchy, native forms and current Catalog
+choices. It has a bounded 60-second transport deadline, with the existing loading
+and unavailable states. The general 12-second deadline expired reproducibly during
+normal page opening even though the same live packet could be read in isolation.
+This change reuses the existing per-call budget; it adds no cache, retry, source
+fallback or authority. Apply acknowledgement and run polling remain at 12 seconds,
+and model advice retains its existing independent budget. A timeout is an
+unavailable read, never evidence that a mutation ran or that a new model call
+should be issued.
+
+Operator-approved publication repair, Landing Unit Decision
+`feature_single_landing_unit`, `refinement-packet-read-budget-console-20261119`.
+Agent Gary authors and the standing delegated human reviews/merges. Publication
+requires the existing exact composed Security acceptance and normal activation.
+No Work Design or Refinement Apply is replayed by qualification.
