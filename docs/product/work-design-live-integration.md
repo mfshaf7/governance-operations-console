@@ -4,7 +4,7 @@
 
 This is the primary Console instruction surface for OOS-backed Delivery Work
 Design advice, source projection, apply, and durable receipt readback. The
-existing Work Design workflow and visual structure remain unchanged.
+Console keeps local draft review and finalization separate from canonical Apply.
 
 OOS owns source revision, bounded AI-advice admission, canonical application,
 reconciliation, and durable receipts. The Console owns operator interaction,
@@ -26,6 +26,32 @@ Save Session and Finalize Brief cover the complete diagram collection, rather
 than just the visible canvas. Existing single-board records remain readable with
 their original saved content and finalized fingerprints. No migration rewrites
 historical finalized versions.
+
+Finalized Brief displays one retained diagram at a time, headed **Diagram N of M**.
+Hover over the image or focus it with the keyboard to show a translucent bottom
+bar with the current diagram name and **Previous**/**Next** controls. Touch
+layouts keep these controls visible. After switching views, the bar fades until
+pointer movement or keyboard interaction reveals it again. Browsing does not edit
+the brief. **View Snapshot** opens the
+same selected view with zoom and diagram navigation. **Export Preview** retains
+the complete collection. Legacy single-image evidence stays single-image;
+missing historical content is not replaced with the current working canvas.
+Long handoff notes show an excerpt followed by **Read full note** at the bottom
+right. The full-note reader preserves the
+complete original text and paragraph breaks in a read-only dialog.
+
+**Expand context note**, inside the note field’s upper-right corner, opens the
+same current note in a large editor. Edits are
+shared with the compact field; Done or Close returns without discarding them.
+Save Session remains the explicit named checkpoint before finalization. A locked
+or historical note opens read-only and retains the same character limit.
+
+**Finalize Brief** uses the full brief review modal before confirmation, including
+the current saved diagrams, complete note reader and pending finalization checks.
+Opening or closing this review does not lock a version. Unsaved changes require
+Save Session first. On reopening an earlier brief, review uses the newly saved
+revision; the old finalized version and its snapshots remain immutable. After
+confirmation the same modal shows the locked version and recorded checks.
 
 Advisor edits bind to the selected diagram and its exact captured local draft.
 The advisor receives the overall note, the selected view and an index of other
@@ -103,6 +129,9 @@ attribution are assembled server-side.
    record and reads its OOS projection before a canonical command.
 2. Context and tree advice bind to the projected source revision. OOS returns
    bounded advice plus CGG and model-profile evidence for operator review.
+   Tree advice carries the selected item identity from the admitted context
+   observations, alongside the same exact tree and source revision. The adapter
+   continues to reject missing or invalid item identities before model dispatch.
 3. The Console keeps accepted advisor evidence with the draft and supplies it
    to Apply without granting the model mutation authority.
 4. Apply uses one stable acceptance identity and accepted time for same-session
@@ -268,3 +297,13 @@ that an architecture diagram is useful.
 When undo restores a legacy single canvas, a later manual diagram name or
 explanation remains in its retained view document. The editor removes the
 compatibility wrapper only if its original default metadata still applies.
+
+
+Structured native advisor replies use a bounded 128,000-character compatibility
+transport shared with OOS Work Design and ordinary draft advisors. This includes
+both the human message and typed edits; it is not a larger message or per-field
+allowance. Native messages stay limited to 12,000 characters. Selected-field,
+read-only, unchanged-context and atomic tree/board validation still apply.
+A reply that exceeds the aggregate bound is rejected without partial edits or
+an automatic model retry. Finalized brief history remains unchanged by a tree
+suggestion or its undo. This repair remains pending until composed activation.

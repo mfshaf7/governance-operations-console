@@ -6,6 +6,8 @@ import { cloneContextBoardSnapshot } from "../../src/product-apps/context-board/
 import { applyContextBoardAdvisorPatch } from "../../src/product-apps/context-board/context-board-advisor-patch.ts";
 import { workDesignContextFingerprint } from "../../src/domain-workspaces/delivery/presentation/workflows/work-design/artifacts/context-brief/work-design-context-fingerprint.ts";
 
+import { workDesignDiagramCollectionAttachment } from "../../src/domain-workspaces/delivery/product-adapters/context-board/work-design-diagram-collection-rendering.ts";
+
 const canvas = label => ({ connections: [], customItems: [{ id: "shared-local-id", kind: "component", label,
   detail: "Retained exact source", x: 123.75, y: 210.5 }], positions: {}, removedCoreIds: [], sketchStrokes: [], style: "architecture", templateTrays: [] });
 const views = () => [{ id: "overview", name: "System architecture", description: "Existing and proposed ownership", diagramType: "c4", snapshot: canvas("Console") },
@@ -88,4 +90,22 @@ test("the planning handoff carries every view's architectural detail and relatio
   assert.deepEqual(context[1].groups[0].itemIds, ["shared-local-id"]);
   assert.equal("x" in context[1].cards[0], false);
   assert.equal("shape" in context[1].connections[0], false);
+});
+
+
+test("retained previews stay separate while the complete export still contains every diagram", () => {
+  const document = captureContextBoardDiagrams(views()[1].snapshot, views(), "recovery");
+  const before = structuredClone(document);
+  const result = workDesignDiagramCollectionAttachment({ artifact: null, coreNodes: [], ref: "brief:original", snapshot: document, title: "Original brief", summary: "Both retained views" }, input => ({
+    title: input.title, ref: input.ref, summary: input.summary, width: 980, height: 520,
+    itemCount: 1, connectorCount: 0, source: "board_state_preview",
+    svg: `<svg width="980" height="520"><text>${input.snapshot.customItems[0].label}</text></svg>`,
+    dataUrl: input.snapshot.customItems[0].label,
+  }));
+  assert.deepEqual(result.diagramPreviews.map(page => page.title), ["1. System architecture", "2. Recovery"]);
+  assert.deepEqual(result.diagramPreviews.map(page => page.dataUrl), ["Console", "Retained operation"]);
+  assert.match(result.svg, /Console/); assert.match(result.svg, /Retained operation/);
+  assert.equal(result.height, 1120); assert.equal(result.itemCount, 2);
+  assert.equal(result.fileName, "context-brief-diagrams.png");
+  assert.deepEqual(document, before);
 });

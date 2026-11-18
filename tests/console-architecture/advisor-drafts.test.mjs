@@ -218,3 +218,21 @@ test("tree drafting preserves existing text and creates ordinary Feature/story d
     assert.throws(() => applyWorkDesignAdvisorPatch(base, patch)); assert.deepEqual(base, before);
   }
 });
+
+
+test("large structured tree replies preserve complete outcomes within the shared transport bound", () => {
+  const selected = { ...scope(), role: "work-design-tree", fields: [{ key: "tree", label: "Tree", kind: "tree", value: node("epic", "Epic") }] };
+  const patch = { addNodes: Array.from({ length: 3 }, (_, i) => ({ parentId: "epic", node: {
+    ...addition(`large-feature-${i}`, "Feature"), draftBody: "x".repeat(18000) } })), updateNodes: [], removeNodeIds: [] };
+  const reply = draft([{ field: "tree", value: patch }]), raw = JSON.stringify(reply);
+  assert.ok(raw.length > 48000);
+  const decoded = parseAdvisorReply(raw, selected);
+  const result = applyWorkDesignAdvisorPatch(selected.fields[0].value, decoded.edits[0].value);
+  assert.equal(result.children.length, 3);
+  assert.equal(result.children[2].draftBody.length, 18000);
+  assert.throws(() => parseAdvisorReply(JSON.stringify({ ...reply, message: "x".repeat(12001) }), selected));
+  const tooLarge = structuredClone(reply);
+  tooLarge.edits[0].value.addNodes = Array.from({ length: 8 }, (_, i) => ({ parentId: "epic", node: { ...addition(`over-${i}`, "Feature"), draftBody: "x".repeat(18000) } }));
+  assert.throws(() => parseAdvisorReply(JSON.stringify(tooLarge), selected), /exceeds its bound/);
+  assert.deepEqual(selected.fields[0].value, node("epic", "Epic"));
+});

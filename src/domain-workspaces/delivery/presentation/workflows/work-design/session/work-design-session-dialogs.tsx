@@ -273,7 +273,6 @@ export function WorkDesignSessionDialogs({
         finalizeContextBrief,
         onClose: closeContextFinalizeDialog,
         onOpenDetails: () => setContextFinalizedDetailsDialogOpen(true),
-        onOpenSnapshot: () => setContextSnapshotDialogOpen(true),
         open: contextFinalizeDialogOpen,
         reopenContextBriefFromFinalize,
       }}

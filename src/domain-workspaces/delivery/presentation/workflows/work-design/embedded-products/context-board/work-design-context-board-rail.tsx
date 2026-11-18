@@ -4,7 +4,6 @@ import styles from "@/product-apps/context-board/context-board-workbench.module.
 import {
   TerasAdvisorPanel,
   TerasPanel,
-  TerasNoteField,
   TerasContentTray,
   TerasPanelHeader,
   TerasStatusPill,
@@ -18,6 +17,7 @@ import type {
 } from "./work-design-context-board-types.ts";
 
 import { WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH } from "../../../../../work-model/work-design/work-design-session-model.ts";
+import { WorkDesignContextNoteEditor } from "./work-design-context-note-editor.tsx";
 
 type WorkDesignContextBoardRailProps = {
   applyCompleted: boolean;
@@ -143,14 +143,8 @@ export function WorkDesignContextBoardRail({
             </button>
           </div>
         </div>
-        <TerasNoteField
-          aria-label="Work Design context note"
-          density="compact"
-          label={`Context note (${contextOperatorNote.length}/${WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH})`}
-          maxLength={WORK_DESIGN_CONTEXT_NOTE_MAX_LENGTH}
-          minimumHeight="short"
-          onValueChange={updateContextOperatorNote}
-          placeholder="Current and proposed system, key interactions, evidence and open questions."
+        <WorkDesignContextNoteEditor
+          onChange={updateContextOperatorNote}
           readOnly={contextBriefReadOnly}
           value={contextOperatorNote}
         />

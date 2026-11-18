@@ -64,6 +64,7 @@ export type {
 } from "./teras-list";
 export {
   TerasMediaSnapshot,
+  TerasMediaSnapshotNavigation,
   TerasMediaSnapshotViewerDialog,
 } from "./teras-media";
 export { TerasMetadataList } from "./teras-metadata";

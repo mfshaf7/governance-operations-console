@@ -15,6 +15,11 @@ async function open(page, options = {}) {
   const errors = [], writes = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/delivery/workspace") return route.fulfill({ json: { mode: "disconnected-preview", projection: null, error: null } });
+    if (path === "/api/console/capabilities") return route.fulfill({ json: { artifactType: "console-runtime-capability-projection", schemaVersion: 1, mode: "disconnected-preview", capabilities: [] } });
+    if (path.startsWith("/api/saved-work/")) return route.fulfill({ json: { mode: "disconnected-preview" } });
+    if (!options.workDesignProjection && path.startsWith("/api/delivery/work-design/") && path.endsWith("/projection")) return route.fulfill({ json: { mode: "disconnected-preview", status: "current", projection: null, error: null, observedAt: new Date().toISOString() } });
     if (options.workDesignProjection && new URL(route.request().url()).pathname.endsWith("/projection") && route.request().url().includes("/api/delivery/work-design/"))
       return route.fulfill({ json: options.workDesignProjection });
     if (!["GET", "HEAD", "OPTIONS"].includes(route.request().method())) {
@@ -25,7 +30,7 @@ async function open(page, options = {}) {
   await page.goto(base, { waitUntil: "domcontentloaded" });
   await waitForShell(page);
   await page.getByTitle("Open DELIVERY", { exact: true }).click();
-  await page.getByRole("button", { name: /03.*Work Design/i }).click();
+  await page.getByRole("button", { name: /03.*Work Design/i }).click({ timeout: 60000 });
   await page.getByRole("row").filter({ hasText: "Context Admission Work Design" }).click();
   await page.getByRole("button", { name: "Open Design Hub", exact: true }).click();
   await page.getByRole("button", { name: "Open Context Session", exact: true }).click();
@@ -157,7 +162,8 @@ async function saved(page) {
 
 test("independent diagrams survive checkpoint/reload and complete finalization remains readonly while navigating", async ({ page }) => {
   const { errors, writes } = await open(page);
-  await current(page).getByRole("textbox", { name: "Work Design context note", exact: true }).fill("Shared runtime architecture, source custody and original-operation recovery.");
+  const fullNote = "Shared runtime architecture, source custody and original-operation recovery.\n\n" + "Retain the exact source identity, independent execution boundary and restart evidence. ".repeat(35) + "\n\nFinal retained paragraph.";
+  await current(page).getByRole("textbox", { name: "Work Design context note", exact: true }).fill(fullNote);
   await current(page).getByRole("button", { name: "Diagram details", exact: true }).click();
   await current(page).getByRole("textbox", { name: "Diagram name", exact: true }).fill("System architecture");
   await current(page).getByRole("textbox", { name: "What this diagram explains", exact: true }).fill("The Console, workflow authority and isolated runtime responsibilities.");
@@ -181,7 +187,7 @@ test("independent diagrams survive checkpoint/reload and complete finalization r
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForShell(page);
   await page.getByText("Shape governed delivery.", { exact: true }).click();
-  await page.getByRole("button", { name: /03.*Work Design/i }).click();
+  await page.getByRole("button", { name: /03.*Work Design/i }).click({ timeout: 60000 });
   await page.getByRole("row").filter({ hasText: "Context Admission Work Design" }).click();
   await page.getByRole("button", { name: "Open Design Hub", exact: true }).click();
   await page.getByRole("button", { name: "Open Context Session", exact: true }).click();
@@ -194,7 +200,80 @@ test("independent diagrams survive checkpoint/reload and complete finalization r
   const image = current(page).locator('img[src^="data:image/svg+xml"]');
   await expect(image).toHaveCount(1);
   const svg = decodeURIComponent((await image.getAttribute("src")).split(",").slice(1).join(","));
-  expect(svg).toContain("Console entry"); expect(svg).toContain("Runtime runner");
+  expect(svg).toContain("Console entry"); expect(svg).not.toContain("Runtime runner");
+  await expect(current(page).getByRole("button", { name: "Previous diagram", exact: true })).toBeDisabled();
+  await expect(current(page).getByRole("status").filter({ hasText: "Diagram 1 of 2" })).toBeVisible();
+  const preview = current(page).getByRole("button", { name: "View full context snapshot", exact: true });
+  const navigation = current(page).getByRole("group", { name: "Diagram navigation", exact: true });
+  const overlay = navigation.locator("..");
+  await current(page).getByRole("button", { name: "Close finalized brief", exact: true }).focus();
+  await page.mouse.move(0, 0);
+  await expect(overlay).toHaveCSS("opacity", "0");
+  await preview.hover();
+  await expect(overlay).toHaveCSS("opacity", "1");
+  await expect(navigation).toContainText("System architecture");
+  const frameBox = await preview.boundingBox(), navBox = await navigation.boundingBox();
+  expect(navBox.x).toBeGreaterThanOrEqual(frameBox.x);
+  expect(navBox.x + navBox.width).toBeLessThanOrEqual(frameBox.x + frameBox.width);
+  expect(frameBox.y + frameBox.height - navBox.y - navBox.height).toBeLessThan(12);
+  await current(page).getByRole("button", { name: "Close finalized brief", exact: true }).focus();
+  await page.mouse.move(0, 0); await expect(overlay).toHaveCSS("opacity", "0");
+  await preview.focus(); await page.keyboard.press("Tab");
+  await expect(current(page).getByRole("button", { name: "Next diagram", exact: true })).toBeFocused();
+  await expect(overlay).toHaveCSS("opacity", "1");
+  await current(page).getByRole("button", { name: "Next diagram", exact: true }).click();
+  await expect(overlay).toHaveCSS("opacity", "0");
+  await preview.hover();
+  await expect(overlay).toHaveCSS("opacity", "1");
+  const secondSvg = decodeURIComponent((await image.getAttribute("src")).split(",").slice(1).join(","));
+  expect(secondSvg).toContain("Runtime runner"); expect(secondSvg).not.toContain("Console entry");
+  await expect(current(page).getByRole("button", { name: "Next diagram", exact: true })).toBeDisabled();
+  await current(page).getByRole("button", { name: "View Snapshot", exact: true }).click();
+  await expect(current(page).getByRole("status").filter({ hasText: "Diagram 2 of 2" })).toBeVisible();
+  const expandedImage = current(page).locator("img");
+  await expandedImage.hover();
+  await expect(current(page).getByRole("group", { name: "Diagram navigation", exact: true })).toContainText("Runtime interactions");
+  await current(page).getByRole("button", { name: "Zoom in snapshot", exact: true }).click();
+  await expect(current(page).getByRole("button", { name: "Fit snapshot", exact: true })).toContainText("125%");
+  await current(page).locator("img").hover();
+  await current(page).getByRole("button", { name: "Previous diagram", exact: true }).click();
+  await expect(current(page).getByRole("status").filter({ hasText: "Diagram 1 of 2" })).toBeVisible();
+  await expect(current(page).getByRole("button", { name: "Fit snapshot", exact: true })).toContainText("100%");
+  const expandedOverlay = current(page).getByRole("group", { name: "Diagram navigation", exact: true }).locator("..");
+  await expect(expandedOverlay).toHaveCSS("opacity", "0");
+  await current(page).getByRole("button", { name: "Next diagram", exact: true }).focus();
+  await expect(expandedOverlay).toHaveCSS("opacity", "1");
+  await page.keyboard.press("Enter");
+  await expect(current(page).getByRole("status").filter({ hasText: "Diagram 2 of 2" })).toBeVisible();
+  await expect(expandedOverlay).toHaveCSS("opacity", "0");
+  await page.getByRole("button", { name: "Close snapshot viewer", exact: true }).click();
+  const readFullNote = current(page).getByRole("button", { name: "Read full note", exact: true });
+  await readFullNote.scrollIntoViewIfNeeded();
+  const noteTray = readFullNote.locator("xpath=ancestor::section[1]");
+  const excerptBox = await noteTray.locator(":scope > p").last().boundingBox();
+  const readBox = await readFullNote.boundingBox(), noteBox = await noteTray.boundingBox();
+  expect(readBox.y).toBeGreaterThanOrEqual(excerptBox.y + excerptBox.height);
+  expect(noteBox.x + noteBox.width - readBox.x - readBox.width).toBeLessThan(24);
+  await readFullNote.click();
+  await expect(current(page).getByText(fullNote, { exact: true })).toBeVisible();
+  expect(await current(page).getByText(fullNote, { exact: true }).evaluate(el => getComputedStyle(el).whiteSpace)).toBe("pre-wrap");
+  await page.getByRole("button", { name: "Close handoff note", exact: true }).click();
+  await expect(current(page).getByText("Final retained paragraph.", { exact: false })).toHaveCount(0);
+  const downloadPromise = page.waitForEvent("download");
+  await current(page).getByRole("button", { name: "Export Preview", exact: true }).click();
+  const download = await downloadPromise;
+  const bytes = await download.createReadStream();
+  const chunks = []; for await (const chunk of bytes) chunks.push(chunk);
+  const completeExport = Buffer.concat(chunks);
+  expect(download.suggestedFilename()).toBe("context-brief-diagrams.png");
+  expect(completeExport.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))).toBe(true);
+  const dimensions = value => ({ width: Number(value.match(/<svg[^>]* width="(\d+)"/)[1]), height: Number(value.match(/<svg[^>]* height="(\d+)"/)[1]) });
+  const one = dimensions(svg), two = dimensions(secondSvg);
+  const collectionWidth = Math.max(one.width, two.width), collectionHeight = one.height + two.height + 80;
+  const scale = Math.max(1, Math.min(2, 4200 / Math.max(collectionWidth, collectionHeight)));
+  expect(completeExport.readUInt32BE(16)).toBe(Math.round(collectionWidth * scale));
+  expect(completeExport.readUInt32BE(20)).toBe(Math.round(collectionHeight * scale));
+  expect((await saved(page)).briefVersions[0]).toEqual(frozen);
   await page.screenshot({ path: test.info().outputPath("complete-brief-review.png") });
   await page.keyboard.press("Escape");
   await choose(page, "Select brief diagram", "2. Runtime interactions");
@@ -273,4 +352,187 @@ test("diagram management preserves descriptions, requires deletion confirmation 
   await expect(current(page).getByRole("button", { name: "Select brief diagram", exact: true })).toContainText("1. Source custody");
   await page.screenshot({ path: test.info().outputPath("compact-diagram-navigation.png") });
   expect(errors).toEqual([]); expect(writes).toEqual([]);
+});
+
+test("single retained snapshot and short note stay compact without redundant navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const { errors, writes } = await open(page);
+  const shortNote = "A single retained architecture view with its original short handoff note.";
+  await current(page).getByRole("textbox", { name: "Work Design context note", exact: true }).fill(shortNote);
+  await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+  await current(page).getByRole("textbox", { name: "Session Name", exact: true }).fill("Single retained view");
+  await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+  await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+  await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+  await expect(current(page).getByRole("button", { name: "Next diagram", exact: true })).toHaveCount(0);
+  await expect(current(page).getByRole("button", { name: "Previous diagram", exact: true })).toHaveCount(0);
+  await expect(current(page).getByRole("button", { name: "Read full note", exact: true })).toHaveCount(0);
+  const note = current(page).getByText(shortNote, { exact: true });
+  await note.scrollIntoViewIfNeeded();
+  await expect(note).toBeVisible();
+  await expect.poll(async () => {
+    await note.scrollIntoViewIfNeeded();
+    return note.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    for (let parent = el.parentElement; parent; parent = parent.parentElement) {
+      if (["hidden", "auto", "scroll", "clip"].includes(getComputedStyle(parent).overflowY)) {
+        const bounds = parent.getBoundingClientRect();
+        if (box.top < bounds.top - 2 || box.bottom > bounds.bottom + 2) return false;
+      }
+    }
+    return box.left >= 0 && box.right <= innerWidth && box.bottom <= innerHeight;
+    });
+  }).toBe(true);
+  await page.screenshot({ path: test.info().outputPath("single-brief-compact.png") });
+  await current(page).getByRole("button", { name: "View Snapshot", exact: true }).click();
+  await expect(current(page).getByRole("button", { name: "Next diagram", exact: true })).toHaveCount(0);
+  await current(page).getByRole("button", { name: "Zoom in snapshot", exact: true }).click();
+  await expect(current(page).getByRole("button", { name: "Fit snapshot", exact: true })).toContainText("125%");
+  expect(errors).toEqual([]); expect(writes).toEqual([]);
+});
+
+test("expanded note edits share the draft and finalization reviews the saved version in the full modal", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const { errors, writes } = await open(page);
+  const fullNote = "Current system and target architecture.\n\n" + "Explain source custody, execution boundaries and recovery. ".repeat(22);
+  const compact = current(page).getByRole("textbox", { name: "Work Design context note", exact: true });
+  const expand = current(page).getByRole("button", { name: "Expand context note", exact: true });
+  const fieldBox = await compact.boundingBox(), expandBox = await expand.boundingBox();
+  expect(expandBox.x).toBeGreaterThan(fieldBox.x);
+  expect(expandBox.x + expandBox.width).toBeLessThan(fieldBox.x + fieldBox.width);
+  expect(expandBox.y).toBeGreaterThanOrEqual(fieldBox.y);
+  expect(expandBox.y + expandBox.height).toBeLessThan(fieldBox.y + fieldBox.height);
+  expect(expandBox.width).toBeLessThanOrEqual(28);
+  expect(expandBox.height).toBeLessThanOrEqual(28);
+  expect(fieldBox.x + fieldBox.width - expandBox.x - expandBox.width).toBeGreaterThanOrEqual(14);
+  const expandGlyph = await expand.locator("svg").boundingBox();
+  expect(expandGlyph.width).toBeGreaterThanOrEqual(12);
+  expect(expandGlyph.height).toBeGreaterThanOrEqual(12);
+  await compact.locator("..").screenshot({ path: test.info().outputPath("compact-note-expand-placement.png") });
+  await expand.click();
+  const editor = current(page).getByRole("textbox", { name: "Expanded Work Design context note", exact: true });
+  await expect(editor).toBeEditable();
+  expect((await editor.boundingBox()).height).toBeGreaterThan(350);
+  await expect(editor).toHaveAttribute("maxlength", "8000");
+  await editor.fill(fullNote);
+  await current(page).getByRole("button", { name: "Done", exact: true }).click();
+  await expect(compact).toHaveValue(fullNote);
+  await current(page).getByRole("button", { name: "Expand context note", exact: true }).click();
+  await expect(current(page).getByRole("textbox", { name: "Expanded Work Design context note", exact: true })).toHaveValue(fullNote);
+  await current(page).getByRole("button", { name: "Close context note editor", exact: true }).click();
+  await addCard(page, "Original boundary");
+  await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+  await current(page).getByRole("textbox", { name: "Session Name", exact: true }).fill("Saved architecture review");
+  await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+  await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+  await expect(current(page).locator('[data-width="wide"]')).toBeVisible();
+  await expect(current(page).getByText("Not finalized", { exact: true })).toBeVisible();
+  await expect(current(page).getByRole("button", { name: "Finalize Brief", exact: true })).toBeEnabled();
+  await expect(current(page).getByRole("button", { name: "Read full note", exact: true })).toBeVisible();
+  const image = current(page).locator('img[src^="data:image/svg+xml"]');
+  expect(decodeURIComponent((await image.getAttribute("src")).split(",").slice(1).join(","))).toContain("Original boundary");
+  expect((await saved(page)).briefVersions).toHaveLength(0);
+  await page.screenshot({ path: test.info().outputPath("full-pre-finalization-review.png") });
+  await current(page).getByRole("button", { name: "Close finalize brief", exact: true }).click();
+  await expect(compact).toBeEditable();
+  expect((await saved(page)).briefVersions).toHaveLength(0);
+  await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+  await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+  await expect(current(page).getByText("Brief Finalized", { exact: true })).toBeVisible();
+  await expect.poll(async () => (await saved(page))?.briefVersions?.length).toBe(1);
+  const frozen = (await saved(page)).briefVersions[0];
+  await current(page).getByRole("button", { name: "Close finalized brief", exact: true }).click();
+  await current(page).getByRole("button", { name: "Expand context note", exact: true }).click();
+  await expect(current(page).getByRole("textbox", { name: "Expanded Work Design context note", exact: true })).toHaveValue(fullNote);
+  await expect(current(page).getByRole("textbox", { name: "Expanded Work Design context note", exact: true })).toHaveJSProperty("readOnly", true);
+  await current(page).getByRole("button", { name: "Done", exact: true }).click();
+  await current(page).getByRole("button", { name: "View Finalized Brief", exact: true }).click();
+  await current(page).getByRole("button", { name: "Reopen Brief", exact: true }).click();
+  await compact.fill("Changed draft note: the saved revision must be reviewed before a second finalization.");
+  await current(page).getByRole("textbox", { name: "Edit Original boundary title", exact: true }).fill("Updated boundary");
+  await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+  await expect(current(page).getByRole("button", { name: "Finalize Brief", exact: true })).toBeDisabled();
+  await expect(current(page).getByText(/Save the current Context Session before reviewing/)).toBeVisible();
+  await expect(current(page).locator("img")).toHaveCount(0);
+  await current(page).getByRole("button", { name: "Close finalize brief", exact: true }).click();
+  await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+  await current(page).getByRole("textbox", { name: "Session Name", exact: true }).fill("Revised architecture review");
+  await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+  await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+  await expect(current(page).getByRole("button", { name: "Finalize Brief", exact: true })).toBeEnabled();
+  const revised = decodeURIComponent((await current(page).locator('img[src^="data:image/svg+xml"]').getAttribute("src")).split(",").slice(1).join(","));
+  expect(revised).toContain("Updated boundary"); expect(revised).not.toContain("Original boundary");
+  await expect(current(page).getByText("Changed draft note: the saved revision must be reviewed before a second finalization.", { exact: true })).toBeVisible();
+  expect((await saved(page)).briefVersions).toHaveLength(1);
+  expect((await saved(page)).briefVersions[0]).toEqual(frozen);
+  await page.screenshot({ path: test.info().outputPath("current-saved-review-preserves-old-version.png") });
+  expect(errors).toEqual([]); expect(writes).toEqual([]);
+});
+
+for (const [option, target] of [["Link To Existing Work", "Existing Work Link"], ["Retire Duplicate", "Retirement Record"]]) {
+  test(`shared brief review retains the ${option} decision before and after finalization`, async ({ page }) => {
+    const { errors, writes } = await open(page);
+    await current(page).getByRole("button", { name: new RegExp(`^${option}`) }).click();
+    await current(page).getByRole("textbox", { name: "Work Design context note", exact: true }).fill(`${option}: retain the system context and recorded reason.`);
+    await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+    await current(page).getByRole("textbox", { name: "Session Name", exact: true }).fill(`${option} context`);
+    await current(page).getByRole("button", { name: "Save Session", exact: true }).click();
+    await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+    await expect(current(page).getByRole("heading", { name: target, exact: true })).toBeVisible();
+    await expect(current(page).getByText(target, { exact: true }).last()).toBeVisible();
+    await current(page).getByRole("button", { name: "Finalize Brief", exact: true }).click();
+    await expect(current(page).getByText("Brief Finalized", { exact: true })).toBeVisible();
+    await expect(current(page).getByRole("heading", { name: target, exact: true })).toBeVisible();
+    expect(errors).toEqual([]); expect(writes).toEqual([]);
+  });
+}
+
+test("Build Tree sends the selected item identity from the admitted observations envelope", async ({ page }) => {
+  const { errors } = await openReasoningAdvisor(page, "tree");
+  const before = await saved(page), received = [];
+  await page.route("**/api/delivery/work-design/**/assist", async route => {
+    const body = route.request().postDataJSON(); received.push(body);
+    await route.fulfill({ json: isolatedAdvice(body) });
+  });
+  const d = current(page);
+  await d.getByRole("textbox", { name: "Work Design tree advisor prompt", exact: true }).fill("Inspect this draft tree without changing it.");
+  await d.getByRole("button", { name: "run", exact: true }).click();
+  await expect.poll(() => received.length).toBe(1);
+  const body = received[0], context = JSON.parse(body.draftScope.scope.context);
+  expect(body.taskKind).toBe("tree_advice");
+  expect(body.selectedNodeId).toBe(context.observations.selectedNodeId);
+  expect(body.selectedNodeId).toBe(body.tree.id);
+  expect(typeof body.selectedNodeId).toBe("string");
+  expect(body.sourceRevision).toBe("version-17");
+  expect(context.observations.finalizedBrief.ref).toBeTruthy();
+  await expect(d.getByText("Isolated complete response; no provider invoked.", { exact: true })).toBeVisible();
+  expect((await saved(page)).treeDraft.tree).toEqual(before.treeDraft.tree);
+  expect(errors).toEqual([]);
+});
+
+
+test("Build Tree applies a complete large structured reply and undo preserves the finalized brief", async ({ page }) => {
+  const { errors, writes } = await openReasoningAdvisor(page, "tree");
+  const before = await saved(page); let requests = 0;
+  await page.route("**/api/delivery/work-design/**/assist", async route => {
+    requests++; const body = route.request().postDataJSON(), response = isolatedAdvice(body);
+    response.text = JSON.stringify({ intent: "draft", message: "Three complete local outcomes proposed; no provider invoked.", edits: [{ field: "tree", value: {
+      addNodes: Array.from({ length: 3 }, (_, i) => ({ parentId: body.tree.id, node: {
+        id: `synthetic-large-feature-${i}`, kind: "Feature", title: `Complete outcome ${i + 1}`, description: "A complete synthetic draft outcome",
+        draftBody: "Retained evidence and acceptance. ".repeat(550), remark: "Local draft only", children: [] } })), updateNodes: [], removeNodeIds: [] } }] });
+    expect(response.text.length).toBeGreaterThan(48000);
+    await route.fulfill({ json: response });
+  });
+  const d = current(page);
+  await d.getByRole("textbox", { name: "Work Design tree advisor prompt", exact: true }).fill("Add the requested complete outcomes to this local tree.");
+  await d.getByRole("button", { name: "run", exact: true }).click();
+  await expect(d.getByText("Three complete local outcomes proposed; no provider invoked.", { exact: true })).toBeVisible();
+  await expect.poll(async () => (await saved(page)).treeDraft.tree.children.filter(n => n.id.startsWith("synthetic-large-feature-")).length).toBe(3);
+  const after = await saved(page);
+  expect(after.treeDraft.tree.children.find(n => n.id === "synthetic-large-feature-2").draftBody).toBe("Retained evidence and acceptance. ".repeat(550));
+  expect(after.briefVersions).toEqual(before.briefVersions);
+  await d.getByRole("button", { name: "Undo advisor edit", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).treeDraft.tree).toEqual(before.treeDraft.tree);
+  expect((await saved(page)).briefVersions).toEqual(before.briefVersions);
+  expect(requests).toBe(1); expect(errors).toEqual([]); expect(writes).toEqual([]);
 });

@@ -428,6 +428,8 @@ presentation/workflows/work-design/artifacts/context-brief/work-design-finalized
 presentation/workflows/work-design/artifacts/context-brief/work-design-finalized-brief-details-dialog.tsx
 presentation/workflows/work-design/artifacts/context-brief/work-design-finalized-brief-dialog.tsx
 presentation/workflows/work-design/artifacts/context-brief/work-design-finalized-brief-evidence-dialog.tsx
+presentation/workflows/work-design/artifacts/context-brief/work-design-handoff-note.tsx
+presentation/workflows/work-design/artifacts/context-brief/work-design-snapshot-preview.tsx
 presentation/workflows/work-design/artifacts/context-brief/work-design-snapshot-attachment-model.ts
 presentation/workflows/work-design/embedded-products/build-tree/index.ts
 presentation/workflows/work-design/embedded-products/build-tree/use-work-design-build-tree.ts
@@ -438,6 +440,7 @@ presentation/workflows/work-design/embedded-products/build-tree/work-design-buil
 presentation/workflows/work-design/embedded-products/context-board/index.ts
 presentation/workflows/work-design/embedded-products/context-board/use-work-design-context-board.ts
 presentation/workflows/work-design/embedded-products/context-board/work-design-context-board-rail.tsx
+presentation/workflows/work-design/embedded-products/context-board/work-design-context-note-editor.tsx
 presentation/workflows/work-design/embedded-products/context-board/work-design-context-board-sources.tsx
 presentation/workflows/work-design/embedded-products/context-board/work-design-context-board-types.ts
 presentation/workflows/work-design/embedded-products/context-board/work-design-context-board-view.tsx

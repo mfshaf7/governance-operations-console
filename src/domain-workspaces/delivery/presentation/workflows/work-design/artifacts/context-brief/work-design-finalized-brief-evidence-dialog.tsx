@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download } from "lucide-react";
 
 import type { DeliveryPackageSummary } from "../../../../../read-model/index.ts";
 import {
@@ -18,7 +17,6 @@ import { workDesignSnapshotAttachmentStatusLabel } from "../../view-model/work-d
 import {
   TerasDialog,
   TerasContentTray,
-  TerasMediaSnapshotViewerDialog,
 } from "@/teras";
 import { downloadConsoleHref } from "@/console-integration/browser-download";
 
@@ -48,7 +46,6 @@ export function WorkDesignFinalizedBriefEvidenceDialog({
   open,
 }: WorkDesignFinalizedBriefEvidenceDialogProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [snapshotOpen, setSnapshotOpen] = useState(false);
   const evidence = useMemo(() => {
     if (!deliveryPackage?.work_design_context_session?.accepted) {
       return null;
@@ -206,29 +203,8 @@ export function WorkDesignFinalizedBriefEvidenceDialog({
         finalizeContextBrief={() => undefined}
         onClose={onClose}
         onOpenDetails={() => setDetailsOpen(true)}
-        onOpenSnapshot={() => setSnapshotOpen(true)}
         open={open}
         reopenContextBriefFromFinalize={() => undefined}
-      />
-      <TerasMediaSnapshotViewerDialog
-        description={
-          evidence.snapshotAttachment.source === "canvas_screenshot"
-            ? "Rendered canvas screenshot attached to the finalized context brief."
-            : "Stored board-state preview shown because no live canvas screenshot is available for this session."
-        }
-        exportAction={{
-          icon: <Download aria-hidden="true" size={14} />,
-          label: evidence.snapshotAttachmentExportLabel,
-          onClick: exportSnapshotAttachment,
-          tone: "warn",
-        }}
-        imageAlt={`${evidence.snapshotAttachment.title} full snapshot attachment`}
-        imageSrc={evidence.snapshotAttachment.dataUrl}
-        kicker={evidence.snapshotAttachmentSourceLabel}
-        onClose={() => setSnapshotOpen(false)}
-        open={snapshotOpen}
-        title="Context Snapshot Viewer"
-        toolbarTitle={evidence.snapshotAttachment.fileName}
       />
       <WorkDesignFinalizedBriefDetailsDialog
         contextFinalizedBrief={evidence.finalizedBrief}

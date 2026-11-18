@@ -28,16 +28,31 @@ export function workDesignContextFinalizedBriefProjection({
   deliveryPackage: DeliveryPackageSummary;
   initialContextSession: WorkDesignInitialContextSession;
 }) {
+  const retained = readOnly || contextBriefReady;
   const contextFinalizedBriefBase = workDesignFinalizedBriefView({
     decision: contextDecision,
     deliveryPackage,
     note:
-      initialContextSession?.note ??
+      (retained ? initialContextSession?.note : null) ??
       contextCurrentSavedSession?.note ??
       contextOperatorNote,
     savedSession: contextCurrentSavedSession,
-    session: initialContextSession,
+    session: retained ? initialContextSession : null,
   });
+  if (!retained) return {
+    contextFinalizedBrief: {
+      ...contextFinalizedBriefBase,
+      finalizedAt: null,
+      version: contextCurrentSavedSession ? "Saved draft" : "Unsaved draft",
+      diagramSummary: contextCurrentSavedSession
+        ? contextCurrentSavedSession.snapshot.diagrams
+          ? `${contextCurrentSavedSession.snapshot.diagrams.length} architectural views in this saved session.`
+          : "Saved architectural context for review before finalization."
+        : "Save a named Context Session to review its diagrams and note.",
+      systemChecks: [],
+    },
+    contextFinalizedBriefAvailable: false,
+  };
   const legacyRetainedBrief = readOnly && activeBriefVersion ? workDesignRetainedBrief(activeBriefVersion,contextCurrentSavedSession) : null;
   const contextFinalizedBrief = activeBriefVersion?.finalizedBrief ?? legacyRetainedBrief ?? (activeBriefVersion
     ? {

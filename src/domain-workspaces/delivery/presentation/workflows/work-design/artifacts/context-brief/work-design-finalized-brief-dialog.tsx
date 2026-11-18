@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Maximize2 } from "lucide-react";
+import { Download } from "lucide-react";
 
 import type { DeliveryPackageSummary } from "../../../../../read-model/index.ts";
 import type { WorkDesignContextDecision } from "../../model/work-design-model.ts";
@@ -13,8 +13,6 @@ import {
   TerasHighlightPanel,
   TerasDialog,
   TerasEmptyState,
-  TerasContentTray,
-  TerasMediaSnapshot,
   TerasMetadataList,
   TerasPanel,
   TerasPanelHeader,
@@ -34,6 +32,9 @@ import {
   workDesignFinalizedBriefSummaryMetadata,
   workDesignSnapshotAttachmentMetadata,
 } from "./work-design-context-brief-model.ts";
+
+import { WorkDesignSnapshotPreview } from "./work-design-snapshot-preview.tsx";
+import { WorkDesignHandoffNote } from "./work-design-handoff-note.tsx";
 
 type WorkDesignBoardInventorySummary = {
   summary: string;
@@ -77,7 +78,6 @@ type WorkDesignFinalizedBriefDialogProps = {
   finalizeContextBrief: () => void;
   onClose: () => void;
   onOpenDetails: () => void;
-  onOpenSnapshot: () => void;
   open: boolean;
   reopenContextBriefFromFinalize: () => void;
 };
@@ -93,80 +93,18 @@ export function WorkDesignFinalizedBriefDialog(
   const finalizedView =
     props.artifactAvailable === false || evidenceOnly || (contextBriefReady && !contextFinalizeRunning);
 
-  return finalizedView ? (
-    <WorkDesignFinalizedBriefArtifactDialog
-      {...props}
-      evidenceOnly={evidenceOnly}
-    />
-  ) : (
-    <WorkDesignFinalizeBriefPreparationDialog {...props} />
-  );
+  return <WorkDesignFinalizedBriefArtifactDialog {...props} preparing={!finalizedView} />;
 }
 
-function WorkDesignFinalizeBriefPreparationDialog({
+function WorkDesignFinalizedBriefArtifactDialog({
+  artifactAvailable = true,
+  preparing,
   applyCompleted,
   contextDecision,
   contextFinalizeCanRun,
   contextFinalizeRequirementRows,
   contextFinalizeRunning,
   finalizeContextBrief,
-  onClose,
-  open,
-}: WorkDesignFinalizedBriefDialogProps) {
-  return (
-    <TerasDialog
-      contentOverflow="auto"
-      height="content"
-      width="standard"
-      actions={
-        <TerasActionButton busy={contextFinalizeRunning}
-          disabled={applyCompleted || !contextFinalizeCanRun || contextFinalizeRunning}
-          onClick={finalizeContextBrief}
-          tone={
-            workDesignFinalizeActionTone(contextFinalizeCanRun) === "danger"
-              ? "danger"
-              : "accent"
-          }
-        >
-          {contextFinalizeRunning ? "Finalizing..." : "Finalize Brief"}
-        </TerasActionButton>
-      }
-      closeDisabled={contextFinalizeRunning}
-      closeLabel="Close finalize brief"
-      description={
-        contextFinalizeRunning
-          ? contextDecision === "proceed"
-            ? "The loaded session is being locked, packetized, and captured for Build Tree."
-            : "The loaded session is being locked, packetized, and captured as a decision record."
-          : "Finalization prepares the loaded session for the next step. Each requirement updates as the handoff is prepared."
-      }
-      kicker="Finalize Brief"
-      onClose={onClose}
-      open={open}
-      title={
-        contextFinalizeRunning
-          ? "Finalizing Context Handoff"
-          : "Prepare Context Handoff"
-      }
-    >
-      <TerasList columns={2}>
-        {contextFinalizeRequirementRows.map((item) => (
-          <TerasStatusItem
-            tone={workDesignFinalizeRequirementTone(item.ready)}
-            detail={item.detail}
-            key={item.label}
-            label={item.label}
-            status={item.status}
-          />
-        ))}
-      </TerasList>
-    </TerasDialog>
-  );
-}
-
-function WorkDesignFinalizedBriefArtifactDialog({
-  artifactAvailable = true,
-  applyCompleted,
   contextBoardInventory,
   contextFinalizedBrief,
   contextFinalizedBriefDescription,
@@ -184,11 +122,10 @@ function WorkDesignFinalizedBriefArtifactDialog({
   exportContextSnapshotAttachment,
   onClose,
   onOpenDetails,
-  onOpenSnapshot,
   open,
   reopenContextBriefFromFinalize,
-}: WorkDesignFinalizedBriefDialogProps) {
-  const canReopenBrief = !evidenceOnly && !applyCompleted;
+}: WorkDesignFinalizedBriefDialogProps & { preparing: boolean }) {
+  const canReopenBrief = !preparing && !evidenceOnly && !applyCompleted;
 
   return (
     <TerasDialog
@@ -196,7 +133,14 @@ function WorkDesignFinalizedBriefArtifactDialog({
       height="content"
       width="wide"
       actions={
-        canReopenBrief ? (
+        preparing ? (
+          <TerasActionButton busy={contextFinalizeRunning}
+            disabled={applyCompleted || !contextFinalizeCanRun || contextFinalizeRunning}
+            onClick={finalizeContextBrief}
+            tone={workDesignFinalizeActionTone(contextFinalizeCanRun) === "danger" ? "danger" : "accent"}>
+            {contextFinalizeRunning ? "Finalizing..." : "Finalize Brief"}
+          </TerasActionButton>
+        ) : canReopenBrief ? (
           <TerasActionButton
             onClick={reopenContextBriefFromFinalize}
             emphasis="secondary"
@@ -205,38 +149,43 @@ function WorkDesignFinalizedBriefArtifactDialog({
           </TerasActionButton>
         ) : undefined
       }
-      closeLabel="Close finalized brief"
+      closeDisabled={contextFinalizeRunning}
+      closeLabel={preparing ? "Close finalize brief" : "Close finalized brief"}
       description={
-        evidenceOnly
+        preparing
+          ? contextFinalizeRunning ? "Finalizing the saved context brief." : "Review the saved diagrams and note, then finalize this version for the next step."
+          : evidenceOnly
           ? (evidenceDescription ?? contextFinalizedBriefDescription)
           : contextFinalizedBriefDescription
       }
       kicker={
-        evidenceOnly
+        preparing ? "Finalize Brief" : evidenceOnly
           ? (evidenceKicker ?? "Work Design Handoff")
           : "Finalized Brief"
       }
       onClose={onClose}
       open={open}
-      title={artifactAvailable ? contextFinalizedBrief.name : "Finalized Brief"}
+      title={preparing && !contextFinalizeCanRun ? "Review Context Brief" : artifactAvailable ? contextFinalizedBrief.name : "Finalized Brief"}
     >
       {artifactAvailable ? <TerasZoneLayout variant="main-aside">
         <TerasZone fit="fill">
           <TerasMetadataList
             accent="rail"
             columns={3}
-            items={workDesignFinalizedBriefSummaryMetadata(
-              contextFinalizedBrief,
-            )}
+            items={preparing ? [
+              { label: "Session", value: contextFinalizeCanRun ? "Saved draft" : "Save required" },
+              { label: "Finalization", value: contextFinalizeRunning ? "In progress" : "Not finalized" },
+              { label: "Decision", value: contextDecision === "proceed" ? "Proceed" : contextDecision === "attach" ? "Link to existing work" : "Retire duplicate" },
+            ] : workDesignFinalizedBriefSummaryMetadata(contextFinalizedBrief)}
           />
           <TerasTrayStack align="start" scroll spacing="comfortable">
             <TerasHighlightPanel>
               <TerasTrayStack spacing="comfortable">
                 <TerasPanelHeader
-                  description="Current package identity. The retained brief content has its own original version and observation."
+                  description={preparing ? "Review the saved context for this package before locking its handoff version." : "Current package identity. The retained brief content has its own original version and observation."}
                   kicker="Delivery Package"
-                  statusLabel="Brief Finalized"
-                  statusTone="ok"
+                  statusLabel={preparing ? contextFinalizeCanRun ? "Awaiting finalization" : "Save required" : "Brief Finalized"}
+                  statusTone={preparing ? "warn" : "ok"}
                   title={deliveryPackage.display_name}
                 />
                 <TerasMetadataList
@@ -249,7 +198,7 @@ function WorkDesignFinalizedBriefArtifactDialog({
                 />
               </TerasTrayStack>
             </TerasHighlightPanel>
-            <TerasPanel frame="padded" treatment="state" tone="warn">
+            <TerasPanel frame="padded" treatment="state" tone="warn" fit="content" spacing="normal">
               <TerasPanelHeader
                 description={contextSnapshotAttachment.summary}
                 kicker={contextSnapshotAttachmentSourceLabel}
@@ -259,36 +208,23 @@ function WorkDesignFinalizedBriefArtifactDialog({
                 )}
                 title={contextSnapshotAttachment.title}
               />
-              <TerasMediaSnapshot
-                actions={[
-                  {
-                    icon: <Maximize2 aria-hidden="true" size={14} />,
-                    label: "View Snapshot",
-                    onClick: onOpenSnapshot,
-                    tone: "warn",
-                  },
-                  {
-                    icon: <Download aria-hidden="true" size={14} />,
-                    label: contextSnapshotAttachmentExportLabel,
-                    onClick: exportContextSnapshotAttachment,
-                    tone: "warn",
-                  },
-                ]}
+              {preparing && !contextFinalizeCanRun ? <TerasEmptyState>Save the current Context Session before reviewing and finalizing it. Your draft stays editable.</TerasEmptyState> : <WorkDesignSnapshotPreview
+                attachment={contextSnapshotAttachment}
+                exportAction={{
+                  icon: <Download aria-hidden="true" size={14} />,
+                  label: contextSnapshotAttachmentExportLabel,
+                  onClick: exportContextSnapshotAttachment,
+                  tone: "warn",
+                }}
                 facts={workDesignSnapshotAttachmentMetadata({
                   contextBoardInventory,
                   contextSnapshotAttachment,
                   contextSnapshotAttachmentSourceLabel,
                 })}
-                imageAlt={`${contextSnapshotAttachment.title} snapshot attachment`}
-                imageSrc={contextSnapshotAttachment.dataUrl}
-                onPreview={onOpenSnapshot}
                 previewAriaLabel="View full context snapshot"
-              />
+              />}
               <TerasTrayStack topOffset="normal">
-                <TerasContentTray
-                  description={contextFinalizedBrief.note}
-                  kicker="Handoff Note"
-                />
+                <WorkDesignHandoffNote note={contextFinalizedBrief.note} />
               </TerasTrayStack>
             </TerasPanel>
           </TerasTrayStack>
@@ -302,7 +238,7 @@ function WorkDesignFinalizedBriefArtifactDialog({
             tone="warn"
           >
             <TerasPanelHeader
-              description="Read-only receipt facts for the finalized brief handoff."
+              description={preparing ? "Planned handoff for the saved session. Finalize Brief locks the version for this next step." : "Read-only receipt facts for the finalized brief handoff."}
               kicker={contextFinalizedBriefHandoffLabel}
               title={contextFinalizedBriefTargetTitle}
             />
@@ -316,12 +252,14 @@ function WorkDesignFinalizedBriefArtifactDialog({
             tone="warn"
           >
             <TerasPanelHeader
-              description="Derived checks captured before the brief was locked."
+              description={preparing ? "Finalization creates the locked version and its retained handoff evidence. These steps remain pending until you confirm." : "Derived checks captured before the brief was locked."}
               kicker="Finalization Checks"
-              title={`${contextFinalizedBrief.systemChecks.length} derived checks`}
+              title={preparing ? "Prepare saved context" : `${contextFinalizedBrief.systemChecks.length} derived checks`}
             />
             <TerasList>
-              {contextFinalizedBrief.systemChecks.map((item) => (
+              {preparing ? contextFinalizeRequirementRows.map(item => <TerasStatusItem
+                key={item.label} label={item.label} detail={item.detail} status={item.status}
+                tone={workDesignFinalizeRequirementTone(item.ready)} />) : contextFinalizedBrief.systemChecks.map((item) => (
                 <TerasStatusItem
                   detail={item.detail}
                   key={item.label}
@@ -331,7 +269,7 @@ function WorkDesignFinalizedBriefArtifactDialog({
                 />
               ))}
             </TerasList>
-            <TerasActionRow spacing="normal">
+            {!preparing ? <TerasActionRow spacing="normal">
               <TerasActionButton
                 onClick={onOpenDetails}
                 tone="warn"
@@ -339,7 +277,7 @@ function WorkDesignFinalizedBriefArtifactDialog({
               >
                 View Details
               </TerasActionButton>
-            </TerasActionRow>
+            </TerasActionRow> : null}
           </TerasPanel>
         </TerasZone>
       </TerasZoneLayout> : <TerasEmptyState>The original finalized brief was not retained in this browser session. Current package metadata is not substituted. Canonical application receipts remain available through History.</TerasEmptyState>}

@@ -18,6 +18,7 @@ type TerasNoteFieldBaseProps = Omit<
   density?: TerasNoteFieldDensity;
   label: ReactNode;
   helper?: ReactNode;
+  actions?: ReactNode;
   onValueChange: (value: string) => void;
   value: string;
 };
@@ -41,14 +42,26 @@ export function TerasNoteField({
   fill = false,
   label,
   helper,
+  actions,
   minimumHeight = "tall",
   onValueChange,
   value,
   ...props
 }: TerasNoteFieldProps) {
   const labelId = useId();
+  const Field = actions ? "div" : "label";
+  const input = (
+    <textarea
+      id={actions ? (props.id ?? `${labelId}-input`) : props.id}
+      onChange={(event) => onValueChange(event.target.value)}
+      value={value}
+      {...props}
+      aria-labelledby={props["aria-labelledby"] ?? (!props["aria-label"] ? labelId : undefined)}
+      aria-describedby={[props["aria-describedby"], helper ? `${labelId}-help` : null].filter(Boolean).join(" ") || undefined}
+    />
+  );
   return (
-    <label
+    <Field
       className={cx(styles.terasNoteField, className)}
       data-accented={accentRgb ? "true" : "false"}
       data-density={density}
@@ -60,15 +73,12 @@ export function TerasNoteField({
           : undefined
       }
     >
-      <span id={labelId}>{label}</span>
-      <textarea
-        onChange={(event) => onValueChange(event.target.value)}
-        value={value}
-        {...props}
-        aria-labelledby={props["aria-labelledby"] ?? (!props["aria-label"] ? labelId : undefined)}
-        aria-describedby={[props["aria-describedby"], helper ? `${labelId}-help` : null].filter(Boolean).join(" ") || undefined}
-      />
+      {actions ? <label id={labelId} htmlFor={props.id ?? `${labelId}-input`}>{label}</label> : <span id={labelId}>{label}</span>}
+      {actions ? <div className={styles.terasNoteFieldInputFrame}>
+        {input}
+        <div className={styles.terasNoteFieldActions}>{actions}</div>
+      </div> : input}
       {helper ? <small id={`${labelId}-help`}>{helper}</small> : null}
-    </label>
+    </Field>
   );
 }
