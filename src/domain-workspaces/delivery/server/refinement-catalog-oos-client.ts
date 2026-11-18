@@ -32,6 +32,10 @@ import {
   stableDigestId,
 } from "./delivery-oos-client.ts";
 
+// A packet reads the admitted tree, native forms and governed Catalog. It is
+// a bounded multi-record read, unlike a run poll or async acknowledgement.
+const refinementPacketReadTimeoutMs = 60_000;
+
 export async function readRefinementProjection(
   packageRef: string,
   options: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
@@ -44,7 +48,7 @@ export async function readRefinementProjection(
       `/v1/delivery-refinement/${encodeURIComponent(packageRef)}/projection?source_ref=${encodeURIComponent(identity.sourceRef)}`,
       { method: "GET" },
       options.fetchImpl,
-      undefined,
+      refinementPacketReadTimeoutMs,
       {
         authority: "operator-orchestration-service",
         recordRef: identity.sourceRef,

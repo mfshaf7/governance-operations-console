@@ -5,8 +5,11 @@ import { normalizeRefinementPersistedSession } from "../../../../local-runtime/p
 import {
   TerasActionButton,
   TerasModalShell,
-  TerasPanel,
+  TerasEmptyState,
+  TerasFieldStack,
+  TerasPanelStack,
   TerasPanelHeader,
+  TerasTechnicalDetails,
   TerasLoadingState,
 } from "@/teras";
 
@@ -52,29 +55,32 @@ function RefinementWorkflowBody({
     return (
       <TerasModalShell
         height="content"
-        description={controller.packetUnavailableReason}
+        description={workflow.deliveryPackage.display_name}
         footer={
           <TerasActionButton onClick={onClose} emphasis="secondary">
             Back to Register
           </TerasActionButton>
         }
         kicker="Refinement Workflow"
-        bodyLayout="fill"
-        modalAttributes={{ "data-teras-active-step": "missing-packet" }}
+        bodyLayout="scroll"
+        modalAttributes={{ "data-teras-active-step": controller.packetLoading ? "loading-packet" : "missing-packet" }}
         onClose={onClose}
         surfaceId="delivery-refinement-unavailable"
         title="Refinement"
-        width="large"
+        width="medium"
       >
-        {controller.packetLoading ? <TerasLoadingState label="Reading Refinement fields…" skeleton="details" /> : <TerasPanel frame="padded" treatment="state" tone="warn">
-          <TerasPanelHeader
-            kicker="Missing Packet"
-            statusLabel="not ready"
-            statusTone="warn"
-            title="Refinement cannot start"
-            description={controller.packetUnavailableReason}
-          />
-        </TerasPanel>}
+        <TerasPanelStack fill="last" minimumFillHeight="medium">
+          {controller.packetLoading
+            ? <TerasLoadingState fill label="Loading Refinement…" detail="Reading saved work and available field choices." skeleton="details" />
+            : <TerasEmptyState fill>
+                <TerasFieldStack>
+                  <TerasPanelHeader kicker="Saved work" title="Refinement couldn’t load"
+                    description="Try again to read the saved work and available choices." />
+                  <TerasActionButton onClick={() => void controller.retryPacket()}>Retry loading</TerasActionButton>
+                  <TerasTechnicalDetails items={[]}><p>{controller.packetUnavailableReason}</p></TerasTechnicalDetails>
+                </TerasFieldStack>
+              </TerasEmptyState>}
+        </TerasPanelStack>
       </TerasModalShell>
     );
   }

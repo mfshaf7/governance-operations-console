@@ -76,23 +76,26 @@ export function useRefinementLiveRuntime(
     return operation;
   }, [packageRef]);
 
-  useEffect(() => {
+  const retryProjection = useCallback(async () => {
     snapshotRef.current = null;
     setSnapshot(null);
     setActiveRun(null);
-    setAdvisorEvidence([]);
-    void refresh().catch((error) => {
+    try { return await refresh(); }
+    catch (error) {
       const next: RefinementProjectionSnapshot = {
         error: error instanceof Error ? error.message : "Refinement projection failed.",
-        mode: "live",
-        observedAt: new Date().toISOString(),
-        projection: null,
-        status: "offline",
+        mode: "live", observedAt: new Date().toISOString(), projection: null, status: "offline",
       };
       snapshotRef.current = next;
       setSnapshot(next);
-    });
-  }, [packageRef, refresh]);
+      return next;
+    }
+  }, [refresh]);
+
+  useEffect(() => {
+    setAdvisorEvidence([]);
+    void retryProjection();
+  }, [packageRef, retryProjection]);
 
   const advise = useCallback(
     async (command: RefinementAssistCommand) => {
@@ -187,6 +190,7 @@ export function useRefinementLiveRuntime(
     projectionError: snapshot?.error ?? null,
     projectionStatus: snapshot?.status ?? "offline",
     refresh,
+    retryProjection,
   };
 }
 
