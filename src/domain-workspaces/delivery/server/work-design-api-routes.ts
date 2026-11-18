@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { advisorDraftInstructions, assertAdvisorScope } from "../../../agent-console/model/advisor-drafts.ts";
+import { assertConversationTurns } from "../../../agent-console/model/advisor-conversation.ts";
 import { hasSecretLikeMaterial } from "../../../agent-console/model/agent-input-policy.ts";
 
 import {
@@ -69,9 +70,7 @@ export async function requestWorkDesignAdviceRoute(
     if (body.draftScope !== undefined) {
       const envelope = record(body.draftScope);
       const scope = assertAdvisorScope(envelope.scope);
-      const conversation = envelope.conversation ?? [];
-      if (!Array.isArray(conversation) || conversation.length > 8 || conversation.some((turn) =>
-        !turn || typeof turn !== "object" || !["operator", "advisor"].includes(turn.role) || typeof turn.text !== "string" || turn.text.length > 2000)) invalid("Advisor conversation is invalid.");
+      const conversation = assertConversationTurns(envelope.conversation ?? []);
       const expectedRole = taskKind === "context_advice" ? "work-design-context" : "work-design-tree";
       if (scope.role !== expectedRole || scope.packageRef !== packageRef || scope.sourceRevision !== sourceRevision) invalid("Advisor draft binding is invalid.");
       if (hasSecretLikeMaterial(JSON.stringify({ scope, conversation, operatorPrompt }))) invalid("Secret-like material cannot enter draft advice.");
@@ -155,7 +154,7 @@ function workDesignErrorResponse(error: unknown) {
   return NextResponse.json(
     { code, error: message, mode: "live", status: code === "ai_provider_busy" ? "busy"
       : code === "ai_completion_unknown" ? "unconfirmed"
-      : code === "ai_context_capacity_exceeded" || status === 413 ? "context-required" : "offline" },
+      : code === "work_design_adapter_request_invalid" || code === "ai_context_capacity_exceeded" || status === 413 ? "context-required" : "offline" },
     { headers: noStoreHeaders, status },
   );
 }

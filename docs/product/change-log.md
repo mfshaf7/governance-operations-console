@@ -1,5 +1,17 @@
 # Governance Operations Console Change Log
 
+## 2026-11-18 — Work Design conversation alignment
+
+Operator-approved maintenance, Landing Unit `child_isolated_landing_unit`,
+`maintenance-work-design-conversation-20261118`. Native Context and Build Tree
+HTTP handlers reuse the shared complete-message conversation validator instead
+of an obsolete 2,000-character check. Both retain the existing 12,000-character
+turn and eight-turn limits. Invalid input reports context required rather than
+a backend outage. Actual handler tests cover long follow-up messages forwarded
+unchanged and malformed/oversized input denied before owner invocation.
+See [Work Design integration](work-design-live-integration.md). Source acceptance
+and native operating verification remain separate from these regression tests.
+
 ## 2026-11-18 — Context and Build Tree reasoning repair
 
 Operator-approved maintenance, Landing Unit `feature_single_landing_unit`,
