@@ -278,3 +278,33 @@ for (const width of [1280,2560]) test(`Refinement read states fill their shell a
   expect(h.packetReads()).toBe(2);expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
  }finally{release();}
 });
+
+for (const count of [1, 2]) test(`selected repository advice avoids 35-item choice-map inflation for ${count} items`, async ({ page }) => {
+  await page.setViewportSize({ width: 1700, height: 1050 });
+  const h = await openWorkbench(page, { saved: true, configure(projection) {
+    const field = projection.packet.draft_groups.at(-1).fields.find(f => f.backend_field === "owner_repo");
+    const options = ["repository-alpha", "repository-beta", "reviewed-repo", ...Array.from({ length: 20 }, (_, i) => `registered-source-owner-with-reviewed-identity-${i}`)];
+    Object.assign(field, { field_kind: "select", allowed_values: options,
+      target_allowed_values: Object.fromEntries(field.target_node_ids.map(id => [id, options])) });
+  }, assist: async body => fieldAdvice(body) });
+  const d = modal(page), tree = d.locator('[data-structure-locked="true"]');
+  if (count === 2) await d.getByRole("radio", { name: "Multiple items", exact: true }).click();
+  await d.getByRole("button", { name: "Expand Feature 1 — reviewed outcome", exact: true }).click();
+  await tree.getByRole("button").filter({ hasText: "Story 1.1" }).click();
+  if (count === 2) await tree.getByRole("button").filter({ hasText: "Story 1.2" }).click();
+  await d.getByRole("button", count === 1 ? { name: /^Edit Implementation repository for User story/ } : { name: "Edit shared Implementation repository", exact: true }).click();
+  await d.getByRole("textbox", { name: "Refinement metadata advisor prompt", exact: true }).fill("Fill this field in from the project context.");
+  await d.getByRole("button", { name: "run", exact: true }).click();
+  await expect.poll(() => h.adviceRequests.length).toBe(1);
+  expect(h.adviceRequests[0].selectedNodeIds).toEqual(count === 1 ? ["1100"] : ["1100", "1101"]);
+  await expect(d.getByLabel("Implementation repository", { exact: true })).toContainText("reviewed-repo");
+  await expect(d.locator('[data-saved-work-status="saved"]')).toBeVisible();
+  await expect.poll(() => {
+    const record = h.record(); if (!record) return 0;
+    return Object.values(JSON.parse(record.payload_json).metadata.draftValues).filter(value => value === "reviewed-repo").length;
+  }).toBe(count);
+  const saved = JSON.parse(h.record().payload_json);
+  expect(Object.entries(saved.metadata.draftValues).filter(([, value]) => value === "reviewed-repo").map(([key]) => saved.metadata.fieldResolutions[key])).toEqual(Array(count).fill("ai_drafted"));
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+  await page.screenshot({ path: test.info().outputPath(`selected-repository-${count}.png`) });
+});

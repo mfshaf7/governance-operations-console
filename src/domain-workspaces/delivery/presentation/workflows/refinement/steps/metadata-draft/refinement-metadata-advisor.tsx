@@ -4,7 +4,7 @@ import { deliveryFieldDisplayLabel } from "../../../../../read-model/terms/copy.
 
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { refinementAdvisorDraftContext } from "../../view-model/refinement-advisor-context.ts";
+import { refinementAdvisorDraftContext, refinementAdvisorTargetContext } from "../../view-model/refinement-advisor-context.ts";
 import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 import { effectiveModelLabel } from "@/console-integration/governed-ai/model-selection";
 
@@ -92,7 +92,7 @@ export function RefinementMetadataAdvisor({
       sourceRef, sourceRevision,
       context: advisorWorkContext({ package: deliveryPackageName, sourceRevision,
         relatedDrafts: refinementAdvisorDraftContext(contextTargets, targets, metadataDraftValues),
-        targets: targets.map((target) => ({ key: target.key, sourceValue: target.sourceValue, field: target.field })) },
+        targets: refinementAdvisorTargetContext(targets) },
         { provided: ["Current selected field metadata, allowed values and source values", "Canonical selected-field packet through Refinement assist"],
           unavailable: ["Operator intent not stated in this request", "Unprovided implementation or completion evidence"] }),
       fields: targets.map((target) => ({ key: target.key, label: target.field.label,

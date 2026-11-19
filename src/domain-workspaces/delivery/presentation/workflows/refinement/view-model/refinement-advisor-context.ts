@@ -10,3 +10,14 @@ export function refinementAdvisorDraftContext(all: RefinementMetadataTarget[], s
   if (values.length > 256 || values.some(item => item.value.length > 16000)) throw Error("This advice scope contains too much draft content. Select fewer items or shorten the draft; no values were omitted.");
   return values;
 }
+
+
+/** A selected field carries its own facts, not the complete packet's target maps. */
+export function refinementAdvisorTargetContext(selected: RefinementMetadataTarget[]) {
+  return selected.map(target => {
+    const { target_node_ids: _ids, target_values: _values,
+      target_statuses: _statuses, target_allowed_values: _choices, ...field } = target.field;
+    return { key: target.key, nodeId: target.node.id, sourceValue: target.sourceValue,
+      field: { ...field, value: target.sourceValue, status: target.status } };
+  });
+}
