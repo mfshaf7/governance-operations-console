@@ -13,6 +13,7 @@ import type {
   ArchitecturePacketPersistResult,
 } from "../live-runtime/architecture-packet-live-types.ts";
 import {
+  DeliveryOosError,
   deliveryOosConfigured,
   deliveryOosRequest,
   resolveDeliveryOosConfig,
@@ -100,17 +101,30 @@ export async function readCurrentArchitecturePacket(
     throw new Error("Architecture Packet Delivery identity is invalid.");
   }
   const config = resolveDeliveryOosConfig(options.env);
-  const value = await deliveryOosRequest(
-    config,
-    "/v1/delivery-art/architecture-packets/current",
-    {
-      body: JSON.stringify({ delivery_id: deliveryId }),
-      headers: { "x-oos-operator-id": config.operatorId },
-      method: "POST",
-    },
-    options.fetchImpl,
-    architecturePacketTimeoutMs,
-  );
+  let value: unknown;
+  try {
+    value = await deliveryOosRequest(
+      config,
+      "/v1/delivery-art/architecture-packets/current",
+      {
+        body: JSON.stringify({ delivery_id: deliveryId }),
+        headers: { "x-oos-operator-id": config.operatorId },
+        method: "POST",
+      },
+      options.fetchImpl,
+      architecturePacketTimeoutMs,
+    );
+  } catch (error) {
+    // OpenProject's native envelope separates its error class from the
+    // precise reason. Only this exact absent-reference result means no plan.
+    if (error instanceof DeliveryOosError && error.status === 404 &&
+        error.code === "not_found" && error.details === "delivery_art_reference_missing") {
+      throw new DeliveryOosError(error.message, "delivery_art_reference_missing", error.status, {
+        details: error.details,
+      });
+    }
+    throw error;
+  }
   const result = assertArchitecturePacketCurrentResult(value);
   assertArtifactBinding(result.artifact, deliveryId);
   return result;

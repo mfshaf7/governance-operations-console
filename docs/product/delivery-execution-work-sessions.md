@@ -93,6 +93,10 @@ than a wizard:
   are distinct. A missing plan never means approval is unnecessary. The current
   work-session owner remains the authority for whether architecture is required.
 - A native missing-reference response identifies **No approved plan recorded**.
+  The current-plan read recognizes the exact OpenProject envelope: HTTP 404,
+  `error: not_found`, and `details: delivery_art_reference_missing`. Other
+  missing records and access failures remain unavailable; they are not treated
+  as absent plans.
   The Console preserves OOS's machine-readable `error` identifier as well as its
   HTTP status; missing records, permission denials and unavailable services remain
   different outcomes. An explicit `code` retains precedence and prose-only errors
