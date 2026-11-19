@@ -11,6 +11,7 @@ import { RefinementProgressPanel } from "../shell/refinement-progress-panel.tsx"
 import { RefinementHubView } from "../hub/refinement-hub-view.tsx";
 import { RefinementApplyView } from "../steps/apply-refinement/refinement-apply-view.tsx";
 import { RefinementMetadataDraftStep } from "../steps/metadata-draft/refinement-metadata-draft-step.tsx";
+import { RefinementTreeReviewDialog } from "../steps/metadata-draft/refinement-tree-review-dialog.tsx";
 import { RefinementReadinessReviewView } from "../steps/readiness-review/refinement-readiness-review-view.tsx";
 import { RefinementHistoryView } from "../steps/history/refinement-history-view.tsx";
 import type { useRefinementSessionController } from "../session-controller/use-refinement-session-controller.ts";
@@ -42,6 +43,7 @@ export function RefinementStepRouter({
   sourceWorkDesignPackage,
 }: RefinementStepRouterProps) {
   const [handoffDialogOpen, setHandoffDialogOpen] = useState(false);
+  const [treeReviewOpen, setTreeReviewOpen] = useState(false);
 
   if ((!packet || !metadataWorkbenchSummary) && !readOnly) {
     return null;
@@ -74,6 +76,18 @@ export function RefinementStepRouter({
     refinementBlocked,
   }) : {title:"Retained Refinement inspection",description:"The current authoring packet is unavailable. Original history is readable independently; no handoff or completion is inferred.",tone:"warn" as const};
   const openHandoffDialog = () => setHandoffDialogOpen(true);
+  const workbench = packet ? {
+    readOnly, activeStep, advisorTranscript, deliveryPackage,
+    markMetadataFieldResolution, markMetadataFieldResolutions,
+    metadataDraftValues, metadataFieldResolutions, metadataSelectionMode,
+    onOpenHandoff: openHandoffDialog,
+    onReviewReadiness: () => setActiveStep("readiness_review"),
+    packet, requestMetadataAdvice, resetMetadataDraftValue, resetMetadataDraftValues,
+    selectedMetadataBulkNodeIds, selectedMetadataFieldKey,
+    runtimeMode: advisorMode, runtimeStatus: advisorStatus,
+    setMetadataSelectionMode, setSelectedMetadataFieldKey, toggleMetadataBulkNode,
+    updateMetadataDraftValue, updateMetadataDraftValues,
+  } : null;
 
   return (
     <>
@@ -105,33 +119,8 @@ export function RefinementStepRouter({
           />
         ) : (!packet || !metadataWorkbenchSummary) && activeStep !== "receipt" ? (
           <TerasPanel frame="padded" treatment="state" tone="warn"><TerasPanelHeader kicker="Current packet" title="No current Refinement packet" description="This section requires the original packet data. Use History to inspect retained runs and item activity; this absence does not mean the item has no history." statusLabel="unavailable" statusTone="warn"/></TerasPanel>
-        ) : activeStep === "metadata_draft" && packet ? (
-          <RefinementMetadataDraftStep
-            readOnly={readOnly}
-            activeStep={activeStep}
-            advisorTranscript={advisorTranscript}
-            deliveryPackage={deliveryPackage}
-            markMetadataFieldResolution={markMetadataFieldResolution}
-            markMetadataFieldResolutions={markMetadataFieldResolutions}
-            metadataDraftValues={metadataDraftValues}
-            metadataFieldResolutions={metadataFieldResolutions}
-            metadataSelectionMode={metadataSelectionMode}
-            onOpenHandoff={openHandoffDialog}
-            onReviewReadiness={() => setActiveStep("readiness_review")}
-            packet={packet}
-            requestMetadataAdvice={requestMetadataAdvice}
-            resetMetadataDraftValue={resetMetadataDraftValue}
-            resetMetadataDraftValues={resetMetadataDraftValues}
-            selectedMetadataBulkNodeIds={selectedMetadataBulkNodeIds}
-            selectedMetadataFieldKey={selectedMetadataFieldKey}
-            runtimeMode={advisorMode}
-            runtimeStatus={advisorStatus}
-            setMetadataSelectionMode={setMetadataSelectionMode}
-            setSelectedMetadataFieldKey={setSelectedMetadataFieldKey}
-            toggleMetadataBulkNode={toggleMetadataBulkNode}
-            updateMetadataDraftValue={updateMetadataDraftValue}
-            updateMetadataDraftValues={updateMetadataDraftValues}
-          />
+        ) : activeStep === "metadata_draft" && workbench ? (
+          <RefinementMetadataDraftStep {...workbench} />
         ) : activeStep === "readiness_review" && packet && metadataWorkbenchSummary ? (
           <RefinementReadinessReviewView
             canApply={canApply}
@@ -141,6 +130,7 @@ export function RefinementStepRouter({
             metadataWorkbenchSummary={metadataWorkbenchSummary}
             onOpenApplyPlan={() => setActiveStep("apply_refinement")}
             onOpenHandoff={openHandoffDialog}
+            onOpenRefinementTree={() => setTreeReviewOpen(true)}
             packet={packet}
           />
         ) : activeStep === "apply_refinement" && packet ? (
@@ -166,6 +156,9 @@ export function RefinementStepRouter({
           />
         )}
       </TerasContentFrame>
+
+      {treeReviewOpen && workbench ? <RefinementTreeReviewDialog
+        workbench={workbench} onClose={() => setTreeReviewOpen(false)} /> : null}
 
       {packet ? <DeliveryWorkDesignHandoffEvidenceDialog
         deliveryPackage={sourceWorkDesignPackage ?? deliveryPackage}

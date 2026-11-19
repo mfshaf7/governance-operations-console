@@ -96,8 +96,8 @@ test("case:refinement-live-positive reads, advises, applies, and polls canonical
     "each explicit advice call is distinct from canonical apply retry identity");
   assert.notEqual(calls[4].body.correlation_id, calls[1].body.correlation_id);
   assert.deepEqual(calls[4].body.target, calls[1].body.target);
-  assert.deepEqual(deadlines, [60_000, 180_000, 12_000, 12_000, 180_000],
-    "multi-record packet reads and synchronous advice get bounded task budgets; async acknowledgement and run polls remain short");
+  assert.deepEqual(deadlines, [60_000, 180_000, 60_000, 12_000, 180_000],
+    "packet reads and Apply preflight share the finite native-validation budget; advice remains independent and run polls remain short");
   const packet = refinementPacketFromProjection({
     ...read,
     latest_run: polled,

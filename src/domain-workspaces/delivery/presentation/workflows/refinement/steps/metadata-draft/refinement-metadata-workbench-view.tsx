@@ -28,6 +28,7 @@ import {
 } from "./refinement-metadata-workbench-tree.tsx";
 
 export function RefinementMetadataWorkbenchView({
+  readOnly = false,
   metadataDraftValues,
   metadataFieldResolutions,
   metadataSelectionMode,
@@ -40,6 +41,7 @@ export function RefinementMetadataWorkbenchView({
   focusedItemId,
   onSelectItem,
 }: {
+  readOnly?: boolean;
   metadataDraftValues: Record<string, string>;
   metadataFieldResolutions: RefinementMetadataFieldResolutionMap;
   metadataSelectionMode: RefinementMetadataSelectionMode;
@@ -81,7 +83,7 @@ export function RefinementMetadataWorkbenchView({
         <TerasPanelHeader
           kicker="Metadata Workbench"
           actions={
-            <MetadataSelectionModeSwitch
+            readOnly ? undefined : <MetadataSelectionModeSwitch
               mode={metadataSelectionMode}
               onSelectMode={onSelectMetadataSelectionMode}
             />
@@ -89,7 +91,7 @@ export function RefinementMetadataWorkbenchView({
           actionsLayout="inline"
           title="Work items"
           description={
-            metadataSelectionMode === "shared"
+            readOnly ? "Expand work items and select a field to read its full value." : metadataSelectionMode === "shared"
               ? `${selectedMetadataBulkNodeIds.length} items selected${hiddenSelections ? ` (${hiddenSelections} hidden by filters)` : ""}. Select two or more items to edit one common field across that exact set.`
               : "Select a work item, then a field beneath it. Its value and guidance open on the right."
           }
@@ -113,6 +115,7 @@ export function RefinementMetadataWorkbenchView({
           {metadataSelectionMode === "shared" ? <SharedMetadataTreeFields targets={targets} selectedIds={selectedMetadataBulkNodeIds}
             drafts={metadataDraftValues} resolutions={metadataFieldResolutions} selectedFieldKey={selectedMetadataFieldKey} onSelect={onSelectMetadataField} /> : null}
           {visibleIds.length ? <MetadataTargetTree
+            readOnly={readOnly}
             metadataDraftValues={metadataDraftValues}
             collapsedNodeIds={filtered ? [] : collapsed}
             filtered={filtered}

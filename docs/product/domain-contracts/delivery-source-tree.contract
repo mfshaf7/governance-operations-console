@@ -375,6 +375,7 @@ presentation/workflows/refinement/steps/apply-refinement/refinement-apply-view.t
 presentation/workflows/refinement/steps/history/refinement-history-view.tsx
 presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-advisor.tsx
 presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-draft-step.tsx
+presentation/workflows/refinement/steps/metadata-draft/refinement-tree-review-dialog.tsx
 presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-editor-controls.tsx
 presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-editor-panel.tsx
 presentation/workflows/refinement/steps/metadata-draft/refinement-metadata-field-editor.tsx

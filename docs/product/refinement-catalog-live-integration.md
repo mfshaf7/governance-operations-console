@@ -59,6 +59,19 @@ The bounded security decision is the
 
 ## Refinement
 
+Readiness Review retains the existing panel arrangement and Work Design Handoff
+button. Only its repeated metadata field-card list is replaced by **View Metadata
+Workbench**. This opens a separate dialog containing only the existing Refinement
+metadata tree, with current draft values and review status. Search, filtering and
+tree expansion remain available; selecting a field expands its full value within
+the tree. There is no editor, advisor, handoff panel or mutation action in this
+inspection dialog. Selection stays local; closing returns to the same Readiness
+screen without changing or saving the authoring session. The existing Metadata
+Workbench step remains the place to edit values. This is not the Work Design
+tree or a claim that Apply has completed. Apply retains its existing owner checks.
+This operator-approved maintenance is preview-first and unpublished until the
+batch is accepted for normal source delivery.
+
 In Metadata Workbench, use **One item** to select one work item, or **Multiple
 items** to select an explicit shared set. Search the tree by name, number or
 description; **Needs review** narrows it to outstanding fields while keeping
@@ -321,3 +334,20 @@ Operator-approved required maintenance, Landing Unit Decision
 `child_isolated_landing_unit`, `refinement-selected-scope-console-20261119`.
 The normal composed Security acceptance and activation qualify this source fix;
 it does not apply any of the current Refinement drafts.
+
+
+### Apply acknowledgement after native validation
+
+A native Apply request revalidates the full packet before acknowledging its
+durable run. The observed validation took longer than the generic 12-second
+transport deadline, leaving a real accepted run without its acknowledgement.
+Apply now uses the same finite 60-second native-packet budget as the packet
+read. Polls retain 12 seconds; advice and durable worker budgets are unchanged.
+This adds no automatic retry, second acceptance or cached authorization.
+Unconfirmed responses still require reading the original run before another
+mutation. Source tests verify the separate deadlines and unchanged input binding.
+
+This required correction is included in the operator-approved Readiness batch,
+`refinement-readiness-review-console-20261119`, alongside the tree-only reader
+and paired native-principal backend repair. Agent Gary authors; standing delegated
+human review, exact composed acceptance and normal activation remain required.
