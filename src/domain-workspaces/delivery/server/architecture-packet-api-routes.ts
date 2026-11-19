@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   assertArchitecturePacketArtifact,
   assertArchitecturePacketDraftInput,
+  architecturePacketValidationIssues,
 } from "../live-runtime/architecture-packet-live-contract.ts";
 import {
   architecturePacketOosConfigured,
@@ -119,7 +120,7 @@ function architecturePacketErrorResponse(error: unknown) {
   const message =
     error instanceof Error ? error.message : "Architecture Packet request failed.";
   return NextResponse.json(
-    { code, error: message, mode: "live", status: "offline" },
+    { code, error: message, issues: architecturePacketValidationIssues(error instanceof DeliveryOosError ? error.details : null), mode: "live", status: "offline" },
     { headers: noStoreHeaders, status },
   );
 }

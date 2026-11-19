@@ -20,6 +20,7 @@ import {
   executionTreePlanningInputIssues,
 } from "../../src/domain-workspaces/delivery/work-model/execution/execution-tree-change-plan.ts";
 import { deliveryChangeOperationForExecutionAction } from "../../src/domain-workspaces/delivery/work-model/execution/execution-change-operation.ts";
+import {withExecutionTreeDependencies,executionDependencyIssues} from "../../src/domain-workspaces/delivery/work-model/execution/execution-tree-dependencies.ts";
 import {
   assertCanonicalSourceRequest,
   canonicalSourceResponse,
@@ -40,6 +41,44 @@ test("canonical change readback preserves description text and rejects malformed
   const result=await readDeliveryChangeProjection("delivery-886",{env,fetchImpl:async()=>canonicalSourceResponse(native,{recordRef:"openproject://work_packages/886",sourceOwner:"workspace-delivery-art"})});
   assert.equal(result.package.execution_tree.description,native.package.execution_tree.description);
   assert.throws(()=>assertDeliveryChangeProjection({...native,package:{...native.package,execution_tree:{...native.package.execution_tree,description:23}}}),/description/);
+});
+
+const dependencyNode=(id,refs=[])=>({id:`node-${id}`,legacyWorkPackageId:id,kind:"User story",title:`Work ${id}`,draftBody:"Original narrative",remark:"",children:[],dependsOnIds:refs});
+test("dependency editing preserves native external links and does not rewrite unchanged lag or notes",()=>{
+ const tree={...dependencyNode(1),kind:"Epic",children:[dependencyNode(2),dependencyNode(3)]};
+ const relation={relation_type:"follows",depends_on:{id:900,subject:"External prerequisite"},target:{id:2},lag:4,description:"Keep original supporting note"};
+ const baseline=withExecutionTreeDependencies(tree,[relation]);
+ assert.deepEqual(baseline.children[0].dependsOnIds,["work-item-900"]);
+ assert.deepEqual(buildExecutionTreeChangePlan({baseline,draft:structuredClone(baseline)}),[]);
+ const draft=structuredClone(baseline);draft.children[0].dependsOnIds.push("work-item-3");
+ const operations=buildExecutionTreeChangePlan({baseline,draft}).map(item=>item.buildOperation(new Map()));
+ assert.deepEqual(operations,[{type:"manage_dependency",payload:{action:"set",target_work_item_id:"work-item-2",depends_on_work_item_id:"work-item-3"}}]);
+ assert.equal(Object.hasOwn(operations[0].payload,"lag"),false);
+ assert.equal(Object.hasOwn(operations[0].payload,"description"),false);
+ assert.throws(()=>withExecutionTreeDependencies(tree,[{depends_on:{id:"900"},target:{id:2}}]),/no links were discarded/);
+});
+test("dependency replacements clear old links before additions and reject self links, cycles and deleted local prerequisites",()=>{
+ const baseline={...dependencyNode(1),children:[dependencyNode(2,["work-item-3"]),dependencyNode(3)]};
+ const draft=structuredClone(baseline);draft.children[0].dependsOnIds=[];draft.children[1].dependsOnIds=["work-item-2"];
+ const ops=buildExecutionTreeChangePlan({baseline,draft}).map(item=>item.buildOperation(new Map()));
+ assert.deepEqual(ops.map(op=>op.payload.action),["clear","set"]);
+ assert.deepEqual(executionDependencyIssues(draft),[]);
+ draft.children[0].dependsOnIds=["work-item-2"];
+ assert.match(executionDependencyIssues(draft).join(),/itself/);
+ draft.children[0].dependsOnIds=["work-item-3"];
+ assert.match(executionDependencyIssues(draft).join(),/cycle/);
+ draft.children[0].dependsOnIds=["deleted-local-node"];
+ assert.match(executionDependencyIssues(draft).join(),/removed from this draft/);
+});
+test("new dependent and prerequisite identities resolve only after their creation commands",()=>{
+ const baseline={...dependencyNode(1),kind:"Epic"};
+ const first={...dependencyNode(null),id:"first-local",title:"First new work"},second={...dependencyNode(null),id:"second-local",title:"Second new work",dependsOnIds:["first-local"]};
+ const plan=buildExecutionTreeChangePlan({baseline,draft:{...baseline,children:[first,second]}});
+ assert.deepEqual(plan.map(item=>item.buildOperation===undefined),[false,false,false]);
+ assert.equal(plan[0].buildOperation(new Map()).type,"add_work_item");
+ assert.equal(plan[1].buildOperation(new Map()).type,"add_work_item");
+ assert.throws(()=>plan[2].buildOperation(new Map()),/Create the prerequisite/);
+ assert.deepEqual(plan[2].buildOperation(new Map([["first-local","work-item-101"],["second-local","work-item-102"]])),{type:"manage_dependency",payload:{action:"set",target_work_item_id:"work-item-102",depends_on_work_item_id:"work-item-101"}});
 });
 
 test("execution add actions match canonical parent rules and expose a real Epic-level PI Objective", () => {

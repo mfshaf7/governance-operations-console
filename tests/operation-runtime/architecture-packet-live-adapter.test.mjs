@@ -4,6 +4,8 @@ import test from "node:test";
 
 import {
   architecturePacketDraftIssues,
+  architecturePacketValidationIssues,
+  isArchitecturePacketApiError,
   assertArchitecturePacketArtifact,
   assertArchitecturePacketDraftInput,
 } from "../../src/domain-workspaces/delivery/live-runtime/architecture-packet-live-contract.ts";
@@ -127,6 +129,49 @@ test("current packet readback stays OOS-owned and can seed editable design witho
   assert.equal(Object.hasOwn(nextInput, "operator"), false);
   assert.equal(Object.hasOwn(nextInput, "custody"), false);
   assert.equal(Object.hasOwn(nextInput, "integrity"), false);
+});
+
+test("missing architecture preserves the native OOS error identifier and HTTP status", async () => {
+  await assert.rejects(
+    () => readCurrentArchitecturePacket("delivery-1384", {
+      env,
+      fetchImpl: async () => new Response(JSON.stringify({
+        error: "delivery_art_reference_missing",
+        message: "No delivery_art_architecture_packet reference is projected on Delivery work item 1384.",
+      }), { status: 404 }),
+    }),
+    error => error.code === "delivery_art_reference_missing" && error.status === 404 &&
+      error.message === "No delivery_art_architecture_packet reference is projected on Delivery work item 1384.",
+  );
+});
+
+test("canonical validation findings remain readable strings without exposing arbitrary owner details", async () => {
+  const errors = ["Work item 1386 needs an execution dependency.", "A source-activation approval needs its owner chain."];
+  assert.deepEqual(architecturePacketValidationIssues({valid:false, errors, private_context:{token:"must-not-render"}}), errors);
+  assert.deepEqual(architecturePacketValidationIssues({errors:[{private_context:"must-not-render"}]}), []);
+  assert.deepEqual(architecturePacketValidationIssues(null), []);
+  assert.deepEqual(architecturePacketValidationIssues({material_errors:["dependency or merge-order topology changed"]}),["dependency or merge-order topology changed"]);
+  assert.equal(isArchitecturePacketApiError({mode:"live",status:"offline",code:"delivery_art_authoring_contract_invalid",error:"Plan needs attention",issues:errors}),true);
+  assert.equal(isArchitecturePacketApiError({mode:"live",status:"offline",code:"invalid",error:"Plan needs attention",issues:[{}]}),false);
+  await assert.rejects(() => draftArchitecturePacket(completeInput("draft"),{env,fetchImpl:async()=>new Response(JSON.stringify({
+    error:"delivery_art_authoring_contract_invalid",message:"Plan needs attention",details:{valid:false,errors},
+  }),{status:422})}),error=>error.code==="delivery_art_authoring_contract_invalid"&&error.status===422&&JSON.stringify(error.details.errors)===JSON.stringify(errors));
+});
+
+test("plan lookup retains distinct permission and service failures, explicit codes and prose fallback", async () => {
+  for (const [status, body, expected] of [
+    [403, { error: "delivery_art_caller_denied", message: "Caller is not permitted." }, "delivery_art_caller_denied"],
+    [503, { error: "delivery_art_backend_unavailable", message: "The backend is unavailable." }, "delivery_art_backend_unavailable"],
+    [404, { code: "explicit_missing_code", error: "delivery_art_reference_missing", message: "Explicit code takes precedence." }, "explicit_missing_code"],
+    [502, { error: "An upstream response could not be read." }, "delivery_oos_rejected"],
+  ]) {
+    await assert.rejects(
+      () => readCurrentArchitecturePacket("delivery-1384", {
+        env, fetchImpl: async () => new Response(JSON.stringify(body), { status }),
+      }),
+      error => error.code === expected && error.status === status,
+    );
+  }
 });
 
 test("Architecture Packet route and surface preserve same-origin identity, no-fixture, and exact candidate review controls", () => {

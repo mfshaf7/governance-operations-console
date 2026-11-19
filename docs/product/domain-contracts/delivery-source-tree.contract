@@ -338,6 +338,7 @@ presentation/surfaces/execution-board/execution-advisor-context.ts
 presentation/surfaces/execution-board/execution-selected-package-panel.tsx
 presentation/surfaces/execution-board/execution-tree-change-review-dialog.tsx
 presentation/surfaces/execution-board/execution-tree-edit-support-panel.tsx
+presentation/surfaces/execution-board/execution-tree-dependency-editor.tsx
 presentation/surfaces/execution-board/execution-tree-edit-view.tsx
 presentation/surfaces/execution-board/work-session/execution-work-session-modal.tsx
 presentation/surfaces/execution-board/work-session/execution-source-access.ts
@@ -599,6 +600,8 @@ work-model/execution/execution-change-operation.ts
 work-model/execution/execution-review-actions.ts
 work-model/execution/execution-package-content.ts
 work-model/execution/execution-tree-change-plan.ts
+work-model/execution/execution-tree-change-types.ts
+work-model/execution/execution-tree-dependencies.ts
 work-model/ingress/proposal-delivery-entry-packet.ts
 work-model/ingress/prototype-movement-entry-packet.ts
 work-model/refinement/refinement-types.ts

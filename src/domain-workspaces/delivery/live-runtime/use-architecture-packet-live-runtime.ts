@@ -14,10 +14,12 @@ import type {
 
 export class ArchitecturePacketLiveRuntimeError extends Error {
   readonly code?: string;
+  readonly issues: string[];
 
-  constructor(message: string, code?: string) {
+  constructor(message: string, code?: string, issues: string[] = []) {
     super(message);
     this.code = code;
+    this.issues = issues;
   }
 }
 
@@ -54,6 +56,7 @@ export function useArchitecturePacketLiveRuntime() {
             ? body.error
             : "Governed Architecture Packet request failed.",
           isArchitecturePacketApiError(body) ? body.code : undefined,
+          isArchitecturePacketApiError(body) ? body.issues : undefined,
         );
         setSnapshot(offlineSnapshot(error.message));
         throw error;

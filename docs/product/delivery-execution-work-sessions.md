@@ -92,6 +92,15 @@ than a wizard:
   current recorded-plan availability. Missing, unavailable and historical records
   are distinct. A missing plan never means approval is unnecessary. The current
   work-session owner remains the authority for whether architecture is required.
+- A native missing-reference response identifies **No approved plan recorded**.
+  The Console preserves OOS's machine-readable `error` identifier as well as its
+  HTTP status; missing records, permission denials and unavailable services remain
+  different outcomes. An explicit `code` retains precedence and prose-only errors
+  retain the generic rejection code. A missing record grants no execution rights.
+- Failed plan validation preserves the owner's individual string findings under
+  **Plan checks requiring attention**. Arbitrary owner details are not projected.
+  Editing or checking another attempt clears the previous findings; validation
+  failure retains the draft and grants no approval or execution rights.
 - **Prepare Plan** starts with a compact scope summary. Use Edit Scope to change
   covered work and Edit Summary for the overall justification. Work & Changes,
   Sequence & Handoffs, Operation & Recovery, Approvals & Decisions and Verification
