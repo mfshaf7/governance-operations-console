@@ -91,6 +91,7 @@ export type ArchitecturePacketApiSnapshot = {
 export type ArchitecturePacketApiError = {
   code: string;
   error: string;
+  issues?: string[];
   mode: "live";
   status: "offline";
 };

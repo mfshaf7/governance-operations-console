@@ -23,6 +23,8 @@ export function ExecutionTreeChangeReviewDialog({
   open,
   plan,
   submitting,
+  appliedIds=[],
+  activeId=null,
 }: {
   acceptanceNote: string;
   error: string | null;
@@ -32,6 +34,8 @@ export function ExecutionTreeChangeReviewDialog({
   open: boolean;
   plan: ExecutionTreeChangePlanItem[];
   submitting: boolean;
+  appliedIds?:string[];
+  activeId?:string|null;
 }) {
   if (!open) return null;
 
@@ -55,7 +59,7 @@ export function ExecutionTreeChangeReviewDialog({
             emphasis="primary"
             onClick={onApply}
           >
-            {submitting ? "Applying Changes" : "Apply Changes"}
+            {submitting ? "Applying Changes" : plan.length>0&&appliedIds.length===plan.length ? "Refresh Result" : appliedIds.length?"Retry Remaining Changes":"Apply Changes"}
           </TerasActionButton>
         </>
       }
@@ -70,7 +74,7 @@ export function ExecutionTreeChangeReviewDialog({
         <TerasPanel frame="padded" spacing="compact" treatment="state" tone="warn">
           <TerasPanelHeader
             kicker="Change Review"
-            title={`${plan.length} ${plan.length === 1 ? "change" : "changes"} ready`}
+            title={appliedIds.length?`${appliedIds.length} of ${plan.length} changes applied`:`${plan.length} ${plan.length === 1 ? "change" : "changes"} ready`}
             description="Commands run one at a time and refresh the canonical package between mutations."
           />
           {plan.length > 0 ? (
@@ -78,9 +82,9 @@ export function ExecutionTreeChangeReviewDialog({
               {plan.map((item) => (
                 <TerasSignalItem
                   key={item.id}
-                  label="Pending"
+                  label={appliedIds.includes(item.id)?"Applied":activeId===item.id?"Applying…":"Pending"}
                   title={item.label}
-                  tone="warn"
+                  tone={appliedIds.includes(item.id)?"ok":"warn"}
                 />
               ))}
             </TerasList>

@@ -1,5 +1,6 @@
 "use client";
 import { useWorkspaceViewState } from "../../../../../console-integration/registers/workspace-view-state.ts";
+import { withExecutionTreeDependencies } from "../../../work-model/execution/execution-tree-dependencies.ts";
 import { useProjectContextChoices } from "@/agent-console";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -132,9 +133,13 @@ export function DeliveryExecutionBoard({
   const [discardDraftGuardOpen, setDiscardDraftGuardOpen] = useState(false);
   const [treeChangeReviewOpen, setTreeChangeReviewOpen] = useState(false);
   const [treeChangeSubmitting, setTreeChangeSubmitting] = useState(false);
+  const [treeEditEntering,setTreeEditEntering]=useState(false);
+  const [treeChangeSuccess,setTreeChangeSuccess]=useState<number|null>(null);
   const [treeChangeError, setTreeChangeError] = useState<string | null>(null);
   const [treeChangeAcceptanceNote, setTreeChangeAcceptanceNote] = useState("");
   const [treeAppliedChangeIds, setTreeAppliedChangeIds] = useState<string[]>([]);
+  const [treeActiveChangeId, setTreeActiveChangeId] = useState<string|null>(null);
+  const treeReviewRevision = useRef<string|undefined>(undefined);
   const treeResolvedNodeIds = useRef(new Map<string, string>());
   const [treeEditEntryError, setTreeEditEntryError] = useState<string | null>(
     null,
@@ -446,6 +451,8 @@ export function DeliveryExecutionBoard({
     setTreeChangeError(null);
     setTreeChangeAcceptanceNote("");
     setTreeAppliedChangeIds([]);
+    setTreeActiveChangeId(null);
+    treeReviewRevision.current=undefined;
     treeResolvedNodeIds.current = new Map();
     setTreeExpandedNodeIds([]);
     setTreeOpenDetailNodeId(null);
@@ -461,6 +468,8 @@ export function DeliveryExecutionBoard({
       return false;
     }
 
+    setTreeEditEntering(true);
+    try {
     setTreeEditEntryError(null);
     let activeDraft =
       treeDraftPackageId === selectedPackage.delivery_package_id && treeDraft
@@ -477,9 +486,10 @@ export function DeliveryExecutionBoard({
       if (!canonicalSnapshot.projection) {
         throw new Error("Canonical Delivery change truth is unavailable.");
       }
-      activeDraft = executionTreeDraftFromChangeNode(
+      activeDraft = withExecutionTreeDependencies(executionTreeDraftFromChangeNode(
         canonicalSnapshot.projection.package.execution_tree,
-      );
+      ),canonicalSnapshot.projection.package.dependency_relations);
+      treeReviewRevision.current=canonicalSnapshot.projection.source_revision;
       baselineDraft = activeDraft;
     }
 
@@ -498,6 +508,7 @@ export function DeliveryExecutionBoard({
     setActiveView("art-tree");
 
     return true;
+    } finally {setTreeEditEntering(false);}
   }
 
   async function handleActionSelect(action: DeliveryAvailableAction) {
@@ -604,7 +615,7 @@ export function DeliveryExecutionBoard({
   async function applyTreeChanges() {
     if (
       !treeDraft ||
-      pendingTreeChangePlan.length === 0 ||
+      (pendingTreeChangePlan.length === 0 && treeAppliedChangeIds.length === 0) ||
       !treeChangeAcceptanceNote.trim()
     ) {
       return;
@@ -614,9 +625,11 @@ export function DeliveryExecutionBoard({
     const resolvedNodeIds = new Map(treeResolvedNodeIds.current);
     try {
       for (const item of pendingTreeChangePlan) {
+        setTreeActiveChangeId(item.id);
         const result = await deliveryChangeRuntime.apply(
           item.buildOperation(resolvedNodeIds),
           treeChangeAcceptanceNote.trim(),
+          treeReviewRevision.current,
         );
         if (!result) {
           throw new Error("Live Delivery change authority is unavailable.");
@@ -643,6 +656,9 @@ export function DeliveryExecutionBoard({
         setTreeAppliedChangeIds((current) =>
           current.includes(item.id) ? current : [...current, item.id],
         );
+        const revision=result.after.source_revision;
+        if(typeof revision!=="string"||!revision)throw new Error("The change was acknowledged without its resulting revision. Inspect current owner state before continuing.");
+        treeReviewRevision.current=revision;
       }
       const refreshed = await deliveryChangeRuntime.refresh();
       if (!refreshed.projection) {
@@ -650,9 +666,10 @@ export function DeliveryExecutionBoard({
           "Delivery changes applied but canonical readback is unavailable.",
         );
       }
-      const canonicalTree = executionTreeDraftFromChangeNode(
+      if(treeReviewRevision.current&&refreshed.projection.source_revision!==treeReviewRevision.current)throw new Error("Work changed again after the accepted changes. Reopen Work Structure to review the current owner state.");
+      const canonicalTree = withExecutionTreeDependencies(executionTreeDraftFromChangeNode(
         refreshed.projection.package.execution_tree,
-      );
+      ),refreshed.projection.package.dependency_relations);
       setTreeDraft(canonicalTree);
       setTreeDraftBaseline(canonicalTree);
       setTreeDraftDirty(false);
@@ -661,12 +678,15 @@ export function DeliveryExecutionBoard({
       setTreeChangeAcceptanceNote("");
       setTreeAppliedChangeIds([]);
       treeResolvedNodeIds.current = new Map();
+      setTreeChangeSuccess(treeChangePlan.length);
+      await onCanonicalChanged?.();
     } catch (error) {
       setTreeChangeError(
         error instanceof Error ? error.message : "Delivery change apply failed.",
       );
     } finally {
       setTreeChangeSubmitting(false);
+      setTreeActiveChangeId(null);
     }
   }
 
@@ -720,6 +740,7 @@ export function DeliveryExecutionBoard({
     selectedPackage && treeEditActive && selectedTreeEditNode ? (
       <ExecutionTreeEditSupportPanel
         sourceTree={treeDraftBaseline}
+        draftTree={treeEditActive}
         disabled={treeChangeSubmitting || treeChangeReviewOpen}
         onUpdateText={(values) => handleTreeDraftChange(updateExecutionTreeNode(
           treeEditActive, selectedTreeEditNode.id, (node) => ({ ...node, ...values }),
@@ -732,13 +753,14 @@ export function DeliveryExecutionBoard({
         }}
         packageSummary={selectedPackage}
         selectedNode={selectedTreeEditNode}
+        onUpdateDependencies={(dependsOnIds)=>handleTreeDraftChange(updateExecutionTreeNode(treeEditActive,selectedTreeEditNode.id,node=>({...node,dependsOnIds})))}
       />
     ) : selectedPackage ? (
       <ExecutionSelectedPackagePanel
         onInspectTechnicalPlan={() => setArchitecturePacketOpen(true)}
         technicalPlanRequirement={readOnly ? undefined : planRequirement}
         live={model.source_truth === "OpenProject-backed OOS"}
-        actionLoading={deliveryChangeRuntime.loading}
+        actionLoading={deliveryChangeRuntime.loading||treeEditEntering}
         actionError={deliveryChangeRuntime.projectionError}
         onChooseWorkItem={!readOnly ? browsePackageWork : undefined}
         onBrowseWorkItems={browsePackageWork}
@@ -758,7 +780,7 @@ export function DeliveryExecutionBoard({
         }
         canonicalTreeAvailable={
           deliveryChangeRuntime.projectionStatus === "current" &&
-          Boolean(deliveryChangeRuntime.projection) && !treeChangeSubmitting
+          Boolean(deliveryChangeRuntime.projection) && !treeChangeSubmitting && !treeEditEntering
         }
         auditEvents={selectedAuditEvents}
         details={selectedDetails}
@@ -908,12 +930,22 @@ export function DeliveryExecutionBoard({
         onAcceptanceNoteChange={setTreeChangeAcceptanceNote}
         onApply={() => void applyTreeChanges()}
         onClose={() => {
-          if (!treeChangeSubmitting) setTreeChangeReviewOpen(false);
+          if (!treeChangeSubmitting) {
+            if(treeAppliedChangeIds.length)setDiscardDraftGuardOpen(true);
+            else setTreeChangeReviewOpen(false);
+          }
         }}
         open={treeChangeReviewOpen}
-        plan={pendingTreeChangePlan}
+        plan={treeChangePlan}
+        appliedIds={treeAppliedChangeIds}
+        activeId={treeActiveChangeId}
         submitting={treeChangeSubmitting}
       />
+      <TerasDialog
+        closeLabel="Close work structure result" contentOverflow="auto" description="The reviewed changes were applied and verified against current owner state."
+        height="content" kicker="Work Structure" onClose={()=>setTreeChangeSuccess(null)} open={treeChangeSuccess!==null} title="Work structure updated" width="compact">
+        <TerasEmptyState>{treeChangeSuccess} {treeChangeSuccess===1?"change has":"changes have"} been recorded. Return to the Technical Plan and validate it against the updated work.</TerasEmptyState>
+      </TerasDialog>
       <TerasDialog
         closeLabel="Close Delivery change notice"
         contentOverflow="auto"
@@ -928,7 +960,7 @@ export function DeliveryExecutionBoard({
         <TerasEmptyState>{treeEditEntryError}</TerasEmptyState>
       </TerasDialog>
       <TerasDraftCloseGuardDialog
-        description="This will discard the unsaved execution tree draft and restore the last projected tree for the selected package."
+        description={treeAppliedChangeIds.length?"Applied changes remain recorded in ART. Discarding removes only the remaining local draft; reopen Work Structure to review fresh owner state.":"This will discard the unsaved execution tree draft and restore the last projected tree for the selected package."}
         kicker="Execution Tree Draft"
         keepEditingLabel="Keep Editing"
         leaveLabel="Discard Draft"

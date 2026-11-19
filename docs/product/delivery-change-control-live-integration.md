@@ -61,12 +61,26 @@ adds caller credentials and constructs the operator and acceptance records.
    menu follows the canonical Delivery parent rules; OOS remains the authority.
 4. `Done Editing` opens explicit review when the draft changed. Record the
    acceptance note before applying.
+   The selected item's **Work prerequisites** tray chooses named work from the
+   current tree. Add or remove a prerequisite in the draft; nothing is written
+   until review and Apply. Existing links to other packages remain visible and
+   unchanged links retain their original lag and supporting notes. New work is
+   created before its dependency commands resolve canonical identities. Self
+   links, cycles visible in this tree and removed draft references block review;
+   OOS/OpenProject remain authoritative for the final relation rules.
 5. The Console submits one command at a time. OOS validates the exact source
    revision, returns a terminal result, and the Console refreshes canonical
    truth before preparing the next command.
 6. A conflict, rejection, partial failure, malformed result, or unknown outcome
    stops the sequence. Keep the draft, follow the exact next action, refresh,
    and review again.
+   Review shows each Applied, Applying or Pending change. Retry resumes only the
+   remaining commands; if every command was acknowledged but readback failed,
+   **Refresh Result** checks current state without repeating successful writes.
+   Leaving a partially applied review requires confirmation: recorded changes
+   remain in ART and only the unapplied local draft is discarded. Successful
+   readback reports **Work structure updated**. Revalidate the Technical Plan
+   after dependency changes; its earlier ART snapshot is no longer approval.
 7. Discarding a dirty draft, leaving Delivery areas, or closing the workspace
    keeps the established confirmation guard.
 

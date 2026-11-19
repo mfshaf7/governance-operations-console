@@ -23,7 +23,7 @@ import {
   TerasZone,
   TerasZoneLayout,
 } from "@/teras";
-import { useArchitecturePacketLiveRuntime } from "../../../../live-runtime/use-architecture-packet-live-runtime.ts";
+import { ArchitecturePacketLiveRuntimeError, useArchitecturePacketLiveRuntime } from "../../../../live-runtime/use-architecture-packet-live-runtime.ts";
 import type {
   ArchitecturePacketArtifact,
   ArchitecturePacketCurrentResult,
@@ -82,6 +82,7 @@ export function ArchitecturePacketAuthoringModal({
   const [approved, setApproved] = useState<ArchitecturePacketDraftResult | null>(null);
   const [persisted, setPersisted] = useState<ArchitecturePacketPersistResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [validationIssues, setValidationIssues] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [closeGuardOpen, setCloseGuardOpen] = useState(false);
   const live = model.source_truth === "OpenProject-backed OOS";
@@ -136,14 +137,17 @@ export function ArchitecturePacketAuthoringModal({
     setApproved(null);
     setPersisted(null);
     setError(null);
+    setValidationIssues([]);
   }
 
   async function run(action: () => Promise<void>) {
     setSubmitting(true);
     setError(null);
+    setValidationIssues([]);
     try {
       await action();
     } catch (caught) {
+      setValidationIssues(caught instanceof ArchitecturePacketLiveRuntimeError ? caught.issues : []);
       setError(
         caught instanceof Error ? caught.message : "Architecture Packet request failed.",
       );
@@ -270,7 +274,7 @@ export function ArchitecturePacketAuthoringModal({
         </TerasPanel></TerasZone>
         <TerasZone fit="fill">
           <TerasPanelStack fill="last" minimumFillHeight="medium" scroll>
-          <TechnicalPlanActionPanel title={actionTitle} description={actionDescription} disabledReason={disabledReason} error={error} recorded={Boolean(persisted)}
+          <TechnicalPlanActionPanel title={actionTitle} description={actionDescription} disabledReason={disabledReason} error={error} validationIssues={validationIssues} recorded={Boolean(persisted)}
             evidence={persisted?<TerasTechnicalDetails summary="Recording evidence" items={[{label:"Plan reference",value:persisted.artifact.custody.uri},{label:"Custody receipt",value:JSON.stringify(persisted.custody_receipt)},{label:"Source receipt",value:JSON.stringify(persisted.owner_receipt)}]}/>:undefined}>
             {!readOnly&&!persisted&&(!current||editing)?approved?<TerasActionButton disabled={submitting||!live} onClick={()=>void run(persistCandidate)}>Record Approved Plan</TerasActionButton>:
               validated?<TerasActionButton disabled={submitting||!live||!confirmed||approvalIssues.length>0} onClick={()=>void run(approveCandidate)}>Approve Plan</TerasActionButton>:

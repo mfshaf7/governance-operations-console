@@ -118,6 +118,9 @@ export async function deliveryOosRequest(
     const code =
       isRecord(body) && typeof body.code === "string"
         ? body.code
+        : isRecord(body) && typeof body.error === "string" &&
+            /^[a-z][a-z0-9_]*$/.test(body.error)
+          ? body.error
         : "delivery_oos_rejected";
     throw new DeliveryOosError(message, code, response.status, {
       details: isRecord(body) ? body.details : undefined,

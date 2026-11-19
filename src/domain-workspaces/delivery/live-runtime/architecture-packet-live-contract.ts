@@ -333,8 +333,15 @@ export function isArchitecturePacketApiError(
     value.mode === "live" &&
     value.status === "offline" &&
     typeof value.code === "string" &&
-    typeof value.error === "string"
+    typeof value.error === "string" &&
+    (value.issues === undefined || (Array.isArray(value.issues) && value.issues.every(issue => typeof issue === "string")))
   );
+}
+
+export function architecturePacketValidationIssues(details: unknown): string[] {
+  if (!isRecord(details)) return [];
+  return [details.errors, details.material_errors].flatMap(value =>
+    Array.isArray(value) && value.every(issue => typeof issue === "string") ? value : []);
 }
 
 function assertRepoRevision(value: unknown) {

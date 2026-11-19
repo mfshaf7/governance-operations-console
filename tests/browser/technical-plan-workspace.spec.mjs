@@ -4,7 +4,7 @@ import {technicalPlanInput,technicalPlanArtifact} from "../support/technical-pla
 const require=createRequire(import.meta.url),{projectCanonicalDeliveryOverview}=require("../../src/domain-workspaces/delivery/live-runtime/delivery-overview-live-projection.ts");
 const base=process.env.CONSOLE_TEST_BASE_URL??"http://127.0.0.1:3320";
 test.setTimeout(120000);test.use({viewport:{width:1700,height:1050}});
-async function open(page,{recorded=false,staleApproval=false,history=false}={}){
+async function open(page,{recorded=false,staleApproval=false,history=false,validationErrors=[]}={}){
  const state={requests:[],advisor:[],errors:[],staleApproval,recorded};
  const epic={id:1,type:"Epic",status:"in-progress",subject:"Technical Plan Exercise",record_ref:"openproject://work_packages/1",owner_repo:"governance-operations-console",target_pi:null,architecture_anchor_ref:null,required_upstream_ref:null};
  const task={id:3,type:"User story",status:"ready",subject:"Implement the reviewed outcome",description:"Build the bounded requested change.",owner_repo:"governance-operations-console",ready_contract_satisfied:true,children:[]};
@@ -25,6 +25,7 @@ async function open(page,{recorded=false,staleApproval=false,history=false}={}){
   }
   if(path==="/api/delivery/architecture-packets/draft"){
    const body=req.postDataJSON();state.requests.push({path,body});
+   if(validationErrors.length)return route.fulfill({status:422,json:{mode:"live",status:"offline",code:"delivery_art_authoring_contract_invalid",error:"This plan needs correction.",issues:validationErrors}});
    const approved=body.input.decision.status==="architecture-ready";
    return route.fulfill({json:{mode:"live",status:"current",observedAt:new Date().toISOString(),error:null,result:{workflow_id:"delivery-art-architecture-packet-draft",architecture_packet:technicalPlanArtifact(body.input),source_snapshot:{art_digest:"sha256:"+(approved&&state.staleApproval?"c":"b").repeat(64),covered_record_count:1,dependency_record_count:0,relation_count:0}}}});
   }
@@ -41,6 +42,24 @@ async function open(page,{recorded=false,staleApproval=false,history=false}={}){
  await workspace.getByRole("button",{name:"Open Technical Plan",exact:true}).click();
  return {state,workspace,modal:page.getByRole("dialog",{name:"Technical Plan & Approval",exact:true})};
 }
+test("owner validation findings remain inspectable and editing clears the failed attempt",async({page})=>{
+ const findings=["Work dependencies must be acyclic.","A source-activation approval requires an owner chain."];
+ const {state,modal}=await open(page,{validationErrors:findings});
+ await fillPlan(page,modal);
+ await modal.getByRole("button",{name:"Validate Plan",exact:true}).click();
+ const action=modal.locator('[data-technical-plan-action="true"]');
+ await expect(action).toContainText("This plan needs correction.");
+ await action.getByText("Plan checks requiring attention · 2",{exact:true}).click();
+ for(const finding of findings)await expect(action).toContainText(finding);
+ await page.screenshot({path:test.info().outputPath("technical-plan-validation-findings.png")});
+ await expect(modal.getByRole("button",{name:"Approve Plan",exact:true})).toHaveCount(0);
+ await modal.getByRole("button",{name:"Edit Summary",exact:true}).click();
+ await modal.getByRole("textbox",{name:"Plan summary and justification",exact:true}).fill("Revised reviewed rationale, with the dependency correction still to validate.");
+ await expect(action).not.toContainText("Plan checks requiring attention");
+ expect(state.requests).toHaveLength(1);
+ expect(state.requests[0].body.input.decision.status).toBe("draft");
+ expect(state.errors).toEqual([]);
+});
 async function fillPlan(page,modal,input=technicalPlanInput()){
  await modal.getByRole("radio",{name:"Prepare Plan",exact:true}).click();
  await modal.getByRole("button",{name:"Edit Scope",exact:true}).click();

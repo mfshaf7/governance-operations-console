@@ -1,5 +1,8 @@
 import type { DeliveryChangeOperation } from "../../live-runtime/delivery-change-live-types.ts";
 import type { DeliveryComponentType } from "../../read-model/index.ts";
+import { executionDependencyChangePlan, executionDependencyIssues } from "./execution-tree-dependencies.ts";
+import type { ExecutionTreeChangeDraftNode, ExecutionTreeChangePlanItem } from "./execution-tree-change-types.ts";
+export type { ExecutionTreeChangeDraftNode, ExecutionTreeChangePlanItem } from "./execution-tree-change-types.ts";
 
 const childKinds: Partial<Record<DeliveryComponentType, readonly DeliveryComponentType[]>> = {
   Epic: ["PI Objective", "Feature", "Risk", "Milestone", "Defect"],
@@ -12,22 +15,10 @@ export function executionTreeChildKinds(parentKind: DeliveryComponentType): Deli
   return [...(childKinds[parentKind] ?? [])];
 }
 
-export type ExecutionTreeChangeDraftNode = {
-  children: ExecutionTreeChangeDraftNode[];
-  draftBody: string;
-  id: string;
-  kind: string;
-  legacyWorkPackageId: number | null;
-  targetPi?: string;
-  iteration?: string;
-  remark: string;
-  title: string;
-};
-
 // Generic creation stays new/backlog; these mirror the native planning inputs,
 // not execution readiness or permission. The native writer remains decisive.
 export function executionTreePlanningInputIssues(tree: ExecutionTreeChangeDraftNode) {
-  return flattenTree(tree).filter((node) => node.legacyWorkPackageId === null).flatMap((node) => {
+  return [...executionDependencyIssues(tree), ...flattenTree(tree).filter((node) => node.legacyWorkPackageId === null).flatMap((node) => {
     const pi = node.targetPi?.trim() ?? "";
     const iteration = node.iteration?.trim() ?? "";
     const issues: string[] = [];
@@ -44,15 +35,8 @@ export function executionTreePlanningInputIssues(tree: ExecutionTreeChangeDraftN
       issues.push("Iteration must match Target PI or use a Program-wide / label.");
     }
     return issues.map((issue) => `${node.title}: ${issue}`);
-  });
+  })];
 }
-
-export type ExecutionTreeChangePlanItem = {
-  buildOperation: (resolvedNodeIds: ReadonlyMap<string, string>) => DeliveryChangeOperation;
-  id: string;
-  label: string;
-  localNodeId: string | null;
-};
 
 export function buildExecutionTreeChangePlan({
   baseline,
@@ -102,7 +86,7 @@ export function buildExecutionTreeChangePlan({
   }
 
   walkNewNodes(draft, null, plan);
-  return plan;
+  return [...plan, ...executionDependencyChangePlan(baseline, draft)];
 }
 
 function walkNewNodes(

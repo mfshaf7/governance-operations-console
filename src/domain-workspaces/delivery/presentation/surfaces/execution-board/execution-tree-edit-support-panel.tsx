@@ -22,6 +22,7 @@ import {
   type ExecutionTreeDraftNode,
 } from "./execution-board-view-model.ts";
 import { executionAdvisorUpstreamContext } from "./execution-advisor-context.ts";
+import { ExecutionTreeDependencyEditor } from "./execution-tree-dependency-editor.tsx";
 
 type AdvisorLine = {
   id: string;
@@ -31,17 +32,21 @@ type AdvisorLine = {
 
 export function ExecutionTreeEditSupportPanel({
   sourceTree,
+  draftTree,
   packageSummary,
   selectedNode,
   onUpdatePlanningInputs,
   onUpdateText,
+  onUpdateDependencies,
   disabled = false,
 }: {
   sourceTree: ExecutionTreeDraftNode | null;
+  draftTree?: ExecutionTreeDraftNode;
   packageSummary: DeliveryPackageSummary;
   selectedNode: ExecutionTreeDraftNode;
   onUpdatePlanningInputs?: (values: { targetPi?: string; iteration?: string }) => void;
   onUpdateText?: (values: { title?: string; draftBody?: string; remark?: string }) => void;
+  onUpdateDependencies?: (ids:string[])=>void;
   disabled?: boolean;
 }) {
   const [advisorPrompt, setAdvisorPrompt] = useState("");
@@ -184,6 +189,7 @@ export function ExecutionTreeEditSupportPanel({
             )}
           </TerasInspectionSection>
         ) : null}
+        {draftTree&&onUpdateDependencies?<ExecutionTreeDependencyEditor key={selectedNode.id} tree={draftTree} node={selectedNode} disabled={disabled} onChange={onUpdateDependencies}/>:null}
       </TerasPanel>
 
       <TerasAdvisorPanel
