@@ -131,13 +131,14 @@ test("current packet readback stays OOS-owned and can seed editable design witho
   assert.equal(Object.hasOwn(nextInput, "integrity"), false);
 });
 
-test("missing architecture preserves the native OOS error identifier and HTTP status", async () => {
+test("native OpenProject missing-reference envelope becomes the precise absent-plan result", async () => {
   await assert.rejects(
     () => readCurrentArchitecturePacket("delivery-1384", {
       env,
       fetchImpl: async () => new Response(JSON.stringify({
-        error: "delivery_art_reference_missing",
+        error: "not_found",
         message: "No delivery_art_architecture_packet reference is projected on Delivery work item 1384.",
+        details: "delivery_art_reference_missing",
       }), { status: 404 }),
     }),
     error => error.code === "delivery_art_reference_missing" && error.status === 404 &&
@@ -163,6 +164,11 @@ test("plan lookup retains distinct permission and service failures, explicit cod
     [403, { error: "delivery_art_caller_denied", message: "Caller is not permitted." }, "delivery_art_caller_denied"],
     [503, { error: "delivery_art_backend_unavailable", message: "The backend is unavailable." }, "delivery_art_backend_unavailable"],
     [404, { code: "explicit_missing_code", error: "delivery_art_reference_missing", message: "Explicit code takes precedence." }, "explicit_missing_code"],
+    [404, { error: "not_found", message: "Work item missing.", details: "work_package_not_found" }, "not_found"],
+    [404, { error: "not_found", message: "No precise reason." }, "not_found"],
+    [403, { error: "not_found", message: "Denied.", details: "delivery_art_reference_missing" }, "not_found"],
+    [404, { code: "explicit_missing_code", error: "not_found", details: "delivery_art_reference_missing" }, "explicit_missing_code"],
+    [404, { error: "delivery_art_reference_missing", message: "Already precise." }, "delivery_art_reference_missing"],
     [502, { error: "An upstream response could not be read." }, "delivery_oos_rejected"],
   ]) {
     await assert.rejects(
