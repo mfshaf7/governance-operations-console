@@ -304,3 +304,20 @@ full-width state frame. Loading keeps the shared animated signal and skeleton.
 Failure shows one plain-language message with an in-place Retry loading action;
 raw diagnostics stay in technical disclosure. Retry performs only the same GET,
 returns to loading, retains the package and cannot replay Apply or advice.
+
+
+### Selected advisor context
+
+A Refinement advice request includes the selected records' field facts and their
+applicable choices, plus relevant selected/ancestor drafts. Packet-wide target
+maps are not copied into this local scope. Per-record value, status, numeric and
+other validation facts remain intact; authoritative source context still comes
+through OOS and CGG. A one-record request must not grow with unrelated sibling
+choice maps. Genuine oversize selected content is still refused without silent
+trimming, and the existing local advisor-scope limit is unchanged. OOS and CGG separately
+use the same finite 32,000-token complete-context planning allowance as Work Design.
+
+Operator-approved required maintenance, Landing Unit Decision
+`child_isolated_landing_unit`, `refinement-selected-scope-console-20261119`.
+The normal composed Security acceptance and activation qualify this source fix;
+it does not apply any of the current Refinement drafts.
