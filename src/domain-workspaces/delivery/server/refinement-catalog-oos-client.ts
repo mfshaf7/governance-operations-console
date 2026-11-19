@@ -33,7 +33,8 @@ import {
 } from "./delivery-oos-client.ts";
 
 // A packet reads the admitted tree, native forms and governed Catalog. It is
-// a bounded multi-record read, unlike a run poll or async acknowledgement.
+// a bounded multi-record read. Apply repeats that native validation before
+// acknowledging its durable run; run polls remain short.
 const refinementPacketReadTimeoutMs = 60_000;
 
 export async function readRefinementProjection(
@@ -185,6 +186,7 @@ export async function applyRefinementDraft(
       `/v1/delivery-refinement/${encodeURIComponent(packageRef)}/apply`,
       { body: JSON.stringify(request), method: "POST" },
       options.fetchImpl,
+      refinementPacketReadTimeoutMs,
     ),
   );
   if (

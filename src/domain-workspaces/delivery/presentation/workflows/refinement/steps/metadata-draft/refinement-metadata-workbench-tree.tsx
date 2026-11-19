@@ -1,5 +1,7 @@
 "use client";
 
+import { Fragment } from "react";
+
 import { TerasContentTray, TerasSegmentedControl, TerasSelectableRow, TerasStatusPill, TerasTrayStack } from "@/teras";
 import { BuildTreeEditorTree } from "@/product-apps/build-tree";
 import { refinementBuildTreeLayout, refinementBuildTreeNode, refinementBuildTreeRole } from "../../../../../product-adapters/build-tree/index.ts";
@@ -17,10 +19,11 @@ export function MetadataSelectionModeSwitch({ mode, onSelectMode }: {
     options={[{value: "single", label: "One item"}, {value: "shared", label: "Multiple items"}]} value={mode} />;
 }
 
-export function MetadataTargetTree({ metadataDraftValues, collapsedNodeIds, onToggleNode, filtered,
+export function MetadataTargetTree({ readOnly = false, metadataDraftValues, collapsedNodeIds, onToggleNode, filtered,
   visibleNodeIds, closedStoryGroups, onToggleStoryGroup, metadataSelectionMode, metadataFieldResolutions, node, onSelectMetadataField,
   onSelectItem, onToggleMetadataBulkNode, selectedBulkNodeIds, selectedNodeId, selectedFieldKey, targets,
 }: {
+  readOnly?: boolean;
   metadataDraftValues: Record<string, string>;
   collapsedNodeIds: string[];
   onToggleNode: (nodeId: string) => void;
@@ -63,7 +66,7 @@ export function MetadataTargetTree({ metadataDraftValues, collapsedNodeIds, onTo
       return <>{item.children.length ? <span>{item.children.length} work items</span> : null}<TerasStatusPill size="compact" tone={blocked ? "danger" : open ? "warn" : "ok"}>{metadataSelectionMode === "shared" ? selectedBulkNodeIds.includes(item.id) ? "Selected" : "Select item" : blocked ? `${blocked} fields blocked` : open ? `${open} fields to review` : "Fields ready"}</TerasStatusPill></>;
     }}
     renderNodeDetails={item => metadataSelectionMode === "single" && item.id === selectedNodeId ?
-      <MetadataTreeFields targets={targets.filter(target => target.node.id === item.id)} drafts={metadataDraftValues}
+      <MetadataTreeFields readOnly={readOnly} targets={targets.filter(target => target.node.id === item.id)} drafts={metadataDraftValues}
         resolutions={metadataFieldResolutions} selectedFieldKey={selectedFieldKey} onSelect={onSelectMetadataField} /> : null}
     getAddActions={() => []} getDraftPlaceholder={() => ""} getEditableTitlePlaceholder={() => ""}
     getTitleParts={item => ({ editable: item.title, locked: "" })}
@@ -82,20 +85,24 @@ export function MetadataTargetTree({ metadataDraftValues, collapsedNodeIds, onTo
   />;
 }
 
-export function MetadataTreeFields({ targets, drafts, resolutions, selectedFieldKey, onSelect }: {
+export function MetadataTreeFields({ readOnly = false, targets, drafts, resolutions, selectedFieldKey, onSelect }: {
+  readOnly?: boolean;
   targets: RefinementMetadataTarget[]; drafts: Record<string, string>; resolutions: RefinementMetadataFieldResolutionMap;
   selectedFieldKey: string | null; onSelect: (key: string) => void;
 }) {
   const sorted = [...targets].sort((a,b) => Number(refinementTargetNeedsReview(b,resolutions,drafts)) - Number(refinementTargetNeedsReview(a,resolutions,drafts)));
-  return <TerasContentTray kicker="Fields to review" description="Select a field to inspect or change its value on the right.">
+  return <TerasContentTray kicker={readOnly ? "Metadata" : "Fields to review"} description={readOnly ? "Select a field to expand its full value." : "Select a field to inspect or change its value on the right."}>
     <TerasTrayStack spacing="compact">{sorted.map(target => {
       const value = drafts[target.key] ?? target.sourceValue;
       const status = refinementFieldReviewLabel(target, resolutions, drafts);
-      return <TerasSelectableRow key={target.key} ariaLabel={`Edit ${deliveryFieldDisplayLabel(target.field.label)} for ${refinementItemLabel(target.node)}`}
+      return <Fragment key={target.key}><TerasSelectableRow ariaLabel={`${readOnly ? "View" : "Edit"} ${deliveryFieldDisplayLabel(target.field.label)} for ${refinementItemLabel(target.node)}`}
+        aria-expanded={readOnly ? target.key === selectedFieldKey : undefined}
         label={deliveryFieldDisplayLabel(target.field.label)}
         detail={`${target.field.required ? "Required" : "Optional"} · ${value.trim() ? value.length > 70 ? `${value.slice(0,67)}…` : value : "Not set"}`}
         status={status} tone={target.status === "blocked" ? "danger" : refinementTargetNeedsReview(target,resolutions,drafts) ? "warn" : "ok"}
-        selected={target.key === selectedFieldKey} onSelect={() => onSelect(target.key)} />;
+        selected={target.key === selectedFieldKey} onSelect={() => onSelect(target.key)} />
+        {readOnly && target.key === selectedFieldKey ? <TerasContentTray title={deliveryFieldDisplayLabel(target.field.label)} descriptionFormat="lines" description={value || "Not set"} /> : null}
+      </Fragment>;
     })}</TerasTrayStack>
   </TerasContentTray>;
 }

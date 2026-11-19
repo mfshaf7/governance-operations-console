@@ -1,11 +1,8 @@
 "use client";
 
-import { deliveryFieldDisplayLabel } from "../../../../../read-model/terms/copy.ts";
-
 import {
   TerasSubjectCard,
   TerasActionButton,
-  TerasEmptyState,
   TerasContentTray,
   TerasActionRow,
   TerasPanel,
@@ -40,6 +37,7 @@ export function RefinementReadinessReviewView({
   metadataWorkbenchSummary,
   onOpenApplyPlan,
   onOpenHandoff,
+  onOpenRefinementTree,
   packet,
 }: {
   canApply: boolean;
@@ -49,6 +47,7 @@ export function RefinementReadinessReviewView({
   metadataWorkbenchSummary: RefinementMetadataWorkbenchSummary;
   onOpenApplyPlan: () => void;
   onOpenHandoff: () => void;
+  onOpenRefinementTree: () => void;
   packet: DeliveryRefinementPacket;
 }) {
   const reviewProjection = refinementReadinessReviewProjection({
@@ -97,7 +96,7 @@ export function RefinementReadinessReviewView({
             >
               <TerasStatGroup offset="none">
                 <TerasStatItem
-                  detail={`${metadataWorkbenchSummary.totalCount} item-scoped fields reviewed`}
+                  detail={`${metadataWorkbenchSummary.totalCount} item-scoped fields`}
                   element="article"
                   label="ART Records"
                   value={reviewProjection.targetRecordCount}
@@ -125,27 +124,11 @@ export function RefinementReadinessReviewView({
                   value={packet.apply_plan.operations.length}
                 />
               </TerasStatGroup>
-              {reviewProjection.decisionRows.length > 0 ? (
-                <TerasList frame="contained">
-                  {reviewProjection.decisionRows.map((row) => (
-                    <TerasSignalItem
-                      detail={row.draftValue}
-                      key={`decision-${row.key}`}
-                      label={row.groupTitle}
-                      meta={row.nodeTitle}
-                      statusLabel={row.statusLabel}
-                      title={deliveryFieldDisplayLabel(row.fieldLabel)}
-                      tone={row.tone}
-                    />
-                  ))}
-                </TerasList>
-              ) : (
-                <TerasEmptyState>
-                  No operator metadata decisions required. The handoff metadata
-                  is already complete. Review the gate findings before opening
-                  the apply plan.
-                </TerasEmptyState>
-              )}
+              <TerasActionRow>
+                <TerasActionButton onClick={onOpenRefinementTree} emphasis="secondary">
+                  View Metadata Workbench
+                </TerasActionButton>
+              </TerasActionRow>
             </TerasContentTray>
 
             <TerasContentTray
@@ -185,7 +168,7 @@ export function RefinementReadinessReviewView({
             description={reviewProjection.applyGateDescription}
           />
           <TerasSubjectCard
-            description="This review covers the Work Design handoff tree, item-scoped metadata decisions, AI-drafted values, readiness gates, and bounded OOS apply routes."
+            description="This review covers Refinement metadata decisions, AI-drafted values, readiness checks and the apply plan."
             facts={refinementApplyReviewGateFacts({
               canApply,
               metadataWorkbenchSummary,

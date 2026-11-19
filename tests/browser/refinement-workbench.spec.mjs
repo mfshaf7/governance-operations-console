@@ -46,6 +46,51 @@ async function openWorkbench(page, { saved = false, projectionHold = null, assis
   return { model, projection, writes, errors, saves, adviceRequests, record: () => record, packetReads: () => packetReads };
 }
 
+test("readiness reuses the locked Refinement tree without persisting inspection choices", async ({ page }) => {
+  await page.setViewportSize({ width: 1700, height: 1050 });
+  const h = await openWorkbench(page, { saved: true }), d = modal(page);
+  await d.getByRole("button", { name: "Expand Feature 1 — reviewed outcome", exact: true }).click();
+  await d.locator('[data-structure-locked="true"]').getByRole("button").filter({ hasText: "Story 1.1" }).click();
+  await d.getByRole("button", { name: /^Edit Notes for User story/ }).click();
+  const note = "Reviewed source note retained exactly in the locked Refinement tree.";
+  await d.getByRole("textbox", { name: "Notes", exact: true }).fill(note);
+  await d.getByRole("button", { name: "Mark reviewed", exact: true }).click();
+  await expect(d.locator('[data-saved-work-status="saved"]')).toBeVisible();
+  await d.getByRole("button", { name: "Review Readiness", exact: true }).click();
+  await expect(d.getByRole("heading", { name: "Metadata Review Packet", exact: true })).toBeVisible();
+  await expect(d.getByRole("button", { name: /View Work Design Handoff/i })).toBeVisible();
+  await expect(d.getByRole("button", { name: "View Work Design Receipt", exact: true })).toHaveCount(0);
+  await expect(d.getByText(note, { exact: true })).toHaveCount(0);
+  await expect(d.locator('[data-saved-work-status="saved"]')).toBeVisible();
+  const before = structuredClone(h.record()), savedCount = h.saves.length;
+  await d.getByRole("button", { name: "View Metadata Workbench", exact: true }).click();
+  const review = modal(page);
+  await expect(review.getByRole("heading", { name: "Metadata Workbench", exact: true })).toBeVisible();
+  await expect(review.locator('[data-delivery-workflow-readonly="true"]')).toBeVisible();
+  await review.getByRole("button", { name: "Expand all", exact: true }).click();
+  const tree = review.locator('[data-structure-locked="true"]');
+  await expect(tree.locator('[data-kind][data-role]')).toHaveCount(36);
+  await tree.getByRole("button").filter({ hasText: "Story 1.1" }).click();
+  await expect(tree.getByText(note, { exact: true })).toHaveCount(0);
+  await tree.getByRole("button", { name: /^View Notes for User story/ }).click();
+  await expect(tree.getByText(note, { exact: true })).toBeVisible();
+  await expect(review.getByRole("textbox")).toHaveCount(0);
+  await expect(review.getByRole("radio")).toHaveCount(0);
+  await expect(review.getByRole("button", { name: "Mark reviewed", exact: true })).toHaveCount(0);
+  await expect(review.getByRole("textbox", { name: "Refinement metadata advisor prompt", exact: true })).toHaveCount(0);
+  await expect(review.getByRole("button", { name: "New conversation", exact: true })).toHaveCount(0);
+  await expect(review.getByRole("button", { name: /View Work Design Handoff/i })).toHaveCount(0);
+  await review.getByRole("searchbox", { name: "Find work items", exact: true }).fill("Story 1.2");
+  await expect(tree.getByRole("button").filter({ hasText: "Story 1.2" })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("locked-refinement-tree.png") });
+  await review.getByRole("button", { name: "Back to Readiness", exact: true }).click();
+  await expect(d.getByRole("heading", { name: "Readiness Review", exact: true })).toBeVisible();
+  await page.waitForTimeout(1000);
+  expect(h.saves.length).toBe(savedCount);
+  expect(h.record()).toEqual(before);
+  expect(h.writes).toEqual([]); expect(h.adviceRequests).toEqual([]); expect(h.errors).toEqual([]);
+});
+
 for (const width of [1280, 1700]) test(`long real-shaped work tree is navigable and full descriptions are safely formatted at ${width}`, async ({ page }) => {
   await page.setViewportSize({ width, height: width === 1280 ? 800 : 1050 });
   const h = await openWorkbench(page), d = modal(page), tree = d.locator('[data-structure-locked="true"]');

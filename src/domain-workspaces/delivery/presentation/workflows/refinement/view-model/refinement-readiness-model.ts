@@ -6,22 +6,10 @@ import type {
 
 import { refinementGateReviewState } from "./refinement-gate-model.ts";
 import {
-  refinementFieldStatusTone,
-  refinementMetadataResolutionLabel,
   refinementMetadataTargets,
   type RefinementMetadataWorkbenchSummary,
 } from "./refinement-metadata-model.ts";
 import type { RefinementMetadataFieldResolutionMap } from "../model/refinement-model.ts";
-
-export type RefinementReadinessDecisionRow = {
-  draftValue: string;
-  fieldLabel: string;
-  groupTitle: string;
-  key: string;
-  nodeTitle: string;
-  statusLabel: string;
-  tone: DeliveryTone;
-};
 
 export type RefinementReadinessGateRow = {
   detail: string;
@@ -40,7 +28,6 @@ export type RefinementReadinessReviewProjection = {
   applyGateActionTone: DeliveryTone;
   applyRouteCount: number;
   blockedGateCount: number;
-  decisionRows: RefinementReadinessDecisionRow[];
   draftReadyGateCount: number;
   gateRows: RefinementReadinessGateRow[];
   openGateCount: number;
@@ -64,7 +51,8 @@ export function refinementReadinessReviewProjection({
 }): RefinementReadinessReviewProjection {
   const metadataTargets = refinementMetadataTargets(packet);
   const actionableTargets = metadataTargets.filter(
-    (target) => target.status !== "complete",
+    (target) => target.status !== "complete" ||
+      (metadataDraftValues[target.key] ?? target.sourceValue).trim() !== target.sourceValue.trim(),
   );
   const decisionTargets = actionableTargets.filter(
     (target) => metadataFieldResolutions[target.key],
@@ -115,25 +103,6 @@ export function refinementReadinessReviewProjection({
     applyGateTitle: canApply ? "Apply Plan Available" : "Apply Locked",
     applyRouteCount,
     blockedGateCount,
-    decisionRows: actionableTargets.map((target) => {
-      const resolution = metadataFieldResolutions[target.key];
-      const tone = refinementFieldStatusTone({
-        resolution,
-        status: target.status,
-      });
-
-      return {
-        draftValue: metadataDraftValues[target.key] ?? target.sourceValue,
-        fieldLabel: target.field.label,
-        groupTitle: target.group.title,
-        key: target.key,
-        nodeTitle: target.node.title,
-        statusLabel: resolution
-          ? refinementMetadataResolutionLabel(resolution)
-          : target.status,
-        tone,
-      };
-    }),
     draftReadyGateCount,
     gateRows,
     openGateCount,
@@ -157,7 +126,7 @@ export function refinementApplyReviewGateFacts({
     },
     {
       label: "Gates",
-      value: canApply ? "reviewable" : "blocked",
+      value: canApply ? "reviewable" : "needs review",
     },
   ];
 }
