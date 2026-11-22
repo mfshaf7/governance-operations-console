@@ -28,7 +28,6 @@ export function useProposalCollectionRead() {
       if(valid()&&record){
         const selected=record;
         setDetails(rows=>({...rows,[id]:selected}));
-        setSnapshot(snapshot=>snapshot?{...snapshot,records:snapshot.records.map(row=>row.projection.proposal_id===id?selected:row)}:snapshot);
         setInspection({id,state:"current",version:selected.projection.record_version,error:null});
       }
     }catch(error){if(valid()){
@@ -42,11 +41,19 @@ export function useProposalCollectionRead() {
     setReading(true);
     const operation=(async()=>{
       try {
-        const next=await readProposalCollection(fetch,{signal:lifetime.current?.signal,onProgress:value=>{if(current())setSnapshot(value);}});
+        const next=await readProposalCollection(fetch,{overview:true,signal:lifetime.current?.signal});
         if(current())setSnapshot(next);return next;
-      } catch {
+      } catch (error) {
         const next:ProposalLiveSnapshot={mode:"live",status:"offline",records:[],observedAt:new Date().toISOString(),error:"Proposal requests could not be confirmed. Refresh to retry."};
-        if(current()){setDetails({});setInspection(null);setSnapshot(next);}return next;
+        if(current()){
+          if([401,403].includes(Number((error as {status?:number}).status))) {
+            inspectionSequence.current++;
+            setDetails({});
+            setInspection(null);
+          }
+          setSnapshot(next);
+        }
+        return next;
       } finally {if(current())setReading(false);}
     })();
     flight.current=operation;
@@ -54,18 +61,34 @@ export function useProposalCollectionRead() {
   },[]);
   useEffect(()=>{
     alive.current=true;generation.current++;lifetime.current=new AbortController();void refresh();
-    const timer=setInterval(()=>{if(document.visibilityState==="visible")void refresh();},15_000);
-    return()=>{alive.current=false;generation.current++;inspectionSequence.current++;flight.current=null;lifetime.current?.abort();clearInterval(timer);};
+    const refreshVisible=()=>{
+      if(document.visibilityState==="visible" && Date.now()-Date.parse(sourceRef.current?.observedAt??"")>60_000)void refresh();
+    };
+    const timer=setInterval(()=>{
+      if(document.visibilityState==="visible")void refresh();
+    },90_000);
+    document.addEventListener("visibilitychange",refreshVisible);
+    return()=>{alive.current=false;generation.current++;inspectionSequence.current++;flight.current=null;lifetime.current?.abort();clearInterval(timer);document.removeEventListener("visibilitychange",refreshVisible);};
   },[refresh]);
   const snapshot=useMemo(()=>{
-    if(!source || source.mode!=="live" || source.status!=="current")return source;
     const selected=inspection?.state==="current"?details[inspection.id]:undefined;
+    if(!source || source.mode!=="live" || source.status!=="current") {
+      if(!selected)return source;
+      return {mode:"live" as const,status:"current" as const,error:null,
+        observedAt:source?.observedAt??selected.projection.updated_at,
+        records:[{...selected,selectedOnly:true}]};
+    }
     const extra=selected&&!source.records.some(row=>row.projection.proposal_id===selected.projection.proposal_id)?[{...selected,selectedOnly:true}]:[];
     const records=[...source.records.map(row=>{
       const original=details[row.projection.proposal_id];
-      return original&&original.projection.record_version===row.projection.record_version?{...original,deliveryLink:row.deliveryLink}:row;
+      if (!original) return row;
+      if (original.projection.record_version===row.projection.record_version) return {...original,deliveryLink:row.deliveryLink};
+      const version = (record:ProposalLiveRecord) => Number(record.projection.record_version.match(/^version-([0-9]+)$/)?.[1]);
+      return selected===original && version(selected)>version(row)?original:row;
     }),...extra];
     return {...source,records,...(extra.length?{coverage:{...(source.coverage??{loaded:source.records.length,total:source.records.length,next_cursor:null}),complete:false,detail:"The selected original was read separately. Refresh the collection to confirm its complete coverage."}}:{})};
   },[source,details,inspection]);
-  return {snapshot,reading,refresh,inspect,inspection};
+  return useMemo(()=>({collection:source,snapshot,reading,refresh,inspect,inspection}),[source,snapshot,reading,refresh,inspect,inspection]);
 }
+
+export type ProposalCollectionRead = ReturnType<typeof useProposalCollectionRead>;

@@ -20,7 +20,7 @@ import {
 import {
   getOperationWorkbenchSurfaceAttributes,
 } from "../../../../operation-workbench/operation-workbench-contract.ts";
-import { TerasActionButton, TerasEmptyState, TerasLoadingState, TerasModalShell } from "@/teras";
+import { TerasActionButton, TerasContentTray, TerasLoadingState, TerasModalShell } from "@/teras";
 
 import type { DeliveryIntakeSource } from "../../read-model/index.ts";
 import {
@@ -69,7 +69,18 @@ export function DeliveryWorkspaceController({
 
   if (!selectedBaseModel) {
     return (
-      <DeliveryWorkspaceUnavailable contract={contract} onClose={onClose} onRetry={live.refresh} loading={consoleRuntime.status === "loading" || consoleRuntime.projection?.mode === "live" && !live.error} />
+      <DeliveryWorkspaceUnavailable
+        contract={contract}
+        onClose={onClose}
+        onRetry={async () => {
+          if (consoleRuntime.status === "current" && consoleRuntime.projection?.mode === "live") {
+            await live.refresh();
+          } else {
+            await consoleRuntime.load();
+          }
+        }}
+        loading={consoleRuntime.status === "loading" || (consoleRuntime.projection?.mode === "live" && !live.error)}
+      />
     );
   }
 
@@ -230,10 +241,19 @@ function DeliveryWorkspaceUnavailable({
   onRetry: () => Promise<void>;
   loading: boolean;
 }) {
+  const [retrying, setRetrying] = useState(false);
+  const retry = async () => {
+    setRetrying(true);
+    try {
+      await onRetry();
+    } finally {
+      setRetrying(false);
+    }
+  };
   return (
     <TerasModalShell
       bodyLayout="fill"
-      description={loading ? "Loading canonical Delivery records." : "Canonical Delivery records are unavailable. Fixtures are not used as fallback in live mode."}
+      description={contract.surfacePurpose}
       kicker="Delivery Workspace"
       modalAttributes={getOperationWorkbenchSurfaceAttributes(contract)}
       onClose={onClose}
@@ -241,10 +261,11 @@ function DeliveryWorkspaceUnavailable({
       surfaceId="delivery-workspace-unavailable"
       title="Delivery Workspace"
       width="viewport"
-      footer={<TerasActionButton emphasis="secondary" onClick={() => void onRetry()}>Refresh canonical records</TerasActionButton>}
     >
-      {loading ? <TerasLoadingState fill label="Loading Delivery workspace…" detail="Reading projects and their current workflow state." />
-        : <TerasEmptyState fill>Canonical Delivery records are unavailable. Restore the OOS source projection before continuing Delivery work.</TerasEmptyState>}
+      {loading || retrying ? <TerasLoadingState fill label="Loading Delivery workspace…" />
+        : <TerasContentTray fit="fill" role="alert" title="Delivery couldn’t load"
+          description="Try reading your Delivery records again."
+          actions={<TerasActionButton emphasis="secondary" onClick={() => void retry()}>Retry loading</TerasActionButton>} />}
     </TerasModalShell>
   );
 }

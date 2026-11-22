@@ -60,7 +60,8 @@ export function useConsoleShellController() {
   const [activeConsoleWorkspaceId, setActiveConsoleWorkspaceId] =
     useState<ConsoleWorkspaceId | null>(null);
   const [consoleDevMode, setConsoleDevMode] = useState(false);
-  const liveAgentContext = useAgentWorkspaceContext(activeConsoleWorkspaceId);
+  const lifecycleTransitionRuntime = useLifecycleTransitionLiveRuntime();
+  const liveAgentContext = useAgentWorkspaceContext(activeConsoleWorkspaceId, lifecycleTransitionRuntime.snapshot);
   const [componentScenarioId, setComponentScenarioId] = useState(
     componentStatusScenarios[0].id,
   );
@@ -78,7 +79,6 @@ export function useConsoleShellController() {
     consoleDevMode,
     scenarioId: componentScenarioId,
   });
-  const lifecycleTransitionRuntime = useLifecycleTransitionLiveRuntime();
   const lifecycleTransitionSnapshot = useMemo(() => composeLifecycleTransitionSnapshot(lifecycleTransitionRuntime.snapshot, liveAgentContext.ownerReads, { proposals: projectProposalLifecycleOutcomes, prototypes: projectPrototypeLifecycleOutcomes }), [lifecycleTransitionRuntime.snapshot, liveAgentContext.ownerReads, liveAgentContext.ownerReadAt]);
   const lifecycleFixtureIsolation = resolveConsoleFixtureIsolation({
     mode: lifecycleTransitionSnapshot?.mode ?? null,

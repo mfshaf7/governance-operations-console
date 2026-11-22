@@ -41,56 +41,84 @@ const planningViews: { value: PlanningView; label: string }[] = [
 
 type PIPlanningSurfaceProps = {
   model: DeliveryReadModel;
+  source: DeliveryReadModel | null;
+  previousPI: string;
   focusPackageId: string | null;
   onReturn?: () => void;
   returnLabel?: string;
   onDirtyChange: (dirty: boolean) => void;
   onPlanningIncrementChange: (pi: string) => void;
   onCanonicalChanged?: () => Promise<void>;
-  onModelRead?: (model: DeliveryReadModel | null) => void;
+  onModelRead: (model: DeliveryReadModel | null) => void;
 };
 
 export function DeliveryPIPlanningSurface(props: PIPlanningSurfaceProps) {
   const local = props.model.source_truth === "mock";
-  const [source, setSource] = useState<DeliveryReadModel | null>(null);
+  const { source, onModelRead } = props;
   const [error, setError] = useState("");
-  const loadSequence = useRef(0);
-  const refresh = useCallback(async () => {
-    const sequence = ++loadSequence.current;
+  const [refreshing, setRefreshing] = useState(!local);
+  const activeRead = useRef<AbortController | null>(null);
+  const requestedPI = useRef<string | null | undefined>(props.focusPackageId ? null : props.previousPI || undefined);
+  const focusNumber = props.focusPackageId?.match(/(?:^|[-:])([1-9][0-9]*)$/)?.[1];
+  const refresh = useCallback(async (fresh = false) => {
+    activeRead.current?.abort();
+    const controller = new AbortController();
+    activeRead.current = controller;
+    setRefreshing(true);
     try {
-      const response = await fetch("/api/delivery/workspace?view=planning", { cache: "no-store" });
+      const query = new URLSearchParams({view:"planning"});
+      if (requestedPI.current === null && focusNumber) query.set("focus", `delivery-${focusNumber}`);
+      else if (requestedPI.current) query.set("pi", requestedPI.current);
+      if (fresh) query.set("fresh", "1");
+      const response = await fetch(`/api/delivery/workspace?${query}`, {
+        cache: "no-store",
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(80_000)]),
+      });
+      if (controller.signal.aborted) return;
+      if (response.status === 401 || response.status === 403) {
+        onModelRead(null);
+        throw new Error("Your current session could not access PI Planning.");
+      }
       const body = await response.json();
       if (!response.ok || body.mode !== "live" || !Array.isArray(body.projection?.art_tree?.roots) ||
           body.projection?.catalog?.projection_status !== "fresh") {
         throw new Error("The planning source is temporarily unavailable.");
       }
-      if (sequence !== loadSequence.current) return;
-      setSource(body.projection);
-      props.onModelRead?.(body.projection);
+      if (controller.signal.aborted) return;
+      onModelRead(body.projection);
       setError("");
     } catch (failure) {
-      if (sequence === loadSequence.current) {
-        setError(failure instanceof Error ? failure.message : "The planning source could not be loaded.");
-      }
+      if (controller.signal.aborted) return;
+      setError(failure instanceof Error ? failure.message : "The planning source could not be loaded.");
       throw failure;
+    } finally {
+      if (!controller.signal.aborted) {
+        activeRead.current = null;
+        setRefreshing(false);
+      }
     }
-  }, [props.onModelRead]);
+  }, [onModelRead, focusNumber]);
+
+  const refreshCurrent = useCallback(() => refresh(true), [refresh]);
+  const readPI = useCallback((pi: string, fresh: boolean) => {
+    requestedPI.current = pi;
+    void refresh(fresh).catch(() => undefined);
+  }, [refresh]);
 
   useEffect(() => {
     if (!local) void refresh().catch(() => undefined);
-    const onModelRead = props.onModelRead;
-    return () => {
-      loadSequence.current += 1;
-      if (!local) onModelRead?.(null);
-    };
-  }, [local, refresh, props.onModelRead]);
+    return () => activeRead.current?.abort();
+  }, [local, refresh]);
 
-  if (!local && !source) return error ? <TerasEmptyState fill>
-    <p role="alert">{error}</p>
-    <TerasActionButton emphasis="secondary" onClick={() => void refresh().catch(() => undefined)}>Retry loading plan</TerasActionButton>
-  </TerasEmptyState> : <TerasLoadingState fill label="Loading PI Planning…" />;
+  if (!local && !source) {
+    return refreshing || !error ? <TerasLoadingState fill label="Loading PI Planning…" /> :
+      <TerasContentTray fit="fill" role="alert" title="PI Planning couldn’t load"
+        description="Try reading the plan and its calendar again."
+        actions={<TerasActionButton emphasis="secondary" onClick={() => void refreshCurrent().catch(() => undefined)}>Retry loading</TerasActionButton>} />;
+  }
   return <PIPlanningBoardSurface {...props} model={local ? props.model : source!}
-    refresh={local ? undefined : refresh} sourceError={error} />;
+    refresh={local ? undefined : refreshCurrent} readPI={local ? undefined : readPI}
+    refreshing={!local && refreshing} sourceError={error} />;
 }
 
 type ReviewedPIEpic = { epicId: number; source: DeliveryChangeProjection };
@@ -102,9 +130,11 @@ function canonicalNodes(root: DeliveryChangeNode) {
   return new Map(list.map(node => [node.id, node]));
 }
 
-function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, onDirtyChange, onPlanningIncrementChange,
-  onCanonicalChanged, refresh, sourceError }: PIPlanningSurfaceProps & {
+function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, returnLabel, onDirtyChange, onPlanningIncrementChange,
+  onCanonicalChanged, refresh, readPI, refreshing, sourceError }: PIPlanningSurfaceProps & {
   refresh?: () => Promise<void>;
+  readPI?: (pi: string, fresh: boolean) => void;
+  refreshing: boolean;
   sourceError: string;
 }) {
   const local = model.source_truth === "mock";
@@ -112,7 +142,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
   const focused = model.packages.find(item => item.delivery_package_id === focusPackageId || item.legacy_epic_id === focusedNumber);
   const datedIterations = useMemo(() => datedIterationIndex(model.catalog.values), [model.catalog.values]);
   const [selectedPI, setSelectedPI] = useState(() => {
-    if (!focused) return "";
+    if (!focused) return previousPI;
     const scheduledPIs = [...new Set(getPlanningNodes(focused, model).flatMap(node =>
       node.currentPI && datedIterations.get(node.currentIteration ?? "")?.pi === node.currentPI ? [node.currentPI] : []))];
     const current = currentPlanningIncrement(model.catalog.values);
@@ -169,7 +199,8 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
     ...Object.keys(model.preview_pi_plans ?? {}),
   ])];
   const currentPI = currentPlanningIncrement(model.catalog.values);
-  const pi = increments.includes(selectedPI) ? selectedPI : (currentPI && increments.includes(currentPI) ? currentPI : increments[0]) ?? "";
+  const pi = model.planning_scope?.target_pi ??
+    (increments.includes(selectedPI) ? selectedPI : (currentPI && increments.includes(currentPI) ? currentPI : increments[0]) ?? "");
   const piWindow = planningWindowForTargetPi(model.catalog.values, pi);
   const datedPI = Boolean(piWindow.value && piWindow.value.lifecycle_state !== "missing" &&
     Number.isFinite(calendarDateNumber(piWindow.startDate)) && Number.isFinite(calendarDateNumber(piWindow.endDate)));
@@ -212,7 +243,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
     const dates = datedIterations.get(value_key)?.window;
     return dates ? [[value_key, calendarDateRange(dates.start_date, dates.end_date)] as const] : [];
   }));
-  const assignmentOf = (item: PlanningNode) => plan.assignments[item.id]?.iteration ?? item.currentIteration;
+  const assignmentOf = (item: Pick<PlanningNode, "id" | "currentIteration">) => plan.assignments[item.id]?.iteration ?? item.currentIteration;
 
   const assignedPI = new Map(Object.entries(model.preview_pi_plans ?? {}).flatMap(([planPI, item]) =>
     Object.keys(item.assignments).map(id => [id, planPI] as const)));
@@ -254,7 +285,13 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
   }, [draftDirty, onDirtyChange]);
   const planItems = nodes.filter(item => changed.has(item.id));
   const touchedEpics = [...new Set(planItems.map(item => item.epicId))];
-  const dependencyConflict = findPIPlanningDependencyConflict(nodes, iterationKeys, pi, plan.assignments, changed);
+  const externalDependencies = (model.planning_external_dependencies ?? []).map(fact => ({
+    id: `external-work-item-${fact.id}`, number: fact.id, title: fact.title, epicId: fact.epic_id,
+    status: fact.status, currentPI: fact.target_pi, currentIteration: recordedPlanningIteration(fact.iteration),
+    dependencies: fact.requires, terminal: ["done","retired"].includes(fact.status),
+  }));
+  const externalByNumber = new Map(externalDependencies.map(fact => [fact.number,fact]));
+  const dependencyConflict = findPIPlanningDependencyConflict([...nodes,...externalDependencies], iterationKeys, pi, plan.assignments, changed);
   const structureConflict = findPIPlanningStructureConflict(nodes, plan.assignments, changed);
   const affectedFeatures = featureAssessments.filter(item =>
     changed.has(item.feature.id) || item.descendants.some(child => changed.has(child.id)));
@@ -265,7 +302,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
     return note?.iteration === target ? note?.reason ?? "" : "";
   };
   const explainedTargets = laterTargets.every(item => targetNote(item.feature.id, item.target).trim());
-  const canReview = draftDirty && !dependencyConflict && !structureConflict && !earlyTarget && !sourceError;
+  const canReview = draftDirty && !dependencyConflict && !structureConflict && !earlyTarget && !sourceError && !refreshing;
 
   function showFeatureWork(featureId: string) {
     setFocusFeatureId(featureId);
@@ -282,6 +319,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
     if (nextView === "overview") {
       setFocusedEpicId(null);
       setLastViewedFeatureId(undefined);
+      if (model.planning_focus && pi) readPI?.(pi, false);
     }
     setView(nextView);
     setSearch("");
@@ -326,7 +364,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
 
   function moveWork(id: string, iteration: string) {
     const item = boardItems.find(node => node.id === id);
-    if (!item?.available || (iteration && !iterationKeys.includes(iteration))
+    if (refreshing || sourceError || !item?.available || (iteration && !iterationKeys.includes(iteration))
       || (!iteration && (recorded.assignments[id] || item.currentPI || item.currentIteration))) return;
     setMessage("");
     setDraft(current => {
@@ -508,14 +546,15 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
     setMessage(`Recorded ${changed.size} ${changed.size === 1 ? "assignment" : "assignments"} in ${pi} for this preview.`);
   }
 
-  const hint = sourceError ? [message, sourceError].filter(Boolean).join(" ") : (dependencyConflict
+  const hint = sourceError ? [message, sourceError, "Showing the last loaded plan."].filter(Boolean).join(" ") : (dependencyConflict
     ? `Schedule “${dependencyConflict.prerequisite.title}” in this or an earlier iteration before “${dependencyConflict.item.title}”.`
     : structureConflict ?? (earlyTarget && earlyTarget.latest
       ? `Move “${earlyTarget.feature.title}” to ${iterationName(earlyTarget.latest)} or later. Its child work is planned through that iteration.`
       : iterationKeys.length ? message : "Set up dated iterations for this PI before scheduling work."));
 
-  function changePlanningIncrement(value: string) {
+  function changePlanningIncrement(value: string, fresh = false) {
     setSelectedPI(value);
+    setEpicFilter("all");
     setFocusedEpicId(null);
     setFocusFeatureId(null);
     setLastViewedFeatureId(undefined);
@@ -524,6 +563,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
     setEpicStatus("all");
     setDraft(null);
     setMessage("");
+    readPI?.(value, fresh);
   }
 
   const reviewLocked = recording || Boolean(liveProgress.current);
@@ -568,15 +608,16 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
           {returnLabel}
         </TerasActionButton>}
         {canAddFeature && <TerasActionButton size="table-compact" emphasis="primary"
-          disabled={draftDirty || Boolean(sourceError)} onClick={() => setAddingFeature(true)}>Add Feature</TerasActionButton>}
+          disabled={draftDirty || Boolean(sourceError) || refreshing} onClick={() => setAddingFeature(true)}>Add Feature</TerasActionButton>}
         {view !== "overview" && <TerasActionButton size="table-compact" emphasis="secondary"
           onClick={() => setCalendarDialog("view")}>View calendar</TerasActionButton>}
         <TerasSegmentedControl ariaLabel="Planning view" value={view}
           options={planningViews} onValueChange={changeView} />
       </TerasActionRow>}
     />
+    {refreshing && !sourceError && <TerasLoadingState inline label="Checking for plan updates…" />}
     {(draftDirty || hint) && <TerasActionRow layout="split" spacing="tight"
-      end={sourceError && refresh ? <TerasActionButton emphasis="secondary" size="table-compact"
+      end={sourceError && refresh ? <TerasActionButton busy={refreshing} emphasis="secondary" size="table-compact"
         onClick={() => void refresh().catch(() => undefined)}>Retry loading plan</TerasActionButton>
         : draftDirty && <TerasActionRow spacing="tight">
           <TerasActionButton emphasis="secondary" size="table-compact" onClick={() => { setDraft(null); setMessage(""); }}>
@@ -589,24 +630,36 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
   </TerasFieldStack>;
 
   const nodesByNumber = new Map<number, PlanningNode[]>();
+  const nodesByEpic = new Map<number, PlanningNode[]>();
   for (const node of nodes) {
+    const epicNodes = nodesByEpic.get(node.epicId) ?? [];
+    epicNodes.push(node);
+    nodesByEpic.set(node.epicId, epicNodes);
     if (!node.number) continue;
     const matches = nodesByNumber.get(node.number) ?? [];
     matches.push(node);
     nodesByNumber.set(node.number, matches);
   }
+  const featuresByEpic = new Map<number, typeof featureAssessments>();
+  for (const assessment of featureAssessments) {
+    const epicId = assessment.feature.epicId;
+    const assessments = featuresByEpic.get(epicId) ?? [];
+    assessments.push(assessment);
+    featuresByEpic.set(epicId, assessments);
+  }
+  const completedPrerequisites = new Set(model.completed_planning_prerequisite_ids);
   const iterationOrder = new Map(iterationKeys.map((key, index) => [key, index]));
   const epicRows = view === "overview" && pi ? candidates.flatMap(epic => {
     const id = epic.legacy_epic_id;
     if (epicFilter !== "all" && String(id) !== epicFilter) return [];
     const inSelectedPI = (item: PlanningNode) => item.currentPI === pi || Boolean(plan.assignments[item.id]);
-    const inPI = nodes.filter(item => item.epicId === id && inSelectedPI(item));
+    const inPI = (nodesByEpic.get(id) ?? []).filter(inSelectedPI);
     const objective = plan.objectives[id];
     if (epic.target_pi !== pi && !inPI.length && !objective) return [];
     const objectives = inPI.filter(item => item.type === "PI Objective" && item.status !== "retired" && item.id !== `${id}/${objective?.id}`)
       .map(item => ({ id: item.id, title: item.title, type: item.objectiveType }));
     if (objective?.title.trim()) objectives.push({ id: "preview-objective", title: objective.title, type: objective.type });
-    const scopedFeatures = featureAssessments.filter(item => item.feature.epicId === id &&
+    const scopedFeatures = (featuresByEpic.get(id) ?? []).filter(item =>
       (inSelectedPI(item.feature) || item.descendants.some(child => !child.terminal && inSelectedPI(child))));
     const openWork = inPI.filter(item => !inactive.has(item.status) && iterationWorkTypes.has(item.type));
     const attention: PlanningAttention[] = [];
@@ -627,18 +680,19 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
       const dependencyReasons = new Set<string>();
       for (const number of item.dependencies) {
         const matches = nodesByNumber.get(number);
-        if (matches?.length !== 1 || matches[0].status === "retired") {
+        if (!matches && completedPrerequisites.has(number)) continue;
+        const prerequisite = matches?.length === 1 ? matches[0] : !matches ? externalByNumber.get(number) : undefined;
+        if (!prerequisite || prerequisite.status === "retired") {
           dependencyReasons.add("Dependency details incomplete");
           continue;
         }
-        const prerequisite = matches[0];
         if (prerequisite.status === "done") continue;
-        const prerequisiteIteration = inSelectedPI(prerequisite)
+        const prerequisiteIteration = (prerequisite.currentPI === pi || Boolean(plan.assignments[prerequisite.id]))
           ? iterationOrder.get(assignmentOf(prerequisite) ?? "") : undefined;
         const late = scheduled !== undefined && (prerequisiteIteration === undefined || prerequisiteIteration > scheduled);
         if (late || (prerequisite.epicId !== id && prerequisiteIteration === undefined)) {
           dependencyReasons.add(prerequisite.epicId === id
-            ? `Schedule dependency #${number} first` : `Waiting on Epic #${prerequisite.epicId}`);
+            ? `Schedule dependency #${number} first` : prerequisite.epicId === null ? `Waiting on work item #${number}` : `Waiting on Epic #${prerequisite.epicId}`);
         }
       }
       for (const reason of dependencyReasons) attention.push({ reason, item, conflict: true });
@@ -731,7 +785,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
       scheduleSummary: featureById.get(item.id)?.earlier ? "Child work runs later"
         : featureById.get(item.id)?.unplanned ? "Child work unscheduled"
         : featureById.get(item.id)?.later ? "Later delivery target" : undefined,
-      available: !sourceError && item.available && iterationKeys.length > 0 && (!item.currentIteration || iterationKeys.includes(item.currentIteration)),
+      available: !sourceError && !refreshing && item.available && iterationKeys.length > 0 && (!item.currentIteration || iterationKeys.includes(item.currentIteration)),
       moveUnavailableReason: item.moveUnavailableReason ?? (!iterationKeys.length ? "Choose a PI with active iterations."
         : item.currentIteration && !iterationKeys.includes(item.currentIteration) ? "The recorded iteration is read-only here." : undefined),
       canReturnToBacklog: !recorded.assignments[item.id] && !item.currentPI && !item.currentIteration,
@@ -773,10 +827,9 @@ function PIPlanningBoardSurface({ model, focusPackageId, onReturn, returnLabel, 
     </TerasModalShell>}
     {calendarDialog === "setup" && <PIPlanningCalendarDialog model={model}
       onClose={() => setCalendarDialog(null)} onSaved={savedPi => {
-        changePlanningIncrement(savedPi);
+        changePlanningIncrement(savedPi, true);
         setCalendarDialog(null);
         setMessage(`Planning calendar saved for ${savedPi}.`);
-        void refresh?.().catch(() => undefined);
       }} />}
     {addingFeature && focusedEpic && <PIPlanningFeatureDialog
       epic={{ id: focusedEpic.legacy_epic_id, title: focusedEpic.display_name }} pi={pi}

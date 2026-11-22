@@ -98,10 +98,11 @@ export async function resolveProposalRepositoryGate(
 
 export async function listProposalRegister(
   selection: ProposalRegisterSelection = { query: "", status: "all", ingress: "all" }, cursor: string | null = null,
-  { env = process.env, fetchImpl = fetch }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch } = {},
+  { env = process.env, fetchImpl = fetch, overview = false }: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; overview?: boolean } = {},
 ) {
   const config = resolveProposalOosConfig(env), query = new URLSearchParams(selection);
   if (cursor) query.set("cursor", cursor);
+  if (overview) query.set("view", "overview");
   const value = await proposalOosRequest(config, `/v1/proposals/register?${query}`, {method: "GET"}, fetchImpl, {
     authority: "operator-orchestration-service", sourceOwner: "workspace-proposals", recordRef: "openproject://projects/workspace-proposals",
   });

@@ -33,6 +33,34 @@ test("permission and unrelated owner rejections never trigger the compatibility 
  }
 });
 
+test("Current Delivery requests the native status scope and verifies the owner's response", async () => {
+ const calls=[];
+ const query=new URLSearchParams({view:"register",surface:"refinement",scope:"current"});
+ const overview={schema_version:1,workflow_id:"delivery-console-overview",project:{identifier:"workspace-delivery-art"},mutation_authority:"none",roots:[],operational_initiatives:[],deferred_history_refs:[]};
+ const fetchImpl=async(url,init)=>{
+  calls.push(new URL(url).searchParams.get("scope"));assertCanonicalSourceRequest(init);
+  return canonicalSourceResponse({...overview,register_page:{scope:"current-root-scan-page",next_cursor:null,source_total:0}},binding);
+ };
+ const result=await readDeliveryRegister(query,undefined,{env,fetchImpl});
+ assert.deepEqual(calls,["current"]);assert.deepEqual(result.projection.packages,[]);
+ await assert.rejects(readDeliveryRegister(query,undefined,{env,fetchImpl:async()=>
+  canonicalSourceResponse({...overview,register_page:{scope:"root-scan-page",next_cursor:null,source_total:0}},binding)
+ }),error=>error.code==="delivery_register_scope_invalid");
+});
+
+test("a prior native register broker can continue without a Current query during deployment", async () => {
+ const calls=[];
+ const overview={schema_version:1,workflow_id:"delivery-console-overview",project:{identifier:"workspace-delivery-art"},mutation_authority:"none",roots:[],operational_initiatives:[],deferred_history_refs:[]};
+ const fetchImpl=async(url)=>{
+  const scope=new URL(url).searchParams.get("scope");calls.push(scope);
+  return scope
+    ? Response.json({code:"delivery_register_selection_invalid",error:"Select one complete-status Delivery root page."},{status:400})
+    : canonicalSourceResponse({...overview,register_page:{scope:"root-scan-page",next_cursor:null,source_total:0}},binding);
+ };
+ await readDeliveryRegister(new URLSearchParams({view:"register",scope:"current"}),undefined,{env,fetchImpl});
+ assert.deepEqual(calls,["current",null]);
+});
+
 test("Delivery register current/history retain canonical scope and reach late matching roots without shrinking the global board",async()=>{
  const baseline=structuredClone(deliveryReadModel),rows=Array.from({length:61},(_,i)=>({...baseline.packages[0],delivery_package_id:`delivery-${1000+i}`,tree_root_id:`root-${i}`,display_name:`Sample ${i}`,source_ref:`openproject://work_packages/${1000+i}`,workflow_phase:"work_design",backend_status:i<3?["done","retired","parked"][i]:"new",package_posture:i<3?["Done","Retired","Deferred"][i]:"New"}));
  const model={...baseline,source_truth:"OpenProject-backed OOS",packages:rows,art_tree:{roots:[]},selected_packages:[]};

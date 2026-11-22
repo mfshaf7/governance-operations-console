@@ -9,16 +9,23 @@ export function projectRepositoryCurrentInventory(
   projection: WorkspaceContinuityProjection | null,
   registrations?: RepositoryRegistrationLookup | null,
 ): RepositoryWorkspaceRecord[] {
+  const inventoryByRef = new Map<string, WorkspaceContinuityProjection["inventory"][number][]>();
+  for (const item of projection?.inventory ?? []) {
+    if (item.kind !== "repo") continue;
+    const matches = inventoryByRef.get(item.record_id) ?? [];
+    matches.push(item);
+    inventoryByRef.set(item.record_id, matches);
+  }
+  const nativeByRef = new Map(registrations?.mode === "current" ? registrations.records.map(row => [row.record_id, row]) : []);
+  const verifiedRefs = new Set(registrations?.mode === "current" ? registrations.recordIds : []);
   return records.map((record): RepositoryWorkspaceRecord => {
     const ownerRef = record.custody?.workspaceOwnerRef;
-    const matches = projection?.inventory.filter(
-      (item) => item.kind === "repo" && item.record_id === ownerRef,
-    ) ?? [];
-    const native = registrations?.mode === "current" ? registrations.records.find(row => row.record_id === ownerRef) : undefined;
+    const matches = ownerRef ? inventoryByRef.get(ownerRef) ?? [] : [];
+    const native = ownerRef ? nativeByRef.get(ownerRef) : undefined;
     const provider = record.providerIdentity;
     const identityChanged = Boolean(native && (!provider || native.provider_repository.provider_repository_id !== provider.repositoryId ||
       native.provider_repository.full_name !== `${provider.owner}/${provider.name}`));
-    const unconfirmed = !matches.length && registrations !== undefined && (registrations === null || registrations.mode === "current" && !registrations.recordIds.includes(ownerRef ?? ""));
+    const unconfirmed = !matches.length && registrations !== undefined && (registrations === null || registrations.mode === "current" && !verifiedRefs.has(ownerRef ?? ""));
     if (!projection || !ownerRef?.startsWith("repo:") || matches.length > 1 || native && matches.length > 0 || identityChanged || unconfirmed) {
       const detail = !projection
         ? "Current Workspace inventory is unavailable. Custody history does not establish admission."

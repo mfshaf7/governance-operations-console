@@ -26,10 +26,19 @@ test("case:1270-positive reads exact private Platform health evidence without gr
 });
 
 test("case:1270-negative rejects partial activation, public files, tampering, and stale receipt truth", async (context) => {
-  assert.equal(consoleProductMaintenanceModeSelected({ GOVERNANCE_CONSOLE_PRODUCT_HEALTH_PROJECTION_PATH: "/tmp/value" }), true);
+  const observations = {
+    GOVERNANCE_CONSOLE_PRODUCT_HEALTH_PROJECTION_PATH: "/tmp/product-health.json",
+    GOVERNANCE_CONSOLE_PRODUCT_HEALTH_RECEIPT_PATH: "/tmp/product-health-receipt.json",
+  };
+  assert.equal(consoleProductMaintenanceModeSelected(observations), false);
+  const incompleteBinding = {
+    ...observations,
+    GOVERNANCE_CONSOLE_PRODUCT_MAINTENANCE_AUTHORITY_REVISION: "a".repeat(40),
+  };
+  assert.equal(consoleProductMaintenanceModeSelected(incompleteBinding), true);
   assert.throws(
-    () => resolveConsoleProductMaintenanceConfiguration({ GOVERNANCE_CONSOLE_PRODUCT_HEALTH_PROJECTION_PATH: "/tmp/value" }),
-    /requires its OOS endpoint|reference|revision/i,
+    () => resolveConsoleProductMaintenanceConfiguration(incompleteBinding),
+    /requires its Product Maintenance Security decision reference/i,
   );
 
   const publicFixture = await evidenceFixture(context);

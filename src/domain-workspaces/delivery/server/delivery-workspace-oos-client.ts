@@ -2,21 +2,35 @@ import { assertDeliveryIntakePage, assertDeliveryHistoryProjection, deliveryHist
 import { projectDeliveryIntakeHistory } from "../live-runtime/delivery-history-projection.ts";
 import type { DeliveryIntakeRecord } from "../live-runtime/delivery-history-live-contract.ts";
 import { projectCanonicalDeliveryWorkspace } from "../live-runtime/delivery-workspace-live-projection.ts";
-import { canonicalDigest, deliveryOosRequest, resolveDeliveryOosConfig } from "./delivery-oos-client.ts";
+import { canonicalDigest, deliveryOosRequest, DeliveryOosError, resolveDeliveryOosConfig } from "./delivery-oos-client.ts";
 import { concurrentSourceRead } from "../../../console-integration/source-authority/concurrent-source-read.ts";
 import { projectCanonicalDeliveryOverview } from "../live-runtime/delivery-overview-live-projection.ts";
 
-type ReadOptions = { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; deliveryId?: string; overview?: boolean; page?: number; scope?: "current" | "history"; search?: string };
+type ReadOptions = { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; deliveryId?: string; overview?: boolean; planning?: boolean;
+  planningPI?: string; planningFocus?: string; refreshPlanning?: boolean; page?: number; scope?: "current" | "history"; search?: string };
 
-export async function readCanonicalDeliveryInventory({ env = process.env, fetchImpl = fetch, overview = false }: ReadOptions = {}) {
+export async function readCanonicalDeliveryInventory({ env = process.env, fetchImpl = fetch, overview = false, planning = false,
+  planningPI, planningFocus, refreshPlanning = false }: ReadOptions = {}) {
   const config = resolveDeliveryOosConfig(env);
-  return concurrentSourceRead(`delivery-inventory:${overview ? "console-overview" : "full"}`, config, fetchImpl, async () => {
-    const value = await deliveryOosRequest(config, "/v1/delivery-initiatives?include_done=true&include_inactive=true" + (overview ? "&view=console" : ""), { method: "GET" }, fetchImpl, 75000, {
+  const query = planning ? new URLSearchParams({view:"planning", ...(planningPI ? {pi:planningPI} : {}),
+    ...(planningFocus ? {focus:planningFocus} : {}), ...(refreshPlanning ? {fresh:"1"} : {})}).toString()
+    : "include_done=true&include_inactive=true" + (overview ? "&view=console" : "");
+  return concurrentSourceRead(`delivery-inventory:${query}`, config, fetchImpl, async () => {
+    const value = await deliveryOosRequest(config, `/v1/delivery-initiatives?${query}`, { method: "GET" }, fetchImpl, 75000, {
       authority: "operator-orchestration-service", sourceOwner: "workspace-delivery-art", recordRef: "openproject://projects/workspace-delivery-art/initiatives",
     });
-    const project = overview ? projectCanonicalDeliveryOverview : projectCanonicalDeliveryWorkspace;
-    const model = project(value, canonicalDigest(value), new Date().toISOString());
-    return { ...model, evidence_coverage: {
+    const revision = canonicalDigest(value);
+    const observedAt = new Date().toISOString();
+    const model = overview || planning
+      ? projectCanonicalDeliveryOverview(value, revision, observedAt, planning)
+      : projectCanonicalDeliveryWorkspace(value, revision, observedAt);
+    if (planning && (model.packages.some(item => ["done", "parked", "retired"].includes(item.backend_status)) ||
+      planningPI !== undefined && model.planning_scope?.target_pi !== planningPI ||
+      planningFocus !== undefined && model.planning_focus !== planningFocus)) {
+      throw new DeliveryOosError("PI Planning source returned an inactive package.", "delivery_planning_scope_invalid", 502);
+    }
+    return { ...model, ...(planning ? { projection_state: { ...model.projection_state,
+      detail: "Current Delivery roots and their child work for PI Planning. History remains in the owning workspace." } } : {}), evidence_coverage: {
       intake: { state: "unavailable" as const, issue_count: 0, detail: "Original Intake evidence is loaded independently when its history is requested; empty rows are not an empty-admission claim." },
       activity: { state: "unavailable" as const, detail: "Original Intake activity is loaded independently with its history." },
     } };

@@ -10,7 +10,7 @@ export function getDeliveryOperationWorkbenchContract(): OperationWorkbenchDomai
       "Delivery-local selected package, workflow modal, filters, local receipts, and prototype session state.",
     mutationBoundary: "prototype-local / future OOS-mediated",
     surfacePurpose:
-      "Manage Delivery intake, work design, refinement, execution board, blocker handling, parking, and closeout preparation.",
+      "Take work from intake through work design, refinement, PI planning, and execution. Manage shared Delivery settings in Catalog.",
     readModel: "Fixture-backed normalized Delivery read model",
     sourceOfTruth:
       "Workspace Delivery ART through OpenProject, OOS, and WGCF read models",

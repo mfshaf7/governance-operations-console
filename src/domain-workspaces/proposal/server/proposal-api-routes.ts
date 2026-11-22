@@ -5,6 +5,7 @@ import type {
   ProposalLiveCommandRequest,
   ProposalLiveHandoffApplicationRequest,
   ProposalLiveTargetApplicationRequest,
+  ProposalLiveRecord,
 } from "../live-runtime/proposal-live-types.ts";
 import {
   applyProposalCommand,
@@ -58,14 +59,21 @@ export async function listProposalsRoute(request?: NextRequest) {
 
   try {
     const query = request?.nextUrl.searchParams ?? new URLSearchParams();
-    if ([...query.keys()].some(key => !["query", "status", "ingress", "cursor"].includes(key) || query.getAll(key).length !== 1) || (query.get("query")?.length ?? 0) > 200) throw new ProposalOosError("Review the proposal search and filters.", "proposal_query_invalid", 400);
-    const {records, page} = await listProposalRegister({query: query.get("query") ?? "", status: query.get("status") ?? "all", ingress: query.get("ingress") ?? "all"}, query.get("cursor"));
+    const overview = query.get("view") === "overview";
+    if ([...query.keys()].some(key => !["query", "status", "ingress", "cursor", "view"].includes(key) || query.getAll(key).length !== 1) ||
+        (query.get("query")?.length ?? 0) > 200 || query.has("view") && (!overview || ["query", "status", "ingress"].some(key => query.has(key)))) {
+      throw new ProposalOosError("Review the proposal search and filters.", "proposal_query_invalid", 400);
+    }
+    const {records, page} = await listProposalRegister(
+      {query: query.get("query") ?? "", status: query.get("status") ?? "all", ingress: query.get("ingress") ?? "all"},
+      query.get("cursor"), { overview },
+    );
     return NextResponse.json(
       {
         error: null,
         mode: "live",
         observedAt: new Date().toISOString(),
-        records,
+        records: overview ? records.map(projectProposalOverviewRecord) : records,
         page,
         status: "current",
       },
@@ -74,6 +82,22 @@ export async function listProposalsRoute(request?: NextRequest) {
   } catch (error) {
     return proposalErrorResponse(error);
   }
+}
+
+function projectProposalOverviewRecord(record: ProposalLiveRecord): ProposalLiveRecord {
+  const { projection } = record;
+  return { ...record, projection: {
+    ...projection,
+    body: null,
+    decision_notes: null,
+    triage_summary: null,
+    source: { ...projection.source, context_ref: {}, native_ref: {} },
+    route: projection.route && {
+      ...projection.route,
+      rationale: "",
+      source_custody: { ...projection.route.source_custody, rationale: "" },
+    },
+  } };
 }
 
 export async function readProposalRecordRoute(_request: NextRequest, proposalId: string) {

@@ -31,6 +31,7 @@ import type {
   ConsoleWorkspaceId,
 } from "../../console-architecture";
 import { ConsoleShellPanel } from "../console-shell-panel";
+import type { ProposalCollectionRead } from "../../domain-workspaces/proposal";
 
 export type ConsoleFocusRouterProps = {
   activeConsoleEntryIntent: ConsoleEntryIntent | null;
@@ -58,6 +59,7 @@ export type ConsoleFocusRouterProps = {
   ) => void;
   onSelectAttentionCandidate: (candidateId: string) => void;
   onSelectPulseSignal: (signal: WorkspacePulseSignal) => void;
+  proposalCollection: ProposalCollectionRead;
   selectedAttentionCandidate: CommandCenterAttentionCandidate | null;
   selectedAlert: RuntimeAlertItem | null;
   selectedComponent: RuntimeComponentObservation | null;
@@ -83,6 +85,7 @@ export function ConsoleFocusRouter({
   onPulseScenarioChange,
   onSelectAttentionCandidate,
   onSelectPulseSignal,
+  proposalCollection,
   selectedAttentionCandidate,
   selectedAlert,
   selectedComponent,
@@ -150,6 +153,7 @@ export function ConsoleFocusRouter({
               })
             }
             onOpenWorkspace={onOpenWorkspace}
+            proposalCollection={proposalCollection}
             selected={selectedWorkbenchSurface}
           />
         ) : selectedResourceMetric ? (

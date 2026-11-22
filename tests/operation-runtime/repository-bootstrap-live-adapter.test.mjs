@@ -152,6 +152,15 @@ test("a known record-authority blocker is named safely, while unknown, malformed
   assert.equal(cancelled, true);
 });
 
+test("GitHub throttling exposes the typed retry time and no provider detail", async () => {
+  const retryAt = "2026-11-22T14:00:00.000Z";
+  await assert.rejects(readRepositoryBootstrap(id,{config,fetchImpl:async()=>Response.json({
+    error:"repository_owner_bootstrap_provider_throttled",message:"opaque detail",
+    details:{retry_at:retryAt},
+  },{status:429})}),error=>error.code==="repository_owner_bootstrap_provider_throttled" &&
+    error.retryAt===retryAt && /GitHub temporarily limited/.test(error.message) && !error.message.includes("opaque"));
+});
+
 test("an active owner reads its current unconfigured plan using Inventory authority without provider writes", async () => {
   const selected = { ownerRepo: owner, custodyRequestId: "custody:fixture", evidenceProfile: null, applicationMarkers: [], withCi: false, nonce: "review:verification", operation: "configure-verification" };
   const fetchImpl = async (_url, init) => {

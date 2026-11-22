@@ -130,6 +130,7 @@ function GovernanceConsoleContent({
             }
             attentionSnapshot={controller.attentionSnapshot}
             consoleDevMode={controller.consoleDevMode}
+            proposalCollection={liveAgentContext.proposals}
             onBackFromPulse={() => {
               controller.setPulseSignalSelection(null);
               controller.setSystemMoodSelection(false);

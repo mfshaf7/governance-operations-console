@@ -10,6 +10,7 @@ import { RepositoryRequestsSurface } from "../surface/repository-requests-surfac
 import { RepositoryControlDialogStack } from "../surface/repository-control-dialog-stack.tsx";
 import { RepositoryControlSurface } from "../surface/repository-control-surface.tsx";
 import { useRepositoryControlController } from "../surface/use-repository-control-controller.ts";
+import type { ProposalCollectionRead } from "../../../operation-integrations/use-proposal-repository-gate-runtime.ts";
 
 export type RepositoryWorkspaceProps = {
   contract: OperationWorkbenchDomainContract;
@@ -18,6 +19,7 @@ export type RepositoryWorkspaceProps = {
   onOpenDeliveryCatalog?: (repositoryId: string) => void;
   onOpenWorkspaceRegistration?: (providerId: string) => void;
   onOpenProposalSurface?: (proposalId: string) => void;
+  proposalCollection: ProposalCollectionRead;
 };
 
 export function RepositoryWorkspace({
@@ -27,8 +29,9 @@ export function RepositoryWorkspace({
   onOpenDeliveryCatalog,
   onOpenWorkspaceRegistration,
   onOpenProposalSurface,
+  proposalCollection,
 }: RepositoryWorkspaceProps) {
-  const controller = useRepositoryControlController({ entryIntent, onOpenDeliveryCatalog, onOpenWorkspaceRegistration });
+  const controller = useRepositoryControlController({ entryIntent, onOpenDeliveryCatalog, onOpenWorkspaceRegistration, proposalCollection });
   return (
     <TerasModalShell
       bodyLayout="fill"

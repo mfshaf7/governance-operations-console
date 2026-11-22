@@ -228,7 +228,9 @@ export function DeliveryIntakeSurface({
             }
             footer={<TerasRegisterPagination label="Delivery Intake register" offset={nativeHistory?page.offset:offset} count={visibleSources.length} page={nativeHistory?page.page:Math.floor(offset/pageSize)+1} total={nativeHistory?null:filteredSources.length} pending={nativeHistory&&page.loading} unavailable={nativeHistory&&Boolean(page.error)} hasPrevious={nativeHistory?page.hasPrevious:offset>0} hasNext={nativeHistory?Boolean(page.nextCursor):offset+visibleSources.length<filteredSources.length} onPrevious={nativeHistory?page.previous:()=>setLocalPosition({key:localKey,offset:Math.max(0,offset-pageSize)})} onNext={nativeHistory?page.next:()=>setLocalPosition({key:localKey,offset:offset+visibleSources.length})} onReset={nativeHistory&&page.error?page.first:undefined} nextLabel={nativeHistory&&visibleSources.length===0&&page.nextCursor?"Continue search":undefined}/>}
             kicker={surface.title}
-            statusLabel={nativeHistory?page.loading?"Loading Intake history":page.error?"Intake unavailable":`${visibleSources.length} on this page`:model.history_scope==="history"&&model.evidence_coverage?.intake.complete===false?"Loading original evidence":`${filteredSources.length}/${sources.length} shown`}
+            statusLabel={nativeHistory ? page.error ? page.verified ? "Last loaded" : "Intake unavailable"
+              : page.loading && !page.verified ? "Loading Intake history" : `${visibleSources.length} on this page`
+              : model.history_scope==="history"&&model.evidence_coverage?.intake.complete===false?"Loading original evidence":`${filteredSources.length}/${sources.length} shown`}
             statusTone="warn"
             title="Accepted Source Register"
           >
@@ -240,7 +242,14 @@ export function DeliveryIntakeSurface({
                 actions:<TerasActionButton emphasis="secondary" onClick={()=>setNativeHistoryId(`delivery-${issue.target_ref.split("/").at(-1)}`)}>Open item history</TerasActionButton>,
               }))}/>
             </TerasContentTray> : null}
-            {nativeHistory&&page.loading?<TerasLoadingState fill label="Loading source history…"/>:nativeHistory&&page.error?<TerasEmptyState fill><p role="alert">{page.error}</p><TerasActionButton emphasis="secondary" onClick={()=>void page.refresh()}>Retry Intake history</TerasActionButton></TerasEmptyState>:visibleSources.length > 0 ? (
+            {nativeHistory && page.verified && page.error ? <TerasContentTray role="status" title="Showing the last loaded history"
+              description="The refresh failed. Open a handoff to check its original evidence."
+              actions={<TerasActionButton busy={page.loading} emphasis="secondary" onClick={() => void page.refresh()}>Retry loading</TerasActionButton>} /> : null}
+            {nativeHistory && !page.verified && page.loading ? <TerasLoadingState fill label="Loading source history…" />
+              : nativeHistory && !page.verified && page.error ? <TerasContentTray fit="fill" role="alert" title="Intake history couldn’t load"
+                description={page.error}
+                actions={<TerasActionButton emphasis="secondary" onClick={() => void page.refresh()}>Retry loading</TerasActionButton>} />
+              : visibleSources.length > 0 ? (
               <DeliveryIntakeRegisterTable
                 onAction={openSourceAction}
                 onSelect={(source) =>

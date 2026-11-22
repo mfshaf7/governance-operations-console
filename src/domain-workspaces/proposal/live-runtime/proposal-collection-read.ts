@@ -11,7 +11,7 @@ export function proposalCollectionComplete(snapshot: ProposalLiveSnapshot | null
 }
 
 export async function readProposalCollection(fetchImpl: typeof fetch = fetch, options: {
-  signal?: AbortSignal; onProgress?: (snapshot: ProposalLiveSnapshot) => void;
+  signal?: AbortSignal; onProgress?: (snapshot: ProposalLiveSnapshot) => void; overview?: boolean;
 } = {}): Promise<ProposalLiveSnapshot> {
   const signal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(80_000)]) : AbortSignal.timeout(80_000);
   const rows: ProposalLiveRecord[] = [], ids = new Set<string>(), cursors = new Set<string>();
@@ -23,7 +23,10 @@ export async function readProposalCollection(fetchImpl: typeof fetch = fetch, op
   while (true) {
     let response: Response;
     try {
-      response = await fetchImpl(`/api/proposals${cursor ? `?${new URLSearchParams({cursor})}` : ""}`, {cache:"no-store",signal});
+      const query = new URLSearchParams();
+      if (options.overview) query.set("view", "overview");
+      if (cursor) query.set("cursor", cursor);
+      response = await fetchImpl(`/api/proposals${query.size ? `?${query}` : ""}`, {cache:"no-store",signal});
     } catch (error) {
       if (!first) throw error;
       return projection(false, "The remaining proposals could not be read. Counts and required moves are incomplete; refresh to retry.");
