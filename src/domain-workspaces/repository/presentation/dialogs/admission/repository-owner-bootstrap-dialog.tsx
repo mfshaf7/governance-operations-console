@@ -21,7 +21,15 @@ async function api(path: string, input?: unknown,signal?:AbortSignal): Promise<u
     // Ending the browser wait does not cancel an accepted owner operation.
     const response = await fetch(path, { cache: "no-store", signal: signal ? AbortSignal.any([signal,AbortSignal.timeout(write ? 135_000 : 15_000)]) : AbortSignal.timeout(write ? 135_000 : 15_000), ...(write ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) } : {}) });
     const body = await response.json();
-    if (!response.ok || body.mode !== "live" || body.error) throw new RepositorySetupError(body.error ?? "Repository setup is unavailable.", response.status >= 500 || [408, 429].includes(response.status), write && (response.status >= 500 || [408, 429].includes(response.status)));
+    if (!response.ok || body.mode !== "live" || body.error) {
+      const throttled = response.status === 429 && body.code === "repository_owner_bootstrap_provider_throttled";
+      const retryAt = throttled && typeof body.retryAt === "string" ? Date.parse(body.retryAt) : NaN;
+      const retry = Number.isFinite(retryAt) && retryAt > Date.now()
+        ? ` Try again after ${new Intl.DateTimeFormat(undefined,{dateStyle:"medium",timeStyle:"medium"}).format(retryAt)}.` : "";
+      const retryable = response.status >= 500 || [408, 429].includes(response.status);
+      const outcomeUnknown = write && retryable && !(throttled && path === `${base}/preparations`);
+      throw new RepositorySetupError((body.error ?? "Repository setup is unavailable.") + retry,retryable,outcomeUnknown);
+    }
     return body.projection;
   } catch (error) {
     if (error instanceof RepositorySetupError) throw error;
@@ -197,7 +205,7 @@ export function RepositoryOwnerBootstrapDialog({ ownerRepo, custodyRequestId, op
       {!current && records !== null && !pendingOwner ? <TerasFieldStack spacing="normal">
         {active && !existingProfile ? <>
           {pending ? <TerasLoadingState label="Checking verification eligibility…" detail="Reading current repository authority and its reviewed source controls." />
-            : <TerasContentTray kicker="Application verification unavailable"
+            : error ? null : <TerasContentTray kicker="Application verification unavailable"
               description="The service has not confirmed this repository's eligibility. Verification changes require active source-only registration, reviewed controls and approved source access on main. Shared, control and Security-bound repositories use their own reviewed source workflow."
               actions={retryable ? <TerasActionButton emphasis="secondary" onClick={() => void run("eligibility", inspectCurrent)}>Retry eligibility check</TerasActionButton> : undefined} />}
         </> : active ? <>

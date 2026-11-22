@@ -2,7 +2,7 @@
 import { useWorkspaceViewState } from "../../../../console-integration/registers/workspace-view-state.ts";
 
 import { repositoryCreationForProposal, repositoryCreationProposalId } from "../../../operation-integrations/proposal-repository-custody.ts";
-import { useProposalRepositoryGateRuntime } from "../../../operation-integrations/use-proposal-repository-gate-runtime.ts";
+import { useProposalRepositoryGateRuntime, type ProposalCollectionRead } from "../../../operation-integrations/use-proposal-repository-gate-runtime.ts";
 import { useRepositoryRegisterPage } from "../../live-runtime/use-repository-register-page.ts";
 import { repositoryRequestState } from "../../../operation-integrations/proposal-repository-live-projection.ts";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
@@ -93,10 +93,12 @@ export function useRepositoryControlController({
   entryIntent = null,
   onOpenDeliveryCatalog,
   onOpenWorkspaceRegistration,
+  proposalCollection,
 }: {
   entryIntent?: ConsoleSurfaceEntryIntent | null;
   onOpenDeliveryCatalog?: (repositoryId: string) => void;
   onOpenWorkspaceRegistration?: (providerId: string) => void;
+  proposalCollection: ProposalCollectionRead;
 }) {
   const runtimeCapabilities = getRepositoryRuntimeCapabilities();
   const consoleRuntime = useConsoleRuntimeCapabilities();
@@ -104,10 +106,11 @@ export function useRepositoryControlController({
     useWorkspaceViewState<RepositoryStatusFilter>('repository:statusFilter', "all");
   const [search, setSearch] = useWorkspaceViewState('repository:search', "");
   const [accountFilter, setAccountFilter] = useWorkspaceViewState('repository:accountFilter', "all");
-  const custodyRuntime = useRepositoryCustodyLiveRuntime();
-  const registerPage=useRepositoryRegisterPage({query:search.trim().toLowerCase(),status:statusFilter,account:accountFilter},consoleRuntime.projection?.mode==="live");
-  const repositoryRequests = useProposalRepositoryGateRuntime();
   const [view, setView] = useWorkspaceViewState<"requests" | "repositories">('repository:view', "repositories");
+  const custodyRuntime = useRepositoryCustodyLiveRuntime();
+  const registerPage=useRepositoryRegisterPage({query:search.trim().toLowerCase(),status:statusFilter,account:accountFilter},
+    consoleRuntime.projection?.mode==="live" && view==="repositories");
+  const repositoryRequests = useProposalRepositoryGateRuntime(proposalCollection);
   const continuityRuntime = useWorkspaceContinuityRuntime();
   useEffect(() => {
     if (consoleRuntime.projection?.mode !== "live" && consoleRuntime.projection?.mode !== "invalid") return;

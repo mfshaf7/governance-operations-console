@@ -284,7 +284,7 @@ export function DeliveryWorkspaceModal({
     <TerasModalShell
       agentHost
       bodyLayout="fill"
-      description={localPlanning ? "Disconnected preview of the Delivery workspace." : "Fullscreen Delivery workspace for intake, work design, refinement, execution, and Delivery Catalog."}
+      description={localPlanning ? "Disconnected preview of the Delivery workspace." : contract.surfacePurpose}
       kicker="Delivery Workspace"
       modalAttributes={getOperationWorkbenchSurfaceAttributes(contract)}
       onClose={requestWorkspaceClose}
@@ -342,7 +342,7 @@ export function DeliveryWorkspaceModal({
                     surface.id === "home"
                       ? "Command"
                       : surface.id === "catalog"
-                        ? "Gated"
+                        ? undefined
                         : String(count)
                   }
                   onClick={() => requestActiveSurfaceChange(surface.id)}
@@ -372,6 +372,8 @@ export function DeliveryWorkspaceModal({
       >
         {activeSurfaceId === "pi-planning" ? <DeliveryPIPlanningSurface
           model={model}
+          source={localPlanning ? null : planningSource}
+          previousPI={planningIncrement}
           focusPackageId={planningHandoff?.packageId ?? null}
           onDirtyChange={setPlanningDraftDirty}
           onPlanningIncrementChange={setPlanningIncrement}

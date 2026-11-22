@@ -10,6 +10,7 @@ import type {
 } from "../../read-model/index.ts";
 
 import {
+  TerasContentTray,
   TerasEmptyState,
   TerasFilterBar,
   TerasRecordControlLayout,
@@ -204,11 +205,20 @@ export function DeliveryPackageRegisterSurface({
               />
             }
             kicker={surface.title}
-            statusLabel={live?`${filteredPackages.length} on this page`:`${filteredPackages.length}/${packages.length} shown`}
+            statusLabel={live ? page.error ? page.model ? "Last loaded" : "Unavailable"
+              : page.loading && !page.model ? "Loading" : `${filteredPackages.length} on this page`
+              : `${filteredPackages.length}/${packages.length} shown`}
             statusTone="warn"
             title={`${surface.title} Register`}
           >
-            {live&&page.loading?<TerasLoadingState fill label="Loading matching packages…"/>:live&&page.error?<TerasEmptyState fill><p role="alert">{page.error}</p><TerasActionButton emphasis="secondary" onClick={()=>void page.refresh()}>Retry package search</TerasActionButton></TerasEmptyState>:filteredPackages.length > 0 ? (
+            {live && page.model && page.error ? <TerasContentTray role="status" title="Showing the last loaded packages"
+              description="The refresh failed. Open an item for its current details."
+              actions={<TerasActionButton busy={page.loading} emphasis="secondary" onClick={() => void page.refresh()}>Retry loading</TerasActionButton>} /> : null}
+            {live && !page.model && page.loading ? <TerasLoadingState fill label="Loading matching packages…" />
+              : live && !page.model && page.error ? <TerasContentTray fit="fill" role="alert" title="Work packages couldn’t load"
+                description={page.error}
+                actions={<TerasActionButton emphasis="secondary" onClick={() => void page.refresh()}>Retry loading</TerasActionButton>} />
+              : filteredPackages.length > 0 ? (
               <DeliveryPackageRegisterTable
                 onSelectPackage={(deliveryPackage) =>
                   setSelectedPackageId(deliveryPackage.delivery_package_id)

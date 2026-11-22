@@ -17,6 +17,18 @@ import type { DeliveryPackageSummary } from "../domain/delivery-package.ts";
 export type DeliveryReadModel = {
   preview_pi_plans?: Record<string, import("../local-runtime/projections/pi-planning-preview.ts").PreviewPIPlan>;
   history_scope?: "current" | "history";
+  completed_planning_prerequisite_ids?: number[];
+  planning_scope?: { target_pi: string; indexed_at: string };
+  planning_focus?: string;
+  planning_external_dependencies?: Array<{
+    id: number;
+    epic_id: number | null;
+    title: string;
+    status: string;
+    target_pi: string | null;
+    iteration: string | null;
+    requires: number[];
+  }>;
   deferred_history_tree_refs?: string[];
   evidence_coverage?: {
     intake: { state: "current" | "partial" | "unavailable"; detail: string; issue_count: number; complete?: boolean; issues?: Array<{target_ref:string;detail:string}> };

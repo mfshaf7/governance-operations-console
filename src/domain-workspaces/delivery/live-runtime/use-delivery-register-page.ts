@@ -15,12 +15,15 @@ export function useDeliveryRegisterPage(selection:DeliveryRegisterSelection,enab
   const inFlight=useRef(false),ticket=useRef(0),active=useRef<AbortController|null>(null);
   const refresh=useCallback(async(background=false)=>{
     if(!enabled||background&&inFlight.current)return;inFlight.current=true;active.current?.abort();const controller=new AbortController();active.current=controller;
-    const run=++ticket.current;setLoading(!background);if(!background)setError(null);
+    const run=++ticket.current;setLoading(!background);
+    let accessDenied = false;
     try{
       const readSignal=AbortSignal.any([controller.signal,AbortSignal.timeout(80000)]);
       const params=new URLSearchParams({view:"register",surface:selection.surface,scope:selection.scope,q:selection.query,status:selection.status,...(cursor?{cursor}:{})});
       const read=async(query:URLSearchParams)=>{
-        const response=await fetch(`/api/delivery/workspace?${query}`,{cache:"no-store",signal:readSignal});const body=await response.json();
+        const response=await fetch(`/api/delivery/workspace?${query}`,{cache:"no-store",signal:readSignal});
+        accessDenied = response.status === 401 || response.status === 403;
+        const body=await response.json();
         if(!response.ok||body.mode!=="live"||body.projection?.schema_version!==1||body.projection.source_truth!=="OpenProject-backed OOS"||!Array.isArray(body.projection.packages)||body.projection.packages.length>25||!body.page||body.page.next_cursor!==null&&(typeof body.page.next_cursor!=="string"||body.page.next_cursor.length>8192))throw Error(body.error??"Delivery register source is unavailable.");
         return body;
       };
@@ -37,7 +40,18 @@ export function useDeliveryRegisterPage(selection:DeliveryRegisterSelection,enab
         if(exact.projection.packages.length!==1||exact.projection.packages[0].delivery_package_id!==focusId)throw Error("The selected original Delivery package could not be verified.");detail=exact.projection;
       }
       if(run===ticket.current){setModel(next.projection);setOriginal(detail);setNextCursor(next.page.next_cursor);setResultScope(scopeKey);setSettledScope(scopeKey);setError(null);}
-    }catch(e){if(run===ticket.current&&!controller.signal.aborted){setModel(null);setOriginal(null);setSettledScope(scopeKey);setError(e instanceof Error?e.message:"Delivery register source unavailable.");}}
+    }catch(e){
+      if(run===ticket.current&&!controller.signal.aborted){
+        if (accessDenied) {
+          setModel(null);
+          setOriginal(null);
+          setResultScope(null);
+          setNextCursor(null);
+        }
+        setSettledScope(scopeKey);
+        setError(e instanceof Error?e.message:"Delivery register source unavailable.");
+      }
+    }
     finally{if(run===ticket.current&&!controller.signal.aborted){setLoading(false);inFlight.current=false;}}
   },[enabled,key,cursor,focusId]);
   const latest=useRef(refresh);latest.current=refresh;

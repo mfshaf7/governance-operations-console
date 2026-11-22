@@ -5,10 +5,8 @@ import { normalizeRefinementPersistedSession } from "../../../../local-runtime/p
 import {
   TerasActionButton,
   TerasModalShell,
-  TerasEmptyState,
-  TerasFieldStack,
+  TerasContentTray,
   TerasPanelStack,
-  TerasPanelHeader,
   TerasTechnicalDetails,
   TerasLoadingState,
 } from "@/teras";
@@ -76,14 +74,13 @@ function RefinementWorkflowBody({
         <TerasPanelStack fill="last" minimumFillHeight="medium">
           {controller.packetLoading
             ? <TerasLoadingState fill label="Loading Refinement…" detail="Reading saved work and available field choices." skeleton="details" />
-            : <TerasEmptyState fill>
-                <TerasFieldStack>
-                  <TerasPanelHeader kicker="Saved work" title="Refinement couldn’t load"
-                    description="Try again to read the saved work and available choices." />
-                  <TerasActionButton onClick={() => void controller.retryPacket()}>Retry loading</TerasActionButton>
-                  <TerasTechnicalDetails items={[]}><p>{controller.packetUnavailableReason}</p></TerasTechnicalDetails>
-                </TerasFieldStack>
-              </TerasEmptyState>}
+            : <TerasContentTray fit="fill" role="alert" title="Refinement couldn’t load"
+                description="Try again to read the saved work and available choices."
+                actions={<TerasActionButton emphasis="secondary" onClick={() => void controller.retryPacket()}>Retry loading</TerasActionButton>}>
+                {controller.packetUnavailableReason ? <TerasTechnicalDetails items={[]}>
+                  <p>{controller.packetUnavailableReason}</p>
+                </TerasTechnicalDetails> : null}
+              </TerasContentTray>}
         </TerasPanelStack>
       </TerasModalShell>
     );

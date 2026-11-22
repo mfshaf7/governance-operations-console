@@ -10,9 +10,10 @@ type Row={record:DeliveryPackageSummary;model:DeliveryReadModel};
 type Selection={surface:string;scope:"current"|"history";query:string;status:string};
 export async function readDeliveryRegister(query:URLSearchParams,callerSignal?:AbortSignal,options:{env?:NodeJS.ProcessEnv;fetchImpl?:typeof fetch;allowLegacy?:boolean;readSource?:(cursor:string|null,id?:string)=>Promise<{model:DeliveryReadModel;next_cursor:string|null}>}={}){
   const owner=ownerQueryFetch(callerSignal,options.fetchImpl);
-  const readSource=options.readSource??((cursor:string|null,id?:string)=>readOwner(cursor,owner.fetchImpl,id,options.env,options.allowLegacy));
   const selection:Selection={surface:query.get("surface")??"work-design",scope:(query.get("scope")??"current") as Selection["scope"],query:(query.get("q")??"").trim().toLowerCase(),status:query.get("status")??"all"};
   if([...query.keys()].some(key=>!["view","surface","scope","q","status","cursor","id"].includes(key)||query.getAll(key).length!==1)||!["work-design","refinement"].includes(selection.surface)||!["current","history"].includes(selection.scope)||selection.query.length>128||!["all","New","Ready","In Progress","Blocked","Done","Deferred","Retired","Closeout Pending"].includes(selection.status))throw new DeliveryOosError("Select a valid Delivery register search.","delivery_register_selection_invalid",400);
+  const readSource=options.readSource??((cursor:string|null,id?:string)=>
+    readOwner(cursor,owner.fetchImpl,id ? "history" : selection.scope,id,options.env,options.allowLegacy));
   const id=query.get("id");if(id&&(!/^delivery-[1-9][0-9]*$/.test(id)||query.has("cursor")))throw new DeliveryOosError("Select one exact original package.","delivery_register_selection_invalid",400);
   let last:DeliveryReadModel|null=null;
   if(id){const page=await readSource(null,id);const row=page.model.packages.find(row=>row.delivery_package_id===id);if(!row)throw new DeliveryOosError("The selected original package is unavailable.","delivery_register_original_missing",404);return response([{record:row,model:page.model}],null,page.model,selection);}
@@ -23,9 +24,9 @@ export async function readDeliveryRegister(query:URLSearchParams,callerSignal?:A
       (!selection.query||[record.display_name,record.delivery_package_id,record.source_ref,record.summary,record.target_pi,record.backend_status,record.package_posture,record.workflow_phase].join(" ").toLowerCase().includes(selection.query))});
   return response(page.records,page.next_cursor,last!,selection);
 }
-async function readOwner(cursor:string|null,fetchImpl:typeof fetch,id?:string,env=process.env,allowLegacy=true){
+async function readOwner(cursor:string|null,fetchImpl:typeof fetch,scope:Selection["scope"],id?:string,env=process.env,allowLegacy=true):Promise<{model:DeliveryReadModel;next_cursor:string|null}>{
   if(cursor?.startsWith("legacy-register:"))return legacy(cursor,fetchImpl,id,env);
-  const params=new URLSearchParams({view:"register",include_done:"true",include_inactive:"true",...(cursor?{cursor}:{}),...(id?{id}:{})});
+  const params=new URLSearchParams({view:"register",include_done:"true",include_inactive:"true",...(scope==="current"?{scope}:{}),...(cursor?{cursor}:{}),...(id?{id}:{})});
   let value:unknown;
   try{value=await deliveryOosRequest(resolveDeliveryOosConfig(env),`/v1/delivery-initiatives?${params}`,{method:"GET"},fetchImpl,75000,{authority:"operator-orchestration-service",sourceOwner:"workspace-delivery-art",recordRef:"openproject://projects/workspace-delivery-art/initiatives"});}
   catch(error){
@@ -33,11 +34,20 @@ async function readOwner(cursor:string|null,fetchImpl:typeof fetch,id?:string,en
     // Only its exact unsupported-view response permits the existing overview read.
     if(allowLegacy&&error instanceof DeliveryOosError&&error.status===400&&
       (error.code==="delivery_view_invalid"||error.code==="delivery_oos_rejected"&&error.message==="The optional view must be console."))return legacy(cursor,fetchImpl,id,env);
+    // The immediately previous broker supports native pages but rejects scope.
+    if(allowLegacy && scope==="current" && error instanceof DeliveryOosError && error.status===400 &&
+      error.code==="delivery_register_selection_invalid" && error.message==="Select one complete-status Delivery root page.") {
+      return readOwner(cursor,fetchImpl,"history",id,env,allowLegacy);
+    }
     throw error;
   }
-  const page=(value as {register_page?:{next_cursor?:unknown}})?.register_page;
+  const page=(value as {register_page?:{next_cursor?:unknown;scope?:string}})?.register_page;
   if(!page||page.next_cursor!==null&&(typeof page.next_cursor!=="string"||page.next_cursor.length>2048))throw new DeliveryOosError("The owner cannot confirm the Delivery register continuation.","delivery_register_page_unavailable",503);
   const model=projectCanonicalDeliveryOverview(value,canonicalDigest(value),new Date().toISOString());
+  if(scope==="current" && (page.scope!=="current-root-scan-page" ||
+    model.packages.some(row=>["done","retired","parked"].includes(row.backend_status)))) {
+    throw new DeliveryOosError("The owner returned a different Delivery scope.","delivery_register_scope_invalid",502);
+  }
   if(model.packages.length>25)throw new DeliveryOosError("The owner returned too many packages for this page.","delivery_register_page_invalid",502);
   return {model,next_cursor:page.next_cursor as string|null};
 }

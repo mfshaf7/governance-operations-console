@@ -19,6 +19,7 @@ import {
 import {
   ProposalWorkspace,
   getProposalOperationWorkbenchContract,
+  type ProposalCollectionRead,
 } from "../domain-workspaces/proposal";
 import {
   PrototypeWorkspace,
@@ -44,6 +45,7 @@ export function OperationWorkbenchHost({
   onOpenRepositorySurface,
   onOpenProposalSurface,
   onOpenWorkspace,
+  proposalCollection,
   selected,
 }: {
   consoleDevMode: boolean;
@@ -53,6 +55,7 @@ export function OperationWorkbenchHost({
   onOpenRepositorySurface: (proposalId: string) => void;
   onOpenProposalSurface: (proposalId: string) => void;
   onOpenWorkspace: (workspaceId: ConsoleWorkspaceId, entryIntent: ConsoleSurfaceEntryIntent) => void;
+  proposalCollection: ProposalCollectionRead;
   selected: OperationWorkbenchSelectorEntry;
 }) {
   const domain = selected.domain;
@@ -84,6 +87,7 @@ export function OperationWorkbenchHost({
             onOpenDeliveryCatalog={onOpenDeliveryCatalog}
             onOpenWorkspaceRegistration={providerId => onOpenWorkspace("workspace-registry", {mode: "resolve", subjectRef: providerId, requiredMoveRef: "workspace-registry.repository-onboarding"})}
             onOpenProposalSurface={onOpenProposalSurface}
+            proposalCollection={proposalCollection}
           />
         </OperationWorkbench>
       );

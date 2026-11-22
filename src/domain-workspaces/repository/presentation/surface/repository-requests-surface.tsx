@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRepositoryRequestPage } from "../../live-runtime/use-repository-request-page.ts";
 import {
   TerasActionButton, TerasActionRow, TerasContentTray, TerasEmptyState, TerasFieldStack, TerasFilterBar, TerasLoadingState,
@@ -26,11 +26,21 @@ export function RepositoryRequestsSurface({ controller, onOpenProposal }: {
       `${request.title} ${request.proposalId}`.toLowerCase().includes(search.toLowerCase().trim());
   });
   const localPage = useRegisterPage(matches, JSON.stringify([search.trim().toLowerCase(), filter]), 'Repository requests');
-  const native = useRepositoryRequestPage({query: search.trim().toLowerCase(), status: filter}, runtime.mode === "live");
-  const live = runtime.mode === "live";
+  const live = controller.canonicalGate.available;
+  const native = useRepositoryRequestPage({query: search.trim().toLowerCase(), status: filter}, live);
+  useEffect(()=>{
+    if (native.accessDenied) setRetainedSelection(null);
+  },[native.accessDenied]);
+  const lastAcknowledgement = useRef(runtime.acknowledgementRevision);
+  useEffect(()=>{
+    if (!live || lastAcknowledgement.current === runtime.acknowledgementRevision) return;
+    lastAcknowledgement.current = runtime.acknowledgementRevision;
+    void native.refresh();
+  },[live,runtime.acknowledgementRevision,native.refresh]);
   const page = live ? { ...native, page: native.pageNumber, hasNext: Boolean(native.nextCursor) } : localPage;
   const records = live ? native.records : localPage.rows;
-  const selected = records.find(request => request.proposalId === selectedId) ?? (retainedSelection?.proposalId === selectedId ? { ...retainedSelection, sourceCurrent: false } : records[0]);
+  const selected = live && native.accessDenied ? undefined : records.find(request => request.proposalId === selectedId) ??
+    (retainedSelection?.proposalId === selectedId ? { ...retainedSelection, sourceCurrent: false } : records[0]);
   const loading = live ? native.loading : runtime.status === "loading";
   const current = live ? !native.loading && !native.error : runtime.status === "current" && (runtime.attentionCount !== null || runtime.coverage?.complete === false);
   const countUnavailable = runtime.status !== "loading" && runtime.attentionCount === null;
@@ -52,7 +62,7 @@ export function RepositoryRequestsSurface({ controller, onOpenProposal }: {
       }}>Review</TerasActionButton> },
   ];
   const empty = loading ? <TerasLoadingState fill label="Loading repository requests…" /> :
-    <TerasEmptyState fill>{!current || countUnavailable ? "The request source is unavailable or incomplete. Refresh to check for current requests." :
+    pageError ? null : <TerasEmptyState fill>{!current || !live && countUnavailable ? "The request source is unavailable or incomplete." :
       live && native.nextCursor ? "No matches in this search window. Continue search to check remaining requests." : runtime.coverage?.complete === false && !live ? "No matching requests are visible in the proposals checked so far. The remaining proposals have not been checked." :
       search.trim() ? "No requests match your search." : filter === "attention" ?
       "No repository requests need attention. Resolved requests remain available in history." :
@@ -61,7 +71,6 @@ export function RepositoryRequestsSurface({ controller, onOpenProposal }: {
     data-repository-requests-surface="true"
     register={<TerasRegisterPanel footer={<TerasRegisterPagination label="Repository requests" offset={page.offset} count={records.length} total={live || runtime.coverage?.complete === false ? undefined : matches.length} page={page.page} pending={loading} unavailable={Boolean(pageError)} hasPrevious={page.hasPrevious} hasNext={page.hasNext} onPrevious={page.previous} onNext={page.next} nextLabel={!records.length && page.hasNext ? "Continue search" : undefined} />} title="Repository requests" kicker="Requests" density="compact-control"
       description="Repository requirements raised by Proposals. Review each request before confirming its repository."
-      actions={<TerasActionButton emphasis="secondary" onClick={() => { void refresh(); }}>Refresh requests</TerasActionButton>}
       filterBar={<TerasFilterBar search={{ariaLabel: "Search repository requests", value: search,
         placeholder: "Search proposal…", onValueChange: setSearch}}
         filters={[{label: "Filter request status", value: filter, onValueChange: setFilter, options: [
@@ -70,8 +79,10 @@ export function RepositoryRequestsSurface({ controller, onOpenProposal }: {
           {label: "All requests", value: "all"},
         ]}]} />}>
       <TerasFieldStack fill="last">
-      {!loading && (!current || countUnavailable) ? <TerasContentTray role="status" kicker="Request coverage" description="Current request count is unavailable. Requests with stale source data are read-only." /> : null}
-      {pageError ? <TerasContentTray role="alert" kicker="Requests unavailable" description={pageError} /> : null}
+      {!loading && !pageError && countUnavailable ? <TerasContentTray role="status" kicker="Request coverage" description="The total number of requests needing attention is unavailable." /> : null}
+      {pageError ? <TerasContentTray role="alert" fit={records.length ? "content" : "fill"}
+        title={native.retained ? "Showing the last loaded requests" : "Repository requests couldn’t load"} description={pageError}
+        actions={<TerasActionButton emphasis="secondary" busy={loading} onClick={() => { void refresh(); }}>Retry loading</TerasActionButton>} /> : null}
       {!live && runtime.coverage && !runtime.coverage.complete ? runtime.reading ? <TerasLoadingState inline label="Checking remaining Proposal pages…" /> :
         <TerasContentTray kicker="Incomplete request coverage" description={runtime.coverage.detail ?? "Some proposals have not been checked. The total needing attention is unavailable."} /> : null}
       {records.length ? <TerasRecordTable ariaLabel="Repository requests" columns={columns} rows={records} fill getRowId={request => request.proposalId}
