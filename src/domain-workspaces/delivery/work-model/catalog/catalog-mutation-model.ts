@@ -13,10 +13,13 @@ import {
   isIterationCatalog,
   isOwnerRepoCatalog,
   isTargetPiCatalog,
+  iterationCatalogId,
   parentTargetPiValueKey,
+  planningWindowForTargetPi,
   piPlanningDateCatalogId,
   targetPiCatalogId,
 } from "./catalog-selectors.ts";
+import { iterationWindows, overlappingPlanningIncrement } from "./planning-calendar.ts";
 import {
   catalogRetirementReceiptLabel,
   catalogRetirementBlocked,
@@ -25,6 +28,7 @@ import {
 export function canDraftCatalogMutation(catalog: DeliveryCatalogItem | null) {
   return (
     catalog !== null &&
+    !isIterationCatalog(catalog) &&
     !["read_only", "retired", "stale", "missing"].includes(catalog.lifecycle_state) &&
     catalog.console_capability !== "read_only" &&
     catalog.console_capability !== "owner_routed"
@@ -109,6 +113,36 @@ export function applyCatalogMutationDraft({
     return null;
   }
   const catalog = activeCatalog;
+  if (isIterationCatalog(catalog)) return null;
+  const editsCalendar = isTargetPiCatalog(catalog) && mutationDraft.mode !== "retire";
+  const generatesCalendar = draft.iterationLengthDays !== undefined || draft.iterationCount !== undefined;
+  const startDate = draft.planningWindowStartDate ?? "";
+  const calendarWindows = generatesCalendar
+    ? iterationWindows(startDate, draft.iterationLengthDays ?? 0, draft.iterationCount ?? 0) : [];
+  if (generatesCalendar && (!editsCalendar || !calendarWindows.length)) {
+    throw new Error("Choose a start date, number of iterations and iteration length.");
+  }
+  const endDate = calendarWindows.at(-1)?.end_date ?? draft.planningWindowEndDate ?? "";
+  if (generatesCalendar && draft.planningWindowEndDate && draft.planningWindowEndDate !== endDate) {
+    throw new Error("The end date must match the number and length of full iterations.");
+  }
+  if (editsCalendar) {
+    const pi = mutationDraft.valueId
+      ? catalogValues.find(value => value.catalog_value_id === mutationDraft.valueId)?.value_key ?? "" : draft.valueKey;
+    const previous = planningWindowForTargetPi(catalogValues, pi);
+    if (!generatesCalendar && (mutationDraft.mode === "add" ||
+        (startDate && startDate !== previous.startDate) ||
+        (endDate && endDate !== previous.endDate))) {
+      throw new Error("Save an iteration calendar to create a PI or change its dates.");
+    }
+    const hasDatedIterations = catalogValues.some(value => value.catalog_item_id === iterationCatalogId &&
+      value.parent_catalog_value_key === pi && value.lifecycle_state !== "retired" && value.iteration_window);
+    if (hasDatedIterations && (pi !== draft.valueKey || (generatesCalendar && (startDate !== previous.startDate || endDate !== previous.endDate)))) {
+      throw new Error("This PI already has dated iterations. Keep its recorded name and date window.");
+    }
+    const overlap = generatesCalendar ? overlappingPlanningIncrement(startDate, endDate, pi, catalogValues) : null;
+    if (overlap) throw new Error(`These dates overlap the calendar for ${overlap}.`);
+  }
 
   function resultFor({
     actionLabel,
@@ -119,6 +153,39 @@ export function applyCatalogMutationDraft({
     nextCatalogValues: DeliveryCatalogValue[];
     valueId: string;
   }): CatalogDraftApplyResult {
+    if (calendarWindows.length) {
+      nextCatalogValues = [...nextCatalogValues];
+      for (const window of calendarWindows) {
+        const label = `Iteration ${window.sequence}`;
+        const key = `${draft.valueKey} / ${label}`;
+        const existingIndex = nextCatalogValues.findIndex(value => value.catalog_item_id === iterationCatalogId && value.value_key === key);
+        const existing = nextCatalogValues[existingIndex];
+        if (existing && (existing.lifecycle_state === "retired" || (existing.iteration_window &&
+          (existing.iteration_window.start_date !== window.start_date || existing.iteration_window.end_date !== window.end_date)))) {
+          throw new Error(`${key} already has a different calendar or status.`);
+        }
+        const value: DeliveryCatalogValue = {
+          ...(existing ?? {
+          catalog_item_id: iterationCatalogId,
+          catalog_value_id: `catalog-value-local-${localIdSeed}-iteration-${window.sequence}`,
+          description: "",
+          evidence_refs: [],
+          last_projected_at: null,
+          lifecycle_state: "active",
+          tone: "ok",
+          usage_count: 0,
+          usage_summary: "No Delivery records use this value.",
+          value_key: key,
+          }),
+          label,
+          parent_catalog_item_id: targetPiCatalogId,
+          parent_catalog_value_key: draft.valueKey,
+          iteration_window: window,
+        };
+        if (existing) nextCatalogValues[existingIndex] = value;
+        else nextCatalogValues.push(value);
+      }
+    }
     return {
       catalogValues: nextCatalogValues,
       localDraftReceipt: {
@@ -134,14 +201,10 @@ export function applyCatalogMutationDraft({
   }
 
   if (mutationDraft.mode === "add") {
-    const parentTargetPiKey =
-      isIterationCatalog(catalog) && draft.parentCatalogValueKey
-        ? draft.parentCatalogValueKey
-        : null;
     const planningWindowValueKey = isTargetPiCatalog(catalog)
       ? formatPlanningWindowValueKey(
-          draft.planningWindowStartDate ?? "",
-          draft.planningWindowEndDate ?? "",
+          startDate,
+          endDate,
         )
       : "";
     const ownerRepoRequest = isOwnerRepoCatalog(catalog)
@@ -158,8 +221,8 @@ export function applyCatalogMutationDraft({
       label: draft.label,
       last_projected_at: null,
       lifecycle_state: "admitted",
-      parent_catalog_item_id: parentTargetPiKey ? targetPiCatalogId : null,
-      parent_catalog_value_key: parentTargetPiKey,
+      parent_catalog_item_id: null,
+      parent_catalog_value_key: null,
       tone: catalog.gap_status === "missing_backend_route" ? "warn" : "ok",
       usage_count: 0,
       usage_summary: ownerRepoRequest
@@ -206,11 +269,9 @@ export function applyCatalogMutationDraft({
     const ownerRepoRequest = isOwnerRepoCatalog(catalog)
       ? (draft.linkedRepository ?? null)
       : null;
-    const planningWindowValueKey = isTargetPiCatalog(catalog)
-      ? formatPlanningWindowValueKey(
-          draft.planningWindowStartDate ?? "",
-          draft.planningWindowEndDate ?? "",
-        )
+    const previousWindow = planningWindowForTargetPi(catalogValues, previousValueKey);
+    const planningWindowValueKey = isTargetPiCatalog(catalog) && (generatesCalendar || previousValueKey !== draft.valueKey)
+      ? formatPlanningWindowValueKey(startDate || previousWindow.startDate, endDate || previousWindow.endDate)
       : "";
     let planningWindowUpdated = false;
     const updatedValues = catalogValues.map((value): DeliveryCatalogValue => {
@@ -227,14 +288,6 @@ export function applyCatalogMutationDraft({
           label: draft.label,
           last_projected_at: null,
           lifecycle_state: "admitted",
-          parent_catalog_item_id:
-            isIterationCatalog(catalog) && draft.parentCatalogValueKey
-              ? targetPiCatalogId
-              : value.parent_catalog_item_id,
-          parent_catalog_value_key:
-            isIterationCatalog(catalog) && draft.parentCatalogValueKey
-              ? draft.parentCatalogValueKey
-              : value.parent_catalog_value_key,
           tone: "warn",
           usage_summary: ownerRepoRequest
             ? `Linked to Repository record ${ownerRepoRequest.id}; sync is required before Execution can apply this owner_repo value.`

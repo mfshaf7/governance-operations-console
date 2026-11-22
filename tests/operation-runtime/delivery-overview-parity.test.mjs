@@ -6,6 +6,8 @@ import {deliveryModelForScope,projectDeliveryIntakeHistory,deliveryIntakeRefresh
 import {deliveryWorkspaceSummaryStats} from '../../src/domain-workspaces/delivery/presentation/workspace/workspace-summary-model.ts';
 import {getDeliveryPackagesByWorkflowPhase,getExecutionBoardPackages} from '../../src/domain-workspaces/delivery/read-model/selectors/workflow-package-selectors.ts';
 import {deliveryOverviewStats,deliverySurfaceItemCount} from '../../src/domain-workspaces/delivery/presentation/workspace/workspace-count-model.ts';
+import {getPlanningNodes} from '../../src/domain-workspaces/delivery/local-runtime/projections/pi-planning-preview.ts';
+import {recordedPlanningIteration} from '../../src/domain-workspaces/delivery/work-model/catalog/planning-calendar.ts';
 
 const at='2026-10-26T00:00:00Z',revision='synthetic-source';
 const ref=id=>`openproject://work_packages/${id}`;
@@ -30,6 +32,29 @@ function fixtures(){
  const overview={schema_version:1,workflow_id:'delivery-console-overview',project:inventory.project,mutation_authority:'none',roots:initiatives.map(i=>({...i.epic,record_version:'version-1'})),operational_initiatives:initiatives.filter(i=>!['done','retired'].includes(i.epic.status)),deferred_history_refs:[ref(1),ref(5)]};
  return {inventory,overview};
 }
+
+test("the live planning summary distinguishes exact dated assignments from recorded legacy labels", () => {
+  const pi = "PI-2026-03";
+  const iteration = `${pi} / Iteration 1`;
+  const child = (id, recorded) => ({ ...initiative(id, "new").epic,
+    target_pi: pi, iteration: recorded, type: "User story", children: [] });
+  const inventory = { workflow_id: "delivery-initiatives", project: { identifier: "workspace-delivery-art" },
+    initiatives: [initiative(10, "new", [child(11, iteration), child(12, "Iteration 1"), child(13, "Not committed to a PI iteration yet.")])] };
+  const model = projectCanonicalDeliveryWorkspace(inventory, revision, at);
+  model.catalog.projection_status = "fresh";
+  const summary = () => deliveryWorkspaceSummaryStats({ activeSurfaceId: "pi-planning", executionCount: 0, model, planningIncrement: pi })[0];
+  assert.equal(summary().label, "Recorded assignments");
+  assert.equal(summary().value, "2");
+  const legacy = getPlanningNodes(model.packages[0], model).find(node => node.number === 12);
+  assert.equal(legacy.currentIteration, recordedPlanningIteration("Iteration 1"));
+  model.catalog.values = [
+    { catalog_item_id: "catalog-pi-planning-date", lifecycle_state: "read_only", parent_catalog_value_key: pi, value_key: "2026-06-01/2026-06-28" },
+    { catalog_item_id: "catalog-iteration", lifecycle_state: "active", parent_catalog_value_key: pi, value_key: iteration,
+      iteration_window: { sequence: 1, start_date: "2026-06-01", end_date: "2026-06-14" } },
+  ];
+  assert.equal(summary().label, "Scheduled");
+  assert.equal(summary().value, "1");
+});
 
 test('global Current board, filters, active and parked details preserve full inventory semantics',()=>{
  const {inventory,overview}=fixtures();

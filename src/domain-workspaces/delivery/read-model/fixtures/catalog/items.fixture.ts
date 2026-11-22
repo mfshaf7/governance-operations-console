@@ -69,25 +69,25 @@ export const deliveryCatalogItemFixtures: DeliveryCatalogItem[] = [
     label: "Iteration",
     value_key: "PI-2026-03 / Iteration 2",
     description:
-      "Iteration value nested under Target PI, used by Refinement when placing Feature and User story work.",
+      "Saved calendar iterations and labels used on existing work.",
     source_authority:
       "OOS delivery planning rules and OpenProject custom-field allowed values.",
     create_authority:
-      "OOS should request iteration creation when Delivery owns the planning horizon; OpenProject adapter supplies allowed values.",
-    console_capability: "request",
+      "Generated when a PI calendar is saved.",
+    console_capability: "owner_routed",
     backend_route:
-      "GET /v1/delivery-catalog/planning missing; create/request route not admitted yet.",
-    owner_route: "operator-orchestration-service delivery planning workflow.",
-    lifecycle_state: "admitted",
-    gap_status: "missing_backend_route",
+      "/v1/delivery-catalog/projection",
+    owner_route: "PI Planning",
+    lifecycle_state: "read_only",
+    gap_status: "owner_routed",
     usage_count: 5,
     usage_summary:
-      "Five refinement packets have iteration-ready metadata but still consume prototype option sets.",
+      "Shows saved iterations and recorded usage.",
     last_projected_at: "2026-06-20T09:10:00.000Z",
-    tone: "stale",
-    next_action_label: "Request Value",
+    tone: "info",
+    next_action_label: "System managed",
     next_action_detail:
-      "Keep this as a request intent until OOS exposes the catalog planning route and create/request contract.",
+      "Set up the PI calendar to generate numbered iterations.",
     evidence_refs: [
       "operator-orchestration-service/src/delivery-planning-workflow.json",
       "operator-orchestration-service/docs/api/openapi.json",

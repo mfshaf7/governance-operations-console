@@ -38,8 +38,34 @@ test("applied receipt survives failed follow-up read and new mutation stays bloc
 test("lost mutation response retries the identical acceptance rather than a replacement",async({page})=>{
  const p=projection();let attempt=0;const h=await harness(page,{read:r=>r.fulfill({json:snapshot(p)}),write:r=>{attempt++;return attempt===1?r.abort("failed"):r.fulfill({json:result(r.request().postDataJSON(),p)});}});const d=await openTeamEdit(page,h);await d.getByRole("button",{name:"Save Changes",exact:true}).click();await expect(d).toContainText("Outcome not confirmed");await expect(d.getByLabel("Description (optional)",{exact:true})).toBeDisabled();await d.getByRole("button",{name:"Retry same change",exact:true}).click();await expect(d).toHaveCount(0);expect(h.writes[1].body).toEqual(h.writes[0].body);await expect(h.catalog).toContainText("Change applied");expect(h.errors).toEqual([]);
 });
-test("retired planning parent is excluded and reversed dates cannot submit",async({page},info)=>{
- const p=projection();p.values[0].lifecycle_state="retired";const h=await harness(page,{read:r=>r.fulfill({json:snapshot(p)})});await h.section("catalog");await expect(h.catalog.getByText("live",{exact:true})).toBeVisible();await h.rail.getByRole("button").nth(1).click();await h.catalog.getByRole("button",{name:"Add Value",exact:true}).click();let d=page.getByRole("dialog").last();await d.getByRole("button",{name:"Target PI",exact:true}).click();await expect(page.getByRole("option",{name:"PI-2026-03",exact:true})).toHaveCount(0);await page.keyboard.press("Escape");await d.getByRole("button",{name:"Cancel",exact:true}).click();await h.rail.getByRole("button").first().click();await h.catalog.getByRole("button",{name:"Add Value",exact:true}).click();d=page.getByRole("dialog").last();await d.getByLabel("Target PI",{exact:true}).fill("PI-2027-01");await d.getByLabel("Planning Start",{exact:true}).fill("2027-06-30");await d.getByLabel("Planning End",{exact:true}).fill("2027-01-01");await expect(d.getByRole("button",{name:"Add Value",exact:true})).toBeDisabled();await expect(d).toContainText("Planning end must be on or after planning start.");await page.setViewportSize({width:1280,height:720});await page.screenshot({path:info.outputPath("catalog-date-form.png")});expect(h.writes).toEqual([]);
+test("Iteration remains readable and PI creation requires a valid generated calendar", async ({ page }, info) => {
+  const projectionData = projection();
+  const targetPi = projectionData.items.find(item => item.catalog_item_id === "catalog-target-pi");
+  targetPi.supports_iteration_generation = true;
+  projectionData.values.find(value => value.value_key === "PI-2026-03").lifecycle_state = "retired";
+  const h = await harness(page, { read: route => route.fulfill({ json: snapshot(projectionData) }) });
+  await h.section("catalog");
+  await expect(h.catalog.getByText("live", { exact: true })).toBeVisible();
+  await h.rail.getByRole("button").nth(1).click();
+  await expect(h.catalog.getByRole("table")).toContainText("No calendar dates");
+  await expect(h.catalog.getByRole("button", { name: "Add Value", exact: true })).toHaveCount(0);
+  await expect(h.catalog.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0);
+  await expect(h.catalog.getByRole("button", { name: "Retire", exact: true })).toHaveCount(0);
+  await h.rail.getByRole("button").first().click();
+  await h.catalog.getByRole("button", { name: "Create PI", exact: true }).click();
+  const calendar = page.getByRole("dialog", { name: "Create PI", exact: true });
+  const create = calendar.getByRole("button", { name: "Create PI", exact: true });
+  await expect(create).toBeDisabled();
+  await calendar.getByLabel("Planning Start", { exact: true }).fill("2027-01-11");
+  await expect(calendar).toContainText("PI-2027-01");
+  await expect(calendar.getByLabel("Planning End", { exact: true })).toHaveValue("2027-03-21");
+  await expect(create).toBeEnabled();
+  await calendar.getByLabel("Number of iterations", { exact: true }).fill("0");
+  await expect(create).toBeDisabled();
+  await expect(calendar).toContainText("Enter a valid start date, 1 to 100 iterations, and a length in whole days.");
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.screenshot({ path: info.outputPath("catalog-date-form.png") });
+  expect(h.writes).toEqual([]);
 });
 test("Catalog values use shared pagination and clear search when switching categories",async({page})=>{
  const p=projection(),seed=p.values.find(v=>v.catalog_item_id==="catalog-delivery-team");p.values=p.values.filter(v=>v.catalog_item_id!==seed.catalog_item_id).concat(Array.from({length:75},(_,i)=>({...seed,catalog_value_id:"audit-team-"+i,value_key:"Audit Team "+i,label:"Audit Team "+i})));const h=await harness(page,{read:r=>r.fulfill({json:snapshot(p)})});await h.section("catalog");await expect(h.catalog.getByText("live",{exact:true})).toBeVisible();await h.catalog.getByRole("searchbox",{name:"Search catalog values",exact:true}).fill("PI-2026");await h.rail.getByRole("button").nth(4).click();await expect(h.catalog.getByRole("searchbox",{name:"Search catalog values",exact:true})).toHaveValue("");await expect(h.catalog.getByRole("table").locator("tbody tr")).toHaveCount(25);await h.catalog.getByRole("button",{name:"Next page",exact:true}).click();await expect(h.catalog.getByRole("navigation")).toContainText("Showing 26–50 of 75");await h.catalog.getByRole("button",{name:"Delivery Catalog values rows per page",exact:true}).click();await page.getByRole("option",{name:"50",exact:true}).click();await expect(h.catalog.getByRole("table").locator("tbody tr")).toHaveCount(50);expect(h.writes).toEqual([]);

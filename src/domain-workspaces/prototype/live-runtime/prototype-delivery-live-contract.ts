@@ -143,7 +143,7 @@ export function assertPrototypeDeliveryApplicationResult(
   identifier(decision.decision_ref, "operator decision reference");
   strings(target, ["record_ref"]);
   match(target.record_ref, /^openproject:\/\/work_packages\/[1-9][0-9]*$/, "target record");
-  if (!Number.isInteger(target.record_version) || Number(target.record_version) < 1) {
+  if (!Number.isSafeInteger(target.record_version) || Number(target.record_version) < 0) {
     invalid("Prototype Delivery target version is invalid.");
   }
   exact(target.record_system, "openproject", "target record system");

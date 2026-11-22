@@ -29,17 +29,19 @@ export type ExecutionWorkSessionTarget = {
 export function directExecutionWorkSessionTarget(
   workItemId: number,
   model?: DeliveryReadModel,
+  packageSummary?: Pick<DeliveryPackageSummary, "display_name"> | null,
 ): ExecutionWorkSessionTarget {
   const find = (nodes: DeliveryArtNode[]): DeliveryArtNode | undefined => {
     for (const node of nodes) { if (node.legacy_work_package_id === workItemId) return node; const child = find(node.children); if (child) return child; }
   };
   const item = model ? find(model.art_tree.roots) : undefined;
   return {
-    description:
-      "Authoritative OOS state determines whether this Delivery work item can start or continue.",
+    description: packageSummary
+      ? "Review the current work requirements and next action."
+      : "Authoritative OOS state determines whether this Delivery work item can start or continue.",
     entry: "direct",
-    sourceLabel: "Entry route",
-    sourceValue: "Direct ART target",
+    sourceLabel: packageSummary ? "Package" : "Entry route",
+    sourceValue: packageSummary?.display_name ?? "Direct ART target",
     title: item ? `${item.component_type} ${workItemId} · ${item.title}` : `Work Item ${workItemId}`,
     workItemId,
   };

@@ -57,7 +57,7 @@ export function ArchitecturePacketAuthoringModal({
   onCanonicalChanged,
   sourceContext,
   requirement: suppliedRequirement,
-  onChooseWorkItem,
+  onOpenWorkBoard,
 }: {
   defaultDeliveryId: string | null;
   defaultWorkItemId: number | null;
@@ -66,7 +66,7 @@ export function ArchitecturePacketAuthoringModal({
   readOnly?: boolean;
   onCanonicalChanged?: () => Promise<void>;
   requirement?: TechnicalPlanRequirement;
-  onChooseWorkItem?: () => void;
+  onOpenWorkBoard?: () => void;
   sourceContext?: { tree: import("../../../../live-runtime/delivery-change-live-types.ts").DeliveryChangeNode; revision: string };
 }) {
   const runtime = useArchitecturePacketLiveRuntime();
@@ -230,9 +230,9 @@ export function ArchitecturePacketAuthoringModal({
   const stateLabel = persisted ? "Approved and recorded" : approved ? "Approval not yet recorded" : validated ? "Ready for review" : checking ? "Checking recorded plan…" : current&&!editing ? current.contract_posture === "current" ? "Approved plan available" : "Historical · read-only" : editing ? "Local draft" : missing ? "No approved plan recorded" : !live ? "Disconnected preview" : "Plan check unavailable";
   const requirement = readOnly ? {...technicalPlanRequirement({deliveryId:editor.deliveryId}),title:"Recorded technical agreement",detail:"Inspect the historical plan and covered scope. Current execution requirements are checked outside History."} : suppliedRequirement ?? technicalPlanRequirement({deliveryId:editor.deliveryId,available:live});
   const actionTitle = persisted ? "Approval recorded" : readOnly ? "Inspect the recorded plan" : approved ? "Record the approved plan" : validated ? "Review and approve" : current&&!editing ? "Review the recorded plan" : tab === "overview"&&!editing ? requirement.status === "required" ? "Prepare the required plan" : requirement.status === "binding" ? "Review the existing plan" : requirement.status === "not-required" ? "Continue with the checked work" : requirement.status === "covered" ? "Inspect the approved plan" : "Choose work to inspect" : "Validate this draft";
-  const actionDescription = persisted ? "Recording is confirmed. Return to the work-start checks to continue execution." : readOnly ? "Inspect the saved agreement and evidence. This historical view keeps changes locked." : approved ? "Approval is not recorded yet. Record this exact candidate so execution can reference it." : validated ? "Review the candidate in Review Plan and explicitly accept it. Approval rechecks the source before recording." : current&&!editing ? "Reuse the recorded agreement while its scope and design remain applicable. Revise it for a material change." : tab === "overview"&&!editing ? requirement.status === "unknown" ? "Choose a work item, then review its execution requirements. Selecting work does not start it. Prepare Plan remains available separately." : requirement.detail : "Check the scope, implementation and verification plan. Validation does not approve or start work.";
+  const actionDescription = persisted ? "Recording is confirmed. Return to the work-start checks to continue execution." : readOnly ? "Inspect the saved agreement and evidence. This historical view keeps changes locked." : approved ? "Approval is not recorded yet. Record this exact candidate so execution can reference it." : validated ? "Review the candidate in Review Plan and explicitly accept it. Approval rechecks the source before recording." : current&&!editing ? "Reuse the recorded agreement while its scope and design remain applicable. Revise it for a material change." : tab === "overview"&&!editing ? requirement.status === "unknown" ? "Open a work item on the Work Board to check whether it needs a plan." : requirement.detail : "Check the scope, implementation and verification plan. Validation does not approve or start work.";
   const disabledReason = submitting ? "Waiting for the workflow response…" : !live ? "Validation and recording are unavailable in disconnected preview." : !approved&&validated&&!confirmed ? "Select the explicit approval choice in Review Plan to enable approval." : !approved&&!validated&&(editing||tab === "prepare")&&draftIssues.length ? draftIssues[0] : null;
-  function requestWorkSelection(){ if(!onChooseWorkItem)return;exitAction.current=onChooseWorkItem;if(dirty)setCloseGuardOpen(true);else onChooseWorkItem(); }
+  function returnToWorkBoard(){ if(!onOpenWorkBoard)return;exitAction.current=onOpenWorkBoard;if(dirty)setCloseGuardOpen(true);else onOpenWorkBoard(); }
   function reviseCurrent(){if(!current||readOnly||current.contract_posture!=="current")return;const next=architecturePacketEditorFromArtifact(current.artifact);edit(()=>next);savedDraft.current=JSON.stringify(next);setTab("prepare");}
   let architecture: unknown = null, architectureError = false;try{architecture=JSON.parse(viewEditor.architectureJson);}catch{architectureError=true;}
   return <>
@@ -251,7 +251,7 @@ export function ArchitecturePacketAuthoringModal({
               designStatus={saved.loading?"Reading saved brief…":saved.error?"Unavailable":saved.brief?`${saved.brief.name} · ${saved.brief.versionLabel}`:"No saved finalized brief returned"}
               checking={checking} readError={readError} missing={missing} live={live} current={Boolean(current)} readOnly={readOnly}
               onRetry={()=>void run(inspectCurrent)} onDesign={()=>setTab("design")} onReview={()=>setTab("review")}
-              onRevise={!readOnly&&current?.contract_posture==="current"?reviseCurrent:undefined} onChooseWorkItem={!readOnly&&onChooseWorkItem&&(editing||current)?requestWorkSelection:undefined}/>:null}
+              onRevise={!readOnly&&current?.contract_posture==="current"?reviseCurrent:undefined} />:null}
             {tab==="prepare"&&!readOnly?current&&!editing?<TerasEmptyState>An approved plan is already recorded. Reuse it when preparing a revision. Historical records remain read-only.<TerasActionButton disabled={current.contract_posture!=="current"} onClick={reviseCurrent}>Revise Current Plan</TerasActionButton></TerasEmptyState>:<TerasFieldStack spacing="normal">
             {!readOnly&&!validated&&draftIssues.length?<TerasTechnicalDetails summary={`Before validation · ${draftIssues.length} ${draftIssues.length === 1 ? "check" : "checks"}`} items={draftIssues.map((issue,index)=>({label:`Check ${index+1}`,value:issue}))}/>:null}
               <ArchitecturePlanEditor editor={editor} model={model} disabled={submitting} onEdit={edit} selectedSection={section} onSectionChange={setSection} packageLocked/>
@@ -278,10 +278,12 @@ export function ArchitecturePacketAuthoringModal({
             evidence={persisted?<TerasTechnicalDetails summary="Recording evidence" items={[{label:"Plan reference",value:persisted.artifact.custody.uri},{label:"Custody receipt",value:JSON.stringify(persisted.custody_receipt)},{label:"Source receipt",value:JSON.stringify(persisted.owner_receipt)}]}/>:undefined}>
             {!readOnly&&!persisted&&(!current||editing)?approved?<TerasActionButton disabled={submitting||!live} onClick={()=>void run(persistCandidate)}>Record Approved Plan</TerasActionButton>:
               validated?<TerasActionButton disabled={submitting||!live||!confirmed||approvalIssues.length>0} onClick={()=>void run(approveCandidate)}>Approve Plan</TerasActionButton>:
-              tab==="overview"&&!editing&&["unknown","not-required"].includes(requirement.status)&&onChooseWorkItem?<TerasActionButton disabled={submitting} onClick={requestWorkSelection}>Choose Work Item</TerasActionButton>:
               tab==="overview"&&!editing&&["binding","covered"].includes(requirement.status)?<TerasActionButton disabled={submitting} onClick={()=>void run(inspectCurrent)}>Check Recorded Plan</TerasActionButton>:
               tab==="overview"&&!editing?<TerasActionButton disabled={submitting} onClick={()=>{setEditing(true);setTab("prepare");}}>Prepare Technical Plan</TerasActionButton>:
               <TerasActionButton disabled={submitting||!live||draftIssues.length>0} onClick={()=>void run(validateDraft)}>Validate Plan</TerasActionButton>:null}
+            {!readOnly && !persisted && tab === "overview" && !editing && onOpenWorkBoard ? (
+              <TerasActionButton emphasis="secondary" disabled={submitting} onClick={returnToWorkBoard}>Open Work Board</TerasActionButton>
+            ) : null}
             {current&&!editing?<TerasActionButton emphasis="secondary" onClick={()=>setTab("review")}>View Recorded Plan</TerasActionButton>:null}
             {!readOnly&&validated?<TerasActionButton emphasis="secondary" onClick={()=>setTab("review")}>{persisted?"View Recorded Plan":"Review Validated Plan"}</TerasActionButton>:null}
             {current&&!editing&&!readOnly&&current.contract_posture==="current"?<TerasActionButton emphasis="secondary" onClick={reviseCurrent}>Revise Current Plan</TerasActionButton>:null}

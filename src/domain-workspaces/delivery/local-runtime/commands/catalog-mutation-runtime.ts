@@ -16,6 +16,7 @@ import type {
 } from "../../read-model/index.ts";
 
 import { applyCatalogMutationDraft } from "../../work-model/catalog/catalog-mutation-model.ts";
+import { recordLocalDeliveryCatalogValues } from "../projections/workspace-projection.ts";
 import type {
   CatalogDraftApplyResult,
   CatalogLocalDraftReceipt,
@@ -132,6 +133,7 @@ export async function submitCatalogMutationCommand({
     );
   }
 
+  if (run.run.result) recordLocalDeliveryCatalogValues(run.run.result.catalogValues);
   return run.run.result;
 }
 

@@ -21,10 +21,12 @@ export function projectLocalExecutionPackage({
   deliveryPackage,
   executionPackageId = executionPackageIdForRefinementPackage(deliveryPackage),
   receipt,
+  targetPI,
 }: {
   deliveryPackage: DeliveryPackageSummary;
   executionPackageId?: string;
   receipt: DeliveryRefinementApplyReceipt;
+  targetPI?: string;
 }): DeliveryPackageSummary {
   const {
     local_workflow_projection: _localWorkflowProjection,
@@ -62,7 +64,8 @@ export function projectLocalExecutionPackage({
         }
       : undefined,
     summary:
-      "Refinement apply is recorded. The Delivery initiative is ready for execution and later closeout.",
+      "Preparation and PI commitment are recorded. Review the work item’s execution requirements.",
+    target_pi: targetPI ?? sourcePackage.target_pi,
     tone: "info",
     workflow_phase: "execution",
   };

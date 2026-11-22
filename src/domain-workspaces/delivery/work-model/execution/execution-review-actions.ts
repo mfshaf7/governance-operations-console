@@ -1,13 +1,17 @@
 import type { DeliveryAvailableAction, DeliveryPackageSummary } from "../../domain/delivery-package.ts";
 import type { DeliveryChangeProjection } from "../../live-runtime/delivery-change-live-types.ts";
 
+export function executionChangeCommandRoute(deliveryId: string) {
+  return `/v1/delivery-initiatives/${deliveryId}/change-control/commands`;
+}
+
 // These controls open reviews, not eligibility decisions. OOS validates the
 // exact revision and all operation prerequisites on the existing command path.
 export function executionReviewActions(projection: DeliveryChangeProjection | null, item: DeliveryPackageSummary): DeliveryAvailableAction[] {
   if (!projection || projection.delivery_id !== `delivery-${item.legacy_epic_id}`) return [];
   const status = projection.package.execution_tree.status;
   if (["done", "retired"].includes(status)) return [];
-  const route = `/v1/delivery-initiatives/${projection.delivery_id}/change-control/commands`;
+  const route = executionChangeCommandRoute(projection.delivery_id);
   return status === "parked" ? [{ action_type: "resume", label: "Resume Work", enabled: true,
     expected_backend_route: route, scope: "package_with_children", tone: "info",
     reason: "Review the return status and reason. The service checks the current package before applying the change." }]

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import {
   TerasEmptyState,
@@ -19,10 +19,12 @@ import styles from "./control-board.module.css";
 
 export function ControlBoardArtTreeView({
   tree,
-  onOpenWorkItem,
+  actions,
+  workItemAction,
 }: {
   tree: ControlBoardTreeNode | null;
-  onOpenWorkItem?: (node: ControlBoardTreeNode) => void;
+  actions?: ReactNode;
+  workItemAction?: (node: ControlBoardTreeNode) => { label: string; open: () => void } | undefined;
 }) {
   const expandableNodeIds = useMemo(
     () => (tree ? collectExpandableTreeNodeIds(tree) : []),
@@ -61,12 +63,13 @@ export function ControlBoardArtTreeView({
         >
           {allCollapsed ? "Expand All" : "Collapse All"}
         </TerasUtilityButton>
+        {actions}
       </div>
       <BuildTreeNodeStack>
         <TreeNode
           collapsedNodeIds={collapsedNodeIdSet}
           node={tree}
-          onOpenWorkItem={onOpenWorkItem}
+          workItemAction={workItemAction}
           onToggleNode={(nodeId) =>
             setCollapsedNodeIds((current) =>
               current.includes(nodeId)
@@ -86,19 +89,20 @@ function TreeNode({
   node,
   onToggleNode,
   selected = false,
-  onOpenWorkItem,
+  workItemAction,
 }: {
   collapsedNodeIds: Set<string>;
   node: ControlBoardTreeNode;
   onToggleNode: (nodeId: string) => void;
   selected?: boolean;
-  onOpenWorkItem?: (node: ControlBoardTreeNode) => void;
+  workItemAction?: (node: ControlBoardTreeNode) => { label: string; open: () => void } | undefined;
 }) {
   const terminalNode = ["Milestone", "Risk", "User story"].includes(
     node.componentType,
   );
   const expandable = node.children.length > 0;
   const expanded = expandable && !collapsedNodeIds.has(node.id);
+  const openWorkItem = workItemAction?.(node);
 
   return (
     <BuildTreeNodeStack>
@@ -115,9 +119,9 @@ function TreeNode({
               }}
             />
           ) : null}
-          {onOpenWorkItem && node.workItemId ? <TerasUtilityButton variant="subtle"
-            aria-label={`Open ${node.sourceLabel ?? node.componentType}: ${node.title}`}
-            onClick={() => onOpenWorkItem(node)}>Open</TerasUtilityButton> : null}
+          {openWorkItem ? <TerasUtilityButton variant="subtle"
+            aria-label={`${openWorkItem.label}: ${node.title}`}
+            onClick={openWorkItem.open}>{openWorkItem.label}</TerasUtilityButton> : null}
           </>
         }
         dataKind={node.componentType}
@@ -138,7 +142,7 @@ function TreeNode({
               collapsedNodeIds={collapsedNodeIds}
               key={child.id}
               node={child}
-              onOpenWorkItem={onOpenWorkItem}
+              workItemAction={workItemAction}
               onToggleNode={onToggleNode}
             />
           ))}

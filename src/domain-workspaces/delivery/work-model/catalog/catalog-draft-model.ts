@@ -1,49 +1,19 @@
 import type {
   DeliveryCatalogItem,
-  DeliveryCatalogValue,
 } from "../../domain/delivery-types.ts";
 
 import {
   isDeliveryTeamCatalog,
   isInitiativeFamilyCatalog,
-  isIterationCatalog,
   isOwnerRepoCatalog,
   isTargetPiCatalog,
-  parentTargetPiValueKey,
 } from "./catalog-selectors.ts";
-
-export function catalogDraftLabel(
-  catalog: DeliveryCatalogItem | null,
-  value: DeliveryCatalogValue | null,
-) {
-  if (!value) {
-    return "";
-  }
-
-  if (isIterationCatalog(catalog)) {
-    const parentTargetPi = parentTargetPiValueKey(value);
-
-    if (parentTargetPi && value.label.startsWith(`${parentTargetPi} / `)) {
-      return value.label.slice(parentTargetPi.length + 3);
-    }
-
-    if (parentTargetPi && value.value_key.startsWith(`${parentTargetPi} / `)) {
-      return value.value_key.slice(parentTargetPi.length + 3);
-    }
-  }
-
-  return value.label;
-}
 
 export function catalogDraftLabelFieldLabel(
   catalog: DeliveryCatalogItem | null,
 ) {
   if (isTargetPiCatalog(catalog)) {
     return "Target PI";
-  }
-
-  if (isIterationCatalog(catalog)) {
-    return "Iteration Label";
   }
 
   if (isInitiativeFamilyCatalog(catalog)) {
@@ -72,11 +42,9 @@ function slugFromLabel(label: string) {
 export function catalogDraftValueKey({
   catalog,
   label,
-  parentCatalogValueKey,
 }: {
   catalog: DeliveryCatalogItem | null;
   label: string;
-  parentCatalogValueKey?: string | null;
 }) {
   const normalizedLabel = label.trim();
 
@@ -86,12 +54,6 @@ export function catalogDraftValueKey({
 
   if (isTargetPiCatalog(catalog)) {
     return normalizedLabel.toUpperCase();
-  }
-
-  if (isIterationCatalog(catalog)) {
-    return parentCatalogValueKey
-      ? `${parentCatalogValueKey} / ${normalizedLabel}`
-      : normalizedLabel;
   }
 
   if (isDeliveryTeamCatalog(catalog)) {
@@ -112,11 +74,9 @@ export function catalogDraftLabelForStorage({ label }: { label: string }) {
 export function catalogDraftStandardError({
   catalog,
   label,
-  parentCatalogValueKey,
 }: {
   catalog: DeliveryCatalogItem | null;
   label: string;
-  parentCatalogValueKey?: string | null;
 }) {
   const normalizedLabel = label.trim();
 
@@ -126,28 +86,6 @@ export function catalogDraftStandardError({
 
   if (isTargetPiCatalog(catalog) && !/^PI-\d{4}-\d{2}$/.test(normalizedLabel)) {
     return "Target PI must use the PI-YYYY-NN format.";
-  }
-
-  if (isIterationCatalog(catalog) && !parentCatalogValueKey) {
-    return "Select a Target PI before preparing an iteration value.";
-  }
-
-  if (
-    isIterationCatalog(catalog) &&
-    parentCatalogValueKey !== "Program-wide" &&
-    !/^Iteration [1-9]\d*$/i.test(normalizedLabel)
-  ) {
-    return "PI-scoped iteration label must use the standard Iteration N format.";
-  }
-
-  if (
-    isIterationCatalog(catalog) &&
-    parentCatalogValueKey === "Program-wide" &&
-    !/^[A-Z][A-Za-z0-9]*(?:[ -][A-Z0-9][A-Za-z0-9]*){0,3}$/.test(
-      normalizedLabel,
-    )
-  ) {
-    return "Program-wide iteration label must be a short title-style label.";
   }
 
   if (isInitiativeFamilyCatalog(catalog)) {
@@ -193,11 +131,7 @@ export function catalogDraftStandardError({
 
 export function catalogDraftStandardHelp(catalog: DeliveryCatalogItem | null) {
   if (isTargetPiCatalog(catalog)) {
-    return "Target PI must use PI-YYYY-NN; planning start and end dates are required.";
-  }
-
-  if (isIterationCatalog(catalog)) {
-    return "PI-scoped values use Iteration N; Program-wide values use a short title label. The key derives from the selected parent.";
+    return "Use PI-YYYY-NN. Set calendar dates in PI Planning.";
   }
 
   if (isInitiativeFamilyCatalog(catalog)) {

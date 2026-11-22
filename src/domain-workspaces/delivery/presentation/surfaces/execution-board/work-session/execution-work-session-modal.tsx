@@ -53,7 +53,7 @@ export function ExecutionWorkSessionModal({
   onClose: () => void;
   runtime: WorkSessionRuntime;
   target: ExecutionWorkSessionTarget;
-  onNavigate?: (destination: "work" | "closeout" | "architecture" | "records", deliveryId: string | null, workItemId?: number) => void;
+  onNavigate?: (destination: "work" | "closeout" | "architecture", deliveryId: string | null, workItemId?: number) => void;
 }) {
   const draft = runtime.projection?.decision_draft ?? null;
   const [decision, setDecision] = useState<DeliveryWorkSessionDecisionInput | null>(
@@ -494,9 +494,9 @@ export function ExecutionWorkSessionModal({
                   onClick={() => run(() => runtime.recoverWork!(recoveryReason))}>Archive Superseded Session</TerasActionButton>
               </TerasFieldStack>
             ) : followUp && onNavigate ? (
-              <TerasList frame="contained"><TerasSignalItem label="Next action" title={followUp === "closeout" ? "Review package closeout" : followUp === "architecture" ? "Review architecture" : prerequisite ? "Review required work or approval" : "Choose remaining work"}
+              <TerasList frame="contained"><TerasSignalItem label="Next action" title={followUp === "closeout" ? "Review package closeout" : followUp === "architecture" ? "Review the technical plan" : prerequisite ? "Review required work or approval" : "Continue remaining work"}
                 detail={nextAction!.reason} tone="info" actions={<TerasActionButton onClick={() => onNavigate(followUp, projection?.delivery_id ?? null, requiredWorkId)}>
-                  {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? "Review Architecture" : prerequisite ? "Open Required Work" : "Choose Remaining Work"}</TerasActionButton>} /></TerasList>
+                  {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? "Open Technical Plan" : prerequisite ? "Open Required Work" : "Open Work Board"}</TerasActionButton>} /></TerasList>
             ) : nextAction?.code === "pull-request-review-required" ? (
               <TerasList frame="contained"><TerasSignalItem label="Human review" title="Review the current source changes" detail={nextAction.reason} tone="warn"
                 actions={reviewUrl ? <a href={reviewUrl} target="_blank" rel="noopener noreferrer">Open Pull Request ↗</a> : undefined} /></TerasList>

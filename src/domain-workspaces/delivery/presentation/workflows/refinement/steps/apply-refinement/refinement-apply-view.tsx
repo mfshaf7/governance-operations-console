@@ -60,6 +60,7 @@ export function RefinementApplyView({
   runtimeError: string | null;
   runtimeRun: RefinementOosRun | null;
 }) {
+  const preparationOnly = !packet.apply_plan.operations.some(operation => operation.kind === "plan_apply");
   const uniqueRoutes = Array.from(new Set(packet.apply_plan.expected_routes));
   const routeSummary = refinementApplyRouteSummary(uniqueRoutes);
   const applyRecorded = Boolean(activeReceipt ?? packet.receipt);
@@ -153,8 +154,8 @@ export function RefinementApplyView({
               kicker="Apply Review"
               statusLabel={headerProjection.statusLabel}
               statusTone={headerProjection.statusTone}
-              title={headerProjection.title}
-              description={headerProjection.description}
+              title={preparationOnly ? applyRecorded ? "Preparation recorded" : "Review work preparation" : headerProjection.title}
+              description={preparationOnly ? "Confirm the work details before deciding what to commit in PI Planning." : headerProjection.description}
             />
             <TerasContentTray
               description={packet.apply_plan.summary}
@@ -208,12 +209,12 @@ export function RefinementApplyView({
                 status="present"
                 tone="info"
               />
-              <TerasStatusItem
+              {!preparationOnly && <TerasStatusItem
                 detail={routeSummary}
                 label="OOS Routes"
                 status={`${uniqueRoutes.length} route${uniqueRoutes.length === 1 ? "" : "s"}`}
                 tone="warn"
-              />
+              />}
             </TerasList>
           </TerasPanel>
 

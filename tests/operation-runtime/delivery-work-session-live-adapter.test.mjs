@@ -60,7 +60,7 @@ test("a committed owner command with lost HTTP acknowledgement retains exact ret
     };
     try {
       const command = { action: "continue", body: { expectedSessionRevision: "2026-08-27T02:00:00.000Z", sourceIntentRef: "source-intent:original-source-scope" }, path: "/api/delivery/execution/714/work-session/continue", pendingCommands, setSnapshot: value => accepted.push(value) };
-      await assert.rejects(submitDeliveryWorkSessionCommand(command), /aborted due to timeout/);
+      await assert.rejects(submitDeliveryWorkSessionCommand(command), /has not confirmed the result yet.*retrying the same command/);
       assert.equal(accepted.length, 0);
       assert.equal(pendingCommands.current.continue.commandId, calls[0].commandId);
       await submitDeliveryWorkSessionCommand(command);

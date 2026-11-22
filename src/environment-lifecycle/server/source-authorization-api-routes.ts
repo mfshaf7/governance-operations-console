@@ -14,5 +14,14 @@ export function writeSourceAuthorizationRoute(request: NextRequest, intentId: st
 }
 async function response(operation: () => Promise<unknown>) {
   try { return NextResponse.json({ mode: "live", projection: await operation(), error: null }, { headers }); }
-  catch (error) { return NextResponse.json({ mode: "live", projection: null, code: error instanceof PlatformOperationOosError ? error.code : "source_authorization_rejected", error: "The source owner has not confirmed this exact authorization. Refresh its retained scope and Platform operation; no credential is available to browser code." }, { headers, status: error instanceof PlatformOperationOosError ? error.status : 400 }); }
+  catch (error) {
+    const ownerError = error instanceof PlatformOperationOosError ? error : null;
+    return NextResponse.json({
+      mode: "live", projection: null,
+      code: ownerError?.code ?? "source_authorization_rejected",
+      error: ownerError?.retryable
+        ? "The source operation has no confirmed result yet. Check its status before retrying the same request."
+        : "The source authorization request was rejected. Refresh the source scope before trying again.",
+    }, { headers, status: ownerError?.status ?? 400 });
+  }
 }

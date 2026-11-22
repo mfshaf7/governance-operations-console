@@ -7,7 +7,6 @@ export type {
 } from "../../../work-model/catalog/catalog-mutation-types.ts";
 
 export {
-  catalogDraftLabel,
   catalogDraftLabelFieldLabel,
   catalogDraftLabelForStorage,
   catalogDraftStandardError,
@@ -43,7 +42,6 @@ export {
 export {
   catalogDraftPreviewMetadata,
   catalogRetirementMetadata,
-  catalogTargetPiSelectOptions,
 } from "./catalog-mutation-view-model.ts";
 export {
   catalogValuesForItem,

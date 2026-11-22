@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { useDraftAdvisor, advisorWorkContext } from "@/agent-console";
 
 import type { DeliveryPackageSummary } from "../../../read-model/index.ts";
+import { inheritedExecutionTreePI, type ExecutionCreationPlanningChoices } from "../../../work-model/execution/execution-tree-change-plan.ts";
 
 import {
   TerasAdvisorPanel,
@@ -12,8 +13,11 @@ import {
   TerasMetadataList,
   TerasPanel,
   TerasPanelHeader,
+  TerasRecordMetaText,
   TerasPanelStack,
-  TerasTextField,
+  TerasActionButton,
+  TerasLoadingState,
+  TerasSelectField,
   TerasContentTray,
 } from "@/teras";
 import {
@@ -35,6 +39,9 @@ export function ExecutionTreeEditSupportPanel({
   draftTree,
   packageSummary,
   selectedNode,
+  planningChoices,
+  planningLoading,
+  onRetryPlanning,
   onUpdatePlanningInputs,
   onUpdateText,
   onUpdateDependencies,
@@ -44,6 +51,9 @@ export function ExecutionTreeEditSupportPanel({
   draftTree?: ExecutionTreeDraftNode;
   packageSummary: DeliveryPackageSummary;
   selectedNode: ExecutionTreeDraftNode;
+  planningChoices?: ExecutionCreationPlanningChoices;
+  planningLoading: boolean;
+  onRetryPlanning: () => void;
   onUpdatePlanningInputs?: (values: { targetPi?: string; iteration?: string }) => void;
   onUpdateText?: (values: { title?: string; draftBody?: string; remark?: string }) => void;
   onUpdateDependencies?: (ids:string[])=>void;
@@ -70,6 +80,9 @@ export function ExecutionTreeEditSupportPanel({
     apply: (edits) => { onUpdateText?.(Object.fromEntries(edits.map((edit) => [edit.field, edit.value]))); return edits; },
   });
   const selectedNodeTitle = executionTreeNodeDisplayTitle(selectedNode);
+  const parentPi = draftTree ? inheritedExecutionTreePI(draftTree, selectedNode.id) : "";
+  const selectedPi = selectedNode.targetPi || parentPi;
+  const iterations = planningChoices?.get(selectedPi) ?? [];
   const advisorTranscript: AdvisorLine[] = [
     {
       id: `execution-tree-advisor-opening-${selectedNode.id}`,
@@ -115,7 +128,7 @@ export function ExecutionTreeEditSupportPanel({
   }
 
   return (
-    <TerasPanelStack fill="last">
+    <TerasPanelStack fill="last" minimumFillHeight="medium" scroll>
       <TerasPanel
         frame="padded"
         treatment="rail"
@@ -164,27 +177,42 @@ export function ExecutionTreeEditSupportPanel({
             ]}
           />
         </TerasInspectionSection>
+        {selectedNode.kind === "Epic" && selectedPi ? <TerasInspectionSection title="Feature Changes">
+          <TerasRecordMetaText>Adding a Feature to a committed PI requires a reviewed initiative plan.</TerasRecordMetaText>
+        </TerasInspectionSection> : null}
         {selectedNode.legacyWorkPackageId === null && onUpdatePlanningInputs ? (
           <TerasInspectionSection title="New Item Planning">
             {selectedNode.kind === "Feature" ? (
               <TerasContentTray title="Backlog Feature creation">
-                Feature PI commitment uses coordinated initiative plan/apply.
-                This generic create path does not replace that workflow.
+                {selectedPi ? "Adding a Feature to a committed PI requires a reviewed initiative plan." :
+                  "Add the Feature to the backlog. Set its delivery target in PI Planning."}
               </TerasContentTray>
+            ) : !planningChoices ? (
+              planningLoading ? <TerasLoadingState label="Reading PI calendars…" /> :
+                <TerasContentTray title="PI calendars unavailable"
+                  actions={<TerasActionButton emphasis="secondary" onClick={onRetryPlanning}>Retry</TerasActionButton>}>
+                  Saved calendars are required to select an iteration.
+                </TerasContentTray>
             ) : (
               <>
-                <TerasTextField
-                  aria-label="New item Target PI" label="New item Target PI"
+                <TerasSelectField
+                  label="Target PI" ariaLabel="New item Target PI"
+                  disabled={disabled}
                   value={selectedNode.targetPi ?? ""}
-                  onValueChange={(targetPi) => onUpdatePlanningInputs({ targetPi })}
+                  options={[
+                    { label: parentPi ? `Use parent PI · ${parentPi}` : "Choose a PI", value: "" },
+                    ...[...planningChoices.keys()].map(pi => ({ label: pi, value: pi })),
+                  ]}
+                  onValueChange={targetPi => onUpdatePlanningInputs({ targetPi, iteration: "" })}
                 />
-                <p>Required for PI Objective, Task and Milestone. Other types may inherit the parent&apos;s PI through the native writer.</p>
-                <TerasTextField
-                  aria-label="New item Iteration" label="New item Iteration"
+                <TerasSelectField
+                  label="Iteration" ariaLabel="New item Iteration"
+                  disabled={disabled || !iterations.length}
                   value={selectedNode.iteration ?? ""}
-                  onValueChange={(iteration) => onUpdatePlanningInputs({ iteration })}
+                  options={[{ label: "Choose an iteration", value: "" }, ...iterations]}
+                  helper={selectedPi && !iterations.length ? "Set up this PI’s calendar in PI Planning." : undefined}
+                  onValueChange={iteration => onUpdatePlanningInputs({ iteration })}
                 />
-                <p>Committed work needs &lt;Target PI&gt; / &lt;iteration&gt; or Program-wide / &lt;label&gt;, including when the PI is inherited. This does not make the item execution-ready.</p>
               </>
             )}
           </TerasInspectionSection>

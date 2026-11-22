@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { DeliveryCatalogReadModel } from "../read-model/index.ts";
 import type { CatalogDraftApplyResult } from "../work-model/catalog/catalog-mutation-types.ts";
@@ -25,7 +25,7 @@ export class CatalogLiveRuntimeError extends Error {
   }
 }
 
-export function useCatalogLiveRuntime() {
+export function useCatalogLiveRuntime({ enabled = true } = {}) {
   const [snapshot, setSnapshot] = useState<CatalogProjectionSnapshot | null>(null);
   const snapshotRef = useRef<CatalogProjectionSnapshot | null>(null);
   const [recoveryRequired, setRecoveryRequired] = useState(false);
@@ -58,6 +58,7 @@ export function useCatalogLiveRuntime() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     void refresh().catch((error) => {
       const next: CatalogProjectionSnapshot = {
         error: error instanceof Error ? error.message : "Catalog projection failed.",
@@ -69,7 +70,7 @@ export function useCatalogLiveRuntime() {
       snapshotRef.current = next;
       setSnapshot(next);
     });
-  }, [refresh]);
+  }, [enabled, refresh]);
 
   const mutate = useCallback(
     async (
@@ -149,9 +150,9 @@ export function useCatalogLiveRuntime() {
     [refresh],
   );
 
-  const readModel: DeliveryCatalogReadModel | null = snapshot?.projection
-    ? catalogReadModelFromProjection(snapshot.projection)
-    : null;
+  const projection = snapshot?.projection;
+  const readModel: DeliveryCatalogReadModel | null = useMemo(() =>
+    projection ? catalogReadModelFromProjection(projection) : null, [projection]);
 
   return {
     recover: async () => { const saved = pendingCommands.current.values().next().value; return saved ? mutate(saved.catalogItemId, saved.command) : null; },

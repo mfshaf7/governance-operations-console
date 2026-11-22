@@ -17,6 +17,7 @@ type TerasSelectFieldBaseProps<Value extends string> = {
   disabled?: boolean;
   helper?: ReactNode;
   label: ReactNode;
+  menuMinWidth?: number;
   onValueChange: (value: Value) => void;
   options: readonly TerasSelectOption<Value>[];
   value: Value;
@@ -45,6 +46,7 @@ export function TerasSelectField<Value extends string>(
     disabled = false,
     helper,
     label,
+    menuMinWidth,
     onValueChange,
     options,
     treatment = "default",
@@ -65,6 +67,7 @@ export function TerasSelectField<Value extends string>(
         ariaLabel={ariaLabel}
         ariaLabelledBy={labelId}
         disabled={disabled}
+        menuMinWidth={menuMinWidth}
         menuPlacement="portal"
         onValueChange={onValueChange}
         options={options}

@@ -13,11 +13,8 @@ function owner({ activeSource = false, wrongMetadata = false, wrongResult = fals
     target_pi: "PI-A", planned_business_value: 8, actual_business_value: actual, pi_objective_review_outcome: outcome, children: [] }; }
   const options = { env, fetchImpl: async (url, init) => {
     const path = new URL(url).pathname; calls.push({ path, method: init.method, body: init.body ? JSON.parse(init.body) : null });
-    if (path.endsWith("/work-session")) return canonicalSourceResponse({ workflow_id: "delivery-art-work-session", delivery_id: "delivery-40", work_item_id: "work-item-42",
-      session_id: activeSource ? "session:test" : null, session_revision: activeSource ? updated : null, landing_unit_id: activeSource ? "landing:test" : null,
-      state: activeSource ? "source-work" : "decision-required", next_action: null }, { recordRef: "openproject://work_packages/42", sourceOwner: "workspace-delivery-art" });
     if (path.endsWith("/continuation-context")) return Response.json({ workflow_id: "delivery-work-item-continuation-context", delivery_id: "delivery-40",
-      work_item_id: "work-item-42", work_item_record_ref: "openproject://work_packages/42",
+      work_item_id: "work-item-42", work_item_record_ref: "openproject://work_packages/42", source_session_present: activeSource,
       continuation_context: { target_item: { ...node(), id: 42, pi_objective_review_outcome_options: choices, blocked: false, dependency_blocked: false, ready_contract_satisfied: actual !== null,
         completion_narrative_contract_satisfied: true, completion_status_transition_available: true, completion_evidence_present: false, completion_evidence_formatting_valid: false },
       summary: { open_descendant_count: 0, open_child_count: 0, completed_related_count: 1 } } });
@@ -39,6 +36,7 @@ const request = context => ({ expectedRevision: context.revision, reviewConfirme
 
 test("earned review uses the exact native objective and PI without completing source or ART", async () => {
   const runtime = owner(); const context = await readItemCompletionContext(42, runtime.options);
+  assert.equal(context.owner_repo, null);
   assert.equal(context.can_complete, false); assert.equal(context.pi_review.can_review, true);
   assert.deepEqual(context.pi_review.review_outcomes, ["Met", "Not met"]);
   const result = await submitItemPiReview(42, request(context), runtime.options);
@@ -47,6 +45,7 @@ test("earned review uses the exact native objective and PI without completing so
     target_pi: "PI-A", reviews: [{ target_work_package_id: 42, actual_business_value: 8, review_outcome: "Met", review_note: review.reviewNote }],
   } } }]);
   assertCompletionContext(result.context);
+  assert.ok(runtime.calls.every(call => !call.path.endsWith("/work-session")));
 });
 
 test("foreign objective metadata, stale revision and source sessions prevent review writes", async () => {

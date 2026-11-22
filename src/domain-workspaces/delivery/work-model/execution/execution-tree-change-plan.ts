@@ -1,5 +1,7 @@
 import type { DeliveryChangeOperation } from "../../live-runtime/delivery-change-live-types.ts";
-import type { DeliveryComponentType } from "../../read-model/index.ts";
+import type { DeliveryCatalogValue, DeliveryComponentType } from "../../read-model/index.ts";
+import { iterationCatalogId, targetPiCatalogId } from "../catalog/catalog-selectors.ts";
+import { calendarDateRange, datedIterationIndex } from "../catalog/planning-calendar.ts";
 import { executionDependencyChangePlan, executionDependencyIssues } from "./execution-tree-dependencies.ts";
 import type { ExecutionTreeChangeDraftNode, ExecutionTreeChangePlanItem } from "./execution-tree-change-types.ts";
 export type { ExecutionTreeChangeDraftNode, ExecutionTreeChangePlanItem } from "./execution-tree-change-types.ts";
@@ -15,24 +17,50 @@ export function executionTreeChildKinds(parentKind: DeliveryComponentType): Deli
   return [...(childKinds[parentKind] ?? [])];
 }
 
-// Generic creation stays new/backlog; these mirror the native planning inputs,
-// not execution readiness or permission. The native writer remains decisive.
-export function executionTreePlanningInputIssues(tree: ExecutionTreeChangeDraftNode) {
-  return [...executionDependencyIssues(tree), ...flattenTree(tree).filter((node) => node.legacyWorkPackageId === null).flatMap((node) => {
-    const pi = node.targetPi?.trim() ?? "";
+export type ExecutionCreationPlanningChoices = ReadonlyMap<string, readonly { label: string; value: string }[]>;
+
+export function executionCreationPlanningChoices(values: readonly DeliveryCatalogValue[]): ExecutionCreationPlanningChoices {
+  const dated = datedIterationIndex(values);
+  const programWide = values.filter(value => value.catalog_item_id === iterationCatalogId &&
+    value.lifecycle_state === "active" && value.value_key.startsWith("Program-wide / "))
+    .map(value => ({ value: value.value_key, label: `${value.value_key} · No calendar dates` }));
+  return new Map(values.filter(value => value.catalog_item_id === targetPiCatalogId &&
+    (["active", "admitted"].includes(value.lifecycle_state) ||
+      (value.value_key === "Program-wide" && value.lifecycle_state === "read_only")))
+    .map(({ value_key: pi }) => [pi, [
+      ...[...dated].filter(([, calendar]) => calendar.pi === pi).sort((a, b) => a[1].window.sequence - b[1].window.sequence)
+        .map(([value, { window }]) => ({ value, label: `Iteration ${window.sequence} · ${calendarDateRange(window.start_date, window.end_date)}` })),
+      ...programWide,
+    ]]));
+}
+
+function creationPlanningNodes(node: ExecutionTreeChangeDraftNode, parentPi = ""): Array<{
+  node: ExecutionTreeChangeDraftNode; pi: string; parentPi: string;
+}> {
+  const inherited = node.legacyWorkPackageId === null ? parentPi : "";
+  const pi = node.targetPi?.trim() || inherited;
+  return [{ node, pi, parentPi }, ...node.children.flatMap(child => creationPlanningNodes(child, pi))];
+}
+
+export function inheritedExecutionTreePI(tree: ExecutionTreeChangeDraftNode, nodeId: string) {
+  return creationPlanningNodes(tree).find(({ node }) => node.id === nodeId)?.parentPi ?? "";
+}
+
+export function executionTreePlanningInputIssues(tree: ExecutionTreeChangeDraftNode, choices?: ExecutionCreationPlanningChoices) {
+  return [...executionDependencyIssues(tree), ...creationPlanningNodes(tree).filter(({ node }) => node.legacyWorkPackageId === null).flatMap(({ node, pi, parentPi }) => {
     const iteration = node.iteration?.trim() ?? "";
     const issues: string[] = [];
-    if (["PI Objective", "Task", "Milestone"].includes(node.kind) && !pi) {
-      issues.push("Target PI is required before this item can exist.");
+    if (!pi && (iteration || ["PI Objective", "Task", "Milestone"].includes(node.kind))) {
+      issues.push("Choose a Target PI.");
     }
     if (node.kind === "Feature" && pi) {
-      issues.push("Feature PI commitment uses coordinated initiative plan/apply, not generic creation.");
+      issues.push("Adding a Feature to a committed PI requires a reviewed initiative plan.");
     }
-    if (pi && node.kind !== "Epic" && !iteration) {
-      issues.push("PI-committed work requires Iteration.");
+    if (pi && ["User story", "Task"].includes(node.kind) && !parentPi) {
+      issues.push("Plan the parent work before committing this item.");
     }
-    if (pi && iteration && !iteration.startsWith(pi + " / ") && !iteration.startsWith("Program-wide / ")) {
-      issues.push("Iteration must match Target PI or use a Program-wide / label.");
+    if (pi && node.kind !== "Feature" && !choices?.get(pi)?.some(option => option.value === iteration)) {
+      issues.push("Choose a saved iteration for this PI.");
     }
     return issues.map((issue) => `${node.title}: ${issue}`);
   })];
@@ -61,8 +89,8 @@ export function buildExecutionTreeChangePlan({
     const subjectChanged = node.title.trim() !== source.title.trim();
     const descriptionChanged =
       node.draftBody.trim() !== source.draftBody.trim();
-    const noteChanged = node.remark.trim() !== source.remark.trim();
-    if (!subjectChanged && !descriptionChanged) continue;
+    const workNote = node.remark.trim() !== source.remark.trim() ? node.remark.trim() : "";
+    if (!subjectChanged && !descriptionChanged && !workNote) continue;
     const changes: Record<string, string> = {};
     if (subjectChanged) changes.subject = node.title.trim();
     if (descriptionChanged) {
@@ -73,14 +101,12 @@ export function buildExecutionTreeChangePlan({
         payload: {
           changes,
           work_item_id: `work-item-${node.legacyWorkPackageId}`,
-          ...(noteChanged && node.remark.trim()
-            ? { work_note: node.remark.trim() }
-            : {}),
+          ...(workNote ? { work_note: workNote } : {}),
         },
         type: "revise_work_item",
       }),
       id: `revise-${node.legacyWorkPackageId}`,
-      label: `Revise ${node.kind} #${node.legacyWorkPackageId}`,
+      label: `${subjectChanged || descriptionChanged ? "Revise" : "Save remark on"} ${node.kind} #${node.legacyWorkPackageId}`,
       localNodeId: null,
     });
   }
@@ -111,6 +137,7 @@ function walkNewNodes(
         return {
           payload: {
             description: node.draftBody.trim() || null,
+            ...(node.remark.trim() ? { work_note: node.remark.trim() } : {}),
             parent_work_item_id: parentWorkItemId,
             subject: node.title.trim(),
             ...(node.targetPi?.trim() ? { target_pi: node.targetPi.trim() } : {}),

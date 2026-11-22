@@ -157,6 +157,7 @@ presentation/surfaces/execution-board/work-session
 presentation/surfaces/home
 presentation/surfaces/intake
 presentation/surfaces/refinement
+presentation/surfaces/pi-planning
 presentation/surfaces/work-design
 presentation/workflows
 presentation/workflows/refinement
@@ -261,6 +262,7 @@ local-runtime/transitions/intake-transition.ts
 local-runtime/transitions/refinement-handoff-transition.ts
 local-runtime/transitions/refinement-execution-transition.ts
 local-runtime/transitions/refinement-transition.ts
+local-runtime/projections/pi-planning-preview.ts
 local-runtime/transitions/transition-record.ts
 local-runtime/transitions/work-design-transition.ts
 live-runtime/catalog-live-contract.ts
@@ -304,6 +306,7 @@ presentation/package-register/package-register-types.ts
 presentation/package-register/package-register-view-model.ts
 presentation/package-register/package-workflow-router.tsx
 presentation/shared/delivery-package-metadata.ts
+presentation/shared/delivery-planning-calendar.tsx
 presentation/shared/format/format-date-time.ts
 presentation/surfaces/catalog/catalog-current-values.tsx
 presentation/surfaces/catalog/catalog-display-model.ts
@@ -315,6 +318,10 @@ presentation/surfaces/catalog/catalog-mutation-view-model.ts
 presentation/surfaces/catalog/catalog-repository-link-dialog.tsx
 presentation/surfaces/catalog/catalog-selector-panel.tsx
 presentation/surfaces/catalog/catalog-surface.tsx
+presentation/surfaces/pi-planning/pi-planning-surface.tsx
+presentation/surfaces/pi-planning/pi-planning-calendar-dialog.tsx
+presentation/surfaces/pi-planning/pi-planning-feature-dialog.tsx
+live-runtime/pi-planning-change.ts
 presentation/surfaces/catalog/catalog-values-panel.tsx
 presentation/surfaces/catalog/catalog-view-model.ts
 presentation/surfaces/catalog/use-catalog-control-state.ts
@@ -334,6 +341,7 @@ presentation/surfaces/execution-board/architecture-packet/architecture-plan-fiel
 presentation/surfaces/execution-board/architecture-packet/architecture-saved-context.tsx
 presentation/surfaces/execution-board/execution-board-surface.tsx
 presentation/surfaces/execution-board/execution-board-view-model.ts
+presentation/surfaces/execution-board/execution-package-work-board.tsx
 presentation/surfaces/execution-board/execution-advisor-context.ts
 presentation/surfaces/execution-board/execution-selected-package-panel.tsx
 presentation/surfaces/execution-board/execution-tree-change-review-dialog.tsx
@@ -343,7 +351,6 @@ presentation/surfaces/execution-board/execution-tree-edit-view.tsx
 presentation/surfaces/execution-board/work-session/execution-work-session-modal.tsx
 presentation/surfaces/execution-board/work-session/execution-source-access.ts
 presentation/surfaces/execution-board/work-session/execution-source-realization-panel.tsx
-presentation/surfaces/execution-board/work-session/execution-work-session-target-dialog.tsx
 presentation/surfaces/execution-board/work-session/execution-work-session-target.ts
 presentation/surfaces/home/home-activity-model.ts
 presentation/surfaces/home/home-agent-console.tsx
@@ -503,6 +510,7 @@ presentation/workspace/workspace-config.ts
 presentation/workspace/workspace-contract.ts
 presentation/workspace/workspace-controller.tsx
 presentation/workspace/workspace-count-model.ts
+presentation/workspace/pi-planning-preview-context.ts
 presentation/workspace/workspace-modal.tsx
 presentation/workspace/workspace-status-model.ts
 presentation/workspace/workspace-summary-model.ts
@@ -588,6 +596,7 @@ work-model/catalog/catalog-mutation-model.ts
 work-model/catalog/catalog-mutation-types.ts
 work-model/catalog/catalog-retirement-model.ts
 work-model/catalog/catalog-selectors.ts
+work-model/catalog/planning-calendar.ts
 work-model/closeout/delivery-closeout-contracts.ts
 work-model/closeout/delivery-closeout-model.ts
 work-model/execution/execution-action-contracts.ts

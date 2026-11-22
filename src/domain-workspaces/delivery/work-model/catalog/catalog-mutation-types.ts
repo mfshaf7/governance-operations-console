@@ -10,6 +10,8 @@ export type CatalogMutationDraft = {
 
 export type CatalogMutationSubmit = {
   description: string;
+  iterationCount?: number;
+  iterationLengthDays?: number;
   label: string;
   linkedRepository?: OperationOwnerRepoCatalogOption | null;
   parentCatalogValueKey?: string | null;

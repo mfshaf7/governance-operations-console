@@ -21,6 +21,7 @@ import type {
 import { assertSourceOperationReceipt as assertSourceCredentialReceipt, sourceOperationIntentFromReceipt as sourceIntentFromReceipt } from "../live-runtime/source-authorization-contract.ts";
 
 const timeoutMs = 12_000;
+export const sourceAuthorizationWriteTimeoutMs = 75_000;
 const maxResponseBytes = 1_048_576;
 
 export class PlatformOperationOosError extends Error {
@@ -118,7 +119,7 @@ export async function submitPlatformOperation(value: unknown, options: Options =
       },
     }),
     method: "POST",
-  }, { ...options, config }));
+  }, { ...options, config }, intent.capabilityId.startsWith("agent-source.") ? sourceAuthorizationWriteTimeoutMs : timeoutMs));
   if (operation.command.command_id !== commandIntent.command_id || operation.command.idempotency_key !== commandIntent.idempotency_key || operation.command.intent_digest !== intentDigest || operation.command.actor_ref !== config.operatorId || operation.command.capability_id !== capability.capability_id || operation.command.action !== capability.action || operation.command.subject.kind !== subject.kind || operation.command.subject.ref !== subject.ref || operation.command.subject.expected_source_version !== subject.source_version) {
     throw new PlatformOperationOosError("OOS returned another Platform operation command binding.", "platform_operation_command_binding_invalid", 502);
   }
@@ -155,7 +156,7 @@ function resolveConfig() {
   }
 }
 
-async function request(path: string, init: RequestInit, options: Options) {
+async function request(path: string, init: RequestInit, options: Options, requestTimeoutMs = timeoutMs) {
   const config = options.config ?? resolveConfig();
   let response: Response;
   try {
@@ -172,7 +173,7 @@ async function request(path: string, init: RequestInit, options: Options) {
         "x-oos-caller-secret": config.callerSecret,
         "x-oos-operator-id": config.operatorId,
       },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: AbortSignal.timeout(requestTimeoutMs),
     });
   } catch {
     throw new PlatformOperationOosError("Platform operations could not reach OOS.", "platform_operation_oos_unavailable", 502, true);

@@ -29,6 +29,7 @@ import {
   refinementStepTone,
 } from "../view-model/refinement-step-model.ts";
 import type { DeliveryRefinementModalStep } from "../model/refinement-model.ts";
+import { usePIPlanningPreview } from "../../../workspace/pi-planning-preview-context.ts";
 
 export function RefinementHubView({
   readOnly = false,
@@ -51,6 +52,9 @@ export function RefinementHubView({
   packet: DeliveryRefinementPacket | null;
   progressActiveStep: DeliveryRefinementStepId;
 }) {
+  const planning = usePIPlanningPreview();
+  const prepared = planning && !readOnly && activeReceipt?.outcome === "accepted";
+  const reviewPreparation = planning?.preview && !readOnly && hubAction?.step === "apply_refinement" && !prepared;
   const hubProjection = packet && metadataWorkbenchSummary ? refinementHubViewProjection({
     activeReceipt,
     deliveryPackage,
@@ -90,13 +94,13 @@ export function RefinementHubView({
             header={
               <TerasPanelHeader
                 kicker="Current Required Move"
-                title={hubProjection.actionTitle}
-                description={hubProjection.actionDescription}
+                title={prepared ? "Ready to plan" : reviewPreparation ? "Review preparation" : hubProjection.actionTitle}
+                description={prepared ? "Preparation is recorded. Set the PI commitment in PI Planning." : reviewPreparation ? "Review the prepared work and record it before choosing a PI." : hubProjection.actionDescription}
               />
             }
             action={
-              <TerasActionButton disabled={readOnly && hubAction?.route === "blocker"} onClick={packet ? onRunHubAction : () => onSelectStep("receipt")} emphasis="primary">
-                {hubProjection.actionButtonLabel}
+              <TerasActionButton disabled={readOnly && hubAction?.route === "blocker"} onClick={prepared ? () => planning.open(deliveryPackage.delivery_package_id) : packet ? onRunHubAction : () => onSelectStep("receipt")} emphasis="primary">
+                {prepared ? "Plan PI work" : reviewPreparation ? "Review preparation" : hubProjection.actionButtonLabel}
               </TerasActionButton>
             }
           />

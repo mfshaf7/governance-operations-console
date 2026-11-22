@@ -1,6 +1,6 @@
 import { resolveConsoleOosOperatorConfiguration, type ConsoleOosOperatorConfiguration } from "../../console-integration/configuration/console-runtime-configuration.ts";
 import { assertSourceOperationPreparation as assertSourceAuthorizationPreparation, sourceOperationIntentFromReceipt as sourceIntentFromReceipt, type SourceAuthorizationPreparation } from "../live-runtime/source-authorization-contract.ts";
-import { controlPlatformOperation, platformCanonicalDigest as digest, platformOwnerRequest, readPlatformOperation, readPlatformOperations, submitPlatformOperation } from "./platform-operation-oos-client.ts";
+import { controlPlatformOperation, platformCanonicalDigest as digest, platformOwnerRequest, readPlatformOperation, readPlatformOperations, sourceAuthorizationWriteTimeoutMs, submitPlatformOperation } from "./platform-operation-oos-client.ts";
 
 type Options = { config?: ConsoleOosOperatorConfiguration; fetchImpl?: typeof fetch };
 const base = "/v1/platform-operations/source-preparations";
@@ -28,7 +28,7 @@ export async function prepareSourceAuthorization(input: unknown, options: Option
     identifier(subject.source_request_id);
   } else throw new Error("Only explicit Delivery, Prototype or repository-bootstrap source subjects are admitted.");
   const preparation = { preparation_id: input.preparationId, subject, decision: input.decision, expires_at: input.expiresAt, supersedes_intent_digest: input.supersedesIntentDigest };
-  return verifyPreparation(await platformOwnerRequest(base, { method: "POST", body: JSON.stringify({ preparation }) }, options));
+  return verifyPreparation(await platformOwnerRequest(base, { method: "POST", body: JSON.stringify({ preparation }) }, options, sourceAuthorizationWriteTimeoutMs));
 }
 export async function commandSourceAuthorization(intentId: string, value: unknown, options: Options = {}) {
   if (!object(value) || Object.keys(value).sort().join(",") !== "action,commandId,expectedIntentDigest,requestedAt" || !["issue", "revoke"].includes(String(value.action)) || typeof value.requestedAt !== "string" || !Number.isFinite(Date.parse(value.requestedAt))) throw new Error("An exact explicit source authorization decision is required.");
@@ -53,9 +53,19 @@ export async function commandSourceAuthorization(intentId: string, value: unknow
   if (value.action === "issue" && preparation.authorization.state !== "prepared") throw new Error("Stopped or expired scope requires a fresh explicit successor, not reapproval of the old intent.");
   const catalog = await readPlatformOperations({ ...options, config });
   const action = `agent-source.${value.action}`;
-  const matches = catalog.catalog?.subjects.filter(subject => subject.kind === "dev-integration-profile" && subject.ref === "profile:accepted-idea-delivery" && subject.capabilities.some(capability => capability.action === action && capability.capability_id === action)) ?? [];
-  if (matches.length !== 1) throw new Error("The existing admitted source issuer is unavailable in the canonical Platform catalog.");
-  await submitPlatformOperation({ capabilityId: action, input: { source_intent: preparation.source_intent, session_id: preparation.session_id }, requestId: value.commandId, requestedAt: value.requestedAt, subjectRef: matches[0].ref }, { ...options, config });
+  const matches = catalog.catalog?.subjects.filter(subject => subject.kind === "dev-integration-profile"
+    && subject.owner === "platform-engineering"
+    && subject.capabilities.some(capability => capability.action === action && capability.capability_id === action)) ?? [];
+  if (matches.length !== 1) throw new Error("The canonical Platform catalog must identify one admitted source issuer.");
+  const issuer = matches[0];
+  await submitPlatformOperation({
+    capabilityId: action,
+    input: { source_intent: preparation.source_intent, session_id: preparation.session_id },
+    requestId: value.commandId,
+    requestedAt: value.requestedAt,
+    reviewedSourceVersion: issuer.source_version,
+    subjectRef: issuer.ref,
+  }, { ...options, config });
   return readSourceAuthorization(intentId, { ...options, config });
 }
 function verifyPreparation(value: unknown): SourceAuthorizationPreparation {

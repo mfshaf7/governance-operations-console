@@ -76,6 +76,7 @@ export type DeliveryPackageSummary = {
     closeout_pending: boolean;
     active_work_item_ids: number[];
     prepared_work_item_ids: number[];
+    planning_prepared_work_item_ids?: number[];
     blocked_work_item_ids: number[];
     refinement_work_item_ids: number[];
     eligibility: "check-selected-work-item";

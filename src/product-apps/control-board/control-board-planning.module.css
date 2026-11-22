@@ -1,0 +1,142 @@
+div.lanes {
+  grid-auto-columns: minmax(13rem, 1fr);
+  align-items: stretch;
+}
+
+.dropZone {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: start;
+  border-radius: 0.76rem;
+}
+
+.dropZone[data-drop-active="true"] > section {
+  border-color: rgba(255, 193, 90, 0.85);
+  box-shadow: inset 0 0 0 2px rgba(255, 193, 90, 0.38);
+}
+
+.card[draggable="true"] {
+  cursor: grab;
+  user-select: none;
+}
+
+.card > p:first-child {
+  padding-right: 1.2rem;
+}
+
+.card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.cardTitle {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.grip {
+  position: absolute;
+  top: 0.52rem;
+  right: 0.45rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.overview {
+  display: grid;
+  container: planning-overview / inline-size;
+  min-width: 0;
+  height: 100%;
+  grid-template-rows: auto minmax(min-content, 1fr);
+  gap: 0.85rem;
+}
+
+.overviewPanels {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 0.85rem;
+}
+
+.iterationTargets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
+  gap: 0.45rem;
+  max-height: 12rem;
+  overflow: auto;
+  padding: 0 0.25rem 0 0;
+  margin: 0;
+  list-style: none;
+  scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
+  scrollbar-width: thin;
+}
+
+.iterationTarget {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 0.82rem;
+}
+
+.iterationName {
+  color: rgba(255, 193, 90, 0.68);
+  overflow-wrap: anywhere;
+}
+
+.iterationTarget[data-missing-target="true"] .iterationName {
+  color: var(--muted);
+}
+
+.iterationTrack,
+.iterationFill {
+  height: 0.34rem;
+  border-radius: 999px;
+}
+
+.iterationTrack {
+  grid-column: 1 / -1;
+  background: rgba(255, 244, 224, 0.12);
+}
+
+.iterationDates {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.iterationFill {
+  background: var(--amber);
+}
+
+.iterationCount {
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.iterationTarget[data-missing-target="true"] .iterationFill {
+  background: var(--muted);
+}
+
+.overview .epicFilters {
+  margin-block: 0.5rem;
+}
+
+@container planning-overview (max-width: 46rem) {
+  .overviewPanels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1450px) {
+  div.lanes {
+    grid-auto-columns: minmax(10rem, 1fr);
+  }
+}

@@ -338,19 +338,24 @@ test("Architecture guided fields retain recorded work and expose only saved brie
 function completionContext(n) {
   return { work_item_id:n,record_ref:`openproject://work_packages/${n}`,subject:"Synthetic non-source completion inspection",status:"in-progress",owner_repo:"sample-owner",revision:"sha256:"+"a".repeat(64),open_descendant_count:0,open_child_count:0,completed_related_count:2,source_session_active:false,completion_evidence_valid:false,can_complete:true,blocking_reasons:[] };
 }
-async function openWorkItem(page,h,path) {
-  await h.section("execution-board"); await h.workspace.getByRole("button", { name:"Open Work Item",exact:true }).click();
-  const opener = page.getByRole("dialog").last();
-  await opener.getByRole("button", { name:"Work path",exact:true }).click(); await page.getByRole("option", { name:path,exact:true }).click();
-  await opener.getByRole("button", { name:"Work item",exact:true }).click();
-  await page.getByRole("option", { name:/^User story 714 ·/ }).click();
-  await opener.getByRole("button", { name:/^Open (Completion|Session)$/ }).click();
+async function openWorkItem(page, h, action) {
+  await page.route("**/api/delivery/execution/**/change-control", route => {
+    const path = new URL(route.request().url()).pathname;
+    const id = /execution\/(?:delivery-)?([0-9]+)\/change-control/.exec(path)?.[1];
+    return id ? route.fulfill({ json: retainedTreeSnapshot(`delivery-${id}`) }) : route.fallback();
+  });
+  await h.section("execution-board");
+  await h.workspace.getByRole("button", { name: /^Epic 698 Governed AI Control Plane/ }).click();
+  await h.workspace.getByRole("button", { name: "Open Work Board", exact: true }).click();
+  await h.workspace.locator('[data-execution-work-item="node-698-feature-1"]').click();
+  await h.workspace.locator('[data-execution-work-item="node-698-story-1"]').click();
+  await h.workspace.getByRole("button", { name: action, exact: true }).click();
 }
 
 test("non-source completion protects evidence on both Escape and board navigation", async ({ page }) => {
   const h = await deliveryHarness(page, { live: true });
   await page.route("**/api/delivery/execution/714/completion",route=>route.fulfill({json:{mode:"live",context:completionContext(714)}}));
-  await openWorkItem(page,h,"Complete work without file changes");
+  await openWorkItem(page, h, "Review Completion");
   const modal = page.getByRole("dialog", { name:"Complete Work",exact:true });
   await expect(modal).toContainText("Synthetic non-source completion inspection");
   const field=modal.getByRole("textbox",{name:"Completion summary",exact:true});await field.fill("Unsubmitted completion evidence");
@@ -367,7 +372,7 @@ test("completion uses explicit observed results and retains an unconfirmed submi
     submitted = route.request().postDataJSON();
     return route.fulfill({ status: 503, json: { error: "Synthetic owner rejection; completion is not confirmed." } });
   });
-  await openWorkItem(page, h, "Complete work without file changes");
+  await openWorkItem(page, h, "Review Completion");
   const modal = page.getByRole("dialog", { name: "Complete Work", exact: true });
   for (const [label, value] of [["Completion summary", "The reviewed outcome is complete."], ["What changed?", "Recorded the accepted outcome and its evidence."],
     ["Test evidence", "Verified the retained operation."], ["Validation evidence", "Inspected the original receipt."]]) {
@@ -408,7 +413,7 @@ function sessionSnapshot() {
 test("source decision preserves edits on refresh and guards changed source and close", async ({ page }) => {
   const h=await deliveryHarness(page,{live:true}),snapshot=sessionSnapshot();
   await page.route("**/api/delivery/execution/714/work-session",r=>r.fulfill({json:snapshot}));
-  await openWorkItem(page,h,"Code or content changes");
+  await openWorkItem(page, h, "Check Work Requirements");
   const modal=page.getByRole("dialog",{name:"Governed Work Session",exact:true});
   const field=modal.getByRole("textbox",{name:"Branch",exact:true});
   await expect(field).toHaveValue("inspection/work");await field.fill("inspection/unsaved");
@@ -514,10 +519,11 @@ test("Execution retains all views with readable horizontally navigable lanes",as
   const h=await deliveryHarness(page);await h.section("execution-board");
   for(const [width,height] of [[1700,1000],[1280,720]]){
     await page.setViewportSize({width,height});
-    for(const view of ["Control Board","Family Map","ART Tree"]){
+    for(const view of ["Control Board","Family Map"]){
       await h.workspace.getByRole("radio",{name:view,exact:true}).click();
       if(view==="Control Board"){
-        const lanes=h.workspace.locator('[class*="controlBoardLanePanel"]');await expect(lanes).toHaveCount(8);
+        const lanes=h.workspace.locator('[class*="controlBoardLanePanel"]');await expect(lanes).toHaveCount(7);
+        await expect(h.workspace.getByRole("searchbox", { name: "Search New items", exact: true })).toHaveCount(0);
         for(const lane of await lanes.all())expect((await lane.boundingBox()).width).toBeGreaterThanOrEqual(239);
         await reachable(page,lanes.last());
         const details=h.workspace.locator('[class*="controlBoardCardDetail"]');
@@ -526,22 +532,26 @@ test("Execution retains all views with readable horizontally navigable lanes",as
           for(let i=1;i<lines.length;i++)expect(lines[i].y).toBeGreaterThanOrEqual(lines[i-1].bottom-1);
         }
       }
-      if (view !== "ART Tree") {
-        const scroll = h.workspace.locator('[class*="controlBoardLaneRow"]');
-        const geometry = await scroll.evaluate(e => {
-          const pane = e.parentElement, a = e.getBoundingClientRect(), b = pane.getBoundingClientRect(), style = getComputedStyle(pane);
-          return { bottom: a.bottom, expectedBottom: b.bottom - parseFloat(style.paddingBottom) - parseFloat(style.borderBottomWidth),
-            width: e.clientWidth, scrollWidth: e.scrollWidth, paneOverflow: pane.scrollHeight - pane.clientHeight };
-        });
-        expect(Math.abs(geometry.bottom - geometry.expectedBottom)).toBeLessThanOrEqual(2);
-        expect(geometry.paneOverflow).toBeLessThanOrEqual(1);
-        expect(geometry.scrollWidth).toBeGreaterThan(geometry.width);
-        await scroll.hover(); await page.mouse.wheel(4000, 0);
-        await expect.poll(() => scroll.evaluate(e => e.scrollLeft)).toBeGreaterThan(0);
-      }
+      const scroll = h.workspace.locator('[class*="controlBoardLaneRow"]');
+      const geometry = await scroll.evaluate(e => {
+        const pane = e.parentElement, a = e.getBoundingClientRect(), b = pane.getBoundingClientRect(), style = getComputedStyle(pane);
+        return { bottom: a.bottom, expectedBottom: b.bottom - parseFloat(style.paddingBottom) - parseFloat(style.borderBottomWidth),
+          width: pane.clientWidth, scrollWidth: pane.scrollWidth, paneOverflow: pane.scrollHeight - pane.clientHeight };
+      });
+      expect(Math.abs(geometry.bottom - geometry.expectedBottom)).toBeLessThanOrEqual(2);
+      expect(geometry.paneOverflow).toBeLessThanOrEqual(1);
+      expect(geometry.scrollWidth).toBeGreaterThan(geometry.width);
+      await scroll.hover(); await page.mouse.wheel(4000, 0);
+      await expect.poll(() => scroll.evaluate(e => e.parentElement.scrollLeft)).toBeGreaterThan(0);
       await expect(h.workspace.getByRole("radio",{name:view,exact:true})).toBeChecked();
     }
   }
+  await h.workspace.getByRole("radio",{name:"Control Board",exact:true}).click();
+  await h.workspace.getByRole("button",{name:/^Epic 698 Governed AI Control Plane/}).click();
+  await h.workspace.getByRole("button",{name:"Open Work Board",exact:true}).click();
+  await h.workspace.getByRole("radio",{name:"ART Tree",exact:true}).click();
+  await expect(h.workspace.getByRole("radio",{name:"ART Tree",exact:true})).toBeChecked();
+  await expect(h.workspace.getByRole("heading",{name:"Governed AI Control Plane",exact:true}).first()).toBeVisible();
   expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
 });
 
@@ -695,17 +705,52 @@ for (const [packageName, actionName, reviewName, recordName] of [
   });
 }
 
-test("Execution tree-change review keeps its heading and acceptance input inside the padded panel", async ({ page }) => {
-  const h = await deliveryHarness(page);
+test("Execution tree-change uses saved dates and keeps review controls reachable", async ({ page }) => {
+  const pi = "PI-2026-03";
+  const h = await deliveryHarness(page, { live: true });
+  const values = structuredClone(h.model.catalog.values);
+  const bounds = values.find(value => value.catalog_value_id === "catalog-value-pi-2026-03-window");
+  Object.assign(bounds, { value_key: "2026-06-01/2026-06-14", lifecycle_state: "read_only" });
+  values.push({ ...bounds, catalog_item_id: "catalog-iteration", catalog_value_id: "catalog-value-dated-iteration-1",
+    value_key: `${pi} / Iteration 1`, lifecycle_state: "active", label: "Iteration 1",
+    iteration_window: { sequence: 1, start_date: "2026-06-01", end_date: "2026-06-14" } });
+  await page.route("**/api/delivery/catalog/projection", route => route.fulfill({ json: {
+    mode: "live", status: "current", observedAt: new Date().toISOString(), error: null,
+    projection: { ...privateCatalogFixtures.projection, values },
+  } }));
   await page.route("**/api/delivery/execution/**/change-control", route => {
     const id = /execution\/(?:delivery-)?([0-9]+)\/change-control/.exec(new URL(route.request().url()).pathname)?.[1] ?? "714";
-    return route.fulfill({ json: retainedTreeSnapshot(`delivery-${id}`) });
+    const snapshot = retainedTreeSnapshot(`delivery-${id}`);
+    Object.assign(snapshot.projection.package.execution_tree, { status: "in-progress", target_pi: pi });
+    return route.fulfill({ json: snapshot });
   });
   await h.section("execution-board");
   await h.workspace.getByRole("button").filter({ hasText: "Broker Draft Validation" }).first().click();
-  await h.workspace.getByRole("button", { name: "Edit Work", exact: true }).click();
-  await h.workspace.getByRole("textbox", { name: "Epic draft title", exact: true }).fill("Synthetic reviewed title draft");
-  await h.workspace.getByRole("button", { name: "Done Editing", exact: true }).click();
+  await h.workspace.getByRole("button", { name: "Open Work Board", exact: true }).click();
+  await h.workspace.getByRole("radio", { name: "ART Tree", exact: true }).click();
+  await h.workspace.getByRole("button", { name: "Edit Work Structure", exact: true }).click();
+  await h.workspace.getByRole("button", { name: "Add child under Epic - Synthetic retained inspection tree", exact: true }).click();
+  await expect(h.workspace.getByRole("menuitem", { name: "Add Feature", exact: true })).toHaveCount(0);
+  await h.workspace.getByRole("menuitem", { name: "Add Milestone", exact: true }).click();
+  await h.workspace.getByRole("textbox", { name: "Milestone draft title", exact: true }).fill("Synthetic reviewed milestone");
+  const done = h.workspace.getByRole("button", { name: "Done Editing", exact: true });
+  const targetPi = h.workspace.getByRole("button", { name: "New item Target PI", exact: true });
+  const iteration = h.workspace.getByRole("button", { name: "New item Iteration", exact: true });
+  await expect(done).toBeDisabled();
+  await expect(targetPi).toContainText(`Use parent PI · ${pi}`);
+  await expect(h.workspace.getByRole("textbox", { name: "New item Iteration" })).toHaveCount(0);
+  await iteration.click();
+  await page.getByRole("option", { name: /^Iteration 1 ·/ }).click();
+  await expect(done).toBeEnabled();
+  await targetPi.click();
+  await page.getByRole("option", { name: "PI-2026-04", exact: true }).click();
+  await expect(iteration).toContainText("Choose an iteration");
+  await expect(done).toBeDisabled();
+  await targetPi.click();
+  await page.getByRole("option", { name: `Use parent PI · ${pi}`, exact: true }).click();
+  await iteration.click();
+  await page.getByRole("option", { name: /^Iteration 1 ·/ }).click();
+  await done.click();
   const modal = page.getByRole("dialog", { name: "Review Execution Changes", exact: true });
   await expect(modal).toBeVisible();
   for (const [width, height] of [[1700, 1000], [1280, 720]]) {

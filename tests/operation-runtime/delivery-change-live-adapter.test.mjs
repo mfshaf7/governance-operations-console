@@ -16,6 +16,7 @@ import { DeliveryOosError } from "../../src/domain-workspaces/delivery/server/de
 import {
   buildExecutionTreeChangePlan,
   createdWorkItemId,
+  executionCreationPlanningChoices,
   executionTreeChildKinds,
   executionTreePlanningInputIssues,
 } from "../../src/domain-workspaces/delivery/work-model/execution/execution-tree-change-plan.ts";
@@ -100,19 +101,32 @@ test("execution add actions match canonical parent rules and expose a real Epic-
   assert.equal(operation.payload.parent_work_item_id, "work-item-1306");
   assert.equal(operation.payload.target_pi, "PI-2026-04");
   assert.equal(operation.payload.iteration, "PI-2026-04 / Iteration 1");
-  assert.deepEqual(executionTreePlanningInputIssues({...root,children:[objective]}), []);
+  const choices = new Map([["PI-2026-04", [{ value: "PI-2026-04 / Iteration 1" }]]]);
+  assert.deepEqual(executionTreePlanningInputIssues({...root,children:[objective]}, choices), []);
 });
 
 test("inline creation captures native planning requirements without inventing Ready authority", () => {
   const root = {id:"root",legacyWorkPackageId:1306,kind:"Epic",title:"Product",draftBody:"",remark:"",children:[]};
   const child = {id:"new",legacyWorkPackageId:null,kind:"PI Objective",title:"Outcome",draftBody:"",remark:"",children:[]};
+  const pi = "PI-2027-01";
+  const key = `${pi} / Iteration 1`;
+  const choices = executionCreationPlanningChoices([
+    { catalog_item_id: "catalog-target-pi", value_key: pi, lifecycle_state: "active" },
+    { catalog_item_id: "catalog-pi-planning-date", value_key: "2027-01-11/2027-01-24",
+      parent_catalog_value_key: pi, lifecycle_state: "read_only" },
+    { catalog_item_id: "catalog-iteration", value_key: key, parent_catalog_value_key: pi, lifecycle_state: "active",
+      iteration_window: { sequence: 1, start_date: "2027-01-11", end_date: "2027-01-24" } },
+    { catalog_item_id: "catalog-iteration", value_key: `${pi} / Iteration 2`, parent_catalog_value_key: pi, lifecycle_state: "active" },
+    { catalog_item_id: "catalog-iteration", value_key: "Program-wide / Continuous", lifecycle_state: "active" },
+  ]);
   for (const kind of ["PI Objective", "Task", "Milestone"]) {
-    assert.match(executionTreePlanningInputIssues({...root,children:[{...child,kind}]}).join(), /Target PI is required/);
-    assert.match(executionTreePlanningInputIssues({...root,children:[{...child,kind,targetPi:"PI-A"}]}).join(), /requires Iteration/);
-    assert.deepEqual(executionTreePlanningInputIssues({...root,children:[{...child,kind,targetPi:"PI-A",iteration:"Program-wide / Continuous"}]}), []);
+    assert.match(executionTreePlanningInputIssues({...root,children:[{...child,kind}]}, choices).join(), /Choose a Target PI/);
+    assert.match(executionTreePlanningInputIssues({...root,targetPi:pi,children:[{...child,kind}]}, choices).join(), /Choose a saved iteration/);
+    assert.deepEqual(executionTreePlanningInputIssues({...root,targetPi:pi,children:[{...child,kind,iteration:key}]}, choices), []);
+    assert.deepEqual(executionTreePlanningInputIssues({...root,targetPi:pi,children:[{...child,kind,iteration:"Program-wide / Continuous"}]}, choices), []);
   }
-  assert.match(executionTreePlanningInputIssues({...root,children:[{...child,targetPi:"PI-A",iteration:"PI-B / Iteration 1"}]}).join(), /must match Target PI/);
-  assert.match(executionTreePlanningInputIssues({...root,children:[{...child,kind:"Feature",targetPi:"PI-A",iteration:"PI-A / Iteration 1"}]}).join(), /coordinated initiative/);
+  assert.match(executionTreePlanningInputIssues({...root,children:[{...child,targetPi:pi,iteration:`${pi} / Iteration 2`}]}, choices).join(), /Choose a saved iteration/);
+  assert.match(executionTreePlanningInputIssues({...root,targetPi:pi,children:[{...child,kind:"Feature"}]}, choices).join(), /reviewed initiative plan/);
   for (const kind of ["Feature", "User story", "Defect", "Risk"]) {
     assert.deepEqual(executionTreePlanningInputIssues({...root,children:[{...child,kind}]}), []);
   }
@@ -311,10 +325,15 @@ test("case:delivery-change-tree-edit sequences revisions and parent-first additi
     ...baseline,
     children: [{ ...baseline.children[0], remark: "Operator note only" }],
   };
-  assert.deepEqual(
-    buildExecutionTreeChangePlan({ baseline, draft: noteOnlyDraft }),
-    [],
-  );
+  const [noteChange] = buildExecutionTreeChangePlan({ baseline, draft: noteOnlyDraft });
+  assert.deepEqual(noteChange.buildOperation(new Map()), {
+    type: "revise_work_item",
+    payload: { work_item_id: "work-item-1029", changes: {}, work_note: "Operator note only" },
+  });
+  const [newNote] = buildExecutionTreeChangePlan({
+    baseline, draft: { ...baseline, children: [...baseline.children, { ...newStory, children: [], remark: "Retain creation context" }] },
+  });
+  assert.equal(newNote.buildOperation(new Map()).payload.work_note, "Retain creation context");
 });
 
 test("case:delivery-change-action-routing maps blocker and parking actions to OOS operations", () => {

@@ -8,6 +8,8 @@ export type DeliveryChangeNode = {
   status: string;
   subject: string;
   type: string;
+  target_pi?: string | null;
+  iteration?: string | null;
 };
 
 export type DeliveryChangeProjection = {
@@ -26,7 +28,43 @@ export type DeliveryChangeProjection = {
 
 export type DeliveryChangeCatalogRequest = Record<string, unknown>;
 
+export type PIPlanFeatureAddition = {
+  title: string;
+  description: string;
+  delivery_target: DatedPIPlacement;
+  delivery_target_reason?: string;
+  first_work_item: {
+    type: "User story" | "Defect";
+    title: string;
+    description: string;
+    placement: DatedPIPlacement;
+  };
+};
+
+export type DatedPIPlacement = { iteration: string; start_date: string; end_date: string };
+
 export type DeliveryChangeOperation =
+  | { type: "apply_pi_plan"; payload: { pi: string; feature_addition: PIPlanFeatureAddition } }
+  | {
+      type: "apply_pi_plan";
+      payload: {
+        pi: string;
+        assignments: {
+          work_item_id: string;
+          iteration: string;
+          start_date: string;
+          end_date: string;
+          delivery_target_reason?: string;
+        }[];
+        objective: {
+          work_item_id: string | null;
+          title: string;
+          type: "Committed" | "Stretch";
+          planned_business_value: number;
+          description?: string;
+        };
+      };
+    }
   | {
       payload: {
         acceptance_criteria?: string | null;
@@ -42,6 +80,7 @@ export type DeliveryChangeOperation =
         status?: string | null;
         subject: string;
         target_pi?: string | null;
+        work_note?: string;
         type: string;
       };
       type: "add_work_item";
