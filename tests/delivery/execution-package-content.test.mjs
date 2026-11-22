@@ -27,6 +27,14 @@ test("next guidance follows recorded posture without inferring closeout or permi
   assert.match(next({status:"retired"}).title,/retired/);
   assert.match(next({groups:executionPackageWorkGroups(node(1,"Epic","ready"))}).title,/Choose/);
 });
+test("next action uses exact plan checks and prioritizes package blockers and read-only inspection", () => {
+  const technicalPlan = { status: "required", workItemId: "work-item-6", actionLabel: "Prepare Technical Plan", detail: "Review the plan for work item 6." };
+  assert.equal(next({ technicalPlan }).title, "Prepare Technical Plan");
+  assert.equal(next({ technicalPlan: { ...technicalPlan, workItemId: null } }).filter, "in-progress");
+  assert.equal(next({ technicalPlan, status: "blocked" }).filter, "blocked");
+  assert.equal(next({ technicalPlan, hasPackageBlocker: true }).kind, "action");
+  assert.equal(next({ technicalPlan, readOnly: true }).kind, "evidence");
+});
 test("plain blocker wording expands known field names and preserves undecided dates", () => {
   assert.equal(executionBlockerApproach({decision_path:"accept-risk"}),"Accept the risk");
   assert.equal(executionBlockerApproach({decision_path:"remove"}),"Resolve the cause");

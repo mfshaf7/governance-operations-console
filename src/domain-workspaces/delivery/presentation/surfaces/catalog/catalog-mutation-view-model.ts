@@ -132,18 +132,3 @@ export function catalogDraftPreviewMetadata({
       : []),
   ];
 }
-
-export function catalogTargetPiSelectOptions(
-  targetPiValues: DeliveryCatalogValue[],
-  recordedParent: string | null = null,
-) {
-  targetPiValues = targetPiValues.filter(value => value.value_key === recordedParent || ["active", "admitted", "read_only"].includes(value.lifecycle_state));
-  if (targetPiValues.length === 0) {
-    return [{ label: "No Target PI projected", value: "" }];
-  }
-
-  return targetPiValues.map((targetPi) => ({
-    label: targetPi.label,
-    value: targetPi.value_key,
-  }));
-}

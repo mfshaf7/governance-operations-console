@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import {
-  TerasEmptyState,
-} from "@/teras";
+import { useState, type ReactNode } from "react";
+import { TerasEmptyState } from "@/teras";
 
 import {
   ControlBoardCardStack,
@@ -12,6 +10,7 @@ import {
 } from "./control-board-dashboard";
 import type {
   ControlBoardPackage,
+  ControlBoardPackagePosture,
   ControlBoardPostureTerms,
 } from "./control-board-model";
 import { ControlBoardPackageCard } from "./control-board-package-card";
@@ -34,46 +33,70 @@ export function ControlBoardView({
   selectedPackageId: string | null;
   hiddenEmptyPostures?: ControlBoardPackage["posture"][];
 }) {
-  const [queries, setQueries] = useState<Record<string, string>>({});
-  const groupedPackages = controlBoardPostureOrder.map((posture) => ({
-    posture,
-    packages: packages.filter(
-      (controlPackage) => controlPackage.posture === posture,
-    ),
-  })).filter(group => group.packages.length > 0 || !hiddenEmptyPostures.includes(group.posture));
+  return (
+    <ControlBoardStatusBoard
+      groups={controlBoardPostureOrder.map(posture => ({
+        posture,
+        items: packages.filter(item => item.posture === posture),
+      })).filter(group => group.items.length > 0 || !hiddenEmptyPostures.includes(group.posture))}
+      postureTerms={postureTerms}
+      emptyMessage="No package currently projects to this posture."
+      filterItems={filterControlBoardPackages}
+      renderItem={item => (
+        <ControlBoardPackageCard
+          key={item.packageId}
+          onSelectPackage={onSelectPackage}
+          packageSummary={item}
+          selected={item.packageId === selectedPackageId}
+        />
+      )}
+    />
+  );
+}
+
+export function ControlBoardStatusBoard<Item>({
+  groups,
+  postureTerms,
+  emptyMessage,
+  filterItems,
+  renderItem,
+}: {
+  groups: { posture: ControlBoardPackagePosture; items: Item[] }[];
+  postureTerms: ControlBoardPostureTerms;
+  emptyMessage: string;
+  filterItems: (items: Item[], query: string) => Item[];
+  renderItem: (item: Item) => ReactNode;
+}) {
+  const [queries, setQueries] = useState<Partial<Record<ControlBoardPackagePosture, string>>>({});
 
   return (
     <ControlBoardLaneRow>
-      {groupedPackages.map(({ packages: posturePackages, posture }) => {
+      {groups.map(({ posture, items }) => {
         const query = queries[posture] ?? "";
-        const visible = filterControlBoardPackages(posturePackages, query);
-        return <ControlBoardLanePanel
-          count={posturePackages.length}
-          description={postureTerms[posture].description}
-          key={posture}
-          search={{label:`Search ${postureTerms[posture].label} items`,value:query,
-            onValueChange:value=>setQueries(current=>({...current,[posture]:value})),
-            resultLabel:query.trim()?`${visible.length} of ${posturePackages.length} shown`:undefined}}
-          title={postureTerms[posture].label}
-          tone={controlBoardPostureTone(posture)}
-        >
-          {visible.length > 0 ? (
-            <ControlBoardCardStack>
-              {visible.map((controlPackage) => (
-                <ControlBoardPackageCard
-                  key={controlPackage.packageId}
-                  onSelectPackage={onSelectPackage}
-                  packageSummary={controlPackage}
-                  selected={controlPackage.packageId === selectedPackageId}
-                />
-              ))}
-            </ControlBoardCardStack>
-          ) : (
-            <TerasEmptyState>
-              {query.trim() ? "No items match this search." : "No package currently projects to this posture."}
-            </TerasEmptyState>
-          )}
-        </ControlBoardLanePanel>;
+        const visible = filterItems(items, query);
+        const { label, description } = postureTerms[posture];
+
+        return (
+          <ControlBoardLanePanel
+            count={items.length}
+            description={description}
+            key={posture}
+            search={{
+              label: `Search ${label} items`,
+              value: query,
+              onValueChange: value => setQueries(current => ({ ...current, [posture]: value })),
+              resultLabel: query.trim() ? `${visible.length} of ${items.length} shown` : undefined,
+            }}
+            title={label}
+            tone={controlBoardPostureTone(posture)}
+          >
+            {visible.length ? (
+              <ControlBoardCardStack>{visible.map(renderItem)}</ControlBoardCardStack>
+            ) : (
+              <TerasEmptyState>{query.trim() ? "No items match this search." : emptyMessage}</TerasEmptyState>
+            )}
+          </ControlBoardLanePanel>
+        );
       })}
     </ControlBoardLaneRow>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 
 import styles from "./teras-patterns.module.css";
 import { TerasPanel } from "./teras-panel";
@@ -12,6 +12,7 @@ export function TerasSurfaceNav({
   children,
   className,
   description,
+  keepCurrentVisible = false,
   kicker,
   title,
 }: {
@@ -19,9 +20,31 @@ export function TerasSurfaceNav({
   children: ReactNode;
   className?: string;
   description: ReactNode;
+  keepCurrentVisible?: boolean;
   kicker: ReactNode;
   title: ReactNode;
 }) {
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!keepCurrentVisible || !nav) return;
+
+    const revealCurrent = () => {
+      const current = nav.querySelector('[aria-current="page"]');
+      if (!current || nav.scrollWidth <= nav.clientWidth) return;
+      const viewport = nav.getBoundingClientRect();
+      const button = current.getBoundingClientRect();
+      if (button.left < viewport.left) nav.scrollLeft += button.left - viewport.left - 4;
+      else if (button.right > viewport.right) nav.scrollLeft += button.right - viewport.right + 4;
+    };
+
+    revealCurrent();
+    const observer = new ResizeObserver(revealCurrent);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [keepCurrentVisible]);
+
   return (
     <TerasPanel
       className={cx(styles.terasSurfaceNav, className)}
@@ -33,7 +56,7 @@ export function TerasSurfaceNav({
         <strong>{title}</strong>
         <p>{description}</p>
       </div>
-      <nav aria-label={ariaLabel} className={styles.terasSurfaceNavList}>
+      <nav ref={navRef} aria-label={ariaLabel} className={styles.terasSurfaceNavList}>
         {children}
       </nav>
     </TerasPanel>

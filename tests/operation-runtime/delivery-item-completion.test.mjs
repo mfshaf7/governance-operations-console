@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { completionEvidence, assertCompletionContext } from "../../src/domain-workspaces/delivery/live-runtime/delivery-item-completion-contract.ts";
 import { readItemCompletionContext, submitItemCompletion } from "../../src/domain-workspaces/delivery/server/delivery-item-completion-client.ts";
-import { canonicalSourceResponse } from "../support/console-source-projection.mjs";
 
 const env = { OOS_BASE_URL: "http://127.0.0.1:8080", OOS_CALLER_ID: "governance-operations-console", OOS_CALLER_SECRET: "test-only", GOVERNANCE_CONSOLE_OPERATOR_ID: "operator:test-owner" };
 const evidence = {
@@ -12,18 +11,14 @@ const evidence = {
   validation_evidence: "- PASS: Canonical owner readback and receipt confirm the completed domain outcome.",
 };
 
-function owner({ activeSource = false, foreignContext = false, done = false, badPost = false } = {}) {
+function owner({ activeSource = false, missingCustody = false, foreignContext = false, done = false, badPost = false } = {}) {
   const calls = [];
   let updated = "2026-01-01T00:00:00.000Z";
   const options = { env, fetchImpl: async (url, init) => {
     calls.push({ method: init.method, path: new URL(url).pathname, body: init.body ? JSON.parse(init.body) : null });
-    if (url.endsWith("/work-session")) return canonicalSourceResponse({
-      workflow_id: "delivery-art-work-session", delivery_id: "delivery-40", work_item_id: "work-item-42",
-      session_id: activeSource ? "session:test" : null, session_revision: activeSource ? updated : null,
-      landing_unit_id: activeSource ? "landing:test" : null, state: activeSource ? "source-work" : "decision-required", next_action: null,
-    }, { recordRef: "openproject://work_packages/42", sourceOwner: "workspace-delivery-art" });
     if (url.endsWith("/continuation-context")) return Response.json({
       workflow_id: "delivery-work-item-continuation-context", work_item_id: "work-item-42", work_item_record_ref: "openproject://work_packages/42",
+      source_session_present: missingCustody ? null : activeSource,
       continuation_context: { target_item: { id: foreignContext ? 43 : 42, record_ref: "openproject://work_packages/42", subject: "Accept the native transfer", type: "User story",
         status: done ? "done" : "new", owner_repo: "example-owner", updated_at: updated,
         blocked: false, dependency_blocked: false, ready_contract_satisfied: true, completion_narrative_contract_satisfied: true,
@@ -45,6 +40,7 @@ test("non-source completion uses native context, one ordinary completion and can
   const writes = runtime.calls.filter(call => call.method === "POST");
   assert.deepEqual(writes, [{ method: "POST", path: "/v1/delivery-work-items/42/complete", body: { input: evidence } }]);
   assert.ok(runtime.calls.every(call => !/start|merge|close|grant/.test(call.path)));
+  assert.ok(runtime.calls.every(call => !call.path.endsWith("/work-session")));
 });
 
 test("active source sessions and changed canonical target cannot use non-source completion", async () => {
@@ -60,6 +56,15 @@ test("foreign owner context and foreign completion response never become success
   await assert.rejects(readItemCompletionContext(42, owner({ foreignContext: true }).options), /different work item/);
   const runtime = owner({ badPost: true }); const context = await readItemCompletionContext(42, runtime.options);
   await assert.rejects(submitItemCompletion(42, { expectedRevision: context.revision, nonSourceConfirmed: true, evidence }, runtime.options), /unconfirmed/);
+});
+
+test("non-source completion fails closed if source-session custody is unavailable", async () => {
+  const runtime = owner({ missingCustody: true });
+  await assert.rejects(
+    submitItemCompletion(42, { expectedRevision: "sha256:" + "a".repeat(64), nonSourceConfirmed: true, evidence }, runtime.options),
+    error => error.status === 503 && error.code === "delivery_completion_session_state_unavailable",
+  );
+  assert.equal(runtime.calls.filter(call => call.method === "POST").length, 0);
 });
 
 test("a cold read recovers existing canonical completion and does not repeat the write", async () => {

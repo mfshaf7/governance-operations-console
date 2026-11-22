@@ -824,6 +824,12 @@
   overflow-wrap: anywhere;
 }
 
+.terasMetadataValue[data-truncate="true"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .terasMetadataItem[data-tone="danger"] {
   --teras-metadata-value-color: rgba(255, 166, 143, 0.94);
 }
@@ -4260,6 +4266,110 @@
 @media (max-width: 760px) {
   .terasSurfaceNav {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1180px) {
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasFullscreenSurfaceFrameBody {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceSummaryHeader {
+    min-height: 0;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    padding-block: 0.46rem;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceSummaryTitle {
+    border-bottom: 0;
+    padding: 0 0.32rem 0 0.16rem;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceSummaryMain {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceSummaryStats:not([data-teras-surface-summary-description]) {
+    display: flex;
+    width: 100%;
+    min-height: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceSummaryPlaceholder {
+    display: none;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSummaryCard {
+    flex: 0 0 auto;
+    min-width: 4.8rem;
+    min-height: 0;
+    padding: 0.38rem 0.52rem;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceSummaryStatusZone {
+    grid-template: auto / auto minmax(0, 1fr);
+    column-gap: 0.45rem;
+    border-left: 0;
+    padding: 0;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceSummaryStatusGrid {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceSummaryStatusPill {
+    flex: 0 0 auto;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceNav {
+    display: block;
+    padding: 0.38rem 0.5rem 0.38rem 0.72rem;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceNavHeader {
+    display: none;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceNavList {
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+    padding: 0.12rem 0.12rem 0.2rem;
+    scrollbar-width: thin;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceNavList > * {
+    flex: 0 0 auto;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceNavButton {
+    min-height: 2.18rem;
+    grid-template: auto / auto auto;
+    column-gap: 0.4rem;
+    padding-inline: 0.56rem;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceNavButton > span {
+    display: none;
+  }
+
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceNavButton > :is(strong, small) {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .terasFullscreenSurfaceFrame[data-compact-toolbar="true"] .terasSurfaceSummaryHeader {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+    gap: 0.38rem;
   }
 }
 

@@ -1,5 +1,6 @@
 import type { DeliveryActiveBlockerProjection, DeliveryAvailableAction } from "../../domain/delivery-package.ts";
 import type { DeliveryArtNode } from "../../domain/delivery-execution.ts";
+import type { TechnicalPlanRequirement } from "./technical-plan-requirement.ts";
 
 export type ExecutionWorkFilter = "all" | "in-progress" | "blocked" | "ready";
 export const executionWorkLabels = { "in-progress": "In progress", blocked: "Blocked work", ready: "Marked ready" } as const;
@@ -30,16 +31,36 @@ export function executionReadableTime(value: string) {
   if (!value || Number.isNaN(date.getTime())) return "Time unavailable";
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
-export function executionPackageNextAction({ status, closeoutPending, hasCloseout, actions, groups }: {
+export function executionPackageNextAction({ status, closeoutPending, hasCloseout, actions, groups, hasPackageBlocker, readOnly, technicalPlan }: {
   status: string; closeoutPending: boolean; hasCloseout: boolean; actions: DeliveryAvailableAction[];
   groups: ReturnType<typeof executionPackageWorkGroups>;
+  hasPackageBlocker?: boolean;
+  readOnly?: boolean;
+  technicalPlan?: TechnicalPlanRequirement;
 }) {
-  const find = (type: string) => actions.find(action => action.action_type === type && action.enabled);
+  const find = (type: DeliveryAvailableAction["action_type"]) => actions.find(action =>
+    action.action_type === type && action.enabled && action.scope !== "execution_target");
   if (["done", "retired"].includes(status)) return { kind: "evidence" as const, title: status === "retired" ? "Review the retired record" : "Review the completed record", detail: "Inspect the recorded outcome, work structure and supporting evidence." };
-  if (status === "parked") return { kind: "action" as const, action: find("resume"), title: "Review whether work can resume", detail: "Review the return status and reason before resuming this deferred package." };
-  if (status === "blocked") return { kind: "action" as const, action: find("clear-blocker"), title: "Review the blocking condition", detail: "Review what is preventing progress and the agreed approach. The service checks whether the blocker can be cleared." };
-  if (closeoutPending && hasCloseout) return { kind: "closeout" as const, title: "Review package closeout", detail: "Review completion evidence and any downstream impact before submitting closeout." };
-  if (groups.find(group => group.status === "in-progress")?.count) return { kind: "work" as const, filter: "in-progress" as const, title: "Continue work in progress", detail: "Open an in-progress item to read its current session and next action." };
-  if (groups.find(group => group.status === "ready")?.count) return { kind: "work" as const, filter: "ready" as const, title: "Review work marked ready", detail: "Open an item to check its current prerequisites. Ready status alone does not grant permission to run it." };
-  return { kind: "work" as const, filter: "all" as const, title: "Choose a work item", detail: "Open a work item to read its current prerequisites, session and next action." };
+  if (readOnly) return { kind: "evidence" as const, title: "Inspect the recorded work", detail: "Open the Work Board to view the package’s items and their recorded status." };
+  if (status === "parked") {
+    const action = find("resume");
+    return { kind: "action" as const, action, title: "Review whether work can resume", detail: action
+      ? "Choose Resume Work under Manage Package to review the return status and reason."
+      : "Review the recorded work while the package is deferred." };
+  }
+  if (status === "blocked" || hasPackageBlocker) {
+    const action = find("clear-blocker");
+    if (!hasPackageBlocker && !action && groups.find(group => group.status === "blocked")?.count) {
+      return { kind: "work" as const, filter: "blocked" as const, title: "Inspect blocked work", detail: "Open the Work Board and select a blocked item to see its blocker or dependencies." };
+    }
+    return { kind: "action" as const, action, title: "Review what’s blocking progress", detail: "Check the blocker details below before deciding how this package can continue." };
+  }
+  if (closeoutPending && hasCloseout) return { kind: "closeout" as const, title: "Review package closeout", detail: "Choose Review Closeout under Manage Package to check completion evidence and downstream impact." };
+  if (technicalPlan?.workItemId && ["required", "binding", "review"].includes(technicalPlan.status)) {
+    return { kind: "technical-plan" as const, title: technicalPlan.actionLabel, detail: technicalPlan.detail };
+  }
+  if (groups.find(group => group.status === "in-progress")?.count) return { kind: "work" as const, filter: "in-progress" as const, title: "Continue work in progress", detail: "Open the Work Board and select an in-progress item to see its current session or check its requirements." };
+  if (groups.find(group => group.status === "ready")?.count) return { kind: "work" as const, filter: "ready" as const, title: "Review work marked ready", detail: "Open the Work Board and select a ready item to check its work requirements." };
+  if (groups.find(group => group.status === "blocked")?.count) return { kind: "work" as const, filter: "blocked" as const, title: "Inspect blocked work", detail: "Open the Work Board and select a blocked item to see its blocker or dependencies." };
+  return { kind: "work" as const, filter: "all" as const, title: "Choose a work item", detail: "Open the Work Board, select an item, and check its work requirements." };
 }

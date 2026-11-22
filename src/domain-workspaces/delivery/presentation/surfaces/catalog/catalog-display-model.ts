@@ -18,6 +18,7 @@ import {
   catalogRetirementReceiptLabel,
   catalogRetirementBlocked,
 } from "../../../work-model/catalog/catalog-retirement-model.ts";
+import { backlogIterationLabel, datedIterationIndex } from "../../../work-model/catalog/planning-calendar.ts";
 
 export { catalogRetirementReceiptLabel, catalogRetirementBlocked };
 
@@ -95,9 +96,8 @@ export function catalogPrimaryMutationActionLabel(
 
   switch (catalog.console_capability) {
     case "create":
-      return "Add Value";
     case "request":
-      return "Add Value";
+      return isTargetPiCatalog(catalog) ? "Create PI" : "Add Value";
     case "owner_routed":
       return "System managed";
     case "read_only":
@@ -266,9 +266,20 @@ export function catalogDraftReceiptMetadata({
   ];
 }
 
+export function catalogIterationSchedule(
+  value: DeliveryCatalogValue,
+  datedIterations: ReturnType<typeof datedIterationIndex>,
+) {
+  const scheduled = datedIterations.get(value.value_key);
+  if (scheduled) return `${scheduled.window.start_date} to ${scheduled.window.end_date}`;
+  if (value.value_key === backlogIterationLabel) return "Unscheduled work";
+  return value.iteration_window ? "Dates unavailable for planning" : "No calendar dates";
+}
+
 export function catalogValueMetadata(
   catalog: DeliveryCatalogItem,
   value: DeliveryCatalogValue,
+  values: readonly DeliveryCatalogValue[],
 ): TerasMetadataItem[] {
   return [
     { label: "Value Key", value: value.value_key },
@@ -276,9 +287,10 @@ export function catalogValueMetadata(
     ...(isIterationCatalog(catalog)
       ? [
           {
-            label: "Target PI Link",
-            value: parentTargetPiValueKey(value) ?? "Missing Target PI link",
+            label: "Linked PI",
+            value: parentTargetPiValueKey(value) ?? "No PI linked",
           },
+          { label: "Calendar", value: catalogIterationSchedule(value, datedIterationIndex(values)) },
         ]
       : []),
   ];

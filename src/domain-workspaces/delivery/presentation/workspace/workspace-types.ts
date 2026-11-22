@@ -3,7 +3,7 @@ import type { DeliveryTone, DeliveryWorkflowPhase } from "../../read-model/index
 export type DeliverySurfaceId =
   "execution-board" | "intake" | "refinement" | "work-design";
 
-export type DeliveryWorkspaceSurfaceId = "home" | DeliverySurfaceId | "catalog";
+export type DeliveryWorkspaceSurfaceId = "home" | DeliverySurfaceId | "catalog" | "pi-planning";
 
 export type DeliverySurfaceConfig = {
   description: string;

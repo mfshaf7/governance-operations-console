@@ -2,6 +2,8 @@ import {readDeliveryRegister} from "../../../../domain-workspaces/delivery/serve
 import { NextResponse } from "next/server";
 import { readCanonicalDeliveryInventory } from "../../../../domain-workspaces/delivery/server/delivery-workspace-oos-client.ts";
 import { deliveryOosConfigured, DeliveryOosError } from "../../../../domain-workspaces/delivery/server/delivery-oos-client.ts";
+import { readCatalogProjection } from "../../../../domain-workspaces/delivery/server/refinement-catalog-oos-client.ts";
+import { catalogReadModelFromProjection } from "../../../../domain-workspaces/delivery/live-runtime/catalog-live-contract.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,10 @@ export async function GET(request:Request) {
   try {
     const query=new URL(request.url).searchParams;
     if(query.get("view")==="register")return NextResponse.json(await readDeliveryRegister(query,request.signal),{headers});
+    if (query.get("view") === "planning") {
+      const [inventory, catalog] = await Promise.all([readCanonicalDeliveryInventory(), readCatalogProjection()]);
+      return NextResponse.json({ mode: "live", projection: { ...inventory, catalog: catalogReadModelFromProjection(catalog) }, error: null }, { headers });
+    }
     return NextResponse.json({ mode: "live", projection: await readCanonicalDeliveryInventory({overview:true}), error: null }, { headers });
   } catch (error) {
     const status=error instanceof DeliveryOosError && [401,403].includes(error.status)?error.status:503;

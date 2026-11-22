@@ -11,15 +11,40 @@ owner-generated default.
 
 ## Purpose
 
-This is the primary Console instruction surface for running a governed Delivery
-work session from Execution Board. The board keeps its approved package and
-action presentation. **Choose Work Item** opens a searchable list of recorded
-names, types, numbers and statuses. Selecting a node in **ART Tree** opens that
-same chooser with its exact work item selected. Choose **Code or content
-changes** for source work, or **Complete work without file changes** for an
-actual completed planning/review outcome. An explicit number entry remains for
-work not loaded in the current inventory. Opening a target starts no work.
-Both routes read authoritative OOS state when live integration is configured.
+Use **Delivery → Execution** to find a package on the Control Board or
+Family Map. Select it to inspect its status and manage PI planning, the
+technical plan, package blockers, closeout, and records. Choose **Open Work
+Board** to manage the items inside the package.
+
+**Next Action**, below **Work Overview**, points to the next review based on
+the package status and verified work checks. An unchecked item starts with
+**Check Work Requirements** on the Work Board. A checked requirement that
+calls for a technical plan points to the plan in **Manage Package**.
+
+- **Epic Board** shows Features and work assigned outside a Feature. A
+  Feature card shows its recorded status and child progress. Select the card
+  to open its stories, tasks and defects. **Direct work** counts only items
+  outside a Feature. The bottom-right board selector
+  uses **Package Board**, **Epic Board**, **Feature Board** and **All Work**.
+- Choose **All Work** for stories, tasks and defects across the package.
+  When a package has several Features, the Feature filter chooses which one
+  to show. Both controls sit inside the canvas at the bottom right. The back
+  button returns to the board you came from. Use the header switch to choose **Work Board** or **ART Tree**.
+  The right panel shows the package, Feature or selected item.
+  **Next Action** follows the overview or item context. It guides the first
+  selection on Epic Board and All Work, and holds the relevant review or
+  work-session controls once an item is selected.
+  Select the exact item to check requirements, open a recorded session, or
+  review evidence-only completion. Blocked work prioritizes its blocker and
+  dependencies. Use **Open item** to inspect a dependency on the Work Board
+  and **Review Blocker** for a recorded blocker when a current change review
+  is available. The review is bound to that item and the current revision.
+- **ART Tree** shows the recorded hierarchy. Open a Feature or executable item
+  on the Work Board, or review completion for other eligible structural items.
+  **Edit Work Structure** opens the existing reviewed tree-change workflow.
+
+Opening a review or work session reads the existing OOS workflow. Starting or
+completing work requires explicit submission.
 
 Current includes deferred packages in the **Deferred** lane. **Resume Work**
 opens a reviewed return-status/reason form; the service checks prerequisites
@@ -35,6 +60,17 @@ outcomes, and receipts. The Console owns operator interaction,
 same-origin routing, decision entry, strict response validation, and bounded
 presentation. The browser does not read Git, call OpenProject, hold OOS
 credentials, or derive progress and completion.
+
+## PI Planning in Preview
+
+Open **PI Planning**, select an initiative that has completed Refinement, and
+choose **Prepare PI plan** or **Update PI plan**. Set the planning increment,
+objective, and iteration at the top. Drag work between **Unscheduled**,
+**Committed**, and **Stretch**, or select a card and use **Move to**. The
+selected card shows its description and recorded dependencies when available.
+The plan needs at least one committed item, and open prerequisites in the same
+plan must also be committed. **Review plan** shows the objective, iteration, and
+assignments before **Record in preview** saves the draft locally.
 
 ## Runtime Modes
 
@@ -70,12 +106,12 @@ Console calls retain their shorter timeout.
 
 ## Technical Plan & Approval
 
-Open **Technical Plan** under the selected package's **Manage Package** panel.
+Open **Technical Plan** under **Manage Package** on the main Execution board.
 Its status explains when to use it: Open Technical Plan is inspection/drafting;
 a missing-plan owner gate makes Prepare Technical Plan the primary next action.
 An existing binding requirement asks for review and linkage of the approved plan.
-Choose Work Item opens the existing work-item workflow. No missing record
-or generated decision default establishes an exemption. Not required and covered
+**Open Work Board** returns to package work selection. A missing record or
+generated decision default grants no exemption. Not required and covered
 are shown only after an owner-confirmed implementation-ready check for that work.
 The workspace is titled Technical Plan & Approval. The global Architecture Packet toolbar entry is removed. When the current
 source session reports a missing or unbound architecture requirement, Next Action
@@ -172,33 +208,27 @@ and isolated browser tests do not replace that qualification.
 
 ## Operator Flow
 
-The package panel's Work Overview distinguishes hierarchy-wide open work from
-story/defect/task status counts. View work or View all opens the same named work
-picker, scoped to that package and selected status; switching to All work keeps
-the package scope. History offers work-structure inspection only. The global
-Open Work Item entry continues to cover all loaded packages.
+The selected package panel on the Control Board or Family Map shows its
+posture, planning facts, blocker details and recent activity. Package-level
+actions open from that panel. The Work Board summary counts the cards in the
+selected scope. History keeps navigation and recorded details
+available with changes locked.
 
-What’s Blocking Progress shows the recorded issue, impact, responsible team or
-service, agreed approach and review date. Original descriptions and rationale
-remain under Blocker details. Review Blocker uses the existing owner command.
-Next Action points to blocked/deferred review, recorded closeout, or current
-work as appropriate; it does not infer execution approval from status counts.
-Manage Package retains secondary operations with clearer labels. Recent Activity
-shows the latest loaded event, readable time and an explicit coverage note;
-original timestamps, receipt references and source text remain under details.
+**What’s Blocking Progress** shows the issue, impact, responsible team or
+service, agreed approach, and review date. The package blocker review uses the
+existing owner command. Child blockers and dependencies are attached to their
+items on the Work Board.
 
-For planning-stage hierarchy maintenance, choose `Open Work Item`, enter an
-exact canonical initiative or child id, then choose `Inspect ART Tree`.
-This resolves the item through the current inventory and selects its initiative
-without preparing or starting a source session. The normal Control Board still
-lists execution/audit work; inspection does not force planning work into Ready.
-Unknown, ambiguous, or unloaded targets are not guessed.
+In connected mode, **Find ART Tree** accepts an exact ART number in the
+current owner inventory. This opens the matching package's tree, including
+planning-stage packages which are outside the Execution lanes. Ambiguous or
+unavailable entries show an error.
 
 The global Delivery register includes all current and retained package roots.
 Its routine refresh loads full active and parked execution trees while
 explicitly deferring completed and retired child graphs. Unloaded archived
 counts are unknown, never zero. Current/History navigation, global package
-totals, filters and cross-project active actions keep their existing meaning.
+totals and filters keep their existing meaning.
 History uses the original exact owner stage reads; these do not require
 scanning every archived execution graph before the register can appear.
 
@@ -218,7 +248,7 @@ the existing five-minute bound. Denied access clears them. During the first
 load, unknown totals and filter results remain explicitly loading; a partial
 first page must not temporarily erase a previously verified source.
 
-`Edit ART Tree` reads a fresh OOS change projection before opening a local draft.
+**Edit Work Structure** reads a fresh OOS change projection before opening a local draft.
 Use the existing typed child menu (including PI Objective under Epic), then
 `Done Editing`, inspect the exact change plan and enter an acceptance note.
 Only `Apply Changes` submits canonical mutations; OOS rechecks source revision,
@@ -232,17 +262,15 @@ but Feature PI commitment belongs to coordinated initiative plan/apply through
 Refinement, not this generic create path. Review shows submitted planning
 values. These inputs create a new item; they do not make it Ready or grant
 execution authority. Native OOS/OpenProject validation remains decisive.
-For a completed initiative, `Inspect Closeout` opens the existing native owner
+For a completed initiative, **Review Closeout** opens the existing native owner
 readiness/closeout flow. Neither inspection action grants source, closure or
 review authority.
 
-1. Select a Delivery package whose structured action intent identifies an
-   executable OpenProject work item and open `Start Work`, or choose
-   `Open Work Item` and enter the exact ART work-item reference.
-2. Wait for the Console to read that target from OOS. Direct entry is only a
-   routing key; it does not create package truth or grant work eligibility.
-3. In disconnected preview, use the established local action flow. In live
-   mode, wait for the OOS work-session projection.
+1. Open the package workspace and select the work item on its **Work Board**.
+2. Choose **Check Work Requirements** or **Open Work Session**. The exact
+   item's OOS read determines eligibility and the next action.
+3. In disconnected preview, **Review Start** is available for an item with an
+   enabled local start intent. In live mode, wait for the OOS projection.
 4. If no session exists, choose `Prepare Session`. OOS returns the
    caller-bound Landing Unit decision draft.
 5. Review the Landing Unit model, identity, branch, split reason, rollback
@@ -300,10 +328,11 @@ scope review; unavailable or stale authority never enables continuation.
 
 ## Evidence-Only Completion And Completed Parents
 
-In live Execution Board, choose `Open Work Item`, select the named item or enter
-its exact ART id, and select `Complete work without file changes`.
-`Open Completion` reads current
-native continuation context and any source session before presenting a review.
+Inside the package workspace, choose **Review Completion** from the
+item on the Work Board. For a Feature, choose **Review Feature Completion**
+when its child work is closed. For a PI Objective, open the outcome review
+from the **ART Tree**.
+The review reads current native continuation context and any source session.
 Use this path only when the outcome requires no source change. A source-backed
 outcome must use its existing governed work session, merged evidence and close
 command; an existing source session blocks this form.
@@ -325,7 +354,7 @@ For an already completed parent scope still marked open, select
 `Reconcile a completed parent (stale-open closeout)` and enter an explicit
 parent-closeout justification. This reuses OOS's existing stale-open operation,
 requires terminal children and completed related scope, and does not infer
-business acceptance from child status. Epics use `Inspect Closeout` instead.
+business acceptance from child status. Use **Review Closeout** in the main board’s package panel for an Epic.
 
 The Epic wizard follows OOS's explicit `prepare_delivery_closeout` action. With
 a clean execution tree, OOS may prepare the existing guided command while only
@@ -366,6 +395,9 @@ read-only. This path creates no source grant, worktree, PR, Review Packet or
 Console-owned completion receipt. The same-origin route is
 `/api/delivery/execution/{workItemId}/completion`; authenticated server-only
 calls reuse OOS `continuation-context`, `complete` and `stale-open-close`.
+Completion and PI Objective review check the source-session custody bit in
+continuation context. They can proceed with no source session even when the
+executor is offline. An existing session requires its own completion path.
 These native ART requests use the existing 75-second governed-work budget so
 readiness/form validation can return its actual owner rejection. Other generic
 Console OOS calls retain their shorter budget. A timeout still requires reading
@@ -376,7 +408,7 @@ the original target; it never authorizes an automatic replacement write.
 In live mode the primary register reads OOS's canonical Delivery initiative
 collection through `/api/delivery/workspace`. It projects observed ART identities,
 trees, and statuses, not synthetic package action eligibility or source custody.
-Use `Open Work Item` to resolve the exact target's current OOS eligibility.
+Open an item on its package Work Board to resolve current OOS eligibility.
 Unavailable and successful-empty reads are distinct; `Refresh owner records`
 retries a failed read without fixture fallback. Visible-page polling is bounded.
 
@@ -513,11 +545,9 @@ custody, scoped to the authenticated caller. A recorded session keeps open work
 visible even when ART status has not changed; open it for current progress and
 permissions. The overview does not perform Git or provider inspection per item.
 
-Choose Work Item lists saved sessions first, then active ART work and prepared
-candidates. No item is selected or started automatically. Dependencies and
-blocker details are attached to their exact work item. A child blocker is never
-presented as a blocker recorded on the package itself. The owner preflight
-continues checking exact source coverage and dependency legality.
+Select a work item on the package Work Board. Dependencies and blocker
+details are attached to that item. The owner preflight checks exact source
+coverage and dependency legality before execution.
 
 The session follows known owner actions: retry retained partial Landing Unit
 closeout, continue to remaining work, review package closeout, rebuild an
@@ -536,11 +566,3 @@ triggered merely by opening a dialog. The board retains last verified rows with
 stale status if that refresh fails; a successful command is not fabricated.
 Application preview/runtime integration remains separate from these workflow
 repairs.
-
-
-Choose Work Item opens the existing picker and execution review; it does not run
-a separate requirement check. In the selected package, the button appears in
-Next Action when that is the current move, otherwise once in Manage Package.
-Technical Plan remains a separate inspection/planning entry. For a blocked
-package, address the stated blocker before trying to start work. Requirement
-results come from the existing work-start review, not from opening the picker.

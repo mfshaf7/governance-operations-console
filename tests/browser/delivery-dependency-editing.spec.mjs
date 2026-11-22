@@ -44,6 +44,8 @@ async function open(page){
  await page.goto(base,{waitUntil:"domcontentloaded"});await page.waitForFunction(()=>{const b=document.querySelector('button[title="Open DELIVERY"]');return b&&Object.keys(b).some(key=>key.startsWith("__reactProps$"));});
  await page.locator('button[title="Open DELIVERY"]').click();
  const workspace=page.getByRole("dialog",{name:"Delivery Workspace",exact:true});await workspace.locator('[data-delivery-workspace-section="execution-board"]').click();
+ await workspace.getByRole("button",{name:"Open Work Board",exact:true}).click();
+ await workspace.getByRole("radio",{name:"ART Tree",exact:true}).click();
  await workspace.getByRole("button",{name:"Edit Work Structure",exact:true}).click();
  const expand=workspace.getByRole("button",{name:/^Expand Feature 2/});if(await expand.count())await expand.click();
  return {state,workspace};

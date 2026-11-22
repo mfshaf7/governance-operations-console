@@ -2,6 +2,73 @@
 
 Status: graduated baseline design profile.
 
+### Shared Delivery PI Planning — preview
+
+PI Planning opens on PI overview from Delivery. Select a PI and, optionally, an
+Epic to scope the dashboard. Planning attention links to the affected Epic,
+Feature or work item. Delivery by iteration counts Feature delivery targets
+and shows untargeted Features on their own row. Search the Epic register by
+name or number, or filter it by planning status. Use View Features to open an
+Epic's board.
+
+In PI Planning, open Set up calendar and choose Create a new PI or an existing
+PI that needs an iteration calendar. The Target PI Catalog offers Create PI
+directly. For a new PI, the form proposes the next name for the chosen start
+year. Choose the start date, number of iterations and length in whole days.
+The default is five 14-day iterations. Review the calculated end date and the
+full schedule before saving. OpenProject records the PI and iterations in
+one change. The overview shows the current PI by date.
+
+Catalog shows each saved iteration's linked PI, date range and usage count.
+Older labels without dates stay visible with their recorded usage. PI Planning
+uses dated iterations inside the selected PI's saved calendar for scheduling.
+The Iteration register is read-only. Saving a PI calendar generates iterations
+and sets PI dates. Use Edit in the Target PI register for PI details.
+
+Click a day in the setup calendar to set the start. Month navigation and
+Jump to iteration let you inspect the schedule before saving. The calendar
+highlights the exact overlap with another PI. View calendar opens the saved
+schedule from any planning view, with date ranges and counts of recorded
+assignments for each dated iteration.
+
+When adding dates to an existing PI, verify the cadence against the recorded
+planning calendar first. The preview shows assignments that already use each
+exact numbered iteration key and lists recorded labels outside the proposed
+calendar. Existing assignments keep their original labels. Review open work
+with an out-of-calendar assignment in Planning attention.
+
+Summary counts follow the selected PI. The PI and Epic selectors keep their
+place across planning views. Back to PI overview restores any explicit Epic
+filter. Feature lanes represent delivery targets. Plan child work
+opens the same plan filtered to the Feature's stories, defects and tasks. The
+Work items view can show work across Features. Drag cards or use the iteration
+selector. The top panel uses Execution's segmented control for the planning
+view. The header gives each view a short description. The labeled PI and
+Epic selectors sit beside the heading, within the board's width. Back stays in the board's lower-right corner. At narrower widths, the workspace
+uses Execution's compact Delivery layout. Each planning column uses the
+standard independent search and keeps its total visible while filtering.
+Starting from Refinement or Execution opens the relevant Epic's Features.
+Refinement records work preparation and offers Plan PI work after canonical
+readback. Work with preparation complete can be planned while its iteration
+is blank. Execution checks work-start eligibility separately. The workspace
+summary and Execution show dated work only when the recorded assignment
+matches its PI's current Catalog dates. Older labels remain visible as
+recorded assignments.
+A Feature shows its latest planned child iteration as a suggested target when
+the child schedule is complete. Unscheduled children make that forecast
+incomplete. Review prevents targeting a Feature earlier than its planned child
+work and records a reason for later delivery when the child schedule is known. Keep the
+review and discard actions with the draft in the board header. Use
+the Delivery draft guard before leaving with unsaved changes.
+
+Review the changed assignments together, grouped by Epic. Committed and Stretch
+classify objectives. Individual planned items carry their own iteration.
+Apply plan sends each approved Epic plan to OOS and confirms the resulting
+assignments in OpenProject. If an Epic cannot be confirmed, the review reports
+which Epic stopped and how many were already saved. Use the same accepted
+command when retrying an uncertain outcome. Record in preview uses in-memory
+state. Confirm placements in Execution before starting work.
+
 ### Execution Delivery Package panel — preview
 
 Use Work Overview, What’s Blocking Progress, Next Action, Manage Package and
@@ -45,6 +112,12 @@ it is not the approved direction. Keep package identity/posture above one intern
 scroll area, with section content at natural height and scroll reset on package
 selection. Use standard compact action-row/field-stack gaps between related
 controls and existing metadata top offsets below the blocker card.
+
+At narrower desktop widths, Execution uses one row of summary metrics and a
+horizontal Delivery navigation row. The board and inspector remain side by
+side, with horizontal lane scrolling and vertical detail scrolling. In smaller
+or shorter windows they stack in one vertical scroll area so their controls
+remain reachable. The horizontal navigation keeps the current section in view.
 
 The existing Signal Item has an explicit full-text wrapping option for selected
 Execution details and the package Audit Trail. Its default compact truncation
@@ -961,8 +1034,20 @@ permission to execute. Closeout Pending remains visible after the final child
 finishes, with a separate reviewed closeout action. Recorded sessions and
 prepared candidates guide explicit work selection. Child blockers retain exact
 scope. Session follow-up actions use the existing action rows and read-only
-history locks; human PR review remains a link. Confirmed effects refresh
-connected data without resetting local drafts or refreshing on modal entry.
+history locks; human PR review remains a link. An item on the current board
+can reopen its recorded session after native completion for source closeout.
+Confirmed effects refresh connected data without resetting local drafts or
+refreshing on modal entry.
+
+New items in Edit Work Structure use the recorded parent's PI by default. A
+planned item selects an iteration from the saved calendar or a registered
+program-wide placement. Changes to the selected PI clear the iteration choice.
+An unplanned backlog Feature can still be added. For a committed Epic, open its
+Feature board in PI Planning and use Add Feature. The dialog shows the Epic and
+PI, the Feature delivery target, and the first Story or Defect's iteration.
+The saved objective and current assignments remain in place. Confirm the
+addition once and use the saved result to refresh the board. The Operator Remark
+in Edit Work Structure creates a reviewed work note for existing or new items.
 
 
 ### Package-scoped technical planning

@@ -61,6 +61,8 @@ import {
   recordLocalDeliveryWorkDesignApply,
   submitDeliveryCloseoutCommand,
 } from "../../src/domain-workspaces/delivery/local-runtime/index.ts";
+import { getPlanningNodes } from "../../src/domain-workspaces/delivery/local-runtime/projections/pi-planning-preview.ts";
+import { recordLocalPIPlan } from "../../src/domain-workspaces/delivery/local-runtime/projections/workspace-projection.ts";
 import { deliveryReadModel } from "../../src/domain-workspaces/delivery/read-model/index.ts";
 
 import {
@@ -821,6 +823,24 @@ test("the Console foundation carries a synthetic product through every catalogue
       focusRefinedPackage?.local_workflow_projection?.status_label,
       "Done",
     );
+    assert.equal(effectiveDelivery.packages.some(item =>
+      item.execution_handoff?.source_refinement_receipt_id === refinementReceipt.receipt_id), false);
+    const epicId = focusRefinedPackage.legacy_epic_id;
+    const preparedWork = getPlanningNodes(focusRefinedPackage, effectiveDelivery)
+      .filter(item => ["Feature", "User story"].includes(item.type));
+    assert.deepEqual(preparedWork.map(item => item.type), ["Feature", "User story"]);
+    const pi = "PI-2026-03";
+    recordLocalPIPlan({
+      pi,
+      assignments: Object.fromEntries(preparedWork.map(item => [`${epicId}/${item.id}`, {
+        epicId, itemId: item.id, iteration: pi + " / Iteration 1",
+      }])),
+      objectives: {
+        [epicId]: { id: null, title: "Deliver an operable Focus Timer", type: "Committed", plannedBusinessValue: "3" },
+      },
+    });
+    effectiveDelivery = currentDeliveryProjection();
+
     const executionPackage = effectiveDelivery.packages.find(
       (deliveryPackage) =>
         deliveryPackage.workflow_phase === "execution" &&

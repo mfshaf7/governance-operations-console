@@ -37,6 +37,12 @@ export type DeliveryArtNode = {
   dependency_blocked?: boolean;
   depends_on_work_package_ids?: number[];
   owner_repo?: string | null;
+  planning?: {
+    targetPI: string | null;
+    iteration: string | null;
+    objectiveType: "Committed" | "Stretch" | "";
+    plannedBusinessValue: string;
+  };
   backend_status: DeliveryBackendStatus;
   children: DeliveryArtNode[];
   component_type: DeliveryComponentType;

@@ -64,7 +64,7 @@ export function ControlBoardLanePanel({
           <p className={styles.controlBoardLaneTitle} title={laneTitle}>
             {title}
           </p>
-          <p className={styles.controlBoardLaneDescription}>{description}</p>
+          {description ? <p className={styles.controlBoardLaneDescription}>{description}</p> : null}
         </div>
         <TerasStatusPill className={styles.controlBoardLaneCount} tone={tone}>
           {count}

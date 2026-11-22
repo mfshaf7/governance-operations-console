@@ -1,125 +1,181 @@
 import type { DeliveryArtNode, DeliveryAvailableAction, DeliveryPackageSummary } from "../../../read-model/index.ts";
-import { getAvailableActions, getChildCounts, getDeliveryEffectivePackageProjection, getPackageAuditEvents, getPackageDetailsById } from "../../../read-model/index.ts";
+import { getChildCounts, getDeliveryEffectivePackageProjection, getPackageAuditEvents, getPackageDetailsById } from "../../../read-model/index.ts";
 import { TerasActionButton, TerasActionRow, TerasContentRegion, TerasFieldStack, TerasLoadingState, TerasEmptyState,
   TerasInspectionSection, TerasContentTray, TerasStatusPill, TerasMetadataList, TerasPanelHeader, TerasList, TerasSignalItem, TerasTechnicalDetails, TerasRecordMetaText } from "@/teras";
+import { ControlBoardHighlightedMetadata, ControlBoardInspectorActions, ControlBoardKickerStatus } from "@/product-apps/control-board/control-board-inspection-layout";
 import { technicalPlanRequirement as uncheckedTechnicalPlan, type TechnicalPlanRequirement } from "../../../work-model/execution/technical-plan-requirement.ts";
-import { executionWorkChoices } from "../../../work-model/execution/execution-package-content.ts";
-import { executionActiveBlockerMetadata, executionBoardSecondaryActions, executionSelectedPackageMetadata } from "./execution-board-view-model.ts";
-import { executionPackageNextAction, executionPackageText, executionPackageWorkGroups, executionReadableTime, type ExecutionWorkFilter } from "../../../work-model/execution/execution-package-content.ts";
+import { executionActiveBlockerMetadata, executionSelectedPackageMetadata } from "./execution-board-view-model.ts";
+import { executionPackageNextAction, executionPackageText, executionPackageWorkGroups, executionReadableTime, executionWorkChoices } from "../../../work-model/execution/execution-package-content.ts";
+import { usePIPlanningPreview } from "../../workspace/pi-planning-preview-context.ts";
 
-const actionLabels: Partial<Record<DeliveryAvailableAction["action_type"], string>> = {
-  "open-closeout": "Review Closeout", "edit-work-tree": "Edit Work Structure", "view-art-tree": "View Work Structure",
-  "open-audit-trail": "View Records & Evidence", "sync-owner-repo": "Configure Implementation Repository",
-  resume: "Resume Work", "clear-blocker": "Review Blocker",
+const packageActionLabels: Partial<Record<DeliveryAvailableAction["action_type"], string>> = {
+  block: "Block Package",
+  defer: "Defer",
+  resume: "Resume Work",
+  retire: "Retire Package",
+  "continue-remaining-work": "Review Remaining Work Decision",
+  "sync-owner-repo": "Configure Implementation Repository",
+};
+
+const technicalPlanStatusLabels: Record<TechnicalPlanRequirement["status"], string> = {
+  unknown: "Not checked",
+  required: "Required",
+  binding: "Link needed",
+  covered: "Covered",
+  "not-required": "Not required",
+  review: "Needs review",
 };
 
 export function ExecutionSelectedPackagePanel({ auditEvents, details, onActionSelect, packageSummary, packageTree, selectedActions,
-  onEditCanonicalTree, canonicalTreeAvailable = false, onInspectCloseout, onInspectHistory, readOnly = false, historyDetail,
-  historyLoading = false, historyError, live = false, actionLoading = false, actionError, onChooseWorkItem, onBrowseWorkItems,
-  onInspectTechnicalPlan, technicalPlanRequirement: requirementInput,
+  scheduledWork, scheduledPIs, recordedAssignments, previewPlanRecorded,
+  onInspectCloseout, onInspectHistory, readOnly = false, historyDetail,
+  historyLoading = false, historyError, actionLoading = false, actionError,
+  onInspectTechnicalPlan, onOpenWorkBoard, technicalPlanRequirement: requirementInput,
 }: {
   auditEvents: ReturnType<typeof getPackageAuditEvents>; details: ReturnType<typeof getPackageDetailsById>;
   onActionSelect: (action: DeliveryAvailableAction) => void; packageSummary: DeliveryPackageSummary; packageTree: DeliveryArtNode | null;
-  selectedActions: ReturnType<typeof getAvailableActions>; onEditCanonicalTree?: () => void; canonicalTreeAvailable?: boolean;
+  selectedActions: DeliveryAvailableAction[];
+  scheduledWork: number | null;
+  scheduledPIs: readonly string[];
+  recordedAssignments: number;
+  previewPlanRecorded: boolean;
   onInspectCloseout?: () => void; onInspectHistory?: () => void; readOnly?: boolean; historyDetail?: string;
-  historyLoading?: boolean; historyError?: string | null; live?: boolean; actionLoading?: boolean; actionError?: string | null;
-  onChooseWorkItem?: (status?: ExecutionWorkFilter) => void; onBrowseWorkItems?: (status: ExecutionWorkFilter) => void;
-  onInspectTechnicalPlan?: () => void; technicalPlanRequirement?: TechnicalPlanRequirement;
+  historyLoading?: boolean; historyError?: string | null; actionLoading?: boolean; actionError?: string | null;
+  onInspectTechnicalPlan?: () => void; onOpenWorkBoard: () => void; technicalPlanRequirement?: TechnicalPlanRequirement;
 }) {
+  const planning = usePIPlanningPreview();
+  const planningSourceId = packageSummary.execution_handoff?.source_package_id ?? packageSummary.delivery_package_id;
+  const hasRecordedPlan = previewPlanRecorded || (scheduledWork ?? 0) > 0;
+  const canOpenPIPlanning = planning && !readOnly && !["done", "retired", "parked"].includes(packageSummary.backend_status);
   const requirement = requirementInput ?? uncheckedTechnicalPlan({deliveryId:packageSummary.delivery_package_id});
-  const technicalPlanRequired = ["required","binding"].includes(requirement.status);
   const checkedWork = requirement.workItemId ? executionWorkChoices(packageTree ? [packageTree] : [],"all").find(item => `work-item-${item.legacy_work_package_id}` === requirement.workItemId) : null;
   const workTitle = checkedWork ? `${checkedWork.component_type} ${checkedWork.legacy_work_package_id} · ${checkedWork.title}` : requirement.workItemId?.replace("work-item-","Work item ");
   const effectiveProjection = getDeliveryEffectivePackageProjection(packageSummary);
   const childCounts = packageTree ? getChildCounts(packageTree) : null;
   const groups = executionPackageWorkGroups(packageTree);
-  const next = executionPackageNextAction({ status: packageSummary.backend_status, closeoutPending: effectiveProjection.posture === "Closeout Pending",
-    hasCloseout: Boolean(onInspectCloseout || selectedActions.some(action => action.action_type === "open-closeout" && action.enabled)), actions: selectedActions, groups });
-  const primaryChoosesWork = !readOnly && !(live && (actionLoading || actionError)) && !technicalPlanRequired && next.kind === "work" && Boolean(onChooseWorkItem);
-  const nextAction = "action" in next ? next.action : next.kind === "closeout" ? selectedActions.find(action => action.action_type === "open-closeout" && action.enabled) : null;
-  const secondaryActions = executionBoardSecondaryActions(selectedActions, nextAction ?? null);
+  const [targetPI, ...packageFacts] = executionSelectedPackageMetadata({ childCounts, details, packageSummary, packageTree });
+  const workOverview = [
+    ...(scheduledWork ? [{
+      label: "Scheduled work",
+      value: String(scheduledWork),
+      title: "Work with an iteration in its dated PI calendar.",
+    }] : recordedAssignments ? [{
+      label: "Recorded assignments",
+      value: String(recordedAssignments),
+      title: "Work with a recorded iteration label.",
+    }] : []),
+    ...packageFacts,
+  ];
+  const packageActions = selectedActions.filter(action =>
+    (action.scope === "package" || action.scope === "package_with_children") && packageActionLabels[action.action_type],
+  );
   const latestEvent = auditEvents[0] ?? null;
   const blocker = packageSummary.active_blocker;
-  const blockerAction = !readOnly ? selectedActions.find(action => action.action_type === "clear-blocker") : undefined;
-  const displayAction = (action: DeliveryAvailableAction) => actionLabels[action.action_type] ?? action.label;
+  const nextAction = executionPackageNextAction({
+    status: packageSummary.backend_status,
+    closeoutPending: effectiveProjection.posture === "Closeout Pending",
+    hasCloseout: Boolean(onInspectCloseout),
+    actions: selectedActions,
+    groups,
+    hasPackageBlocker: Boolean(blocker),
+    readOnly,
+    technicalPlan: checkedWork && onInspectTechnicalPlan ? requirement : undefined,
+  });
+  const blockerAction = !readOnly ? selectedActions.find(action =>
+    action.action_type === "clear-blocker" && action.scope !== "execution_target",
+  ) : undefined;
+  const reviewBlocker = blockerAction?.enabled ? (
+    <TerasActionButton disabled={actionLoading || Boolean(actionError)} onClick={() => onActionSelect(blockerAction)}>
+      Review Blocker
+    </TerasActionButton>
+  ) : undefined;
   const activityReferencesOnly = latestEvent?.detail.split(/\s+|·/).filter(Boolean).every(word => /^[a-z][a-z0-9+.-]*:\/\//i.test(word));
-  function nextControl() {
-    if (technicalPlanRequired && onInspectTechnicalPlan) return <TerasActionButton onClick={onInspectTechnicalPlan}>{requirement.actionLabel}</TerasActionButton>;
-    if (next.kind === "work" && onChooseWorkItem) return <TerasActionButton onClick={() => onChooseWorkItem(next.filter)}>Choose Work Item</TerasActionButton>;
-    if (next.kind === "closeout" && onInspectCloseout) return <TerasActionButton onClick={onInspectCloseout}>Review Closeout</TerasActionButton>;
-    if (next.kind === "evidence") return onInspectHistory ? <TerasActionButton emphasis="secondary" onClick={onInspectHistory}>View Records & Evidence</TerasActionButton> : null;
-    if (nextAction && !(blocker && nextAction.action_type === "clear-blocker")) return <TerasActionButton onClick={() => onActionSelect(nextAction)}>{displayAction(nextAction)}</TerasActionButton>;
-    return null;
-  }
   return <>
-    <TerasPanelHeader kicker="Delivery Package" statusLabel={effectiveProjection.posture} statusTone={effectiveProjection.tone}
-      title={packageSummary.display_name} description={<span title={packageSummary.source_ref}>Epic {packageSummary.legacy_epic_id}</span>} />
+    <header>
+      <TerasPanelHeader kicker="Delivery Package" statusLabel={effectiveProjection.posture} statusTone={effectiveProjection.tone}
+        title={packageSummary.display_name} description={<span title={packageSummary.source_ref}>Epic {packageSummary.legacy_epic_id}</span>} />
+      <ControlBoardInspectorActions>
+        <TerasActionButton onClick={onOpenWorkBoard}>Open Work Board</TerasActionButton>
+      </ControlBoardInspectorActions>
+    </header>
     <TerasContentRegion key={packageSummary.delivery_package_id} data-execution-package-body="true" scroll>
       <TerasInspectionSection title="Work Overview">
         <TerasFieldStack spacing="compact">
-          <TerasMetadataList items={executionSelectedPackageMetadata({ childCounts, details, packageSummary, packageTree })} />
-          <TerasRecordMetaText>Open work items includes all descendant levels. Status counts cover stories, defects and tasks.</TerasRecordMetaText>
-          {groups.some(group => group.items.length > 0) ? <TerasList frame="contained">
-            {groups.filter(group => group.items.length > 0).map(group => <TerasSignalItem key={group.status} textOverflow="wrap"
-              label={group.label} title={`${group.count} ${group.count === 1 ? "work item" : "work items"}`}
-              detail={group.items.slice(0, 2).map(item => `${item.component_type}${item.legacy_work_package_id ? ` ${item.legacy_work_package_id}` : ""} · ${executionPackageText(item.title)}`).join("; ")}
-              tone={group.status === "blocked" ? "danger" : "info"}
-              actions={onBrowseWorkItems ? <TerasActionButton emphasis="secondary" onClick={() => onBrowseWorkItems(group.status)}>{group.items.length > 2 ? `View all ${group.count}` : "View work"}</TerasActionButton> : undefined} />)}
-          </TerasList> : null}
+          <ControlBoardHighlightedMetadata items={[{
+            ...targetPI,
+            ...(scheduledPIs.length > 0 ? { label: "Scheduled in", value: scheduledPIs.join(", ") } : {}),
+            ...(canOpenPIPlanning && {
+              detail: hasRecordedPlan
+                ? "Review or revise the saved iteration assignments for this package."
+                : "Choose the work, PI objective, and iteration.",
+              actions: <TerasActionButton size="table-compact" emphasis="secondary" onClick={() => planning.open(planningSourceId)}>
+                {hasRecordedPlan ? "Review PI plan" : "Open PI Planning"}
+              </TerasActionButton>,
+            }),
+          }]} />
+          <TerasMetadataList items={workOverview} />
         </TerasFieldStack>
+      </TerasInspectionSection>
+      <TerasInspectionSection title="Next Action">
+        <TerasContentTray title={nextAction.title} description={nextAction.detail} />
       </TerasInspectionSection>
       {blocker || packageSummary.backend_status === "blocked" || Boolean(packageSummary.execution_navigation?.blocked_work_item_ids.length || groups.find(group => group.status === "blocked")?.count) ? <TerasInspectionSection title="What’s Blocking Progress">
         <TerasFieldStack spacing="compact">
           {blocker ? <>
             <TerasList frame="contained"><TerasSignalItem textOverflow="wrap" label="What is blocked?" title={executionPackageText(blocker.statement || "Statement not recorded")}
-              detail={<><strong>Impact: </strong>{executionPackageText(blocker.impact || "Not recorded")}</>} tone="danger"
-              actions={blockerAction ? <TerasActionButton disabled={!blockerAction.enabled || Boolean(live && (actionLoading || actionError))} onClick={() => onActionSelect(blockerAction)}>Review Blocker</TerasActionButton> : undefined} /></TerasList>
+              detail={blocker.impact ? executionPackageText(blocker.impact) : undefined}
+              tone="danger" actions={reviewBlocker} /></TerasList>
             {blockerAction && !blockerAction.enabled ? <TerasRecordMetaText>{executionPackageText(blockerAction.reason)}</TerasRecordMetaText> : null}
             <TerasMetadataList items={executionActiveBlockerMetadata(blocker)} shape="list" />
             <TerasTechnicalDetails summary="Blocker details" items={[
               { label: "Recorded reason", value: blocker.justification || "Not recorded" }, { label: "First recorded", value: blocker.discovered_on || "Not recorded" },
               { label: "Original statement", value: blocker.statement }, { label: "Original impact", value: blocker.impact },
             ]} />
-          </> : packageSummary.backend_status === "blocked" ? <TerasEmptyState>This package is marked blocked, but its blocker details were not returned. Review its records before changing the status.</TerasEmptyState> :
-            <TerasList frame="contained"><TerasSignalItem label="Blocked child work" title="Review blocked work items" detail="A child work item has a recorded blocker or unresolved dependency. This is separate from a blocker on the package itself."
-              tone="warn" actions={onBrowseWorkItems ? <TerasActionButton emphasis="secondary" onClick={() => onBrowseWorkItems("blocked")}>View Blocked Work</TerasActionButton> : undefined} /></TerasList>}
+          </> : packageSummary.backend_status === "blocked" ? <TerasList frame="contained">
+            <TerasSignalItem label="Package status" title="Blocked" detail="No package blocker details were returned." tone="danger" actions={reviewBlocker} />
+          </TerasList> :
+            <TerasList frame="contained"><TerasSignalItem label="Blocked child work" title="Some work items are blocked"
+              detail="Open the Work Board to see the affected items and their dependencies." tone="warn" /></TerasList>}
         </TerasFieldStack>
       </TerasInspectionSection> : null}
-      <TerasInspectionSection title="Next Action">
-        {readOnly ? <TerasEmptyState>This is a read-only history record. Browse its work structure and recorded evidence.</TerasEmptyState>
-          : live && actionLoading ? <TerasLoadingState inline label="Checking available actions…" />
-          : live && actionError ? <TerasFieldStack spacing="compact"><TerasEmptyState>Available actions could not be checked. Review the package records or try again after the connection recovers.</TerasEmptyState>
-              <TerasTechnicalDetails summary="Action check details" items={[{ label: "Read problem", value: actionError }]} /></TerasFieldStack>
-          : <TerasList frame="contained"><TerasSignalItem textOverflow="wrap" label="Next action" title={technicalPlanRequired ? requirement.title : next.title} detail={technicalPlanRequired ? `${workTitle ?? "The checked work"}: ${requirement.detail}` : next.detail}
-              actions={nextControl()} tone={packageSummary.backend_status === "blocked" ? "warn" : "info"} /></TerasList>}
-      </TerasInspectionSection>
-      <TerasInspectionSection title="Manage Package">
+      <TerasInspectionSection title={readOnly ? "Package Records" : "Manage Package"}>
         <TerasFieldStack spacing="compact">
-          {onInspectTechnicalPlan ? <TerasContentTray title="Technical Plan" kicker="Implementation approach" description={readOnly ? "Inspect the agreement retained for this package. History does not establish current work-start eligibility." : requirement.detail}>
+          {onInspectTechnicalPlan ? <TerasContentTray
+            title="Technical Plan"
+            kicker={<ControlBoardKickerStatus title={<span>Implementation approach</span>} status={
+              <span title={readOnly ? "Recorded history" : requirement.title}>
+                <TerasStatusPill tone={requirement.tone}>{readOnly ? "History" : technicalPlanStatusLabels[requirement.status]}</TerasStatusPill>
+              </span>
+            } />}
+            description={readOnly ? "Inspect the agreement retained for this package. History does not establish current work-start eligibility." : requirement.detail}
+          >
             <TerasFieldStack spacing="compact">
-              <span><TerasStatusPill tone={requirement.tone}>{readOnly ? "Recorded history" : requirement.title}</TerasStatusPill></span>
               {workTitle ? <TerasRecordMetaText>Checked work: {workTitle}</TerasRecordMetaText> : null}
-              <TerasActionRow spacing="compact"><TerasActionButton emphasis="secondary" onClick={onInspectTechnicalPlan}>{requirement.status === "covered" ? "View Approved Plan" : requirement.status === "review" ? "Review Technical Plan" : "Open Technical Plan"}</TerasActionButton>
+              <TerasActionRow spacing="compact"><TerasActionButton emphasis="secondary" onClick={onInspectTechnicalPlan}>{requirement.actionLabel}</TerasActionButton>
               </TerasActionRow>
               {requirement.ownerReason ? <TerasTechnicalDetails summary="Requirement details" items={[{label:"Check explanation",value:requirement.ownerReason}]}/> : null}
             </TerasFieldStack>
           </TerasContentTray> : null}
-          {onInspectHistory || onInspectCloseout || onEditCanonicalTree || onChooseWorkItem ? <TerasActionRow spacing="compact">
-            {onInspectHistory && (next.kind !== "evidence" || readOnly) ? <TerasActionButton emphasis="secondary" onClick={onInspectHistory}>View Records & Evidence</TerasActionButton> : null}
-            {onInspectCloseout && next.kind !== "closeout" ? <TerasActionButton emphasis="secondary" onClick={onInspectCloseout}>Review Closeout</TerasActionButton> : null}
-            {onEditCanonicalTree ? <TerasActionButton disabled={!canonicalTreeAvailable} emphasis="secondary" onClick={onEditCanonicalTree}>Edit Work Structure</TerasActionButton> : null}
-            {onChooseWorkItem && !primaryChoosesWork ? <TerasActionButton emphasis="secondary" onClick={() => onChooseWorkItem("all")}>Choose Work Item</TerasActionButton> : null}
+          {onInspectHistory || onInspectCloseout ? <TerasActionRow spacing="compact">
+            {onInspectHistory ? <TerasActionButton emphasis="secondary" onClick={onInspectHistory}>View Records & Evidence</TerasActionButton> : null}
+            {onInspectCloseout ? <TerasActionButton onClick={onInspectCloseout}>Review Closeout</TerasActionButton> : null}
           </TerasActionRow> : null}
-          {!readOnly && secondaryActions.length ? <TerasList frame="contained">{secondaryActions.filter(action => !(blocker && action.action_type === "clear-blocker")).map(action =>
-            <TerasSignalItem textOverflow="wrap" key={action.action_type} label={action.enabled ? "Package action" : "Unavailable"} title={displayAction(action)}
+          {!readOnly && actionLoading ? <TerasLoadingState inline label="Checking package actions…" /> : null}
+          {!readOnly && actionError ? <>
+            <TerasEmptyState>Package actions could not be checked.</TerasEmptyState>
+            <TerasTechnicalDetails summary="Action check details" items={[{ label: "Read problem", value: actionError }]} />
+          </> : null}
+          {!readOnly && packageActions.length ? <TerasList frame="contained">{packageActions.map(action =>
+            <TerasSignalItem textOverflow="wrap" key={action.action_type} label={action.enabled ? "Package action" : "Unavailable"} title={packageActionLabels[action.action_type]}
               detail={executionPackageText(action.reason)} tone={action.tone}
-              actions={action.enabled ? <TerasActionButton aria-label={`${displayAction(action)} for ${packageSummary.display_name}`} emphasis="secondary"
-                tone={action.tone === "danger" ? "danger" : "accent"} onClick={() => onActionSelect(action)}>{displayAction(action)}</TerasActionButton> : undefined} />)}</TerasList> : null}
+              actions={action.enabled ? <TerasActionButton disabled={actionLoading || Boolean(actionError)} emphasis="secondary"
+                tone={action.tone === "danger" ? "danger" : "accent"} onClick={() => onActionSelect(action)}>{packageActionLabels[action.action_type]}</TerasActionButton> : undefined} />)}
+          </TerasList> : null}
         </TerasFieldStack>
       </TerasInspectionSection>
       <TerasInspectionSection title="Recent Activity">
         <TerasFieldStack spacing="compact">
-          <TerasRecordMetaText>Showing the latest loaded event. View Records &amp; Evidence shows available history and coverage.</TerasRecordMetaText>
+          <TerasRecordMetaText>Showing the latest loaded event.</TerasRecordMetaText>
           {historyLoading ? <TerasLoadingState inline label="Reading recent activity…" /> : null}
           {historyError ? <TerasEmptyState>Recent activity could not be loaded. Previously loaded information may be out of date.</TerasEmptyState> : null}
           {latestEvent ? <>

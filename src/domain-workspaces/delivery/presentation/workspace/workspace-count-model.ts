@@ -46,6 +46,8 @@ export function deliverySurfaceItemCount({
       return getDeliveryWorkflowPhaseCount("refinement", model);
     case "catalog":
       return 0;
+    case "pi-planning":
+      return Object.keys(model.preview_pi_plans ?? {}).length;
   }
 }
 

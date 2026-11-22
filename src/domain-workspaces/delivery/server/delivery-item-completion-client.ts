@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { completionObject, completionEvidence, completionTargetId, itemPiReview, type ItemCompletionContext } from "../live-runtime/delivery-item-completion-contract.ts";
 import { deliveryOosRequest, resolveDeliveryOosConfig, DeliveryOosError } from "./delivery-oos-client.ts";
-import { readDeliveryWorkSession } from "./delivery-work-session-oos-client.ts";
 import { readDeliveryChangeProjection } from "./delivery-change-oos-client.ts";
 
 type Options = { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch };
@@ -12,10 +11,9 @@ const completionOosTimeoutMs = 75_000;
 export async function readItemCompletionContext(target: number, options: Options = {}): Promise<ItemCompletionContext> {
   const id = completionTargetId(target);
   const config = resolveDeliveryOosConfig(options.env);
-  const [raw, session] = await Promise.all([
-    deliveryOosRequest(config, `/v1/delivery-work-items/${id}/continuation-context`, { method: "GET" }, options.fetchImpl, completionOosTimeoutMs),
-    readDeliveryWorkSession(id, options),
-  ]);
+  const raw = await deliveryOosRequest(
+    config, `/v1/delivery-work-items/${id}/continuation-context`, { method: "GET" }, options.fetchImpl, completionOosTimeoutMs,
+  );
   const envelope = completionObject(raw);
   const context = completionObject(envelope.continuation_context);
   const item = completionObject(context.target_item);
@@ -28,8 +26,12 @@ export async function readItemCompletionContext(target: number, options: Options
     [summary.open_descendant_count, summary.open_child_count, summary.completed_related_count].some(v => !Number.isSafeInteger(v) || Number(v) < 0)) {
     throw new DeliveryOosError("The native completion read belongs to an invalid or different work item.", "delivery_completion_context_invalid", 502);
   }
+  if (typeof envelope.source_session_present !== "boolean") {
+    throw new DeliveryOosError("Source-session records could not be checked. Retry before recording completion or PI review.", "delivery_completion_session_state_unavailable", 503);
+  }
+  const sourceSessionPresent = envelope.source_session_present;
   const reasons: string[] = [];
-  if (session.session_id) reasons.push("An active source session must finish through its existing merge and close path.");
+  if (sourceSessionPresent) reasons.push("An active source session must finish through its existing merge and close path.");
   if (item.type === "Epic") reasons.push("Use initiative closeout for an Epic.");
   if (summary.open_descendant_count !== 0) reasons.push("Open descendants must complete first.");
   if (item.blocked !== false || item.dependency_blocked !== false) reasons.push("Resolve the native blocker or dependency first.");
@@ -37,14 +39,14 @@ export async function readItemCompletionContext(target: number, options: Options
   if (item.completion_narrative_contract_satisfied !== true) reasons.push("The native done narrative requires correction.");
   if (item.completion_status_transition_available !== true) reasons.push("The native completion transition is unavailable.");
   const piReview = item.type === "PI Objective" ? await readPiReviewMetadata(id, envelope.delivery_id, item, options) : undefined;
-  const pi = piReview ? { ...piReview, can_review: piReview.review_outcomes.length > 0 && !session.session_id && !["done", "retired"].includes(item.status) } : undefined;
-  const revision = `sha256:${createHash("sha256").update(JSON.stringify({ item, open_descendant_count: summary.open_descendant_count, source_session_id: session.session_id, pi_review: pi })).digest("hex")}`;
+  const pi = piReview ? { ...piReview, can_review: piReview.review_outcomes.length > 0 && !sourceSessionPresent && !["done", "retired"].includes(item.status) } : undefined;
+  const revision = `sha256:${createHash("sha256").update(JSON.stringify({ item, open_descendant_count: summary.open_descendant_count, source_session_present: sourceSessionPresent, pi_review: pi })).digest("hex")}`;
   return {
     work_item_id: id, record_ref: ref, subject: item.subject, status: item.status,
     owner_repo: typeof item.owner_repo === "string" ? item.owner_repo : null,
     revision, open_descendant_count: Number(summary.open_descendant_count),
     open_child_count: Number(summary.open_child_count), completed_related_count: Number(summary.completed_related_count),
-    source_session_active: Boolean(session.session_id),
+    source_session_active: sourceSessionPresent,
     completion_evidence_valid: item.completion_evidence_present === true && item.completion_evidence_formatting_valid === true,
     can_complete: item.status !== "done" && reasons.length === 0,
     blocking_reasons: reasons,

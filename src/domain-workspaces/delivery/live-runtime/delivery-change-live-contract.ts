@@ -20,6 +20,7 @@ const operationTypes = [
   "move_work_item",
   "remove_work_item",
   "manage_dependency",
+  "apply_pi_plan",
   "manage_blocker",
   "manage_parking",
   "request_repository",
@@ -79,6 +80,14 @@ export function assertDeliveryChangeCommandResult(
   return value as DeliveryChangeCommandResult;
 }
 
+function assertDatedPlacement(value: unknown) {
+  const placement = record(value, "PI assignment");
+  nonEmpty(placement.iteration, "PI assignment iteration");
+  for (const key of ["start_date", "end_date"]) {
+    if (typeof placement[key] !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(placement[key])) invalid("PI assignment dates are required.");
+  }
+}
+
 export function assertDeliveryChangeOperation(
   value: unknown,
 ): DeliveryChangeOperation {
@@ -86,14 +95,47 @@ export function assertDeliveryChangeOperation(
   oneOf(operation.type, operationTypes, "operation type");
   const payload = record(operation.payload, "operation payload");
   switch (operation.type) {
+    case "apply_pi_plan": {
+      if (typeof payload.pi !== "string" || !/^PI-\d{4}-\d{2}$/.test(payload.pi)) invalid("A valid PI is required.");
+      if (payload.feature_addition !== undefined) {
+        if (payload.assignments !== undefined || payload.objective !== undefined) invalid("Review the Feature addition on its own.");
+        const addition = record(payload.feature_addition, "Feature addition");
+        nonEmpty(addition.title, "Feature title");
+        nonEmpty(addition.description, "Feature description");
+        assertDatedPlacement(addition.delivery_target);
+        const child = record(addition.first_work_item, "First work item");
+        oneOf(child.type, ["User story", "Defect"], "First work item type");
+        nonEmpty(child.title, "First work item title");
+        nonEmpty(child.description, "First work item description");
+        assertDatedPlacement(child.placement);
+        break;
+      }
+      const assignments = array(payload.assignments, "PI assignments");
+      if (!assignments.length || assignments.length > 500) invalid("Choose between 1 and 500 assignments for one Epic.");
+      for (const assignment of assignments) {
+        const value = record(assignment, "PI assignment");
+        workItemId(value.work_item_id, "PI assignment item");
+        assertDatedPlacement(value);
+      }
+      const objective = record(payload.objective, "PI objective");
+      if (objective.work_item_id !== null) workItemId(objective.work_item_id, "PI objective item");
+      nonEmpty(objective.title, "PI objective title");
+      oneOf(objective.type, ["Committed", "Stretch"], "PI objective type");
+      if (!Number.isSafeInteger(objective.planned_business_value) || Number(objective.planned_business_value) < 0) {
+        invalid("PI objective business value must be a non-negative whole number.");
+      }
+      break;
+    }
     case "add_work_item":
       workItemId(payload.parent_work_item_id, "add parent");
       nonEmpty(payload.type, "add type");
       nonEmpty(payload.subject, "add subject");
+      if (payload.work_note !== undefined) nonEmpty(payload.work_note, "work note");
       break;
     case "revise_work_item":
       workItemId(payload.work_item_id, "revision target");
-      if (Object.keys(record(payload.changes, "revision changes")).length === 0) {
+      if (payload.work_note !== undefined) nonEmpty(payload.work_note, "work note");
+      if (Object.keys(record(payload.changes, "revision changes")).length === 0 && payload.work_note === undefined) {
         invalid("Delivery change revision has no changes.");
       }
       break;

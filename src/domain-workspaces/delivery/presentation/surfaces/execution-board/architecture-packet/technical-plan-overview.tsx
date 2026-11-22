@@ -1,9 +1,9 @@
 import { TerasActionButton, TerasActionRow, TerasConceptFlow, TerasContentTray, TerasEmptyState, TerasFieldStack, TerasLoadingState, TerasMetadataList, TerasPanelHeader, TerasTechnicalDetails } from "@/teras";
 import type { TechnicalPlanRequirement } from "../../../../work-model/execution/technical-plan-requirement.ts";
-export function TechnicalPlanOverview({requirement,workTitle,planStatus,coveredWork,designStatus,checking,readError,missing,live,current,readOnly,onRetry,onDesign,onReview,onRevise,onChooseWorkItem}: {
+export function TechnicalPlanOverview({requirement,workTitle,planStatus,coveredWork,designStatus,checking,readError,missing,live,current,readOnly,onRetry,onDesign,onReview,onRevise}: {
   requirement:TechnicalPlanRequirement;workTitle:string|null;planStatus:string;coveredWork:string;designStatus:string;
   checking:boolean;readError:string|null;missing:boolean;live:boolean;current:boolean;readOnly:boolean;
-  onRetry:()=>void;onDesign:()=>void;onReview:()=>void;onRevise?:()=>void;onChooseWorkItem?:()=>void;
+  onRetry:()=>void;onDesign:()=>void;onReview:()=>void;onRevise?:()=>void;
 }) {
   return <TerasFieldStack spacing="normal">
     <TerasPanelHeader kicker="Purpose" title="Agree how the work will be delivered" description="Use a technical plan when implementation needs an agreed approach across architecture, repositories or dependencies. It connects the system design to the changes, checks and recovery needed to deliver it."/>
@@ -15,8 +15,7 @@ export function TechnicalPlanOverview({requirement,workTitle,planStatus,coveredW
         {title:"Execution checks",detail:"Use the recorded agreement when starting and advancing that work."},
       ]}/>
     </TerasContentTray>
-    <TerasContentTray kicker="Requirement for the checked work" title={requirement.title} description={requirement.detail}
-      actions={requirement.status === "unknown" && onChooseWorkItem ? <TerasActionButton emphasis="secondary" onClick={onChooseWorkItem}>Choose Work Item</TerasActionButton> : undefined}>
+    <TerasContentTray kicker="Requirement for the checked work" title={requirement.title} description={requirement.detail}>
       <TerasMetadataList columns={2} items={[
         {label:"Checked work",value:workTitle ?? "No work item checked"},
         {label:"Plan status",value:planStatus},{label:"Covered work",value:coveredWork || "Choose work in Prepare Plan"},{label:"Saved system design",value:designStatus},

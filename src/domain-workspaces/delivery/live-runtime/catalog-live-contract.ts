@@ -69,6 +69,13 @@ export function assertCatalogMutationRequest(
 ): CatalogMutationRequest {
   const command = record(value, "Catalog mutation command");
   const draft = record(command.draft, "Catalog mutation draft");
+  const iterationLengthDays = draft.iterationLengthDays;
+  const iterationCount = draft.iterationCount;
+  if (iterationLengthDays !== undefined || iterationCount !== undefined) {
+    integer(iterationLengthDays, "mutation iteration length", 1);
+    integer(iterationCount, "mutation iteration count", 1);
+    if (Number(iterationCount) > 100) invalid("Create up to 100 iterations in one PI.");
+  }
   const linkedRepository =
     draft.linkedRepository === undefined || draft.linkedRepository === null
       ? null
@@ -91,6 +98,8 @@ export function assertCatalogMutationRequest(
     ),
     draft: {
       description: stringValue(draft.description, "mutation description"),
+      ...(iterationCount !== undefined ? { iterationCount: Number(iterationCount),
+        iterationLengthDays: Number(iterationLengthDays) } : {}),
       label: nonEmptyValue(draft.label, "mutation label"),
       linkedRepository,
       parentCatalogValueKey: optionalNullableString(
@@ -195,6 +204,7 @@ function assertCatalogItem(value: unknown) {
   integer(item.usage_count, "Catalog item usage", 0);
   stringList(item.evidence_refs, "Catalog item evidence");
   nullableDateTime(item.last_projected_at, "Catalog item projection time");
+  if (item.supports_iteration_generation !== undefined) boolean(item.supports_iteration_generation, "Catalog calendar capability");
 }
 
 function assertCatalogValue(value: unknown) {
@@ -209,6 +219,11 @@ function assertCatalogValue(value: unknown) {
   nullableDateTime(item.last_projected_at, "Catalog value projection time");
   nullableStringOrUndefined(item.parent_catalog_item_id, "Catalog parent item");
   nullableStringOrUndefined(item.parent_catalog_value_key, "Catalog parent value");
+  if (item.iteration_window !== undefined) {
+    const window = record(item.iteration_window, "Catalog iteration window");
+    integer(window.sequence, "Catalog iteration sequence", 1);
+    for (const key of ["start_date", "end_date"]) match(window[key], /^\d{4}-\d{2}-\d{2}$/, `Catalog iteration ${key}`);
+  }
   if (item.repository_binding !== undefined && item.repository_binding !== null) assertRepositoryReadiness(item.repository_binding);
 }
 

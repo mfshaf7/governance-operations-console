@@ -19,6 +19,7 @@ import { DeliveryRefinementBlockerRecoveryDialog } from "../support/blocker-reco
 import { RefinementCloseGuardDialog } from "./dialogs/refinement-close-guard-dialog.tsx";
 import { useRefinementSessionController } from "../session-controller/use-refinement-session-controller.ts";
 import type { DeliveryRefinementWorkflow } from "../model/refinement-model.ts";
+import { usePIPlanningPreview } from "../../../workspace/pi-planning-preview-context.ts";
 
 type SavedRefinementProps = Parameters<typeof RefinementWorkflowBody>[0];
 export function DeliveryRefinementWorkflowModal(props: SavedRefinementProps) {
@@ -50,6 +51,9 @@ function RefinementWorkflowBody({
     sourceWorkDesignPackage: sourceWorkDesignPackage ?? null,
   });
   const { packet, sessionState } = controller;
+  const planning = usePIPlanningPreview();
+  const preparationOnly = Boolean(packet && !packet.apply_plan.operations.some(operation => operation.kind === "plan_apply"));
+  const canPlan = !readOnly && preparationOnly && (sessionState.activeReceipt ?? packet?.receipt)?.outcome === "accepted";
 
   if (!packet && !readOnly) {
     return (
@@ -101,6 +105,11 @@ function RefinementWorkflowBody({
             activeStep={sessionState.activeStep}
             blocked={controller.refinementBlocked}
             canApply={controller.canApply}
+            preparationOnly={preparationOnly}
+            onPlanWork={canPlan && planning ? () => {
+              controller.returnToRegister();
+              planning.open(workflow.deliveryPackage.delivery_package_id);
+            } : undefined}
             onApplyRefinement={controller.applyRefinement}
             onRequestClose={controller.requestClose}
             onReturnToRegister={controller.returnToRegister}

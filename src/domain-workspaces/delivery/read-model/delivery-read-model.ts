@@ -15,6 +15,7 @@ import type { DeliveryIntakeSource } from "../domain/delivery-intake.ts";
 import type { DeliveryPackageSummary } from "../domain/delivery-package.ts";
 
 export type DeliveryReadModel = {
+  preview_pi_plans?: Record<string, import("../local-runtime/projections/pi-planning-preview.ts").PreviewPIPlan>;
   history_scope?: "current" | "history";
   deferred_history_tree_refs?: string[];
   evidence_coverage?: {

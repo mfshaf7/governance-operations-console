@@ -112,7 +112,7 @@ function AvailableDeliveryWorkspaceController({
   const [workspaceMounted, setWorkspaceMounted] = useState(false);
   const appliedEntryIntentRef = useRef<string | null>(null);
   const [recordScope,setRecordScope] = useWorkspaceViewState<"current"|"history">('delivery:recordScope', "current");
-  const effectiveRecordScope = activeWorkspaceSurfaceId === "home" || activeWorkspaceSurfaceId === "catalog"
+  const effectiveRecordScope = activeWorkspaceSurfaceId === "home" || activeWorkspaceSurfaceId === "catalog" || activeWorkspaceSurfaceId === "pi-planning"
     ? "current" : recordScope;
   const completeModel = useMemo(
     () =>

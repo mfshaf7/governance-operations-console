@@ -67,6 +67,7 @@ export function DeliveryCatalogSurface({
       }
       inspector={
         <CatalogInspectorPanel
+          catalogValues={catalogState.catalogValues}
           preview={catalogState.runtimeMode === "disconnected-preview"}
           activeCatalog={catalogState.activeCatalog}
           canEditSelectedValue={catalogState.canEditSelectedValue}
@@ -98,6 +99,7 @@ export function DeliveryCatalogSurface({
         repositorySearch={catalogState.repositorySearch}
         preferredOwnerRepoId={catalogState.preferredOwnerRepoId}
         planningFacetSummary={catalogState.mutationPlanningFacetSummary}
+        supportsIterationGeneration={catalogState.supportsIterationGeneration}
         targetPiValues={catalogState.targetPiValues}
         value={catalogState.mutationValue}
       />

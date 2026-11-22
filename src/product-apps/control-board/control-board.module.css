@@ -1,4 +1,6 @@
 .controlBoardWorkspaceFrame {
+  --control-board-inspector-width: 390px;
+  --control-board-columns: minmax(0, 1fr) minmax(340px, var(--control-board-inspector-width));
   display: grid;
   height: 100%;
   min-width: 0;
@@ -6,6 +8,10 @@
   flex: 1;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 0.72rem;
+}
+
+.controlBoardWorkspaceFrame[hidden] {
+  display: none;
 }
 
 .controlBoardControlStrip {
@@ -18,10 +24,14 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);
+  grid-template-columns: var(--control-board-columns);
   gap: 0.82rem;
   align-items: stretch;
   overflow: hidden;
+}
+
+.controlBoardWorkspace[data-split="false"] {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .controlBoardColumn {
@@ -75,6 +85,22 @@
   flex-direction: column;
 }
 
+.controlBoardSelectedPane .controlBoardPackageActions {
+  margin-block: 0.82rem 0.42rem;
+  border-color: var(--line);
+  background: rgba(0, 0, 0, 0.44);
+}
+
+.controlBoardPackageActions button {
+  width: 100%;
+}
+
+.controlBoardSelectedPane .controlBoardTargetPI > div {
+  --teras-inner-title-muted: var(--amber);
+  border-color: rgba(255, 193, 90, 0.25);
+  background: linear-gradient(110deg, rgba(255, 193, 90, 0.12), rgba(0, 0, 0, 0.18));
+}
+
 .controlBoardSelectedBarePane {
   display: grid;
   min-width: 0;
@@ -89,6 +115,83 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.controlBoardWorkspaceHeader[data-has-filters="true"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.82rem;
+}
+
+.controlBoardWorkspaceHeader[data-has-filters="true"][data-split="true"] {
+  grid-template-columns: minmax(0, 1fr) minmax(var(--control-board-inspector-width), max-content);
+}
+
+.controlBoardWorkspaceHeader[data-has-filters="true"] > :last-child {
+  justify-self: end;
+  min-width: 0;
+  padding-block-start: 0.9rem;
+}
+
+.controlBoardHeaderLead,
+.controlBoardHeaderFilters {
+  display: flex;
+  align-items: start;
+  min-width: 0;
+  gap: 0.55rem;
+}
+
+.controlBoardHeaderLead > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.controlBoardHeaderFilters {
+  flex: 0 0 auto;
+  padding-block-start: 0.9rem;
+}
+
+.controlBoardHeaderFilters .controlBoardHeaderSelect {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-width: 0;
+  gap: 0.36rem;
+}
+
+.controlBoardHeaderSelect > span {
+  flex: 0 0 auto;
+}
+
+.controlBoardHeaderFilters .controlBoardHeaderSelect button {
+  width: 9rem;
+  min-width: 0;
+  min-height: 2.2rem;
+  max-width: 9rem;
+  gap: 0.55rem;
+  padding: 0.42rem 0.7rem;
+}
+
+.controlBoardHeaderFilters .controlBoardHeaderSelect:first-child button {
+  width: 7.75rem;
+}
+
+@media (max-width: 540px) {
+  .controlBoardHeaderLead,
+  .controlBoardHeaderFilters {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 760px), (max-width: 1180px) and (max-height: 620px) {
+  .controlBoardWorkspaceHeader[data-has-filters="true"],
+  .controlBoardWorkspaceHeader[data-has-filters="true"][data-split="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .controlBoardWorkspaceHeader[data-has-filters="true"] > :last-child {
+    justify-self: start;
+  }
 }
 
 .controlBoardThinHeader {
@@ -414,6 +517,8 @@
 
 .controlBoardTreeToolbar {
   display: flex;
+  align-items: center;
+  gap: 0.5rem;
   justify-content: flex-end;
 }
 
@@ -426,7 +531,135 @@
 }
 
 @media (max-width: 1180px) {
-  .controlBoardWorkspace {
-    grid-template-columns: 1fr;
+  .controlBoardWorkspaceFrame {
+    --control-board-inspector-width: 21rem;
+    --control-board-columns: minmax(0, 1fr) minmax(19rem, var(--control-board-inspector-width));
   }
+}
+
+@media (max-width: 760px), (max-width: 1180px) and (max-height: 620px) {
+  .controlBoardWorkspaceFrame {
+    --control-board-columns: minmax(0, 1fr);
+  }
+
+  .controlBoardWorkspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: max-content;
+    align-content: start;
+    overflow-y: auto;
+    scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
+    scrollbar-width: thin;
+  }
+
+  .controlBoardWorkspace .controlBoardColumn {
+    height: clamp(16rem, 48dvh, 24rem);
+  }
+
+  .controlBoardWorkspace .controlBoardSelectedPane[data-layout="header-body"] {
+    grid-template-rows: auto auto;
+  }
+
+  .controlBoardWorkspace .controlBoardSelectedPane > [data-teras-content-region] {
+    overflow: visible;
+  }
+
+  .controlBoardWorkspace .controlBoardSelectedBarePane {
+    height: clamp(24rem, 62dvh, 36rem);
+  }
+}
+
+.controlBoardWorkspace .controlBoardMainPane[data-has-controls="true"] {
+  display: grid;
+  grid-template: minmax(0, 1fr) auto / minmax(0, 1fr);
+  padding: 0;
+  overflow: hidden;
+}
+
+.controlBoardCanvasBody {
+  grid-area: 1 / 1 / 3 / 2;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.92rem 0.92rem 4rem;
+  overflow: auto;
+  scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
+  scrollbar-width: thin;
+}
+
+.controlBoardCanvasBody > .controlBoardLaneRow {
+  padding-bottom: 0;
+  overflow: visible;
+}
+
+.controlBoardCanvasControls {
+  grid-area: 2 / 1;
+  z-index: 1;
+  justify-self: end;
+  max-width: calc(100% - 1.84rem);
+  min-width: 0;
+  margin: 0 0.92rem 0.92rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  padding: 0.28rem;
+  background: var(--canvas-soft);
+}
+
+.controlBoardCanvasControls .controlBoardCanvasActionRow {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.controlBoardCanvasControls button.controlBoardCanvasBack {
+  flex: 0 0 auto;
+  gap: 0.34rem;
+  min-height: 2rem;
+}
+
+.controlBoardScopeField {
+  min-width: 0;
+  max-width: min(20rem, 100%);
+}
+
+.controlBoardFeatureFilter {
+  width: 12rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.controlBoardScopeField button,
+.controlBoardFeatureFilter button {
+  min-height: 2rem;
+  border-radius: 0.52rem;
+  padding: 0.35rem 0.58rem;
+}
+
+.controlBoardCardChevron {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--muted);
+}
+
+.controlBoardItemHeader {
+  position: relative;
+}
+
+.controlBoardItemHeader[data-dismissable="true"] {
+  padding-right: 2.35rem;
+}
+
+.controlBoardItemHeader button.controlBoardItemClose {
+  position: absolute;
+  inset: 0 0 auto auto;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  min-width: 0;
+  min-height: 1.75rem;
+  padding: 0;
+}
+
+.controlBoardKickerStatus {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type { DeliveryComponentType } from "../../../read-model/index.ts";
-import { executionTreeChildKinds, executionTreePlanningInputIssues } from "../../../work-model/execution/execution-tree-change-plan.ts";
+import { executionTreeChildKinds } from "../../../work-model/execution/execution-tree-change-plan.ts";
 
 import {
   BuildTreeEditorTree,
@@ -39,6 +39,7 @@ export function ExecutionTreeEditView({
   onTreeAddMenuNodeIdChange,
   onTreeChange,
   openDetailNodeId,
+  planningIssues,
   selectedNodeId,
   tree,
 }: {
@@ -52,11 +53,11 @@ export function ExecutionTreeEditView({
   onTreeAddMenuNodeIdChange: (next: string | null) => void;
   onTreeChange: (next: ExecutionTreeDraftNode) => void;
   openDetailNodeId: string | null;
+  planningIssues: string[];
   selectedNodeId: string;
   tree: ExecutionTreeDraftNode;
 }) {
   const expandedNodeIdSet = new Set(expandedNodeIds);
-  const planningIssues = executionTreePlanningInputIssues(tree);
 
   function toggleNode(nodeId: string) {
     onTreeAddMenuNodeIdChange(null);
@@ -118,10 +119,12 @@ export function ExecutionTreeEditView({
   function getAddActions(
     node: ExecutionTreeDraftNode,
   ): BuildTreeEditorTreeAddAction<ExecutionTreeDraftNode>[] {
-    return executionTreeChildKinds(node.kind).map((kind) => ({
-      label: kind === "User story" ? "Add Story" : `Add ${kind}`,
-      onSelect: (target) => addChild(target, kind),
-    }));
+    return executionTreeChildKinds(node.kind)
+      .filter(kind => kind !== "Feature" || !node.targetPi?.trim())
+      .map(kind => ({
+        label: kind === "User story" ? "Add Story" : `Add ${kind}`,
+        onSelect: target => addChild(target, kind),
+      }));
   }
 
   return (

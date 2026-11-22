@@ -26,6 +26,14 @@ export function projectCanonicalDeliveryWorkspace(value: unknown, sourceRevision
       backend_status: backendStatus, component_type: item.type as DeliveryComponentType,
       title: text(item.subject), description: typeof item.description === "string" ? item.description : "",
       owner_repo: nullableText(item.owner_repo),
+      planning: {
+        targetPI: nullableText(item.target_pi),
+        iteration: nullableText(item.iteration),
+        objectiveType: item.pi_objective_type === "Committed" || item.pi_objective_type === "Stretch" ? item.pi_objective_type : "",
+        plannedBusinessValue: typeof item.planned_business_value === "number" && Number.isFinite(item.planned_business_value)
+          ? String(item.planned_business_value)
+          : nullableText(item.planned_business_value) ?? "",
+      },
       blocker: blocker(item.blocker),
       dependency_blocked: item.dependency_blocked === true,
       depends_on_work_package_ids: Array.isArray(item.depends_on_work_package_ids) ? item.depends_on_work_package_ids.map(value => integer(value)) : [],
@@ -117,7 +125,8 @@ function executionNavigation(value: unknown, root: DeliveryArtNode): DeliveryPac
   if (item.authority !== "operator-orchestration-service" || item.eligibility !== "check-selected-work-item" || item.native_status !== root.backend_status ||
     !["execution", "refinement", "work_design", "audit_only"].includes(String(item.workflow_phase)) ||
     ![...Object.values(postures), "Closeout Pending"].includes(item.package_posture as DeliveryPackagePosture) || typeof item.closeout_pending !== "boolean") invalid();
-  for (const key of ["active_work_item_ids", "prepared_work_item_ids", "blocked_work_item_ids", "refinement_work_item_ids"]) {
+  for (const key of ["active_work_item_ids", "prepared_work_item_ids", "blocked_work_item_ids", "refinement_work_item_ids",
+    ...(item.planning_prepared_work_item_ids === undefined ? [] : ["planning_prepared_work_item_ids"])]) {
     const refs = array(item[key]);
     if (new Set(refs).size !== refs.length || refs.some(id => !Number.isSafeInteger(id) || !ids.has(Number(id)) || id === root.legacy_work_package_id)) invalid();
   }

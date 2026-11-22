@@ -4,6 +4,7 @@ import type {
   DeliveryReadModel,
   DeliveryTone,
 } from "../../read-model/index.ts";
+import { datedIterationIndex, recordedPlanningIteration } from "../../work-model/catalog/planning-calendar.ts";
 import {
   getDeliveryIntakeSourceCount,
   getDeliveryEffectivePackagePosture,
@@ -32,6 +33,8 @@ export function deliveryWorkspaceSummaryTitle(
   switch (surfaceId) {
     case "execution-board":
       return "Board State";
+    case "pi-planning":
+      return "PI Planning";
     case "intake":
       return "Intake State";
     case "catalog":
@@ -64,10 +67,12 @@ export function deliveryWorkspaceSummaryStats({
   activeSurfaceId,
   executionCount,
   model,
+  planningIncrement,
 }: {
   activeSurfaceId: DeliveryWorkspaceSurfaceId;
   executionCount: number;
   model: DeliveryReadModel;
+  planningIncrement?: string;
 }): DeliveryWorkspaceSummaryCard[] {
   if (model.history_scope === "history" && !["catalog", "intake"].includes(activeSurfaceId)) {
     return deliveryOverviewStats(model, executionCount);
@@ -83,6 +88,30 @@ export function deliveryWorkspaceSummaryStats({
       return executionWorkspaceSummaryStats(model);
     case "catalog":
       return catalogWorkspaceSummaryStats();
+    case "pi-planning": {
+      const plan = planningIncrement ? model.preview_pi_plans?.[planningIncrement] : undefined;
+      const calendar = datedIterationIndex(model.catalog.values);
+      const hasDates = [...calendar.values()].some(entry => entry.pi === planningIncrement);
+      const label = hasDates ? "Scheduled" : "Recorded assignments";
+      const isDated = (iteration: string | null | undefined) => calendar.get(iteration ?? "")?.pi === planningIncrement;
+      if (model.source_truth !== "mock") {
+        const nodes = [...model.art_tree.roots];
+        for (const node of nodes) nodes.push(...node.children);
+        const inPI = nodes.filter(node => node.planning?.targetPI === planningIncrement && !["retired", "parked"].includes(node.backend_status));
+        const canCount = model.catalog.projection_status === "fresh" && Boolean(planningIncrement);
+        return [
+          { id: "scheduled", label, value: canCount ? String(inPI.filter(node =>
+            ["Feature", "User story", "Defect", "Task"].includes(node.component_type) &&
+              (hasDates ? isDated(node.planning?.iteration) : recordedPlanningIteration(node.planning?.iteration))).length) : "—", tone: hasDates ? "ok" : "muted" },
+          { id: "objectives", label: "PI objectives", value: canCount ? String(inPI.filter(node => node.component_type === "PI Objective").length) : "—", tone: "muted" },
+        ];
+      }
+      return [
+        { id: "scheduled", label, value: String(Object.values(plan?.assignments ?? {})
+          .filter(item => !hasDates || isDated(item.iteration)).length), tone: hasDates ? "ok" : "muted" },
+        { id: "objectives", label: "PI objectives", value: String(Object.keys(plan?.objectives ?? {}).length), tone: "muted" },
+      ];
+    }
     case "home":
     default:
       return deliveryOverviewStats(model, executionCount);

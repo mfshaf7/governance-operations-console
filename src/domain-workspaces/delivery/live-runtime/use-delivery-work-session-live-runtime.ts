@@ -243,10 +243,16 @@ export async function submitDeliveryWorkSessionCommand({
   if (!response.ok) {
     // A server/timeout failure may follow an accepted owner effect. Retain the
     // exact command for recovery; only a known rejection releases its identity.
+    const error = clientError(value);
     if (response.status < 500 && response.status !== 408) {
       delete pendingCommands.current[action];
+    } else if (response.status === 408 || error.code === "delivery_oos_unavailable") {
+      throw new DeliveryWorkSessionLiveRuntimeError(
+        "Delivery has not confirmed the result yet. Read Current Session before retrying the same command.",
+        error.code,
+      );
     }
-    throw clientError(value);
+    throw error;
   }
   const next = assertDeliveryWorkSessionSnapshot(value);
   delete pendingCommands.current[action];

@@ -26,6 +26,9 @@ type DeliveryWorkSessionClientOptions = {
 
 const deliveryWorkSessionReadTimeoutMs = 75_000;
 const deliveryWorkSessionCommandTimeoutMs = 75_000;
+// Starting with source authorization performs several sequential repository
+// readbacks before OOS can record the work-start receipt.
+const deliveryWorkSessionStartTimeoutMs = 120_000;
 
 export function deliveryWorkSessionOosConfigured(
   env: NodeJS.ProcessEnv = process.env,
@@ -246,8 +249,8 @@ async function requestWorkSession(
       },
     },
     fetchImpl,
-    suffix === ""
-      ? deliveryWorkSessionReadTimeoutMs
+    suffix === "" ? deliveryWorkSessionReadTimeoutMs
+      : suffix === "/start" ? deliveryWorkSessionStartTimeoutMs
       : deliveryWorkSessionCommandTimeoutMs,
     suffix === ""
       ? {

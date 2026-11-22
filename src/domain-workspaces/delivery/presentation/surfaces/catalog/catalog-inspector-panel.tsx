@@ -32,6 +32,7 @@ import {
 
 export function CatalogInspectorPanel({
   activeCatalog,
+  catalogValues,
   preview = false,
   canEditSelectedValue,
   canRetireSelectedValue,
@@ -45,6 +46,7 @@ export function CatalogInspectorPanel({
   selectedValue,
 }: {
   activeCatalog: DeliveryCatalogItem | null;
+  catalogValues: DeliveryCatalogValue[];
   preview?: boolean;
   canEditSelectedValue: boolean;
   canRetireSelectedValue: boolean;
@@ -94,7 +96,7 @@ export function CatalogInspectorPanel({
 
             <TerasContentTray kicker="Value">
               <TerasMetadataList
-                items={catalogValueMetadata(activeCatalog, selectedValue)}
+                items={catalogValueMetadata(activeCatalog, selectedValue, catalogValues)}
               />
             </TerasContentTray>
 

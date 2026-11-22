@@ -445,7 +445,10 @@ export function buildCatalogMutationRequest(
       description: command.draft.description,
       parent_catalog_value_key: command.draft.parentCatalogValueKey ?? null,
       planning_window_start_date: command.draft.planningWindowStartDate || null,
-      planning_window_end_date: command.draft.planningWindowEndDate || null,
+      planning_window_end_date: command.draft.iterationCount === undefined ? command.draft.planningWindowEndDate || null : null,
+      ...(command.draft.iterationCount !== undefined ? {
+        iteration_count: command.draft.iterationCount, iteration_length_days: command.draft.iterationLengthDays,
+      } : {}),
       repository_binding: command.mode === "retire"
         ? null
         : command.repositoryReadiness ?? null,

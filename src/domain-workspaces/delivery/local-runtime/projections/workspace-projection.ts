@@ -1,9 +1,11 @@
 import { createLocalOperationProjectionStore } from "../../../operation-runtime/index.ts";
+import type { PreviewPIPlan } from "./pi-planning-preview.ts";
 
 import type {
   DeliveryIntakeSource,
   DeliveryPackageSummary,
   DeliveryRefinementApplyReceipt,
+  DeliveryCatalogValue,
 } from "../../read-model/index.ts";
 import type { DeliveryCloseoutReceipt } from "../../work-model/closeout/delivery-closeout-contracts.ts";
 import type { WorkDesignApplyReceipt } from "../../work-model/work-design/work-design-types.ts";
@@ -26,12 +28,25 @@ import {
 } from "../transitions/transition-record.ts";
 
 type DeliveryWorkspaceLocalProjectionState = {
+  catalogValues?: DeliveryCatalogValue[];
+  piPlans?: Record<string, PreviewPIPlan>;
   closeoutRecords: Record<string, LocalDeliveryCloseoutRecord>;
   consumedIntakeRecords: Record<string, LocalConsumedIntakeRecord>;
   executionActionRecords: Record<string, LocalExecutionActionRecord>;
   refinementApplyReceipts: Record<string, LocalRefinementApplyRecord>;
   workDesignApplyRecords: Record<string, LocalWorkDesignApplyRecord>;
 };
+
+export function recordLocalDeliveryCatalogValues(values: DeliveryCatalogValue[]) {
+  deliveryWorkspaceProjectionStore.updateState(current => ({ ...current, catalogValues: values }));
+}
+
+export function recordLocalPIPlan(plan: PreviewPIPlan) {
+  deliveryWorkspaceProjectionStore.updateState(current => ({
+    ...current,
+    piPlans: { ...current.piPlans, [plan.pi]: plan },
+  }));
+}
 
 export type DeliveryWorkspaceProjectionSnapshot =
   DeliveryWorkspaceLocalProjectionState & {

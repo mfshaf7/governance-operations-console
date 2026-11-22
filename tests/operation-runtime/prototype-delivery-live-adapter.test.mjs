@@ -388,7 +388,7 @@ function prototypeDeliveryApplicationResult({ resolution = "created" } = {}) {
       record_ref: "openproject://work_packages/901",
       record_system: "openproject",
       record_type: "delivery-epic",
-      record_version: 7,
+      record_version: 0,
       source_receipt_state: "emitted",
     },
     workflow_id: "prototype-delivery-application",

@@ -29,6 +29,7 @@ import {
   catalogValuesForItem,
   editableCatalogItems,
   isOwnerRepoCatalog,
+  isTargetPiCatalog,
   planningFacetCatalogItems,
   planningFacetValueSummary,
   planningFacetValuesForTargetPi,
@@ -177,8 +178,10 @@ export function useCatalogControlState(
         (value) => value.catalog_value_id === mutationDraft.valueId,
       ) ?? null)
     : null;
-  const canMutateActiveCatalog =
-    canSubmit && canDraftCatalogMutation(activeCatalog);
+  const supportsIterationGeneration = liveRuntime.mode === "disconnected-preview"
+    || Boolean(activeCatalog?.supports_iteration_generation);
+  const canMutateActiveCatalog = canSubmit && canDraftCatalogMutation(activeCatalog)
+    && (!isTargetPiCatalog(activeCatalog) || supportsIterationGeneration);
   const selectedDraftReceipt =
     selectedValue &&
     localDraftReceipt?.valueId === selectedValue.catalog_value_id
@@ -228,11 +231,11 @@ export function useCatalogControlState(
   );
   const openAddDraft = useCallback(
     () => {
-      repositories.refresh();
+      if (isOwnerRepoCatalog(activeCatalog)) repositories.refresh();
       setMutationError(null);
       setMutationDraft({ mode: "add", valueId: null });
     },
-    [repositories.refresh],
+    [activeCatalog, repositories.refresh],
   );
   const openEditDraft = useCallback(
     (value: DeliveryCatalogValue) => {
@@ -318,6 +321,8 @@ export function useCatalogControlState(
 
   async function submitCatalogDraft({
     description,
+    iterationCount,
+    iterationLengthDays,
     label,
     linkedRepository,
     parentCatalogValueKey,
@@ -331,6 +336,8 @@ export function useCatalogControlState(
 
     const draft = {
       description,
+      iterationCount,
+      iterationLengthDays,
       label,
       linkedRepository,
       parentCatalogValueKey,
@@ -495,6 +502,7 @@ export function useCatalogControlState(
 
   return {
     activeCatalog,
+    supportsIterationGeneration,
     canEditCatalogValue,
     canEditSelectedValue,
     canMutateActiveCatalog,

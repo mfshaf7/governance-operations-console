@@ -47,12 +47,11 @@ export function executionBoardPrimaryAction(
   );
 }
 
-export function executionBoardSecondaryActions(
-  selectedActions: DeliveryAvailableAction[],
-  primaryAction: DeliveryAvailableAction | null,
-) {
-  return selectedActions.filter((action) => action !== primaryAction);
-}
+const executionWorkCountDescriptions = {
+  "in-progress": "Stories, defects, and tasks recorded as in progress.",
+  blocked: "Stories, defects, and tasks with a blocked status, recorded blocker, or blocking dependency.",
+  ready: "Stories, defects, and tasks marked ready. Check the item’s requirements before starting work.",
+};
 
 export function executionSelectedPackageMetadata({
   childCounts,
@@ -66,74 +65,33 @@ export function executionSelectedPackageMetadata({
   packageTree?: DeliveryArtNode | null;
 }): TerasMetadataItem[] {
   const groups = executionPackageWorkGroups(packageTree ?? null);
+  const repository = details?.owner_repo?.trim();
+  const repositoryDescription = "Repository assigned to this package for implementation.";
   return [
     {
       label: "Target PI",
       value: packageSummary.target_pi ?? "Not committed",
+      title: "The planning increment this package is targeting.",
     },
     {
-      label: "Implementation repository",
-      value: details ? details.owner_repo?.trim() || "Not assigned" : "Repository information unavailable",
-    },
-    {
-      label: "Open work items",
-      value: String(
-        childCounts?.open_child_count ?? packageSummary.open_child_count ?? "Details not loaded",
-      ),
-    },
-    ...groups.map(group => ({ label: group.label, value: group.count === null ? "Not loaded" : String(group.count) })),
-  ];
-}
-
-export function executionPackageDetailsMetadata({
-  childCounts,
-  details,
-  packageSummary,
-}: {
-  childCounts: ReturnType<typeof getChildCounts> | null;
-  details: ReturnType<typeof getPackageDetailsById>;
-  packageSummary: DeliveryPackageSummary;
-}): TerasMetadataItem[] {
-  const items: TerasMetadataItem[] = [
-    { label: "Source", value: packageSummary.source_ref },
-    {
-      label: "Target PI",
-      value: packageSummary.target_pi ?? "Not committed",
-    },
-    {
-      label: "Implementation repository",
-      value: details?.owner_repo ?? "Unavailable",
+      label: "Repository",
+      value: repository || (details ? "Not assigned" : "Unavailable"),
+      title: repository ? `${repository}\n${repositoryDescription}` : repositoryDescription,
+      truncateValue: true,
     },
     {
       label: "Open work items",
       value: String(
         childCounts?.open_child_count ?? packageSummary.open_child_count ?? "Details not loaded",
       ),
+      title: "Counts open work at every level below the Epic, including Features and deferred items.",
     },
-    {
-      label: "Architecture Anchor",
-      value: details?.lineage_refs.architecture_anchor_ref ?? "Not projected",
-    },
-    {
-      label: "Required Upstream",
-      value: details?.lineage_refs.required_upstream_ref ?? "Not projected",
-    },
+    ...groups.map(group => ({
+      label: group.label,
+      value: group.count === null ? "Not loaded" : String(group.count),
+      title: executionWorkCountDescriptions[group.status],
+    })),
   ];
-
-  if (packageSummary.active_blocker) {
-    items.push(
-      {
-        label: "Blocker",
-        value: packageSummary.active_blocker.statement,
-      },
-      {
-        label: "Resolution responsibility",
-        value: packageSummary.active_blocker.owner,
-      },
-    );
-  }
-
-  return items;
 }
 
 export function executionActiveBlockerMetadata(
@@ -198,6 +156,8 @@ export function executionTreeDraftFromArtNode(
     id: node.id,
     kind: node.component_type,
     legacyWorkPackageId: node.legacy_work_package_id,
+    targetPi: node.planning?.targetPI ?? undefined,
+    iteration: node.planning?.iteration ?? undefined,
     metadataStatus: node.metadata_status,
     remark:
       node.legacy_work_package_id === null
@@ -223,6 +183,8 @@ export function executionTreeDraftFromChangeNode(
     id: `node-${node.id}`,
     kind: deliveryChangeNodeType(node.type),
     legacyWorkPackageId: node.id,
+    targetPi: node.target_pi ?? undefined,
+    iteration: node.iteration ?? undefined,
     metadataStatus: "complete",
     remark: `WP #${node.id}`,
     title: node.subject,

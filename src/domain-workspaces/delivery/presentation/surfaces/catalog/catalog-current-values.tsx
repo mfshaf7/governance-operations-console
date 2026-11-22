@@ -17,12 +17,16 @@ import type {
   DeliveryCatalogItem,
   DeliveryCatalogValue,
 } from "../../../read-model/index.ts";
+import { datedIterationIndex } from "../../../work-model/catalog/planning-calendar.ts";
+import { catalogIterationSchedule } from "./catalog-display-model.ts";
 
 import {
   catalogLifecycleLabel,
   catalogLifecycleTone,
   canDraftCatalogValueMutation,
   catalogValueMutationDisabledReason,
+  isIterationCatalog,
+  iterationCatalogId,
   parentTargetPiValueKey,
   planningWindowForTargetPi,
   targetPiCatalogId,
@@ -92,13 +96,14 @@ function catalogColumns({
   onEdit: (value: DeliveryCatalogValue) => void;
   onRetire: (value: DeliveryCatalogValue) => void;
 }): Array<TerasRecordTableColumn<DeliveryCatalogValue>> {
+  const datedIterations = isIterationCatalog(activeCatalog) ? datedIterationIndex(catalogValues) : new Map();
   const columns: Array<TerasRecordTableColumn<DeliveryCatalogValue>> = [
     {
       header: "Current Value",
       intent: "primary",
       key: "value",
       render: (value) => {
-        const meta = catalogCurrentValueMeta(value, catalogValues);
+        const meta = catalogCurrentValueMeta(value, catalogValues, datedIterations);
 
         return (
           <TerasRecordCellText
@@ -199,8 +204,14 @@ function catalogColumns({
 function catalogCurrentValueMeta(
   value: DeliveryCatalogValue,
   values: DeliveryCatalogValue[],
+  datedIterations: ReturnType<typeof datedIterationIndex>,
 ) {
   const parentTargetPi = parentTargetPiValueKey(value);
+
+  if (value.catalog_item_id === iterationCatalogId) {
+    const schedule = catalogIterationSchedule(value, datedIterations);
+    return parentTargetPi ? `${parentTargetPi} · ${schedule}` : schedule;
+  }
 
   if (parentTargetPi) {
     return `Target PI: ${parentTargetPi}`;

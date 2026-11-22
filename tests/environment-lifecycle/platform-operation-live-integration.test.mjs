@@ -335,6 +335,34 @@ test("explicit source approval uses server identity and retained exact time, wit
   await commandSourceAuthorization(preparation.intent_id, decision, { config, fetchImpl }); assert.equal(submitted, 1);
   await assert.rejects(commandSourceAuthorization(preparation.intent_id, { ...decision, expectedIntentDigest: hash("other") }, { config, fetchImpl }), /changed/);
 });
+test("source approval uses one owner-selected issuer and refuses competing issuers", async () => {
+  const preparation = sourcePreparation();
+  const working = sourceCatalog();
+  const disposable = sourceCatalog();
+  const issuer = disposable.subjects[0];
+  issuer.ref = "profile:accepted-idea-delivery-mutation-smoke";
+  let submitted = null;
+  let activeCatalog = { ...disposable, subjects: [...disposable.subjects, ...working.subjects] };
+  const fetchImpl = async (url, init) => {
+    if (String(url).includes("/source-preparations/")) return Response.json(preparation);
+    if (String(url).endsWith("/catalog")) return Response.json(activeCatalog);
+    if (String(url).endsWith("/commands")) {
+      submitted = JSON.parse(init.body).command;
+      preparation.authorization = { state: "approved", approval_ref: submitted.approval.decision_ref, credential_receipt: null };
+      return Response.json(operation(submitted));
+    }
+    return Response.json({ workflow_id: "platform-operation-list", operations: [] });
+  };
+  const decision = { action: "issue", commandId: "approval:rehearsal", requestedAt: now, expectedIntentDigest: preparation.source_intent_digest };
+  await assert.rejects(commandSourceAuthorization(preparation.intent_id, decision, { config, fetchImpl }), /one admitted source issuer/);
+  assert.equal(submitted, null);
+  activeCatalog = disposable;
+  await commandSourceAuthorization(preparation.intent_id, decision, { config, fetchImpl });
+  assert.deepEqual(submitted.subject, {
+    kind: "dev-integration-profile", ref: issuer.ref, expected_source_version: issuer.source_version,
+  });
+});
+
 test("native successful source receipts are accepted only with exact bounded permissions and verified intent/digest", async () => {
   const bound = sourceCommand(), retained = operation(bound), receipt = sourceReceipt(bound);
   retained.state = "succeeded"; retained.provider_operation.state = "succeeded"; retained.provider_operation.events[0].state = "succeeded";

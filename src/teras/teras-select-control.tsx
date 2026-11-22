@@ -19,6 +19,7 @@ export function TerasSelectControl<Value extends string>({
   ariaLabel,
   ariaLabelledBy,
   disabled = false,
+  menuMinWidth = 0,
   menuPlacement,
   onValueChange,
   options,
@@ -28,6 +29,7 @@ export function TerasSelectControl<Value extends string>({
   ariaLabel?: string;
   ariaLabelledBy?: string;
   disabled?: boolean;
+  menuMinWidth?: number;
   menuPlacement: TerasSelectMenuPlacement;
   onValueChange: (value: Value) => void;
   options: readonly TerasSelectOption<Value>[];
@@ -175,7 +177,7 @@ export function TerasSelectControl<Value extends string>({
       }
 
       const viewportPadding = 12;
-      const width = Math.min(rect.width, window.innerWidth - viewportPadding * 2);
+      const width = Math.min(Math.max(rect.width, menuMinWidth), window.innerWidth - viewportPadding * 2);
       const left = Math.max(
         viewportPadding,
         Math.min(rect.left, window.innerWidth - width - viewportPadding),
@@ -204,7 +206,7 @@ export function TerasSelectControl<Value extends string>({
       window.removeEventListener("resize", updateMenuPosition);
       window.removeEventListener("scroll", updateMenuPosition, true);
     };
-  }, [disabled, menuPlacement, open]);
+  }, [disabled, menuMinWidth, menuPlacement, open]);
 
   useEffect(() => {
     if (!open) {

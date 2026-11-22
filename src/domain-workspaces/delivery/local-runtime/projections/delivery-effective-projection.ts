@@ -13,8 +13,11 @@ export function projectDeliveryEffectiveReadModel({
   model: DeliveryReadModel;
   runtimeProjection: DeliveryWorkspaceProjectionSnapshot;
 }): DeliveryReadModel {
+  const effectiveModel = model.source_truth === "mock" && runtimeProjection.catalogValues
+    ? { ...model, catalog: { ...model.catalog, values: runtimeProjection.catalogValues } }
+    : model;
   const ingressModel = projectDeliveryIngressSources(
-    model,
+    effectiveModel,
     runtimeProjection.ingress?.intakeSources ?? [],
   );
 
@@ -29,6 +32,7 @@ export function projectDeliveryEffectiveReadModel({
           runtimeProjection.workDesignApplyRecords,
         ),
         runtimeProjection.refinementApplyReceipts,
+        runtimeProjection.piPlans,
       ),
       runtimeProjection.executionActionRecords,
     ),

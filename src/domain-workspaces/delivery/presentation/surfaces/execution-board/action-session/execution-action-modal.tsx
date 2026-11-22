@@ -7,7 +7,6 @@ import type {
   DeliveryReadModel,
 } from "../../../../read-model/index.ts";
 import {
-  getChildCounts,
   getPackageAuditEvents,
   getPackageDetailsById,
 } from "../../../../read-model/index.ts";
@@ -47,7 +46,6 @@ import {
   executionActionOperatorFieldSpecs,
   executionBoardApplyIntent,
 } from "../../../../work-model/execution/execution-action-intent.ts";
-import { executionPackageDetailsMetadata } from "../execution-board-view-model.ts";
 import { executionActionIntentReady } from "../../../../work-model/execution/execution-action-eligibility.ts";
 
 export function ExecutionActionModal({
@@ -89,6 +87,7 @@ export function ExecutionActionModal({
   submitting: boolean;
 }) {
   const actionContract = executionActionContracts[action.action_type];
+  const itemBlockerReview = action.action_type === "clear-blocker" && action.scope === "execution_target";
   const sourceApplyIntent = executionBoardApplyIntent({
     action,
     actionContract,
@@ -124,12 +123,13 @@ export function ExecutionActionModal({
     operatorPayload,
   });
   const operatorFields = executionActionOperatorFieldSpecs(action);
+  const returnStatus = operatorFields.find(field => field.id === "resume_status")?.options
+    ?.find(option => option.value && option.value === operatorPayload.resume_status)?.label;
   const operatorDraftDirty = operatorFields.some(
     (field) =>
       (operatorPayload[field.id] ?? "") !==
       (initialOperatorPayload[field.id] ?? ""),
   );
-  const childCounts = packageTree ? getChildCounts(packageTree) : null;
   const reviewableAction = action.enabled && actionContract.reviewable;
   const applyReady = canSubmit && executionActionIntentReady(applyIntent);
 
@@ -187,37 +187,14 @@ export function ExecutionActionModal({
     );
   }
 
-  if (action.action_type === "open-details") {
-    return (
-      <TerasDialog
-        contentOverflow="auto"
-        height="content"
-        width="standard"
-        closeLabel="Close package details"
-        description="Read-only package context, lineage, and projected child shape."
-        kicker="Package Details"
-        onClose={onClose}
-        open
-        title={packageSummary.display_name}
-      >
-        <TerasMetadataList
-          items={executionPackageDetailsMetadata({
-            childCounts,
-            details,
-            packageSummary,
-          })}
-        />
-      </TerasDialog>
-    );
-  }
-
   return (
     <>
       <TerasModalShell
         bodyLayout="scroll"
         height="content"
         width="standard"
-        description={actionContract.modalDescription}
+        modalAttributes={itemBlockerReview ? { style: { maxWidth: "42rem" } } : undefined}
+        description={itemBlockerReview ? "Review the recorded blocker before returning this item to active work." : actionContract.modalDescription}
         footer={
           <>
             <TerasActionButton onClick={requestClose} emphasis="secondary">
@@ -225,7 +202,7 @@ export function ExecutionActionModal({
             </TerasActionButton>
             {actionStep === "draft" && reviewableAction ? (
               <TerasActionButton onClick={() => onActionStepChange("apply")}>
-                {actionContract.reviewActionLabel}
+                {itemBlockerReview ? "Review Changes" : actionContract.reviewActionLabel}
               </TerasActionButton>
             ) : null}
             {actionStep === "apply" ? (
@@ -246,7 +223,7 @@ export function ExecutionActionModal({
                     : "accent"
                 }
               >
-                {actionContract.receiptActionLabel}
+                {itemBlockerReview ? "Clear Blocker" : actionContract.receiptActionLabel}
               </TerasActionButton>
             ) : null}
           </>
@@ -254,7 +231,7 @@ export function ExecutionActionModal({
         kicker={actionContract.modalKicker}
         onClose={requestClose}
         surfaceId="delivery-execution-action"
-        title="Execution Action"
+        title={itemBlockerReview ? "Review Blocker" : "Execution Action"}
       >
         {actionStep === "draft" ? (
           <TerasTrayStack spacing="compact">
@@ -266,17 +243,20 @@ export function ExecutionActionModal({
             >
               <TerasPanelHeader
                 kicker={actionContract.familyLabel}
-                title={actionContract.draftTitle}
-                description={actionContract.draftDescription}
+                title={itemBlockerReview ? "What’s blocking this item" : actionContract.draftTitle}
+                description={itemBlockerReview ? packageTree?.blocker?.statement : actionContract.draftDescription}
               />
-              <TerasMetadataList
+              {itemBlockerReview ? <TerasMetadataList items={[
+                { label: "Work item", value: applyIntent.target_display_name },
+                { label: "Package", value: packageSummary.display_name },
+              ]} /> : <TerasMetadataList
                 items={executionActionDraftMetadata({
                   action,
                   actionContract,
                   applyIntent,
                   packageSummary,
                 })}
-              />
+              />}
               {applyIntent.advisor_reason ? (
                 <TerasContentTray kicker="Advisor Reason">
                   {applyIntent.advisor_reason}
@@ -292,7 +272,7 @@ export function ExecutionActionModal({
                         return (
                           <TerasSelectField
                             key={field.id}
-                            label={field.label}
+                            label={itemBlockerReview && field.id === "resume_status" ? "Return to" : field.label}
                             onValueChange={(nextValue) =>
                               updateOperatorPayload(field.id, nextValue)
                             }
@@ -346,17 +326,20 @@ export function ExecutionActionModal({
               tone="warn"
             >
               <TerasPanelHeader
-                kicker="Apply Review"
-                title={actionContract.applyTitle}
-                description={actionContract.applyDescription}
+                kicker={itemBlockerReview ? "Confirmation" : "Apply Review"}
+                title={itemBlockerReview ? "Clear this blocker?" : actionContract.applyTitle}
+                description={itemBlockerReview ? "Confirm the blocker has been resolved and the item can return to the selected status." : actionContract.applyDescription}
               />
-              <TerasMetadataList
+              {itemBlockerReview ? <TerasMetadataList items={[
+                { label: "Work item", value: applyIntent.target_display_name },
+                { label: "Return to", value: returnStatus ?? "Choose a status" },
+              ]} /> : <TerasMetadataList
                 items={executionActionApplyMetadata({
                   actionContract,
                   applyIntent,
                 })}
-              />
-              <TerasList frame="contained">
+              />}
+              {!itemBlockerReview ? <TerasList frame="contained">
                 {applyIntent.gate_checks.map((gate) => (
                   <TerasSignalItem
                     statusLabel={gate.passed ? "Clear" : "Blocked"}
@@ -366,7 +349,7 @@ export function ExecutionActionModal({
                     tone={gate.tone}
                   />
                 ))}
-              </TerasList>
+              </TerasList> : null}
               {error ? (
                 <TerasList frame="contained">
                   <TerasSignalItem

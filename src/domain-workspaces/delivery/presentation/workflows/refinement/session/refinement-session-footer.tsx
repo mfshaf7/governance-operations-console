@@ -10,6 +10,8 @@ type RefinementSessionFooterProps = {
   activeStep: DeliveryRefinementModalStep;
   blocked: boolean;
   canApply: boolean;
+  preparationOnly: boolean;
+  onPlanWork?: () => void;
   onApplyRefinement: () => void;
   onRequestClose: () => void;
   onReturnToRegister: () => void;
@@ -22,6 +24,8 @@ export function RefinementSessionFooter({
   activeStep,
   blocked,
   canApply,
+  preparationOnly,
+  onPlanWork,
   onApplyRefinement,
   onRequestClose,
   onReturnToRegister,
@@ -60,7 +64,7 @@ export function RefinementSessionFooter({
           disabled={!readOnly && (blocked || !canApply)}
           onClick={() => onSelectStep("apply_refinement")}
         >
-          Review Apply Plan
+          {preparationOnly ? "Review preparation" : "Review Apply Plan"}
         </TerasActionButton>
       ) : activeStep === "apply_refinement" ? (
         <TerasActionButton
@@ -69,15 +73,16 @@ export function RefinementSessionFooter({
           disabled={readOnly || blocked || !canApply || applyInFlight}
           onClick={onApplyRefinement}
         >
-          {applyInFlight ? "Applying…" : "Apply Refinement"}
+          {applyInFlight ? "Applying…" : preparationOnly ? "Record preparation" : "Apply Refinement"}
         </TerasActionButton>
       ) : (
-        <TerasActionButton
-          data-refinement-action="return-to-register"
-          onClick={onRequestClose}
-        >
-          Back to Register
-        </TerasActionButton>
+        <>
+          <TerasActionButton data-refinement-action="return-to-register"
+            emphasis={onPlanWork ? "secondary" : "primary"} onClick={onRequestClose}>
+            Back to Register
+          </TerasActionButton>
+          {onPlanWork && <TerasActionButton onClick={onPlanWork}>Plan PI work</TerasActionButton>}
+        </>
       )}
     </>
   );

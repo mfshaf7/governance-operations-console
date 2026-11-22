@@ -38,6 +38,7 @@ export type DeliveryCatalogGroupId =
   | "planning";
 
 export type DeliveryCatalogItem = {
+  supports_iteration_generation?: boolean;
   backend_route: string;
   catalog_item_id: string;
   console_capability: DeliveryCatalogCapability;
@@ -67,6 +68,7 @@ export type DeliveryCatalogValue = {
   label: string;
   last_projected_at: string | null;
   lifecycle_state: DeliveryCatalogLifecycleState;
+  iteration_window?: { sequence: number; start_date: string; end_date: string };
   parent_catalog_item_id?: string | null;
   parent_catalog_value_key?: string | null;
   tone: DeliveryTone;

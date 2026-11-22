@@ -4,7 +4,7 @@ const require=createRequire(import.meta.url);
 const {projectCanonicalDeliveryOverview}=require("../../src/domain-workspaces/delivery/live-runtime/delivery-overview-live-projection.ts");
 const base=process.env.CONSOLE_TEST_BASE_URL??"http://127.0.0.1:3320";
 test.setTimeout(120000);
-test.use({viewport:{width:1700,height:1050}});
+test.use({viewport:{width:1700,height:1050},actionTimeout:12000});
 
 // Isolated browser protocol proof. Every API is intercepted. These responses
 // never stand in for qualification of live OOS, source or ART mutations.
@@ -46,12 +46,11 @@ async function harness(page){
   await page.locator('button[title="Open DELIVERY"]').click();
   const workspace=page.getByRole("dialog",{name:"Delivery Workspace",exact:true});
   await workspace.locator('[data-delivery-workspace-section="execution-board"]').click();
-  await workspace.getByRole("button",{name:"Open Work Item",exact:true}).click();
-  const picker=page.getByRole("dialog",{name:"Open Work Item",exact:true});
-  await expect(picker).toContainText("with a saved session");
-  await picker.getByRole("button",{name:"Work item",exact:true}).click();
-  await page.getByRole("option",{name:/^Task 3 ·/}).click();
-  await picker.getByRole("button",{name:"Open Session",exact:true}).click();
+  await workspace.getByRole("button",{name:"Open Work Board",exact:true}).click();
+  const completed = workspace.locator('[data-execution-work-item]').filter({ hasText: "Work 3" });
+  await expect(completed).toContainText("Session Recorded");
+  await completed.click();
+  await workspace.getByRole("button",{name:"Open Work Session",exact:true}).click();
   return {state,workspace,modal:page.getByRole("dialog",{name:"Governed Work Session",exact:true})};
 }
 
@@ -78,7 +77,7 @@ test("partial closeout retry preserves identity and refreshes the board before p
 });
 
 test("human review remains a link and reconstruction uses its bounded owner action",async({page})=>{
-  const {state,modal}=await harness(page);state.code="pull-request-review-required";
+  const {state,workspace,modal}=await harness(page);state.code="pull-request-review-required";
   await modal.getByRole("button",{name:"Read Current Session",exact:true}).click();
   await expect(modal.getByRole("link",{name:"Open Pull Request ↗",exact:true})).toHaveAttribute("href","https://github.com/example/work/pull/1");
   await expect(modal.getByRole("button",{name:"Merge Source",exact:true})).toHaveCount(0);expect(state.writes).toEqual([]);
@@ -89,14 +88,13 @@ test("human review remains a link and reconstruction uses its bounded owner acti
   state.code="architecture-human-gate-required";state.requiredWork=4;
   await modal.getByRole("button",{name:"Read Current Session",exact:true}).click();
   await modal.getByRole("button",{name:"Open Required Work",exact:true}).click();
-  const chooser=page.getByRole("dialog",{name:"Open Work Item",exact:true});
-  await expect(chooser.getByRole("button",{name:"Work item",exact:true})).toContainText("Task 4");
+  await expect(workspace.locator('[data-execution-work-item]').filter({hasText:"Work 4"})).toHaveAttribute("aria-pressed","true");
   expect(state.writes).toHaveLength(1);
   expect(state.errors).toEqual([]);
 });
 
 test("recovery requires an explicit substantive reason and then offers remaining-work navigation",async({page})=>{
-  const {state,modal}=await harness(page);state.code="architecture-recovery-required";
+  const {state,workspace,modal}=await harness(page);state.code="architecture-recovery-required";
   await modal.getByRole("button",{name:"Read Current Session",exact:true}).click();
   const archive=modal.getByRole("button",{name:"Archive Superseded Session",exact:true});
   await expect(archive).toBeDisabled();
@@ -104,7 +102,8 @@ test("recovery requires an explicit substantive reason and then offers remaining
   await archive.click();
   expect(state.writes).toHaveLength(1);expect(state.writes[0].path).toBe("/api/delivery/execution/3/work-session/recover");
   expect(state.writes[0].body.recovery.pull_request.head_commit).toBe("a".repeat(40));
-  await modal.getByRole("button",{name:"Choose Remaining Work",exact:true}).click();
-  await expect(page.getByRole("dialog",{name:"Open Work Item",exact:true})).toContainText("Connected Execution Check");
+  await modal.getByRole("button",{name:"Open Work Board",exact:true}).click();
+  await expect(workspace.locator('[data-execution-work-item]').filter({hasText:"Work 4"})).toBeVisible();
+  await expect(modal).toHaveCount(0);
   expect(state.errors).toEqual([]);
 });

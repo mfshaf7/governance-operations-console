@@ -14,6 +14,7 @@ export type TerasMetadataItem = {
   label: ReactNode;
   title?: string;
   tone?: TerasTone;
+  truncateValue?: boolean;
   value: ReactNode;
 };
 
@@ -63,7 +64,9 @@ export function TerasMetadataList({
           title={item.title}
         >
           <span className={styles.terasMetadataLabel}>{item.label}</span>
-          <strong className={styles.terasMetadataValue}>{item.value}</strong>
+          <strong className={styles.terasMetadataValue} data-truncate={item.truncateValue || undefined}>
+            {item.value}
+          </strong>
           {item.detail ? (
             <small className={styles.terasMetadataDetail}>{item.detail}</small>
           ) : null}

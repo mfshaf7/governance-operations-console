@@ -54,6 +54,17 @@ export function catalogValuesForItem(
   });
 }
 
+export function activeIterationsForPi(values: DeliveryCatalogValue[], pi: string) {
+  if (!pi) return [];
+  const prefix = `${pi} / `;
+  const active = values.filter(value => value.catalog_item_id === iterationCatalogId
+    && value.lifecycle_state === "active"
+    && value.value_key.startsWith(prefix)
+    && (!value.parent_catalog_value_key || value.parent_catalog_value_key === pi));
+  const dated = active.filter(value => value.parent_catalog_value_key === pi && value.iteration_window);
+  return dated.length ? dated.sort((left, right) => left.iteration_window!.sequence - right.iteration_window!.sequence) : active;
+}
+
 export function isTargetPiCatalog(catalog: DeliveryCatalogItem | null) {
   return catalog?.catalog_item_id === targetPiCatalogId;
 }
@@ -140,11 +151,11 @@ export function planningWindowForTargetPi(
         candidate.catalog_item_id === piPlanningDateCatalogId &&
         parentTargetPiValueKey(candidate) === targetPiValueKey,
     ) ?? null;
-  const [startDate = "", endDate = ""] = value?.value_key.split("..") ?? [];
+  const [start = "", end = ""] = value?.value_key.split(/\.\.|\//) ?? [];
 
   return {
-    endDate,
-    startDate,
+    endDate: end === "unscheduled" ? "" : end,
+    startDate: start === "unscheduled" ? "" : start,
     value,
   };
 }

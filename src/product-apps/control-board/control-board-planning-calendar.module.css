@@ -1,0 +1,142 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) minmax(11rem, 1fr);
+  gap: 0.75rem;
+}
+
+.month, .details {
+  min-width: 0;
+}
+
+.details {
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+}
+
+.grid {
+  --calendar-border: #d4dae3;
+  --calendar-focus: #89560e;
+  --calendar-muted: #505c6a;
+  border: 1px solid var(--calendar-border);
+  border-radius: 0.45rem;
+  background: #fff;
+  color: #202b3a;
+}
+
+.weekdays, .days, .bands {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekdays {
+  padding: 0.3rem 0.4rem;
+  color: var(--calendar-muted);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.weekdays span:nth-child(-n + 5) {
+  color: var(--calendar-focus);
+  font-weight: 700;
+}
+
+.week {
+  padding: 0.2rem 0.4rem 0.3rem;
+  border-top: 1px solid var(--calendar-border);
+}
+
+.day {
+  min-height: 1.65rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+button.day:not(:disabled):hover,
+.day[aria-pressed="true"], .day[data-start="true"] {
+  color: #673d05;
+  border-color: #d0a651;
+  background: #fff0cc;
+}
+
+button.day:not(:disabled), .band {
+  cursor: pointer;
+}
+
+.bands {
+  row-gap: 0.15rem;
+}
+
+.band {
+  min-width: 0;
+  min-height: 1.45rem;
+  margin: 0.13rem 0.08rem 0;
+  padding: 0.1rem 0.32rem;
+  overflow: hidden;
+  border: 1px solid #d9b872;
+  border-radius: 0.28rem;
+  color: #673d05;
+  background: #fff2d5;
+  font: inherit;
+  font-size: 0.68rem;
+  text-align: start;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.band[data-iteration-color="1"] {
+  border-color: #8cbeb9;
+  background: #e1f4f1;
+  color: #174c47;
+}
+
+.band[data-iteration-color="2"] {
+  border-color: #bda8d7;
+  background: #f1e9fc;
+  color: #503471;
+}
+
+.band[data-iteration-color="3"] {
+  border-color: #a4be94;
+  background: #eaf3e3;
+  color: #38532b;
+}
+
+.band[data-iteration-color="4"] {
+  border-color: #aeb7c3;
+  background: #edf0f4;
+  color: #374354;
+}
+
+.band[data-kind="other"] {
+  border-color: #a4bcdf;
+  background: #e9f1ff;
+  color: #224b78;
+}
+
+.band[data-kind="overlap"] {
+  border-color: #d4988b;
+  background: #ffede8;
+  color: #842d21;
+}
+
+.band:hover, .band[aria-pressed="true"] {
+  border-color: currentColor;
+}
+
+.band:focus-visible, button.day:focus-visible {
+  outline: 2px solid var(--calendar-focus);
+  outline-offset: 1px;
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

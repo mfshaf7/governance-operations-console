@@ -30,6 +30,7 @@ import {
   DeliveryExecutionBoard,
   type ExecutionTreeEditState,
 } from "../surfaces/execution-board/execution-board-surface.tsx";
+import type { ExecutionWorkBoardSummary } from "../surfaces/execution-board/execution-package-work-board.tsx";
 import { DeliveryIntakeSurface } from "../surfaces/intake/intake-surface.tsx";
 import { DeliveryCatalogSurface } from "../surfaces/catalog/catalog-surface.tsx";
 import { DeliveryRefinementSurface } from "../surfaces/refinement/refinement-surface.tsx";
@@ -54,6 +55,8 @@ import {
   deliveryWorkspaceSummaryTitle,
 } from "./workspace-view-model.ts";
 import { DeliveryPackageWorkflowRouter } from "../package-register/index.ts";
+import { DeliveryPIPlanningSurface } from "../surfaces/pi-planning/pi-planning-surface.tsx";
+import { PIPlanningPreviewContext } from "./pi-planning-preview-context.ts";
 
 export function DeliveryWorkspaceModal({
   activeSurfaceId,
@@ -93,6 +96,18 @@ export function DeliveryWorkspaceModal({
   ) => void;
   packageRegisterFocus: DeliveryPackageRegisterFocus | null;
 }) {
+  const localPlanning = model.source_truth === "mock";
+  const [planningSource, setPlanningSource] = useState<DeliveryReadModel | null>(null);
+  const [planningDraftDirty, setPlanningDraftDirty] = useState(false);
+  const [planningIncrement, setPlanningIncrement] = useState("");
+  const [planningHandoff, setPlanningHandoff] = useState<{ packageId: string; from: "refinement" | "execution-board" } | null>(null);
+  const workspaceSections = model.history_scope !== "history"
+    ? [
+        ...deliveryWorkspaceSurfaces.slice(0, 4),
+        { id: "pi-planning" as const, title: "PI Planning", tone: "info" as const },
+        ...deliveryWorkspaceSurfaces.slice(4),
+      ]
+    : deliveryWorkspaceSurfaces;
   const [workspacePackageAction, setWorkspacePackageAction] =
     useState<DeliveryPackageActionState | null>(null);
   const [catalogDeliveryLinkTarget, setCatalogDeliveryLinkTarget] =
@@ -102,6 +117,7 @@ export function DeliveryWorkspaceModal({
     sourceId: string;
     token: number;
   } | null>(null);
+  const [executionWorkBoardSummary, setExecutionWorkBoardSummary] = useState<ExecutionWorkBoardSummary | null>(null);
   const [executionTreeEditState, setExecutionTreeEditState] =
     useState<ExecutionTreeEditState>({
       active: false,
@@ -119,10 +135,13 @@ export function DeliveryWorkspaceModal({
     | { type: "scope"; scope: "current" | "history" }
     | null
   >(null);
-  const workspaceSummaryStats = deliveryWorkspaceSummaryStats({
+  const compactBoardLayout = activeSurfaceId === "execution-board" || activeSurfaceId === "pi-planning";
+  const workBoardSummary = activeSurfaceId === "execution-board" ? executionWorkBoardSummary : null;
+  const workspaceSummaryStats = workBoardSummary?.metrics ?? deliveryWorkspaceSummaryStats({
     activeSurfaceId,
     executionCount,
-    model,
+    model: activeSurfaceId === "pi-planning" && planningSource ? planningSource : model,
+    planningIncrement,
   });
   const workspaceSummaryDescription =
     deliveryWorkspaceSummaryDescription(activeSurfaceId);
@@ -159,7 +178,7 @@ export function DeliveryWorkspaceModal({
   }
 
   function requestWorkspaceClose() {
-    if (dirtyExecutionTreeDraftActive()) {
+    if (planningDraftDirty || dirtyExecutionTreeDraftActive()) {
       setPendingWorkspaceExit({ type: "close" });
       return;
     }
@@ -172,7 +191,7 @@ export function DeliveryWorkspaceModal({
       return;
     }
 
-    if (dirtyExecutionTreeDraftActive()) {
+    if (planningDraftDirty || dirtyExecutionTreeDraftActive()) {
       setPendingWorkspaceExit({
         surfaceId,
         type: "surface",
@@ -181,6 +200,7 @@ export function DeliveryWorkspaceModal({
     }
 
     if (surfaceId !== "catalog") setCatalogDeliveryLinkTarget(null);
+    setPlanningHandoff(null);
     onActiveSurfaceChange(surfaceId);
   }
 
@@ -203,6 +223,7 @@ export function DeliveryWorkspaceModal({
     }
 
     if(pendingExit.type === "scope") { onRecordScopeChange?.(pendingExit.scope); return; }
+    setPlanningHandoff(null);
     onActiveSurfaceChange(pendingExit.surfaceId);
   }
 
@@ -250,10 +271,20 @@ export function DeliveryWorkspaceModal({
   }
 
   return (
+    <PIPlanningPreviewContext.Provider value={model.history_scope !== "history" ? {
+      plans: model.preview_pi_plans ?? {},
+      preview: localPlanning,
+      open: (packageId) => {
+        if (activeSurfaceId !== "refinement" && activeSurfaceId !== "execution-board") return;
+        if (dirtyExecutionTreeDraftActive()) return;
+        setPlanningHandoff({ packageId, from: activeSurfaceId });
+        onActiveSurfaceChange("pi-planning");
+      },
+    } : null}>
     <TerasModalShell
       agentHost
       bodyLayout="fill"
-      description="Fullscreen Delivery workspace for intake, work design, refinement, execution, and Delivery Catalog."
+      description={localPlanning ? "Disconnected preview of the Delivery workspace." : "Fullscreen Delivery workspace for intake, work design, refinement, execution, and Delivery Catalog."}
       kicker="Delivery Workspace"
       modalAttributes={getOperationWorkbenchSurfaceAttributes(contract)}
       onClose={requestWorkspaceClose}
@@ -263,10 +294,12 @@ export function DeliveryWorkspaceModal({
       width="viewport"
     >
       <TerasFullscreenSurfaceFrame
+        data-compact-toolbar={compactBoardLayout ? "true" : undefined}
         nav={
           <TerasSurfaceNav
             ariaLabel="Delivery workspace sections"
             description="Switch between delivery control surfaces."
+            keepCurrentVisible={compactBoardLayout}
             kicker="Workspace Nav"
             title="Delivery Areas"
           >
@@ -274,7 +307,7 @@ export function DeliveryWorkspaceModal({
               <TerasActionRow spacing="none">
                 <TerasSegmentedControl
                   ariaLabel="Delivery record scope"
-                  disabled={activeSurfaceId === "home" || activeSurfaceId === "catalog"}
+                  disabled={activeSurfaceId === "home" || activeSurfaceId === "catalog" || activeSurfaceId === "pi-planning"}
                   layout="fit"
                   size="compact"
                   value={model.history_scope ?? "current"}
@@ -283,7 +316,7 @@ export function DeliveryWorkspaceModal({
                     { label: "History", value: "history" as const },
                   ]}
                   onValueChange={(scope) => {
-                    if (dirtyExecutionTreeDraftActive()) {
+                    if (planningDraftDirty || dirtyExecutionTreeDraftActive()) {
                       setPendingWorkspaceExit({ type: "scope", scope });
                     } else {
                       onRecordScopeChange(scope);
@@ -292,7 +325,7 @@ export function DeliveryWorkspaceModal({
                 />
               </TerasActionRow>
             ) : null}
-            {deliveryWorkspaceSurfaces.map((surface) => {
+            {workspaceSections.map((surface, index) => {
               const count = deliverySurfaceItemCount({
                 executionCount,
                 model,
@@ -304,7 +337,7 @@ export function DeliveryWorkspaceModal({
                   current={activeSurfaceId === surface.id}
                   data-delivery-workspace-section={surface.id}
                   key={surface.id}
-                  kicker={surface.kicker}
+                  kicker={String(index + 1).padStart(2, "0")}
                   meta={
                     surface.id === "home"
                       ? "Command"
@@ -313,7 +346,7 @@ export function DeliveryWorkspaceModal({
                         : String(count)
                   }
                   onClick={() => requestActiveSurfaceChange(surface.id)}
-                  title={workspaceNavTitle(surface.id)}
+                  title={surface.id === "pi-planning" ? surface.title : workspaceNavTitle(surface.id)}
                   tone={surface.tone}
                 />
               );
@@ -324,15 +357,33 @@ export function DeliveryWorkspaceModal({
           <TerasSurfaceSummaryHeader
             ariaLabel="Delivery workspace summary"
             description={workspaceSummaryDescription}
-            metrics={workspaceSummaryStats.map(metric=>({...metric,value:metric.value==="—"?<span aria-label="Total not available" title="The full total is not available. Open Intake to browse source history.">—</span>:metric.value}))}
+            metrics={workspaceSummaryStats.map(metric => ({
+              ...metric,
+              value: metric.value === "—" ? <span aria-label="Total not available"
+                title={activeSurfaceId === "pi-planning" ? "Select a PI after planning data has loaded."
+                  : "The full total is not available. Open Intake to browse source history."}>—</span> : metric.value,
+            }))}
             statuses={projectOperationSurfaceStatusItems(
               deliveryWorkspaceComponentStatuses(model),
             )}
-            title={`${model.history_scope ? model.history_scope === "history" ? "History · " : "Current · " : ""}${deliveryWorkspaceSummaryTitle(activeSurfaceId)}`}
+            title={`${model.history_scope ? model.history_scope === "history" ? "History · " : "Current · " : ""}${workBoardSummary?.title ?? deliveryWorkspaceSummaryTitle(activeSurfaceId)}`}
           />
         }
       >
-        <DeliveryWorkspaceSurfaceContent
+        {activeSurfaceId === "pi-planning" ? <DeliveryPIPlanningSurface
+          model={model}
+          focusPackageId={planningHandoff?.packageId ?? null}
+          onDirtyChange={setPlanningDraftDirty}
+          onPlanningIncrementChange={setPlanningIncrement}
+          onCanonicalChanged={onExecutionChanged}
+          onModelRead={setPlanningSource}
+          returnLabel={planningHandoff ? "Back to " + workspaceNavTitle(planningHandoff.from) : undefined}
+          onReturn={planningHandoff ? () => {
+            if (planningHandoff.from === "refinement") onRequestPackageRegisterFocus("refinement", planningHandoff.packageId);
+            else onActiveSurfaceChange("execution-board");
+            setPlanningHandoff(null);
+          } : undefined}
+        /> : <DeliveryWorkspaceSurfaceContent
           onExecutionChanged={onExecutionChanged}
           key={`${activeSurfaceId}:${model.history_scope??"preview"}`}
           activeSurfaceId={activeSurfaceId}
@@ -354,6 +405,7 @@ export function DeliveryWorkspaceModal({
           onCloseFocusedIntakeSource={closeFocusedIntakeSource}
           onConsumeSource={onConsumeSource}
           onExecutionTreeEditStateChange={recordExecutionTreeEditState}
+          onExecutionWorkBoardSummaryChange={setExecutionWorkBoardSummary}
           onOpenCatalogForDelivery={(target) => {
             setCatalogDeliveryLinkTarget(target);
             onActiveSurfaceChange("catalog");
@@ -363,7 +415,7 @@ export function DeliveryWorkspaceModal({
           onRequestPackageRegisterFocus={onRequestPackageRegisterFocus}
           onWorkDesignApplied={onWorkDesignApplied}
           packageRegisterFocus={packageRegisterFocus}
-        />
+        />}
       </TerasFullscreenSurfaceFrame>
       <DeliveryPackageWorkflowRouter
         model={model}
@@ -378,11 +430,12 @@ export function DeliveryWorkspaceModal({
       />
       <TerasDraftCloseGuardDialog
         description={
-          pendingWorkspaceExit?.type === "close"
+          planningDraftDirty ? "This PI plan has unsaved changes. Record the plan or discard the draft before leaving."
+            : pendingWorkspaceExit?.type === "close"
             ? `An execution tree draft${executionTreeEditState.packageLabel ? ` for ${executionTreeEditState.packageLabel}` : ""} has unsaved changes. Closing Delivery Workspace will discard it.`
             : `An execution tree draft${executionTreeEditState.packageLabel ? ` for ${executionTreeEditState.packageLabel}` : ""} has unsaved changes. Switching Delivery areas will discard it.`
         }
-        kicker="Execution Tree Draft"
+        kicker={planningDraftDirty ? "PI Planning Draft" : "Execution Tree Draft"}
         keepEditingLabel="Keep Editing"
         leaveLabel={
           pendingWorkspaceExit?.type === "close"
@@ -395,10 +448,11 @@ export function DeliveryWorkspaceModal({
         title={
           pendingWorkspaceExit?.type === "close"
             ? "Close Delivery Workspace?"
-            : "Leave Execution Board?"
+            : planningDraftDirty ? "Leave PI Planning?" : "Leave Execution Board?"
         }
       />
     </TerasModalShell>
+    </PIPlanningPreviewContext.Provider>
   );
 }
 
@@ -414,6 +468,7 @@ function DeliveryWorkspaceSurfaceContent({
   onCloseFocusedIntakeSource,
   onConsumeSource,
   onExecutionTreeEditStateChange,
+  onExecutionWorkBoardSummaryChange,
   onOpenCatalogForDelivery,
   intakeFocus,
   onOpenPackageAction,
@@ -432,6 +487,7 @@ function DeliveryWorkspaceSurfaceContent({
   onCloseFocusedIntakeSource: () => void;
   onConsumeSource: (source: DeliveryIntakeSource) => void;
   onExecutionTreeEditStateChange: (state: ExecutionTreeEditState) => void;
+  onExecutionWorkBoardSummaryChange: (summary: ExecutionWorkBoardSummary | null) => void;
   onOpenCatalogForDelivery: (target: CatalogDeliveryLinkTarget | null) => void;
   intakeFocus: {
     returnSurfaceId: DeliveryWorkspaceSurfaceId;
@@ -488,6 +544,7 @@ function DeliveryWorkspaceSurfaceContent({
         model={model}
         onOpenCatalog={onOpenCatalogForDelivery}
         onTreeEditStateChange={onExecutionTreeEditStateChange}
+        onWorkBoardSummaryChange={onExecutionWorkBoardSummaryChange}
         showIntro={false}
       />
     );

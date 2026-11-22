@@ -31,11 +31,13 @@ export function executionBoardApplyIntent({
   packageTree: DeliveryArtNode | null;
   sourceRevision: string;
 }): DeliveryApplyIntent {
+  const target = action.scope === "execution_target" ? packageTree : null;
   return (
     model.apply_intents.find(
       (intent) =>
         intent.action_type === action.action_type &&
-        intent.delivery_package_id === packageSummary.delivery_package_id,
+        intent.delivery_package_id === packageSummary.delivery_package_id &&
+        (!(action.action_type === "clear-blocker" && target) || intent.target_work_item_id === target.legacy_work_package_id),
     ) ??
     buildFallbackActionIntent({
       action,
@@ -185,12 +187,13 @@ function buildFallbackActionIntent({
   packageTree: DeliveryArtNode | null;
   sourceRevision: string;
 }): DeliveryApplyIntent {
+  const target = action.scope === "execution_target" ? packageTree : null;
   return {
     action_type: action.action_type,
     artifacts: [],
-    advisor_reason:
+    advisor_reason: target ? null :
       "This prepares a review of the selected package. The service checks prerequisites and the exact source revision when you confirm.",
-    current_backend_status: packageSummary.backend_status,
+    current_backend_status: target?.backend_status ?? packageSummary.backend_status,
     current_package_posture: getDeliveryEffectivePackagePosture(packageSummary),
     delivery_package_id: packageSummary.delivery_package_id,
     dirty_state: packageSummary.tone === "stale" ? "stale" : "clean",
@@ -217,7 +220,7 @@ function buildFallbackActionIntent({
         tone: actionContract.family === "blocker" ? "warn" : "ok",
       },
     ],
-    intent_id: `intent-fallback-${packageSummary.delivery_package_id}-${action.action_type}`,
+    intent_id: `intent-fallback-${target?.id ?? packageSummary.delivery_package_id}-${action.action_type}`,
     operator_payload: executionFallbackOperatorPayload(action),
     receipt_category: actionContract.receiptCategory,
     required_payload_fields: executionFallbackRequiredPayloadFields(action),
