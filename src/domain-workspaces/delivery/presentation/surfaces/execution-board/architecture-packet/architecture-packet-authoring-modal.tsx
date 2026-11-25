@@ -1,27 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SavedWorkBoundary, SavedWorkStatus, useSavedWorkSession } from "@/console-integration/saved-work/saved-work-boundary";
 
 import {
+  TerasPlanning,
   TerasActionButton,
   TerasChoiceGroup,
-  TerasContentRegion,
-  TerasLoadingState,
-  TerasSegmentedControl,
-  TerasActionRow,
+  TerasContentTray,
   TerasDraftCloseGuardDialog,
   TerasEmptyState,
   TerasFieldStack,
-  TerasMetadataList,
-  TerasModalShell,
-  TerasNoteField,
   TerasPanel,
   TerasPanelHeader,
   TerasPanelStack,
   TerasSignalItem,
   TerasTechnicalDetails,
   TerasZone,
-  TerasZoneLayout,
 } from "@/teras";
 import { ArchitecturePacketLiveRuntimeError, useArchitecturePacketLiveRuntime } from "../../../../live-runtime/use-architecture-packet-live-runtime.ts";
 import type {
@@ -35,20 +30,51 @@ import {
   architecturePacketEditorIssues,
   architecturePacketInputFromEditor,
   emptyArchitecturePacketEditor,
+  normalizeSavedTechnicalPlan,
+  starterTechnicalPlanEditor,
+  type SavedTechnicalPlan,
   type ArchitecturePacketEditor,
 } from "./architecture-packet-editor-model.ts";
 import type { DeliveryReadModel } from "../../../../read-model/delivery-read-model.ts";
 import { ArchitecturePlanEditor } from "./architecture-plan-editor.tsx";
 import { ArchitectureSavedContext, useArchitectureSavedContext } from "./architecture-saved-context.tsx";
-import { technicalPlanDefaultSection, technicalPlanFillRecordedFacts, technicalPlanWorkItems } from "../../../../work-model/execution/technical-plan-model.ts";
+import { architectureFormContract } from "../../../../work-model/execution/architecture-form-model.ts";
+import { technicalPlanDefaultSection, technicalPlanPrepareDraft, technicalPlanReplaceScope, technicalPlanScopeDropsChoices, technicalPlanWorkItems, technicalPlanWorkLabel } from "../../../../work-model/execution/technical-plan-model.ts";
+import type { PlanChangeConfirmation } from "./architecture-plan-field.tsx";
 import { TechnicalPlanAdvisor } from "./technical-plan-advisor.tsx";
 import { TechnicalPlanReview } from "./technical-plan-review.tsx";
-import { TechnicalPlanOverview } from "./technical-plan-overview.tsx";
+import { TechnicalPlanScope } from "./technical-plan-overview.tsx";
 import { TechnicalPlanActionPanel } from "./technical-plan-action-panel.tsx";
 import { technicalPlanRequirement, type TechnicalPlanRequirement } from "../../../../work-model/execution/technical-plan-requirement.ts";
 import { TechnicalPlanSequenceView } from "./technical-plan-sequence-view.tsx";
+import { technicalPlanCheckSection } from "../../../../live-runtime/architecture-packet-live-contract.ts";
+import { technicalPlanSection } from "../../../../work-model/execution/technical-plan-model.ts";
+import { technicalPlanGuidanceScope, type TechnicalPlanSourceContext } from "../../../../work-model/execution/technical-plan-guidance.ts";
+import type { ExecutionPlanStarterTransfer } from "../work-session/execution-technical-plan-guidance.tsx";
 
-export function ArchitecturePacketAuthoringModal({
+type ArchitecturePacketAuthoringProps = {
+  defaultDeliveryId: string | null;
+  defaultWorkItemId: number | null;
+  onClose: () => void;
+  model: DeliveryReadModel;
+  readOnly?: boolean;
+  onCanonicalChanged?: () => Promise<void>;
+  requirement?: TechnicalPlanRequirement;
+  starter?: ExecutionPlanStarterTransfer | null;
+  onOpenWorkBoard?: (workItemId: number | null) => void;
+  sourceContext?: TechnicalPlanSourceContext;
+};
+
+export function ArchitecturePacketAuthoringModal(props: ArchitecturePacketAuthoringProps) {
+  const packageId = props.defaultDeliveryId;
+  if (props.readOnly || !packageId) return <ArchitecturePacketEditorModal {...props} />;
+  return <SavedWorkBoundary key={packageId} storageKey={`delivery-technical-plan-draft:${packageId}:v1`}
+    onClose={props.onClose} normalize={value => normalizeSavedTechnicalPlan(value, packageId)}>
+    <ArchitecturePacketEditorModal {...props} />
+  </SavedWorkBoundary>;
+}
+
+function ArchitecturePacketEditorModal({
   defaultDeliveryId,
   defaultWorkItemId,
   onClose,
@@ -57,22 +83,19 @@ export function ArchitecturePacketAuthoringModal({
   onCanonicalChanged,
   sourceContext,
   requirement: suppliedRequirement,
+  starter,
   onOpenWorkBoard,
-}: {
-  defaultDeliveryId: string | null;
-  defaultWorkItemId: number | null;
-  onClose: () => void;
-  model: DeliveryReadModel;
-  readOnly?: boolean;
-  onCanonicalChanged?: () => Promise<void>;
-  requirement?: TechnicalPlanRequirement;
-  onOpenWorkBoard?: () => void;
-  sourceContext?: { tree: import("../../../../live-runtime/delivery-change-live-types.ts").DeliveryChangeNode; revision: string };
-}) {
+}: ArchitecturePacketAuthoringProps) {
   const runtime = useArchitecturePacketLiveRuntime();
+  const draftSession = useSavedWorkSession();
   const exitAction = useRef(onClose);
+  const [startingDraft] = useState(() => {
+    const raw = draftSession?.read();
+    try { return raw ? normalizeSavedTechnicalPlan(JSON.parse(raw), defaultDeliveryId ?? "")?.draft ?? null : null; }
+    catch { return null; }
+  });
   const [editor, setEditor] = useState(() =>
-    technicalPlanFillRecordedFacts(emptyArchitecturePacketEditor({
+    technicalPlanPrepareDraft(startingDraft ?? emptyArchitecturePacketEditor({
       deliveryId: defaultDeliveryId ?? "",
       workItemId: defaultWorkItemId,
     }), model),
@@ -85,12 +108,19 @@ export function ArchitecturePacketAuthoringModal({
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [closeGuardOpen, setCloseGuardOpen] = useState(false);
+  const [pendingChange, setPendingChange] = useState<(PlanChangeConfirmation & { draft: ArchitecturePacketEditor }) | null>(null);
   const live = model.source_truth === "OpenProject-backed OOS";
-  const [tab, setTab] = useState("overview"), [section,setSection] = useState<string>(technicalPlanDefaultSection);
-  const [confirmed,setConfirmed] = useState(false),[readError,setReadError] = useState<string|null>(null),[checking,setChecking] = useState(live),[editing,setEditing] = useState(false),[missing,setMissing] = useState(false);
+  const [step, setStep] = useState<"scope" | "plan" | "review">(readOnly ? "review" : "scope");
+  const [planView, setPlanView] = useState<"edit" | "design" | "sequence">("edit");
+  const [section, setSection] = useState<string>(technicalPlanDefaultSection);
+  const [advisorWide, setAdvisorWide] = useState(false);
+  const [confirmed,setConfirmed] = useState(false),[readError,setReadError] = useState<string|null>(null),[checking,setChecking] = useState(live),[editing,setEditing] = useState(Boolean(startingDraft)),[missing,setMissing] = useState(false);
   const saved = useArchitectureSavedContext(editor.deliveryId,live);
   const item = model.packages.find(item=>item.delivery_package_id===editor.deliveryId||`delivery-${item.legacy_epic_id}`===editor.deliveryId);
-  const titles = useMemo(()=>Object.fromEntries(technicalPlanWorkItems(model,editor.deliveryId).map(node=>[`work-item-${node.legacy_work_package_id}`,`${node.component_type} ${node.legacy_work_package_id} · ${node.title}`])),[model,editor.deliveryId]);
+  const nodes = useMemo(() => technicalPlanWorkItems(model, editor.deliveryId), [model, editor.deliveryId]);
+  const titles = useMemo(() => Object.fromEntries(nodes.map(node => [
+    `work-item-${node.legacy_work_package_id}`, technicalPlanWorkLabel(node),
+  ])), [nodes]);
   useEffect(()=>{
     if(!live){setChecking(false);return;}
     let active=true;setChecking(true);
@@ -103,22 +133,76 @@ export function ArchitecturePacketAuthoringModal({
     return()=>{active=false;};
   },[live,editor.deliveryId,runtime.inspectCurrent]);
   const savedDraft = useRef(JSON.stringify(editor));
+  const pendingDraft = useMemo<SavedTechnicalPlan>(() => ({ schemaVersion: 1, packageId: editor.deliveryId, draft: editor }), [editor]);
   const dirty = JSON.stringify(editor) !== savedDraft.current;
+  const [starterNotice, setStarterNotice] = useState<string | null>(null);
+  const attemptedStarter = useRef<ExecutionPlanStarterTransfer | null>(null);
+  useEffect(() => {
+    if (!starter || checking || attemptedStarter.current === starter) return;
+    attemptedStarter.current = starter;
+    if (startingDraft || current || dirty) {
+      setStarterNotice("Opened the existing plan. Its content is preserved.");
+      return;
+    }
+    const saveStatus = draftSession?.getSnapshot().status;
+    if (!live || readOnly || !missing || readError || !draftSession ||
+        !["ready", "saved"].includes(saveStatus ?? "")) {
+      setStarterNotice("Could not confirm that this package is clear for a new draft. Read the existing plan before trying again.");
+      return;
+    }
+    const activeScope = technicalPlanGuidanceScope(model, editor.deliveryId, starter.scope.work.id, sourceContext);
+    if (activeScope?.basis !== starter.scope.basis || activeScope.sourceRevision !== starter.scope.sourceRevision) {
+      setStarterNotice("The work changed before the editor opened. Check the current scope again.");
+      return;
+    }
+    setEditor(technicalPlanPrepareDraft(starterTechnicalPlanEditor(activeScope, starter.draft), model));
+    setEditing(true);
+    setStarterNotice("The starter includes an approach, checks and rollback steps for the selected work. Review and complete it before validating.");
+  }, [starter, checking, startingDraft, current, dirty, draftSession, live, readOnly, missing, readError, model, editor.deliveryId, sourceContext]);
+  const draftBasis = editor.starterBasis;
+  const staleStarter = draftBasis && !persisted && editing && (
+    editor.coveredWorkItemIds.length !== 1 ||
+    editor.coveredWorkItemIds[0] !== `work-item-${draftBasis.workItemId}` ||
+    technicalPlanGuidanceScope(model, editor.deliveryId, draftBasis.workItemId, sourceContext)?.basis !== draftBasis.scope
+  );
+
+  useEffect(() => {
+    if (editing && dirty && !persisted) draftSession?.write(pendingDraft);
+  }, [draftSession, editing, dirty, pendingDraft, persisted]);
+
+  const draftNeedsCloseGuard = useCallback(() => {
+    const status = draftSession?.getSnapshot().status;
+    return dirty && (!draftSession || draftSession.read() !== JSON.stringify(pendingDraft) ||
+      (status !== "saved" && status !== "local"));
+  }, [dirty, draftSession, pendingDraft]);
 
   function requestClose() {
     exitAction.current = onClose;
     if (submitting) return;
-    if (dirty) setCloseGuardOpen(true);
+    if (draftNeedsCloseGuard()) setCloseGuardOpen(true);
     else onClose();
   }
 
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {
-      if (dirty || submitting) event.preventDefault();
+      if (submitting || draftNeedsCloseGuard()) event.preventDefault();
     };
     window.addEventListener("beforeunload", guard);
     return () => window.removeEventListener("beforeunload", guard);
-  }, [dirty, submitting]);
+  }, [draftNeedsCloseGuard, submitting]);
+
+  const changeConfirmation = pendingChange?.draft === editor ? pendingChange : null;
+  function confirmChange(change: PlanChangeConfirmation) {
+    setPendingChange({ ...change, draft: editor });
+  }
+
+  function changeScope(ids: string[]) {
+    const apply = () => edit(current => technicalPlanReplaceScope(current, ids, model));
+    if (technicalPlanScopeDropsChoices(editor, ids)) {
+      confirmChange({ title: "Remove work from this plan?", description: "This scope change removes assigned checks or dependency timing for the excluded work.",
+        actionLabel: "Remove from scope", apply });
+    } else apply();
+  }
 
   const draftIssues = useMemo(
     () => architecturePacketEditorIssues(editor, "draft"),
@@ -131,7 +215,10 @@ export function ArchitecturePacketAuthoringModal({
 
   function edit(update: (current: ArchitecturePacketEditor) => ArchitecturePacketEditor) {
     if(readOnly||submitting)return;
-    setEditor(update);
+    setEditor(current => {
+      const next = update(current);
+      return next === current ? current : technicalPlanPrepareDraft(next, model);
+    });
     setEditing(true);setConfirmed(false);
     setValidated(null);
     setApproved(null);
@@ -176,8 +263,13 @@ export function ArchitecturePacketAuthoringModal({
   }
 
   async function validateDraft() {
+    const draft = technicalPlanPrepareDraft(editor, model);
+    if (draft !== editor) {
+      setEditor(draft);
+      setEditing(true);
+    }
     const snapshot = await runtime.draft(
-      architecturePacketInputFromEditor(editor, "draft"),
+      architecturePacketInputFromEditor(draft, "draft"),
     );
     const result = snapshot.result;
     if (!result || result.workflow_id !== "delivery-art-architecture-packet-draft") {
@@ -185,7 +277,7 @@ export function ArchitecturePacketAuthoringModal({
     }
     if(result.architecture_packet.delivery_id!==editor.deliveryId || [...result.architecture_packet.covered_work_item_ids].sort().join()!==editor.coveredWorkItemIds.map(id=>id.trim()).filter(Boolean).sort().join()) throw Error("The validated plan did not match the selected package and covered work.");
     setValidated(result);
-    setConfirmed(false);setTab("review");
+    setConfirmed(false);setStep("review");
     setApproved(null);
     setPersisted(null);
   }
@@ -222,79 +314,223 @@ export function ArchitecturePacketAuthoringModal({
     setPersisted(result);
     setConfirmed(false);void onCanonicalChanged?.().catch(()=>undefined);
     savedDraft.current = persistedDraft;
+    draftSession?.write({ schemaVersion: 1, packageId: editor.deliveryId, draft: null } satisfies SavedTechnicalPlan);
   }
 
-  const displayed = persisted?.artifact ?? approved?.architecture_packet ?? validated?.architecture_packet ?? (!editing?current?.artifact:null) ?? null;
+  const recordedPlan = editing ? null : current;
+  const displayed = persisted?.artifact ?? approved?.architecture_packet ?? validated?.architecture_packet ?? recordedPlan?.artifact ?? null;
   const viewEditor = displayed ? architecturePacketEditorFromArtifact(displayed) : editor;
-  const sourceLabel = persisted ? "Recorded approved plan" : approved ? "Approved locally · not recorded" : validated ? "Validated draft" : current&&!editing ? "Recorded plan" : "Unvalidated local draft";
-  const stateLabel = persisted ? "Approved and recorded" : approved ? "Approval not yet recorded" : validated ? "Ready for review" : checking ? "Checking recorded plan…" : current&&!editing ? current.contract_posture === "current" ? "Approved plan available" : "Historical · read-only" : editing ? "Local draft" : missing ? "No approved plan recorded" : !live ? "Disconnected preview" : "Plan check unavailable";
-  const requirement = readOnly ? {...technicalPlanRequirement({deliveryId:editor.deliveryId}),title:"Recorded technical agreement",detail:"Inspect the historical plan and covered scope. Current execution requirements are checked outside History."} : suppliedRequirement ?? technicalPlanRequirement({deliveryId:editor.deliveryId,available:live});
-  const actionTitle = persisted ? "Approval recorded" : readOnly ? "Inspect the recorded plan" : approved ? "Record the approved plan" : validated ? "Review and approve" : current&&!editing ? "Review the recorded plan" : tab === "overview"&&!editing ? requirement.status === "required" ? "Prepare the required plan" : requirement.status === "binding" ? "Review the existing plan" : requirement.status === "not-required" ? "Continue with the checked work" : requirement.status === "covered" ? "Inspect the approved plan" : "Choose work to inspect" : "Validate this draft";
-  const actionDescription = persisted ? "Recording is confirmed. Return to the work-start checks to continue execution." : readOnly ? "Inspect the saved agreement and evidence. This historical view keeps changes locked." : approved ? "Approval is not recorded yet. Record this exact candidate so execution can reference it." : validated ? "Review the candidate in Review Plan and explicitly accept it. Approval rechecks the source before recording." : current&&!editing ? "Reuse the recorded agreement while its scope and design remain applicable. Revise it for a material change." : tab === "overview"&&!editing ? requirement.status === "unknown" ? "Open a work item on the Work Board to check whether it needs a plan." : requirement.detail : "Check the scope, implementation and verification plan. Validation does not approve or start work.";
-  const disabledReason = submitting ? "Waiting for the workflow response…" : !live ? "Validation and recording are unavailable in disconnected preview." : !approved&&validated&&!confirmed ? "Select the explicit approval choice in Review Plan to enable approval." : !approved&&!validated&&(editing||tab === "prepare")&&draftIssues.length ? draftIssues[0] : null;
-  function returnToWorkBoard(){ if(!onOpenWorkBoard)return;exitAction.current=onOpenWorkBoard;if(dirty)setCloseGuardOpen(true);else onOpenWorkBoard(); }
-  function reviseCurrent(){if(!current||readOnly||current.contract_posture!=="current")return;const next=architecturePacketEditorFromArtifact(current.artifact);edit(()=>next);savedDraft.current=JSON.stringify(next);setTab("prepare");}
-  let architecture: unknown = null, architectureError = false;try{architecture=JSON.parse(viewEditor.architectureJson);}catch{architectureError=true;}
+  const sourceLabel = persisted || recordedPlan?.contract_posture === "current" ? "Recorded approved plan" :
+    recordedPlan ? "Historical plan" : approved ? "Approved · recording pending" : validated ? "Validated draft" : "Draft · awaiting validation";
+  const stateLabel = readOnly ? "Read-only" : displayed ? sourceLabel : checking ? "Reading recorded plan…" :
+    editing ? "Draft in progress" : missing ? "No approved plan recorded" : !live ? "Disconnected preview" : "Plan status unavailable";
+  const requirement = suppliedRequirement ?? technicalPlanRequirement({ deliveryId: editor.deliveryId, available: live });
+  const workTitle = defaultWorkItemId ? titles[`work-item-${defaultWorkItemId}`] ?? `Work item #${defaultWorkItemId}` : undefined;
+  const workReason = defaultWorkItemId && requirement.status !== "unknown" ? requirement.detail : undefined;
+  const editable = !readOnly && !recordedPlan && !persisted && !submitting && (!checking || editing);
+  const needsScope = viewEditor.coveredWorkItemIds.length === 0;
+  const needsSummary = viewEditor.rationale.trim().length < 20;
+  const canRevise = !readOnly && recordedPlan?.contract_posture === "current";
+  const returnLabel = defaultWorkItemId ? "Return to work start" : "Open Work Board";
+  const hasRecordedPlan = Boolean(persisted || recordedPlan);
+  const inspectPlan = readOnly || hasRecordedPlan;
+  const canOpenPlanForm = !inspectPlan || displayed?.schema_version === architectureFormContract.authoringVersion;
+  let architecture: unknown = null;
+  try { architecture = JSON.parse(viewEditor.architectureJson); } catch {}
+  const architectureError = !architecture || typeof architecture !== "object" || Array.isArray(architecture);
+
+  function returnToWorkBoard() {
+    if (!onOpenWorkBoard || submitting) return;
+    const navigate = () => onOpenWorkBoard(defaultWorkItemId);
+    exitAction.current = navigate;
+    if (draftNeedsCloseGuard()) setCloseGuardOpen(true); else navigate();
+  }
+
+  function openChanges(view: typeof planView = "edit") {
+    setPlanView(view);
+    setStep("plan");
+  }
+
+  function openCheck(issue: string) {
+    if (issue.startsWith("Covered work") || issue.startsWith("Operator rationale") ||
+        technicalPlanCheckSection(issue) === "architecture:descendant_owner_map") {
+      setStep("scope");
+      return;
+    }
+    const target = technicalPlanCheckSection(issue);
+    if (target) setSection(target);
+    openChanges();
+  }
+
+  function checkLabelFor(issue: string) {
+    if (issue.startsWith("Covered work")) return "Choose the work this plan covers.";
+    if (issue.startsWith("Operator rationale")) return "Explain the approach and its limits in the plan summary.";
+    if (issue.startsWith("Conformance requirement")) return "Include the verification required to approve this plan.";
+    if (/^(At least one evidence handoff|Runtime activation steps|Verification cases must|Git dependency verification)/.test(issue)) return issue;
+    const target = technicalPlanCheckSection(issue);
+    return target ? `Review ${technicalPlanSection(target)[1].toLowerCase()}.` : issue;
+  }
+
+  function reviseCurrent() {
+    if (!canRevise || !current || submitting) return;
+    const next = architecturePacketEditorFromArtifact(current.artifact);
+    edit(() => next);
+    savedDraft.current = JSON.stringify(next);
+    openChanges();
+  }
+
+  const checkToResolve = !displayed && draftIssues[0];
+  const historyWithoutPlan = readOnly && !hasRecordedPlan;
+  const recordedPlanTitle = recordedPlan?.contract_posture === "historical-read-only" ? "Historical plan" : "Plan recorded";
+  const reviewPreparation = planView === "design" ? "Use the saved diagrams and brief to check the plan against the system design." :
+    planView === "sequence" ? "Check the order of work and required approvals before continuing." :
+    "Prepare the changes, verification, and recovery steps before review.";
+  const actionTitle = historyWithoutPlan ? (checking ? "Checking for a recorded plan" : missing ? "No recorded plan" : "Recorded plan unavailable") :
+    step === "scope" ? (inspectPlan ? "Review the saved scope" : needsScope ? "Choose work to include" : "Review the plan’s scope") :
+    step === "plan" ? (inspectPlan ? "Review the saved plan" : "Review your plan") : hasRecordedPlan ? recordedPlanTitle :
+    approved ? "Record the approved plan" : validated ? "Approve the reviewed plan" :
+    checkToResolve ? "Resolve the remaining checks" : "Validate this draft";
+  const actionDescription = historyWithoutPlan ? (checking ? "Reading the plan saved for this package." : "History displays plans recorded for this package.") :
+    step === "scope" ? (inspectPlan ? "See the work included in the recorded plan." : "Review the included work and explain the approach before continuing.") :
+    step === "plan" ? (inspectPlan ? "Continue to review the recorded plan and its evidence." : reviewPreparation) :
+    hasRecordedPlan ? (readOnly || !onOpenWorkBoard ? "Inspect the saved plan and its source evidence." :
+      defaultWorkItemId ? "Return to the work-start check for the selected item." : "Open the package’s Work Board to see its work items.") :
+    approved ? "Record this approved version for work start." :
+    validated ? "Review the checked plan and approve it for the covered work." :
+    checkToResolve ? checkLabelFor(checkToResolve) : "Check the draft against the current work and source evidence.";
+  const disabledReason = step !== "review" ? null :
+    validated && !approved && !confirmed ? "Confirm the approval decision below the reviewed plan." :
+    !live && !recordedPlan && !persisted ? "Validation and recording need a connected workspace." : null;
+
+  function primaryAction() {
+    if (historyWithoutPlan) return null;
+    if (step === "scope") return <TerasActionButton disabled={submitting} onClick={() => openChanges(
+      canOpenPlanForm ? "edit" : "sequence")}>Continue to plan</TerasActionButton>;
+    if (step === "plan") return <TerasActionButton disabled={submitting} onClick={() => setStep("review")}>Continue to review</TerasActionButton>;
+    if (readOnly || recordedPlan || persisted) return onOpenWorkBoard && !readOnly ?
+      <TerasActionButton disabled={submitting} onClick={returnToWorkBoard}>{returnLabel}</TerasActionButton> : null;
+    if (approved) return <TerasActionButton disabled={submitting || !live}
+      onClick={() => void run(persistCandidate)}>Record Approved Plan</TerasActionButton>;
+    if (validated) return <TerasActionButton disabled={submitting || !live || !confirmed || approvalIssues.length > 0}
+      onClick={() => void run(approveCandidate)}>Approve Plan</TerasActionButton>;
+    if (checkToResolve) return <TerasActionButton disabled={submitting} onClick={() => openCheck(checkToResolve)}>Review next issue</TerasActionButton>;
+    return <TerasActionButton disabled={submitting || !live} onClick={() => void run(validateDraft)}>Validate Plan</TerasActionButton>;
+  }
+
+  const recordingEvidence = persisted ? <TerasTechnicalDetails summary="Recording evidence" items={[
+    { label: "Plan reference", value: persisted.artifact.custody.uri },
+    { label: "Custody receipt", value: JSON.stringify(persisted.custody_receipt) },
+    { label: "Source receipt", value: JSON.stringify(persisted.owner_receipt) },
+  ]} /> : undefined;
+
   return <>
-    <TerasModalShell busy={submitting} busyLabel="Checking or recording this technical plan…" bodyLayout="fill" height="fill" width="viewport"
+    <TerasPlanning.Modal busy={submitting} busyLabel="Checking or recording this technical plan…" bodyLayout="fill" height="fill" width="viewport"
       kicker="Delivery · Execution" title="Technical Plan & Approval" surfaceId="delivery-architecture-packet-authoring" onClose={requestClose}
-      description="Connect the saved system design to its implementation, verification and recovery plan. Approval covers only the listed work and does not start execution."
-      footer={<TerasActionButton disabled={submitting} emphasis="secondary" onClick={requestClose}>Back to Execution Board</TerasActionButton>}>
-      <TerasZoneLayout variant="main-aside">
+
+      footer={<><SavedWorkStatus />{dirty && draftSession && !persisted ? <TerasActionButton disabled={submitting} emphasis="secondary"
+        onClick={() => { draftSession.write(pendingDraft); void draftSession.retry(); }}>Save Draft</TerasActionButton> : null}
+        <TerasActionButton disabled={submitting} emphasis="secondary" onClick={requestClose}>Back to Execution Board</TerasActionButton></>}>
+      <TerasPlanning.Zones
+        variant={advisorWide ? "main-aside" : "main-support"}>
         <TerasZone fit="fill"><TerasPanel fit="fill" frame="padded" layout="header-toolbar-body" spacing="normal" treatment="neutral">
-          <TerasPanelHeader kicker={`Selected package · Epic ${item?.legacy_epic_id??editor.deliveryId}`} title={item?.display_name??"Selected work"} statusLabel={readOnly?"Read-only":stateLabel} statusTone={persisted?"ok":readError?"warn":"info"}/>
-          <TerasSegmentedControl ariaLabel="Technical plan views" disabled={submitting} value={tab} onValueChange={setTab} options={[
-            {value:"overview",label:"Overview"},...(!readOnly?[{value:"prepare",label:"Prepare Plan"}]:[]),{value:"design",label:"System Architecture"},{value:"sequence",label:"Implementation Sequence"},{value:"review",label:"Review Plan"}]}/>
-          <TerasContentRegion fill scroll={tab!=="sequence"} gap="normal">
-            {tab==="overview"?<TechnicalPlanOverview requirement={requirement} workTitle={requirement.workItemId ? titles[requirement.workItemId] ?? requirement.workItemId : null}
-              planStatus={stateLabel} coveredWork={viewEditor.coveredWorkItemIds.filter(Boolean).map(id=>titles[id]??id).join(" · ")}
-              designStatus={saved.loading?"Reading saved brief…":saved.error?"Unavailable":saved.brief?`${saved.brief.name} · ${saved.brief.versionLabel}`:"No saved finalized brief returned"}
-              checking={checking} readError={readError} missing={missing} live={live} current={Boolean(current)} readOnly={readOnly}
-              onRetry={()=>void run(inspectCurrent)} onDesign={()=>setTab("design")} onReview={()=>setTab("review")}
-              onRevise={!readOnly&&current?.contract_posture==="current"?reviseCurrent:undefined} />:null}
-            {tab==="prepare"&&!readOnly?current&&!editing?<TerasEmptyState>An approved plan is already recorded. Reuse it when preparing a revision. Historical records remain read-only.<TerasActionButton disabled={current.contract_posture!=="current"} onClick={reviseCurrent}>Revise Current Plan</TerasActionButton></TerasEmptyState>:<TerasFieldStack spacing="normal">
-            {!readOnly&&!validated&&draftIssues.length?<TerasTechnicalDetails summary={`Before validation · ${draftIssues.length} ${draftIssues.length === 1 ? "check" : "checks"}`} items={draftIssues.map((issue,index)=>({label:`Check ${index+1}`,value:issue}))}/>:null}
-              <ArchitecturePlanEditor editor={editor} model={model} disabled={submitting} onEdit={edit} selectedSection={section} onSectionChange={setSection} packageLocked/>
-              <TerasTechnicalDetails summary="Technical data · JSON import and export" items={[]}><TerasFieldStack spacing="normal">
-                {([ ["architectureJson","Architecture design"],["conformanceJson","Verification plan"],["repoRevisionsJson","Repository revisions"] ] as const).map(([key,label])=><TerasNoteField key={key} label={`${label} JSON`} value={editor[key]} minimumHeight="tall" disabled={submitting} onValueChange={value=>edit(current=>({...current,[key]:value}))}/>)}
-              </TerasFieldStack></TerasTechnicalDetails>
-            </TerasFieldStack>:null}
-            {tab==="design"?<ArchitectureSavedContext deliveryId={editor.deliveryId} live={live} context={saved}/>:null}
-            {tab==="sequence"?architectureError?<TerasEmptyState>The draft architecture data cannot be read. Correct its technical data in Prepare Plan before viewing the sequence.</TerasEmptyState>:<TechnicalPlanSequenceView architecture={architecture} titles={titles} sourceLabel={sourceLabel}/>:null}
-            {tab==="review"?<TerasFieldStack spacing="normal">
-              <TerasPanelHeader kicker={sourceLabel} title="Review the technical agreement" description="Check the covered work, design, implementation sequence, verification and recovery. The readable plan is below; JSON is available in technical details."/>
-              <TechnicalPlanReview editor={viewEditor} titles={titles}/><TerasMetadataList items={[{label:"Plan justification",value:viewEditor.rationale||"Not recorded"}]}/>
-              {validated&&!readOnly&&!approved?<TerasChoiceGroup frame="tray" ariaLabel="Technical plan approval" label="Operator approval" selectedId={confirmed?"approve":"review"} onSelect={value=>setConfirmed(value==="approve")} disabled={submitting}
-                options={[{id:"review",label:"Review required",tone:"warn"},{id:"approve",label:"I approve this technical plan for the covered work",tone:"ok"}]}/>:null}
-              {displayed?<TerasTechnicalDetails summary="Plan identity and source evidence" items={candidateMetadata(displayed)}>
-                <TerasNoteField label="Canonical plan JSON" value={JSON.stringify(displayed,null,2)} minimumHeight="tall" readOnly onValueChange={()=>undefined}/>
-              </TerasTechnicalDetails>:null}
-            </TerasFieldStack>:null}
-          </TerasContentRegion>
+          <TerasPanelHeader kicker={`Delivery package · Epic #${item?.legacy_epic_id ?? editor.deliveryId.replace("delivery-", "")}`}
+            title={item?.display_name ?? "Selected work"} statusLabel={stateLabel} statusTone={persisted ? "ok" : readError ? "warn" : "info"} />
+          <TerasFieldStack spacing="compact">
+            {staleStarter || starterNotice ? <TerasContentTray role="status"
+              title={staleStarter ? "Review the starter against the current scope" : undefined}
+              description={staleStarter
+                ? "The plan scope, schedule or recorded dependencies changed. Review the retained draft against the current work."
+                : starterNotice ?? undefined} /> : null}
+            <TerasPlanning.Progress ariaLabel="Technical plan flow" activeStepId={step}
+              onSelectStep={next => { setStep(next); if (next === "plan" && !canOpenPlanForm && planView === "edit") setPlanView("sequence"); }}
+              steps={[
+                { id: "scope", label: "Choose scope", detail: "Work included in the plan", available: !submitting },
+                { id: "plan", label: "Plan the changes", detail: "Order, checks and recovery", available: !submitting },
+                { id: "review", label: "Review & record", detail: persisted || recordedPlan ? "Plan recorded" : "Check and approve", available: !submitting },
+              ]} />
+          </TerasFieldStack>
+          <TerasPlanning.StepRegion key={`${step}-${step === "plan" ? planView : ""}`}
+            step={step}
+            fill scroll={step !== "plan"} gap="normal">
+            {step === "scope" ? <TechnicalPlanScope plan={viewEditor} nodes={nodes} editable={editable}
+              loading={checking && !editing} workTitle={workTitle} workReason={workReason}
+              onScopeChange={changeScope}
+              onRationaleChange={rationale => edit(current => ({ ...current, rationale }))}
+              guidance={<TerasTechnicalDetails summary="When does this work need a plan?" items={[]} defaultOpen>
+                <TerasContentTray title="Work with a shared rollout"
+                  description="For example, coordinate a contact form and its service so the service is ready before visitors can send a message. The work-start review checks the recorded plan for the specific item being started." />
+              </TerasTechnicalDetails>} /> : null}
+            {step === "plan" ? <TerasFieldStack spacing="compact" fill="last">
+              <TerasPlanning.ViewActions role="group" aria-label="Plan tools">
+                {canOpenPlanForm ? <TerasActionButton emphasis="secondary" size="table-compact"
+                  aria-pressed={planView === "edit"} disabled={submitting} onClick={() => setPlanView("edit")}>
+                  {inspectPlan ? "View plan" : "Edit plan"}
+                </TerasActionButton> : null}
+                <TerasActionButton emphasis="secondary" size="table-compact" aria-pressed={planView === "sequence"}
+                  disabled={submitting} onClick={() => setPlanView("sequence")}>Implementation sequence</TerasActionButton>
+                <TerasActionButton emphasis="secondary" size="table-compact" aria-pressed={planView === "design"}
+                  disabled={submitting} onClick={() => setPlanView("design")}>Saved architecture</TerasActionButton>
+              </TerasPlanning.ViewActions>
+              {planView === "edit" && canOpenPlanForm ? <ArchitecturePlanEditor editor={inspectPlan ? viewEditor : editor}
+                model={model} disabled={!editable} navigationDisabled={submitting} onEdit={update => { if (editable) edit(update); }}
+                selectedSection={section} onSectionChange={setSection} confirmChange={confirmChange} /> : null}
+              {planView === "design" ? <ArchitectureSavedContext deliveryId={editor.deliveryId} live={live} context={saved} /> : null}
+              {planView === "sequence" ? architectureError ? <TerasEmptyState>
+                The saved plan could not be used to build this diagram.
+                {editable ? <TerasActionButton emphasis="secondary" onClick={() => {
+                  setSection(technicalPlanDefaultSection);
+                  openChanges();
+                }}>Review saved draft</TerasActionButton> : null}
+              </TerasEmptyState> :
+                <TechnicalPlanSequenceView architecture={architecture} titles={titles} sourceLabel={sourceLabel} /> : null}
+            </TerasFieldStack> : null}
+            {step === "review" ? <TerasFieldStack spacing="normal">
+              {!inspectPlan && editor.inactiveArchitectureSections ? <TerasContentTray title="Previous details kept in this draft"
+                description="Recording keeps the active plan choices and closes this draft. Restore any access or lifecycle details you want to include from Edit plan." /> : null}
+              {!displayed && !readOnly && draftIssues.length ? <TerasTechnicalDetails summary={`Before validation · ${draftIssues.length} ${draftIssues.length === 1 ? "check" : "checks"}`} items={[]}>
+                <TerasFieldStack spacing="compact">{draftIssues.map(issue => <TerasSignalItem key={issue}
+                  label="Preparation" title={checkLabelFor(issue)} textOverflow="wrap" tone="warn"
+                  actions={<TerasActionButton size="table-compact" emphasis="secondary" disabled={submitting}
+                    onClick={() => openCheck(issue)}>Open section</TerasActionButton>} />)}</TerasFieldStack>
+              </TerasTechnicalDetails> : null}
+              <TechnicalPlanReview editor={viewEditor} titles={titles} sourceLabel={sourceLabel}
+                approval={validated && !readOnly && !approved ? <TerasChoiceGroup frame="tray" ariaLabel="Technical plan approval" label="Operator approval"
+                  selectedId={confirmed ? "approve" : "review"} onSelect={value => setConfirmed(value === "approve")} disabled={submitting}
+                  options={[{ id: "review", label: "Review required", tone: "warn" }, { id: "approve", label: "I approve this technical plan for the covered work", tone: "ok" }]} /> : null} />
+              {displayed ? <TerasTechnicalDetails summary="Plan identity and source evidence" items={candidateMetadata(displayed)} /> : null}
+            </TerasFieldStack> : null}
+          </TerasPlanning.StepRegion>
         </TerasPanel></TerasZone>
         <TerasZone fit="fill">
           <TerasPanelStack fill="last" minimumFillHeight="medium" scroll>
-          <TechnicalPlanActionPanel title={actionTitle} description={actionDescription} disabledReason={disabledReason} error={error} validationIssues={validationIssues} recorded={Boolean(persisted)}
-            evidence={persisted?<TerasTechnicalDetails summary="Recording evidence" items={[{label:"Plan reference",value:persisted.artifact.custody.uri},{label:"Custody receipt",value:JSON.stringify(persisted.custody_receipt)},{label:"Source receipt",value:JSON.stringify(persisted.owner_receipt)}]}/>:undefined}>
-            {!readOnly&&!persisted&&(!current||editing)?approved?<TerasActionButton disabled={submitting||!live} onClick={()=>void run(persistCandidate)}>Record Approved Plan</TerasActionButton>:
-              validated?<TerasActionButton disabled={submitting||!live||!confirmed||approvalIssues.length>0} onClick={()=>void run(approveCandidate)}>Approve Plan</TerasActionButton>:
-              tab==="overview"&&!editing&&["binding","covered"].includes(requirement.status)?<TerasActionButton disabled={submitting} onClick={()=>void run(inspectCurrent)}>Check Recorded Plan</TerasActionButton>:
-              tab==="overview"&&!editing?<TerasActionButton disabled={submitting} onClick={()=>{setEditing(true);setTab("prepare");}}>Prepare Technical Plan</TerasActionButton>:
-              <TerasActionButton disabled={submitting||!live||draftIssues.length>0} onClick={()=>void run(validateDraft)}>Validate Plan</TerasActionButton>:null}
-            {!readOnly && !persisted && tab === "overview" && !editing && onOpenWorkBoard ? (
-              <TerasActionButton emphasis="secondary" disabled={submitting} onClick={returnToWorkBoard}>Open Work Board</TerasActionButton>
-            ) : null}
-            {current&&!editing?<TerasActionButton emphasis="secondary" onClick={()=>setTab("review")}>View Recorded Plan</TerasActionButton>:null}
-            {!readOnly&&validated?<TerasActionButton emphasis="secondary" onClick={()=>setTab("review")}>{persisted?"View Recorded Plan":"Review Validated Plan"}</TerasActionButton>:null}
-            {current&&!editing&&!readOnly&&current.contract_posture==="current"?<TerasActionButton emphasis="secondary" onClick={reviseCurrent}>Revise Current Plan</TerasActionButton>:null}
-          </TechnicalPlanActionPanel>
-          <TechnicalPlanAdvisor key={editor.deliveryId} sourceContext={sourceContext} editor={readOnly||current&&!editing?viewEditor:editor} section={section} onSectionChange={setSection} model={model} brief={saved.brief} contextState={saved.loading?"loading":saved.error??(saved.brief?"available":"no finalized brief returned")}
-            currentPlanRef={persisted?.artifact.custody.uri??current?.artifact.custody.uri??null} disabled={readOnly||submitting||Boolean(current?.contract_posture==="historical-read-only"&&!editing)} onEdit={next=>edit(()=>next)}/>
+            <TechnicalPlanActionPanel kicker={readOnly && (step === "review" || historyWithoutPlan) ? "Plan status" : undefined}
+              title={actionTitle} description={actionDescription} disabledReason={disabledReason}
+              error={error ?? readError} validationIssues={validationIssues}
+              recorded={Boolean(persisted || recordedPlan?.contract_posture === "current")} evidence={recordingEvidence}>
+              {primaryAction()}
+              {canRevise ? <TerasActionButton disabled={submitting} emphasis="secondary" onClick={reviseCurrent}>Revise Current Plan</TerasActionButton> : null}
+              {readError ? <TerasActionButton disabled={submitting} emphasis="secondary" onClick={() => void run(inspectCurrent)}>Retry plan check</TerasActionButton> : null}
+              {step !== "scope" && !readOnly && onOpenWorkBoard && (step === "plan" || !recordedPlan && !persisted) ?
+                <TerasActionButton disabled={submitting} emphasis="secondary" onClick={returnToWorkBoard}>{returnLabel}</TerasActionButton> : null}
+            </TechnicalPlanActionPanel>
+            <TechnicalPlanAdvisor key={editor.deliveryId} view={step === "plan" ? planView : step} sourceContext={sourceContext} editor={displayed ? viewEditor : editor} section={section}
+              onSectionChange={setSection} model={model} brief={saved.brief} contextState={saved.loading ? "loading" : saved.error ?? (saved.brief ? "available" : "no finalized brief returned")}
+              widthControl={{ wide: advisorWide, onToggle: () => setAdvisorWide(wide => !wide) }}
+              currentPlanRef={persisted?.artifact.custody.uri ?? current?.artifact.custody.uri ?? null}
+              disabled={!editable || Boolean(validated || approved)} onEdit={next => edit(() => next)} />
           </TerasPanelStack>
         </TerasZone>
-      </TerasZoneLayout>
-    </TerasModalShell>
-    <TerasDraftCloseGuardDialog open={closeGuardOpen} title="Discard technical plan edits?" kicker="Unsaved plan" description="These local edits have not been recorded. The existing approved plan remains available." leaveLabel="Discard Draft" onKeepEditing={()=>{exitAction.current=onClose;setCloseGuardOpen(false);}} onLeave={()=>exitAction.current()}/>
+      </TerasPlanning.Zones>
+    </TerasPlanning.Modal>
+    {changeConfirmation ? <TerasDraftCloseGuardDialog open title={changeConfirmation.title} kicker="Technical plan draft"
+      description={changeConfirmation.description} keepEditingLabel="Cancel" leaveLabel={changeConfirmation.actionLabel}
+      onKeepEditing={() => setPendingChange(null)} onLeave={() => {
+        setPendingChange(null);
+        if (editable) changeConfirmation.apply();
+      }} /> : null}
+    <TerasDraftCloseGuardDialog open={closeGuardOpen} title="Leave before draft save finishes?" kicker="Technical plan draft"
+      description="Stay until the save is confirmed to resume this version from another session." leaveLabel="Leave Now"
+      onKeepEditing={()=>{exitAction.current=onClose;setCloseGuardOpen(false);}} onLeave={()=>exitAction.current()}/>
   </>;
 }
 

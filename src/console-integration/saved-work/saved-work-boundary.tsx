@@ -28,8 +28,11 @@ export function SavedWorkBoundary({ children, storageKey, onClose, readOnly = fa
 }
 
 export function SavedWorkStatus() {
-  const session = useContext(SavedWorkContext);
+  const session = useSavedWorkSession();
   return session ? <SavedWorkStatusContent session={session}/> : null;
+}
+export function useSavedWorkSession() {
+  return useContext(SavedWorkContext);
 }
 function SavedWorkStatusContent({ session }: { session: SavedWorkBrowserSession }) {
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);

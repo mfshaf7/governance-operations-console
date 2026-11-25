@@ -79,6 +79,7 @@ export type DeliveryPackageSummary = {
     planning_prepared_work_item_ids?: number[];
     blocked_work_item_ids: number[];
     refinement_work_item_ids: number[];
+    refinement_governance_pending?: boolean;
     eligibility: "check-selected-work-item";
   };
   initiative_family?: string | null;

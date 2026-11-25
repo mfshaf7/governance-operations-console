@@ -58,7 +58,21 @@ export function getDeliveryEffectivePackagePosture(
   return getDeliveryEffectivePackageProjection(deliveryPackage).posture;
 }
 
+export function deliveryRefinementPackageHasBlocker(
+  deliveryPackage: DeliveryPackageSummary,
+  posture = getDeliveryEffectivePackagePosture(deliveryPackage),
+) {
+  return deliveryPackage.execution_navigation
+    ? deliveryPackage.backend_status === "blocked" || Boolean(deliveryPackage.active_blocker)
+    : posture === "Blocked";
+}
+
 export function deliveryPackageMatchesWorkflowPhase(deliveryPackage: DeliveryPackageSummary, workflowPhase: DeliveryWorkflowPhase) {
-  return deliveryPackage.backend_status !== "parked" && (deliveryPackage.workflow_phase === workflowPhase ||
-    workflowPhase === "refinement" && Boolean(deliveryPackage.execution_navigation?.refinement_work_item_ids.length));
+  if (deliveryPackage.backend_status === "parked") return false;
+  const navigation = deliveryPackage.execution_navigation;
+  if (workflowPhase === "refinement" && navigation) {
+    return Boolean(navigation.refinement_governance_pending || navigation.refinement_work_item_ids.length ||
+      (navigation.planning_prepared_work_item_ids === undefined && deliveryPackage.workflow_phase === "refinement"));
+  }
+  return deliveryPackage.workflow_phase === workflowPhase;
 }

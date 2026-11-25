@@ -348,6 +348,7 @@ presentation/surfaces/execution-board/execution-tree-change-review-dialog.tsx
 presentation/surfaces/execution-board/execution-tree-edit-support-panel.tsx
 presentation/surfaces/execution-board/execution-tree-dependency-editor.tsx
 presentation/surfaces/execution-board/execution-tree-edit-view.tsx
+presentation/surfaces/execution-board/work-session/execution-technical-plan-guidance.tsx
 presentation/surfaces/execution-board/work-session/execution-work-session-modal.tsx
 presentation/surfaces/execution-board/work-session/execution-source-access.ts
 presentation/surfaces/execution-board/work-session/execution-source-realization-panel.tsx
@@ -627,10 +628,14 @@ work-model/execution/technical-plan-model.ts
 work-model/execution/technical-plan-preparation.ts
 work-model/execution/technical-plan-sequence.ts
 presentation/surfaces/execution-board/architecture-packet/technical-plan-advisor.tsx
+presentation/surfaces/execution-board/architecture-packet/technical-plan-change-groups.tsx
+presentation/surfaces/execution-board/architecture-packet/technical-plan-entry-page.tsx
+presentation/surfaces/execution-board/architecture-packet/technical-plan-source-facts.tsx
 presentation/surfaces/execution-board/architecture-packet/technical-plan-review.tsx
 presentation/surfaces/execution-board/architecture-packet/technical-plan-sequence-view.tsx
 product-adapters/context-board/sequence-model.ts
 
+work-model/execution/technical-plan-guidance.ts
 work-model/execution/technical-plan-requirement.ts
 presentation/surfaces/execution-board/architecture-packet/technical-plan-overview.tsx
 presentation/surfaces/execution-board/architecture-packet/technical-plan-action-panel.tsx

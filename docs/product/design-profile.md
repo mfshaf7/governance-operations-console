@@ -48,6 +48,7 @@ Epic selectors sit beside the heading, within the board's width. Back stays in t
 uses Execution's compact Delivery layout. Each planning column uses the
 standard independent search and keeps its total visible while filtering.
 Starting from Refinement or Execution opens the relevant Epic's Features.
+If the selected PI needs dates, **Set up calendar** is available there.
 Refinement records work preparation and offers Plan PI work after canonical
 readback. Work with preparation complete can be planned while its iteration
 is blank. Execution checks work-start eligibility separately. The workspace
@@ -93,8 +94,9 @@ packages using recorded membership or Unassigned. No completion/readiness gate
 claim may be inferred from a status or a retired descendant.
 
 Architecture Packet keeps technical approval separate from the saved Work Design
-brief. Default authoring uses named work and sectioned fields; raw JSON stays in
-Technical data. Saved finalized diagrams reuse the existing zoomable snapshot.
+brief. Draft with named work and sectioned fields. Offer stored-text repair only
+when a saved field cannot open in the form. Saved finalized diagrams reuse the
+existing zoomable snapshot.
 Completion and closeout evidence use ordinary notes and explicit result choices;
 formatting is supplied by the adapter, while facts and approval stay operator
 decisions. Closeout product selection reads registered identity/version and
@@ -1052,71 +1054,86 @@ in Edit Work Structure creates a reviewed work note for existing or new items.
 
 ### Package-scoped technical planning
 
-Technical Plan & Approval lives under Manage Package and as an exact scoped
-Next Action when the source owner requires it. Keep the package identity visible;
-Overview, Prepare Plan, System Architecture, Implementation Sequence and Review
-Plan are ordinary views without a wizard progress bar. Preserve source diagrams
-separately from the derived delivery sequence. Use the shared context-board
-renderer and zoom/full-diagram viewer. Canonical JSON is a specialist disclosure;
-readable review and explicit human approval are primary. The standard advisor
-stays open with usable prompt space at both supported desktop sizes. Missing
-checks belong with the form rather than consuming the advisor's entire rail.
-History retains the same layout with mutation locked.
+The shared Teras planning layout owns the workspace frame, planning panels,
+responsive reference layout, and scroll boundaries. Delivery supplies the
+work records, plan fields, policy, and actions.
 
+Technical Plan & Approval opens under Manage Package or from a specific work
+item’s start review. Keep package identity and the item that brought the
+operator here visible. Return to the exact work-start review after recording
+or to work selection when the plan was opened from the package.
 
-Prepare Plan keeps scope and justification in one compact summary tray, with
-explicit Edit Scope and Edit Summary controls. Five freely navigable planning
-areas share one focused section editor. The desktop area rail becomes a standard
-selector on narrower desktops; the advisor keeps its own usable prompt space.
-Empty, Draft and Needs attention describe local input, never owner readiness or
-approval. The Verification area exposes the existing explicit verification-required
-decision alongside applicability; neither is inferred by the form.
+The top navigation uses the existing progress-step pattern for **Choose
+scope**, **Plan the changes**, and **Review & record**. All three steps are
+directly reachable. Selected scope and recorded approval use observed values.
+Validation, explicit approval, and confirmed recording retain separate
+outcomes. Keep the advisor alongside the plan, sequence, and saved
+architecture. The full-map and saved-diagram viewers provide more space.
 
-Scalar fields use shared field grids instead of per-property trays. Nested
-structures use inspection dividers. Repeated entries are named compact rows,
-with one open editor per list. Simple text lists reuse the shared compact
-add/remove field instead of wrapping each string in an entry tray. Work type, parent and repository details start as
-metadata with explicit editing. Repository search appears only for sections that
-use repositories. Written reasoning remains free text; identifiers, references,
-choices and repeatable structures keep their distinct controls. Specialist JSON
-and validation checks stay in disclosures; they do not replace guided fields.
-Review Plan uses the same planning areas and readable sections. No schema,
-applicability, source evidence, approval or storage authority changes.
+- **Choose scope** groups real work by Feature, with search, a selection
+  filter, and bulk selection of the items shown. Open package-level work by
+  default. Display a group’s selected count with its heading. Fill work type,
+  ownership, and parent details from the package records. Give the plan
+  rationale the available writing height alongside the scrollable tree.
+- **Plan the changes** uses one section editor at a time. Change-group entries
+  show the actual covered work, the repository, and whether files change.
+  Present the five planning areas in order, starting with work and ending with
+  verification. Describe required approvals before linking them from dependencies.
+  Reuse the numbered step selector from Delivery hubs where the editor fits.
+  Keep the same order in the compact selector and in Review. Operators can
+  open any area directly. Use the Teras view switcher when an area has
+  multiple sections. Give a single section its full content space.
+  Open verification coverage, check settings, and source lookup forms in
+  focused dialogs. Use the remaining height for the selected section
+  with a full-height section frame. Primary entry lists take the remaining
+  height and scroll within their own frames. Nested lists have bounded,
+  independently scrollable frames. Keep search and add actions on one row
+  when space allows. Related choices sit side by side when they have room.
+  Put the section title above its contents. Use a searchable entry list and
+  a dedicated detail view in the same section. Returning from an entry restores
+  the search, scroll position, and focus. Use the same entry navigation when
+  inspecting lists in Review. Open record additions in a Teras dialog and
+  apply them only when the operator chooses Add to draft. Use a compact dialog
+  for short forms. Keep values and selections for an existing record inline.
+  Assign from work in scope, with known single-repository boundaries. New
+  groups receive stable identifiers, and selecting work fills its observed
+  repository. Source order derives its nodes from the groups that change
+  files. Choose groups, work, and recorded verification areas from lists.
+  When the form cannot open a saved value, open repair on demand and retain the
+  original until repaired text is applied. Retain free text for reasons,
+  outcomes, and recovery steps. Let plan notes grow with their contents inside
+  the section scroll area. Give access and execution notes more writing height.
+  Stack the two rule fields when the editor is too narrow for readable columns.
+- **Implementation sequence** opens from Plan the changes. Show source changes
+  in dependency order with approvals and other groups available in the list.
+  Place the generated graph directly in this view. Focus on the selected
+  item and its direct prerequisites and dependents. Label the meaning of
+  start, closeout, merge and approval arrows in the graph toolbar. The full
+  dependency map opens at readable scale with an explicit Fit option.
+  Selecting a node highlights its linked paths. Items without recorded links
+  remain visible in a labelled region of the map.
+- **Saved architecture** is a read-only reference within Plan the changes.
+  Display one retained diagram with visible name and navigation. The same
+  viewer supports zoom. Give the finalized brief its own reading panel.
+  In short windows, use the Teras view switcher to give each reference panel
+  the available height, both here and in Implementation sequence.
+- **Review & record** leads with a summary of scope, source changes, required
+  approvals, and verification. Place open decisions, recovery, and section
+  details in quieter follow-up areas. Open a planning area and an individual
+  entry for details. Match the plan editor's verification labels and case
+  summaries. Size readers to content for short lists and give long lists a
+  full-height reader. Show validation issues on the review step
+  with links back to the relevant editor. History uses the same inspection
+  surfaces with edits locked.
 
+The owner checks the exact plan and work binding. Source order, readiness,
+permissions, and approval remain based on the existing workflow and contracts.
 
-### Technical Plan workspace clarification — approved preview redesign
-
-Overview explains the conditional purpose with a four-part concept diagram:
-system design → technical plan → human approval → execution checks. This is
-explanatory content, without progress semantics. A clearly labelled API/UI
-example shows ordering, verification and recovery; it is separate from the
-selected package's real plan. The checked-work requirement, record availability,
-covered scope and saved-design availability remain distinct facts.
-
-The Execution Board entry explains when to open the plan and offers the existing
-work-item check path. Missing records and generated draft booleans remain Not
-checked. Only the owner-confirmed implementation-ready work-start result can
-establish Not required or an approved bound plan for that exact work item.
-Required-plan, existing-plan binding and recovery are distinct. History offers
-inspection without claiming current eligibility. No applicability classifier or
-new execution gate is introduced.
-
-Next Action uses the existing rail panel treatment at natural height. Every
-state has a purpose/outcome description and disabled controls have a visible
-reason. Long check lists stay in Prepare Plan, preserving advisor height. The
-Overview's primary action opens work selection to inspect its requirements; drafting remains freely
-available through Prepare Plan. Leaving a dirty plan to inspect work uses the
-existing discard guard.
-
-Prepare Plan has one framed selected-section container, with named nested groups
-and flat scalar fields. Scope editing, area/section navigation, field content,
-lookup utilities and specialist JSON have distinct places. Review uses framed
-planning areas with source-derived summaries and full retained details; counts
-are not readiness claims. Saved architecture brief and diagram context use
-separate readable containers with preserved line breaks and provenance disclosure.
-Implementation Sequence protects canvas height, keeps selected-element details
-compact and explicitly identifies plan source rather than claiming execution
-progress. Both supported desktop sizes retain readable controls and advisor input.
+Verify Technical Plan at both supported desktop sizes with an ordinary plan
+and a large package. Frame the list and the selected item's editor so their
+relationship is visible. Check text size, readable wrapping, control alignment,
+and clear instructions at the point of use. Keep workflow steps, active tools,
+and primary actions visually distinct within the shared Console patterns.
 
 Compact advisor feedback uses secondary typography and short gaps for notices,
 evidence labels and retained Undo/history actions. It preserves the prompt after
@@ -1129,7 +1146,7 @@ The board offers one work-picker action per selected package. When Next Action
 already owns Choose Work Item, Manage Package omits its duplicate. When another
 move owns Next Action, or that read is unavailable, Manage Package retains the
 work picker for inspection. Technical Plan has its own inspection entry and no
-second work-picker button. Its workspace uses Choose Work Item for the same
+second work-picker button. Its workspace uses the Work Board for the same
 picker; the label never implies a separate check operation. Package blockers
 retain priority, and only work-start responses establish execution requirements.
 

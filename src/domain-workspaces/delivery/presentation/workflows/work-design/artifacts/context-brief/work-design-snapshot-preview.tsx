@@ -30,21 +30,26 @@ export function WorkDesignSnapshotViewerDialog({ attachment, ...props }: ViewerP
 }
 
 /** Browse derived views without changing the complete retained/exported artifact. */
-export function WorkDesignSnapshotPreview({ attachment, ...props }: Omit<ComponentProps<typeof TerasMediaSnapshot>, "imageSrc" | "imageAlt" | "onPreview" | "title" | "actions"> & {
+export function WorkDesignSnapshotPreview({ attachment, navigationPlacement = "overlay", ...props }: Omit<ComponentProps<typeof TerasMediaSnapshot>, "imageSrc" | "imageAlt" | "onPreview" | "title" | "actions"> & {
   attachment: WorkDesignSnapshotAttachment;
-  exportAction: NonNullable<ComponentProps<typeof TerasMediaSnapshot>["actions"]>[number];
+  navigationPlacement?: "overlay" | "header";
+  exportAction?: NonNullable<ComponentProps<typeof TerasMediaSnapshot>["actions"]>[number];
+  viewerDescription?: string;
 }) {
-  const { exportAction, ...mediaProps } = props;
+  const { exportAction, viewerDescription, ...mediaProps } = props;
   const { selected, pages, index, select } = useDiagramPreview(attachment);
   const [viewerOpen, setViewerOpen] = useState(false);
   return <TerasTrayStack spacing="normal">
+    {navigationPlacement === "header" && pages.length > 1 ?
+      <DiagramNavigation index={index} total={pages.length} title={selected.title} select={select} /> : null}
     <TerasMediaSnapshot {...mediaProps} imageAlt={`${selected.title} snapshot attachment`} imageSrc={selected.dataUrl}
       title={pages.length > 1 ? <span role="status" aria-live="polite">Diagram {index + 1} of {pages.length}</span> : undefined}
-      previewOverlay={pages.length > 1 ? <DiagramNavigation index={index} total={pages.length} title={selected.title} select={select} /> : undefined}
+      previewOverlay={pages.length > 1 && navigationPlacement === "overlay" ? <DiagramNavigation index={index} total={pages.length} title={selected.title} select={select} /> : undefined}
       onPreview={() => setViewerOpen(true)}
-      actions={[{ icon: <Maximize2 aria-hidden="true" size={14} />, label: "View Snapshot", onClick: () => setViewerOpen(true), tone: "warn" }, exportAction]} />
+      actions={[{ icon: <Maximize2 aria-hidden="true" size={14} />, label: "View Snapshot", onClick: () => setViewerOpen(true), tone: "warn" }, ...(exportAction ? [exportAction] : [])]} />
     <TerasMediaSnapshotViewerDialog open={viewerOpen} onClose={() => setViewerOpen(false)}
       title="Context Snapshot Viewer" kicker="Retained Context Diagram"
+      description={viewerDescription}
       toolbarTitle={<span role="status" aria-live="polite">Diagram {index + 1} of {pages.length}</span>}
       imageAlt={`${selected.title} full snapshot attachment`} imageSrc={selected.dataUrl}
       navigation={pages.length > 1 ? <DiagramNavigation index={index} total={pages.length} title={selected.title} select={select} /> : undefined}

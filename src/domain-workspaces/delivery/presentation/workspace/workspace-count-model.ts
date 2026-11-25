@@ -47,7 +47,9 @@ export function deliverySurfaceItemCount({
     case "catalog":
       return 0;
     case "pi-planning":
-      return Object.keys(model.preview_pi_plans ?? {}).length;
+      return model.source_truth === "mock" ? Object.keys(model.preview_pi_plans ?? {}).length :
+        model.packages.filter(item => !["done", "retired", "parked"].includes(item.backend_status) &&
+          Boolean(item.execution_navigation?.planning_prepared_work_item_ids?.length)).length;
   }
 }
 

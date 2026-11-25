@@ -207,6 +207,12 @@ export function refinementRunMatchesHandoff(packet: RefinementOosPacket, run: Re
     (!run.receipt || run.receipt.target.delivery_ref === packet.source.source_ref);
 }
 
+export function refinementRunAppliesToCurrentPacket(packet: RefinementOosPacket, run: RefinementOosRun | null) {
+  if (!run || !refinementRunMatchesHandoff(packet, run)) return false;
+  // A completed receipt is historical when current source needs more preparation.
+  return run.state !== "completed" || !packet.readiness_gates.some(gate => gate.status === "open" || gate.status === "blocked");
+}
+
 export function refinementPacketFromProjection(
   projection: RefinementOosProjection,
 ): DeliveryRefinementPacket {
@@ -214,7 +220,7 @@ export function refinementPacketFromProjection(
   // Retained history belongs to the package, but completion belongs to one
   // Work Design handoff. Source versions change during Apply; the handoff does not.
   const completedRun = [projection.latest_run, ...projection.history].find((run) =>
-    run?.state === "completed" && refinementRunMatchesHandoff(packet, run),
+    run?.state === "completed" && refinementRunAppliesToCurrentPacket(packet, run),
   ) ?? null;
 
   return {

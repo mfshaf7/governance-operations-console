@@ -212,12 +212,18 @@ test("session close reads the exact revision before closing and treats absence a
   }), { closed: false });
 });
 
-test("governed path probe distinguishes ready and unavailable OOS", async () => {
-  assert.deepEqual(await probeGovernedAgentPath({ config, fetchImpl: async () => new Response("ok") }), {
+test("governed path probe distinguishes agent activation from broker readiness", async () => {
+  assert.deepEqual(await probeGovernedAgentPath({ config, fetchImpl: async () => Response.json({ ready: true, checks: { agent_console: "active" } }) }), {
     profileId: "agent-console-assistant-v1",
   });
   await assert.rejects(
     probeGovernedAgentPath({ config, fetchImpl: async () => new Response("no", { status: 503 }) }),
     (error) => error.code === "agent_console_oos_not_ready",
   );
+  for (const checks of [{ agent_console: "inactive" }, { openproject: "reachable" }]) {
+    await assert.rejects(
+      probeGovernedAgentPath({ config, fetchImpl: async () => Response.json({ ready: true, checks }) }),
+      (error) => error.code === "agent_console_not_active",
+    );
+  }
 });

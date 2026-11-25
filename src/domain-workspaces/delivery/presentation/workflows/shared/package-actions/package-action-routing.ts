@@ -1,4 +1,5 @@
 import type { DeliveryTone } from "../../../../read-model/index.ts";
+import { deliveryRefinementPackageHasBlocker } from "../../../../domain/delivery-package-posture.ts";
 
 import type { DeliveryPackageActionRoute } from "./package-action-types.ts";
 import type { DeliverySurfaceConfig } from "../../../workspace/workspace-types.ts";
@@ -82,7 +83,7 @@ export function packageActionForSurface(
 
   if (surface.id === "refinement") {
     const effectiveStatus = deliveryPackageRegisterStatusLabel(deliveryPackage);
-    const blocked = effectiveStatus === "Blocked";
+    const blocked = deliveryRefinementPackageHasBlocker(deliveryPackage);
     const done = effectiveStatus === "Done";
     const deferred = effectiveStatus === "Deferred";
     return {

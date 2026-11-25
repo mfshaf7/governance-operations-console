@@ -10,6 +10,7 @@ import {
   draftArchitecturePacket,
   persistArchitecturePacket,
   readCurrentArchitecturePacket,
+  readTechnicalPlanFacts,
 } from "./architecture-packet-oos-client.ts";
 import { DeliveryOosError } from "./delivery-oos-client.ts";
 
@@ -24,6 +25,16 @@ export async function readCurrentArchitecturePacketRoute(
       return snapshot(null, "disconnected-preview");
     }
     return snapshot(await readCurrentArchitecturePacket(deliveryId), "live");
+  } catch (error) {
+    return architecturePacketErrorResponse(error);
+  }
+}
+
+export async function readTechnicalPlanFactsRoute(request: NextRequest) {
+  try {
+    requireLiveMode();
+    const body = record(await request.json().catch(() => null));
+    return snapshot(await readTechnicalPlanFacts(record(body.input)), "live");
   } catch (error) {
     return architecturePacketErrorResponse(error);
   }

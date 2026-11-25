@@ -224,3 +224,5 @@ export { TerasRegisterPagination } from "./teras-register-pagination";
 export { useRegisterPage } from "./use-register-page";
 
 export { TerasDocument } from "./teras-document.tsx";
+
+export { TerasPlanning } from "./teras-planning-layout";

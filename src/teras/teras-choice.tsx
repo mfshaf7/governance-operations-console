@@ -36,6 +36,7 @@ export type TerasSelectableRowProps = Omit<
 
 export function TerasSelectableRow({
   ariaLabel,
+  className,
   detail,
   disabled = false,
   label,
@@ -49,7 +50,7 @@ export function TerasSelectableRow({
     <button
       aria-label={ariaLabel}
       aria-pressed={selected}
-      className={styles.terasSelectableRow}
+      className={cx(styles.terasSelectableRow, className)}
       data-current={selected}
       data-has-detail={detail ? "true" : "false"}
       data-has-status={status ? "true" : "false"}

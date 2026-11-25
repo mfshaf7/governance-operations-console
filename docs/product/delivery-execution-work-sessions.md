@@ -118,56 +118,101 @@ source session reports a missing or unbound architecture requirement, Next Actio
 also opens the same package-scoped workspace and identifies the affected work.
 No package-wide permission is inferred from one work item's requirement.
 
-Overview includes a purpose diagram and a labelled example, independent of live
-plan contents. Next Action uses the primary rail treatment with descriptions and
-visible disabled reasons. Leaving an edited plan to check work uses the normal
-discard guard. The workspace separates five jobs, with ordinary navigation rather
-than a wizard:
+Choose the work in **Choose scope**. Browse the package tree by Feature,
+search by name or number, and select the exact work the plan covers. Items
+already in the current plan and the original work-start target are visible.
+The Console fills work type, parent, and repository from recorded facts.
+Explain the approach and its limits in **Plan summary and justification**.
 
-- **Overview** explains applicability, the selected package, covered work and
-  current recorded-plan availability. Missing, unavailable and historical records
-  are distinct. A missing plan never means approval is unnecessary. The current
-  work-session owner remains the authority for whether architecture is required.
-- A native missing-reference response identifies **No approved plan recorded**.
-  The current-plan read recognizes the exact OpenProject envelope: HTTP 404,
-  `error: not_found`, and `details: delivery_art_reference_missing`. Other
-  missing records and access failures remain unavailable; they are not treated
-  as absent plans.
-  The Console preserves OOS's machine-readable `error` identifier as well as its
-  HTTP status; missing records, permission denials and unavailable services remain
-  different outcomes. An explicit `code` retains precedence and prose-only errors
-  retain the generic rejection code. A missing record grants no execution rights.
-- Failed plan validation preserves the owner's individual string findings under
-  **Plan checks requiring attention**. Arbitrary owner details are not projected.
-  Editing or checking another attempt clears the previous findings; validation
-  failure retains the draft and grants no approval or execution rights.
-- **Prepare Plan** starts with a compact scope summary. Use Edit Scope to change
-  covered work and Edit Summary for the overall justification. Work & Changes,
-  Sequence & Handoffs, Operation & Recovery, Approvals & Decisions and Verification
-  are freely navigable planning areas. Open a named entry to edit it; other entries
-  stay compact. Local Empty/Draft/Needs attention indicators do not certify
-  readiness. Verification required is an explicit existing plan decision. Written
-  explanations remain free text; structured plan data uses guided fields.
-  It uses named work and section guidance from the existing v6
-  contract. Selecting work fills recorded type, parent and repository observations
-  where available, preserving explicit edits. Verification applicability, change
-  grouping, source pins and approval are not invented as form defaults. Verified
-  source observations can be read from the existing work-session endpoint; JSON
-  import/export stays under Technical data for specialist use.
-- **System Architecture** reads the exact selected package's saved finalized Work
-  Design brief and retained diagrams. Multiple diagrams can be inspected
-  individually or together using the existing zoomable viewer. Missing original
-  data remains unavailable. Changes to that underlying design belong in Work
-  Design; this workspace does not silently rewrite it.
-- **Implementation Sequence** is derived from the current draft, validated
-  candidate or recorded plan, labelled accordingly. Change landing order, work
-  dependencies and required approvals remain distinguishable. Select a node for
-  complete readable details, zoom or open the full diagram. Unknown references
-  and dependency cycles are visible; the drawing grants no execution permission.
-  No second manually maintained diagram or execution engine is introduced.
-- **Review Plan** presents the covered work, responsibilities, ordering,
-  verification, approvals and recovery in readable sections. Canonical JSON,
-  identity and custody receipts remain inspectable under Technical details.
+Use **Plan the changes** to assign covered items to change groups, choose what
+must happen before start or closeout, and record checks and recovery. A change
+group brings items from the same repository together for review and rollback.
+The Console prepares one group when all covered work uses the same repository.
+Confirm whether it changes repository files. The Console assigns group
+identifiers and derives which groups appear in the source order. In
+**Work dependencies**, choose when each recorded prerequisite must complete.
+To add a dependency, record it in Delivery and reopen the plan with refreshed
+work data.
+Work through **Work & Changes**, **Approvals & Decisions**, **Sequence &
+Handoffs**, **Operation & Recovery**, and **Verification**. You can return to
+any area directly. Under **Required approvals**, choose the work item that
+provides the approval. Its repository and entry under **Work dependencies**
+are filled automatically. Evidence from other work must be a recorded
+dependency of the approval work item. In **Source revisions**, select **Read missing
+revisions** to pin the default branch for each unpinned repository. Open
+**Pin a revision** to read the branch head or verify an exact
+commit on that branch. **Manage revisions** opens the full list to add or edit
+recorded pins. Correct work type, parent, or repository on the original work
+item and reopen the plan with refreshed Delivery data. The draft keeps a parent
+link when both items are in scope. Search the repository registry from a field
+that can use another registered repository, such as a transition's responsible
+repository. Select a change group or plan entry to open its
+dedicated detail view. **Back to entries** restores the list, search and
+focused row. The same navigation is available for entries in **Review & record**.
+Add actions that create plan records open a dialog. Short forms use a compact
+dialog. **Add to draft** puts the new entries into the list. **Cancel** returns
+without adding anything. Individual values and selections stay in the section.
+
+Add approvals, open decisions, and evidence handoffs when the work needs them.
+Use a handoff when a change group in another repository needs a specific result.
+Select each group and its work item. The Console fills the repositories from
+the groups. The plan uses standard installation access unless the work needs
+its own authorization rules. Use the verified work-start requirements to
+determine whether a particular item requires a Technical Plan. Under **Activation order**, the
+selected approval supplies the groups to commission. Select a pinned source
+repository and enter the path and setting name to read a boolean or declared
+activation posture from its committed JSON or YAML. Authorization records can
+reuse a reference from the approved plan or read a document from a pinned
+revision. The Console fills the immutable link and digest. Confirm what the
+document authorizes before using it.
+
+Switching to standard installation access or no lifecycle changes keeps the
+previous details in the private draft. Select the earlier option to restore
+them, including after reopening the draft. The reviewed plan includes the
+active choices. Reopening a decision with a written resolution, replacing an
+entered source value, or removing work with assigned checks or timing asks
+for confirmation before clearing that input.
+
+Describe a success and failure case for each covered item in **Verification**.
+Use **Check coverage** to see the standard checks, add plan-specific checks,
+and assign them to work. Use **Connection and Git checks** when the change affects how systems exchange
+commands, data, or results, or needs proof of a Git dependency. The Console
+adds the standard connection checks when you select **Yes** for that question.
+**Change merge order** sets the intended order when several groups change source.
+Use the form for drafting. If a saved value cannot open in the form,
+**Open draft repair** exposes its retained content for recovery.
+
+Open **Implementation sequence** to select a change or work item and see its
+prerequisites and dependents. Labels distinguish source order, start and
+closeout requirements, and approvals. Use **Open full map** to inspect the
+entire sequence. **Saved architecture** opens the retained Work Design
+diagrams and finalized brief as a reference while planning. Bring focus or the
+pointer into the preview to switch diagrams. Open the snapshot to zoom.
+
+In **Review & record**, select **View covered work** to search the included
+items by name or number. Read open decisions and recovery from their panels.
+Choose a review area and open its section to inspect records in the reader.
+**Back to entries** restores the list and search after opening a record.
+Verification uses the same case summaries, **Check coverage**, and
+**Connection and Git checks** as the plan editor. Source revision rows show the
+recorded branch and short commit. Open a row to read the full revision.
+**Review next issue** and **Open section** return to the relevant form when
+preparation is incomplete. Owner validation findings remain available until
+the plan changes or another validation runs.
+
+Draft edits retain their private save acknowledgement. A confirmed recording
+lets the selected item’s start review check the new plan. **Return to work
+start** opens that exact item and refreshes its current requirements. Plans
+opened from the package can return to the **Work Board** to choose the item.
+History keeps read-only access to scope, references, the sequence, and review.
+Select **View plan** to browse the recorded form when it uses the current
+authoring schema. Earlier schemas remain available through the reference and
+review views that can read their saved fields.
+
+A native HTTP 404 with `error: not_found` and
+`details: delivery_art_reference_missing` identifies **No approved plan
+recorded**. Unavailable or rejected reads retain their distinct status. The
+Console preserves OOS's machine-readable error and presents its safe findings.
 
 **Validate Plan** authors a local candidate through OOS. Explicit operator
 acceptance enables **Approve Plan**, which rebinds the reviewed input to fresh ART
@@ -186,11 +231,26 @@ CGG admission, native structured replies, receipt evidence, private conversation
 new conversation, cancellation and undo. No separate provider or default model is
 hard-coded for this workspace.
 
-Only manual chat requests invoke it. Questions do not edit. An explicit draft
-request can modify only the selected local `sectionJson`, preserving other
-sections, scope, human justification, source revisions and approval. Repository
-revision assistance is read-only. Context contains the actual selected-section
-schema, supplied covered-work records and available canonical ancestor narratives,
+In **Check Work Requirements**, follow the recorded requirement when a plan
+is required or already approved. Where the work can proceed without a
+mandatory plan, **Check recommendation** offers optional guidance for the
+selected work. It uses the description from the current work record, the
+recorded PI and iteration, direct dependencies across iterations, and any
+available finalized Work Design note. Unrelated work in the same iteration
+is excluded. A positive recommendation offers
+**Draft Technical Plan**, which opens the editor with an approach, verification
+and rollback starter for the selected work. Existing drafts and recorded plans
+are preserved. Review the retained draft if its scope, schedule or dependencies
+change before completing validation and approval.
+
+The advisor runs on explicit requests. Questions do not edit. In **Choose scope**,
+ask the advisor to draft or rewrite the plan summary. It writes short, plain-language
+paragraphs into the textarea, where you can edit or undo them. In the plan editor,
+an explicit draft request applies to the selected editable section. Scope
+selection and approval stay under operator control. Source revision assistance,
+Saved architecture, Implementation sequence, and Review & record offer read-only
+advice. Context contains the selected draft field and its schema
+when applicable, supplied covered-work records and available canonical ancestor narratives,
 the saved finalized brief and selected diagram's contents, including supplied core
 nodes. The advisor's Context controls identify related plan sections and the
 selected diagram. Unselected diagrams and linked evidence are references rather

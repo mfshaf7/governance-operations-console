@@ -5,7 +5,22 @@ import { refinementSessionContentKey } from "../../src/domain-workspaces/deliver
 import { refinementItemSummary, refinementVisibleTreeIds, refinementValueError, refinementFieldReviewLabel } from "../../src/domain-workspaces/delivery/presentation/workflows/refinement/view-model/refinement-workbench-model.ts";
 import { refinementMetadataTargets, refinementMetadataWorkbenchSummary, refinementSharedMetadataTargetGroups } from "../../src/domain-workspaces/delivery/presentation/workflows/refinement/view-model/refinement-metadata-model.ts";
 import { refinementPacketFromProjection } from "../../src/domain-workspaces/delivery/live-runtime/refinement-live-contract.ts";
-import { refinementFeedbackProjection } from "../support/refinement-feedback-fixture.mjs";
+import { refinementIsBlocked } from "../../src/domain-workspaces/delivery/presentation/workflows/refinement/view-model/refinement-hub-model.ts";
+import { refinementFeedbackProjection, refinementFeedbackRun } from "../support/refinement-feedback-fixture.mjs";
+
+test("an earlier receipt and an unrelated child blocker do not lock a new Refinement gate", () => {
+  const receipt = refinementFeedbackRun("completed");
+  const projection = refinementFeedbackProjection(receipt);
+  assert.equal(refinementPacketFromProjection(projection).receipt.receipt_id, receipt.receipt.receipt_id);
+  projection.packet.status = "drafting";
+  projection.packet.readiness_gates.push({ label: "Metadata Review", status: "open" });
+  const packet = refinementPacketFromProjection(projection);
+  assert.equal(packet.receipt, null);
+  assert.equal(projection.history[0], receipt);
+  const scopedPackage = { backend_status: "new", package_posture: "Blocked", execution_navigation: { blocked_work_item_ids: [761] } };
+  assert.equal(refinementIsBlocked({ deliveryPackage: scopedPackage, packet }), false);
+  assert.equal(refinementIsBlocked({ deliveryPackage: { ...scopedPackage, backend_status: "blocked" }, packet }), true);
+});
 
 test("idle persistence ignores only the timestamp, retaining changes to values, selection, review and receipts", () => {
   const saved = { lastSavedAt: "2026-11-01T00:00:00Z", metadata: { draftValues: { a: "one" }, fieldResolutions: {}, selectedFieldKey: "a" }, apply: { receipt: null } };

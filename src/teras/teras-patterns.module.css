@@ -2562,6 +2562,10 @@
   min-height: 4.8rem;
 }
 
+.terasNoteField[data-auto-grow="true"] textarea {
+  field-sizing: content;
+}
+
 .terasNoteField[data-fill="true"] textarea {
   height: 100%;
   min-height: 0;
@@ -2689,6 +2693,23 @@
 
 .terasReadoutField[data-fit="content"] .terasReadoutFieldBox {
   min-height: 0;
+}
+
+.terasReadoutField[data-surface="field"] .terasReadoutFieldBox {
+  border-color: rgba(255, 193, 90, .22);
+  padding-inline-start: .8rem;
+  color: #15130e;
+  background: #f8f4eb;
+}
+
+.terasReadoutField[data-scroll-height="fill"] {
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.terasReadoutField[data-scroll-height="fill"] .terasReadoutFieldBox {
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .terasReadoutFieldBox > :first-child {
@@ -2852,6 +2873,50 @@
   height: 100%;
   min-height: 12rem;
 }
+
+.terasPanel[data-teras-diagram-frame][data-layout] { gap: 0; }
+
+.terasPanel[data-teras-diagram-frame] > [data-teras-diagram-toolbar] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .4rem .55rem;
+  color: #e3dbcc;
+  font-size: .74rem;
+  background: #1a1c1e;
+  border-bottom: 1px solid rgba(158, 175, 195, .16);
+}
+
+.terasPanel[data-teras-diagram-frame] > [data-teras-diagram-toolbar] > [aria-label="Diagram controls"] { margin-inline-start: auto; }
+
+.terasPanel[data-teras-diagram-frame] > [data-teras-diagram-canvas] {
+  background:
+    linear-gradient(#2c2e31 1px, transparent 1px),
+    linear-gradient(90deg, #2c2e31 1px, transparent 1px),
+    #383a3d;
+  background-size: 22px 22px;
+}
+
+.terasMediaDiagramTitle { font-weight: 600; }
+
+.terasMediaDiagram .terasMediaSnapshotViewport,
+.terasMediaDiagram .terasMediaSnapshotPreviewButton { border-radius: 0; }
+
+.terasMediaDiagram .terasMediaSnapshotPreviewButton {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  transform: none;
+}
+
+.terasMediaDiagram .terasMediaSnapshotPreviewButton:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: -2px;
+}
+
+.terasMediaDiagram .terasMediaSnapshotPreviewButton img { background: transparent; }
 
 .terasMediaSnapshotContent {
   display: grid;
@@ -5102,9 +5167,14 @@
   scrollbar-width: thin;
 }
 
+.terasSectionEditorContainer {
+  container: teras-section-editor / inline-size;
+  min-width: 0;
+}
+
 .terasSectionEditorLayout {
   display: grid;
-  grid-template-columns: 11rem minmax(0, 1fr);
+  grid-template-columns: minmax(11.375rem, 0.23fr) minmax(0, 1fr);
   align-items: start;
   gap: 1rem;
   min-width: 0;
@@ -5122,7 +5192,7 @@
 
 .terasSectionEditorControls {
   display: grid;
-  gap: 1rem;
+  gap: .58rem;
   min-width: 0;
 }
 
@@ -5130,11 +5200,44 @@
   display: none;
 }
 
-@media (max-width: 1450px) {
+.terasSectionEditorContainer[data-fill="true"] {
+  height: 100%;
+  min-height: 0;
+}
+
+.terasSectionEditorContainer[data-fill="true"] .terasSectionEditorLayout {
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.terasSectionEditorContainer[data-fill="true"] .terasSectionEditorNavigation {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 2px;
+}
+
+.terasSectionEditorContainer[data-fill="true"] .terasSectionEditorBody {
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: .58rem;
+}
+
+.terasSectionEditorContent[data-fill="true"] {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+@container teras-section-editor (width < 45rem) {
   .terasSectionEditorLayout { grid-template-columns: minmax(0, 1fr); }
   .terasSectionEditorNavigation { display: none; }
   .terasSectionEditorSelector { display: block; }
-  .terasSectionEditorControls { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
+  .terasSectionEditorControls { grid-template-columns: minmax(10.5rem, .36fr) minmax(0, 1fr); }
+}
+
+@container teras-section-editor (width < 28rem) {
+  .terasSectionEditorControls { grid-template-columns: minmax(0, 1fr); }
 }
 
 .terasDetailGrid[data-variant="balanced"] {
@@ -5420,6 +5523,30 @@
 
 .terasTextListFieldItems[data-scroll="true"][data-visible-items="4"] {
   max-block-size: 10.1rem;
+}
+
+.terasLabeledGroup[data-text-list-fit="fill"] {
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+}
+
+.terasLabeledGroup[data-text-list-fit="fill"] .terasTextListFieldItems {
+  max-block-size: none;
+  min-block-size: 0;
+}
+
+.terasTextListNote > span:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.terasTextListNote textarea {
+  field-sizing: content;
+  max-height: 11rem;
 }
 
 .terasTextListFieldRow {

@@ -1,0 +1,700 @@
+.technicalPlanSurface[data-teras-modal] > header h3 { font-size: 1.42rem; }
+.technicalPlanSurface [aria-haspopup="listbox"] > span,
+.technicalPlanFormDialog [aria-haspopup="listbox"] > span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+
+.technicalPlanSurface [role="option"],
+dialog:has(.technicalPlanFormDialog) [role="option"] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.technicalPlanSurface [data-agent-status-bar] [aria-label="Conversation save status"] {
+  margin-inline: 0;
+  text-align: left;
+  letter-spacing: .025em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.planEntry [data-teras-field-grid],
+.planFactsTray [data-teras-field-grid] {
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+}
+
+.planFactsTray h4 {
+  overflow-wrap: anywhere;
+}
+
+.planFactsTray > :has(> h4) {
+  align-items: baseline;
+  flex-wrap: wrap;
+  row-gap: .35rem;
+}
+
+.planEntry {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  gap: .75rem;
+}
+
+.planEntry:not([data-frame]) > .planEntryHeader[data-has-actions] {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  padding-block: .34rem .52rem;
+  border-bottom: 1px solid rgba(245, 239, 226, .13);
+  background: #121418;
+}
+
+@media (max-height: 780px) {
+  .planEntry:not([data-frame]) > .planEntryHeader[data-has-actions] { position: static; }
+}
+
+.planEntry .planEntryHeader h3 {
+  font-size: 1rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.planEntryHeader h3 > span:focus-visible {
+  outline: 1px solid var(--focus-ring, #ffd17c);
+  outline-offset: 3px;
+  border-radius: .18rem;
+}
+
+.planFacts[data-shape] > div > span:first-child {
+  font-size: .61rem;
+  letter-spacing: .07em;
+  overflow-wrap: anywhere;
+}
+
+.planFacts[data-shape] > div > strong {
+  font-size: .81rem;
+}
+
+.sourceRevisionWorkspace {
+  container: technical-plan-source / inline-size;
+}
+
+.planSectionFields .sourceRevisionHeader h3 {
+  font-size: .96rem;
+  line-height: 1.25;
+}
+
+.sourceRevisionHeader p:empty {
+  display: none;
+}
+
+.sourceRevisionHeader h3 > span:focus-visible {
+  outline: 1px solid var(--focus-ring, #ffd17c);
+  outline-offset: 3px;
+  border-radius: .18rem;
+}
+
+.revisionCards[data-shape] > div > span:first-child {
+  font-size: .67rem;
+  letter-spacing: .015em;
+  line-height: 1.32;
+  text-transform: none;
+}
+
+.planLookupSelection[data-teras-field-grid] {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sourceReadStatus {
+  margin: 0;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+@container technical-plan-source (width < 27rem) {
+  .revisionCards[data-shape="grid"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container technical-plan-fields (width < 32rem) {
+  .planLookupSelection[data-teras-field-grid],
+  .planFacts[data-shape="grid"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.scopeLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.14fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: .8rem;
+}
+.scopeRegion[data-scroll="true"] {
+  display: flex;
+  flex-direction: column;
+  container: technical-plan-scope / inline-size;
+}
+.scopeRegion > .scopeStep { flex: 1 1 0; }
+.planRegion[data-teras-content-region] {
+  grid-template-rows: minmax(0, 1fr);
+  container: technical-plan-area / inline-size;
+}
+.planSectionHeader {
+  display: grid;
+  min-width: 0;
+  gap: .5rem;
+}
+.planSectionTabs[role="tablist"][data-size="compact"] button {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 2rem;
+  padding-inline: .45rem;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.planSectionTabs[role="tablist"] button[aria-selected="true"]:is(:hover, :focus-visible) { color: #17130d; }
+.planSectionTabs[role="tablist"] button:focus-visible { outline: 1px solid currentColor; outline-offset: -3px; }
+@container teras-section-editor (width < 45rem) {
+  .planSectionHeader { display: contents; }
+  .planSectionTabs { grid-column: 1 / -1; }
+}
+.planSectionContent[data-teras-field-stack] {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-block-size: 0;
+}
+.planSectionFields[data-scroll="true"] {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  padding: 2px 5px 2px 2px;
+  scrollbar-gutter: stable;
+  container: technical-plan-fields / inline-size;
+}
+/* Whole-section lists fill the form body and own their scrolling at every viewport. */
+.planSectionFields > [data-teras-field-stack] {
+  flex: 1 0 auto;
+}
+.planSectionFields > [data-teras-field-stack]:has([data-plan-list-fill]),
+.planSectionFields [data-teras-field-stack]:has(> [data-plan-list-fill]),
+.planSectionFields [data-plan-list-fill],
+.planSectionFields [data-plan-list-fill] > [data-teras-field-stack] {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  min-block-size: min-content;
+}
+.planSectionFields [data-plan-list-fill] [data-teras-list][data-fit="fill"] {
+  height: auto;
+  flex: 1 1 0;
+  min-block-size: 3.5rem;
+  contain: size;
+}
+.planSectionFields [data-plan-list-fill]:has(.sourceRevisionHeader) [data-teras-list][data-fit="fill"] {
+  min-block-size: 7rem;
+}
+.planSectionFields [data-plan-object-section]:has([data-plan-entry-path]) > :not(:has([data-plan-entry-path])) {
+  display: none;
+}
+
+.pairedPlanFields[data-teras-field-grid] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.planSectionFields > [data-teras-field-stack]:has(.lifecycleGrid),
+.planSectionFields .lifecycleApplicability,
+.planSectionFields .planObjectSection {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  min-block-size: min-content;
+}
+
+.lifecycleGrid[data-teras-field-grid] {
+  flex: 1 0 0;
+  min-height: 15rem;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.lifecycleGrid > section[data-fit="fill"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.lifecycleGrid > section > div:last-child,
+.lifecycleGrid .lifecycleStates [data-teras-field-stack] {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.lifecycleTransitions > div:last-child > [data-teras-field-stack],
+.lifecycleStates [data-text-list-fit="fill"] {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.lifecycleTransitions [data-plan-list-fill] {
+  min-height: 0;
+}
+
+.lifecycleGrid:has([data-plan-entry-path])[data-teras-field-grid] {
+  display: block;
+  min-height: 0;
+}
+
+.lifecycleGrid:has([data-plan-entry-path]) > .lifecycleStates,
+.lifecycleTransitions:has([data-plan-entry-path]) > div:has(> h4) {
+  display: none;
+}
+
+.lifecycleTransitions:has([data-plan-entry-path]) {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+@container technical-plan-fields (width < 34rem) {
+  .pairedPlanFields[data-teras-field-grid],
+  .lifecycleGrid[data-teras-field-grid] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lifecycleGrid[data-teras-field-grid] {
+    grid-template-rows: minmax(10rem, auto) minmax(15rem, auto);
+  }
+}
+
+@container technical-plan-fields (width < 28rem) {
+  .searchRow { grid-template-columns: minmax(0, 1fr); }
+}
+
+.entryChoiceGrid[data-teras-field-grid] {
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+}
+
+.authorizationNotesGrid[data-teras-field-grid] {
+  grid-template-columns: repeat(auto-fit, minmax(min(21rem, 100%), 1fr));
+}
+
+.scopeStep[data-teras-field-stack], .scopeTreePanel[data-frame][data-spacing], .scopeApproach[data-frame][data-spacing] {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.scopeLayout, .scopeTree, .approachNote { flex: 1; min-height: 0; }
+.scopeTree { gap: .45rem; }
+.scopeStep > :not(.scopeLayout), .scopeTreePanel > :not(.scopeTree), .scopeApproach > :not(.approachNote) { flex-shrink: 0; }
+.scopeApproach .approachNote[data-fill="true"] { min-height: 11.5rem; }
+@media (max-height: 780px) {
+  .scopeApproach .approachNote[data-fill="true"] { min-height: 6rem; }
+}
+@media (max-height: 780px) and (max-width: 920px) {
+  .scopeRegion > .scopeStep { flex: 1 0 auto; }
+  .scopeLayout { min-height: 18rem; }
+}
+.scopeTree:focus-visible, .scopeFeature > summary:focus-visible {
+  outline: 2px solid var(--focus-ring, #ffd17c);
+  outline-offset: -2px;
+}
+.scopeFeature {
+  border: 1px solid rgba(158, 175, 195, .24);
+  border-radius: .65rem;
+  padding: .62rem .7rem;
+}
+.scopeFeature > summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .5rem;
+  color: inherit;
+  cursor: pointer;
+  font-size: .86rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  list-style: none;
+}
+.scopeFeature > summary::-webkit-details-marker { display: none; }
+.scopeFeature > summary > svg { color: #e8bf7a; }
+.scopeFeature[open] > summary > svg { transform: rotate(90deg); }
+.scopeFeature > summary > small { color: #cbbd9f; font-size: .72rem; white-space: nowrap; }
+.scopeFeature[open] > summary { margin-bottom: .6rem; }
+.scopeFeature[open] > summary > span { font-weight: 650; }
+.scopeWorkReference { color: var(--amber); white-space: nowrap; }
+.spokenOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.searchRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; align-items: end; }
+.planWorkPicker { container: technical-plan-work-picker / inline-size; }
+[data-plan-list-fill] > .planWorkPicker {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  min-block-size: min-content;
+}
+@container technical-plan-work-picker (width < 14rem) {
+  .searchRow { grid-template-columns: minmax(0, 1fr); }
+  .scopeFilter { justify-self: start; }
+}
+.referenceContent[data-scroll="true"] {
+  scrollbar-gutter: stable;
+  padding: .15rem .3rem .15rem .1rem;
+}
+.sequenceWorkspace {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: fit-content(61%) minmax(0, 1fr);
+  grid-template-areas: "map map" "browse selected";
+  gap: .65rem;
+  min-width: 0;
+  overflow: hidden;
+}
+.sequenceWorkspace > [data-frame] > .referenceContent { overscroll-behavior: contain; }
+.generatedDiagram {
+  grid-area: map;
+  align-self: start;
+  min-width: 0;
+  max-block-size: 100%;
+  container: technical-plan-map / inline-size;
+}
+.sequenceWorkspace > .generatedDiagram[data-layout][data-spacing] {
+  padding-block: .68rem;
+  gap: .45rem;
+}
+.generatedDiagram > .referenceContent[data-scroll="true"] {
+  padding-inline: 0;
+  scrollbar-gutter: stable both-edges;
+}
+.sequenceBrowse { grid-area: browse; }
+.sequenceSelection { grid-area: selected; }
+.sequenceWorkspace :is(.sequenceBrowse, .sequenceSelection)[data-layout][data-spacing] {
+  min-width: 0;
+  padding: .6rem .7rem;
+  gap: .42rem;
+}
+.sequenceWorkspace .sequenceSideHeading h3 {
+  font-size: 1.06rem;
+  line-height: 1.25;
+  margin-top: .15rem;
+}
+.sequenceWorkspace .sequenceSideHeading h3 + p {
+  font-size: .77rem;
+  line-height: 1.3;
+  margin-top: .25rem;
+}
+.sequenceWorkspace .sequenceSideHeading[data-actions-layout="inline"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: .45rem;
+}
+.sequenceMapHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 46%) auto;
+  grid-template-areas: "title fields full";
+  align-items: end;
+  gap: .45rem;
+}
+.sequenceMapHeading { grid-area: title; align-self: start; }
+.sequenceMapFields {
+  grid-area: fields;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
+  gap: .45rem;
+}
+.sequenceFocusLabel { color: var(--text); }
+.sequenceMapHeader > .sequenceOpenMap[data-size="table-compact"] {
+  grid-area: full;
+  min-height: 2.55rem;
+}
+@container technical-plan-map (width < 45rem) {
+  .sequenceMapHeader {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "title title" "fields full";
+  }
+}
+@container technical-plan-map (width < 23rem) {
+  .sequenceMapHeader { grid-template-areas: "title full" "fields fields"; }
+}
+.sequenceSearch { inline-size: clamp(6.6rem, 9vw, 12rem); }
+.sequenceBrowse > .sequenceSideHeading[data-actions-layout="inline"] > :last-child {
+  align-self: center;
+}
+.sequenceBrowseTabs[role="tablist"][data-size="compact"] > button {
+  min-inline-size: 0;
+  padding-inline: .36rem;
+}
+.referenceViewSwitcher[role="radiogroup"] { display: none; }
+@container technical-plan-area (width < 35rem) {
+  .sequenceWorkspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: fit-content(33%) repeat(2, minmax(0, 1fr));
+    grid-template-areas: "map" "browse" "selected";
+  }
+}
+.technicalPlanSurface .sequenceWorkspace [aria-haspopup="listbox"] > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planningNavigation[data-frame][data-density] { padding: .48rem; }
+.planningNavigation .planningHeading h3 { margin-top: .2rem; font-size: 1.16rem; line-height: 1.2; }
+.planningSteps[role="group"] { margin-top: 0; gap: .3rem; }
+.planningSteps button[data-connects-next="false"][data-density="compact"] {
+  grid-template-columns: 1.05rem minmax(0, 1fr);
+  gap: .42rem;
+  padding: .32rem .44rem;
+}
+.planningSteps button strong, .planningSteps button small { white-space: normal; }
+.planningSteps button em:empty { display: none; }
+@media (max-height: 760px) {
+  .planningNavigation[data-frame][data-density] { padding-block: .4rem; }
+  .planningSteps[role="group"] { gap: .24rem; }
+}
+.reviewFollowUp[data-tone] {
+  border-color: rgba(245, 239, 226, .13);
+  background: rgba(0, 0, 0, .16);
+  box-shadow: none;
+}
+.scopeFilter[data-emphasis] { min-height: 2.55rem; }
+.stepFlow [aria-current="step"] { scroll-margin-inline: .75rem; }
+.stepFlow[data-teras-progress-step-list] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stepFlow button strong { font-size: .83rem; white-space: normal; }
+.stepFlow button small { font-size: .68rem; white-space: normal; }
+.stepFlow button[aria-current="step"] strong { color: #fff1d3; }
+.planTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  padding-block-start: .25rem;
+  padding-inline: .125rem;
+}
+.planTools [aria-pressed="true"], .scopeFilter[aria-pressed="true"] {
+  border-color: rgba(255, 193, 90, .62);
+  background-color: rgba(255, 193, 90, .12);
+  color: #ffe4ac;
+}
+.scopeLayout strong { overflow-wrap: anywhere; }
+.sequenceSelection .sequenceFocusCard h3 {
+  font-size: .92rem;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+.sequenceRelations { margin: 0; padding: 0; list-style: none; }
+.sequenceRelations li + li { margin-block-start: .35rem; }
+.selectionTools { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; }
+.selectionTools > :first-child { flex: 1 1 14rem; }
+.readableRowTitle, .readableRowDetail { display: block; white-space: normal; overflow-wrap: anywhere; }
+.readableRowTitle { font-weight: 600; font-family: system-ui, sans-serif; font-size: .79rem; line-height: 1.3; text-transform: none; color: #f3ebdd; }
+.readableRowDetail { font-size: .73rem; line-height: 1.28; color: #c7baa4; }
+.planInspectionRow[data-current="false"]:not(:hover, :focus-visible) {
+  border-color: rgba(var(--teras-selectable-row-rgb), .08);
+}
+.planInspectionRow[data-current="false"]:not(:hover, :focus-visible)::before { opacity: 0; }
+.planInspectionRow[data-current="false"]:not(:hover, :focus-visible) .readableRowTitle { color: rgba(245, 239, 226, .76); }
+.planInspectionRow[data-current="false"]:not(:hover, :focus-visible) .readableRowDetail { color: rgba(245, 239, 226, .6); }
+.reviewFacts [data-teras-stat-item] > span { font-size: .67rem; line-height: 1.25; }
+.reviewFacts [data-teras-stat-item] > strong { font-size: .94rem; line-height: 1.3; }
+.savedArchitectureZones {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  gap: .65rem;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+.savedArchitectureContent[data-scroll="true"][data-fill="true"] {
+  align-content: stretch;
+  grid-auto-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+.savedArchitectureZones .referenceContent[data-scroll="true"] { overscroll-behavior: contain; }
+.savedArchitectureDiagrams[data-scroll="true"] { container-type: size; }
+.savedArchitectureDiagrams [data-teras-diagram-frame] button[aria-label="Open saved diagram viewer"] img {
+  height: clamp(3.5rem, calc(100cqh - 3.2rem), 32rem);
+}
+.savedArchitectureBrief[data-scroll="true"][data-fill="true"] {
+  align-content: stretch;
+  grid-auto-rows: minmax(0, 1fr);
+}
+.architectureBriefFields[data-teras-field-stack] {
+  grid-template-rows: minmax(5rem, 1fr) auto;
+  align-content: stretch;
+}
+@container technical-plan-area (width < 43rem) {
+  .savedArchitectureContent[data-scroll="true"][data-fill="true"] {
+    align-content: start;
+    grid-auto-rows: max-content;
+    overflow: auto;
+    scrollbar-gutter: stable;
+  }
+  .savedArchitectureZones {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+  .savedArchitectureZones .referenceContent[data-scroll="true"] {
+    height: auto;
+    overflow: visible;
+  }
+  .savedArchitectureDiagrams[data-scroll="true"] { container-type: normal; }
+  .savedArchitectureDiagrams [data-teras-diagram-frame] button[aria-label="Open saved diagram viewer"] img {
+    height: clamp(10rem, 36dvh, 19rem);
+  }
+  .savedArchitectureBrief[data-scroll="true"] { min-height: clamp(16rem, 40dvh, 24rem); }
+}
+
+.generatedDiagram [aria-label="Implementation sequence canvas"] {
+  max-height: min(21rem, 42vh);
+}
+
+@media (max-height: 800px) {
+  .referenceViewSwitcher[role="radiogroup"] {
+    display: inline-flex;
+    grid-area: views;
+    justify-self: start;
+    max-inline-size: 100%;
+  }
+  .referenceViewSwitcher > button[aria-checked="true"] { color: #17130d; }
+  .referenceViewSwitcher > button:focus-visible {
+    outline: 1px solid var(--focus-ring, #ffd17c);
+    outline-offset: -1px;
+  }
+  .sequenceWorkspace[data-reference-view] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "views" "reference";
+  }
+  .savedArchitectureZones[data-reference-view] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "reference";
+  }
+  :is(.sequenceWorkspace, .savedArchitectureZones)[data-reference-view] > [data-reference-panel] { grid-area: reference; }
+  :is(.sequenceWorkspace, .savedArchitectureZones)[data-reference-view] > [data-reference-panel="false"] {
+    display: none;
+  }
+  .savedArchitectureContent[data-scroll="true"][data-fill="true"] {
+    align-content: stretch;
+    grid-auto-rows: minmax(0, 1fr);
+    overflow: hidden;
+  }
+  .savedArchitectureZones .referenceContent[data-scroll="true"] {
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+  }
+  .savedArchitectureBrief[data-scroll="true"][data-fill="true"] {
+    align-content: start;
+    grid-auto-rows: max-content;
+  }
+  .architectureBriefFields[data-teras-field-stack] {
+    grid-template-rows: auto auto;
+    align-content: start;
+  }
+  .architectureBriefFields [data-surface="field"][data-scroll-height="fill"] > div {
+    overflow: visible;
+  }
+  .savedArchitectureDiagrams[data-scroll="true"] { container-type: size; }
+  .savedArchitectureDiagrams [data-teras-diagram-frame] button[aria-label="Open saved diagram viewer"] img {
+    height: clamp(3.5rem, calc(100cqh - 3.2rem), 32rem);
+  }
+}
+
+.planReaderList {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.planReaderList > [data-teras-field-stack] {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.planReaderEntry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .3rem .8rem;
+  border-bottom: 1px solid rgba(245, 239, 226, .11);
+  padding: .55rem .65rem;
+  overflow-wrap: anywhere;
+}
+.planReaderEntry:last-child { border-bottom: 0; }
+
+.reviewScalarGrid[data-shape="grid"][data-columns="3"] {
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+}
+.sequenceDetailFacts[data-shape="grid"][data-columns="3"][data-treatment="card"] {
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+}
+
+.sequenceRecordDetails { display: grid; gap: .45rem; }
+.sequenceRecordDetails > p {
+  margin: 0;
+  color: rgba(255, 223, 169, .9);
+  font-size: .7rem;
+}
+
+.planReaderEntry small { color: var(--muted); }
+
+.focusedFlow {
+  --sequence-connection-gap: 1.45rem;
+  display: grid;
+  gap: var(--sequence-connection-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.focusedFlow > li { position: relative; min-width: 0; }
+.focusedFlow > li:not(:last-child)::before,
+.focusedFlow > li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #e9be74;
+  pointer-events: none;
+}
+.focusedFlow > li:not(:last-child)::before {
+  top: 100%;
+  width: 2px;
+  height: calc(var(--sequence-connection-gap) - 1px);
+}
+.focusedFlow > li:not(:last-child)::after {
+  top: calc(100% + var(--sequence-connection-gap) - .4rem);
+  width: .6rem;
+  height: .4rem;
+  clip-path: polygon(0 0, 50% 62%, 100% 0, 100% 38%, 50% 100%, 0 38%);
+}
+@container technical-plan-scope (width < 42rem) {
+  .scopeRegion > .scopeStep { flex: 1 0 auto; }
+  .scopeLayout { grid-template-columns: minmax(0, 1fr); }
+  .scopeTree[data-scroll="true"] { min-height: min(12rem, 31vh); max-height: min(20rem, 48vh); }
+}
+.scopeTree[data-scroll="true"] { padding-inline-end: .28rem; }
+@media (min-width: 1121px) {
+  .overviewLayout[data-teras-zone-layout][data-variant="main-support"] {
+    grid-template-columns: minmax(0, 1fr) minmax(21.25rem, 25%);
+  }
+}
+@media (max-width: 1120px) {
+  .overviewLayout[data-teras-zone-layout][data-variant="main-aside"] {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: auto;
+  }
+  .overviewLayout[data-teras-zone-layout][data-variant="main-aside"] > [data-teras-zone] { height: auto; }
+  .overviewLayout[data-teras-zone-layout] { grid-template-rows: minmax(max(34rem, 100%), 1fr) auto; }
+  .advisorWidthControl { display: none; }
+}
+@media (max-width: 700px) {
+  .stepFlow[data-teras-progress-step-list], .searchRow { grid-template-columns: minmax(0, 1fr); }
+}

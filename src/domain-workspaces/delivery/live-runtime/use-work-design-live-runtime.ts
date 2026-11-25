@@ -110,7 +110,10 @@ export function useWorkDesignLiveRuntime(
   );
 
   const treeAdvice = useCallback(
-    async (command: Omit<WorkDesignTreeAssistCommand, "sourceRevision">, signal?: AbortSignal) => {
+    async (
+      command: Omit<WorkDesignTreeAssistCommand, "sourceRevision">,
+      signal?: AbortSignal,
+    ) => {
       signal?.throwIfAborted();
       if (readOnly) throw new Error("Completed work is read-only.");
       const current = await currentSnapshot(snapshotRef.current, refresh);

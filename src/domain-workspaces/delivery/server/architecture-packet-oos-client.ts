@@ -32,6 +32,29 @@ export function architecturePacketOosConfigured(
   return deliveryOosConfigured(env);
 }
 
+export async function readTechnicalPlanFacts(
+  input: Record<string, unknown>,
+  options: ArchitecturePacketClientOptions = {},
+) {
+  const config = resolveDeliveryOosConfig(options.env);
+  const result = await deliveryOosRequest(
+    config,
+    "/v1/delivery-art/architecture-packets/facts",
+    {
+      body: JSON.stringify({ input }),
+      headers: { "x-oos-operator-id": config.operatorId },
+      method: "POST",
+    },
+    options.fetchImpl,
+    architecturePacketTimeoutMs,
+  );
+  const binding = result as { delivery_id?: unknown; kind?: unknown } | null;
+  if (!binding || binding.delivery_id !== input.delivery_id || binding.kind !== input.kind) {
+    throw new DeliveryOosError("The plan facts did not match this request.", "delivery_plan_facts_mismatch", 502);
+  }
+  return result;
+}
+
 export async function draftArchitecturePacket(
   input: ArchitecturePacketDraftInput,
   options: ArchitecturePacketClientOptions = {},

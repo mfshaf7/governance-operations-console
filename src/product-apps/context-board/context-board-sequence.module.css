@@ -1,7 +1,12 @@
 .workspace { min-width: 0; min-height: 0; }
-.sequenceCanvas { min-width: 0; max-width: 100%; max-height: 32rem; overflow: auto; border: 1px solid rgba(158,175,195,.25); border-radius: .8rem; background: #0d1119; }
+.sequenceCanvas {
+  min-width: 0;
+  max-width: 100%;
+  max-height: 32rem;
+  overflow: auto;
+}
 .sequenceCanvas svg { display: block; max-width: none; }
-.sequenceEdge { fill: none; stroke: #b6a27a; stroke-width: 2; color: #b6a27a; }
+.sequenceEdge { fill: none; }
 .sequenceNode { cursor: pointer; outline: none; }
 .sequenceNode rect { fill: #17202c; stroke: #8197b5; stroke-width: 1.5; }
 .sequenceNode rect[data-kind="approval"] { stroke: #e5b351; }
@@ -11,4 +16,25 @@
 
 .workspace[data-fit="workspace"] { height: 100%; display: flex; flex-direction: column; overflow: auto; scrollbar-width: thin; scrollbar-color: rgba(255,193,90,.44) rgba(20,14,9,.62); }
 .workspace[data-fit="workspace"] > * { flex-shrink: 0; }
-.workspace[data-fit="workspace"] .sequenceCanvas { flex: 1 0 13rem; min-height: 13rem; max-height: none; }
+.workspace[data-fit="workspace"] > .sequenceFrame { flex: 1 0 16rem; min-height: 16rem; }
+.workspace[data-fit="workspace"] .sequenceCanvas { max-height: none; }
+
+.sequenceToolbar {
+  container: sequence-toolbar / inline-size;
+}
+.sequenceIconAction[data-size="table-compact"] { min-inline-size: 2rem; padding-inline: .4rem; font-size: .85rem; }
+.sequenceLegend { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .85rem; margin: 0; padding: 0; list-style: none; }
+.sequenceLegend li { display: flex; align-items: center; gap: .35rem; }
+@container sequence-toolbar (width < 27rem) {
+  .sequenceToolbar > [aria-label="Diagram controls"] { gap: .28rem; }
+  .sequenceIconAction[data-size="table-compact"] { min-inline-size: 1.85rem; }
+  .sequenceViewerSuffix { display: none; }
+}
+.sequenceArrow { stroke-width: 1.5; fill: none; }
+.sequenceEdge[data-dim="true"] { opacity: .2; }
+.sequenceNode[data-dim="true"] { opacity: .48; }
+.sequenceNode[data-dim="true"]:is(:hover, :focus-visible) { opacity: 1; }
+.sequenceDivider { stroke: #8996a5; stroke-dasharray: 5 5; }
+.sequenceDividerLabel { fill: #dddfe2; font-size: 11px; font-weight: 700; }
+.workspace[data-fit="embedded"] .sequenceCanvas { max-height: clamp(12.5rem, 32vh, 19rem); }
+.workspace[data-fit="embedded"] .sequenceCanvas svg { margin-inline: auto; }

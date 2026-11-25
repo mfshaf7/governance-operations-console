@@ -176,23 +176,29 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
     if (!byEpic.has(item.legacy_epic_id) || item.workflow_phase === "refinement") byEpic.set(item.legacy_epic_id, item);
   }
   const candidates = [...byEpic.values()];
-  const nodes: PlanningNode[] = candidates.flatMap(epic => getPlanningNodes(epic, model).map(node => ({
-    ...node,
-    id: `${epic.legacy_epic_id}/${node.id}`,
-    parentId: node.parentId ? `${epic.legacy_epic_id}/${node.parentId}` : null,
-    epicId: epic.legacy_epic_id,
-    epicTitle: epic.display_name,
-    available: node.available && (local ? refinementPreparationComplete(epic)
-      : ["new", "ready"].includes(node.status) && (epic.workflow_phase === "execution"
-        || Boolean((epic.execution_navigation?.planning_prepared_work_item_ids
-          ?? epic.execution_navigation?.prepared_work_item_ids)?.includes(node.number ?? 0)))),
-    moveUnavailableReason: node.status === "done" ? "Completed work. The recorded schedule is available for inspection."
-      : local && !refinementPreparationComplete(epic) ? "Finish Refinement before scheduling this work."
-      : node.status === "in-progress" ? "This work has started. Its schedule can be inspected here."
-      : node.status === "blocked" ? "Review the blocker in Execution before moving this work."
-      : !node.available ? "This work item is available for inspection only."
-      : undefined,
-  })));
+  const nodes: PlanningNode[] = candidates.flatMap(epic => {
+    const navigation = epic.execution_navigation;
+    const preparedIds = new Set(navigation?.planning_prepared_work_item_ids ?? navigation?.prepared_work_item_ids ?? []);
+    const localPreparationComplete = local && refinementPreparationComplete(epic);
+    return getPlanningNodes(epic, model).map(node => {
+      const movable = node.available && ["new", "ready"].includes(node.status);
+      const prepared = local ? localPreparationComplete : preparedIds.has(node.number ?? 0);
+      return {
+        ...node,
+        id: `${epic.legacy_epic_id}/${node.id}`,
+        parentId: node.parentId ? `${epic.legacy_epic_id}/${node.parentId}` : null,
+        epicId: epic.legacy_epic_id,
+        epicTitle: epic.display_name,
+        available: movable && prepared,
+        moveUnavailableReason: node.status === "done" ? "Completed work. The recorded schedule is available for inspection."
+          : node.status === "in-progress" ? "This work has started. Its schedule can be inspected here."
+          : node.status === "blocked" ? "Review the blocker in Execution before moving this work."
+          : !movable ? "This work item is available for inspection only."
+          : !prepared ? "Finish Refinement before scheduling this work."
+          : undefined,
+      };
+    });
+  });
   const increments = [...new Set([
     ...model.catalog.values.filter(item => item.catalog_item_id === targetPiCatalogId &&
       ["active", "admitted"].includes(item.lifecycle_state) && /^PI-\d{4}-\d{2}$/.test(item.value_key)).map(item => item.value_key),
@@ -619,12 +625,15 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
     {(draftDirty || hint) && <TerasActionRow layout="split" spacing="tight"
       end={sourceError && refresh ? <TerasActionButton busy={refreshing} emphasis="secondary" size="table-compact"
         onClick={() => void refresh().catch(() => undefined)}>Retry loading plan</TerasActionButton>
-        : draftDirty && <TerasActionRow spacing="tight">
+        : draftDirty ? <TerasActionRow spacing="tight">
           <TerasActionButton emphasis="secondary" size="table-compact" onClick={() => { setDraft(null); setMessage(""); }}>
             Discard changes
           </TerasActionButton>
           <TerasActionButton size="table-compact" disabled={!canReview} onClick={() => void openPlanReview()}>Review plan</TerasActionButton>
-      </TerasActionRow>}>
+      </TerasActionRow> : view !== "overview" && !hasCalendar && canSaveCalendar && !refreshing &&
+        <TerasActionButton emphasis="primary" size="table-compact" onClick={() => setCalendarDialog("setup")}>
+          Set up calendar
+        </TerasActionButton>}>
       {hint && <div role="status"><TerasRecordMetaText>{hint}</TerasRecordMetaText></div>}
     </TerasActionRow>}
   </TerasFieldStack>;

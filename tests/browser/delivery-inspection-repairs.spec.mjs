@@ -96,10 +96,10 @@ test("Home advisor sends only on request through the governed Agent path and req
   await expect(advisor).toContainText("Online");
   expect(h.requests).toHaveLength(0);
   await page.setViewportSize({ width: 1280, height: 720 });
-  await advisor.locator("details").last().scrollIntoViewIfNeeded();
   await page.route("**/api/agent-interaction", route => route.request().method() === "POST"
     ? route.fulfill({ body: "Synthetic governed Delivery guidance", headers: evidenceHeaders }) : route.fallback());
   const input = advisor.getByRole("textbox", { name: "Delivery advisor prompt", exact: true });
+  await reachable(page, input);
   await input.fill("Explain the Delivery overview without changing work"); await advisor.getByRole("button", { name: "run", exact: true }).click();
   await expect(advisor).toContainText("Synthetic governed Delivery guidance");
   expect(h.requests).toHaveLength(1);
@@ -114,7 +114,7 @@ test("Home advisor sends only on request through the governed Agent path and req
   expect(h.errors).toEqual([]);
 });
 
-test("Home advisor retains cancellation and rejects fixture context", async ({ page }) => {
+test("Home advisor retains cancellation and rejects stale context", async ({ page }) => {
   const h = await deliveryHarness(page, { live: true, online: true });
   let release; const pending = new Promise(resolve => { release = resolve; });
   await page.route("**/api/agent-interaction", async route => {
@@ -135,7 +135,8 @@ test("Home advisor retains cancellation and rejects fixture context", async ({ p
   h.model.projection_state.checked_at = "2020-01-01T00:00:00Z";
   await h.refresh();
   await advisor.getByRole("textbox").fill("Explain this stale Delivery overview"); await advisor.getByRole("button", { name: "run", exact: true }).click();
-  await expect(advisor).toContainText(/unavailable|not available/); expect(h.requests).toHaveLength(1);
+  await expect(advisor).toContainText("No model-eligible focused context candidate is available.");
+  expect(h.requests).toHaveLength(1);
   expect(h.errors).toEqual([]);
 });
 
@@ -196,7 +197,7 @@ test("failed package reads show unavailable rather than an empty successful regi
  await expect(footer.getByRole("button",{name:"Continue search",exact:true})).toBeDisabled();
  await expect(h.workspace.getByRole("alert")).toContainText("Synthetic package source unavailable");
  await page.unroute("**/api/delivery/workspace?**");
- await h.workspace.getByRole("button",{name:"Retry package search",exact:true}).click();
+ await h.workspace.getByRole("alert").getByRole("button",{name:"Retry loading",exact:true}).click();
  await expect(footer.getByRole("status")).not.toHaveText("Page unavailable");
  await expect(h.workspace.getByRole("alert")).toHaveCount(0);
  expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
@@ -281,21 +282,22 @@ test("Catalog edits survive equivalent owner refresh and closing requires explic
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 
-test("Architecture authoring retains editable JSON and guards unsaved changes", async ({ page }) => {
+test("Architecture authoring retains named-field edits when switching views", async ({ page }) => {
   const h = await deliveryHarness(page); await h.section("execution-board");
   await h.workspace.getByRole("button", { name:"Open Technical Plan",exact:true }).click();
   const modal = page.getByRole("dialog", { name:"Technical Plan & Approval",exact:true });
-  await modal.getByRole("radio", {name:"Prepare Plan",exact:true}).click();
-  await modal.getByText("Technical data · JSON import and export",{exact:true}).click();
-  const field = modal.getByRole("textbox", { name:"Architecture design JSON",exact:true });
-  await field.fill('{"inspection":"unsaved"}'); await page.keyboard.press("Escape");
-  const guard = page.getByRole("alertdialog", { name:"Discard technical plan edits?",exact:true });
-  await guard.getByRole("button", { name:"Keep Editing",exact:true }).click(); await expect(field).toHaveValue('{"inspection":"unsaved"}');
-  await modal.getByRole("button", { name:"Back to Execution Board",exact:true }).click(); await guard.getByRole("button", { name:"Discard Draft",exact:true }).click();
-  await expect(modal).toHaveCount(0); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+  const field = modal.getByRole("textbox", { name:"Plan summary and justification",exact:true });
+  await field.fill("Coordinate the work while keeping the current service available.");
+  const steps = modal.getByRole("group", { name:"Technical plan flow",exact:true });
+  await steps.getByRole("button", { name:/Plan the changes/ }).click();
+  await expect(modal.getByRole("tablist", { name:"Plan sections",exact:true })).toBeVisible();
+  await expect(modal.getByRole("textbox", { name:"Stored draft content",exact:true })).toHaveCount(0);
+  await steps.getByRole("button", { name:/Choose scope/ }).click();
+  await expect(field).toHaveValue("Coordinate the work while keeping the current service available.");
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 
-test("Architecture guided fields retain recorded work and expose only saved brief diagrams", async ({ page }, info) => {
+test("Technical planning shows the retained Work Design diagrams and brief", async ({ page }, info) => {
   const h = await deliveryHarness(page, { live: true });
   const snapshot = { connections: [], customItems: [{ id: "saved-service", kind: "component", label: "Saved workflow service", detail: "Original responsibility", x: 160, y: 160 }],
     positions: {}, removedCoreIds: [], sketchStrokes: [], style: "architecture", templateTrays: [] };
@@ -303,7 +305,9 @@ test("Architecture guided fields retain recorded work and expose only saved brie
     finalizedFingerprint: "synthetic:fingerprint", metadataPacketRef: "metadata:review", name: "Saved system architecture", savedSessionId: null, snapshot, versionLabel: "1",
     coreNodes: [], finalizedBrief: { boardSnapshotRef: "snapshot:review", carriedMetadata: [], decision: "proceed", diagramNodes: [],
       diagramSummary: "Saved service responsibilities", diagramTitle: "Saved system architecture", finalizedAt: "2026-01-01T00:00:00Z", finalizedBy: "Synthetic reviewer",
-      metadataPacketRef: "metadata:review", name: "Saved system architecture", note: "Frozen architecture narrative", systemChecks: [], snapshotArtifact: null, version: "1" } };
+      metadataPacketRef: "metadata:review", name: "Saved system architecture",
+      note: "# Service architecture\n\n## Responsibilities\n\nFrozen architecture narrative\n\n```sh\n# Retain this code comment\n```",
+      systemChecks: [], snapshotArtifact: null, version: "1" } };
   await page.route("**/api/saved-work/work-design/*", route => {
     const id = new URL(route.request().url()).pathname.split("/").at(-1);
     return route.fulfill({ json: { mode: "live", snapshot: { kind: "work-design", subject_id: id, record: { payload_json: JSON.stringify({ schemaVersion: 2, packageId: id,
@@ -312,21 +316,17 @@ test("Architecture guided fields retain recorded work and expose only saved brie
   await h.section("execution-board");
   await h.workspace.getByRole("button", { name: "Open Technical Plan", exact: true }).click();
   const modal = page.getByRole("dialog", { name: "Technical Plan & Approval", exact: true });
-  await expect(modal.getByRole("textbox", { name: "Architecture design JSON", exact: true })).not.toBeVisible();
-  await modal.getByRole("radio", { name:"Prepare Plan",exact:true }).click();
-  await modal.getByRole("button",{name:"Edit Scope",exact:true}).click();
-  await expect(modal.getByRole("button",{name:"Delivery package",exact:true})).toBeDisabled();
-  const work = modal.getByRole("button", { name: "Covered work item 1", exact: true }).first();
-  await work.click();
-  const option = page.getByRole("option").filter({ hasText: /^(Epic|Feature|User story|Defect|Task) [0-9]+ ·/ }).first();
-  const label = await option.innerText(); await option.click();
-  await modal.getByText("Technical data · JSON import and export", { exact: true }).click();
-  const source = JSON.parse(await modal.getByRole("textbox", { name: "Architecture design JSON", exact: true }).inputValue());
-  expect(source.descendant_owner_map[0].work_item_id).toBe(`work-item-${label.match(/\b([0-9]+) ·/)[1]}`);
-  await modal.getByText("Technical data · JSON import and export", { exact: true }).click();
-  await modal.getByRole("radio", {name:"System Architecture",exact:true}).click();
-  await expect(modal.getByText("Frozen architecture narrative", { exact: true })).toBeVisible();
-  await expect(modal.locator('img[src^="data:image/svg+xml"]')).toBeVisible();
+  await modal.getByRole("group", { name:"Technical plan flow", exact:true }).getByRole("button", { name:/Plan the changes/ }).click();
+  await modal.getByRole("button", { name:"Saved architecture",exact:true }).click();
+  await expect(modal.getByRole("button", { name:"Open saved diagram viewer",exact:true }).locator("img")).toBeVisible();
+  const finalized=modal.getByRole("region", { name:"Finalized brief",exact:true });
+  const note = finalized.getByRole("region", { name:"Handoff note",exact:true });
+  await expect(note.getByRole("heading", { name:"Service architecture", level:4 })).toBeVisible();
+  await expect(note.getByRole("heading", { name:"Responsibilities", level:5 })).toBeVisible();
+  await expect(note).toContainText("Frozen architecture narrative");
+  await expect(note).toContainText("# Retain this code comment");
+  await expect(note.getByRole("heading", { name:"Retain this code comment" })).toHaveCount(0);
+  await expect(note.getByRole("textbox")).toHaveCount(0);
   for (const [width, height] of [[1700, 1050], [1280, 720]]) {
     await page.setViewportSize({ width, height });
     await modal.screenshot({ path: info.outputPath(`architecture-guided-${width}.png`) });
@@ -591,23 +591,23 @@ test("Refinement single/shared editors and every step retain short-window inspec
   await expect(page.getByRole("group",{name:"Refinement steps"})).toBeVisible();
   await page.getByRole("button",{name:"Open Metadata Workbench",exact:true}).click();
   const modal=()=>page.getByRole("dialog").last();
-  await reachable(page,modal().getByRole("button",{name:"Expand",exact:true}));
-  await modal().getByRole("radio",{name:"Shared",exact:true}).click();
+  const advisor = modal().getByRole("textbox",{name:"Refinement metadata advisor prompt",exact:true});
+  await reachable(page,advisor);
+  await reachable(page,modal().getByRole("button",{name:"Read work item",exact:true}));
+  await modal().getByRole("radio",{name:"Multiple items",exact:true}).click();
+  await modal().getByRole("button",{name:"Expand Feature 1 - Metadata Materialization",exact:true}).click();
   await modal().getByRole("button").filter({hasText:"User Story 1 - Primary Execution Target"}).click();
   await modal().getByRole("button").filter({hasText:"User Story 2 - Readiness Metadata"}).click();
   await expect(modal()).not.toContainText("No Shared Fields");
-  await reachable(page,modal().getByRole("button",{name:"Expand",exact:true}));
-  await modal().getByRole("button",{name:"Expand",exact:true}).click();
   await reachable(page,modal().getByRole("button",{name:"run",exact:true}));
-  await modal().getByRole("button",{name:"Collapse",exact:true}).last().click();
-  for(const index of [1,2,3]){
-    const steps=modal().locator('[data-teras-progress-step-list] button');await steps.nth(index).click();
-    if(index===1) {
-      await expect(modal().locator('[data-teras-progress-step-list] button').first()).toContainText("Open");
-      await reachable(page,modal().getByRole("button",{name:"Review Apply Plan",exact:true}));
-    }
-    if(index===2)await expect(modal()).toContainText("Apply");
-    await reachable(page,modal().getByRole("button",{name:"Back to Hub",exact:true}));
+  await modal().getByRole("button",{name:"Back to Hub",exact:true}).click();
+  for(const [label,heading] of [["Readiness Review","Readiness Review"],["Apply Refinement","Apply Refinement"]]){
+    const steps=modal().getByRole("group",{name:"Refinement steps",exact:true});
+    const step=steps.getByRole("button",{name:new RegExp(label)});
+    await reachable(page,step);await step.click();
+    await expect(modal().getByRole("heading",{name:heading,exact:true})).toBeVisible();
+    const back=modal().getByRole("button",{name:"Back to Hub",exact:true});
+    await reachable(page,back);await back.click();
   }
   expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
 });
@@ -665,9 +665,9 @@ test("Home activity uses the shared timeline and keeps original event evidence b
 });
 
 for (const [packageName, actionName, reviewName, recordName] of [
-  ["Broker Draft Validation", "Continue Remaining Work", "Review Continue", "Record Continue Receipt"],
+  ["Broker Draft Validation", "Review Remaining Work Decision", "Review Continue", "Record Continue Receipt"],
   ["Governed AI Control Plane", "Defer", "Review Parking", "Record Parking Receipt"],
-  ["Security Baseline Review", "Resume", "Review Resume", "Record Resume Receipt"],
+  ["Security Baseline Review", "Resume Work", "Review Resume", "Record Resume Receipt"],
 ]) {
   test(`${actionName}: rounded panel content stays inset and reachable in draft, review and local receipt`, async ({ page }) => {
     const h = await deliveryHarness(page, { disconnected: true }); await h.section("execution-board");
@@ -686,13 +686,13 @@ for (const [packageName, actionName, reviewName, recordName] of [
         const last = step === "draft" ? panel.locator("input,textarea,button").last() : step === "review" ? panel.locator('[data-teras-list] > *').last() : panel.locator('[class*="terasMetadataValue"]').last();
         await reachable(page, last);
         expect(await modal.evaluate(e => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(1);
-        if (actionName === "Continue Remaining Work") await page.screenshot({ path: test.info().outputPath(`${step}-${width}.png`) });
+        if (actionName === "Review Remaining Work Decision") await page.screenshot({ path: test.info().outputPath(`${step}-${width}.png`) });
       }
     }
     await verifyContent("draft");
     for (const field of await modal.locator("textarea").all()) await field.fill("Synthetic browser layout evidence only; no owner command is authorized.");
     for (const field of await modal.locator('input[type="date"]').all()) await field.fill("2027-01-08");
-    if (actionName === "Resume") {
+    if (actionName === "Resume Work") {
       await modal.getByRole("button", { name: "Resume posture", exact: true }).click();
       await page.getByRole("option", { name: "Ready", exact: true }).click();
     }
@@ -842,25 +842,25 @@ for(const width of[1280,1700])test(`Delivery package and Intake history selector
  await h.section('intake');await h.workspace.getByRole('radio',{name:'History',exact:true}).click();const intake=h.workspace.getByRole('navigation',{name:'Delivery Intake register pages',exact:true});await expect(intake.getByRole('status')).toContainText('Showing 1–25');await intake.getByRole('button',{name:'Delivery Intake register rows per page',exact:true}).click();await page.getByRole('option',{name:'100',exact:true}).click();await expect(intake.getByRole('status')).toContainText('Showing 1–100');await intake.getByRole('button',{name:'Next page',exact:true}).click();await expect(intake.getByRole('status')).toContainText('Showing 101–131');expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);await h.workspace.screenshot({path:test.info().outputPath('page-size-delivery.png')});
 });
 
-test("package 812 has one work picker and no invented requirement-check step",async({page},info)=>{
+test("package 812 uses the Work Board to inspect child work and keeps the package blocker visible",async({page},info)=>{
  const h=await deliveryHarness(page,{disconnected:true});await h.section("execution-board");
  await h.workspace.getByRole("button",{name:/^Epic 812 Client Insight Delivery/}).click();
  const body=h.workspace.locator('[data-execution-package-body="true"]');
- await expect(body.getByText("Review the blocking condition",{exact:true})).toBeVisible();
+ await expect(body.getByRole("heading",{name:"Review what’s blocking progress",exact:true})).toBeVisible();
+ await expect(body.getByText(/^Implementation repository value client-insight-delivery is not linked and synced in Delivery Catalog/)).toBeVisible();
  await expect(body.getByRole("button",{name:"Check Work Requirements",exact:true})).toHaveCount(0);
- await expect(body.getByRole("button",{name:"Choose Work Item",exact:true})).toHaveCount(1);
+ await expect(body.getByRole("button",{name:"Choose Work Item",exact:true})).toHaveCount(0);
  await expect(body.getByRole("button",{name:"Prepare Technical Plan",exact:true})).toHaveCount(0);
  await expect(body.getByRole("button",{name:"Open Technical Plan",exact:true})).toHaveCount(1);
- const choose=body.getByRole("button",{name:"Choose Work Item",exact:true});
+ const choose=h.workspace.getByRole("button",{name:"Open Work Board",exact:true});
+ await expect(choose).toHaveCount(1);
  for(const [width,height]of[[1700,1050],[1280,720]]){
    await page.setViewportSize({width,height});await choose.scrollIntoViewIfNeeded();
    await h.workspace.screenshot({path:info.outputPath(`package-812-work-selection-${width}.png`)});
    expect(await h.workspace.evaluate(e=>e.scrollWidth-e.clientWidth)).toBeLessThanOrEqual(1);
  }
  await choose.click();
- const picker=page.getByRole("dialog",{name:"Open Work Item",exact:true});
- await expect(picker.getByRole("button",{name:"Work item",exact:true})).toBeVisible();
- await expect(picker.getByRole("button",{name:"Open Session",exact:true})).toBeDisabled();
- await expect(picker).toContainText("Client Insight Delivery");
+ await expect(h.workspace.getByRole("button",{name:"Board level",exact:true})).toHaveText("Epic Board");
+ await expect(page.getByRole("dialog",{name:"Open Work Item",exact:true})).toHaveCount(0);
  expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
 });

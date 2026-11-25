@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import type { CSSProperties, KeyboardEvent } from "react";
+import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -9,6 +9,7 @@ import styles from "./teras-patterns.module.css";
 import { cx } from "./teras-utils";
 
 export type TerasSelectOption<Value extends string = string> = Readonly<{
+  content?: ReactNode;
   label: string;
   value: Value;
 }>;
@@ -277,6 +278,7 @@ export function TerasSelectControl<Value extends string>({
       >
         {options.map((option, index) => (
           <button
+            aria-label={option.content != null ? option.label : undefined}
             aria-selected={option.value === value}
             className={cx(
               styles.filterSelectOption,
@@ -292,7 +294,7 @@ export function TerasSelectControl<Value extends string>({
             role="option"
             type="button"
           >
-            {option.label}
+            {option.content ?? option.label}
           </button>
         ))}
       </div>
@@ -314,7 +316,7 @@ export function TerasSelectControl<Value extends string>({
         ref={buttonRef}
         type="button"
       >
-        <span>{selectedOption?.label ?? placeholder}</span>
+        <span>{selectedOption?.content ?? selectedOption?.label ?? placeholder}</span>
         <ChevronDown aria-hidden="true" size={15} />
       </button>
       {menuPlacement === "inline"
