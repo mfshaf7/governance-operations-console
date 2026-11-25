@@ -30,6 +30,15 @@ commissioning `#1264` complete in order. The Console displays the exact
 posture, audience, listing scope, access class, and owner-manifest evidence but
 does not treat any of them as product-access authority.
 
+Execution Technical Plan guidance uses the existing Technical Plan Advisor
+routing and context admission. Explicit requests submit the selected work, its
+recorded planning placement and direct dependencies, and any saved finalized
+brief note through a read-only advisor scope. A starter response contains
+bounded draft text. The Console assigns the work scope from the current
+Delivery record and saves editable content under the existing caller-bound
+Technical Plan draft. Validation, human approval, and recording retain their
+existing authority checks.
+
 The current security evidence is:
 
 - [Security review checklist](https://github.com/mfshaf7/security-architecture/blob/main/docs/reviews/security-review-checklist.md)

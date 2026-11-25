@@ -12,3 +12,24 @@
 .description code { font-family: "IBM Plex Mono", monospace; font-size: 0.85em; }
 .description a { color: #8bb5ff; text-decoration: underline; }
 .description blockquote { border-left: 2px solid rgba(255, 193, 90, 0.55); padding-left: 0.9rem; }
+
+.note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.note > :is(h4, h5, h6, p) {
+  margin: 0;
+  color: inherit;
+}
+
+.note > :is(h4, h5, h6) {
+  font-size: 1em;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.note > h4 { font-size: 1.1em; }
+.note > :is(h4, h5, h6):not(:first-child) { margin-block-start: .95em; }
+.note > :is(h4, h5, h6) + p { margin-block-start: .3em; }
+.note > p + p { margin-block-start: .7em; }

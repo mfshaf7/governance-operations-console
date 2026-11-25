@@ -22,11 +22,11 @@ const architectureSections = [
   ["landing_units", "Landing Units", "non-empty-array"],
   ["source_landing_graph", "source landing graph", "record"],
   ["work_item_execution_plan", "work-item execution plan", "non-empty-array"],
-  ["lifecycle_state_model", "lifecycle state model", "record"],
+  ["lifecycle_state_model", "lifecycle state model", "nullable-record"],
   [
     "authorization_session_execution_model",
     "authorization and execution model",
-    "record",
+    "nullable-record",
   ],
   ["evidence_receipt_handoffs", "evidence handoffs", "array"],
   ["runtime_boundaries", "runtime boundaries", "non-empty-array"],
@@ -52,9 +52,26 @@ const conformanceSections = [
   ["cases", "executable conformance cases", "non-empty-array"],
 ] as const;
 
+export function technicalPlanCheckSection(issue: string): string | null {
+  const architecture = architectureSections.find(([, label]) => issue === `Architecture ${label} is incomplete.`);
+  if (architecture) return `architecture:${architecture[0]}`;
+  const verification = conformanceSections.find(([, label]) => issue === `Conformance ${label} is incomplete.`);
+  if (verification) return `conformance_plan:${verification[0]}`;
+  if (issue.startsWith("Repository revisions must")) return "repo_revisions";
+  if (issue.startsWith("Architecture design must")) return "architecture:landing_units";
+  if (issue.startsWith("Conformance plan must")) return "conformance_plan:protocol_applicability";
+  if (issue.startsWith("At least one evidence handoff")) return "architecture:evidence_receipt_handoffs";
+  if (issue.startsWith("architecture human gate ")) return "architecture:required_human_gates";
+  if (issue.startsWith("Runtime activation steps")) return "architecture:runtime_activation_chains";
+  if (issue.startsWith("Verification cases must")) return "conformance_plan:cases";
+  if (issue.startsWith("Git dependency verification")) return "conformance_plan:git_causality";
+  if (issue.startsWith("Conformance requirement")) return "conformance_plan:protocol_applicability";
+  return null;
+}
+
 export function architecturePacketDraftIssues(
   input: ArchitecturePacketDraftInput,
-  { requireApproval = false } = {},
+  { requireApproval = false, requireInstallationRules = false } = {},
 ) {
   const issues: string[] = [];
   if (!deliveryIdPattern.test(input.delivery_id)) {
@@ -77,11 +94,15 @@ export function architecturePacketDraftIssues(
     issues.push("Repository revisions must bind repo, base ref, and exact commit.");
   }
   for (const [key, label, shape] of architectureSections) {
+    if (key === "runtime_boundaries" && !requireInstallationRules &&
+        (input.architecture[key] === undefined || Array.isArray(input.architecture[key]))) continue;
     if (!matchesShape(input.architecture[key], shape)) {
       issues.push(`Architecture ${label} is incomplete.`);
     }
   }
-  if (typeof input.conformance_plan.required !== "boolean") {
+  if (requireApproval && input.conformance_plan.required !== true) {
+    issues.push("Conformance requirement must be enabled for approval.");
+  } else if (typeof input.conformance_plan.required !== "boolean") {
     issues.push("Conformance requirement must be explicit.");
   }
   for (const [key, label, shape] of conformanceSections) {
@@ -227,6 +248,7 @@ export function assertArchitecturePacketArtifact(
   if (artifact.schema_version === 6) {
     const issues = architecturePacketDraftIssues(editable, {
       requireApproval: decision.status === "architecture-ready",
+      requireInstallationRules: true,
     });
     if (issues.length > 0) invalid(issues.join(" "));
   }
@@ -354,10 +376,11 @@ function assertRepoRevision(value: unknown) {
 
 function matchesShape(
   value: unknown,
-  shape: "array" | "non-empty-array" | "record",
+  shape: "array" | "non-empty-array" | "record" | "nullable-record",
 ) {
   if (shape === "array") return Array.isArray(value);
   if (shape === "non-empty-array") return Array.isArray(value) && value.length > 0;
+  if (shape === "nullable-record") return value === null || isRecord(value);
   return isRecord(value);
 }
 

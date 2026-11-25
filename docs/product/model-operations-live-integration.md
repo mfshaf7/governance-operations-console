@@ -408,6 +408,10 @@ the authoritative updated states/events. Unknown outcomes retain the original
 frozen command and read/retry recovery. Implementation verification is available
 when the original request is approved and applied.
 
+Switching between review actions keeps drafted change requirements for the same
+request. Return to **Request changes** to continue editing them. The recorded
+decision uses the currently selected action's input.
+
 Event names and UTC timestamps are readable; each event retains its original
 summary, order, actor, exact timestamp, command, resulting states and receipt
 reference/digest under **Event details**. A source with no history shows an

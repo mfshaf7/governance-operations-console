@@ -306,7 +306,7 @@ for (const width of [1280,2560]) test(`Refinement read states fill their shell a
   await expect(d.getByText("Missing Packet",{exact:true})).toHaveCount(0);
   await expect(d.getByText("not ready",{exact:true})).toHaveCount(0);
   await expect(d.getByText("The operation was aborted due to timeout",{exact:true})).toBeHidden();
-  const frame=d.locator('[class*="terasEmptyStateFill"]'),a=await shell.boundingBox(),b=await frame.boundingBox();
+  const frame=shell.getByRole("alert"),a=await shell.boundingBox(),b=await frame.boundingBox();
   expect(b.width/a.width).toBeGreaterThan(.9);
   await page.screenshot({path:test.info().outputPath("refinement-read-error.png")});
   await d.getByText("Technical details",{exact:true}).click();

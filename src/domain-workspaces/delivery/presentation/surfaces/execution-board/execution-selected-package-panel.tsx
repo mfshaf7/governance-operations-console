@@ -79,6 +79,8 @@ export function ExecutionSelectedPackagePanel({ auditEvents, details, onActionSe
     groups,
     hasPackageBlocker: Boolean(blocker),
     readOnly,
+    planningPending: Boolean(canOpenPIPlanning && scheduledWork === 0 &&
+      packageSummary.execution_navigation?.planning_prepared_work_item_ids?.length),
     technicalPlan: checkedWork && onInspectTechnicalPlan ? requirement : undefined,
   });
   const blockerAction = !readOnly ? selectedActions.find(action =>
@@ -142,15 +144,16 @@ export function ExecutionSelectedPackagePanel({ auditEvents, details, onActionSe
         <TerasFieldStack spacing="compact">
           {onInspectTechnicalPlan ? <TerasContentTray
             title="Technical Plan"
-            kicker={<ControlBoardKickerStatus title={<span>Implementation approach</span>} status={
+            kicker={readOnly || requirement.status !== "unknown" ? <ControlBoardKickerStatus title={<span>Implementation approach</span>} status={
               <span title={readOnly ? "Recorded history" : requirement.title}>
                 <TerasStatusPill tone={requirement.tone}>{readOnly ? "History" : technicalPlanStatusLabels[requirement.status]}</TerasStatusPill>
               </span>
-            } />}
-            description={readOnly ? "Inspect the agreement retained for this package. History does not establish current work-start eligibility." : requirement.detail}
+            } /> : "Implementation approach"}
+            description={readOnly ? "Inspect the agreement retained for this package." :
+              requirement.status === "unknown" ? "Coordinate changes that share a rollout, verification, or recovery plan." : requirement.detail}
           >
             <TerasFieldStack spacing="compact">
-              {workTitle ? <TerasRecordMetaText>Checked work: {workTitle}</TerasRecordMetaText> : null}
+              {workTitle && requirement.status !== "unknown" ? <TerasRecordMetaText>Checked work: {workTitle}</TerasRecordMetaText> : null}
               <TerasActionRow spacing="compact"><TerasActionButton emphasis="secondary" onClick={onInspectTechnicalPlan}>{requirement.actionLabel}</TerasActionButton>
               </TerasActionRow>
               {requirement.ownerReason ? <TerasTechnicalDetails summary="Requirement details" items={[{label:"Check explanation",value:requirement.ownerReason}]}/> : null}

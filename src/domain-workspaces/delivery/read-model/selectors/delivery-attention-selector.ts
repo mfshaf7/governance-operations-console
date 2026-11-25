@@ -184,7 +184,7 @@ function deliveryAttentionItemForPackage(
       detail: packageSummary,
       label: "Closeout",
       rank: 60,
-      target: { surfaceId: "execution-board" },
+      target: { surfaceId: "execution-board", packageId: deliveryPackage.delivery_package_id },
       title: deliveryPackage.display_name,
       tone: "warn",
     };
@@ -200,7 +200,7 @@ function deliveryAttentionItemForPackage(
       detail: packageSummary,
       label: "Execution Blocked",
       rank: 14,
-      target: { surfaceId: "execution-board" },
+      target: { surfaceId: "execution-board", packageId: deliveryPackage.delivery_package_id },
       title: deliveryPackage.display_name,
       tone: "danger",
     };

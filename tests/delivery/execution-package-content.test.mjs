@@ -35,6 +35,15 @@ test("next action uses exact plan checks and prioritizes package blockers and re
   assert.equal(next({ technicalPlan, hasPackageBlocker: true }).kind, "action");
   assert.equal(next({ technicalPlan, readOnly: true }).kind, "evidence");
 });
+test("prepared package without a schedule directs to PI Planning and retains its child blocker", () => {
+  const work = node(1, "Epic", "new", [node(2, "Feature", "new", [
+    { ...node(3, "User story", "new"), dependency_blocked: true },
+  ])]);
+  const groups = executionPackageWorkGroups(work);
+  assert.equal(groups.find(group => group.status === "blocked").count, 1);
+  assert.equal(next({ status: "new", groups, planningPending: true }).kind, "planning");
+  assert.equal(next({ status: "new", groups }).filter, "blocked");
+});
 test("plain blocker wording expands known field names and preserves undecided dates", () => {
   assert.equal(executionBlockerApproach({decision_path:"accept-risk"}),"Accept the risk");
   assert.equal(executionBlockerApproach({decision_path:"remove"}),"Resolve the cause");

@@ -21,6 +21,7 @@ export type TerasSegmentedControlProps<T extends string> = {
   onValueChange: (value: T) => void;
   options: readonly TerasSegmentedControlOption<T>[];
   size?: TerasSegmentedControlSize;
+  tabPanelId?: string;
   value: T;
 };
 
@@ -32,6 +33,7 @@ export function TerasSegmentedControl<T extends string>({
   onValueChange,
   options,
   size = "default",
+  tabPanelId,
   value,
 }: TerasSegmentedControlProps<T>) {
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -65,9 +67,9 @@ export function TerasSegmentedControl<T extends string>({
 
     let nextIndex: number | null = null;
 
-    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+    if (event.key === "ArrowLeft" || (!tabPanelId && event.key === "ArrowUp")) {
       nextIndex = (index - 1 + options.length) % options.length;
-    } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+    } else if (event.key === "ArrowRight" || (!tabPanelId && event.key === "ArrowDown")) {
       nextIndex = (index + 1) % options.length;
     } else if (event.key === "Home") {
       nextIndex = 0;
@@ -88,7 +90,7 @@ export function TerasSegmentedControl<T extends string>({
       className={cx(styles.terasSegmentedControl, className)}
       data-layout={layout}
       data-size={size}
-      role="radiogroup"
+      role={tabPanelId ? "tablist" : "radiogroup"}
       style={fillStyle}
     >
       {options.map((option, index) => {
@@ -96,12 +98,15 @@ export function TerasSegmentedControl<T extends string>({
 
         return (
           <button
-            aria-checked={selected}
+            aria-checked={tabPanelId ? undefined : selected}
+            aria-controls={tabPanelId}
+            aria-selected={tabPanelId ? selected : undefined}
             className={cx(
               styles.terasSegmentedControlButton,
               selected && styles.terasSegmentedControlButtonActive,
             )}
             disabled={disabled}
+            id={tabPanelId ? `${tabPanelId}-tab-${option.value}` : undefined}
             key={option.value}
             onClick={() => {
               if (!disabled) {
@@ -112,7 +117,7 @@ export function TerasSegmentedControl<T extends string>({
             ref={(node) => {
               optionRefs.current[index] = node;
             }}
-            role="radio"
+            role={tabPanelId ? "tab" : "radio"}
             tabIndex={index === focusableIndex ? 0 : -1}
             type="button"
           >

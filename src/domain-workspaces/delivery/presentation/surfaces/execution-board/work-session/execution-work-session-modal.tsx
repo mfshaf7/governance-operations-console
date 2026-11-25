@@ -29,6 +29,10 @@ import { canContinueApprovedSourceAccess } from "./execution-source-access.ts";
 import { SourceAuthorizationPanel } from "../../../../../../environment-lifecycle/presentation/source-authorization-panel.tsx";
 import { assertDeliveryWorkSessionDecision } from "../../../../live-runtime/delivery-work-session-live-contract.ts";
 
+import type { TechnicalPlanGuidanceScope } from "../../../../work-model/execution/technical-plan-guidance.ts";
+import type { TechnicalPlanRequirement } from "../../../../work-model/execution/technical-plan-requirement.ts";
+import { ExecutionTechnicalPlanGuidance, type ExecutionPlanStarterTransfer } from "./execution-technical-plan-guidance.tsx";
+
 type WorkSessionRuntime = {
   reconstructWork?: () => Promise<unknown>;
   recoverWork?: (reason: string) => Promise<unknown>;
@@ -49,10 +53,18 @@ export function ExecutionWorkSessionModal({
   runtime,
   target,
   onNavigate,
+  planRequirement,
+  planGuidance,
+  onDraftTechnicalPlan,
+  onViewApprovedPlan,
 }: {
   onClose: () => void;
   runtime: WorkSessionRuntime;
   target: ExecutionWorkSessionTarget;
+  planRequirement?: TechnicalPlanRequirement;
+  planGuidance?: TechnicalPlanGuidanceScope | null;
+  onDraftTechnicalPlan?: (transfer: ExecutionPlanStarterTransfer) => void;
+  onViewApprovedPlan?: () => void;
   onNavigate?: (destination: "work" | "closeout" | "architecture", deliveryId: string | null, workItemId?: number) => void;
 }) {
   const draft = runtime.projection?.decision_draft ?? null;
@@ -119,6 +131,13 @@ export function ExecutionWorkSessionModal({
   const followUp = nextAction && ["initiative-closeout-required", "initiative-closeout-gates-required"].includes(nextAction.code) ? "closeout" :
     prerequisite || nextAction && ["initiative-work-remains", "initiative-follow-up-required", "art-blocker-review-required"].includes(nextAction.code) ? "work" :
     nextAction && ["architecture-packet-required", "architecture-binding-required"].includes(nextAction.code) ? "architecture" : null;
+  const configuredPlan = projection?.configured_path?.architecture as { required?: boolean } | undefined;
+  const canAdvise = runtime.mode === "live" && runtime.projectionStatus === "current" &&
+    projection && !projection.session_id && configuredPlan?.required !== true &&
+    planGuidance && projection.delivery_id === planGuidance.deliveryId &&
+    projection.work_item_id === `work-item-${planGuidance.work.id}` &&
+    (planRequirement?.status === "unknown" || planRequirement?.status === "not-required") &&
+    (nextAction?.code === "work-session-start-required" || nextAction?.code === "work-session-start-ready");
   const projectedCommand = workSessionCommand(nextAction?.code);
   const canPrepare =
     runtime.mode === "live" &&
@@ -494,9 +513,9 @@ export function ExecutionWorkSessionModal({
                   onClick={() => run(() => runtime.recoverWork!(recoveryReason))}>Archive Superseded Session</TerasActionButton>
               </TerasFieldStack>
             ) : followUp && onNavigate ? (
-              <TerasList frame="contained"><TerasSignalItem label="Next action" title={followUp === "closeout" ? "Review package closeout" : followUp === "architecture" ? "Review the technical plan" : prerequisite ? "Review required work or approval" : "Continue remaining work"}
+              <TerasList frame="contained"><TerasSignalItem label="Next action" title={followUp === "closeout" ? "Review package closeout" : followUp === "architecture" ? planRequirement?.title ?? "Review the technical plan" : prerequisite ? "Review required work or approval" : "Continue remaining work"}
                 detail={nextAction!.reason} tone="info" actions={<TerasActionButton onClick={() => onNavigate(followUp, projection?.delivery_id ?? null, requiredWorkId)}>
-                  {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? "Open Technical Plan" : prerequisite ? "Open Required Work" : "Open Work Board"}</TerasActionButton>} /></TerasList>
+                  {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? planRequirement?.actionLabel ?? "Open Technical Plan" : prerequisite ? "Open Required Work" : "Open Work Board"}</TerasActionButton>} /></TerasList>
             ) : nextAction?.code === "pull-request-review-required" ? (
               <TerasList frame="contained"><TerasSignalItem label="Human review" title="Review the current source changes" detail={nextAction.reason} tone="warn"
                 actions={reviewUrl ? <a href={reviewUrl} target="_blank" rel="noopener noreferrer">Open Pull Request ↗</a> : undefined} /></TerasList>
@@ -519,6 +538,14 @@ export function ExecutionWorkSessionModal({
             )}
           </TerasPanel>
 
+          {canAdvise && planGuidance && onDraftTechnicalPlan && onViewApprovedPlan ? <ExecutionTechnicalPlanGuidance
+            scope={planGuidance} disabled={submitting || sourceChanged} onDraft={onDraftTechnicalPlan} onViewApproved={onViewApprovedPlan} /> : null}
+          {planRequirement?.status === "covered" && onNavigate ? <TerasContentTray title={planRequirement.title}
+            description={planRequirement.detail}>
+            <TerasActionButton emphasis="secondary" onClick={() => onNavigate("architecture", projection?.delivery_id ?? null)}>
+              {planRequirement.actionLabel}
+            </TerasActionButton>
+          </TerasContentTray> : null}
           {projection?.command_receipt ? (
             <TerasPanel spacing="normal"
               frame="padded"

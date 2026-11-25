@@ -19,6 +19,7 @@ type Options = {
   restore?: (edits: AdvisorEdit[]) => void;
   disabled?: boolean;
   active?: boolean;
+  registerScope?: boolean;
   requestBudgetMs?: number;
   providerBudgetMs?: number;
   stopWaitingOnly?: boolean;
@@ -146,7 +147,8 @@ export function useDraftAdvisor(options: Options) {
     setUndoRecord(null); setNotice("Advisor draft edits undone.");
   }
   const cancel = () => active.current?.abort("operator-stop");
-  useDraftScopeRegistration({ getScope: () => ({ ...current.current.getScope(), readOnly: Boolean(current.current.disabled) }), run, undo }, options.active !== false);
+  useDraftScopeRegistration({ getScope: () => ({ ...current.current.getScope(), readOnly: Boolean(current.current.disabled) }), run, undo },
+    options.active !== false && options.registerScope !== false);
   return { busy, run, undo, canUndo: Boolean(undoRecord), evidence, notice, cancel,
     panelControls: { connection, busy, canUndo: Boolean(undoRecord), onUndo: undo, onCancel: cancel,
       ...(options.requestBudgetMs ? { waiting, cancelLabel: options.stopWaitingOnly ? "stop waiting" : "cancel" } : {}),

@@ -27,16 +27,19 @@ export type TerasNoteFieldProps = TerasNoteFieldBaseProps &
   (
     | {
         fill: true;
+        autoGrow?: never;
         minimumHeight?: never;
       }
     | {
         fill?: false;
+        autoGrow?: boolean;
         minimumHeight?: TerasNoteFieldMinimumHeight;
       }
   );
 
 export function TerasNoteField({
   accentRgb,
+  autoGrow = false,
   className,
   density = "normal",
   fill = false,
@@ -64,6 +67,7 @@ export function TerasNoteField({
     <Field
       className={cx(styles.terasNoteField, className)}
       data-accented={accentRgb ? "true" : "false"}
+      data-auto-grow={autoGrow || undefined}
       data-density={density}
       data-fill={fill ? "true" : "false"}
       data-minimum-height={minimumHeight}

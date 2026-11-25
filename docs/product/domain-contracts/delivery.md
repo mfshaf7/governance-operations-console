@@ -1017,7 +1017,8 @@ link drafts use the existing explicit discard guard. Equivalent refreshes retain
 edits. Changed Catalog/decision source requires review and guarded reload before
 submission. Pending commands prevent closing the owning draft; no owner result
 is fabricated. Guided packet fields are a generated presentation snapshot of the
-owner schema, with JSON import/export retained under Technical data. Saved Work
+owner schema. Stored draft text is available for explicit repair when a value
+cannot open in the form. Saved Work
 Design brief/diagrams are read by exact initiative; missing retained material is
 not recreated from current data. Owner eligibility contracts remain unchanged.
 Completion and closeout convert reviewed prose/results to the native evidence

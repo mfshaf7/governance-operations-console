@@ -22,6 +22,10 @@ invocation or expose private endpoints.
 
 ## Invocation Path
 
+The Online indicator requires the broker to report an active Agent Console
+service. Model Operations reports the health of individual provider
+connections.
+
 1. The browser supplies one generated session nonce, one invocation nonce, the
    selected Focus or Workspace mode, the visible bounded candidate, and the
    manual operator prompt to `/api/agent-interaction`.

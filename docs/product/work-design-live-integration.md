@@ -45,6 +45,8 @@ Each preview shows one diagram with the same navigation and zoom behavior;
 it must not render the complete collection export as a tall thumbnail.
 Browsing stays read-only, and Export Preview still includes the whole collection.
 
+Optional Technical Plan advice is available in Execution under **Check Work Requirements**, where the selected work and its schedule are available.
+
 Apply feedback records actual browser submission and confirmed receipt events at
 their observed times. While awaiting the backend, show Applying with the shared
 loading indicator, prevent duplicate submission and keep the Apply view open.

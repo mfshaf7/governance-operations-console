@@ -250,7 +250,7 @@ test("independent diagrams survive checkpoint/reload and complete finalization r
   const readFullNote = current(page).getByRole("button", { name: "Read full note", exact: true });
   await readFullNote.scrollIntoViewIfNeeded();
   const noteTray = readFullNote.locator("xpath=ancestor::section[1]");
-  const excerptBox = await noteTray.locator(":scope > p").last().boundingBox();
+  const excerptBox = await noteTray.locator("[data-work-design-handoff-note]").boundingBox();
   const readBox = await readFullNote.boundingBox(), noteBox = await noteTray.boundingBox();
   expect(readBox.y).toBeGreaterThanOrEqual(excerptBox.y + excerptBox.height);
   expect(noteBox.x + noteBox.width - readBox.x - readBox.width).toBeLessThan(24);
@@ -359,7 +359,7 @@ test("other architecture views are included only as explicit read-only knowledge
  const scope=seen[0].draftScope.scope,context=JSON.parse(scope.context);
  expect(context.observations.readOnlySupportingDiagrams).toHaveLength(1);
  expect(context.observations.readOnlySupportingDiagrams[0].snapshot.customItems[0].label).toBe('Original operation');
- expect(scope.fields.map(field=>field.key)).toEqual(['note','diagramName','diagramDescription','board']);
+ expect(scope.fields.map(field=>field.key)).toEqual(['note','diagramName','diagramType','diagramDescription','board']);
  await expect.poll(async()=>JSON.stringify((await saved(page))?.context?.current?.snapshot?.diagrams)).toBe(JSON.stringify(before.context.current.snapshot.diagrams));
  expect(errors).toEqual([]);
 });

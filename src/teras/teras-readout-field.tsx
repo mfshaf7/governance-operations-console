@@ -7,7 +7,7 @@ import styles from "./teras-patterns.module.css";
 import { cx } from "./teras-utils";
 
 export type TerasReadoutFieldFit = "content" | "standard";
-export type TerasReadoutFieldScrollHeight = "medium" | "short" | "tall";
+export type TerasReadoutFieldScrollHeight = "fill" | "medium" | "short" | "tall";
 export type TerasReadoutFieldTreatment = "plain" | "quote";
 
 export type TerasReadoutFieldProps = Omit<
@@ -17,6 +17,7 @@ export type TerasReadoutFieldProps = Omit<
   fit?: TerasReadoutFieldFit;
   label: ReactNode;
   scrollHeight?: TerasReadoutFieldScrollHeight;
+  surface?: "field";
   treatment?: TerasReadoutFieldTreatment;
   value: ReactNode;
 };
@@ -26,6 +27,7 @@ export function TerasReadoutField({
   fit = "standard",
   label,
   scrollHeight,
+  surface,
   treatment = "plain",
   value,
   ...props
@@ -39,10 +41,11 @@ export function TerasReadoutField({
       className={cx(styles.terasReadoutField, className)}
       data-fit={fit}
       data-scroll-height={scrollHeight ?? "none"}
+      data-surface={surface}
       data-treatment={treatment}
     >
       <span id={labelId}>{label}</span>
-      <div className={styles.terasReadoutFieldBox}>{value}</div>
+      <div className={styles.terasReadoutFieldBox} tabIndex={scrollHeight === "fill" ? 0 : undefined}>{value}</div>
     </section>
   );
 }

@@ -21,8 +21,12 @@ delete architecture.properties.dependency_merge_dag;
 delete architecture.properties.work_dependency_graph;
 const snapshot = source.properties.source_snapshot.$ref
   ? source.$defs[source.properties.source_snapshot.$ref.split("/").at(-1)] : source.properties.source_snapshot;
+const requiredProtocolDimensions = source.properties.conformance_plan.allOf
+  .find(rule => rule.if?.properties?.protocol_applicability?.properties?.applies?.const === true)
+  .then.properties.dimensions.allOf.map(rule => rule.contains.const);
 process.stdout.write("// Generated presentation snapshot; OOS retains semantic authority.\nexport default " + JSON.stringify({
   source: "operator-orchestration-service/contracts/delivery-art/delivery-art-architecture-packet.schema.json",
   sourceSha256: createHash("sha256").update(raw).digest("hex"), authoringVersion: 6,
+  requiredProtocolDimensions,
   $defs: source.$defs, properties: { architecture, conformance_plan: merge(source.properties.conformance_plan, v6.conformance_plan), repo_revisions: snapshot.properties.repo_revisions },
 }, null, 2) + ";\n");

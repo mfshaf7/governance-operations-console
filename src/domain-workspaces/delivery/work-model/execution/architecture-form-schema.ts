@@ -1,8 +1,22 @@
 // Generated presentation snapshot; OOS retains semantic authority.
 export default {
   "source": "operator-orchestration-service/contracts/delivery-art/delivery-art-architecture-packet.schema.json",
-  "sourceSha256": "d4e4e2390e7fdb027d8bbe614bd60f86aacdb13f221f38ee8be08abb8481b103",
+  "sourceSha256": "34232369eb40c96553ac7b94af440991d1a1bfee2dfc253f62405b064a8489b4",
   "authoringVersion": 6,
+  "requiredProtocolDimensions": [
+    "command-and-acknowledgement-semantics",
+    "deterministic-identities-and-idempotency",
+    "state-mutation-ordering",
+    "retry-cancel-replay-and-recovery-semantics",
+    "bounded-failure-mapping",
+    "authorization-integrity-and-replay-resistance",
+    "session-scenario-and-execution-binding",
+    "result-and-owner-receipt-completeness",
+    "immutable-baseline-and-restore-evidence",
+    "lifecycle-state-matrix",
+    "cross-artifact-timeline-ordering",
+    "shared-validator-compatibility"
+  ],
   "$defs": {
     "nonEmptyString": {
       "type": "string",
@@ -649,78 +663,91 @@ export default {
           }
         },
         "lifecycle_state_model": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "states",
-            "transitions"
-          ],
-          "properties": {
-            "states": {
-              "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
-              "items": {
-                "$ref": "#/$defs/nonEmptyString"
-              }
+          "oneOf": [
+            {
+              "type": "null"
             },
-            "transitions": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "from",
-                  "to",
-                  "authority",
-                  "evidence"
-                ],
-                "properties": {
-                  "from": {
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "states",
+                "transitions"
+              ],
+              "properties": {
+                "states": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
                     "$ref": "#/$defs/nonEmptyString"
-                  },
-                  "to": {
-                    "$ref": "#/$defs/nonEmptyString"
-                  },
-                  "authority": {
-                    "$ref": "#/$defs/repoName"
-                  },
-                  "evidence": {
-                    "$ref": "#/$defs/nonEmptyString"
+                  }
+                },
+                "transitions": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "from",
+                      "to",
+                      "authority",
+                      "evidence"
+                    ],
+                    "properties": {
+                      "from": {
+                        "$ref": "#/$defs/nonEmptyString"
+                      },
+                      "to": {
+                        "$ref": "#/$defs/nonEmptyString"
+                      },
+                      "authority": {
+                        "$ref": "#/$defs/repoName"
+                      },
+                      "evidence": {
+                        "$ref": "#/$defs/nonEmptyString"
+                      }
+                    }
                   }
                 }
               }
             }
-          }
+          ]
         },
         "authorization_session_execution_model": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "summary",
-            "authority_refs",
-            "session_binding",
-            "execution_binding"
-          ],
-          "properties": {
-            "summary": {
-              "$ref": "#/$defs/nonEmptyString"
+          "oneOf": [
+            {
+              "type": "null"
             },
-            "authority_refs": {
-              "$ref": "#/$defs/artifactRefs"
-            },
-            "session_binding": {
-              "$ref": "#/$defs/nonEmptyString"
-            },
-            "execution_binding": {
-              "$ref": "#/$defs/nonEmptyString"
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "summary",
+                "authority_refs",
+                "session_binding",
+                "execution_binding"
+              ],
+              "properties": {
+                "summary": {
+                  "$ref": "#/$defs/nonEmptyString"
+                },
+                "authority_refs": {
+                  "$ref": "#/$defs/artifactRefs"
+                },
+                "session_binding": {
+                  "$ref": "#/$defs/nonEmptyString"
+                },
+                "execution_binding": {
+                  "$ref": "#/$defs/nonEmptyString"
+                }
+              }
             }
-          }
+          ]
         },
         "evidence_receipt_handoffs": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -786,7 +813,11 @@ export default {
               "$ref": "#/$defs/nonEmptyStrings"
             },
             "cleanup_obligations": {
-              "$ref": "#/$defs/nonEmptyStrings"
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/nonEmptyString"
+              }
             },
             "terminal_conditions": {
               "$ref": "#/$defs/nonEmptyStrings"

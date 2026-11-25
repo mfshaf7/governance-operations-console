@@ -68,6 +68,10 @@ export async function probeGovernedAgentPath(options: Options = {}) {
   if (!response.ok) {
     throw new AgentConsoleOosError("Agent Console OOS runtime is not ready.", "agent_console_oos_not_ready", 503, true);
   }
+  const readiness = await response.json().catch(() => null) as { checks?: { agent_console?: string } } | null;
+  if (readiness?.checks?.agent_console !== "active") {
+    throw new AgentConsoleOosError("Agent Console orchestration is unavailable.", "agent_console_not_active", 503, true);
+  }
   return { profileId: governedAgentProfileId };
 }
 

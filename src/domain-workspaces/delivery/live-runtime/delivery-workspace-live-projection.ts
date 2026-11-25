@@ -125,6 +125,7 @@ function executionNavigation(value: unknown, root: DeliveryArtNode): DeliveryPac
   if (item.authority !== "operator-orchestration-service" || item.eligibility !== "check-selected-work-item" || item.native_status !== root.backend_status ||
     !["execution", "refinement", "work_design", "audit_only"].includes(String(item.workflow_phase)) ||
     ![...Object.values(postures), "Closeout Pending"].includes(item.package_posture as DeliveryPackagePosture) || typeof item.closeout_pending !== "boolean") invalid();
+  if (item.refinement_governance_pending !== undefined && typeof item.refinement_governance_pending !== "boolean") invalid();
   for (const key of ["active_work_item_ids", "prepared_work_item_ids", "blocked_work_item_ids", "refinement_work_item_ids",
     ...(item.planning_prepared_work_item_ids === undefined ? [] : ["planning_prepared_work_item_ids"])]) {
     const refs = array(item[key]);

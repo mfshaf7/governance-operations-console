@@ -135,6 +135,7 @@ export function DeliveryWorkspaceModal({
     | { type: "scope"; scope: "current" | "history" }
     | null
   >(null);
+  const [workspaceExecutionFocus, setWorkspaceExecutionFocus] = useState<string | null>(null);
   const compactBoardLayout = activeSurfaceId === "execution-board" || activeSurfaceId === "pi-planning";
   const workBoardSummary = activeSurfaceId === "execution-board" ? executionWorkBoardSummary : null;
   const workspaceSummaryStats = workBoardSummary?.metrics ?? deliveryWorkspaceSummaryStats({
@@ -200,6 +201,7 @@ export function DeliveryWorkspaceModal({
     }
 
     if (surfaceId !== "catalog") setCatalogDeliveryLinkTarget(null);
+    if (surfaceId === "execution-board") setWorkspaceExecutionFocus(null);
     setPlanningHandoff(null);
     onActiveSurfaceChange(surfaceId);
   }
@@ -240,6 +242,12 @@ export function DeliveryWorkspaceModal({
 
     if (!target.packageId) {
       onActiveSurfaceChange(target.surfaceId);
+      return;
+    }
+
+    if (target.surfaceId === "execution-board") {
+      setWorkspaceExecutionFocus(target.packageId);
+      onActiveSurfaceChange("execution-board");
       return;
     }
 
@@ -397,9 +405,9 @@ export function DeliveryWorkspaceModal({
               : null
           }
           executionFocusPackageId={
-            entryIntent?.requiredMoveRef.startsWith("delivery.execution-board.")
+            workspaceExecutionFocus ?? (entryIntent?.requiredMoveRef.startsWith("delivery.execution-board.")
               ? entryIntent.subjectRef
-              : null
+              : null)
           }
           model={model}
           onActiveSurfaceChange={requestActiveSurfaceChange}

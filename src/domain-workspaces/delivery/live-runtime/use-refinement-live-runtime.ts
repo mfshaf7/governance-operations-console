@@ -11,7 +11,7 @@ import {
   assertRefinementProjectionSnapshot,
   isRefinementLiveApiError,
   refinementPacketFromProjection,
-  refinementRunMatchesHandoff,
+  refinementRunAppliesToCurrentPacket,
 } from "./refinement-live-contract.ts";
 import type {
   RefinementApplyCommand,
@@ -66,7 +66,8 @@ export function useRefinementLiveRuntime(
         snapshotRef.current = next;
         setSnapshot(next);
         const projection = next.projection;
-        setActiveRun(projection ? [projection.active_run, projection.latest_run].find(run => refinementRunMatchesHandoff(projection.packet, run)) ?? null : null);
+        setActiveRun(projection ? [projection.active_run, projection.latest_run]
+          .find(run => refinementRunAppliesToCurrentPacket(projection.packet, run)) ?? null : null);
         return next;
       })
       .finally(() => {

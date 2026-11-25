@@ -98,7 +98,14 @@ export function ModelProfileRequestHistoryDialog({ open, onClose, initialRequest
     catch (cause) { setError(cause instanceof Error ? cause.message : "Request implementation could not be verified."); }
     finally { setBusy(false); }
   }
-  const reviewDirty=Boolean(reason||decisionUri||decisionDigest||action||requirements.some(row=>row.summary||row.owner_repo||row.next_action));
+  const hasWrittenRequirements = requirements.some(row => row.summary.trim() || row.owner_repo.trim() || row.next_action.trim());
+  const reviewDirty=Boolean(reason||decisionUri||decisionDigest||action||hasWrittenRequirements);
+  function chooseReviewAction(next: string) {
+    setAction(next as ModelProfileReviewAction | "");
+    setError(null);
+    setRecordedAction(false);
+    if (next === "request-changes") setRequirements(rows => rows.length ? rows : [newRequirement()]);
+  }
   function chooseOriginal(id:string){if(!id||busy)return;if(frozen&&id!==selected?.request_id)return;if(reviewDirty&&!frozen)setRequestedSelection(id);else void loadOriginal(id);}
   function close() { if (frozen || reviewDirty) setLeaveRequested(true); else onClose(); }
   const needsDecision = action === "approve" || action === "reject";
@@ -138,7 +145,11 @@ export function ModelProfileRequestHistoryDialog({ open, onClose, initialRequest
           <TerasPanel frame="padded" treatment="neutral" spacing="normal" fit="content">
           <TerasPanelHeader kicker="Review" title="Review and implementation" description="Approval records a decision. It does not activate the profile."/>
           <TerasMetadataList items={modelProfileRequestStatusMetadata(selected)}/>
-          {availableActions.length?<TerasSelectField label="Review action" disabled={locked} value={action} options={[{value:"",label:"Choose an action"},...availableActions.map(a=>({value:a,label:modelProfileReviewActionLabel(a)}))]} onValueChange={value => { setAction(value as ModelProfileReviewAction|""); setError(null); setRecordedAction(false); setRequirements(value === "request-changes" ? [newRequirement()] : []); }} />:null}
+          {availableActions.length ? <TerasSelectField label="Review action" disabled={locked} value={action}
+            options={[{value:"",label:"Choose an action"},...availableActions.map(a=>({value:a,label:modelProfileReviewActionLabel(a)}))]}
+            helper={action !== "request-changes" && hasWrittenRequirements
+              ? "Your requested changes are kept in this review. Select Request changes to restore them." : undefined}
+            onValueChange={chooseReviewAction} /> : null}
           {action && action !== "revise" ? <>
             <TerasNoteField label={needsReason ? "Review reason" : "Review note (optional)"} value={reason} maxLength={2000} disabled={locked} minimumHeight="short" onValueChange={setReason} />
             {needsDecision ? <TerasContentTray kicker="Decision evidence" description="Your explicit decision and review reason are saved together with this exact request revision. The service records the evidence reference automatically."/> : null}

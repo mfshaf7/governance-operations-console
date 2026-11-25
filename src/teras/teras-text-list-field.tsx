@@ -6,6 +6,7 @@ import { Plus, Trash2 } from "lucide-react";
 import styles from "./teras-patterns.module.css";
 import { TerasActionButton } from "./teras-action";
 import { TerasLabeledGroup } from "./teras-labeled-group";
+import { TerasNoteField } from "./teras-note-field";
 import { TerasTextField } from "./teras-text-field";
 
 export type TerasTextListVisibleItems = 2 | 3 | 4;
@@ -15,6 +16,8 @@ export type TerasTextListFieldProps = {
   description?: ReactNode;
   disabled?: boolean;
   emptyLabel?: string;
+  fit?: "content" | "fill";
+  multiline?: boolean;
   itemLabel: (index: number) => string;
   items: string[];
   label: ReactNode;
@@ -32,6 +35,8 @@ export function TerasTextListField({
   description,
   disabled = false,
   emptyLabel = "No items added.",
+  fit = "content",
+  multiline = false,
   itemLabel,
   items,
   label,
@@ -68,7 +73,7 @@ export function TerasTextListField({
   }
 
   return (
-    <TerasLabeledGroup
+    <TerasLabeledGroup data-text-list-fit={fit}
       actions={
         !readOnly ? (
           <TerasActionButton
@@ -91,13 +96,25 @@ export function TerasTextListField({
     >
       <div
         className={styles.terasTextListFieldItems}
-        data-scroll={items.length > visibleItems ? "true" : "false"}
+        data-scroll={fit === "fill" || (!multiline && items.length > visibleItems) ? "true" : "false"}
         data-visible-items={visibleItems}
       >
         {items.length > 0 ? (
           items.map((item, index) => (
             <div className={styles.terasTextListFieldRow} key={index}>
-              <TerasTextField
+              {multiline ? <TerasNoteField
+                className={styles.terasTextListNote}
+                aria-label={itemLabel(index)}
+                density="compact"
+                disabled={disabled}
+                label={itemLabel(index)}
+                minimumHeight="short"
+                maxLength={maxLength}
+                onValueChange={(value) => updateItem(index, value)}
+                placeholder={placeholder}
+                readOnly={readOnly}
+                value={item}
+              /> : <TerasTextField
                 aria-label={itemLabel(index)}
                 density="compact"
                 disabled={disabled}
@@ -108,7 +125,7 @@ export function TerasTextListField({
                 placeholder={placeholder}
                 readOnly={readOnly}
                 value={item}
-              />
+              />}
               {!readOnly ? (
                 <TerasActionButton
                   aria-label={`Remove ${itemLabel(index)}`}

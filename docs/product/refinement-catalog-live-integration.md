@@ -59,6 +59,11 @@ The bounded security decision is the
 
 ## Refinement
 
+Use **Current** for remaining preparation. Already-prepared work can be
+scheduled in **PI Planning**, where objectives and iteration assignments belong.
+Use **History** to open the original Refinement record. A blocked child remains
+visible in Execution and does not reopen completed preparation for other items.
+
 Readiness Review retains the existing panel arrangement and Work Design Handoff
 button. Only its repeated metadata field-card list is replaced by **View Metadata
 Workbench**. This opens a separate dialog containing only the existing Refinement

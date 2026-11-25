@@ -75,6 +75,8 @@ import { ExecutionTreeChangeReviewDialog } from "./execution-tree-change-review-
 import { ExecutionTreeEditView } from "./execution-tree-edit-view.tsx";
 import { ExecutionTreeEditSupportPanel } from "./execution-tree-edit-support-panel.tsx";
 import { useDeliveryWorkSessionLiveRuntime } from "../../../live-runtime/use-delivery-work-session-live-runtime.ts";
+import type { ExecutionPlanStarterTransfer } from "./work-session/execution-technical-plan-guidance.tsx";
+import { technicalPlanGuidanceScope } from "../../../work-model/execution/technical-plan-guidance.ts";
 import { ExecutionWorkSessionModal } from "./work-session/execution-work-session-modal.tsx";
 import { ExecutionItemCompletionModal } from "./work-session/execution-item-completion-modal.tsx";
 import {
@@ -217,6 +219,8 @@ export function DeliveryExecutionBoard({
   const [completionTarget, setCompletionTarget] = useState<number | null>(null);
   const [closeoutOpen, setCloseoutOpen] = useState(false);
   const [architecturePacketOpen, setArchitecturePacketOpen] = useState(false);
+  const [planStarter, setPlanStarter] = useState<ExecutionPlanStarterTransfer | null>(null);
+  const [inspectApprovedPlan, setInspectApprovedPlan] = useState(false);
   const [technicalPlanWorkItemId, setTechnicalPlanWorkItemId] = useState<number | null>(null);
   const [actionReview, setActionReview] = useState<{ revision?: string; target?: DeliveryArtNode } | null>(null);
 
@@ -464,6 +468,18 @@ export function DeliveryExecutionBoard({
 
   const planRequirement = technicalPlanRequirement({deliveryId:selectedPackage?.legacy_epic_id ? `delivery-${selectedPackage.legacy_epic_id}` : "",projection:workSessionRuntime.projection,
     workItemId:workSessionTarget?.workItemId,available:model.source_truth === "OpenProject-backed OOS" && !workSessionRuntime.projectionError && workSessionRuntime.projectionStatus !== "offline"});
+  const guidanceDeliveryId = workSessionRuntime.projection?.delivery_id;
+  const guidanceWorkItemId = workSessionTarget?.workItemId;
+  const packageProjection = deliveryChangeRuntime.projection;
+  const sourceContext = useMemo(() => packageProjection && deliveryChangeRuntime.projectionStatus === "current" &&
+    !deliveryChangeRuntime.projectionError && packageProjection.delivery_id === selectedPackage?.delivery_package_id &&
+    packageProjection.package.execution_tree.id === selectedPackage.legacy_epic_id
+    ? { tree: packageProjection.package.execution_tree, revision: packageProjection.source_revision }
+    : undefined, [packageProjection, deliveryChangeRuntime.projectionStatus, deliveryChangeRuntime.projectionError,
+    selectedPackage?.delivery_package_id, selectedPackage?.legacy_epic_id]);
+  const planGuidance = useMemo(() => workSessionOpen && guidanceDeliveryId && guidanceWorkItemId && !deliveryChangeRuntime.loading
+    ? technicalPlanGuidanceScope(model, guidanceDeliveryId, guidanceWorkItemId, sourceContext)
+    : null, [workSessionOpen, guidanceDeliveryId, guidanceWorkItemId, model, sourceContext, deliveryChangeRuntime.loading]);
 
   useEffect(() => {
     if (
@@ -761,7 +777,9 @@ export function DeliveryExecutionBoard({
     });
   }
 
-  function openTechnicalPlan(workItemId: number | null) {
+  function openTechnicalPlan(workItemId: number | null, starter: ExecutionPlanStarterTransfer | null = null, inspectApproved = false) {
+    setPlanStarter(starter);
+    setInspectApprovedPlan(inspectApproved);
     setTechnicalPlanWorkItemId(workItemId);
     setArchitecturePacketOpen(true);
   }
@@ -1084,7 +1102,7 @@ export function DeliveryExecutionBoard({
 
   const packagePanel = selectedPackage ? (
       <ExecutionSelectedPackagePanel
-        onInspectTechnicalPlan={() => openTechnicalPlan(planRequirement.workItemId
+        onInspectTechnicalPlan={() => openTechnicalPlan(planRequirement.status !== "unknown" && planRequirement.workItemId
           ? Number(planRequirement.workItemId.slice("work-item-".length))
           : (!selectedChild?.featureProgress ? selectedChild?.node.legacy_work_package_id : null) ?? selectedWorkItemId)}
         technicalPlanRequirement={readOnly ? undefined : planRequirement}
@@ -1216,6 +1234,10 @@ export function DeliveryExecutionBoard({
       ) : null}
       {!readOnly && workSessionTarget && workSessionOpen ? (
         <ExecutionWorkSessionModal
+          planRequirement={planRequirement}
+          planGuidance={planGuidance}
+          onDraftTechnicalPlan={starter => openTechnicalPlan(starter.scope.work.id, starter)}
+          onViewApprovedPlan={() => openTechnicalPlan(workSessionTarget.workItemId, null, true)}
           onNavigate={(destination, deliveryId, requiredWorkId) => {
             try {
               const item = requiredWorkId && destination === "work"
@@ -1231,7 +1253,7 @@ export function DeliveryExecutionBoard({
                 throw new Error("The required item is unavailable on this package’s Work Board. Check its ART Tree and package records.");
               }
 
-              setWorkSessionOpen(false);
+              if (destination !== "architecture") setWorkSessionOpen(false);
               switch (destination) {
                 case "closeout":
                   handleSelectedPackageChange(item.delivery_package_id);
@@ -1240,8 +1262,7 @@ export function DeliveryExecutionBoard({
                   break;
                 case "architecture":
                   handleSelectedPackageChange(item.delivery_package_id);
-                  setPackageWorkspaceOpen(false);
-                  openTechnicalPlan(workSessionTarget.workItemId);
+                  openTechnicalPlan(workSessionTarget.workItemId, null, ["binding", "covered"].includes(planRequirement.status));
                   break;
                 default:
                   if (requiredChild) showWorkItemOnBoard(requiredChild, item.delivery_package_id);
@@ -1262,10 +1283,21 @@ export function DeliveryExecutionBoard({
       {selectedPackage && architecturePacketOpen ? (
         <ArchitecturePacketAuthoringModal
           requirement={planRequirement}
-          onOpenWorkBoard={!readOnly ? () => { setArchitecturePacketOpen(false); openWorkBoard(); } : undefined}
-          sourceContext={deliveryChangeRuntime.projection?.delivery_id === selectedPackage.delivery_package_id && deliveryChangeRuntime.projection.package.execution_tree.id === selectedPackage.legacy_epic_id && !deliveryChangeRuntime.projectionError ? { tree: deliveryChangeRuntime.projection.package.execution_tree, revision: deliveryChangeRuntime.projection.source_revision } : undefined}
+          starter={planStarter}
+          onOpenWorkBoard={!readOnly ? targetWorkId => {
+            setArchitecturePacketOpen(false);
+            const work = targetWorkId ? packageWorkItems.find(({ node }) => node.legacy_work_package_id === targetWorkId) : null;
+            if (!work) {
+              openWorkBoard();
+              return;
+            }
+            showWorkItemOnBoard(work, selectedPackage.delivery_package_id);
+            openChildAction(work);
+            if (workSessionTarget?.workItemId === targetWorkId) void workSessionRuntime.refresh().catch(() => undefined);
+          } : undefined}
+          sourceContext={sourceContext}
           key={selectedPackage.delivery_package_id}
-          readOnly={readOnly}
+          readOnly={readOnly || inspectApprovedPlan}
           onCanonicalChanged={onCanonicalChanged}
           model={model}
           defaultDeliveryId={

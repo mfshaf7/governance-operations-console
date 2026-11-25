@@ -14,6 +14,7 @@ import {
 import { TerasContentTray } from "./teras-content-tray";
 import { TerasDialog } from "./teras-dialog";
 import { TerasMetadataList, type TerasMetadataItem } from "./teras-metadata";
+import { TerasPanel } from "./teras-panel";
 import { TerasSectionTitle } from "./teras-subject";
 import type { TerasTone } from "./teras-types";
 import { cx } from "./teras-utils";
@@ -29,19 +30,27 @@ type TerasMediaSnapshotAction = {
 
 function useSnapshotOverlayVisibility() {
   const [suppressed, setSuppressed] = useState(false);
+  const pointer = useRef<{ x: number; y: number } | null>(null);
   const reveal = () => setSuppressed(false);
+  function revealOnMovement(event: PointerEvent<HTMLDivElement>) {
+    const next = { x: event.clientX, y: event.clientY };
+    if (pointer.current?.x === next.x && pointer.current.y === next.y) return;
+    pointer.current = next;
+    reveal();
+  }
   return {
     "data-controls-suppressed": suppressed,
-    onPointerEnter: reveal,
-    onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
-      if (event.movementX || event.movementY) reveal();
-    },
+    onPointerEnter: revealOnMovement,
+    onPointerMove: revealOnMovement,
     onFocusCapture: reveal,
     onKeyDownCapture: reveal,
     onClickCapture: (event: MouseEvent<HTMLDivElement>) => {
       const button = event.target instanceof Element
         ? event.target.closest('[aria-label="Diagram navigation"] button') : null;
-      if (button instanceof HTMLButtonElement && !button.disabled) setSuppressed(true);
+      if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+      // Switching diagrams can resize the canvas under a stationary pointer.
+      if (event.detail) pointer.current = { x: event.clientX, y: event.clientY };
+      setSuppressed(true);
     },
   };
 }
@@ -113,6 +122,7 @@ export function TerasMediaSnapshotNavigation({
 export function TerasMediaSnapshot({
   previewDisabled = false,
   actions,
+  layout = "tray",
   className,
   density = "normal",
   fit = "content",
@@ -127,6 +137,7 @@ export function TerasMediaSnapshot({
 }: {
   previewDisabled?: boolean;
   actions?: TerasMediaSnapshotAction[];
+  layout?: "tray" | "diagram";
   className?: string;
   density?: "compact" | "normal";
   fit?: "content" | "fill";
@@ -158,6 +169,23 @@ export function TerasMediaSnapshot({
       <div className={styles.terasMediaSnapshotOverlay}>{previewOverlay}</div>
     </div>
   ) : previewButton;
+
+  if (layout === "diagram") return (
+    <TerasPanel className={cx(styles.terasMediaDiagram, className)} frame="flush" layout="header-body"
+      overflow="hidden" fit={fit} data-teras-diagram-frame>
+      <div data-teras-diagram-toolbar>
+        {title ? <div className={styles.terasMediaDiagramTitle}>{title}</div> : null}
+        {actions?.length ? <TerasActionRow spacing="none" role="group" aria-label="Diagram controls">
+          {actions.map((action, index) => <TerasActionButton key={terasMediaSnapshotActionKey(action, index)}
+            emphasis="secondary" size="table-compact" disabled={action.disabled} aria-label={action.ariaLabel} onClick={action.onClick}>
+            {action.icon}{action.label}
+          </TerasActionButton>)}
+        </TerasActionRow> : null}
+      </div>
+      <div data-teras-diagram-canvas>{preview}{facts.length ? factsGrid : null}</div>
+    </TerasPanel>
+  );
+
   const actionRow = actions?.length ? (
     <TerasActionRow
       className={styles.terasMediaSnapshotActions}
@@ -171,7 +199,6 @@ export function TerasMediaSnapshot({
       ))}
     </TerasActionRow>
   ) : null;
-
   return (
     <TerasContentTray
       className={cx(styles.terasMediaSnapshot, className)}

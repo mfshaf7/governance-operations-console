@@ -25,6 +25,16 @@ for(const width of [1280,1700])test(`history uses readable sections, explicit ch
  await history.getByText('Event details',{exact:true}).click();await expect(history.getByText('oos://receipt/test',{exact:true})).toBeVisible();await expect(history.getByText('request-created',{exact:true})).toBeVisible();await expect(history.getByText('2026-10-08T17:00:00Z',{exact:true})).toBeVisible();
  await history.getByRole('button',{name:'Find by reference',exact:true}).click();await expect(history.getByRole('textbox',{name:'Original request reference',exact:true})).toHaveValue('model-profile-request:console-test');
  await history.getByRole('button',{name:'Review action',exact:true}).click();await page.getByRole('option',{name:'Request changes',exact:true}).click();await expect(history.getByRole('textbox',{name:'Required change 1',exact:true})).toBeEditable();await history.getByRole('button',{name:'Add requested change',exact:true}).click();await expect(history.getByRole('textbox',{name:'Required change 2',exact:true})).toBeVisible();await expect(history.getByRole('button',{name:'Record reviewed action',exact:true})).toBeDisabled();
+ const requiredChange=history.getByRole('textbox',{name:'Required change 2',exact:true});
+ const reviewAction=history.getByRole('button',{name:'Review action',exact:true});
+ await requiredChange.fill('Require the exact reviewed profile revision.');
+ await reviewAction.click();
+ await page.getByRole('option',{name:'Approve request',exact:true}).click();
+ await expect(history.getByText('Your requested changes are kept in this review. Select Request changes to restore them.',{exact:true})).toBeVisible();
+ await expect(requiredChange).toHaveCount(0);
+ await reviewAction.click();
+ await page.getByRole('option',{name:'Request changes',exact:true}).click();
+ await expect(requiredChange).toHaveValue('Require the exact reviewed profile revision.');
  await history.screenshot({path:test.info().outputPath('request-history.png')});expect(writes).toEqual([]);expect(errors).toEqual([]);
 });
 test('explicit reason records evidence automatically; uncertain action reads and retries the same command, then shows canonical success',async({page})=>{

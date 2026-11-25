@@ -48,6 +48,34 @@ test("Current Delivery requests the native status scope and verifies the owner's
  }),error=>error.code==="delivery_register_scope_invalid");
 });
 
+test("prepared work leaves Refinement Current while History and original links retain it", async () => {
+ const baseline=structuredClone(deliveryReadModel);
+ const base={...baseline.packages[0],backend_status:"new",workflow_phase:"refinement",execution_navigation:{
+   refinement_work_item_ids:[],planning_prepared_work_item_ids:[11],
+ }};
+ const rows=[
+   {...base,delivery_package_id:"delivery-10",display_name:"Prepared"},
+   {...base,delivery_package_id:"delivery-20",workflow_phase:"execution",execution_navigation:{
+     ...base.execution_navigation,blocked_work_item_ids:[21],
+   }},
+   {...base,delivery_package_id:"delivery-30",execution_navigation:{
+     ...base.execution_navigation,refinement_work_item_ids:[31],
+   }},
+   {...base,delivery_package_id:"delivery-40",execution_navigation:{
+     ...base.execution_navigation,refinement_governance_pending:true,
+   }},
+ ];
+ const readSource=async(_cursor,id)=>({model:{...baseline,packages:id?rows.filter(row=>row.delivery_package_id===id):rows},next_cursor:null});
+ const query=new URLSearchParams({view:"register",surface:"refinement",scope:"current"});
+ const ids=async()=> (await readDeliveryRegister(query,undefined,{readSource})).projection.packages.map(row=>row.delivery_package_id);
+ assert.deepEqual(await ids(),["delivery-30","delivery-40"]);
+ query.set("scope","history");
+ assert.deepEqual(await ids(),rows.map(row=>row.delivery_package_id));
+ query.set("scope","current");
+ query.set("id","delivery-10");
+ assert.deepEqual(await ids(),["delivery-10"]);
+});
+
 test("a prior native register broker can continue without a Current query during deployment", async () => {
  const calls=[];
  const overview={schema_version:1,workflow_id:"delivery-console-overview",project:{identifier:"workspace-delivery-art"},mutation_authority:"none",roots:[],operational_initiatives:[],deferred_history_refs:[]};

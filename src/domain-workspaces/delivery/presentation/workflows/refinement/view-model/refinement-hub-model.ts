@@ -1,4 +1,5 @@
 import type { TerasMetadataItem } from "@/teras";
+import { deliveryRefinementPackageHasBlocker } from "../../../../domain/delivery-package-posture.ts";
 
 import type {
   DeliveryPackagePosture,
@@ -165,11 +166,9 @@ export function refinementIsBlocked({
   packet: DeliveryRefinementPacket;
   refinementReceipt?: DeliveryRefinementApplyReceipt | null;
 }) {
-  return (
-    getDeliveryEffectivePackageProjection(deliveryPackage, {
-      refinementReceipt,
-    }).posture === "Blocked" || packet.status === "blocked"
-  );
+  const { posture } = getDeliveryEffectivePackageProjection(deliveryPackage, { refinementReceipt });
+  const packageBlocked = deliveryRefinementPackageHasBlocker(deliveryPackage, posture);
+  return packageBlocked || packet.status === "blocked";
 }
 
 export function refinementBlockerStatusProjection({

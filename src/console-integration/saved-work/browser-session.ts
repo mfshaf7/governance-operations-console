@@ -1,4 +1,4 @@
-export type SavedWorkKind = "work-design" | "refinement" | "orchestration" | "advisor-conversation";
+export type SavedWorkKind = "work-design" | "refinement" | "technical-plan" | "orchestration" | "advisor-conversation";
 export type SavedWorkRecovery = { recovery_id: string; storage_key: string; content_digest: string; preserved_at: string };
 type RecordValue = { revision: number; payload_json: string; content_digest: string; acknowledgement_id: string; saved_at: string };
 type Snapshot = { kind: SavedWorkKind; subject_id: string; record: RecordValue | null; recoveries: SavedWorkRecovery[]; recovery?: { storage_key: string; raw_value: string } | null };
@@ -9,6 +9,8 @@ type CacheMeta = { operatorId: string; digest: string | null };
 export function savedWorkIdentity(key: string): { kind: SavedWorkKind; subjectId: string } | null {
   const conversation = /^advisor-conversation:(chat:[a-f0-9]{64}):v1$/.exec(key);
   if (conversation) return { kind: "advisor-conversation", subjectId: conversation[1] };
+  const technicalPlan = /^delivery-technical-plan-draft:(delivery-[1-9][0-9]*):v1$/.exec(key);
+  if (technicalPlan) return { kind: "technical-plan", subjectId: technicalPlan[1] };
   const match = /^(delivery-work-design-session|delivery-refinement-session|orchestration-definition-design):(.+):v\d+$/.exec(key);
   if (!match) return null;
   return { kind: match[1] === "delivery-work-design-session" ? "work-design" : match[1] === "delivery-refinement-session" ? "refinement" : "orchestration", subjectId: match[2] };
@@ -45,7 +47,7 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
     const values = new Map<string, string>();
     // Chat has no legacy browser originals to import into another operator's
     // recovery store. Its current cache is usable only after operator matching.
-    if (identity!.kind === "advisor-conversation") return values;
+    if (identity!.kind === "advisor-conversation" || identity!.kind === "technical-plan") return values;
     if (!storage) return values;
     const prefix = key.replace(/:v\d+$/, ":v");
     try {
@@ -78,13 +80,13 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
   }
   function acknowledge(record: RecordValue | null) {
     revision = record?.revision ?? 0; confirmed = record?.payload_json ?? null;
-    if (record || identity!.kind === "advisor-conversation") writeLocal(metaPrefix + key, JSON.stringify({ operatorId, digest: record?.content_digest ?? null }));
+    if (record || ["advisor-conversation", "technical-plan"].includes(identity!.kind)) writeLocal(metaPrefix + key, JSON.stringify({ operatorId, digest: record?.content_digest ?? null }));
   }
   async function flush() {
     if (timer) { clearTimeout(timer); timer = null; }
     if (mode !== "live" || !state.hydrated || readOnly || inFlight || state.status === "conflict" || raw === null || raw === confirmed) return;
     if (!pending) pending = { command_id: crypto.randomUUID(), expected_revision: revision, payload_json: raw,
-      origin: revision === 0 ? "browser-import" : "operator-edit" };
+      origin: revision === 0 && identity!.kind !== "technical-plan" ? "browser-import" : "operator-edit" };
     const command = pending; inFlight = true; update({ status: "saving", message: "Saving to server…" });
     try {
       const result = await request("", command); const saved = result.snapshot.record;
@@ -115,7 +117,7 @@ export function createSavedWorkBrowserSession(key: string, options: { storage: S
         mode = "live"; operatorId = result.operatorId;
         let snapshot = result.snapshot;
         let meta: CacheMeta | null = null; try { meta = JSON.parse(readLocal(metaPrefix + key) ?? "null"); } catch { /* Legacy cache has no acknowledgement. */ }
-        if (identity!.kind === "advisor-conversation" && !meta?.operatorId) local = null;
+        if (["advisor-conversation", "technical-plan"].includes(identity!.kind) && !meta?.operatorId) local = null;
         if (local !== null && meta?.operatorId && meta.operatorId !== operatorId)
           throw new SaveFailure("This browser copy belongs to a different operator. It was preserved locally and has not been imported.");
         if (!readOnly) for (const [storageKey, rawValue] of preserved) {

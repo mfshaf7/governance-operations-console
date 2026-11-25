@@ -31,11 +31,12 @@ export function executionReadableTime(value: string) {
   if (!value || Number.isNaN(date.getTime())) return "Time unavailable";
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
-export function executionPackageNextAction({ status, closeoutPending, hasCloseout, actions, groups, hasPackageBlocker, readOnly, technicalPlan }: {
+export function executionPackageNextAction({ status, closeoutPending, hasCloseout, actions, groups, hasPackageBlocker, readOnly, planningPending, technicalPlan }: {
   status: string; closeoutPending: boolean; hasCloseout: boolean; actions: DeliveryAvailableAction[];
   groups: ReturnType<typeof executionPackageWorkGroups>;
   hasPackageBlocker?: boolean;
   readOnly?: boolean;
+  planningPending?: boolean;
   technicalPlan?: TechnicalPlanRequirement;
 }) {
   const find = (type: DeliveryAvailableAction["action_type"]) => actions.find(action =>
@@ -60,6 +61,7 @@ export function executionPackageNextAction({ status, closeoutPending, hasCloseou
     return { kind: "technical-plan" as const, title: technicalPlan.actionLabel, detail: technicalPlan.detail };
   }
   if (groups.find(group => group.status === "in-progress")?.count) return { kind: "work" as const, filter: "in-progress" as const, title: "Continue work in progress", detail: "Open the Work Board and select an in-progress item to see its current session or check its requirements." };
+  if (planningPending) return { kind: "planning" as const, title: "Schedule prepared work", detail: "Open PI Planning from Work Overview to review the calendar, objective, and iteration assignments." };
   if (groups.find(group => group.status === "ready")?.count) return { kind: "work" as const, filter: "ready" as const, title: "Review work marked ready", detail: "Open the Work Board and select a ready item to check its work requirements." };
   if (groups.find(group => group.status === "blocked")?.count) return { kind: "work" as const, filter: "blocked" as const, title: "Inspect blocked work", detail: "Open the Work Board and select a blocked item to see its blocker or dependencies." };
   return { kind: "work" as const, filter: "all" as const, title: "Choose a work item", detail: "Open the Work Board, select an item, and check its work requirements." };
