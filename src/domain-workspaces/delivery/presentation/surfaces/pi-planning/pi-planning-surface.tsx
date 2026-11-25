@@ -31,6 +31,7 @@ type PlanningAttention = { reason: string; item?: PlanningNode; conflict?: boole
 
 const choices = (values: string[]) => values.map(value => ({ label: value, value }));
 const inactive = new Set(["done", "parked", "retired"]);
+const iterationBoardTypes = new Set([...iterationWorkTypes, "Risk", "Milestone"]);
 const completedLane = "completed-without-iteration";
 type PlanningView = "overview" | "features" | "work";
 const planningViews: { value: PlanningView; label: string }[] = [
@@ -256,7 +257,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
   const inBoardScope = (item: PlanningNode) => (!item.currentPI || item.currentPI === pi)
     && (!assignedPI.has(item.id) || assignedPI.get(item.id) === pi);
   const boardItems = nodes.filter(item => (showFeatures ? !item.terminal && item.type === "Feature"
-    : iterationWorkTypes.has(item.type) && item.status !== "retired" && (!focusedChildren || focusedChildren.has(item.id)))
+    : iterationBoardTypes.has(item.type) && item.status !== "retired" && (!focusedChildren || focusedChildren.has(item.id)))
     && inBoardScope(item)
     && (visibleEpic === "all" || String(item.epicId) === visibleEpic));
   const columns: PlanningColumn[] = [
@@ -343,7 +344,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
     setFocusedEpicId(String(id));
     setLastViewedFeatureId(undefined);
     const showItem = item && inBoardScope(item) ? item : undefined;
-    if (showItem && iterationWorkTypes.has(showItem.type)) {
+    if (showItem && iterationBoardTypes.has(showItem.type)) {
       changeView("work");
       setOverviewWorkId(showItem.id);
     } else {
@@ -601,7 +602,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
     : "See targets and planning issues."
     : showFeatures ? "Set Feature delivery targets and review child work."
     : focusedFeature?.target ? `Schedule child work. Delivery target ${iterationName(focusedFeature.target)}.`
-    : "Schedule stories, defects and tasks by iteration.";
+    : "Schedule stories, defects, tasks, risks and milestones by iteration.";
   const header = <TerasFieldStack spacing="compact">
     <ControlBoardWorkspaceHeader
       kicker={focusedFeature ? planningItemLabel(focusedFeature.feature) : focusedEpic ? `Epic ${focusedEpic.legacy_epic_id}` : "PI Planning"}
@@ -670,7 +671,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
     if (objective?.title.trim()) objectives.push({ id: "preview-objective", title: objective.title, type: objective.type });
     const scopedFeatures = (featuresByEpic.get(id) ?? []).filter(item =>
       (inSelectedPI(item.feature) || item.descendants.some(child => !child.terminal && inSelectedPI(child))));
-    const openWork = inPI.filter(item => !inactive.has(item.status) && iterationWorkTypes.has(item.type));
+    const openWork = inPI.filter(item => !inactive.has(item.status) && iterationBoardTypes.has(item.type));
     const attention: PlanningAttention[] = [];
     if ((scopedFeatures.length || openWork.length) && !objectives.length) attention.push({ reason: "Missing PI objective" });
     for (const assessment of scopedFeatures) {
@@ -683,7 +684,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
     for (const item of [...openWork, ...scopedFeatures.map(item => item.feature)]) {
       const assignment = assignmentOf(item);
       const scheduled = iterationOrder.get(assignment ?? "");
-      if (assignment && scheduled === undefined && iterationWorkTypes.has(item.type)) {
+      if (assignment && scheduled === undefined && iterationBoardTypes.has(item.type)) {
         attention.push({ reason: "Recorded iteration outside the dated calendar", item });
       }
       const dependencyReasons = new Set<string>();

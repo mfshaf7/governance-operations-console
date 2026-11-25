@@ -72,6 +72,11 @@ The plan needs at least one committed item, and open prerequisites in the same
 plan must also be committed. **Review plan** shows the objective, iteration, and
 assignments before **Record in preview** saves the draft locally.
 
+Use **Work items** in the Epic's PI Planning view to place a prepared Risk or
+Milestone in a dated iteration. Choose the existing objective, review the
+assignment, then apply the plan. This supplies the iteration for readiness.
+Complete the item separately when its evidence is ready.
+
 ## Runtime Modes
 
 - `disconnected-preview`: `OOS_BASE_URL` is absent. The established structured
