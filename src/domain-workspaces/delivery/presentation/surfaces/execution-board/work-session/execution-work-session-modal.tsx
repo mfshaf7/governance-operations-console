@@ -6,7 +6,6 @@ import { TerasLoadingState,
   TerasDraftCloseGuardDialog,
   TerasEmptyState,
   TerasFieldStack,
-  TerasList,
   TerasMetadataList,
   TerasModalShell,
   TerasNoteField,
@@ -23,7 +22,7 @@ import type {
   DeliveryWorkSessionDecisionInput,
   DeliveryWorkSessionProjection,
 } from "../../../../live-runtime/delivery-work-session-live-types.ts";
-import { workSessionCommand, workSessionCommandLabel, workSessionReviewUrl, type ExecutionWorkSessionTarget } from "./execution-work-session-target.ts";
+import { workSessionCommand, workSessionCommandLabel, workSessionMove, workSessionReviewUrl, type ExecutionWorkSessionTarget } from "./execution-work-session-target.ts";
 import { ExecutionSourceRealizationPanel } from "./execution-source-realization-panel.tsx";
 import { canContinueApprovedSourceAccess } from "./execution-source-access.ts";
 import { SourceAuthorizationPanel } from "../../../../../../environment-lifecycle/presentation/source-authorization-panel.tsx";
@@ -127,6 +126,9 @@ export function ExecutionWorkSessionModal({
     landing_unit: { ...draft.landing_unit, branch: decision.branch, decision: decision.landingUnitDecision, id: decision.landingUnitId, rollback_boundary: decision.rollbackBoundary, split_reason: decision.splitReason },
   } : null;
   const nextAction = projection?.next_action ?? null;
+  const move = nextAction ? workSessionMove(nextAction.code, projection?.facts?.operating_evidence) : null;
+  const diagnostic = error ?? runtime.projectionError;
+  const unavailable = runtime.projectionStatus === "offline";
   const reviewUrl = workSessionReviewUrl(projection?.pull_request?.url);
   const prerequisite = nextAction && ["architecture-prerequisite-required", "architecture-human-gate-required"].includes(nextAction.code);
   const requiredWorkRef = nextAction?.inputs?.work_item_id;
@@ -427,85 +429,31 @@ export function ExecutionWorkSessionModal({
             treatment="rail"
           >
             <TerasPanelHeader
-              description={
-                error ??
-                runtime.projectionError ??
-                nextAction?.reason ??
-                "OOS is resolving the current work-session move."
-              }
+              description={unavailable ? "Read the session again to check the current state." :
+                diagnostic ? "The result could not be confirmed. Read Current Session before trying again." :
+                move?.description ?? (runtime.mode === "disconnected-preview" ? "This preview is disconnected from live work sessions." : undefined)}
               kicker="Current Move"
-              statusLabel={projection?.state ?? (runtime.mode ? "Loading" : "Connecting")}
-              statusTone={runtime.projectionStatus === "offline" ? "danger" : "info"}
-              title={nextAction ? nextActionLabel(nextAction.code) : "Work Session Status"}
+              statusLabel={unavailable ? "Unavailable" : diagnostic ? "Check result" : move?.status}
+              statusTone={unavailable ? "danger" : diagnostic || move?.status === "Blocked" ? "warn" : move?.status === "Complete" ? "ok" : "info"}
+              title={unavailable ? "Session unavailable" : move?.title ?? "Work session status"}
             />
-            {runtime.projectionStatus === "offline" ? (
-              <TerasList frame="contained">
-                <TerasSignalItem
-                  actions={
-                    <TerasActionButton
-                      emphasis="secondary"
-                      onClick={() => run(runtime.refresh)}
-                    >
-                      Retry
-                    </TerasActionButton>
-                  }
-                  detail="Live mode remains read-only until authoritative session state is available."
-                  label="Unavailable"
-                  title="OOS projection could not be loaded"
-                  tone="danger"
-                />
-              </TerasList>
+            {unavailable ? (
+              <TerasActionButton emphasis="secondary" disabled={submitting} onClick={() => run(runtime.refresh)}>
+                Retry Session Read
+              </TerasActionButton>
             ) : canPrepare ? (
-              <TerasList frame="contained">
-                <TerasSignalItem
-                  actions={
-                    <TerasActionButton
-                      disabled={submitting}
-                      onClick={() => run(runtime.prepare)}
-                    >
-                      Prepare Session
-                    </TerasActionButton>
-                  }
-                  detail="Ask OOS for the caller-bound Landing Unit decision draft."
-                  label="Required"
-                  title="Prepare work-session decision"
-                  tone="info"
-                />
-              </TerasList>
+              <TerasActionButton disabled={submitting} onClick={() => run(runtime.prepare)}>
+                Prepare Session
+              </TerasActionButton>
             ) : canStart && decision ? (
-              <TerasList frame="contained">
-                <TerasSignalItem
-                  actions={
-                    <TerasActionButton
-                      disabled={submitting || !sourceIntent}
-                      onClick={() => run(() => runtime.start(decision, sourceIntent ?? undefined))}
-                    >
-                      Start Work Session
-                    </TerasActionButton>
-                  }
-                  detail="Submit the reviewed Landing Unit decision to OOS."
-                  label="Operator action"
-                  title="Start governed work"
-                  tone="info"
-                />
-              </TerasList>
+              <TerasActionButton disabled={submitting || !sourceIntent}
+                onClick={() => run(() => runtime.start(decision, sourceIntent ?? undefined))}>
+                Start Work Session
+              </TerasActionButton>
             ) : canRunProjectedCommand && nextAction ? (
-              <TerasList frame="contained">
-                <TerasSignalItem
-                  actions={
-                    <TerasActionButton
-                      disabled={submitting}
-                      onClick={() => run(runProjectedCommand)}
-                    >
-                      {workSessionCommandLabel(nextAction.code)}
-                    </TerasActionButton>
-                  }
-                  detail={nextAction.reason}
-                  label="Operator action"
-                  title={nextActionLabel(nextAction.code)}
-                  tone="info"
-                />
-              </TerasList>
+              <TerasActionButton disabled={submitting} onClick={() => run(runProjectedCommand)}>
+                {workSessionCommandLabel(nextAction.code)}
+              </TerasActionButton>
             ) : nextAction?.code === "architecture-recovery-required" ? (
               <TerasFieldStack spacing="normal">
                 <TerasSignalItem label="Review recovery" title="Archive superseded session" detail="Preserve this attempt and its evidence before preparing current work. Archiving does not complete ART work or approve a release." tone="warn" />
@@ -520,29 +468,25 @@ export function ExecutionWorkSessionModal({
                   onClick={() => run(() => runtime.recoverWork!(recoveryReason))}>Archive Superseded Session</TerasActionButton>
               </TerasFieldStack>
             ) : followUp && onNavigate ? (
-              <TerasList frame="contained"><TerasSignalItem label="Next action" title={followUp === "closeout" ? "Review package closeout" : followUp === "architecture" ? planRequirement?.title ?? "Review the technical plan" : prerequisite ? "Review required work or approval" : "Continue remaining work"}
-                detail={nextAction!.reason} tone="info" actions={<TerasActionButton onClick={() => onNavigate(followUp, projection?.delivery_id ?? null, requiredWorkId)}>
-                  {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? planRequirement?.actionLabel ?? "Open Technical Plan" : prerequisite ? "Open Required Work" : "Open Work Board"}</TerasActionButton>} /></TerasList>
-            ) : nextAction?.code === "pull-request-review-required" ? (
-              <TerasList frame="contained"><TerasSignalItem label="Human review" title="Review the current source changes" detail={nextAction.reason} tone="warn"
-                actions={reviewUrl ? <a href={reviewUrl} target="_blank" rel="noopener noreferrer">Open Pull Request ↗</a> : undefined} /></TerasList>
-            ) : nextAction ? (
-              <TerasList frame="contained">
-                <TerasSignalItem
-                  detail={nextAction.reason}
-                  label={nextAction.authority}
-                  statusLabel={nextAction.code === "work-complete" ? "Complete" : "Action required"}
-                  title={nextActionLabel(nextAction.code)}
-                  tone="warn"
-                />
-              </TerasList>
-            ) : runtime.mode === null ? (
+              <TerasActionButton disabled={submitting} onClick={() => onNavigate(followUp, projection?.delivery_id ?? null, requiredWorkId)}>
+                {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? planRequirement?.actionLabel ?? "Open Technical Plan" : prerequisite ? "Open Required Work" : "Open Work Board"}
+              </TerasActionButton>
+            ) : nextAction?.code === "pull-request-review-required" && reviewUrl ? (
+              <a href={reviewUrl} target="_blank" rel="noopener noreferrer">Open Pull Request ↗</a>
+            ) : runtime.projectionStatus === "loading" ? (
               <TerasLoadingState label="Loading execution session…" skeleton="details" />
-            ) : (
-              <TerasEmptyState>
-                No work-session mutation is currently available from this surface.
-              </TerasEmptyState>
-            )}
+            ) : null}
+            {diagnostic || nextAction ? (
+              <TerasTechnicalDetails items={[
+                ...(diagnostic ? [{ label: "Read or action result", value: diagnostic }] : []),
+                ...(projection ? [{ label: "Recorded state", value: projection.state }] : []),
+                ...(nextAction ? [
+                  { label: "Recorded reason", value: nextAction.reason },
+                  { label: "Action code", value: nextAction.code },
+                  { label: "Responsible component", value: nextAction.authority },
+                ] : []),
+              ]} />
+            ) : null}
           </TerasPanel>
 
           {canAdvise && planGuidance && onDraftTechnicalPlan && onViewApprovedPlan ? <ExecutionTechnicalPlanGuidance
@@ -672,15 +616,6 @@ function decisionInputFromDraft(
 function cleanRequiredMarker(value: string) {
   return value.startsWith("REQUIRED:") ? "" : value;
 }
-
-function nextActionLabel(code: string) {
-  return code
-    .replace(/-required$/, "")
-    .split("-")
-    .map((word) => `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`)
-    .join(" ");
-}
-
 
 function workSessionScope(projection: DeliveryWorkSessionProjection | null, selected?: string[]) {
   const workItemIds =
