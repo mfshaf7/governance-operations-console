@@ -20,9 +20,10 @@ async function harness(page){
   }
   function session(){return {mode:"live",status:"current",observedAt:new Date().toISOString(),error:null,projection:{
     workflow_id:"delivery-art-work-session",work_item_id:"work-item-3",delivery_id:"delivery-1",covered_work_item_ids:["work-item-3","work-item-4"],
-    landing_unit_id:"workflow",session_id:"work-session:delivery-1:workflow",session_revision:state.complete?"2026-11-17T02:00:00Z":"2026-11-17T01:00:00Z",state:"closeout-required",
+    landing_unit_id:"workflow",session_id:"work-session:delivery-1:workflow",session_revision:state.complete?"2026-11-17T02:00:00Z":"2026-11-17T01:00:00Z",state:state.sessionStatus??"closeout-required",
+    ...(state.operatingEvidence ? {facts:{operating_evidence:state.operatingEvidence}} : {}),
     pull_request:{state:"merged",url:"https://github.com/example/work/pull/1",head_commit:"a".repeat(40),merge_commit:"b".repeat(40)},
-    next_action:{authority:"operator-orchestration-service",code:state.code,...(state.requiredWork?{inputs:{work_item_id:`work-item-${state.requiredWork}`}}:{}),reason:"Synthetic owner next action for the connected workflow check."}}};}
+    next_action:{authority:"operator-orchestration-service",code:state.code,...(state.requiredWork?{inputs:{work_item_id:`work-item-${state.requiredWork}`}}:{}),reason:state.reason??"Synthetic owner next action for the connected workflow check."}}};}
   page.on("pageerror",error=>state.errors.push(error.message));
   await page.route("**/api/**",async route=>{
     const request=route.request(),path=new URL(request.url()).pathname;
@@ -34,6 +35,16 @@ async function harness(page){
       if(path.endsWith("/work-session/close")){
         if(state.failClose){state.failClose=false;return route.fulfill({status:503,json:{mode:"live",status:"offline",error:"Synthetic lost acknowledgement",code:"delivery_work_session_projection_unavailable"}});}
         state.complete=true;state.code="initiative-closeout-required";return route.fulfill({json:session()});
+      }
+      if(path.endsWith("/work-session/continue") && state.code==="acquire-operating-evidence"){
+        if(state.failOperatingEvidence){
+          state.failOperatingEvidence=false;
+          state.operatingEvidence="invalid";
+        } else {
+          state.operatingEvidence="ready";
+          state.code="draft-finalization";
+        }
+        return route.fulfill({json:session()});
       }
       if(path.endsWith("/work-session/reconstruct")){state.code="art-closeout-required";return route.fulfill({json:session()});}
       if(path.endsWith("/work-session/recover")){state.code="initiative-work-remains";return route.fulfill({json:session()});}
@@ -59,7 +70,8 @@ test("partial closeout retry preserves identity and refreshes the board before p
   await expect(workspace.getByRole("heading",{name:"New",exact:true})).toHaveCount(0);
   const before=state.reads;
   await modal.getByRole("button",{name:"Retry Landing Unit Closeout",exact:true}).click();
-  await expect(modal).toContainText("Synthetic lost acknowledgement");
+  await expect(modal.getByText("The result could not be confirmed. Read Current Session before trying again.")).toBeVisible();
+  await expect(modal.getByText("Synthetic lost acknowledgement")).toBeHidden();
   await modal.getByRole("button",{name:"Retry Landing Unit Closeout",exact:true}).click();
   await expect(modal.getByRole("button",{name:"Review Closeout",exact:true})).toBeVisible();
   await expect.poll(()=>state.reads).toBeGreaterThan(before);
@@ -105,5 +117,66 @@ test("recovery requires an explicit substantive reason and then offers remaining
   await modal.getByRole("button",{name:"Open Work Board",exact:true}).click();
   await expect(workspace.locator('[data-execution-work-item]').filter({hasText:"Work 4"})).toBeVisible();
   await expect(modal).toHaveCount(0);
+  expect(state.errors).toEqual([]);
+});
+
+
+test("Current Move presents the next step and keeps owner diagnostics available on demand", async ({ page }, info) => {
+  const { state, modal } = await harness(page);
+  state.code = "architecture-compatible-refresh-required";
+  state.sessionStatus = "architecture-refresh-required";
+  state.reason = "The active Landing Unit design is unchanged; refresh its durable architecture and work-start bindings before continuing.";
+  const read = modal.getByRole("button", { name: "Read Current Session", exact: true });
+  await read.click();
+  const refreshTitle = modal.getByRole("heading", { name: "Refresh the session plan", exact: true });
+  await expect(refreshTitle).toBeVisible();
+  const move = modal.getByText("Current Move", { exact: true }).locator("xpath=ancestor::section[1]");
+  await expect(move.getByRole("button", { name: "Refresh Session Plan", exact: true })).toBeEnabled();
+  await expect(move.getByText(state.reason, { exact: true })).toBeHidden();
+  await expect(move.getByText("Refresh needed", { exact: true })).toBeVisible();
+  await move.getByText("Technical details", { exact: true }).click();
+  await expect(move.getByText(state.reason, { exact: true })).toBeVisible();
+  await expect(move.getByText(state.code, { exact: true })).toBeVisible();
+  await move.getByText("Technical details", { exact: true }).click();
+
+  state.code = "source-work-required";
+  state.sessionStatus = "source-work";
+  state.reason = "Source must descend from the recorded base, remain on the recorded branch, and be clean and pushed before review evidence can advance.";
+  await read.click();
+  await expect(move.getByRole("heading", { name: "Work on the source", exact: true })).toBeVisible();
+  await expect(move.getByText("In progress", { exact: true })).toBeVisible();
+  await expect(move.getByText(/Use Edit or Import Source/)).toBeVisible();
+  await expect(move.getByText(state.reason, { exact: true })).toBeHidden();
+  await expect(move.getByRole("button", { name: "Refresh Session Plan", exact: true })).toHaveCount(0);
+  expect(state.writes).toEqual([]);
+  for (const [width, height] of [[1700, 1050], [1280, 720]]) {
+    await page.setViewportSize({ width, height });
+    await move.screenshot({ path: info.outputPath(`current-move-${width}.png`) });
+    expect(await move.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+  }
+  expect(state.errors).toEqual([]);
+});
+
+
+test("the merged session can request verification of recorded runtime results", async ({ page }) => {
+  const { state, modal } = await harness(page);
+  state.code = "acquire-operating-evidence";
+  state.sessionStatus = "implementation-ready";
+  state.failOperatingEvidence = true;
+  await modal.getByRole("button", { name: "Read Current Session", exact: true }).click();
+
+  await expect(modal.getByRole("heading", { name: "Verify the runtime results", exact: true })).toBeVisible();
+  const verify = modal.getByRole("button", { name: "Verify Runtime Results", exact: true });
+  await verify.click();
+  await expect(modal.getByRole("heading", { name: "Runtime results need attention", exact: true })).toBeVisible();
+  await expect(modal.getByRole("button", { name: "Prepare Final Evidence", exact: true })).toHaveCount(0);
+
+  await verify.click();
+  await expect(modal.getByRole("button", { name: "Prepare Final Evidence", exact: true })).toBeVisible();
+  expect(state.writes).toHaveLength(2);
+  expect(state.writes[0]).toMatchObject({
+    path: "/api/delivery/execution/3/work-session/continue",
+    body: { expectedSessionRevision: "2026-11-17T01:00:00Z" },
+  });
   expect(state.errors).toEqual([]);
 });
