@@ -7,7 +7,8 @@ The source approval and start decision retain that exact coverage. OOS still
 verifies every item's current owner, readiness and exact Architecture Packet
 Landing Unit match; entering an ID grants no authority. Original-scope recovery
 restores its recorded coverage. Existing single-item clients retain their
-owner-generated default.
+owner-generated default. For a recorded Technical Plan, source authorization
+and Start Work Session preserve the approved work group's exact identifier.
 
 ## Purpose
 

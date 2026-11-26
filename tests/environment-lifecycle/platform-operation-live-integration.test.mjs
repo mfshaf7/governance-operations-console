@@ -253,6 +253,26 @@ function sourceCommand() {
   intent.subject.ref = "profile:accepted-idea-delivery"; intent.input = { source_intent: sourcePreparation().source_intent, session_id: null };
   return { ...intent, intent_digest: hash(intent), approval: { ...approval, intent_digest: hash(intent) } };
 }
+test("source authorization reads a recorded group before and after approval", () => {
+  const preparation = sourcePreparation();
+  const landingUnitId = "landing-unit:delivery-42.source_foundation";
+  preparation.source_intent.landing_unit_id = landingUnitId;
+  preparation.source_intent_digest = hash(preparation.source_intent);
+  preparation.start_decision.landing_unit.id = landingUnitId;
+  const location = { recorded_artifact_digest: hash("recorded-plan") };
+  preparation.start_decision.architecture = { required: true, artifact_location: location };
+
+  assert.equal(assertSourceAuthorizationPreparation(preparation).source_intent.landing_unit_id, landingUnitId);
+  const bound = sourceCommand();
+  bound.input.source_intent = preparation.source_intent;
+  const receipt = sourceReceipt(bound);
+  preparation.authorization = { state: "approved", approval_ref: "approval:source-42", credential_receipt: receipt };
+  const approved = assertSourceAuthorizationPreparation(preparation);
+  assert.equal(approved.authorization.credential_receipt.landing_unit_id, landingUnitId);
+  assert.equal(approved.start_decision.architecture.artifact_location.recorded_artifact_digest, location.recorded_artifact_digest);
+  assert.throws(() => assertSourceCredentialIntent({ ...preparation.source_intent, landing_unit_id: "landing-unit:/other" }), /unauthorized/);
+});
+
 function bootstrapPreparation(withCi = false) {
   const value = sourcePreparation();
   value.start_decision = null;

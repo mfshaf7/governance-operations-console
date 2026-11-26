@@ -44,7 +44,7 @@ function assertIntent(value: unknown, allowBootstrap: boolean): SourceOperationI
   const item = closed(value, intentFields), subject = object(item.subject);
   const bootstrap = allowBootstrap && item.purpose === "trusted-owner-bootstrap";
   if (item.schema_version !== 1 || (!bootstrap && item.purpose !== "ordinary-source") || !["intent_id", "caller_id", "operator_id", "human_reviewer_id"].every(field => id(item[field])) || !digest(item.source_start_digest) || !timestamp(item.expires_at) || (item.supersedes_intent_digest !== null && !digest(item.supersedes_intent_digest))) invalid();
-  if (typeof item.repository !== "string" || !/^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(item.repository) || !positive(item.repository_id) || !positive(item.installation_id) || !commit(item.fetched_base) || typeof item.landing_unit_id !== "string" || !/^[a-z0-9][a-z0-9-]{2,127}$/.test(item.landing_unit_id)) invalid();
+  if (typeof item.repository !== "string" || !/^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/.test(item.repository) || !positive(item.repository_id) || !positive(item.installation_id) || !commit(item.fetched_base) || typeof item.landing_unit_id !== "string" || !/^[a-z0-9][a-z0-9._:-]{0,255}$/.test(item.landing_unit_id)) invalid();
   if (typeof item.branch !== "string" || !/^[a-z0-9][a-z0-9._/-]*$/.test(item.branch) || item.branch === "main" || item.branch.includes("..") || item.branch.includes("//") || item.branch.endsWith("/")) invalid();
   if (bootstrap) {
     assertBootstrapSubject(subject);
