@@ -336,8 +336,11 @@ review authority.
    item's OOS read determines eligibility and the next action.
 3. In disconnected preview, **Review Start** is available for an item with an
    enabled local start intent. In live mode, wait for the OOS projection.
-4. If no session exists, choose `Prepare Session`. OOS returns the
-   caller-bound Landing Unit decision draft.
+4. If no session exists, choose `Prepare Session`. When an approved Technical
+   Plan defines the selected work, the draft shows its complete approved work
+   group and binds the saved plan automatically. Review the branch and rollback
+   boundary before approving source access. Reload the decision if the
+   approved plan changes while you review it.
 5. Review the Landing Unit model, identity, branch, split reason, rollback
    boundary, and architecture packet decision. The Console sends only these
    bounded operator inputs; the server retains OOS-owned work item, covered

@@ -102,7 +102,15 @@ function assertPreparation(value: unknown, allowBootstrap: boolean): SourceAutho
       for (const value of landing.supersedes_recoveries) closed(value, ["landing_unit_id", "recovery_receipt_id", "session_id"]);
     }
     const architecture = closed(decision.architecture, ["required", "artifact_location"]);
-    if (architecture.artifact_location !== null) closed(architecture.artifact_location, ["repo", "relative_path"]);
+    if (architecture.artifact_location !== null) {
+      const location = object(architecture.artifact_location);
+      if (Object.hasOwn(location, "recorded_artifact_digest")) {
+        closed(location, ["recorded_artifact_digest"]);
+        if (!digest(location.recorded_artifact_digest)) invalid();
+      } else {
+        closed(location, ["repo", "relative_path"]);
+      }
+    }
     closed(decision.human_gate_work_item_ids, ["security_acceptance"]);
     if (JSON.stringify(decision).length > 32768) invalid();
   }

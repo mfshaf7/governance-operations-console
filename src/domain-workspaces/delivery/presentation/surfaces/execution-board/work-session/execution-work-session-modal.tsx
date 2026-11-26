@@ -116,6 +116,9 @@ export function ExecutionWorkSessionModal({
       (!decision.coveredWorkItemIds || decision.coveredWorkItemIds.includes(`work-item-${target.workItemId}`)) : false),
     [decision, target.workItemId],
   );
+  const artifactLocation = decision?.architecture.artifactLocation;
+  const recordedPlan = Boolean(artifactLocation && "recorded_artifact_digest" in artifactLocation);
+  const repositoryLocation = artifactLocation && "repo" in artifactLocation ? artifactLocation : null;
   const projection = runtime.projection;
   const sourceDecision = draft && decision ? {
     ...draft,
@@ -256,7 +259,7 @@ export function ExecutionWorkSessionModal({
               />
               <TerasFieldStack spacing="normal">
                 <TerasTextField
-                  disabled={submitting}
+                  disabled={submitting || recordedPlan}
                   label="Covered ART items (comma-separated)"
                   onValueChange={(value) => setDecision(current => current ? { ...current,
                     coveredWorkItemIds: value.split(",").map(item => item.trim().replace(/^#?([1-9][0-9]*)$/, "work-item-$1"))
@@ -265,7 +268,7 @@ export function ExecutionWorkSessionModal({
                     .map(item => item.replace(/^work-item-/, "")).join(", ")}
                 />
                 <TerasSelectField
-                  disabled={submitting}
+                  disabled={submitting || recordedPlan}
                   label="Landing unit model"
                   onValueChange={(value) =>
                     updateDecision(setDecision, "landingUnitDecision", value)
@@ -283,7 +286,7 @@ export function ExecutionWorkSessionModal({
                   value={decision.landingUnitDecision}
                 />
                 <TerasTextField
-                  disabled={submitting}
+                  disabled={submitting || recordedPlan}
                   label="Landing unit id"
                   onValueChange={(value) =>
                     updateDecision(setDecision, "landingUnitId", value)
@@ -317,7 +320,7 @@ export function ExecutionWorkSessionModal({
                   value={decision.rollbackBoundary}
                 />
                 <TerasSelectField
-                  disabled={submitting}
+                  disabled={submitting || recordedPlan}
                   label="Architecture packet"
                   onValueChange={(value) =>
                     setDecision((current) =>
@@ -327,6 +330,7 @@ export function ExecutionWorkSessionModal({
                             architecture: {
                               ...current.architecture,
                               required: value === "required",
+                              artifactLocation: value === "required" ? current.architecture.artifactLocation : null,
                             },
                           }
                         : current,
@@ -338,7 +342,10 @@ export function ExecutionWorkSessionModal({
                   ]}
                   value={decision.architecture.required ? "required" : "not-required"}
                 />
-                {decision.architecture.required ? (
+                {recordedPlan ? (
+                  <TerasContentTray title="Approved Technical Plan"
+                    description="The recorded plan sets the work scope and repository for this session." />
+                ) : decision.architecture.required ? (
                   <TerasContentTray kicker="Architecture Location">
                     <TerasFieldStack spacing="normal">
                       <TerasTextField
@@ -347,7 +354,7 @@ export function ExecutionWorkSessionModal({
                         onValueChange={(value) =>
                           updateArchitectureLocation(setDecision, "repo", value)
                         }
-                        value={decision.architecture.artifactLocation?.repo ?? ""}
+                        value={repositoryLocation?.repo ?? ""}
                       />
                       <TerasTextField
                   disabled={submitting}
@@ -360,7 +367,7 @@ export function ExecutionWorkSessionModal({
                           )
                         }
                         value={
-                          decision.architecture.artifactLocation?.relative_path ?? ""
+                          repositoryLocation?.relative_path ?? ""
                         }
                       />
                     </TerasFieldStack>
@@ -739,26 +746,22 @@ function updateArchitectureLocation(
   field: "relative_path" | "repo",
   value: string,
 ) {
-  setDecision((current) =>
-    current
-      ? {
-          ...current,
-          architecture: {
-            ...current.architecture,
-            artifactLocation: {
-              relative_path:
-                field === "relative_path"
-                  ? value
-                  : (current.architecture.artifactLocation?.relative_path ?? ""),
-              repo:
-                field === "repo"
-                  ? value
-                  : (current.architecture.artifactLocation?.repo ?? ""),
-            },
-          },
-        }
-      : current,
-  );
+  setDecision((current) => {
+    if (!current) return current;
+    const location = current.architecture.artifactLocation;
+    if (location && "recorded_artifact_digest" in location) return current;
+    return {
+      ...current,
+      architecture: {
+        ...current.architecture,
+        artifactLocation: {
+          relative_path: location?.relative_path ?? "",
+          repo: location?.repo ?? "",
+          [field]: value,
+        },
+      },
+    };
+  });
 }
 
 function updateDecision(
@@ -779,6 +782,7 @@ function updateDecision(
 }
 
 function workSessionDecisionReady(decision: DeliveryWorkSessionDecisionInput) {
+  const location = decision.architecture.artifactLocation;
   return Boolean(
     (!decision.coveredWorkItemIds || (decision.coveredWorkItemIds.length > 0 &&
       new Set(decision.coveredWorkItemIds).size === decision.coveredWorkItemIds.length &&
@@ -788,7 +792,7 @@ function workSessionDecisionReady(decision: DeliveryWorkSessionDecisionInput) {
       decision.rollbackBoundary.trim() &&
       decision.splitReason.trim() &&
       (!decision.architecture.required ||
-        (decision.architecture.artifactLocation?.repo.trim() &&
-          decision.architecture.artifactLocation.relative_path.trim())),
+        (location && ("recorded_artifact_digest" in location ||
+          (location.repo.trim() && location.relative_path.trim())))),
   );
 }

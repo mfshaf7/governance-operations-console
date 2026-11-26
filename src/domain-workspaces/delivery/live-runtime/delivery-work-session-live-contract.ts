@@ -200,6 +200,17 @@ export function assertDeliveryWorkSessionProjection(
   return value as DeliveryWorkSessionProjection;
 }
 
+function checkArchitectureLocation(value: unknown) {
+  const location = record(value, "architecture artifact location");
+  if (Object.hasOwn(location, "recorded_artifact_digest")) {
+    if (Object.keys(location).length !== 1) invalid("The recorded plan binding contains unexpected fields.");
+    match(location.recorded_artifact_digest, digestPattern, "recorded Technical Plan digest");
+  } else {
+    match(location.repo, repoPattern, "architecture artifact repo");
+    relativePath(location.relative_path, "architecture artifact path");
+  }
+}
+
 export function assertDeliveryWorkSessionDecision(
   value: unknown,
   allowDraft = false,
@@ -248,12 +259,7 @@ export function assertDeliveryWorkSessionDecision(
     invalid("Decision architecture requirement is required.");
   }
   if (architecture.artifact_location !== null) {
-    const location = record(
-      architecture.artifact_location,
-      "architecture artifact location",
-    );
-    match(location.repo, repoPattern, "architecture artifact repo");
-    relativePath(location.relative_path, "architecture artifact path");
+    checkArchitectureLocation(architecture.artifact_location);
   }
   if (!allowDraft && architecture.required && !architecture.artifact_location) {
     invalid("Required architecture must name its artifact location.");
@@ -295,12 +301,7 @@ export function assertDeliveryWorkSessionDecisionInput(
     invalid("Decision architecture requirement is invalid.");
   }
   if (architecture.artifactLocation !== null) {
-    const location = record(
-      architecture.artifactLocation,
-      "architecture artifact location",
-    );
-    match(location.repo, repoPattern, "architecture artifact repo");
-    relativePath(location.relative_path, "architecture artifact path");
+    checkArchitectureLocation(architecture.artifactLocation);
   }
   if (architecture.required && architecture.artifactLocation === null) {
     invalid("Required architecture must name its artifact location.");

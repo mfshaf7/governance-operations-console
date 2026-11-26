@@ -247,7 +247,9 @@ test("case:delivery-execution-end-to-end-positive rebuilds accepted input from a
 });
 
 test("explicit shared landing coverage survives fresh source preparation without browser-derived identity", async () => {
-  const input = { ...decisionInput(), coveredWorkItemIds: ["work-item-714", "work-item-715", "work-item-716"],
+  const recordedPlan = { recorded_artifact_digest: `sha256:${"b".repeat(64)}` };
+  const input = { ...decisionInput(), architecture: { required: true, artifactLocation: recordedPlan },
+    coveredWorkItemIds: ["work-item-714", "work-item-715", "work-item-716"],
     caller_id: "untrusted-caller", operator: { id: "untrusted-operator" } };
   assert.equal(assertDeliveryWorkSessionDecisionInput(input), input);
   const draft = preparedDecisionDraft();
@@ -263,6 +265,7 @@ test("explicit shared landing coverage survives fresh source preparation without
   assert.equal(result.operator.id, env.GOVERNANCE_CONSOLE_OPERATOR_ID);
   assert.deepEqual(draft.covered_work_item_ids, ["work-item-714"]);
   assertDeliveryWorkSessionDecision(result);
+  assert.deepEqual(result.architecture, { required: true, artifact_location: recordedPlan });
 });
 
 test("invalid coverage cannot replace the selected target or create an owner preparation", async () => {
