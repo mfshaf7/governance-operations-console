@@ -224,6 +224,15 @@ function sourcePreparation() {
       operator: { id: config.operatorId, decision_source: "operator" }, landing_unit: { id: "source-example", decision: "feature_single_landing_unit", split_reason: "One owner boundary.", base_ref: "origin/main", branch: "topic/example", rollback_boundary: "Revert reviewed source." }, architecture: { required: false, artifact_location: null }, human_gate_work_item_ids: { security_acceptance: [] } },
     authorization: { state: "prepared", approval_ref: null, credential_receipt: null }, authority: "operator-orchestration-service", secret_values_embedded: false };
 }
+test("source access retains the exact recorded Technical Plan binding", () => {
+  const preparation = sourcePreparation();
+  const location = { recorded_artifact_digest: hash("recorded-plan") };
+  preparation.start_decision.architecture = { required: true, artifact_location: location };
+  assert.deepEqual(assertSourceAuthorizationPreparation(preparation).start_decision.architecture.artifact_location, location);
+  location.recorded_artifact_digest = "unverified";
+  assert.throws(() => assertSourceAuthorizationPreparation(preparation));
+});
+
 function sourceCatalog() {
   const value = catalog(); value.subjects[0].ref = "profile:accepted-idea-delivery";
   value.subjects[0].capabilities = ["issue", "renew", "revoke"].map(action => ({ capability_id: `agent-source.${action}`, action: `agent-source.${action}`, available: true, unavailable_reason: null, required_capability: "platform.agent-source", approval_required: true, destructive: action === "revoke" }));

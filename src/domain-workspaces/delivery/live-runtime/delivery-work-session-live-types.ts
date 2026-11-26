@@ -44,10 +44,9 @@ export type DeliveryWorkSessionPullRequest = Record<string, unknown> & {
   state: string;
 };
 
-export type DeliveryWorkSessionArchitectureLocation = {
-  relative_path: string;
-  repo: string;
-};
+export type DeliveryWorkSessionArchitectureLocation =
+  | { relative_path: string; repo: string }
+  | { recorded_artifact_digest: string };
 
 export type DeliveryWorkSessionDecision = {
   architecture: {
