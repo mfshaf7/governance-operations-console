@@ -161,8 +161,16 @@ test("GitHub throttling exposes the typed retry time and no provider detail", as
     error.retryAt===retryAt && /GitHub temporarily limited/.test(error.message) && !error.message.includes("opaque"));
 });
 
+test("a missing GitHub source grant gives the setup user an actionable message", async () => {
+  await assert.rejects(readRepositoryBootstrap(id, { config, fetchImpl: async () => Response.json({
+    error: "github_source_connection_required", message: "opaque provider text",
+  }, { status: 403 }) }), error => error.code === "github_source_connection_required" &&
+    error.status === 403 && /GitHub Source App has access/.test(error.message) && !error.message.includes("opaque"));
+});
+
 test("an active owner reads its current unconfigured plan using Inventory authority without provider writes", async () => {
   const selected = { ownerRepo: owner, custodyRequestId: "custody:fixture", evidenceProfile: null, applicationMarkers: [], withCi: false, nonce: "review:verification", operation: "configure-verification" };
+  let readAuthorization;
   const fetchImpl = async (_url, init) => {
     const input = JSON.parse(init.body);
     assert.equal(input.operation, "configure-verification"); assert.equal(input.evidence_profile, null); assert.deepEqual(input.application_markers, []);
@@ -172,11 +180,22 @@ test("an active owner reads its current unconfigured plan using Inventory author
         inventory_entry_ref: { id: `repo:${owner}`, version: 1, digest: digest("inventory") }, source_bootstrap_eligible: false, verification_setup_eligible: true,
         ordinary_source_eligible: true, model_writes_allowed: false, canonical_mutation: false, runtime_activation: false },
       existing_owner_controls: { owner_repo: owner, evidence_profile: { schema_version: 1, owner_repo: owner, profile_id: "owner-source-controls", application_verification: { mode: "unconfigured", manual_checks: [] }, commands: [] } },
-      next_action: "configure-application-verification", authorization: "preparation-only", credential_issued: false, checkout_created: false, canonical_mutation: false, runtime_activation: false };
+      next_action: "configure-application-verification", authorization: "preparation-only", credential_issued: readAuthorization !== undefined,
+      ...(readAuthorization === undefined ? {} : { read_authorization: readAuthorization }),
+      checkout_created: false, canonical_mutation: false, runtime_activation: false };
     return Response.json({ ...body, preparation_digest: digest(body) });
   };
   const result = await prepareRepositoryBootstrap(selected, { config, fetchImpl });
   assert.equal(result.plan, null); assert.equal(result.owner_authority.intake_entry_ref, null);
+  readAuthorization = { scope: "trusted-owner-controls", credential_revoked: true };
+  const authenticated = await prepareRepositoryBootstrap(selected, { config, fetchImpl });
+  assert.equal(authenticated.credential_issued, true);
+  assert.deepEqual(authenticated.read_authorization, readAuthorization);
+  for (const invalid of [{ ...readAuthorization, credential_revoked: false },
+    { ...readAuthorization, scope: "repository-checkout" }]) {
+    readAuthorization = invalid;
+    await assert.rejects(prepareRepositoryBootstrap(selected, { config, fetchImpl }));
+  }
   await assert.rejects(prepareRepositoryBootstrap({ ...selected, operation: "other" }, { config, fetchImpl }));
 });
 

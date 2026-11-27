@@ -18,6 +18,6 @@ async function respond(operation: () => Promise<unknown>) {
   try { return NextResponse.json({ mode: "live", projection: await operation(), error: null }, { headers }); }
   catch (error) { return NextResponse.json({ mode: "live", projection: null, code: error instanceof RepositoryBootstrapOosError ? error.code : "repository_bootstrap_contract_rejected",
     ...(error instanceof RepositoryBootstrapOosError && error.retryAt ? { retryAt: error.retryAt } : {}),
-    error: error instanceof RepositoryBootstrapOosError && ["record_authority_unavailable","repository_owner_bootstrap_provider_throttled"].includes(error.code) ? error.message
+    error: error instanceof RepositoryBootstrapOosError && ["record_authority_unavailable","repository_owner_bootstrap_provider_throttled","github_source_connection_required"].includes(error.code) ? error.message
       : "The owner did not confirm this exact setup. Refresh the original request; source readiness, app acceptance and admission remain separate." }, { headers, status: error instanceof RepositoryBootstrapOosError ? error.status : 400 }); }
 }

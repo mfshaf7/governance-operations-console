@@ -3,6 +3,10 @@ import {execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const {workspaceRegistryFixture}=require('../../src/workspace-registry/fixtures/workspace-registry.fixture.ts');
+const {projectRepositoryProvisioningResults,projectRepositoryCustodyResults,repositoryProvisionedRecordId}=
+ require('../../src/domain-workspaces/repository/live-runtime/repository-custody-live-projection.ts');
+const {projectRepositoryCurrentInventory}=require('../../src/domain-workspaces/repository/live-runtime/repository-inventory-live-projection.ts');
+const {repositoryMatchesSelection}=require('../../src/domain-workspaces/repository/read-model/repository-register-selection.ts');
 const fixture=JSON.parse(execFileSync(process.execPath,['--experimental-strip-types','--disable-warning=MODULE_TYPELESS_PACKAGE_JSON','--input-type=module','-e',"import {repositoryUiFixture} from './tests/support/repository-ui-fixture.mjs';process.stdout.write(JSON.stringify(await repositoryUiFixture({proposalId:null})));"],{encoding:'utf8'}));
 const base=process.env.CONSOLE_TEST_BASE_URL??'http://127.0.0.1:4317';
 if(new URL(base).port==='3317')throw new Error('Use an isolated preview');
@@ -20,6 +24,13 @@ async function setup(page,{active=false,registered=false,failSelection=false,inv
   if(path==='/api/workspace-continuity')return route.fulfill({json:f.continuity});
   if(path==='/api/workspace-registry')return route.fulfill({json:registry});
   if(path==='/api/proposals')return route.fulfill({json:{mode:'live',status:'current',error:null,observedAt:new Date().toISOString(),records:[]}});
+  if(path==='/api/repositories/register'){
+   const selection={query:url.searchParams.get('q')??'',status:url.searchParams.get('status')??'all',account:url.searchParams.get('account')??'all'};
+   const provisioned=projectRepositoryProvisioningResults([],{[f.result.request.request_id]:f.result});
+   const rows=projectRepositoryCustodyResults(provisioned,{[repositoryProvisionedRecordId(f.result)]:f.result});
+   const records=projectRepositoryCurrentInventory(rows,f.continuity).filter(row=>repositoryMatchesSelection(row,selection));
+   return route.fulfill({json:{mode:'live',status:'current',error:null,records,page:{selection,next_cursor:null,total:null}}});
+  }
   if(path==='/api/repositories/custody/requests')return failSelection&&url.searchParams.has('provider_repository_id')?route.fulfill({status:503,json:{error:'Synthetic source unavailable'}}):route.fulfill({json:{schema_version:1,mode:'live',status:'current',error:null,records:[f.result],next_cursor:null}});
   if(path==='/api/workspace-registry/repository-status'){
    if(!registered)return route.fulfill({json:{schema_version:1,mode:'not-configured',projected_at:new Date().toISOString()}});
@@ -44,7 +55,8 @@ async function openFromRepository(page){
 test('Repository Control opens Registry onboarding for the exact repository without a Product/Component choice',async({page},info)=>{
  const {writes}=await setup(page);const onboarding=await openFromRepository(page);
  await expect(page.getByRole('dialog',{name:'Workspace Registry',exact:true})).toBeVisible();
- await expect(onboarding.getByText('https://github.com/synthetic-workspace/synthetic-source',{exact:true})).toBeVisible();
+ await expect(onboarding.getByRole('heading',{name:'synthetic-workspace/synthetic-source',exact:true})).toBeVisible();
+ await expect(onboarding.getByRole('button',{name:'Open on GitHub',exact:true})).toBeVisible();
  await expect(onboarding.getByRole('button',{name:'Registration type',exact:true})).toHaveCount(0);
  await onboarding.getByRole('button',{name:'Continue onboarding',exact:true}).click();
  const details=page.getByRole('dialog',{name:'Repository onboarding details',exact:true});
