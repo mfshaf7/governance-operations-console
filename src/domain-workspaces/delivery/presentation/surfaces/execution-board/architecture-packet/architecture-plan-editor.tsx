@@ -28,10 +28,12 @@ import { isOptionalArchitectureSection, technicalPlanDefaultSection, technicalPl
 import { technicalPlanEmptyAnswers, technicalPlanGroup, technicalPlanGroups, technicalPlanGroupState, technicalPlanInputState, technicalPlanRepositoryLookupFields, technicalPlanEntryName, technicalPlanVerificationCoverage, technicalPlanVerificationReaders } from "../../../../work-model/execution/technical-plan-preparation.ts";
 import { ArchitecturePlanField, type PlanChangeConfirmation, type PlanChoice } from "./architecture-plan-field.tsx";
 import { isTechnicalPlanChangeGroup, TechnicalPlanChangeGroups } from "./technical-plan-change-groups.tsx";
+import { TechnicalPlanWorkTitle } from "./technical-plan-overview.tsx";
 
-export function ArchitecturePlanEditor({ editor, model, disabled, navigationDisabled = false, onEdit, selectedSection, onSectionChange, confirmChange }: {
+export function ArchitecturePlanEditor({ editor, model, disabled, navigationDisabled = false, onEdit, selectedSection, onSectionChange, confirmChange, approvedRuntimeResponsibilities }: {
   editor: ArchitecturePacketEditor; model: DeliveryReadModel; disabled: boolean;
   navigationDisabled?: boolean;
+  approvedRuntimeResponsibilities?: unknown;
   selectedSection?: string; onSectionChange?: (section: string) => void;
   onEdit: (update: (value: ArchitecturePacketEditor) => ArchitecturePacketEditor) => void;
   confirmChange: (change: PlanChangeConfirmation) => void;
@@ -219,6 +221,9 @@ export function ArchitecturePlanEditor({ editor, model, disabled, navigationDisa
             {groupEditor ? <TechnicalPlanChangeGroups groups={changeGroups} work={planChoices} repositories={repositoryChoices}
               pins={source.pins} onOpenRevisions={() => setSection("repo_revisions")}
               disabled={disabled} onChange={change} repositorySearch={repositorySearchControl} confirmChange={confirmChange} /> : <>
+              {section === "architecture:runtime_boundaries" && !parseError ? <TerasPlanning.FieldHint>
+                <strong>Standard installation rules</strong> cover plan handling and evidence storage automatically.
+              </TerasPlanning.FieldHint> : null}
               {section === "conformance_plan:protocol_applicability" && !parseError && verification.required !== true ?
                 <TerasContentTray title="Include the verification required for approval"
                   description="This draft has no verification requirement recorded. Apply the Technical Plan requirement, then decide whether it also needs checks for system connections."
@@ -259,6 +264,7 @@ export function ArchitecturePlanEditor({ editor, model, disabled, navigationDisa
                   workItems={["work_item_execution_plan", "required_human_gates", "evidence_receipt_handoffs", "cases", "work_item_dimension_applicability", "git_causality"].includes(key ?? "") ? scopedChoices : choices}
                   repositories={key === "runtime_activation_chains" ? scopedOwners.map(value => ({ value, label: value })) : repositoryChoices}
                   references={refs} onChange={change} onRepair={() => setRepairOpen(true)}
+                  approvedRuntimeResponsibilities={key === "runtime_boundaries" ? approvedRuntimeResponsibilities : undefined}
                   repositorySearch={repositorySearchControl} repositoryLookupFields={repositoryLookupFields} source={source}
                   emptyAnswer={emptyAnswer}
                   emptyHelp={key === "evidence_receipt_handoffs" && new Set(groups.map(item => item.repository).filter(Boolean)).size < 2 ?
@@ -269,18 +275,20 @@ export function ArchitecturePlanEditor({ editor, model, disabled, navigationDisa
       </TerasPlanning.SectionStack>
     </TerasSectionEditorLayout>
     {verificationDialog && key === "cases" && !parseError ? <TerasDialog open onClose={() => setVerificationDialog(null)}
-      kicker="Verification" title={technicalPlanVerificationReaders[verificationDialog ?? "coverage"]}
-      width="standard" height="content" contentOverflow="auto">
-      <TerasFieldStack spacing="normal">
+      kicker="Verification" title={technicalPlanVerificationReaders[verificationDialog]}
+      width="large" height="content" contentOverflow="auto">
+      <TerasPlanning.ChoiceFields spacing="normal">
         {verificationDialog === "coverage" ? <>
-          {verificationCoverage.length ? <TerasContentTray title="Items missing a case"
-            description={`${verificationCoverage.length} ${verificationCoverage.length === 1 ? "work item needs" : "work items need"} a success or failure case.`}>
-            <TerasTechnicalDetails summary="See which cases are missing" items={verificationCoverage.map(item => ({
-              label: titles[item.id] ?? item.id.replace(/^work-item-/, "Work item #"),
-              value: item.missing.map(kind => kind === "positive" ? "Success case" : "Failure case").join(" and "),
-            }))} />
-          </TerasContentTray> : null}
-          {verificationField("dimensions")}
+          <TerasFieldStack spacing="normal">
+            {verificationCoverage.length ? <TerasContentTray title="Items missing a complete case"
+              description={`${verificationCoverage.length} ${verificationCoverage.length === 1 ? "work item needs" : "work items need"} a complete success or failure case.`}>
+              <TerasTechnicalDetails summary="See which cases are missing" items={verificationCoverage.map(item => ({
+                label: <TechnicalPlanWorkTitle label={titles[item.id] ?? item.id.replace(/^work-item-/, "Work item #")} />,
+                value: item.missing.map(kind => kind === "positive" ? "Success case" : "Failure case").join(" and "),
+              }))} />
+            </TerasContentTray> : null}
+            {verificationField("dimensions")}
+          </TerasFieldStack>
           <TerasContentTray title="Checks by work item" description="Choose which checks apply to each work item.">
             {verificationField("work_item_dimension_applicability")}
           </TerasContentTray>
@@ -292,7 +300,7 @@ export function ArchitecturePlanEditor({ editor, model, disabled, navigationDisa
             {verificationField("git_causality")}
           </TerasContentTray>
         </>}
-      </TerasFieldStack>
+      </TerasPlanning.ChoiceFields>
     </TerasDialog> : null}
     {guidanceOpen && sectionGuidance ? <TerasDialog open kicker={area.label} title={sectionLabel} description={sectionGuidance}
       width="compact" height="content" contentOverflow="auto" onClose={() => setGuidanceOpen(false)} /> : null}

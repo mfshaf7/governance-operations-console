@@ -12,8 +12,9 @@ test.beforeEach(({page})=>{
 test.use({viewport:{width:1700,height:1050}});
 const scopedWorkDescription = "Update the homepage and coordinate the compatibility change that lands first.";
 const advisorPlanSummary = "Publish the reviewed homepage so visitors can find the updated contact details.\n\nCheck the links and layout before release.";
-async function open(page,{recorded=false,staleApproval=false,history=false,validationErrors=[],durableDraft=false,website=false,initialPlan,recordedRevision=false,longWorkTitle,guidance=false}={}){
- const state={requests:[],advisor:[],errors:[],workReads:[],staleApproval,recorded,savedDraft:null};
+async function open(page,{recorded=false,staleApproval=false,history=false,validationErrors=[],durableDraft=false,website=false,initialPlan,recordedRevision=false,longWorkTitle,guidance=false,sessionImpact=[],staleImpact=false}={}){
+ const state={requests:[],advisor:[],errors:[],workReads:[],staleApproval,staleImpact,recorded,savedDraft:null};
+ const impact={revision:"sha256:"+"e".repeat(64),sessions:sessionImpact};
  if(initialPlan){
   const packageId=initialPlan.delivery_id;
   const payload_json=JSON.stringify({schemaVersion:1,packageId,draft:{
@@ -96,7 +97,7 @@ async function open(page,{recorded=false,staleApproval=false,history=false,valid
   if(path==="/api/delivery/architecture-packets/facts"){
    const { input } = req.postDataJSON();
    state.factReads = [...(state.factReads ?? []), input];
-   const authorization = {uri:"https://github.com/example/console/blob/"+"d".repeat(40)+"/docs/authorization.md",digest:"sha256:"+"e".repeat(64)};
+   const authorization = {uri:`https://github.com/example/${task.owner_repo}/blob/`+"d".repeat(40)+"/docs/authorization.md",digest:"sha256:"+"e".repeat(64)};
    const result = {delivery_id:input.delivery_id,kind:input.kind};
    if(input.kind==="recorded-authorization") result.refs=[authorization];
    else{
@@ -111,12 +112,15 @@ async function open(page,{recorded=false,staleApproval=false,history=false,valid
    const body=req.postDataJSON();state.requests.push({path,body});
    if(validationErrors.length)return route.fulfill({status:422,json:{mode:"live",status:"offline",code:"delivery_art_authoring_contract_invalid",error:"This plan needs correction.",issues:validationErrors}});
    const approved=body.input.decision.status==="architecture-ready";
-   return route.fulfill({json:{mode:"live",status:"current",observedAt:new Date().toISOString(),error:null,result:{workflow_id:"delivery-art-architecture-packet-draft",architecture_packet:technicalPlanArtifact(body.input),source_snapshot:{art_digest:"sha256:"+(approved&&state.staleApproval?"c":"b").repeat(64),covered_record_count:1,dependency_record_count:0,relation_count:0}}}});
+   return route.fulfill({json:{mode:"live",status:"current",observedAt:new Date().toISOString(),error:null,result:{workflow_id:"delivery-art-architecture-packet-draft",architecture_packet:technicalPlanArtifact(body.input),session_impact:impact,source_snapshot:{art_digest:"sha256:"+(approved&&state.staleApproval?"c":"b").repeat(64),covered_record_count:1,dependency_record_count:0,relation_count:0}}}});
   }
   if(path==="/api/delivery/architecture-packets/persist"){
-   const body=req.postDataJSON();state.requests.push({path,body});state.recorded=true;
+   const body=req.postDataJSON();state.requests.push({path,body});
+   if(state.staleImpact)return route.fulfill({status:409,json:{mode:"live",status:"offline",code:"delivery_art_plan_impact_changed",error:"The current plan or work session changed. Validate the draft and review the current impact before recording."}});
+   expect(body.expected_impact_revision).toBe(impact.revision);
+   state.recorded=true;
    const artifact={...body.artifact,custody:{backend:"wgcf-artifact-registry",state:"durable",uri:"wgcf://artifacts/delivery-art/sha256/"+"a".repeat(64)}};
-   return route.fulfill({json:{mode:"live",status:"current",observedAt:new Date().toISOString(),error:null,result:{workflow_id:"delivery-art-architecture-packet-persist",artifact,custody_receipt:{ref:"receipt:test"},owner_receipt:{ref:"owner:test"}}}});
+   return route.fulfill({json:{mode:"live",status:"current",observedAt:new Date().toISOString(),error:null,result:{workflow_id:"delivery-art-architecture-packet-persist",artifact,session_impact:impact,custody_receipt:{ref:"receipt:test"},owner_receipt:{ref:"owner:test"}}}});
   }
   return route.fulfill({status:503,json:{mode:"live",status:"offline",projection:null,error:"Isolated owner unavailable"}});
  });
@@ -128,7 +132,7 @@ async function open(page,{recorded=false,staleApproval=false,history=false,valid
   await workspace.getByRole("button",{name:/User story #3 Build the homepage/}).click();
   await workspace.getByRole("button",{name:"Check Work Requirements",exact:true}).click();
   if(!guidance){
-   const session = page.getByRole("dialog",{name:"Governed Work Session",exact:true});
+   const session = page.getByRole("dialog",{name:"Work Session",exact:true});
    await expect(session.getByRole("button",{name:"Check recommendation",exact:true})).toHaveCount(0);
    await session.getByRole("button",{name:"Prepare Technical Plan",exact:true}).click();
   }
@@ -137,7 +141,7 @@ async function open(page,{recorded=false,staleApproval=false,history=false,valid
 }
 test("Execution checks only explicitly and keeps advice and starter coverage tied to the selected work", async ({page}, info) => {
  const {state,modal}=await open(page,{website:true,guidance:true,durableDraft:true});
- const session=page.getByRole("dialog",{name:"Governed Work Session",exact:true});
+ const session=page.getByRole("dialog",{name:"Work Session",exact:true});
  const check=session.getByRole("button",{name:"Check recommendation",exact:true});
  await expect(check).toBeEnabled();
  expect(state.advisor).toEqual([]);
@@ -176,7 +180,7 @@ test("Execution checks only explicitly and keeps advice and starter coverage tie
 
 test("Execution displays an approved plan before asking the model and preserves an existing private draft", async ({page}) => {
  const {state,modal}=await open(page,{website:true,guidance:true,recorded:true,initialPlan:technicalPlanInput()});
- const session=page.getByRole("dialog",{name:"Governed Work Session",exact:true});
+ const session=page.getByRole("dialog",{name:"Work Session",exact:true});
  const initialDraft=structuredClone(state.savedDraft);
  await session.getByRole("button",{name:"View Approved Plan",exact:true}).click();
  await expect(modal.getByText("Read-only",{exact:true})).toBeVisible();
@@ -186,7 +190,7 @@ test("Execution displays an approved plan before asking the model and preserves 
 
 test("Execution starter preserves the already saved plan draft", async ({page}) => {
  const {state,modal}=await open(page,{website:true,guidance:true,initialPlan:technicalPlanInput()});
- const session=page.getByRole("dialog",{name:"Governed Work Session",exact:true});
+ const session=page.getByRole("dialog",{name:"Work Session",exact:true});
  const initialDraft=structuredClone(state.savedDraft);
  await session.getByRole("button",{name:"Check recommendation",exact:true}).click();
  await session.getByRole("button",{name:"Draft Technical Plan",exact:true}).click();
@@ -196,16 +200,23 @@ test("Execution starter preserves the already saved plan draft", async ({page}) 
 });
 
 test("owner validation findings remain inspectable and editing clears the failed attempt",async({page})=>{
- const findings=["Work dependencies must be acyclic.","A source-activation approval requires an owner chain."];
+ const findings=["architecture work dependency graph must be acyclic",
+   "architecture human gate gate:publish-review evidence prerequisites are absent from authority work item work-item-3 execution prerequisites: work-item-2"];
  const {state,modal}=await open(page,{validationErrors:findings,initialPlan:technicalPlanInput()});
  await step(modal,"Review & record").click();
  await modal.getByRole("button",{name:"Validate Plan",exact:true}).click();
  const action=modal.locator('[data-technical-plan-action="true"]');
  await expect(action).toContainText("This plan needs correction.");
- await action.getByText("Plan checks requiring attention · 2",{exact:true}).click();
- for(const finding of findings)await expect(action).toContainText(finding);
+ await expect(modal.getByRole("heading",{name:"Changes needed before approval",exact:true})).toBeVisible();
+ await expect(modal.getByText(/Some work or approvals depend on each other/)).toBeVisible();
+ await expect(modal.getByText(/missing a dependency for its required evidence/)).toBeVisible();
+ await expect(modal.getByText(findings[0],{exact:true})).toBeHidden();
+ await modal.getByText("Plan checks requiring attention · 2",{exact:true}).click();
+ for(const finding of findings)await expect(modal.getByText(finding,{exact:true})).toBeVisible();
  await page.screenshot({path:test.info().outputPath("technical-plan-validation-findings.png")});
  await expect(modal.getByRole("button",{name:"Approve Plan",exact:true})).toHaveCount(0);
+ await action.getByRole("button",{name:"Review next issue",exact:true}).click();
+ await expect(modal.getByRole("heading",{name:"Work dependencies",exact:true})).toBeVisible();
  await step(modal,"Choose scope").click();
  await modal.getByRole("textbox",{name:"Plan summary and justification",exact:true}).fill("Revised reviewed rationale, with the dependency correction still to validate.");
  await expect(action).not.toContainText("Plan checks requiring attention");
@@ -273,7 +284,11 @@ test("package entry and advisor are scoped, manual and undoable without canonica
 test("a personal website plan records approval and returns to the exact work-start review",async({page},info)=>{
  const input=technicalPlanInput();
  input.decision.rationale="Release the homepage when links and desktop and mobile layouts have been checked.";
- const {state,modal}=await open(page,{website:true,initialPlan:input});
+ const {state,modal}=await open(page,{website:true,initialPlan:input,sessionImpact:[
+  {disposition:"refresh",reason:"scope-unchanged",owner_repo:"governance-operations-console",work_item_ids:["work-item-3"],open_work_item_id:"work-item-3"},
+  {disposition:"rebuild",reason:"scope-changed-clean",owner_repo:"website-contracts",work_item_ids:["work-item-4"],open_work_item_id:"work-item-4"},
+  {disposition:"review",reason:"session-operator",owner_repo:"governance-operations-console",work_item_ids:["work-item-5"],open_work_item_id:null},
+ ]});
  await expect(modal).toContainText("Opened from a work item");
  await expect(modal).toContainText("Build the homepage");
  await step(modal,"Plan the changes").click();
@@ -298,6 +313,12 @@ test("a personal website plan records approval and returns to the exact work-sta
  await action.getByRole("button",{name:"Continue to review",exact:true}).click();
  await expect(step(modal,"Review & record")).toHaveAttribute("aria-current","step");
  await modal.getByRole("button",{name:"Validate Plan",exact:true}).click();
+ const impact=modal.getByRole("list",{name:"Affected work sessions"});
+ await expect(impact).toContainText("Refresh plan link");
+ await expect(impact).toContainText("Rebuild available");
+ await expect(impact).toContainText("Review needed");
+ await expect(impact.getByRole("button",{name:"Open Work Session"})).toHaveCount(0);
+ await impact.screenshot({path:info.outputPath("plan-session-impact.png")});
  await expect(modal.getByRole("button",{name:"Approve Plan",exact:true})).toBeDisabled();
  await modal.getByRole("radio",{name:"I approve this technical plan for the covered work",exact:true}).click();
  await modal.getByRole("button",{name:"Approve Plan",exact:true}).click();
@@ -310,13 +331,28 @@ test("a personal website plan records approval and returns to the exact work-sta
  expect(state.requests[2].body.artifact.covered_work_item_ids).toEqual(["work-item-3","work-item-4"]);
  expect(state.requests[2].body.artifact.decision.status).toBe("architecture-ready");
  const reads=state.workReads.length;
- await modal.getByRole("button",{name:"Return to work start",exact:true}).click();
- const work=page.getByRole("dialog",{name:"Governed Work Session",exact:true});
+ await expect(impact.getByRole("button",{name:"Open Work Session"})).toHaveCount(2);
+ await impact.getByRole("listitem").filter({hasText:"Build the homepage"}).getByRole("button",{name:"Open Work Session"}).click();
+ const work=page.getByRole("dialog",{name:"Work Session",exact:true});
  await expect(work).toContainText("Build the homepage");
  await expect(work).toContainText("Review the start with the recorded plan.");
  expect(state.workReads.length).toBeGreaterThan(reads);
  expect(state.workReads.every(id=>id===3)).toBe(true);
  expect(state.errors).toEqual([]);
+});
+test("a change after plan approval requires review again and keeps the draft",async({page})=>{
+ const {state,modal}=await open(page,{staleImpact:true,initialPlan:technicalPlanInput()});
+ await step(modal,"Review & record").click();
+ await modal.getByRole("button",{name:"Validate Plan",exact:true}).click();
+ await expect(modal).toContainText("There are no active work sessions affected by this plan.");
+ await modal.getByRole("radio",{name:"I approve this technical plan for the covered work",exact:true}).click();
+ await modal.getByRole("button",{name:"Approve Plan",exact:true}).click();
+ await modal.getByRole("button",{name:"Record Approved Plan",exact:true}).click();
+ await expect(modal).toContainText("Validate the draft and review the current impact");
+ await expect(modal.getByRole("button",{name:"Validate Plan",exact:true})).toBeEnabled();
+ await expect(modal.getByRole("button",{name:"Record Approved Plan",exact:true})).toHaveCount(0);
+ expect(state.recorded).toBe(false);
+ expect(state.savedDraft).not.toBeNull();
 });
 test("changed source prevents recording and History exposes no approval actions",async({page})=>{
  const {state,modal}=await open(page,{staleApproval:true,initialPlan:technicalPlanInput()});await step(modal,"Review & record").click();await modal.getByRole("button",{name:"Validate Plan",exact:true}).click();
@@ -339,7 +375,9 @@ test("changed source prevents recording and History exposes no approval actions"
  await retained.modal.getByRole("group",{name:"Planning areas",exact:true}).getByRole("button",{name:/Verification/}).click();
  await expect(retained.modal.getByRole("button",{name:"Add verification case",exact:true})).toBeDisabled();
  await retained.modal.getByRole("button",{name:/The page builds against the compatible revision/}).click();
- await expect(retained.modal.getByRole("textbox",{name:"Expected outcome",exact:true})).toBeDisabled();
+ const retainedCase=page.getByRole("dialog",{name:"View verification case",exact:true});
+ await expect(retainedCase.getByRole("textbox",{name:"Expected outcome",exact:true})).toBeDisabled();
+ await retainedCase.getByRole("button",{name:"Close",exact:true}).click();
  for(const name of ["Validate Plan","Approve Plan","Record Approved Plan","Revise Current Plan"])await expect(retained.modal.getByRole("button",{name,exact:true})).toHaveCount(0);
  expect(retained.state.requests).toEqual([]);
 });
@@ -645,6 +683,14 @@ test("a saved plan reveals an entry on selection and reuses recorded form values
  const reviewList=reader.getByRole("list",{name:"Evidence handoffs",exact:true});
  await reviewList.getByRole("button",{name:"Compatibility report",exact:true}).click();
  await expect(reviewList).toHaveCount(0);
+ await expect(reader.locator("[data-plan-review-entry]")).toBeVisible();
+ await expect(reader.getByRole("heading",{name:"Sending the evidence",exact:true})).toBeVisible();
+ await expect(reader.getByRole("heading",{name:"Receiving the evidence",exact:true})).toBeVisible();
+ for(const reference of ["User story #4","User story #3"]){
+  const metadata=reader.locator('[class*="terasMetadataValue"]');
+  await expect(metadata.getByText(reference,{exact:true}).first()).toHaveCSS("color","rgb(255, 193, 90)");
+ }
+ await expect(reader.getByText("Compatibility report",{exact:true})).toHaveCount(1);
  await reader.getByRole("button",{name:"Back to entries",exact:true}).click();
  await expect(reviewList.getByRole("button",{name:"Compatibility report",exact:true})).toBeFocused();
  await reader.getByRole("button",{name:"Close review details",exact:true}).click();
@@ -757,22 +803,68 @@ test("activation and authorization reuse the pinned source and leave approvals t
  await modal.getByRole("tab",{name:/^Access and execution/}).click();
  await panel.getByRole("button",{name:"Find approved references",exact:true}).click();
  await panel.getByRole("button",{name:"Authorization reference",exact:true}).click();
- await page.getByRole("option",{name:"authorization.md",exact:true}).click();
+ await page.getByRole("option",{name:/authorization\.md · governance-operations-console/}).click();
  await panel.getByRole("button",{name:"Use authorization reference",exact:true}).click();
  await expect.poll(()=>JSON.parse(JSON.parse(state.savedDraft.payload_json).draft.architectureJson).authorization_session_execution_model.authority_refs?.[0]?.digest)
   .toEqual("sha256:"+"e".repeat(64));
  const findDocument=panel.getByRole("button",{name:"Find a document in pinned source",exact:true});
  await findDocument.click();
  const documentLookup=page.getByRole("dialog",{name:"Find an authorization document",exact:true});
- await documentLookup.getByRole("button",{name:"Repository",exact:true}).click();
- await page.getByRole("option",{name:owner,exact:true}).click();
- await documentLookup.getByRole("textbox",{name:"Document path",exact:true}).fill("docs/authorization.md");
- await documentLookup.getByRole("button",{name:"Read document reference",exact:true}).click();
+ const documentPath = documentLookup.getByRole("textbox",{name:"Document path or GitHub permalink",exact:true});
+ const readDocument = documentLookup.getByRole("button",{name:"Read document reference",exact:true});
+ const permalink = `https://github.com/example/${owner}/blob/${pin.commit}/docs/authorization.md`;
+ await expect(documentLookup.getByRole("button",{name:"Repository",exact:true})).toHaveCount(0);
+ await expect(documentLookup).toContainText(pin.commit.slice(0,12));
+ await documentPath.fill(permalink.replace(pin.commit, "a".repeat(40)));
+ await expect(readDocument).toBeDisabled();
+ await expect(documentLookup).toContainText("revision pinned in this plan");
+ await documentPath.fill(permalink.replace("/example/", "/other-account/"));
+ await readDocument.click();
+ await expect(documentLookup).toContainText("different repository from the link");
+ await expect(documentLookup.getByRole("button",{name:"Use authorization reference",exact:true})).toHaveCount(0);
+ await documentPath.fill(permalink + "#L10-L12");
+ await readDocument.click();
  await expect(documentLookup).toContainText("Document found.");
  await documentLookup.getByRole("button",{name:"Use authorization reference",exact:true}).click();
  await expect(panel).toContainText("This authorization reference is already in the draft.");
  await expect(findDocument).toBeFocused();
  expect(state.factReads.at(-1)).toMatchObject({kind:"authorization",repo:owner,revision:pin.commit,path:"docs/authorization.md"});
+ expect(state.requests).toEqual([]);
+ expect(state.errors).toEqual([]);
+});
+
+test("runtime setup reuses only the selected repository’s approved actions", async ({page}) => {
+ const initialPlan = technicalPlanInput();
+ const owner = "governance-operations-console";
+ initialPlan.architecture.runtime_boundaries = [{
+   owner_repo: owner, allowed_capability_ids: ["console.custom-read"], prohibited_capability_ids: [],
+ }];
+ const {state,modal} = await open(page,{initialPlan,recorded:true});
+ await step(modal,"Plan the changes").click();
+ const panel = modal.getByRole("tabpanel");
+ await modal.getByRole("group",{name:"Planning areas",exact:true}).getByRole("button",{name:/Operation & Recovery/}).click();
+ await modal.getByRole("tab",{name:/^Runtime responsibilities/}).click();
+ await expect(panel.getByText("Standard installation rules",{exact:true})).toBeVisible();
+ await panel.getByRole("list",{name:"Runtime responsibilities",exact:true}).getByRole("button",{name:owner,exact:true}).click();
+ await panel.getByRole("button",{name:"Reuse an approved allowed action",exact:true}).click();
+ await page.getByRole("option",{name:"submit operator intent",exact:true}).click();
+ await panel.getByRole("button",{name:"Reuse an approved prohibited action",exact:true}).click();
+ await page.getByRole("option",{name:"own lifecycle truth",exact:true}).click();
+ const savedRows = () => JSON.parse(JSON.parse(state.savedDraft.payload_json).draft.architectureJson).runtime_boundaries;
+ await expect.poll(() => savedRows()[0]).toEqual({
+   owner_repo:owner, allowed_capability_ids:["console.custom-read","console.submit-operator-intent"],
+   prohibited_capability_ids:["console.own-lifecycle-truth"],
+ });
+ await expect(panel.getByRole("button",{name:"Reuse an approved allowed action",exact:true})).toHaveCount(0);
+ await panel.getByRole("button",{name:"Back to entries",exact:true}).click();
+ await panel.getByRole("button",{name:"Add runtime responsibility",exact:true}).click();
+ const form = page.getByRole("dialog",{name:"Add runtime responsibility",exact:true});
+ await form.getByRole("button",{name:"Repository",exact:true}).click();
+ await expect(page.getByRole("option",{name:owner,exact:true})).toHaveCount(0);
+ await page.getByRole("option",{name:"website-contracts",exact:true}).click();
+ await expect(form.getByRole("button",{name:/^Reuse an approved/})).toHaveCount(0);
+ await form.getByRole("button",{name:"Cancel",exact:true}).click();
+ expect(savedRows()).toHaveLength(1);
  expect(state.requests).toEqual([]);
  expect(state.errors).toEqual([]);
 });
@@ -957,11 +1049,87 @@ test("Technical Plan puts revision management and authorization in their owning 
  await expect(panel.getByRole("button",{name:"Search repository registry",exact:true})).toBeVisible();
 
  await tabs.getByRole("tab",{name:/^Access and execution/}).click();
+ const manual = panel.getByText("Enter a verified reference manually", {exact:true});
+ await manual.click();
  await panel.getByRole("button",{name:"Add authorization record",exact:true}).click();
  const add=page.getByRole("dialog",{name:"Add authorization record",exact:true});
- await expect(add.getByRole("textbox",{name:"Evidence record link",exact:true})).toBeVisible();
+ await add.getByRole("textbox",{name:"Evidence record link",exact:true}).fill("https://example.com/verified");
+ const digest = add.getByRole("textbox",{name:"SHA-256 from the record",exact:true});
+ await digest.fill("invalid");
+ await expect(add.getByRole("button",{name:"Add to draft",exact:true})).toBeDisabled();
+ await digest.fill("sha256:" + "a".repeat(64));
+ await expect(add.getByRole("button",{name:"Add to draft",exact:true})).toBeEnabled();
  await add.getByRole("button",{name:"Cancel",exact:true}).click();
  await expect(panel.getByRole("button",{name:"Add authorization record",exact:true})).toBeFocused();
+});
+
+test("large verification plans add incomplete drafts and finish them in the shared case form", async ({page}, info) => {
+ const initialPlan = technicalPlanInput();
+ const template = initialPlan.conformance_plan.cases[0];
+ initialPlan.conformance_plan.cases = Array.from({length: 100}, (_, index) => ({
+   ...template, id: `case:verification-${index + 1}`, expected_outcome: `Original case ${index + 1}`,
+ }));
+ await page.setViewportSize({width:1280,height:720});
+ const {modal, state} = await open(page, {initialPlan});
+ await step(modal, "Plan the changes").click();
+ await modal.getByRole("group", {name:"Planning areas",exact:true}).getByRole("button", {name:/Verification/}).click();
+ const verification = modal.getByRole("region", {name:"Verification cases",exact:true});
+ await verification.getByRole("button", {name:"Add verification case",exact:true}).click();
+ const add = page.getByRole("dialog", {name:"Add verification case",exact:true});
+ await expect(add.getByRole("button", {name:"Add to draft",exact:true})).toBeDisabled();
+ const what = add.getByRole("heading", {name:"What to verify",exact:true});
+ const how = add.getByRole("heading", {name:"How to verify",exact:true});
+ expect((await how.boundingBox()).x).toBeGreaterThan((await what.boundingBox()).x);
+ await expect(add.getByText("Choose at least one work item.",{exact:true})).toBeVisible();
+ await expect(add.getByText("Choose at least one verification area.",{exact:true})).toBeVisible();
+ await add.getByRole("textbox", {name:"Expected outcome",exact:true}).fill("The website keeps the saved section after reload.");
+ await add.screenshot({path:info.outputPath("verification-case-wide.png")});
+ await add.getByRole("button", {name:"Keep incomplete case",exact:true}).click();
+
+ const savedCases = () => JSON.parse(JSON.parse(state.savedDraft.payload_json).draft.conformanceJson).cases;
+ await expect.poll(() => savedCases().length).toBe(101);
+ const find = verification.getByRole("textbox", {name:"Find verification cases",exact:true});
+ await find.fill("keeps the saved section");
+ const row = verification.getByRole("button", {name:/The website keeps the saved section/});
+ await expect(row).toContainText("Incomplete");
+ await row.click();
+ const editor = page.getByRole("dialog", {name:"Edit verification case",exact:true});
+ await expect(editor.getByRole("textbox", {name:"Expected outcome",exact:true})).toHaveValue("The website keeps the saved section after reload.");
+ await editor.getByRole("list", {name:"Covered work",exact:true}).getByRole("button", {name:/#3/}).click();
+ const selectedArea = editor.getByRole("list", {name:"Verification areas",exact:true}).getByRole("button").first();
+ await selectedArea.click();
+ for (const [field, option] of [
+   ["Check type", "Failure or rejection path"],
+   ["Test environment","Real Git repository"],
+   ["When this check must pass", "Before merge"],
+ ]) {
+   await editor.getByRole("button", {name:field,exact:true}).click();
+   await page.getByRole("option", {name:option,exact:true}).click();
+ }
+ await editor.getByRole("button", {name:"Change group providing evidence",exact:true}).click();
+ await page.getByRole("option", {name:/#3 - Implement the reviewed outcome/}).click();
+ await expect(editor.getByText("Choose at least one verification area.",{exact:true})).toHaveCount(0);
+ await expect.poll(() => savedCases().at(-1)).toEqual(expect.objectContaining({
+   applies_to_work_item_ids: ["work-item-3"], polarity:"negative", fidelity:"real-git", target_readiness:"merge-ready",
+   evidence_owner_landing_unit_id: "delivery-1-packet-authoring", dimension_ids: expect.arrayContaining([expect.any(String)]),
+ }));
+ await editor.getByRole("button", {name:"Done",exact:true}).click();
+ await expect(row).toBeFocused();
+ await expect(row).not.toContainText("Incomplete");
+ await expect(verification.getByRole("button", {name:"Add verification case",exact:true})).toBeEnabled();
+ await row.click();
+ const remove = editor.getByRole("button", {name:"Remove case",exact:true});
+ await remove.click();
+ const confirm = page.getByRole("alertdialog", {name:"Remove this verification case?",exact:true});
+ await confirm.getByRole("button", {name:"Cancel",exact:true}).click();
+ await expect(remove).toBeFocused();
+ expect(savedCases()).toHaveLength(101);
+ await remove.click();
+ await confirm.getByRole("button", {name:"Remove case",exact:true}).click();
+ await expect(editor).not.toBeVisible();
+ await expect.poll(() => savedCases().length).toBe(100);
+ expect(state.requests).toEqual([]);
+ expect(state.errors).toEqual([]);
 });
 
 test("large review lists and narrow scope use the available workspace", async ({page}) => {
@@ -970,7 +1138,8 @@ test("large review lists and narrow scope use the available workspace", async ({
  initialPlan.conformance_plan.dimensions.push("command-and-acknowledgement-semantics");
  const template=initialPlan.conformance_plan.cases[0];
  initialPlan.conformance_plan.cases=Array.from({length:72},(_,index)=>({
-  ...template,id:`case:verification-${index+1}`,expected_outcome:`Expected result ${index+1} from the verified source`,
+  ...template,id:`case:verification-${index+1}`,expected_outcome:`Expected result ${index+1} from the verified source${index===71
+   ? "\n\nRisk 1393: confirm **User Story #4** before using the literal identifier `User story #5`." : ""}`,
  }));
  const {modal}=await open(page,{initialPlan});
  await step(modal,"Review & record").click();
@@ -984,7 +1153,16 @@ test("large review lists and narrow scope use the available workspace", async ({
 
  await modal.getByRole("button",{name:"Source revisions details",exact:true}).click();
  const sources=page.getByRole("dialog",{name:"Source revisions",exact:true});
+ const revisionSearch=sources.getByRole("textbox",{name:"Find source revisions",exact:true});
+ await revisionSearch.fill("governance");
  await expect(sources.getByRole("button",{name:/governance-operations-console.*main · bbbbbbbbbbbb/})).toBeVisible();
+ const revisionRow=sources.getByRole("button",{name:/governance-operations-console.*main · bbbbbbbbbbbb/});
+ await revisionRow.click();
+ await expect(sources.locator("[data-plan-review-entry]")).toBeVisible();
+ await expect(sources.getByText("governance-operations-console",{exact:true})).toHaveCount(1);
+ await sources.getByRole("button",{name:"Back to entries",exact:true}).click();
+ await expect(revisionRow).toBeFocused();
+ await expect(revisionSearch).toHaveValue("governance");
  expect((await sources.locator('[data-width="standard"][data-height="content"]').boundingBox()).height).toBeLessThan(450);
  await sources.getByRole("button",{name:"Close review details",exact:true}).click();
  await modal.getByRole("button",{name:"Review area",exact:true}).click();
@@ -994,6 +1172,9 @@ test("large review lists and narrow scope use the available workspace", async ({
  await sections.getByRole("button",{name:"Check coverage details",exact:true}).click();
  const coverage=page.getByRole("dialog",{name:"Check coverage",exact:true});
  await expect(coverage.getByText("Commands and acknowledgements",{exact:true})).toBeVisible();
+ const areas = coverage.getByRole("heading",{name:"What the checks cover",exact:true});
+ const assignments = coverage.getByRole("heading",{name:"Checks required for each work item",exact:true});
+ expect((await assignments.boundingBox()).x).toBeGreaterThan((await areas.boundingBox()).x);
  await coverage.getByRole("button",{name:"Close review details",exact:true}).click();
  await expect(sections.getByRole("button",{name:"Connection and Git checks details",exact:true})).toBeEnabled();
  const section=modal.getByRole("button",{name:"Verification cases details",exact:true});
@@ -1001,15 +1182,34 @@ test("large review lists and narrow scope use the available workspace", async ({
  const reader=page.getByRole("dialog",{name:"Verification cases",exact:true});
  const list=reader.getByRole("list",{name:"Verification cases",exact:true});
  expect((await list.boundingBox()).height).toBeGreaterThan(450);
+ const readerFrame = reader.locator('[data-height="fill"][data-width="large"]');
+ const listFrameHeight = (await readerFrame.boundingBox()).height;
  const search=reader.getByRole("textbox",{name:"Find verification cases",exact:true});
  await search.fill("Expected result 72 ");
  const row=list.getByRole("button",{name:/Expected result 72/});
  await expect(row).toContainText("Success path · Before merge · 2 work items");
  await row.click();
  await expect(reader.getByText("Real Git repository",{exact:true})).toBeVisible();
- await expect(reader.getByRole("heading",{name:"Expected result 72 from the verified source",exact:true})).toBeVisible();
+ await expect(reader.locator('[class*="terasMetadataValue"]').getByText("User story #3",{exact:true})).toHaveCSS("color","rgb(255, 193, 90)");
+ const expectedOutcome=reader.getByRole("article",{name:"Expected outcome",exact:true});
+ for(const reference of ["Risk 1393","User Story #4"]){
+  await expect(expectedOutcome.getByText(reference,{exact:true})).toHaveCSS("color","rgb(255, 193, 90)");
+ }
+ await expect(expectedOutcome.locator("code")).toHaveText("User story #5");
+ const what = reader.getByRole("heading",{name:"What to verify",exact:true});
+ const how = reader.getByRole("heading",{name:"How to verify",exact:true});
+ await expect(what).toBeVisible();
+ await expect(how).toBeVisible();
+ expect((await how.boundingBox()).x).toBeGreaterThan((await what.boundingBox()).x);
+ await expect(reader.getByRole("heading",{name:"Verification case 72",exact:true})).toBeInViewport();
+ await expect(reader.locator("[data-plan-review-entry]")).toBeVisible();
+ expect((await readerFrame.boundingBox()).height).toBeLessThan(listFrameHeight);
+ await expect(reader.getByRole("heading",{name:"Expected outcome",exact:true})).toBeVisible();
+ await expect(reader.getByText("Expected result 72 from the verified source",{exact:true})).toHaveCount(1);
  await reader.getByRole("button",{name:"Back to entries",exact:true}).click();
  await expect(row).toBeFocused();
+ await expect(search).toHaveValue("Expected result 72 ");
+ expect((await readerFrame.boundingBox()).height).toBe(listFrameHeight);
  await reader.getByRole("button",{name:"Close review details",exact:true}).click();
  await expect(section).toBeFocused();
 

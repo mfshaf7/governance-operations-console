@@ -34,8 +34,8 @@ export function sourceFileSelectors(url: string) {
   if ([...query.keys()].some(key => key !== "path") || paths.length > 48 || new Set(paths).size !== paths.length) throw new Error("Select at most 48 distinct source paths.");
   return paths.map(sourcePath);
 }
-export async function readSourceSaveBody(request: Request): Promise<OperatorDraftCommand> {
-  return assertOperatorDraftCommand(await readSourceBody(request));
+export async function readSourceSaveBody(request: Request, allowPatch = false): Promise<OperatorDraftCommand> {
+  return assertOperatorDraftCommand(await readSourceBody(request), allowPatch);
 }
 export async function readSourceAssistantBody(request: Request): Promise<AssistantRequest> {
   return assertAssistantRequest(await readSourceBody(request));
@@ -50,8 +50,8 @@ async function readSourceBody(request: Request): Promise<unknown> {
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
   return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
 }
-export function verifySourceCapture(value: unknown, expected: { sessionId: string; base: string; ownerRepo?: string }, paths: string[]) {
-  const raw = sourceObject(value), { context_digest, ...body } = raw, result = assertSourceCapture(raw);
+export function verifySourceCapture(value: unknown, expected: { sessionId: string; base: string; ownerRepo?: string }, paths: string[], startLine?: number) {
+  const raw = sourceObject(value), { context_digest, ...body } = raw, result = assertSourceCapture(raw, startLine);
   if (sourceTextDigest(JSON.stringify(body)) !== context_digest || result.session_id !== expected.sessionId || result.head_commit !== expected.base || expected.ownerRepo && result.owner_repo !== expected.ownerRepo ||
       paths.length !== result.files.length || paths.some(path => !result.files.some(file => file.path === path)) || result.files.some(file => sourceTextDigest(file.content) !== file.content_digest)) throw new Error("Source files do not bind the exact clean owner base and requested text.");
   return result;

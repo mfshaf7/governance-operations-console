@@ -1,5 +1,5 @@
 import { assertAssistantRequest, assertAssistantReply } from "../../../console-integration/source-authoring/source-assistant-contract.ts";
-import { assertOperatorDraftCommand, sourcePathIssue } from "../../../console-integration/source-authoring/source-editor-contract.ts";
+import { assertOperatorDraftCommand, assertSourceDraft, sourceObject, sourcePathIssue } from "../../../console-integration/source-authoring/source-editor-contract.ts";
 import { SourceEditorUnconfirmedSaveError, sourceBoundedFetch, sourceEditorState, verifySourceCapture, verifySourceDraft, verifySourceSaveAcknowledgement } from "../../../console-integration/source-authoring/server/source-editor-evidence.ts";
 import { readDeliverySourceRealization } from "./delivery-source-realization-oos-client.ts";
 import { readDeliveryWorkSession } from "./delivery-work-session-oos-client.ts";
@@ -21,16 +21,33 @@ async function request(workItemId: number, suffix: string, options: Options, com
     authority: "operator-orchestration-service", sourceOwner: "workspace-delivery-art", recordRef: `openproject://work_packages/${target}/source-realization/${suffix.split("?")[0]}`,
   } : undefined);
 }
-export async function readDeliveryEditorFiles(workItemId: number, paths: string[], options: Options = {}) {
+export async function readDeliveryEditorFiles(workItemId: number, selection: { paths: string[]; startLine?: number } | string[], options: Options = {}) {
+  const { paths, startLine } = Array.isArray(selection) ? { paths: selection, startLine: undefined } : selection;
   const current = await binding(workItemId, options), query = new URLSearchParams(); paths.forEach(path => query.append("path", path));
-  return { capture: verifySourceCapture(await request(workItemId, `files${query.size ? `?${query}` : ""}`, options), current, paths), current: sourceEditorState(current.realization) };
+  if (startLine !== undefined) query.set("line", String(startLine));
+  return { capture: verifySourceCapture(await request(workItemId, `files${query.size ? `?${query}` : ""}`, options), current, paths, startLine), current: sourceEditorState(current.realization) };
 }
 export async function readDeliveryEditorDraft(workItemId: number, options: Options = {}) {
   const current = await binding(workItemId, options), r = current.realization;
   return { ...verifySourceDraft(await request(workItemId, "draft", options), { ...current, revision: r.revision, digest: r.attempt?.change_set?.digest ?? null, accepted: r.state === "source-created" }, "delivery-art-source-draft"), editorState: sourceEditorState(r) };
 }
+export async function readRetainedDeliveryEditorDraft(workItemId: number, options: Options = {}) {
+  const current = await binding(workItemId, options);
+  const raw = sourceObject(await request(workItemId, "draft?retained=1", options));
+  const draft = assertSourceDraft(raw, "delivery-art-source-draft");
+  if (raw.retained_for_session !== current.sessionId || draft.session_id === current.sessionId ||
+      draft.accepted || typeof raw.same_repository !== "boolean") {
+    throw new Error("The previous draft does not bind this rebuilt source workspace.");
+  }
+  return {
+    draft: verifySourceDraft(raw, { sessionId: draft.session_id, base: draft.change_set.base_commit,
+      revision: draft.revision, digest: draft.digest, accepted: false }, "delivery-art-source-draft"),
+    sessionId: current.sessionId,
+    sameRepository: raw.same_repository,
+  };
+}
 export async function saveDeliveryEditorDraft(workItemId: number, value: unknown, options: Options = {}) {
-  const command = assertOperatorDraftCommand(value);
+  const command = assertOperatorDraftCommand(value, true);
   if (command.objective.length < 20 || command.objective.length > 12000 || command.operations.some(row => sourcePathIssue(row.path, null))) throw new Error("The draft is outside the Delivery text-source contract.");
   const before = await binding(workItemId, options);
   const response = await request(workItemId, "draft", options, command);

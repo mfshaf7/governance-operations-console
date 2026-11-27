@@ -25,15 +25,15 @@ export function assertDeliverySourceRealizationProjection(value: unknown): Deliv
   const operations = change ? array(change.operations).map((entry) => {
     const operation = record(entry);
     if (Object.keys(operation).sort().join(",") !== "action,content_digest,expected_digest,path") invalid();
-    if (!["create", "replace", "delete"].includes(String(operation.action))) invalid();
+    if (!["create", "replace", "delete", "patch"].includes(String(operation.action))) invalid();
     const path = text(operation.path, 240);
     if (!/^[A-Za-z0-9._/-]+$/.test(path) || path.startsWith("/") || path.split("/").some((part) => !part || part === "." || part === ".." || part === ".git")) invalid();
     const contentDigest = nullableDigest(operation.content_digest);
     const expectedDigest = nullableDigest(operation.expected_digest);
     if (operation.action === "create" && (!contentDigest || expectedDigest !== null) ||
-        operation.action === "replace" && (!contentDigest || !expectedDigest) ||
+        (operation.action === "replace" || operation.action === "patch") && (!contentDigest || !expectedDigest) ||
         operation.action === "delete" && (contentDigest !== null || !expectedDigest)) invalid();
-    return { action: operation.action as "create" | "replace" | "delete", path, content_digest: contentDigest, expected_digest: expectedDigest };
+    return { action: operation.action as "create" | "replace" | "delete" | "patch", path, content_digest: contentDigest, expected_digest: expectedDigest };
   }) : [];
   if (change && (operations.length < 1 || operations.length > 64 || new Set(operations.map((entry) => entry.path)).size !== operations.length)) invalid();
   const result: DeliverySourceRealizationProjection = {
@@ -42,6 +42,7 @@ export function assertDeliverySourceRealizationProjection(value: unknown): Deliv
     state: item.state as DeliverySourceRealizationProjection["state"],
     next_action: { authority: text(next.authority), code: text(next.code), reason: text(next.reason, 2000) },
     replayed: boolean(item.replayed),
+    ...(item.retained_draft_available === undefined ? {} : { retained_draft_available: boolean(item.retained_draft_available) }),
     attempt: attempt ? {
       request_id: stable(attempt.request_id), state: text(attempt.state), retry_of: nullableStable(attempt.retry_of), objective_digest: digest(attempt.objective_digest),
       ...(attempt.execution_id === undefined ? {} : { execution_id: stable(attempt.execution_id) }),

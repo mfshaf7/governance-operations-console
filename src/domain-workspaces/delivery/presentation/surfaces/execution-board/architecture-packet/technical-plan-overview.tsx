@@ -25,24 +25,31 @@ import {
 const scopeLimit = 50;
 const workId = (item: DeliveryArtNode) => `work-item-${item.legacy_work_package_id}`;
 
-// Plan entries can include more than one reference, for example a merge dependency.
-const workReference = /(\b(?:Epic|Feature|User story|Defect|Risk|PI Objective|Milestone|Task|Work item) #\d+)(?= - |$)/;
+// Saved notes can also cite older references such as "Risk 1393:".
+const workReference = /(\b(?:Epic|Feature|User story|Defect|Risk|PI Objective|Milestone|Task|Work item)[ \t]+(?:#[1-9]\d*\b|[1-9]\d*\b(?=[ \t]*(?::|[-–—][ \t]|$))))/i;
+
+export function renderTechnicalPlanWorkReferences(text: string): ReactNode {
+  const parts = text.split(workReference);
+  if (parts.length === 1) return text;
+  return parts.map((part, index) => index % 2
+    ? <TerasPlanning.WorkReference key={index}>{part}</TerasPlanning.WorkReference>
+    : part);
+}
 
 export function TechnicalPlanWorkTitle({ label }: { label: string }) {
-  return label.split(workReference).map((part, index) => index % 2
-    ? <TerasPlanning.WorkReference key={index} >{part}</TerasPlanning.WorkReference>
-    : part);
+  return renderTechnicalPlanWorkReferences(label);
 }
 
 type WorkOption = { label: string; value: string; repository?: string | null };
 
-export function TechnicalPlanWorkPicker({ label, items, selected, disabled, itemDisabled, fill, onToggle }: {
+export function TechnicalPlanWorkPicker({ label, items, selected, disabled, itemDisabled, fill, scrollHeight = "medium", onToggle }: {
   label: string;
   items: readonly WorkOption[];
   selected: ReadonlySet<string>;
   disabled: boolean;
   itemDisabled?: (item: WorkOption) => boolean;
   fill?: boolean;
+  scrollHeight?: "short" | "medium";
   onToggle: (workId: string) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -60,7 +67,7 @@ export function TechnicalPlanWorkPicker({ label, items, selected, disabled, item
         onClick={() => setSelectedOnly(value => !value)}>Selected only</TerasPlanning.FilterAction>
     </TerasPlanning.SearchRow> : null}
     {visibleItems.length ? <TerasList ariaLabel={label} frame="contained"
-      fit={fill ? "fill" : "content"} scrollHeight={fill ? undefined : "medium"}>
+      fit={fill ? "fill" : "content"} scrollHeight={fill ? undefined : scrollHeight}>
       {visibleItems.map(item => <TerasSelectableRow key={item.value}
         label={<TerasPlanning.ItemTitle><TechnicalPlanWorkTitle label={item.label} /></TerasPlanning.ItemTitle>}
         detail={<TerasPlanning.ItemDetail>Repository: {item.repository || "Not recorded"}</TerasPlanning.ItemDetail>}

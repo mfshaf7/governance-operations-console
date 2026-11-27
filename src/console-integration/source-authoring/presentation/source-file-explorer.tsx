@@ -7,9 +7,10 @@ import { sourceCreationIssue, sourceFileTree } from "../source-file-tree.ts";
 import type { SourceOperation } from "../source-editor-contract.ts";
 import styles from "./source-editor-workspace.module.css";
 
-export function SourceFileExplorer({ paths, selected, operations, scope, truncated, editable, pending, contextPaths, contextPending, onSelect, onContext, onCreate }: {
+export function SourceFileExplorer({ paths, selected, operations, scope, truncated, editable, pending, contextPaths, contextPending, sectionPaths, onSelect, onContext, onCreate }: {
   paths: string[]; selected: string | null; operations: SourceOperation[]; scope: SourceEditorTarget["scope"]; truncated: boolean; editable: boolean; pending: boolean;
-  contextPaths: string[]; contextPending: boolean; onSelect: (path: string) => void; onContext: (path: string) => void;
+  contextPaths: string[]; contextPending: boolean; onSelect: (path: string) => void; onContext?: (path: string) => void;
+  sectionPaths?: string[];
   onCreate: (path: string, folder: boolean) => Promise<boolean>;
 }) {
   const [query, setQuery] = useState(""), [collapsed, setCollapsed] = useState(new Set<string>()), [directory, setDirectory] = useState(scope?.source_root ?? "");
@@ -27,10 +28,10 @@ export function SourceFileExplorer({ paths, selected, operations, scope, truncat
   const focus = (path?: string) => { if (!path) return; setFocused(path); Array.from(root.current?.querySelectorAll<HTMLButtonElement>("[data-source-tree-entry]") ?? []).find(node => node.dataset.sourceTreeEntry === path)?.focus(); };
   return <TerasFieldStack spacing="compact">
     <TerasTextField label="Find files or folders" value={query} onValueChange={setQuery} maxLength={240} />
-    <TerasActionRow>
+    {onContext ? <TerasActionRow>
       <TerasActionButton size="table-compact" emphasis="secondary" disabled={!editable} onClick={() => start("file")}>New file</TerasActionButton>
       <TerasActionButton size="table-compact" emphasis="secondary" disabled={!editable} onClick={() => start("folder")}>New folder</TerasActionButton>
-    </TerasActionRow>
+    </TerasActionRow> : null}
     {creating ? <form className={styles.createPath} onSubmit={async event => { event.preventDefault(); const issue = sourceCreationIssue(newPath, paths, truncated, scope, creating === "folder"); setCreationError(issue); if (!issue && editable && newPath && await onCreate(newPath, creating === "folder")) { setCreating(null); setQuery(""); setCollapsed(new Set()); } }}>
       <TerasTextField autoFocus label={creating === "folder" ? "New relative folder path" : "New relative file path"} helper={creating === "folder" ? "Adds a .gitkeep file so the folder is retained when saved to Git." : "Relative to the repository root. Include folders, for example src/components/Button.tsx."} value={newPath} onValueChange={value => { setNewPath(value); setCreationError(null); }} disabled={!editable} maxLength={creating === "folder" ? 231 : 240} />
       {creationError ? <p role="alert" className={styles.explorerHint}>{creationError}</p> : null}
@@ -56,10 +57,10 @@ export function SourceFileExplorer({ paths, selected, operations, scope, truncat
             {entry.folder ? <>{expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}{expanded ? <FolderOpen size={15} /> : <Folder size={15} />}</> : <><span className={styles.treeIndent} /><FileText size={15} /></>}
             <span className={styles.treeName}>{entry.name}</span>{operation ? <span className={styles.fileChange} title={operation.action}>{operation.action === "create" ? "A" : operation.action === "delete" ? "D" : "M"}</span> : null}
           </button>
-          {!entry.folder ? <input className={styles.contextCheck} type="checkbox" aria-label={`${contextPaths.includes(entry.path) ? "Remove from" : "Add to"} AI context: ${entry.path}`} title="Include this file when asking AI" checked={contextPaths.includes(entry.path)} disabled={contextPending || !!issue} onChange={() => onContext(entry.path)} /> : null}
+          {!entry.folder && onContext && !sectionPaths?.includes(entry.path) ? <input className={styles.contextCheck} type="checkbox" aria-label={`${contextPaths.includes(entry.path) ? "Remove from" : "Add to"} AI context: ${entry.path}`} title="Include this file when asking AI" checked={contextPaths.includes(entry.path)} disabled={contextPending || !!issue} onChange={() => onContext(entry.path)} /> : null}
         </li>;
       })}
     </ul> : <TerasEmptyState>No matching files or folders.</TerasEmptyState>}
-    <p className={styles.explorerHint}>A · Added　M · Modified　D · Deleted<br />Checkboxes select AI context.</p>
+    <p className={styles.explorerHint}>A · Added　M · Modified　D · Deleted{onContext ? <><br />Checkboxes select AI context.</> : null}</p>
   </TerasFieldStack>;
 }

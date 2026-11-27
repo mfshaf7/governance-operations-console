@@ -231,13 +231,34 @@ export function TechnicalPlanActivationEvidence({ source, owner, evidence, disab
   </TerasPlanning.FactsTray>;
 }
 
-function isAuthorizationRef(value: unknown): value is AuthorizationRef {
+export function isAuthorizationRef(value: unknown): value is AuthorizationRef {
   const ref = value as AuthorizationRef | null | undefined;
-  return Boolean(ref && typeof ref.uri === "string" && ref.uri && typeof ref.digest === "string" && /^sha256:[0-9a-f]{64}$/.test(ref.digest));
+  return Boolean(ref && typeof ref.uri === "string" && ref.uri.trim() &&
+    typeof ref.digest === "string" && /^sha256:[0-9a-f]{64}$/.test(ref.digest));
+}
+
+function githubAuthorizationDocument(value: string) {
+  const match = /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/blob\/([a-f0-9]{40})\/([\w./-]{1,240})(?:#L[0-9]+(?:-L[0-9]+)?)?$/.exec(value);
+  if (!match || !validDocumentPath(match[4])) return null;
+  const [, account, repository, commit, path] = match;
+  return { account: account.toLowerCase(), repository: repository.toLowerCase(), commit, path };
+}
+
+function validDocumentPath(value: string) {
+  return /^[A-Za-z0-9._/-]{1,240}$/.test(value) && value.split("/").every(part => part && part !== "." && part !== "..");
+}
+
+function referenceKey(ref: AuthorizationRef) {
+  return JSON.stringify([ref.uri, ref.digest]);
 }
 
 function referenceLabel(uri: string) {
-  return uri.split("/").at(-1) || uri;
+  const document = githubAuthorizationDocument(uri);
+  return document ? `${document.path} · ${document.repository}` : uri.split("/").at(-1) || uri;
+}
+
+function documentLookupKey(pin: SourceRevision, path: string, link: ReturnType<typeof githubAuthorizationDocument>) {
+  return JSON.stringify([pin.repo, pin.base_ref, pin.commit, path, link?.account, link?.repository]);
 }
 
 export function TechnicalPlanAuthorizationLookup({ source, disabled, onAdd }: {
@@ -246,36 +267,61 @@ export function TechnicalPlanAuthorizationLookup({ source, disabled, onAdd }: {
   const [repo, setRepo] = useState("");
   const [file, setFile] = useState("");
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
-  const [locatedDocument, setLocatedDocument] = useState<AuthorizationRef | null>(null);
+  const [locatedDocument, setLocatedDocument] = useState<{ key: string; reference: AuthorizationRef } | null>(null);
   const [recorded, setRecorded] = useState<AuthorizationRef[]>([]);
   const [selected, setSelected] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const pin = source.pins.find(item => item.repo === repo);
+  const [documentMessage, setDocumentMessage] = useState("");
+  const input = file.trim();
+  const link = githubAuthorizationDocument(input);
+  const pastedLink = input.includes("://");
+  const path = link?.path ?? input;
+  const pin = link ? source.pins.find(item => item.repo === link.repository && item.commit === link.commit) :
+    pastedLink ? undefined : source.pins.find(item => item.repo === repo) ?? (source.pins.length === 1 ? source.pins[0] : undefined);
+  const lookupKey = pin && validDocumentPath(path) ? documentLookupKey(pin, path, link) : null;
+  const confirmedReference = lookupKey && locatedDocument?.key === lookupKey ? locatedDocument.reference : null;
+  const linkProblem = !input ? undefined : link && !pin
+    ? "This link does not use a repository and revision pinned in this plan. Use the pinned revision or update Source revisions."
+    : !validDocumentPath(path)
+      ? "Enter a repository-relative path or a GitHub file permalink that includes its full commit ID." : undefined;
 
-  async function read(previous: boolean) {
+  async function readApproved() {
     setBusy(true);
-    setMessage(previous ? "Looking up approved references…" : "Reading the pinned document…");
+    setMessage("Looking up approved references…");
+    setRecorded([]);
+    setSelected("");
     try {
-      if (previous) {
-        const result = await source.read({ kind: "recorded-authorization" });
-        const refs = Array.isArray(result.refs) ? result.refs.filter(isAuthorizationRef) : [];
-        setRecorded(refs);
-        setSelected("");
-        setMessage(refs.length ? "Choose a reference from the approved plan." : "The approved plan has no recorded authorization references.");
-      } else if (pin) {
-        const result = await source.read({ kind: "authorization", repo: pin.repo, base_ref: pin.base_ref, revision: pin.commit, path: file.trim() });
-        const value = result.facts?.find(row => row.repo === pin.repo && row.status === "available")?.fact;
-        if (!isAuthorizationRef(value) || !value.uri.includes(`/blob/${pin.commit}/`)) throw Error("The document could not be read at this revision.");
-        setRecorded(records => [...records.filter(record => record.uri !== value.uri), value]);
-        setSelected(value.uri);
-        setLocatedDocument(value);
-        setMessage("Document found. Confirm it is the authorization record for this work.");
-      }
+      const result = await source.read({ kind: "recorded-authorization" });
+      const refs = Array.isArray(result.refs) ? result.refs.filter(isAuthorizationRef) : [];
+      setRecorded([...new Map(refs.map(ref => [referenceKey(ref), ref])).values()]);
+      setMessage(refs.length ? "Choose a reference from the approved plan." : "The approved plan has no recorded authorization references.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Authorization records are unavailable."); }
     finally { setBusy(false); }
   }
-  const choice = recorded.find(record => record.uri === selected);
+
+  async function readDocument() {
+    if (!pin || !lookupKey) return;
+    setBusy(true);
+    setLocatedDocument(null);
+    setDocumentMessage("Reading the pinned document…");
+    try {
+      const result = await source.read({ kind: "authorization", repo: pin.repo, base_ref: pin.base_ref, revision: pin.commit, path });
+      const value = result.facts?.find(row => row.repo === pin.repo && row.status === "available")?.fact;
+      const observed = isAuthorizationRef(value) ? githubAuthorizationDocument(value.uri) : null;
+      if (!isAuthorizationRef(value) || !observed || observed.commit !== pin.commit || observed.path !== path) {
+        throw Error("The document could not be verified. Check the path and whether the pinned source is available.");
+      }
+      if (link && (observed.account !== link.account || observed.repository !== link.repository)) {
+        throw Error("The source reader found a different repository from the link. Check the repository in your permalink.");
+      }
+      setLocatedDocument({ key: lookupKey, reference: value });
+      setDocumentMessage("Document found. Check that it authorizes this work.");
+    } catch (error) { setDocumentMessage(error instanceof Error ? error.message : "Authorization records are unavailable."); }
+    finally { setBusy(false); }
+  }
+
+  const choice = recorded.find(record => referenceKey(record) === selected);
   const referenceFacts: TerasMetadataItem[] = choice ? [
     { label: "Document", value: choice.uri }, { label: "SHA-256", value: choice.digest },
   ] : [];
@@ -286,47 +332,53 @@ export function TechnicalPlanAuthorizationLookup({ source, disabled, onAdd }: {
   }
   return <TerasFieldStack spacing="compact">
     <TerasActionRow spacing="compact">
-      <TerasActionButton emphasis="secondary" size="table-compact" disabled={disabled || !source.live || busy}
-        onClick={() => void read(true)}>Find approved references</TerasActionButton>
-      <TerasActionButton emphasis="secondary" size="table-compact" aria-haspopup="dialog" disabled={disabled || busy}
-        onClick={() => { setLocatedDocument(null); setMessage(""); setDocumentDialogOpen(true); }}>Find a document in pinned source</TerasActionButton>
+      <TerasActionButton emphasis="secondary" size="table-compact" busy={busy && !documentDialogOpen} disabled={disabled || !source.live || busy}
+        onClick={() => void readApproved()}>Find approved references</TerasActionButton>
+      <TerasActionButton emphasis="secondary" size="table-compact" aria-haspopup="dialog" disabled={disabled || busy || !source.live}
+        onClick={() => { setLocatedDocument(null); setDocumentMessage(""); setDocumentDialogOpen(true); }}>Find a document in pinned source</TerasActionButton>
     </TerasActionRow>
     {documentDialogOpen ? <TerasDialog open onClose={() => setDocumentDialogOpen(false)} kicker="Authorization" title="Find an authorization document"
-      description="Use the path of the document at a pinned repository revision."
+      description="Paste a GitHub permalink or enter a path in a pinned repository. The Console reads the file and fills the link and digest."
       width="standard" height="content" contentOverflow="auto"
       actions={<>
-        <TerasActionButton emphasis="secondary" busy={busy} disabled={disabled || !source.live || busy || !pin || !file.trim()}
-          onClick={() => { setLocatedDocument(null); void read(false); }}>Read document reference</TerasActionButton>
-        {locatedDocument ? <TerasActionButton disabled={disabled || busy || !pin || !locatedDocument.uri.includes(`/blob/${pin.commit}/`)}
+        <TerasActionButton emphasis="secondary" busy={busy} disabled={disabled || !source.live || busy || !lookupKey}
+          onClick={() => void readDocument()}>Read document reference</TerasActionButton>
+        {confirmedReference ? <TerasActionButton disabled={disabled || busy}
           onClick={() => {
-            useReference(locatedDocument);
+            useReference(confirmedReference);
             setDocumentDialogOpen(false);
           }}>Use authorization reference</TerasActionButton> : null}
       </>}>
       <TerasFieldStack spacing="normal">
-        <TerasFieldGrid spacing="normal">
-          <TerasSelectField label="Repository" value={repo} disabled={disabled || busy}
-            options={[{ value: "", label: "Choose a pinned repository" }, ...source.pins.map(pin => ({ value: pin.repo, label: pin.repo }))]}
-            onValueChange={value => { setRepo(value); setLocatedDocument(null); setMessage(""); }} />
-          <TerasTextField label="Document path" value={file} disabled={disabled || busy}
-            onValueChange={value => { setFile(value); setLocatedDocument(null); setMessage(""); }} />
-        </TerasFieldGrid>
-        {locatedDocument ? <TerasMetadataList shape="list" items={[
-          { label: "Document", value: locatedDocument.uri }, { label: "SHA-256", value: locatedDocument.digest },
+        <TerasTextField label="Document path or GitHub permalink" value={file} disabled={disabled || busy}
+          helper={linkProblem} onValueChange={value => {
+            setFile(value);
+            setLocatedDocument(null);
+            setDocumentMessage("");
+          }} />
+        {source.pins.length > 1 && !pastedLink ? <TerasSelectField label="Repository" value={pin?.repo ?? ""} disabled={disabled || busy}
+          options={[{ value: "", label: "Choose a pinned repository" }, ...source.pins.map(pin => ({ value: pin.repo, label: pin.repo }))]}
+          onValueChange={value => { setRepo(value); setLocatedDocument(null); setDocumentMessage(""); }} /> : null}
+        {pin ? <TerasMetadataList shape="list" items={[
+          { label: "Pinned repository", value: pin.repo },
+          { label: "Pinned revision", value: <span title={pin.commit}>{sourceRevisionSummary(pin)}</span> },
+        ]} /> : !source.pins.length ? <TerasEmptyState>Pin a repository revision in Source revisions, then return here.</TerasEmptyState> : null}
+        {confirmedReference ? <TerasTechnicalDetails summary="View exact reference" items={[
+          { label: "Document", value: confirmedReference.uri }, { label: "SHA-256", value: confirmedReference.digest },
         ]} /> : null}
-        <ReadStatus message={message} />
+        <ReadStatus message={documentMessage} />
       </TerasFieldStack>
     </TerasDialog> : null}
     {recorded.length ? <>
       <TerasPlanning.LookupFields align="end" spacing="compact">
         <TerasSelectField label="Authorization reference" value={selected} disabled={disabled || busy}
-          options={[{ value: "", label: "Choose a reference" }, ...recorded.map(record => ({ value: record.uri, label: referenceLabel(record.uri) }))]}
+          options={[{ value: "", label: "Choose a reference" }, ...recorded.map(record => ({ value: referenceKey(record), label: referenceLabel(record.uri) }))]}
           onValueChange={setSelected} />
         <TerasActionRow spacing="compact"><TerasActionButton emphasis="secondary" disabled={disabled || busy || !choice}
           onClick={() => { if (choice) useReference(choice); }}>Use authorization reference</TerasActionButton></TerasActionRow>
       </TerasPlanning.LookupFields>
       {referenceFacts.length ? <TerasTechnicalDetails summary="View exact reference" items={referenceFacts} /> : null}
     </> : null}
-    <ReadStatus message={documentDialogOpen ? "" : message} />
+    <ReadStatus message={message} />
   </TerasFieldStack>;
 }

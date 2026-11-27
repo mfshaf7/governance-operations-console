@@ -218,6 +218,12 @@
   color: rgba(255, 193, 90, 0.64);
 }
 
+.buildTreeEditorTreeTitleReadout {
+  min-width: 0;
+  padding: 0.08rem 0.16rem 0.1rem;
+  overflow-wrap: anywhere;
+}
+
 .buildTreeEditorTreeTitleInput {
   flex: 0 1 auto;
   width: auto;
@@ -473,6 +479,15 @@
 
 .buildTreeEditorTree[data-draft-notes-size="large"] .buildTreeEditorTreeNoteField textarea {
   min-height: clamp(12rem, 28vh, 20rem);
+}
+
+.buildTreeEditorTreeReadout {
+  --text: #15130e;
+  block-size: clamp(9.6rem, calc(20vh + 1.35rem), 12.85rem);
+}
+
+.buildTreeEditorTreeReadout a {
+  color: #26549a;
 }
 
 .buildTreeEditorTreeDetailActions {

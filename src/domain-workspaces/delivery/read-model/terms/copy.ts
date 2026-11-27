@@ -159,7 +159,7 @@ export const deliveryActionTerms: Record<
   },
   "view-art-tree": {
     description: "Inspect package hierarchy without mutating ART.",
-    label: "View ART Tree",
+    label: "View Work Tree",
   },
 };
 

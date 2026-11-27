@@ -14,7 +14,12 @@ async function open(page){
  const ref=()=>`delivery-package:sha256:${String(state.generation).padStart(64,"0")}`;
  const node=(id,type,subject,children=[])=>({id,type,subject,children,status:"new",description:"Existing canonical narrative",record_ref:`openproject://work_packages/${id}`,owner_repo:"governance-operations-console",target_pi:null,architecture_anchor_ref:null,required_upstream_ref:null});
  const tree=node(1,"Epic","Dependency review exercise",[node(2,"Feature","Reviewed feature",[3,4,5].map(id=>node(id,"User story",`Work ${id}`)))]);
- const model=()=>projectCanonicalDeliveryOverview({schema_version:1,workflow_id:"delivery-console-overview",project:{identifier:"workspace-delivery-art"},roots:[tree],deferred_history_refs:[],mutation_authority:"none",operational_initiatives:[{epic:tree,execution_tree:tree,summary:{open_descendant_count:4},execution_navigation:{authority:"operator-orchestration-service",eligibility:"check-selected-work-item",native_status:"new",workflow_phase:"execution",package_posture:"New",closeout_pending:false,active_work_item_ids:[],prepared_work_item_ids:[],blocked_work_item_ids:[],refinement_work_item_ids:[]}}]},"test-only-owner-revision",new Date().toISOString());
+ const model=()=>{
+  const work3 = tree.children[0].children[0];
+  work3.depends_on_work_package_ids = state.relations.filter(relation => relation.target.id === 3).map(relation => relation.depends_on.id);
+  work3.dependency_blocked = work3.depends_on_work_package_ids.length > 0;
+  return projectCanonicalDeliveryOverview({schema_version:1,workflow_id:"delivery-console-overview",project:{identifier:"workspace-delivery-art"},roots:[tree],deferred_history_refs:[],mutation_authority:"none",operational_initiatives:[{epic:tree,execution_tree:tree,summary:{open_descendant_count:4},execution_navigation:{authority:"operator-orchestration-service",eligibility:"check-selected-work-item",native_status:"new",workflow_phase:"execution",package_posture:"New",closeout_pending:false,active_work_item_ids:[],prepared_work_item_ids:[],blocked_work_item_ids:[],refinement_work_item_ids:[]}}]},"test-only-owner-revision",new Date().toISOString());
+ };
  const projection=()=>({schema_version:1,delivery_id:"delivery-1",record_ref:tree.record_ref,source_revision:ref(),projection_state:"current",projected_at:new Date().toISOString(),last_event_ref:null,package:{execution_tree:tree,dependency_relations:state.relations}});
  page.on("pageerror",error=>state.errors.push(error.message));
  await page.route("**/api/**",async route=>{
@@ -22,6 +27,12 @@ async function open(page){
   if(path==="/api/console/capabilities")return route.fulfill({json:{artifactType:"console-runtime-capability-projection",schemaVersion:1,mode:"live",capabilities:[]}});
   if(path==="/api/delivery/workspace")return route.fulfill({json:{mode:"live",projection:model()}});
   if(path.endsWith("/change-control"))return route.fulfill({json:{mode:"live",status:"current",error:null,observedAt:new Date().toISOString(),projection:projection()}});
+  if(path.includes("/change-control/commands/")){
+   const id=decodeURIComponent(path.split("/").at(-1));
+   state.readBack ??= [];state.readBack.push(id);
+   return route.fulfill({json:state.confirm && id===state.delayed?.command_id
+     ? {state:"completed",result:state.delayed} : {state:"pending"}});
+  }
   if(path.endsWith("/change-control/commands")){
    const body=request.postDataJSON();state.writes.push(body);
    expect(body.expectedSourceRevision).toBe(ref());expect(body.acceptanceNote).toBe("Reviewed work prerequisites for this exercise.");
@@ -37,18 +48,35 @@ async function open(page){
    const next_action={authority:"operator-orchestration-service",code:"refresh_delivery_package",label:"Review current work"},receipt={ref:"oos://synthetic/"+body.commandId,digest:"sha256:"+"a".repeat(64)};
    const result={schema_version:1,command_id:body.commandId,status,replayed:false,before:{record_ref:tree.record_ref,source_revision:before},after:{record_ref:tree.record_ref,source_revision:ref()},receipt,next_action,
     event:{schema_version:1,event_id:"event:"+body.commandId,command_id:body.commandId,command_digest:"sha256:"+"b".repeat(64),delivery_id:"delivery-1",operation_type:"manage_dependency",status,occurred_at:new Date().toISOString(),operator_id:"operator:test",source_revision_before:before,source_revision_after:ref(),effect,receipt,next_action,rollback:{mode:"compensating_command_required",reason:"Review a separate compensating command."}}};
+   if(state.loseResponse){
+    state.delayed=result;
+    return route.fulfill({status:502,json:{error:"The request ended before its result arrived."}});
+   }
    return route.fulfill({json:{mode:"live",status:"current",error:null,observedAt:new Date().toISOString(),result}});
   }
   return route.fulfill({status:503,json:{mode:"live",status:"offline",error:"Isolated unavailable owner",projection:null}});
  });
+ const workspace=await openBoard(page);
+ const hierarchy = workspace.getByRole("region", {name:"Work hierarchy", exact:true});
+ await hierarchy.getByRole("button",{name:/Work 3.*#3\b/i}).click();
+ await hierarchy.getByRole("button",{name:/^View on Work Board:/}).click();
+ const details = workspace.locator('[data-execution-work-item-details="work-item-3"]');
+ await expect(details.getByText("Depends on", {exact:true})).toBeVisible();
+ await expect(details.getByRole("button", {name:/^Open User story #4:/i})).toBeVisible();
+ await expect(details.getByText("Work item #900", {exact:true})).toBeVisible();
+ await expect(details.getByRole("button",{name:"Add prerequisite",exact:true})).toHaveCount(0);
+ await workspace.getByRole("radio",{name:"Work Tree",exact:true}).click();
+ await workspace.getByRole("button",{name:"Edit Work Structure",exact:true}).click();
+ const expand=workspace.getByRole("button",{name:/^Expand Feature 2/});if(await expand.count())await expand.click();
+ return {state,workspace};
+}
+async function openBoard(page){
  await page.goto(base,{waitUntil:"domcontentloaded"});await page.waitForFunction(()=>{const b=document.querySelector('button[title="Open DELIVERY"]');return b&&Object.keys(b).some(key=>key.startsWith("__reactProps$"));});
  await page.locator('button[title="Open DELIVERY"]').click();
  const workspace=page.getByRole("dialog",{name:"Delivery Workspace",exact:true});await workspace.locator('[data-delivery-workspace-section="execution-board"]').click();
  await workspace.getByRole("button",{name:"Open Work Board",exact:true}).click();
- await workspace.getByRole("radio",{name:"ART Tree",exact:true}).click();
- await workspace.getByRole("button",{name:"Edit Work Structure",exact:true}).click();
- const expand=workspace.getByRole("button",{name:/^Expand Feature 2/});if(await expand.count())await expand.click();
- return {state,workspace};
+ await workspace.getByRole("radio",{name:"Work Tree",exact:true}).click();
+ return workspace;
 }
 async function choose(page,workspace,id){await workspace.getByRole("button",{name:"Prerequisite work item",exact:true}).click();await page.getByRole("option",{name:new RegExp(`^User story ${id} ·`)}).click();await workspace.getByRole("button",{name:"Add prerequisite",exact:true}).click();}
 
@@ -82,4 +110,24 @@ test("prerequisites preserve external links, reject local cycles, and apply revi
  const expand=workspace.getByRole("button",{name:/^Expand Feature 2/});if(await expand.count())await expand.click();
  await workspace.locator('input[value="Work 3"]').click();await expect(workspace.getByRole("list",{name:"Selected prerequisites",exact:true})).toContainText("User story 5");
  expect(state.errors).toEqual([]);
+});
+
+test("a saved dependency change is recovered across reload without a second write",async({page})=>{
+ const {state,workspace}=await open(page);
+ state.rejectOnce=false;
+ state.loseResponse=true;
+ await workspace.locator('input[value="Work 3"]').click();
+ await choose(page,workspace,5);
+ await workspace.getByRole("button",{name:"Done Editing",exact:true}).click();
+ const review=page.getByRole("dialog",{name:"Review Execution Changes",exact:true});
+ await review.getByRole("textbox",{name:"Acceptance note",exact:true}).fill("Reviewed work prerequisites for this exercise.");
+ await review.getByRole("button",{name:"Apply Changes",exact:true}).click();
+ await expect(review.getByRole("button",{name:"Checking Result",exact:true})).toBeDisabled();
+ const reloaded=await openBoard(page);
+ await expect(reloaded).toContainText("Checking the result of your submitted work structure change");
+ state.confirm=true;
+ await expect(reloaded).toContainText("Your submitted work structure change was recorded.", {timeout:15000});
+ expect(state.writes).toHaveLength(1);
+ expect(new Set(state.readBack)).toEqual(new Set([state.writes[0].commandId]));
+ expect(state.relations.filter(relation=>relation.depends_on.id===5)).toHaveLength(1);
 });

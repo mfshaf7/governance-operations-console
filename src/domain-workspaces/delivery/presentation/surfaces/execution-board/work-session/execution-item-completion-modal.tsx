@@ -137,7 +137,7 @@ export function ExecutionItemCompletionModal({ workItemId, onClose, onOpenSource
     <TerasFieldStack spacing="loose">
       <TerasPanel spacing="normal" frame="padded" fit="content" treatment="neutral">
         <TerasPanelHeader kicker="Canonical target" title={context?.subject ?? `ART work item #${workItemId}`}
-          description="OOS remains the work-state, readiness and narrative authority. No branch, source credential or source packet is created here." />
+          description="Use this when the work is complete and you can link or describe the result." />
         {context ? <TerasMetadataList columns={2} items={[
           { label: "Work item", value: `Work item ${workItemId}` }, { label: "Status", value: context.status },
           { label: "Implementation repository", value: context.owner_repo ?? "Not declared" }, { label: "Open work items", value: String(context.open_descendant_count) },
@@ -145,10 +145,10 @@ export function ExecutionItemCompletionModal({ workItemId, onClose, onOpenSource
           { label: "Stored completion evidence", value: context.completion_evidence_valid ? "Valid" : "Not yet confirmed" },
         ]} /> : null}
       </TerasPanel>
-      {outcome ? <TerasList frame="contained"><TerasSignalItem label="Canonical result" title={outcome} detail={context?.record_ref ?? "Read the original target."} tone="ok" /></TerasList> : null}
-      {context?.blocking_reasons.length ? <TerasList frame="contained">{context.blocking_reasons.map(reason => <TerasSignalItem key={reason} label="Service prerequisite" title="Completion unavailable" detail={reason} tone="warn" />)}</TerasList> : null}
+      {outcome ? <TerasList frame="contained"><TerasSignalItem label="Recorded result" title={outcome} detail={context?.record_ref ?? "Read the original target."} tone="ok" /></TerasList> : null}
+      {context?.blocking_reasons.length ? <TerasList frame="contained">{context.blocking_reasons.map(reason => <TerasSignalItem key={reason} label="Required before completion" title="Completion unavailable" detail={reason} tone="warn" />)}</TerasList> : null}
       {context?.pi_review && context.status !== "done" ? <TerasPanel spacing="normal" frame="padded" fit="content" treatment="neutral">
-        <TerasPanelHeader kicker="Earned objective review" title="Record the actual PI outcome" description="Review the completed outcome and evidence. OOS records actual value and its native review outcome; this does not complete the objective." />
+        <TerasPanelHeader kicker="Earned objective review" title="Record the actual PI outcome" description="Check the evidence and record the value actually delivered. Completing the objective is a separate step." />
         <TerasMetadataList columns={2} items={[
           { label: "Initiative", value: context.pi_review.delivery_id }, { label: "Target PI", value: context.pi_review.target_pi },
           { label: "Planned value", value: String(context.pi_review.planned_business_value ?? "Not recorded") },
@@ -172,9 +172,9 @@ export function ExecutionItemCompletionModal({ workItemId, onClose, onOpenSource
         </TerasFieldStack>
       </TerasPanel> : null}
       {context?.status !== "done" ? <>
-        <TerasSelectField label="Completion route" value={route} disabled={pending || uncertain} onValueChange={value => { setRoute(value); setConfirmed(false); }}
+        <TerasSelectField label="How was the work completed?" value={route} disabled={pending || uncertain} onValueChange={value => { setRoute(value); setConfirmed(false); }}
           options={[{ label: "Record completed work", value: "complete" }, { label: "Close a parent whose required work is complete", value: "stale-open-close" }]} />
-        {route === "stale-open-close" ? <TerasNoteField label="Parent closeout justification" value={justification} disabled={pending || uncertain}
+        {route === "stale-open-close" ? <TerasNoteField label="Why should the parent work be closed?" value={justification} disabled={pending || uncertain}
           placeholder="Explain why actual completed child scope satisfies this still-open parent. OOS enforces the existing stale-open contract."
           onValueChange={value => { setJustification(value); setConfirmed(false); }} /> : null}
         {fields.map(field => <TerasFieldStack key={field.key} spacing="compact">
@@ -199,9 +199,9 @@ export function ExecutionItemCompletionModal({ workItemId, onClose, onOpenSource
         else onOpenSourceSession();
       }}>Open existing work session</TerasActionButton> : null}
       <TerasTechnicalDetails items={[{ label: "Source record", value: context?.record_ref ?? "Not loaded" }, { label: "Reviewed revision", value: context?.revision ?? "Not loaded" }]} />
-      {uncertain ? <TerasList frame="contained"><TerasSignalItem label="Original target retained" title="Read before another write"
+      {uncertain ? <TerasList frame="contained"><TerasSignalItem label="Original request" title="Check the result before trying again"
         detail="The outcome is not confirmed. Read this same work item; no replacement completion is submitted automatically." tone="warn" /></TerasList> : null}
-      {error ? <TerasList frame="contained"><TerasSignalItem label="Completion unavailable" title="Service operation stopped" detail={error} tone="danger" /></TerasList> : null}
+      {error ? <TerasList frame="contained"><TerasSignalItem label="Completion unavailable" title="The request could not be confirmed" detail={error} tone="danger" /></TerasList> : null}
     </TerasFieldStack>
   </TerasModalShell>
   <TerasDraftCloseGuardDialog open={closeGuardOpen} title="Leave completion draft?" kicker="Unapplied evidence"

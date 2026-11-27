@@ -1,14 +1,12 @@
 import {
   buildTreeExpandedNodeIds,
   buildTreeNodeDisplayTitle,
-  buildTreeNodeSummary,
   buildTreeNodeTitleParts,
   buildTreeRootExpandedNodeIds,
   buildTreeStructuredNodeLayout,
   composeBuildTreeNodeTitle,
   deleteBuildTreeNode,
   findBuildTreeNode,
-  flattenBuildTree,
   insertBuildTreeNodeBeforeSupport,
   updateBuildTreeNode,
   type BuildTreeTitleProfile,
@@ -192,16 +190,20 @@ export function executionTreeDraftFromChangeNode(
   };
 }
 
-export function executionTreeDraftToControlBoardTreeNode(
-  node: ExecutionTreeDraftNode,
-): ControlBoardTreeNode {
+export function executionTreeFromBoardNode(node: ControlBoardTreeNode): ExecutionTreeDraftNode {
+  const backendStatus = deliveryChangeBackendStatus(node.status ?? "");
   return {
-    children: node.children.map(executionTreeDraftToControlBoardTreeNode),
-    componentType: node.kind,
-    description: node.draftBody || node.description,
+    backendStatus,
+    children: node.children.map(executionTreeFromBoardNode),
+    description: node.description,
+    draftBody: node.description,
     id: node.id,
+    kind: deliveryChangeNodeType(node.componentType),
+    legacyWorkPackageId: node.workItemId ?? null,
+    metadataStatus: "not_applicable",
+    remark: "",
     title: node.title,
-    totalChildCount: Math.max(0, flattenBuildTree(node).length - 1),
+    tone: deliveryChangeTone(backendStatus),
   };
 }
 
@@ -368,18 +370,11 @@ export function executionTreeNodeIndex(
 }
 
 export function executionTreeNodeSummary(node: ExecutionTreeDraftNode) {
-  const childCount = node.children.length;
-
-  return buildTreeNodeSummary(node, {
-    childItemLabel: (count) =>
-      `${count} child ${count === 1 ? "item" : "items"} / ${node.backendStatus}`,
-    groupKind: "Feature",
-    groupSummary: () =>
-      `${childCount} child ${childCount === 1 ? "item" : "items"} / ${node.backendStatus}`,
-    rootKind: "Epic",
-    rootSummary: (root) =>
-      `${root.children.length} direct ${root.children.length === 1 ? "child" : "children"} / ${root.backendStatus}`,
-  });
+  const count = node.children.length;
+  const status = node.backendStatus === "parked" ? "Deferred" :
+    node.backendStatus.charAt(0).toUpperCase() + node.backendStatus.slice(1).replaceAll("-", " ");
+  const identity = node.legacyWorkPackageId === null ? "New draft" : `#${node.legacyWorkPackageId} · ${status}`;
+  return count ? `${identity} · ${count} ${count === 1 ? "child" : "children"}` : identity;
 }
 
 export function executionTreeNodeRole(node: ExecutionTreeDraftNode) {

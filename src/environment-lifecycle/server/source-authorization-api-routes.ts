@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { PlatformOperationOosError } from "./platform-operation-oos-client.ts";
 import { commandSourceAuthorization, listSourceAuthorizations, prepareSourceAuthorization, readSourceAuthorization } from "./source-authorization-oos-client.ts";
 const headers = { "Cache-Control": "no-store" };
-export function readSourceAuthorizationRoute(intentId: string | null = null) {
-  return response(() => intentId ? readSourceAuthorization(intentId) : listSourceAuthorizations());
+export function readSourceAuthorizationRoute(intentId: string | null = null, workItemRef: string | null = null) {
+  return response(() => intentId ? readSourceAuthorization(intentId) : listSourceAuthorizations({ workItemRef }));
 }
 export function writeSourceAuthorizationRoute(request: NextRequest, intentId: string | null = null) {
   return response(async () => {

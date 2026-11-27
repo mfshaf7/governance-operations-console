@@ -122,9 +122,16 @@ async function commandDeliveryWorkSessionRoute(
     requireLiveMode();
     const workItemId = routeWorkItemId(workItemIdInput);
     const body = record(await request.json().catch(() => null));
+    const reviewedVerificationDigest = body.reviewedVerificationDigest;
+    if (reviewedVerificationDigest !== undefined &&
+        (command !== continueDeliveryWorkSession || body.sourceIntentRef !== undefined ||
+          typeof reviewedVerificationDigest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(reviewedVerificationDigest))) {
+      invalid("Review the exact original merge and verifier before continuing.");
+    }
     const projection = await command(workItemId, {
       commandId: commandIdentity(body.commandId),
       ...(body.sourceIntentRef === undefined ? {} : { sourceIntentRef: sourceReference(body.sourceIntentRef)! }),
+      ...(typeof reviewedVerificationDigest === "string" ? { reviewedVerificationDigest } : {}),
       expectedSessionRevision: requiredDateTime(
         body.expectedSessionRevision,
         "expected session revision",
@@ -235,8 +242,12 @@ function workSessionErrorResponse(error: unknown) {
       : "delivery_work_session_adapter_request_invalid";
   const message =
     error instanceof Error ? error.message : "Delivery work-session adapter failed.";
+  const details = error instanceof DeliveryOosError ? error.details : null;
+  const operationId = code === "platform_source_credential_pending" && details && typeof details === "object" && "operation_id" in details
+    ? details.operation_id : null;
+  const sourceOperationId = typeof operationId === "string" && /^platform-operation:[0-9a-f]{24}$/.test(operationId) ? operationId : undefined;
   return NextResponse.json(
-    { code, error: message, mode: "live", status: "offline" },
+    { code, error: message, mode: "live", status: "offline", ...(sourceOperationId ? { sourceOperationId } : {}) },
     { headers: noStoreHeaders, status },
   );
 }

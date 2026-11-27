@@ -6,7 +6,9 @@ import {
   TerasInspectionSection, TerasList, TerasLoadingState, TerasModalShell, TerasNoteField, TerasPanel, TerasPanelHeader, TerasRecordCellText, TerasRecordMetaText,
   TerasRecordTable, TerasSegmentedControl, TerasSelectField, TerasSignalItem, TerasStatusPill, TerasTextField,
 } from "@/teras";
-import { applyPIPlanningEpic, PIPlanningApplyError, readPIPlanningEpic } from "../../../live-runtime/pi-planning-change.ts";
+import { assertDeliveryChangeResult } from "../../../live-runtime/delivery-change-live-contract.ts";
+import { useDeliveryCommandRecovery } from "../../../live-runtime/delivery-command-outcome.ts";
+import { applyPIPlanningEpic, PIPlanningApplyError, piPlanningCommandScope, readPIPlanningEpic } from "../../../live-runtime/pi-planning-change.ts";
 import type { DeliveryChangeNode, DeliveryChangeOperation, DeliveryChangeProjection } from "../../../live-runtime/delivery-change-live-types.ts";
 import {
   assessFeatureDeliveryTarget, findPIPlanningDependencyConflict, findPIPlanningStructureConflict, getPlanningNodes,
@@ -167,6 +169,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
   const [reviewError, setReviewError] = useState("");
   const [readingReview, setReadingReview] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [reviewDescriptions, setReviewDescriptions] = useState<Record<number, string>>({});
   const liveProgress = useRef<LivePlanProgress | null>(null);
   const [message, setMessage] = useState("");
@@ -208,6 +211,19 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
   const currentPI = currentPlanningIncrement(model.catalog.values);
   const pi = model.planning_scope?.target_pi ??
     (increments.includes(selectedPI) ? selectedPI : (currentPI && increments.includes(currentPI) ? currentPI : increments[0]) ?? "");
+  const recovery = useDeliveryCommandRecovery(!local && !addingFeature ? piPlanningCommandScope(pi) : null, recording, value => {
+    const result = assertDeliveryChangeResult(value);
+    liveProgress.current = null;
+    setDraft(null);
+    setReview(false);
+    setMessage(result.status === "applied"
+      ? "Your submitted plan change was recorded. Review any remaining assignments on the current board."
+      : "Check the saved plan before submitting further assignments.");
+    void refresh?.().then(() => onCanonicalChanged?.()).catch(() => undefined);
+    return result.status === "applied";
+  });
+  const checkingResult = checking || recovery === "checking";
+
   const piWindow = planningWindowForTargetPi(model.catalog.values, pi);
   const datedPI = Boolean(piWindow.value && piWindow.value.lifecycle_state !== "missing" &&
     Number.isFinite(calendarDateNumber(piWindow.startDate)) && Number.isFinite(calendarDateNumber(piWindow.endDate)));
@@ -488,7 +504,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
   }
 
   async function recordLivePlan() {
-    if (recording || liveProgress.current?.stopped) return;
+    if (recording || checkingResult || liveProgress.current?.stopped) return;
     setRecording(true);
     setReviewError("");
     try {
@@ -496,7 +512,8 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
       liveProgress.current = progress;
       while (progress.completed < progress.commands.length) {
         const { epicId, body } = progress.commands[progress.completed];
-        const result = await applyPIPlanningEpic(epicId, body);
+        const result = await applyPIPlanningEpic(epicId, body, pi, () => setChecking(true));
+        setChecking(false);
         if (result.status !== "applied") {
           progress.stopped = true;
           const error = result.event.effect.error;
@@ -519,6 +536,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
       setReviewError(`${completed ? `${completed} Epic plans saved. ` : ""}${failure instanceof Error
         ? failure.message : "The remaining plan could not be confirmed."}`);
     } finally {
+      setChecking(false);
       setRecording(false);
     }
   }
@@ -573,7 +591,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
     readPI?.(value, fresh);
   }
 
-  const reviewLocked = recording || Boolean(liveProgress.current);
+  const reviewLocked = recording || checkingResult || Boolean(liveProgress.current);
 
   const backView = focusedFeature ? "features" : view !== "overview" && focusedEpic ? "overview" : undefined;
   const canvasControls = backView ? <ControlBoardCanvasNavigation label="PI Planning navigation"
@@ -615,13 +633,17 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
           {returnLabel}
         </TerasActionButton>}
         {canAddFeature && <TerasActionButton size="table-compact" emphasis="primary"
-          disabled={draftDirty || Boolean(sourceError) || refreshing} onClick={() => setAddingFeature(true)}>Add Feature</TerasActionButton>}
+          disabled={draftDirty || checkingResult || Boolean(sourceError) || refreshing} onClick={() => setAddingFeature(true)}>Add Feature</TerasActionButton>}
         {view !== "overview" && <TerasActionButton size="table-compact" emphasis="secondary"
           onClick={() => setCalendarDialog("view")}>View calendar</TerasActionButton>}
         <TerasSegmentedControl ariaLabel="Planning view" value={view}
           options={planningViews} onValueChange={changeView} />
       </TerasActionRow>}
     />
+    {checkingResult && !review && <TerasContentTray title="Checking the original result"
+      description="The Console will check the submitted PI plan change until Delivery confirms its result." />}
+    {recovery === "failed" && !review && <TerasContentTray title="Review the saved plan"
+      description="Delivery recorded a problem while applying your plan change. Review the current assignments before submitting another change." />}
     {refreshing && !sourceError && <TerasLoadingState inline label="Checking for plan updates…" />}
     {(draftDirty || hint) && <TerasActionRow layout="split" spacing="tight"
       end={sourceError && refresh ? <TerasActionButton busy={refreshing} emphasis="secondary" size="table-compact"
@@ -630,7 +652,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
           <TerasActionButton emphasis="secondary" size="table-compact" onClick={() => { setDraft(null); setMessage(""); }}>
             Discard changes
           </TerasActionButton>
-          <TerasActionButton size="table-compact" disabled={!canReview} onClick={() => void openPlanReview()}>Review plan</TerasActionButton>
+          <TerasActionButton size="table-compact" disabled={!canReview || checkingResult} onClick={() => void openPlanReview()}>Review plan</TerasActionButton>
       </TerasActionRow> : view !== "overview" && !hasCalendar && canSaveCalendar && !refreshing &&
         <TerasActionButton emphasis="primary" size="table-compact" onClick={() => setCalendarDialog("setup")}>
           Set up calendar
@@ -858,7 +880,7 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
         void refresh?.().then(() => onCanonicalChanged?.()).catch(() => undefined);
       }} />}
     {review && <TerasModalShell surfaceId="delivery-pi-planning-review" kicker="PI Planning" title="Review PI Plan" description={pi}
-      bodyLayout="scroll" height="content" width="medium" busy={recording} busyLabel="Saving to OpenProject…" onClose={closeReview}
+      bodyLayout="scroll" height="content" width="medium" busy={recording} busyLabel={checkingResult ? "Checking the original result…" : "Saving to OpenProject…"} onClose={closeReview}
       footer={<TerasActionRow>
         <TerasActionButton emphasis="secondary" onClick={closeReview}
           disabled={recording || Boolean(liveProgress.current && !liveProgress.current.stopped)}>
@@ -866,9 +888,9 @@ function PIPlanningBoardSurface({ model, focusPackageId, previousPI, onReturn, r
         </TerasActionButton>
         {!local && reviewError && !liveProgress.current && <TerasActionButton emphasis="secondary"
           onClick={() => { setDraft(null); closeReview(); void refresh?.().catch(() => undefined); }}>Refresh board</TerasActionButton>}
-        <TerasActionButton disabled={recording || readingReview || !validObjectives || !canReview || !explainedTargets ||
+        <TerasActionButton disabled={recording || checkingResult || readingReview || !validObjectives || !canReview || !explainedTargets ||
             (!local && !liveReview) || Boolean(liveProgress.current?.stopped)} onClick={record}>
-          {local ? "Record in preview" : liveProgress.current ? "Retry same plan" : "Apply plan"}
+          {local ? "Record in preview" : checkingResult ? "Checking Result" : "Apply plan"}
         </TerasActionButton>
       </TerasActionRow>}>
       <TerasFieldStack spacing="compact">

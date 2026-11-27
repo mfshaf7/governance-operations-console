@@ -12,6 +12,7 @@ import {
   readDeliveryChangeProjection,
   submitDeliveryChangeCommand,
 } from "../../src/domain-workspaces/delivery/server/delivery-change-oos-client.ts";
+import { applyPIPlanningEpic } from "../../src/domain-workspaces/delivery/live-runtime/pi-planning-change.ts";
 import { DeliveryOosError } from "../../src/domain-workspaces/delivery/server/delivery-oos-client.ts";
 import {
   buildExecutionTreeChangePlan,
@@ -522,3 +523,35 @@ function jsonResponse(body, status = 200) {
     status,
   });
 }
+
+test("PI planning reads the original operation after a lost response without applying it twice", async t => {
+  const commandId = "delivery-change-command:console-apply_pi_plan-reconcile-886";
+  const storage = new Map();
+  const originalWindow = globalThis.window;
+  globalThis.window = {
+    sessionStorage: {
+      getItem: key => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value),
+      removeItem: key => storage.delete(key),
+    },
+  };
+  t.after(() => {
+    if (originalWindow === undefined) delete globalThis.window;
+    else globalThis.window = originalWindow;
+  });
+  const terminal = result({ commandId, operationType: "apply_pi_plan", status: "applied" });
+  const calls = [];
+  t.mock.method(globalThis, "fetch", async (url, init = {}) => {
+    calls.push({ method: init.method ?? "GET", url });
+    if (init.method === "POST") return Response.json({ error: "Reply lost" }, { status: 502 });
+    assert.deepEqual([...storage.values()].map(JSON.parse), [{ kind: "change-control", target: "delivery-886", commandId }]);
+    assert.equal(url, `/api/delivery/execution/delivery-886/change-control/commands/${encodeURIComponent(commandId)}`);
+    return Response.json({ state: "completed", result: terminal });
+  });
+  let checking = 0;
+  const applied = await applyPIPlanningEpic(886, JSON.stringify({ commandId }), "PI-2026-04", () => { checking += 1; });
+  assert.equal(checking, 1);
+  assert.equal(applied.receipt.digest, terminal.receipt.digest);
+  assert.deepEqual(calls.map(call => call.method), ["POST", "GET"]);
+  assert.equal(storage.size, 0);
+});

@@ -85,6 +85,7 @@ export async function continueDeliveryWorkSession(
     commandId: string;
     expectedSessionRevision: string;
     sourceIntentRef?: string;
+    reviewedVerificationDigest?: string;
   },
   options: DeliveryWorkSessionClientOptions = {},
 ) {
@@ -97,6 +98,7 @@ export async function continueDeliveryWorkSession(
           command_id: command.commandId,
           expected_session_revision: command.expectedSessionRevision,
           ...(command.sourceIntentRef ? { source_intent_ref: command.sourceIntentRef } : {}),
+          ...(command.reviewedVerificationDigest ? { reviewed_verification_digest: command.reviewedVerificationDigest } : {}),
         },
       }),
       method: "POST",

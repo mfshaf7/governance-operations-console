@@ -1,8 +1,14 @@
-import { assertDeliveryChangeCommandResult, assertDeliveryChangeSnapshot } from "./delivery-change-live-contract.ts";
+import { assertDeliveryChangeCommandResult, assertDeliveryChangeResult, assertDeliveryChangeSnapshot } from "./delivery-change-live-contract.ts";
+import { submitTrackedDeliveryCommand } from "./delivery-command-outcome.ts";
 import type { DeliveryChangeResult } from "./delivery-change-live-types.ts";
 
 export class PIPlanningApplyError extends Error {
-  constructor(message: string, readonly status: number) { super(message); }
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
 }
 
 export function piPlanningChangePath(epicId: number) {
@@ -19,11 +25,25 @@ export async function readPIPlanningEpic(epicId: number) {
   return snapshot.projection;
 }
 
-export async function applyPIPlanningEpic(epicId: number, request: string): Promise<DeliveryChangeResult> {
-  const response = await fetch(`${piPlanningChangePath(epicId)}/commands`, {
-    method: "POST", body: request, headers: { "Content-Type": "application/json" },
+export function piPlanningCommandScope(pi: string) {
+  return `pi-planning:${pi}`;
+}
+
+export async function applyPIPlanningEpic(epicId: number, request: string, pi: string, onChecking: () => void): Promise<DeliveryChangeResult> {
+  const { commandId } = JSON.parse(request) as { commandId: string };
+  return submitTrackedDeliveryCommand({
+    scope: piPlanningCommandScope(pi),
+    reference: { kind: "change-control", target: `delivery-${epicId}`, commandId },
+    send: () => fetch(`${piPlanningChangePath(epicId)}/commands`, {
+      method: "POST", body: request, headers: { "Content-Type": "application/json" },
+    }),
+    accept: (body, recovered) => recovered ? assertDeliveryChangeResult(body) : assertDeliveryChangeCommandResult(body).result,
+    reject: (body, status) => new PIPlanningApplyError(
+      body && typeof body === "object" && "error" in body && typeof body.error === "string"
+        ? body.error
+        : `Epic #${epicId} could not confirm a result.`,
+      status,
+    ),
+    onChecking,
   });
-  const body = await response.json().catch(() => null);
-  if (!response.ok) throw new PIPlanningApplyError(body?.error ?? `Epic #${epicId} could not confirm a result.`, response.status);
-  return assertDeliveryChangeCommandResult(body).result;
 }

@@ -2,10 +2,10 @@
 import { useState, type ReactNode } from "react";
 import { TerasPlanning, TerasActionButton, TerasActionRow, TerasContentTray, TerasEmptyState, TerasFieldGrid, TerasFieldStack, TerasList, TerasMetadataList, TerasNoteField, TerasSegmentedControl, TerasSelectableRow, TerasSelectField, TerasTechnicalDetails, TerasTextField, TerasTextListField } from "@/teras";
 import { planFieldInitialValue, planFieldLabel, resolvePlanSchema, type PlanSchema } from "../../../../work-model/execution/architecture-form-model.ts";
-import { technicalPlanCaseEntry, technicalPlanEntryName, technicalPlanOptionLabels } from "../../../../work-model/execution/technical-plan-preparation.ts";
+import { technicalPlanCaseEntry, technicalPlanEntryName, technicalPlanMissingCaseFields, technicalPlanOptionLabels } from "../../../../work-model/execution/technical-plan-preparation.ts";
 import { technicalPlanHasDraftInput } from "../../../../work-model/execution/technical-plan-model.ts";
-import { isSourceRevision, sourceRevisionSummary, TechnicalPlanActivationEvidence, TechnicalPlanAuthorizationLookup, type PlanSourceFacts } from "./technical-plan-source-facts.tsx";
-import { TechnicalPlanAddDialog, TechnicalPlanEntryPage, TechnicalPlanEntryRow, useTechnicalPlanEntryPage } from "./technical-plan-entry-page.tsx";
+import { isAuthorizationRef, isSourceRevision, sourceRevisionSummary, TechnicalPlanActivationEvidence, TechnicalPlanAuthorizationLookup, type PlanSourceFacts } from "./technical-plan-source-facts.tsx";
+import { TechnicalPlanAddDialog, TechnicalPlanEntryPage, TechnicalPlanEntryRow, TechnicalPlanFormDialog, useTechnicalPlanEntryPage } from "./technical-plan-entry-page.tsx";
 import { TechnicalPlanWorkPicker, TechnicalPlanWorkTitle } from "./technical-plan-overview.tsx";
 
 export type PlanChoice = { label: string; value: string; workType?: string; parent?: string | null; repository?: string | null; workItemIds?: string[]; changeGroupIds?: string[]; sourceBacked?: boolean; prerequisiteIds?: string[] };
@@ -16,9 +16,10 @@ type PlanFieldProps = {
   schema: PlanSchema; value: unknown; onChange: (value: unknown) => void;
   name: string; path?: string; disabled: boolean; workItems: PlanChoice[]; repositories: PlanChoice[];
   inactiveValue?: Record<string, unknown>;
+  approvedRuntimeResponsibilities?: unknown;
   confirmChange: (change: PlanChangeConfirmation) => void;
   references?: Record<string, PlanChoice[]>; onRepair: () => void;
-  emptyAnswer?: string; emptyHelp?: string; repositorySearch?: ReactNode; repositoryLookupFields?: readonly string[]; source?: PlanSourceFacts;
+  emptyAnswer?: string; emptyHelp?: string; fieldHelper?: string; repositorySearch?: ReactNode; repositoryLookupFields?: readonly string[]; source?: PlanSourceFacts;
   listHeader?: { title: ReactNode; actions: ReactNode; description: string; kicker: string };
 };
 const isNote = (name: string) => /rationale|reason|summary|condition|description|boundary|outcome|evidence_requirement/.test(name) || ["session_binding", "execution_binding", "evidence", "acceptance", "resolution"].includes(name);
@@ -67,16 +68,25 @@ const fieldHelp: Readonly<Record<string, string | undefined>> = {
   fidelity: "Choose the environment that can prove this check, such as a real Git repository for source order.",
   blocked_transition: "Choose the stage that must wait for the approval.",
   dimensions: "Use a short behaviour or safeguard, such as Saving sends one request. Keep established verification IDs when the protocol requires them.",
-  allowed_capability_ids: "Use capability IDs from the component’s contract, such as delivery-art.persist-canonical-artifacts for the evidence store.",
-  prohibited_capability_ids: "Use the contract IDs of actions this component must never perform.",
+  allowed_capability_ids: "For a new action, enter its exact ID from the repository’s contract.",
+  prohibited_capability_ids: "For a new restriction, enter the action ID from the repository’s contract.",
 };
-export function ArchitecturePlanField({ schema: input, value, onChange, name, path = name, disabled, workItems, repositories, references = {}, onRepair, emptyAnswer, emptyHelp, repositorySearch, repositoryLookupFields, source, listHeader, inactiveValue, confirmChange }: PlanFieldProps) {
+const caseInputHint: Readonly<Record<string, string | undefined>> = {
+  applies_to_work_item_ids: "Choose at least one work item.",
+  dimension_ids: "Choose at least one verification area.",
+  evidence_owner_landing_unit_id: "Choose the change group that will provide evidence.",
+  polarity: "Choose a success or rejection path.",
+  fidelity: "Choose a test environment.",
+  target_readiness: "Choose when this check must pass.",
+  expected_outcome: "Describe what result would count as a pass.",
+};
+export function ArchitecturePlanField({ schema: input, value, onChange, name, path = name, disabled, workItems, repositories, references = {}, onRepair, emptyAnswer, emptyHelp, fieldHelper, repositorySearch, repositoryLookupFields, source, listHeader, inactiveValue, confirmChange, approvedRuntimeResponsibilities }: PlanFieldProps) {
   const schema = resolvePlanSchema(input);
   const label = path === "protocol_applicability.applies" ? "Do the extra connection checks apply?" :
     path === "git_causality.applies" ? "Does verification depend on a Git change?" : planFieldLabel(name);
   const noteLabel = path === "protocol_applicability.rationale" ? "Reason for connection checks"
     : path === "git_causality.rationale" ? "Reason for Git checks" : label;
-  const children = { disabled, workItems, repositories, references, onRepair, repositorySearch, repositoryLookupFields, source, confirmChange };
+  const children = { disabled, workItems, repositories, references, onRepair, repositorySearch, repositoryLookupFields, source, confirmChange, approvedRuntimeResponsibilities };
   const variants = schema.oneOf ?? schema.anyOf;
   if (variants) {
     const boolean = variants.find(item => resolvePlanSchema(item).type === "boolean");
@@ -122,7 +132,7 @@ export function ArchitecturePlanField({ schema: input, value, onChange, name, pa
   if (schema.type === "array") return <PlanArrayFields {...children} schema={schema} value={value} onChange={onChange} name={name} path={path} emptyAnswer={emptyAnswer} emptyHelp={emptyHelp} listHeader={listHeader}/>;
   const workTypes = name === "work_item_type" ? [...new Set([...workItems.map(item => item.workType).filter((item): item is string => Boolean(item)), ...(typeof value === "string" && value ? [value] : [])])] : [];
   const choiceValues = schema.enum ?? (workTypes.length ? workTypes : schema.type === "boolean" ? [true, false] : schema.const !== undefined ? [schema.const] : null);
-  if (choiceValues) return <TerasSelectField disabled={disabled} label={label} helper={fieldHelp[name]} value={value === null || value === undefined ? "" : JSON.stringify(value)}
+  if (choiceValues) return <TerasSelectField disabled={disabled} label={label} helper={fieldHelper ?? fieldHelp[name]} value={value === null || value === undefined ? "" : JSON.stringify(value)}
     options={[{ value: "", label: "Choose…" }, ...choiceValues.map(item => ({ value: JSON.stringify(item), label: typeof item === "boolean" ? item ? "Yes" : "No" : technicalPlanOptionLabels[String(item)] ?? String(item).replaceAll("_", " ").replaceAll("-", " ") }))]}
     onValueChange={next => onChange(next ? JSON.parse(next) : null)} />;
   const ref = input.$ref?.split("/").at(-1);
@@ -132,7 +142,7 @@ export function ArchitecturePlanField({ schema: input, value, onChange, name, pa
   if (specific || choices?.length || ref === "landingUnitId" || ref === "repoName" || ref === "workItemId") {
     const current = typeof value === "string" ? value : "";
     const available = choices ?? [];
-    const selector = <TerasSelectField disabled={disabled} label={label} helper={fieldHelp[name]} value={current}
+    const selector = <TerasSelectField disabled={disabled} label={label} helper={fieldHelper ?? fieldHelp[name]} value={current}
       options={[{ value: "", label: available.length ? "Choose…" : "No choices available" }, ...available,
         ...(current && !available.some(item => item.value === current) ? [{ value: current, label: `${current} · not in the loaded choices` }] : [])]}
       onValueChange={onChange} />;
@@ -142,11 +152,11 @@ export function ArchitecturePlanField({ schema: input, value, onChange, name, pa
   const text = value === null || value === undefined ? "" : String(value);
   if (isNote(name)) {
     const minimumHeight = path.startsWith("authorization_session_execution_model.")
-      ? "tall" : name === "rationale" ? "medium" : "short";
+      ? "tall" : name === "rationale" || path.startsWith("cases.") && name === "expected_outcome" ? "medium" : "short";
     return <TerasNoteField autoGrow disabled={disabled} label={noteLabel} minimumHeight={minimumHeight}
-      helper={fieldHelp[name]} value={text} onValueChange={onChange} />;
+      helper={fieldHelper ?? fieldHelp[name]} value={text} onValueChange={onChange} />;
   }
-  return <TerasTextField disabled={disabled} label={label} helper={fieldHelp[name]} value={text} placeholder={ref === "workItemId" ? "work-item-123" : ref === "repoName" ? "Registered repository name" : undefined}
+  return <TerasTextField disabled={disabled} label={label} helper={fieldHelper ?? fieldHelp[name]} value={text} placeholder={ref === "workItemId" ? "work-item-123" : ref === "repoName" ? "Registered repository name" : undefined}
     onValueChange={next => onChange(["number", "integer"].includes(String(schema.type)) ? next.trim() ? Number(next) : null : next)} />;
 }
 
@@ -180,6 +190,8 @@ function PlanBooleanOrTextField(props: PlanFieldProps) {
 function PlanObjectFields({ schema, value, onChange, path, ...props }: PlanFieldProps) {
   const record = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
   const approval = props.name === "required_human_gates";
+  const verificationCase = props.name === "cases";
+  const missingCaseFields = verificationCase ? technicalPlanMissingCaseFields(record, schema) : [];
   const activation = props.name === "runtime_activation_chains";
   const boundWorkRow = ["work_item_execution_plan", "work_item_dimension_applicability"].includes(props.name) &&
     props.workItems.some(item => item.value === record.work_item_id);
@@ -250,6 +262,27 @@ function PlanObjectFields({ schema, value, onChange, path, ...props }: PlanField
   }
 
   function field(key: string, child: PlanSchema) {
+    if (props.name === "runtime_boundaries" && (key === "allowed_capability_ids" || key === "prohibited_capability_ids") &&
+      (record[key] === undefined || Array.isArray(record[key]) && record[key].every((id): id is string => typeof id === "string"))) {
+      const ids = (record[key] ?? []) as string[];
+      const opposite = key === "allowed_capability_ids" ? record.prohibited_capability_ids : record.allowed_capability_ids;
+      const unavailable = new Set([...ids, ...(Array.isArray(opposite) ? opposite : [])]);
+      const recorded = typeof record.owner_repo === "string" && record.owner_repo && Array.isArray(props.approvedRuntimeResponsibilities)
+        ? props.approvedRuntimeResponsibilities.find(row => row?.owner_repo === record.owner_repo)?.[key] : undefined;
+      const options: PlanChoice[] = Array.isArray(recorded) ? [...new Set(recorded.filter(
+        (id): id is string => typeof id === "string" && Boolean(id) && !unavailable.has(id),
+      ))].map(value => ({ value, label: value.slice(value.lastIndexOf(".") + 1).replaceAll("-", " ") })) : [];
+      return <TerasFieldStack key={key} spacing="compact">
+        {options.length ? <TerasSelectField
+          label={key === "allowed_capability_ids" ? "Reuse an approved allowed action" : "Reuse an approved prohibited action"}
+          helper="From the approved plan for this repository."
+          value="" disabled={props.disabled}
+          options={[{ value: "", label: "Choose a recorded action" }, ...options]}
+          onValueChange={id => { if (options.some(option => option.value === id)) updateField(key, [...ids, id]); }} /> : null}
+        <ArchitecturePlanField {...props} schema={child} name={key} path={`${path}.${key}`} value={ids}
+          references={references} onChange={next => updateField(key, next)} />
+      </TerasFieldStack>;
+    }
     if (approval && key === "authority_owner_repo") {
       const label = approvalOwner || "Repository missing from the work details";
       return <TerasPlanning.Metadata key={key} shape="list" items={[{ label: planFieldLabel(key), value: label }]} />;
@@ -267,7 +300,8 @@ function PlanObjectFields({ schema, value, onChange, path, ...props }: PlanField
       const choices = references?.landingUnitId ?? [];
       const entries = Array.isArray(record[key]) ? record[key] : [];
       return <TerasPlanning.Metadata key={key} shape="list" items={[{ label: planFieldLabel(key),
-        value: entries.length ? entries.map(id => choices.find(choice => choice.value === id)?.label ?? id).join(", ") : "None recorded" }]} />;
+        value: entries.length ? <TechnicalPlanWorkTitle label={entries.map(id => choices.find(choice => choice.value === id)?.label ?? id).join(", ")} />
+          : "None recorded" }]} />;
     }
     if (activation && key === "source_activation_evidence" && props.source) {
       const evidence = record[key] && typeof record[key] === "object" && !Array.isArray(record[key])
@@ -296,12 +330,18 @@ function PlanObjectFields({ schema, value, onChange, path, ...props }: PlanField
     const resolved = resolvePlanSchema(child);
     const input = isDecision && key === "resolution" && record.status === "resolved" ?
       (resolved.oneOf ?? resolved.anyOf)?.find(item => resolvePlanSchema(item).type === "string") ?? child : child;
+    const caseHint = missingCaseFields.includes(key) ? caseInputHint[key] : undefined;
+    const casePicker = verificationCase && (key === "applies_to_work_item_ids" || key === "dimension_ids");
     return <TerasFieldStack key={key} spacing="compact">
       <ArchitecturePlanField {...props} schema={input} name={key} path={`${path}.${key}`} value={record[key]}
         references={evidenceChoices} workItems={workItems} onChange={next => updateField(key, next)}
+        fieldHelper={caseHint && !casePicker ? `Required. ${caseHint}` : undefined}
         emptyHelp={key === "evidence_prerequisite_work_item_ids"
           ? approvalWork ? "No recorded dependencies in this plan for the selected approval item." : "Choose the approval work item first."
+          : casePicker ? key === "dimension_ids" ? "Add verification areas in Check coverage, then return here."
+            : "Include work on Choose scope, then return here."
           : undefined} />
+      {casePicker && caseHint ? <TerasPlanning.FieldHint>{caseHint}</TerasPlanning.FieldHint> : null}
       {!required ? <TerasActionRow spacing="compact"><TerasActionButton emphasis="secondary" disabled={props.disabled} onClick={() => {
         const apply = () => {
           const next = { ...record };
@@ -348,6 +388,40 @@ function PlanObjectFields({ schema, value, onChange, path, ...props }: PlanField
         {["artifact", "integration_point", "acceptance"].map(key => field(key, schema.properties![key]))}
       </TerasFieldStack></TerasContentTray>
     </TerasFieldStack>;
+  }
+
+  if (verificationCase) {
+    function caseField(key: string) {
+      const definition = schema.properties?.[key];
+      return definition ? field(key, definition) : null;
+    }
+
+    return <TerasPlanning.ChoiceFields spacing="normal">
+      <TerasContentTray title="What to verify">
+        <TerasFieldStack spacing="normal">
+          <TerasContentTray title="Covered work"
+            kicker={Array.isArray(record.applies_to_work_item_ids) ? `${record.applies_to_work_item_ids.length} selected` : undefined}>
+            {caseField("applies_to_work_item_ids")}
+          </TerasContentTray>
+          <TerasContentTray title="Verification areas"
+            kicker={Array.isArray(record.dimension_ids) ? `${record.dimension_ids.length} selected` : undefined}>
+            {caseField("dimension_ids")}
+          </TerasContentTray>
+        </TerasFieldStack>
+      </TerasContentTray>
+      <TerasContentTray title="How to verify">
+        <TerasFieldStack spacing="normal">
+          <TerasFieldGrid spacing="normal">
+            {caseField("polarity")}
+            {caseField("fidelity")}
+            {caseField("target_readiness")}
+            {caseField("evidence_owner_landing_unit_id")}
+          </TerasFieldGrid>
+          {caseField("expected_outcome")}
+          {missingCaseFields.includes("id") ? caseField("id") : null}
+        </TerasFieldStack>
+      </TerasContentTray>
+    </TerasPlanning.ChoiceFields>;
   }
 
   const shown = visible.filter(([key]) =>
@@ -428,7 +502,7 @@ function PlanObjectFields({ schema, value, onChange, path, ...props }: PlanField
     return <TerasFieldStack spacing="normal">
       <TerasPlanning.Metadata items={[
         { label: "Work type", value: work.workType || "Not recorded in Delivery" },
-        { label: "Parent work item", value: parentLabel },
+        { label: "Parent work item", value: <TechnicalPlanWorkTitle label={parentLabel} /> },
         { label: "Repository", value: work.repository || "Not assigned in Delivery" },
       ]} />
       <small>To correct a detail, update this work item in Delivery and reopen the plan.</small>
@@ -469,19 +543,28 @@ function hasSavedEntries(value: unknown) {
 
 function PlanArrayFields({ schema, value, onChange, name, path = name, emptyAnswer, emptyHelp, listHeader, ...props }: PlanFieldProps) {
   const [query, setQuery] = useState("");
+  const [caseEditIndex, setCaseEditIndex] = useState<number | null>(null);
   const [pendingEntry, setPendingEntry] = useState<{ value: unknown; edited: boolean } | null>(null);
   const values = Array.isArray(value) ? value : [], label = planFieldLabel(name);
   const titles = Object.fromEntries([...props.workItems, ...(props.references?.landingUnitId ?? [])].map(item => [item.value, item.label]));
   const itemSchema = resolvePlanSchema(schema.items ?? {}), ref = schema.items?.$ref?.split("/").at(-1);
   const referenced = props.references?.[name] ?? (ref === "workItemId" ? props.workItems : ref === "repoName" ? props.repositories : ref ? props.references?.[ref] : undefined);
   const entries = values.map((item, index) => {
-    if (name === "cases") return technicalPlanCaseEntry(item, index, titles);
+    if (name === "cases") {
+      const entry = technicalPlanCaseEntry(item, index, titles);
+      const missing = technicalPlanMissingCaseFields(item, itemSchema).length;
+      if (!missing) return entry;
+      const status = `Incomplete · ${missing} ${missing === 1 ? "field" : "fields"} to fill`;
+      return { ...entry, detail: [status, entry.detail].filter(Boolean).join(" · "), searchText: `${status} ${entry.searchText}` };
+    }
     const label = technicalPlanEntryName(item, index, titles);
     return { index, label, detail: undefined, searchText: label };
   });
   const page = useTechnicalPlanEntryPage(entries.map(item => item.index));
   const current = page.selected === null ? null : entries[page.selected];
+  const editingCase = caseEditIndex === null ? null : entries[caseEditIndex];
   const addLabel = addEntryLabels[name] ?? `Add ${label}`;
+  const atLimit = name !== "cases" && values.length >= 100;
 
   const standardDimensions = name === "dimensions" ? props.references?.standardDimensions : undefined;
   if (standardDimensions?.length && values.every((item): item is string => typeof item === "string")) {
@@ -502,13 +585,14 @@ function PlanArrayFields({ schema, value, onChange, name, path = name, emptyAnsw
   if (itemSchema.type === "string" && referenced && values.every(item => typeof item === "string")) {
     const picked = new Set(values);
     const known = new Set(referenced.map(item => item.value));
+    const scrollHeight = path.startsWith("cases.") ? "short" : "medium";
     const toggle = (id: string) => onChange(picked.has(id)
       ? values.filter(value => value !== id) : [...values, id]);
     return <TerasFieldStack spacing="compact">
       {referenced.length ? ref === "workItemId" ?
-        <TechnicalPlanWorkPicker label={label} items={referenced} selected={picked} disabled={props.disabled}
+        <TechnicalPlanWorkPicker label={label} items={referenced} selected={picked} disabled={props.disabled} scrollHeight={scrollHeight}
           onToggle={toggle} /> :
-        <TerasList ariaLabel={label} frame="contained" scrollHeight="medium">
+        <TerasList ariaLabel={label} frame="contained" scrollHeight={scrollHeight}>
           {referenced.map(item => <TerasSelectableRow key={item.value}
             label={<TerasPlanning.ItemTitle><TechnicalPlanWorkTitle label={item.label} /></TerasPlanning.ItemTitle>}
             selected={picked.has(item.value)} disabled={props.disabled} onSelect={() => toggle(item.value)} />)}
@@ -543,6 +627,13 @@ function PlanArrayFields({ schema, value, onChange, name, path = name, emptyAnsw
         });
         else onChange(items);
       }} />;
+  function repositoriesForEntry(index?: number) {
+    if (name !== "runtime_boundaries") return props.repositories;
+    const alreadyRecorded = new Set(values.flatMap((row, rowIndex) =>
+      rowIndex !== index && typeof row?.owner_repo === "string" ? [row.owner_repo] : []));
+    return props.repositories.filter(repository => !alreadyRecorded.has(repository.value));
+  }
+
   const fields = Object.entries(itemSchema.properties ?? {});
   const compactForm = fields.length <= 2 &&
     fields.every(([key, input]) => !isNote(key) && !["object", "array"].includes(String(resolvePlanSchema(input).type)));
@@ -577,6 +668,7 @@ function PlanArrayFields({ schema, value, onChange, name, path = name, emptyAnsw
     entryPath={`${path}.${current.index}`}>
     <TerasFieldStack spacing="normal">
       <ArchitecturePlanField {...props} schema={schema.items ?? {}} name={name} path={`${path}.${current.index}`} value={values[current.index]}
+        repositories={repositoriesForEntry(current.index)}
         onChange={next => onChange(values.map((item, index) => index === current.index ? next : item))} />
       {!selectedRecordedWork ? <TerasActionRow>
         <TerasActionButton emphasis="secondary" disabled={props.disabled} onClick={() => props.confirmChange({
@@ -587,10 +679,11 @@ function PlanArrayFields({ schema, value, onChange, name, path = name, emptyAnsw
     </TerasFieldStack>
   </TechnicalPlanEntryPage>;
   const authorizationSource = name === "authority_refs" ? props.source : undefined;
+  const manualReference = name === "authority_refs";
   const actionsInHeader = Boolean(authorizationSource || listHeader);
   const addButtons = <>
     {!allWorkRecorded ? <TerasPlanning.FilterAction emphasis="secondary" size={listHeader || name === "authority_refs" ? "table-compact" : "default"}
-      disabled={props.disabled || values.length >= 100}
+      disabled={props.disabled || atLimit}
       aligned={!actionsInHeader} onClick={beginAdd}>{addLabel}</TerasPlanning.FilterAction> : null}
     {emptyAnswer && !values.length && !recordedNone ?
       <TerasActionButton emphasis="secondary" disabled={props.disabled} onClick={() => onChange([])}>{emptyAnswer}</TerasActionButton> : null}
@@ -615,7 +708,7 @@ function PlanArrayFields({ schema, value, onChange, name, path = name, emptyAnsw
             detail={revision ? <span title={revision.commit}>
               {sourceRevisionSummary(revision)}
             </span> : item.detail}
-            onOpen={() => page.open(item.index)} />;
+            onOpen={() => name === "cases" ? setCaseEditIndex(item.index) : page.open(item.index)} />;
         })}
       </TerasList> : <TerasEmptyState>{values.length && (!recordedDependencies || query.trim()) ? "No entries match this search." : emptyText}</TerasEmptyState>}
       {authorizationSource ? <>
@@ -625,21 +718,49 @@ function PlanArrayFields({ schema, value, onChange, name, path = name, emptyAnsw
             onChange([...values, ref]);
             return true;
           }} />
+        {!props.disabled ? <TerasTechnicalDetails summary="Enter a verified reference manually" items={[]}>
+          <TerasPlanning.FieldHint>Use a link and digest you have already checked when the document cannot be read from this plan.</TerasPlanning.FieldHint>
+          {addActions}
+        </TerasTechnicalDetails> : null}
       </> : null}
     </TerasFieldStack>
-    {pendingEntry ? <TechnicalPlanAddDialog title={addLabel} width={compactForm ? "compact" : "standard"}
-      disabled={props.disabled || values.length >= 100 || !pendingEntry.edited}
+    {editingCase ? <TechnicalPlanFormDialog title={props.disabled ? "View verification case" : "Edit verification case"}
+      width="large" description={props.disabled ? undefined : "Changes save to this draft as you edit."}
+      onClose={() => setCaseEditIndex(null)}
+      actions={<>
+        {!props.disabled ? <TerasActionButton emphasis="secondary" onClick={() => props.confirmChange({
+          title: "Remove this verification case?",
+          description: "The case will be removed from this draft.",
+          actionLabel: "Remove case",
+          apply: () => {
+            onChange(values.filter((_, index) => index !== editingCase.index));
+            setCaseEditIndex(null);
+          },
+        })}>Remove case</TerasActionButton> : null}
+        <TerasActionButton emphasis="primary" onClick={() => setCaseEditIndex(null)}>{props.disabled ? "Close" : "Done"}</TerasActionButton>
+      </>}>
+      <ArchitecturePlanField {...props} schema={schema.items ?? {}} name={name} path={`${path}.${editingCase.index}`}
+        value={values[editingCase.index]}
+        onChange={next => onChange(values.map((item, index) => index === editingCase.index ? next : item))} />
+    </TechnicalPlanFormDialog> : null}
+    {pendingEntry ? <TechnicalPlanAddDialog title={addLabel}
+      width={name === "cases" ? "large" : compactForm ? "compact" : "standard"}
+      actionLabel={name === "cases" && pendingEntry.edited && technicalPlanMissingCaseFields(pendingEntry.value, itemSchema).length
+        ? "Keep incomplete case" : undefined}
+      disabled={props.disabled || atLimit || !pendingEntry.edited || manualReference &&
+        !isAuthorizationRef(pendingEntry.value)}
       onClose={() => setPendingEntry(null)} onAdd={() => {
         onChange([...values, pendingEntry.value]);
         setPendingEntry(null);
       }}>
       <TerasFieldStack spacing="normal">
         <ArchitecturePlanField {...props} schema={schema.items ?? {}} name={name} path={`${path}.new`}
-          value={pendingEntry.value} onChange={next => setPendingEntry({ value: next, edited: true })} />
+          value={pendingEntry.value} repositories={repositoriesForEntry()}
+          onChange={next => setPendingEntry({ value: next, edited: true })} />
         </TerasFieldStack>
     </TechnicalPlanAddDialog> : null}
   </div>;
-  return authorizationSource ? <TerasPlanning.FactsTray title={label} actions={addActions}>
+  return authorizationSource ? <TerasPlanning.FactsTray title={label}>
     {browse}
   </TerasPlanning.FactsTray> : browse;
 }

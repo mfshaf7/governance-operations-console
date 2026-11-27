@@ -21,7 +21,6 @@ export {
   summarizeControlBoardFamilyPackages,
 } from "./control-board-view-model";
 
-export { ControlBoardArtTreeView } from "./control-board-art-tree-view";
 export { ControlBoardFamilyMapView } from "./control-board-family-map-view";
 export { ControlBoardThinHeader } from "./control-board-thin-header";
 export { ControlBoardView } from "./control-board-view";

@@ -5,7 +5,9 @@ import {
   TerasActionButton, TerasActionRow, TerasContentTray, TerasFieldGrid, TerasFieldStack,
   TerasLoadingState, TerasModalShell, TerasNoteField, TerasRecordMetaText, TerasSelectField, TerasTextField,
 } from "@/teras";
-import { applyPIPlanningEpic, PIPlanningApplyError, readPIPlanningEpic } from "../../../live-runtime/pi-planning-change.ts";
+import { assertDeliveryChangeResult } from "../../../live-runtime/delivery-change-live-contract.ts";
+import { useDeliveryCommandRecovery } from "../../../live-runtime/delivery-command-outcome.ts";
+import { applyPIPlanningEpic, PIPlanningApplyError, piPlanningCommandScope, readPIPlanningEpic } from "../../../live-runtime/pi-planning-change.ts";
 import type { DatedPIPlacement, DeliveryChangeOperation, DeliveryChangeProjection } from "../../../live-runtime/delivery-change-live-types.ts";
 
 type Placement = DatedPIPlacement & { label: string; sequence: number };
@@ -29,10 +31,19 @@ export function PIPlanningFeatureDialog({ epic, pi, placements, onClose, onSaved
   const [childDescription, setChildDescription] = useState("");
   const [childIteration, setChildIteration] = useState("");
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const request = useRef<string | null>(null);
   const submitting = useRef(false);
+  const recovery = useDeliveryCommandRecovery(piPlanningCommandScope(pi), saving, value => {
+    const result = assertDeliveryChangeResult(value);
+    request.current = null;
+    if (result.status === "applied") onSaved();
+    else setNeedsRefresh(true);
+    return result.status === "applied";
+  });
+  const checkingResult = checking || recovery === "checking";
 
   useEffect(() => {
     let active = true;
@@ -55,7 +66,7 @@ export function PIPlanningFeatureDialog({ epic, pi, placements, onClose, onSaved
   const childPlacement = placements.find(item => item.iteration === childIteration);
   const tooLate = Boolean(targetPlacement && childPlacement && childPlacement.sequence > targetPlacement.sequence);
   const needsTargetReason = Boolean(targetPlacement && childPlacement && childPlacement.sequence < targetPlacement.sequence);
-  const locked = saving || Boolean(request.current) || needsRefresh;
+  const locked = saving || checkingResult || Boolean(request.current) || needsRefresh;
   const ready = Boolean(source && targetPlacement && childPlacement && !tooLate &&
     title.trim() && childTitle.trim() && description.trim() && childDescription.trim() &&
     (!needsTargetReason || targetReason.trim()));
@@ -64,7 +75,7 @@ export function PIPlanningFeatureDialog({ epic, pi, placements, onClose, onSaved
   }))];
 
   async function save() {
-    if (submitting.current || needsRefresh) return;
+    if (submitting.current || checkingResult || needsRefresh) return;
     if (!request.current) {
       if (!source || !targetPlacement || !childPlacement || !ready) return;
       const dated = ({ iteration, start_date, end_date }: Placement) => ({ iteration, start_date, end_date });
@@ -93,7 +104,7 @@ export function PIPlanningFeatureDialog({ epic, pi, placements, onClose, onSaved
     setSaving(true);
     setError("");
     try {
-      const result = await applyPIPlanningEpic(epic.id, request.current);
+      const result = await applyPIPlanningEpic(epic.id, request.current, pi, () => setChecking(true));
       request.current = null;
       if (result.status === "applied") {
         onSaved();
@@ -112,6 +123,7 @@ export function PIPlanningFeatureDialog({ epic, pi, placements, onClose, onSaved
       }
       setError(failure instanceof Error ? failure.message : "The result is unavailable. Retry the same request.");
     } finally {
+      setChecking(false);
       setSaving(false);
       submitting.current = false;
     }
@@ -119,14 +131,14 @@ export function PIPlanningFeatureDialog({ epic, pi, placements, onClose, onSaved
 
   return <TerasModalShell surfaceId="delivery-pi-planning-add-feature" kicker="PI Planning" title="Add Feature"
     description={`Epic #${epic.id} · ${epic.title} · ${pi}`} bodyLayout="scroll" height="content" width="medium"
-    busy={saving} busyLabel="Saving Feature and first work item…"
+    busy={saving} busyLabel={checkingResult ? "Checking the original result…" : "Saving Feature and first work item…"}
     onClose={() => { if (!saving && !request.current) onClose(needsRefresh); }}
     footer={<TerasActionRow>
       <TerasActionButton emphasis="secondary" onClick={() => onClose(needsRefresh)} disabled={saving || Boolean(request.current)}>
         {needsRefresh ? "Return to plan" : "Cancel"}
       </TerasActionButton>
-      {source && !needsRefresh && <TerasActionButton onClick={() => void save()} disabled={(!ready && !request.current) || saving}>
-        {request.current ? "Retry same request" : "Add Feature and work item"}
+      {source && !needsRefresh && <TerasActionButton onClick={() => void save()} disabled={(!ready && !request.current) || saving || checkingResult}>
+        {checkingResult ? "Checking Result" : "Add Feature and work item"}
       </TerasActionButton>}
     </TerasActionRow>}>
     <TerasFieldStack spacing="normal">

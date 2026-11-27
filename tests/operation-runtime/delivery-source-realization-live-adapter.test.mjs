@@ -123,7 +123,7 @@ test("all realization mutation routes retain shared session authorization and th
   }
   const panel = readFileSync(new URL("../../src/domain-workspaces/delivery/presentation/surfaces/execution-board/work-session/execution-source-realization-panel.tsx", import.meta.url), "utf8");
   assert.match(panel, /acceptedChangeSetDigest: draft.digest/);
-  assert.match(panel, /Recover accepted source action/);
-  assert.match(panel, /Generate linked retry/);
+  assert.match(panel, /action: "recover", expectedRevision: current.revision/);
+  assert.match(panel, /retryOf: current\?\.attempt\?\.request_id/);
   assert.doesNotMatch(panel, /execFile|child_process|content_base64|writeFile|prototype-local/);
 });

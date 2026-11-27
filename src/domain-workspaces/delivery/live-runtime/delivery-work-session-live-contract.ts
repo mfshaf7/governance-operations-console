@@ -54,11 +54,34 @@ export function assertDeliveryWorkSessionProjection(
   nullableText(projection.landing_unit_id, "projection Landing Unit identity");
   nullableText(projection.session_id, "projection session identity");
   nullableDateTime(projection.session_revision, "projection session revision");
+  if (projection.pending_rebuild !== undefined) {
+    const pending = record(projection.pending_rebuild, "pending rebuild");
+    match(pending.command_id, /^work-session-command:[A-Za-z0-9._:-]{1,179}$/, "pending rebuild command");
+    dateTime(pending.expected_session_revision, "pending rebuild revision");
+    if (!projection.session_id) invalid("A pending rebuild requires a recorded work session.");
+  }
   if (projection.source_authorization !== undefined) {
     const binding = record(projection.source_authorization, "source authorization");
     match(binding.intent_ref, /^source-intent:[A-Za-z0-9][A-Za-z0-9._:/@+\-]{0,241}$/, "source authorization intent");
-    if (binding.session_id !== projection.session_id) invalid("Source authorization belongs to another session.");
+    const terminalReceipt = projection.state === "closed" ? projection.cleanup_receipt
+      : projection.state === "recovery-recorded" ? projection.recovery_receipt : undefined;
+    const closedSession = terminalReceipt !== undefined ? record(terminalReceipt, "terminal receipt").session_id : null;
+    if (binding.session_id !== projection.session_id && (!closedSession || binding.session_id !== closedSession)) {
+      invalid("Source authorization belongs to another session.");
+    }
     if (binding.revision !== undefined) dateTime(binding.revision, "source authorization revision");
+  }
+  if (projection.source_access_scope !== undefined) {
+    const scope = record(projection.source_access_scope, "source access scope");
+    if (!projection.session_id) invalid("Source access scope requires a work session.");
+    workItemId(scope.work_item_ref, "source access work item");
+    if (!(projection.covered_work_item_ids as unknown[] | undefined ?? [projection.work_item_id]).includes(scope.work_item_ref)) {
+      invalid("Source access belongs to another work session.");
+    }
+    match(scope.source_start_digest, digestPattern, "source access binding");
+    if (scope.predecessor_intent_ref !== undefined) {
+      match(scope.predecessor_intent_ref, /^source-intent:[A-Za-z0-9][A-Za-z0-9._:/@+\-]{0,241}$/, "previous source authorization");
+    }
   }
   text(projection.state, "projection state");
   if (projection.next_action !== null) {
@@ -111,6 +134,34 @@ export function assertDeliveryWorkSessionProjection(
   if (projection.pull_request !== undefined) {
     const pullRequest = record(projection.pull_request, "pull-request projection");
     text(pullRequest.state, "pull-request state");
+  }
+  if (projection.operating_verification !== undefined) {
+    const binding = record(projection.operating_verification, "reviewed verification");
+    const source = record(binding.source, "verification source");
+    const verifier = record(binding.verifier, "reviewed verifier");
+    const pr = record(projection.pull_request, "verification pull request");
+    const action = record(projection.next_action, "verification next action");
+    if (action.code !== "acquire-operating-evidence" || pr.state !== "merged" ||
+        source.pull_request_url !== pr.url || source.head_commit !== pr.head_commit || source.merge_commit !== pr.merge_commit) {
+      invalid("Reviewed verification does not match the recorded merged pull request.");
+    }
+    const pullRequestUrl = /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/[1-9][0-9]*$/;
+    match(source.pull_request_url, pullRequestUrl, "original pull request");
+    match(verifier.pull_request_url, pullRequestUrl, "verifier pull request");
+    match(source.head_commit, gitCommitPattern, "original reviewed head");
+    match(source.merge_commit, gitCommitPattern, "original merge");
+    match(verifier.revision, gitCommitPattern, "verifier revision");
+    match(binding.review_packet_digest, digestPattern, "original Review Packet");
+    match(binding.digest, digestPattern, "reviewed verification binding");
+    if (!Array.isArray(binding.cases) || !binding.cases.length || binding.cases.length > 24) invalid("Reviewed verification cases are invalid.");
+    const cases = binding.cases as unknown[];
+    const ids = cases.map(value => {
+      const testCase = record(value, "verification case");
+      text(testCase.id, "verification case id");
+      text(testCase.title, "verification case title");
+      return testCase.id;
+    });
+    if (new Set(ids).size !== ids.length) invalid("Reviewed verification cases must be distinct.");
   }
   if (projection.agent_source !== undefined) {
     const agentSource = record(projection.agent_source, "Agent source projection");

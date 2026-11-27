@@ -84,9 +84,9 @@ export function useArchitecturePacketLiveRuntime() {
   );
 
   const persist = useCallback(
-    (artifact: ArchitecturePacketArtifact) =>
+    (artifact: ArchitecturePacketArtifact, expectedImpactRevision: string) =>
       request("/api/delivery/architecture-packets/persist", {
-        body: JSON.stringify({ artifact }),
+        body: JSON.stringify({ artifact, expected_impact_revision: expectedImpactRevision }),
         method: "POST",
       }),
     [request],

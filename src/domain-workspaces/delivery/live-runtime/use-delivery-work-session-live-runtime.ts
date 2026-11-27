@@ -7,6 +7,8 @@ import {
   recoveryFromWorkSession,
   isDeliveryWorkSessionLiveApiError,
 } from "./delivery-work-session-live-contract.ts";
+import { submitTrackedDeliveryCommand, useDeliveryCommandRecovery, type DeliveryCommandReference, type DeliveryPublication } from "./delivery-command-outcome.ts";
+import { assertPlatformOperationRecord } from "../../../environment-lifecycle/live-runtime/platform-operation-contract.ts";
 import type {
   DeliveryWorkSessionDecisionInput,
   DeliveryWorkSessionSnapshot,
@@ -14,10 +16,12 @@ import type {
 
 export class DeliveryWorkSessionLiveRuntimeError extends Error {
   readonly code?: string;
+  readonly sourceOperationId?: string;
 
-  constructor(message: string, code?: string) {
+  constructor(message: string, code?: string, sourceOperationId?: string) {
     super(message);
     this.code = code;
+    this.sourceOperationId = sourceOperationId;
   }
 }
 
@@ -31,6 +35,12 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
     useState<DeliveryWorkSessionSnapshot | null>(null);
   const pendingCommands = useRef<Record<string, PendingCommand>>({});
   const confirmedRevision = useRef<string | null>(null);
+  const [dispatching, setDispatching] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [publication, setPublication] = useState<DeliveryPublication | null>(null);
+  const [pendingAccess, setPendingAccess] = useState<{ operationId: string; intentId: string } | null>(null);
+  const [accessCheckFailed, setAccessCheckFailed] = useState(false);
+  const [pendingRebuild, setPendingRebuild] = useState<{ reference: DeliveryCommandReference; revision: string } | null>(null);
   const changed = useRef(onCanonicalChanged); changed.current = onCanonicalChanged;
   const publish = useCallback((next: DeliveryWorkSessionSnapshot) => {
     const revision = next.projection?.session_revision ?? null;
@@ -39,11 +49,16 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
     }
     confirmedRevision.current = revision;
     setSnapshot(next);
+    const pullRequest = next.projection?.pull_request;
+    if (typeof pullRequest?.url === "string" && next.projection?.next_action?.code !== "agent-source-publish-required") {
+      setPublication(current => current?.url === pullRequest.url && current?.head_commit === pullRequest.head_commit ? null : current);
+    }
   }, []);
 
   const publishCommand = useCallback((next: DeliveryWorkSessionSnapshot) => {
     confirmedRevision.current = next.projection?.session_revision ?? null;
     setSnapshot(next);
+    setPublication(null);
     void changed.current?.().catch(() => undefined);
   }, []);
 
@@ -101,10 +116,93 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
 
   useEffect(() => {
     setSnapshot(null);
+    setPublication(null);
+    setPendingAccess(null);
+    setAccessCheckFailed(false);
     pendingCommands.current = {};
     confirmedRevision.current = null;
     void refresh().catch(() => undefined);
   }, [refresh]);
+
+  useEffect(() => {
+    if (!pendingAccess) return;
+    const { operationId, intentId } = pendingAccess;
+    const abort = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    async function check() {
+      try {
+        const response = await fetch(`/api/environment-operations/${encodeURIComponent(operationId)}`, { cache: "no-store", signal: abort.signal });
+        if (!response.ok) throw new Error("Source access read failed.");
+        const operation = assertPlatformOperationRecord(await response.json());
+        const intent = operation.command.input.source_intent as { intent_id?: string } | undefined;
+        if (abort.signal.aborted) return;
+        if (operation.operation_id === operationId && intent?.intent_id === intentId &&
+            ["agent-source.issue", "agent-source.renew"].includes(operation.command.action)) {
+          if (operation.state === "succeeded") {
+            await refresh();
+            if (!abort.signal.aborted) setPendingAccess(null);
+            return;
+          }
+          if (["failed", "cancelled"].includes(operation.state)) {
+            await refresh();
+            if (!abort.signal.aborted) {
+              setAccessCheckFailed(true);
+              setPendingAccess(null);
+            }
+            return;
+          }
+        }
+      } catch {
+        // Keep checking the original access operation after a temporary read failure.
+      }
+      if (!abort.signal.aborted) timer = setTimeout(check, 5_000);
+    }
+    void check();
+    return () => { abort.abort(); clearTimeout(timer); };
+  }, [pendingAccess, refresh]);
+
+  const scope = workItemId === null ? null : `work-session:${workItemId}`;
+  const recovery = useDeliveryCommandRecovery(scope, dispatching, result => {
+    publishCommand(assertDeliveryWorkSessionSnapshot({
+      mode: "live", status: "current", error: null, observedAt: new Date().toISOString(), projection: result,
+    }));
+    return true;
+  }, setPendingRebuild, setPublication);
+
+  const track = useCallback(async (action: string, target: number, path: string, body: Record<string, unknown>, observePublication = false) => {
+    const commandId = commandIdentity(action, "");
+    setDispatching(true);
+    setPublication(null);
+    setAccessCheckFailed(false);
+    try {
+      const next = await submitTrackedDeliveryCommand({
+        scope: `work-session:${target}`,
+        reference: { kind: "work-session", target: String(target), commandId },
+        send: () => fetch(path, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...body, commandId }),
+        }),
+        accept: (value, recovered) => assertDeliveryWorkSessionSnapshot(recovered ? {
+          mode: "live", status: "current", error: null, observedAt: new Date().toISOString(), projection: value,
+        } : value),
+        reject: clientError,
+        onChecking: () => setChecking(true),
+        ...(observePublication ? { onPublication: setPublication } : {}),
+      });
+      publishCommand(next);
+      return next;
+    } catch (error) {
+      if (error instanceof DeliveryWorkSessionLiveRuntimeError && error.code === "platform_source_credential_pending" &&
+          error.sourceOperationId && typeof body.sourceIntentRef === "string") {
+        setPendingAccess({ operationId: error.sourceOperationId, intentId: body.sourceIntentRef });
+        return;
+      }
+      throw error;
+    } finally {
+      setChecking(false);
+      setDispatching(false);
+    }
+  }, [publishCommand]);
 
   const prepare = useCallback(async () => {
     const current = await currentSnapshot(snapshot, refresh);
@@ -119,29 +217,23 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
       pendingCommands,
       setSnapshot: next => { confirmedRevision.current = next.projection?.session_revision ?? null; setSnapshot(next); },
     });
-  }, [refresh, snapshot, workItemId, publishCommand]);
+  }, [refresh, snapshot, workItemId]);
 
   const start = useCallback(
     async (decision: DeliveryWorkSessionDecisionInput, sourceIntentRef?: string) => {
       const current = await currentSnapshot(snapshot, refresh);
       if (current.mode === "disconnected-preview") return current;
-      return submitDeliveryWorkSessionCommand({
-        action: "start",
-        body: {
-          decision,
-          ...(sourceIntentRef ? { sourceIntentRef } : {}),
-          expectedSessionRevision:
-            current.projection?.session_revision ?? null,
-        },
-        path: `${workSessionPath(requiredTarget(workItemId))}/start`,
-        pendingCommands,
-        setSnapshot: publishCommand,
+      const target = requiredTarget(workItemId);
+      return track("start", target, `${workSessionPath(target)}/start`, {
+        decision,
+        ...(sourceIntentRef ? { sourceIntentRef } : {}),
+        expectedSessionRevision: current.projection?.session_revision ?? null,
       });
     },
-    [refresh, snapshot, workItemId, publishCommand],
+    [refresh, snapshot, workItemId, track],
   );
 
-  const command = useCallback(async (action: "close" | "continue" | "merge" | "reconstruct" | "recover", sourceIntentRef?: string, reason?: string) => {
+  const command = useCallback(async (action: "close" | "continue" | "merge" | "reconstruct" | "recover", sourceIntentRef?: string, reason?: string, reviewedVerificationDigest?: string) => {
     const current = await currentSnapshot(snapshot, refresh);
     if (current.mode === "disconnected-preview") return current;
     const revision = current.projection?.session_revision;
@@ -151,19 +243,54 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
         "delivery_work_session_not_started",
       );
     }
-    return submitDeliveryWorkSessionCommand({
-      action,
-      body: { expectedSessionRevision: revision, ...(sourceIntentRef ? { sourceIntentRef } : {}), ...(action === "recover" ? { recovery: recoveryFromWorkSession(current.projection!, reason ?? "") } : {}) },
-      path: `${workSessionPath(requiredTarget(workItemId))}/${action}`,
-      pendingCommands,
-      setSnapshot: publishCommand,
-    });
-  }, [refresh, snapshot, workItemId, publishCommand]);
+    const target = requiredTarget(workItemId);
+    if (reviewedVerificationDigest && current.projection?.operating_verification?.digest !== reviewedVerificationDigest) {
+      throw new DeliveryWorkSessionLiveRuntimeError("The original merge or verifier changed. Read the current session before verifying.");
+    }
+    return track(action, target, `${workSessionPath(target)}/${action}`, {
+      expectedSessionRevision: revision,
+      ...(sourceIntentRef ? { sourceIntentRef } : {}),
+      ...(reviewedVerificationDigest ? { reviewedVerificationDigest } : {}),
+      ...(action === "recover" ? { recovery: recoveryFromWorkSession(current.projection!, reason ?? "") } : {}),
+    }, action === "continue" && current.projection?.next_action?.code === "agent-source-publish-required");
+  }, [refresh, snapshot, workItemId, track]);
 
-  const continueWork = useCallback((sourceIntentRef?: string) => command("continue", sourceIntentRef), [command]);
+  const continueWork = useCallback((sourceIntentRef?: string, reviewedVerificationDigest?: string) =>
+    command("continue", sourceIntentRef, undefined, reviewedVerificationDigest), [command]);
   const mergeWork = useCallback(() => command("merge"), [command]);
   const closeWork = useCallback(() => command("close"), [command]);
   const reconstructWork = useCallback(() => command("reconstruct"), [command]);
+  const ownerRebuild = snapshot?.projection?.pending_rebuild;
+  const resumeRebuild = useCallback(async () => {
+    if (!scope || workItemId === null) return;
+    const accepted = ownerRebuild ? {
+      reference: { kind: "work-session" as const, commandId: ownerRebuild.command_id, target: String(workItemId) },
+      revision: ownerRebuild.expected_session_revision,
+    } : pendingRebuild;
+    if (!accepted || accepted.reference.target !== String(workItemId)) return;
+    const { reference, revision } = accepted;
+    setDispatching(true);
+    try {
+      const next = await submitTrackedDeliveryCommand({
+        scope,
+        reference,
+        resume: true,
+        send: () => fetch(`${workSessionPath(requiredTarget(workItemId))}/reconstruct`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ commandId: reference.commandId, expectedSessionRevision: revision }),
+        }),
+        accept: (value, recovered) => assertDeliveryWorkSessionSnapshot(recovered ? {
+          mode: "live", status: "current", error: null, observedAt: new Date().toISOString(), projection: value,
+        } : value),
+        reject: clientError,
+        onChecking: () => setChecking(true),
+      });
+      publishCommand(next);
+    } finally {
+      setChecking(false);
+      setDispatching(false);
+    }
+  }, [ownerRebuild, pendingRebuild, scope, workItemId, publishCommand]);
   const recoverWork = useCallback((reason: string) => command("recover", undefined, reason), [command]);
 
   const projectionStatus: DeliveryWorkSessionSnapshot["status"] | "loading" =
@@ -172,9 +299,13 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
   return {
     closeWork,
     reconstructWork,
+    resumeRebuild: ownerRebuild || pendingRebuild ? resumeRebuild : undefined,
     recoverWork,
     continueWork,
     mergeWork,
+    operationStatus: checking || ownerRebuild ? "checking" as const : recovery,
+    publication,
+    accessCheckStatus: pendingAccess ? "checking" as const : accessCheckFailed ? "failed" as const : "idle" as const,
     mode: snapshot?.mode ?? null,
     prepare,
     projection: snapshot?.projection ?? null,
@@ -205,6 +336,8 @@ function clientError(value: unknown) {
       ? value.error
       : "Governed Delivery work-session request failed.",
     isDeliveryWorkSessionLiveApiError(value) ? value.code : undefined,
+    value && typeof value === "object" && "sourceOperationId" in value &&
+      typeof value.sourceOperationId === "string" && /^platform-operation:[0-9a-f]{24}$/.test(value.sourceOperationId) ? value.sourceOperationId : undefined,
   );
 }
 

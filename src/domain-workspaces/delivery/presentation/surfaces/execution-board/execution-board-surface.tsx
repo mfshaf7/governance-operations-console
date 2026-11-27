@@ -32,7 +32,6 @@ import { TerasLoadingState,
 } from "@/teras";
 import { TerasSelectControl, type TerasSelectOption } from "@/teras/teras-select-control";
 import {
-  ControlBoardArtTreeView,
   ControlBoardFamilyMapView,
   ControlBoardThinHeader,
   ControlBoardView,
@@ -65,14 +64,14 @@ import {
 import {
   executionTreeDraftFromArtNode,
   executionTreeDraftFromChangeNode,
-  executionTreeDraftToControlBoardTreeNode,
+  executionTreeFromBoardNode,
   executionTreeInitialExpandedNodeIds,
   findExecutionTreeNode,
   updateExecutionTreeNode,
   type ExecutionTreeDraftNode,
 } from "./execution-board-view-model.ts";
 import { ExecutionTreeChangeReviewDialog } from "./execution-tree-change-review-dialog.tsx";
-import { ExecutionTreeEditView } from "./execution-tree-edit-view.tsx";
+import { ExecutionWorkTree } from "./execution-tree-edit-view.tsx";
 import { ExecutionTreeEditSupportPanel } from "./execution-tree-edit-support-panel.tsx";
 import { useDeliveryWorkSessionLiveRuntime } from "../../../live-runtime/use-delivery-work-session-live-runtime.ts";
 import type { ExecutionPlanStarterTransfer } from "./work-session/execution-technical-plan-guidance.tsx";
@@ -85,6 +84,7 @@ import {
   parseExecutionWorkItemReference,
   type ExecutionWorkSessionTarget,
 } from "./work-session/execution-work-session-target.ts";
+import { DeliveryCommandUnconfirmed } from "../../../live-runtime/delivery-command-outcome.ts";
 import { useDeliveryChangeLiveRuntime } from "../../../live-runtime/use-delivery-change-live-runtime.ts";
 import { useDeliveryCloseoutLiveRuntime } from "../../../live-runtime/use-delivery-closeout-live-runtime.ts";
 import { DeliveryHistoryDialog,useDeliveryOwnerHistory } from "../../workflows/shared/history/delivery-history-dialog.tsx";
@@ -135,7 +135,7 @@ type BoardLocation = {
 
 function boardLocationLabel(location: BoardLocation) {
   if (location.view === "execution") return boardLevelLabels.execution;
-  if (location.view === "art-tree") return "ART Tree";
+  if (location.view === "art-tree") return "Work Tree";
   if (location.scope === "all-work") return boardLevelLabels["all-work"];
   return location.scope && location.scope !== "choose-feature" ? boardLevelLabels.feature : boardLevelLabels.package;
 }
@@ -200,6 +200,7 @@ export function DeliveryExecutionBoard({
   const [treeActiveChangeId, setTreeActiveChangeId] = useState<string|null>(null);
   const treeReviewRevision = useRef<string|undefined>(undefined);
   const treeResolvedNodeIds = useRef(new Map<string, string>());
+  const treeAwaitingChangeId = useRef<string | null>(null);
   const [treeEditEntryError, setTreeEditEntryError] = useState<string | null>(
     null,
   );
@@ -365,7 +366,7 @@ export function DeliveryExecutionBoard({
         ),
         submission.applyIntent.source_revision,
       );
-      if (!result) throw new Error("The live owner did not return an action result. No local receipt was created.");
+      if (!result) throw new Error("Delivery could not confirm the action result. Check the work item before trying again.");
       if (result.status !== "applied" && result.status !== "routed") {
         throw new Error(
           `${result.next_action.label}: the Delivery change was ${result.status.replaceAll("_", " ")}.`,
@@ -396,9 +397,11 @@ export function DeliveryExecutionBoard({
     treeDraftPackageId === selectedPackage.delivery_package_id
       ? treeDraft
       : null;
-  const selectedBoardTreeWithDraft = selectedTreeDraftActive
-    ? executionTreeDraftToControlBoardTreeNode(selectedTreeDraftActive)
-    : selectedBoardTree;
+  const readTree = useMemo(
+    () => selectedBoardTree ? executionTreeFromBoardNode(selectedBoardTree) : null,
+    [selectedBoardTree],
+  );
+  const workTree = readOnly ? readTree : selectedTreeDraftActive ?? readTree;
   const treeEditActive =
     selectedPackage &&
     treeEditPackageId === selectedPackage.delivery_package_id &&
@@ -427,6 +430,31 @@ export function DeliveryExecutionBoard({
       ),
     [treeAppliedChangeIds, treeChangePlan],
   );
+
+  useEffect(() => {
+    const changeId = treeAwaitingChangeId.current;
+    if (!changeId || (deliveryChangeRuntime.operationStatus !== "completed" &&
+        deliveryChangeRuntime.operationStatus !== "failed")) return;
+    treeAwaitingChangeId.current = null;
+    const result = deliveryChangeRuntime.lastResult;
+    if (deliveryChangeRuntime.operationStatus === "failed" || result?.status !== "applied") {
+      setTreeChangeError("Review the saved work structure before continuing with the remaining changes.");
+      return;
+    }
+    const item = treeChangePlan.find(entry => entry.id === changeId);
+    if (item?.localNodeId) {
+      const created = createdWorkItemId(result.event.effect);
+      if (!created) {
+        setTreeChangeError("The change was saved. Reopen the work structure to confirm the new item before continuing.");
+        setTreeAppliedChangeIds(current => current.includes(changeId) ? current : [...current, changeId]);
+        return;
+      }
+      treeResolvedNodeIds.current.set(item.localNodeId, created);
+    }
+    treeReviewRevision.current = result.after.source_revision;
+    setTreeAppliedChangeIds(current => current.includes(changeId) ? current : [...current, changeId]);
+    setTreeChangeError(null);
+  }, [deliveryChangeRuntime.lastResult, deliveryChangeRuntime.operationStatus, treeChangePlan]);
 
   useEffect(() => {
     onTreeEditStateChange?.({
@@ -513,7 +541,7 @@ export function DeliveryExecutionBoard({
           setArtReference("");
           setFindStructureError(null);
           setFindStructureOpen(true);
-        }}>Find ART Tree</TerasActionButton>
+        }}>Find Work Tree</TerasActionButton>
       ) : null}
       <TerasSegmentedControl
         ariaLabel="Execution Board views"
@@ -554,7 +582,7 @@ export function DeliveryExecutionBoard({
           onValueChange={setActiveView}
           options={[
             { label: "Work Board", value: "work-board" },
-            { label: "ART Tree", value: "art-tree" },
+            { label: "Work Tree", value: "art-tree" },
           ]}
           value={activeView}
         />}
@@ -614,6 +642,7 @@ export function DeliveryExecutionBoard({
     setTreeAppliedChangeIds([]);
     setTreeActiveChangeId(null);
     treeReviewRevision.current=undefined;
+    treeAwaitingChangeId.current = null;
     treeResolvedNodeIds.current = new Map();
     setTreeExpandedNodeIds([]);
     setTreeOpenDetailNodeId(null);
@@ -937,6 +966,7 @@ export function DeliveryExecutionBoard({
 
   async function applyTreeChanges() {
     if (
+      deliveryChangeRuntime.operationStatus === "checking" ||
       !treeDraft ||
       (pendingTreeChangePlan.length === 0 && treeAppliedChangeIds.length === 0) ||
       !treeChangeAcceptanceNote.trim()
@@ -949,11 +979,13 @@ export function DeliveryExecutionBoard({
     try {
       for (const item of pendingTreeChangePlan) {
         setTreeActiveChangeId(item.id);
+        treeAwaitingChangeId.current = item.id;
         const result = await deliveryChangeRuntime.apply(
           item.buildOperation(resolvedNodeIds),
           treeChangeAcceptanceNote.trim(),
           treeReviewRevision.current,
         );
+        treeAwaitingChangeId.current = null;
         if (!result) {
           throw new Error("Live Delivery change authority is unavailable.");
         }
@@ -973,7 +1005,7 @@ export function DeliveryExecutionBoard({
           const workItemId = createdWorkItemId(result.event.effect);
           if (!workItemId) {
             throw new Error(
-              "OOS applied the new work item but did not return its canonical identity.",
+              "Delivery reported that the item was added. Reload the work tree to find its number.",
             );
           }
           resolvedNodeIds.set(item.localNodeId, workItemId);
@@ -989,7 +1021,7 @@ export function DeliveryExecutionBoard({
       const refreshed = await deliveryChangeRuntime.refresh();
       if (!refreshed.projection) {
         throw new Error(
-          "Delivery changes applied but canonical readback is unavailable.",
+          "Delivery reported that the changes were saved. Reload the board to confirm the current state.",
         );
       }
       if(treeReviewRevision.current&&refreshed.projection.source_revision!==treeReviewRevision.current)throw new Error("Work changed again after the accepted changes. Reopen Work Structure to review the current owner state.");
@@ -1007,6 +1039,7 @@ export function DeliveryExecutionBoard({
       setTreeChangeSuccess(treeChangePlan.length);
       await onCanonicalChanged?.();
     } catch (error) {
+      if (!(error instanceof DeliveryCommandUnconfirmed)) treeAwaitingChangeId.current = null;
       setTreeChangeError(
         error instanceof Error ? error.message : "Delivery change apply failed.",
       );
@@ -1036,45 +1069,40 @@ export function DeliveryExecutionBoard({
       : <TerasEmptyState fill>No work tree is available for this package.</TerasEmptyState>
   ) : undefined;
 
-  const treeContent = activeView === "art-tree" ? (
-        treeEditActive ? (
-          <ExecutionTreeEditView
-            addMenuNodeId={treeAddMenuNodeId}
-            expandedNodeIds={treeExpandedNodeIds}
-            onDiscardDraft={() => setDiscardDraftGuardOpen(true)}
-            onDoneEditing={finishTreeEditing}
-            onExpandedNodeIdsChange={setTreeExpandedNodeIds}
-            onOpenDetailNodeIdChange={setTreeOpenDetailNodeId}
-            onSelectedNodeIdChange={setTreeSelectedNodeId}
-            onTreeAddMenuNodeIdChange={setTreeAddMenuNodeId}
-            onTreeChange={handleTreeDraftChange}
-            openDetailNodeId={treeOpenDetailNodeId}
-            planningIssues={executionTreePlanningInputIssues(treeEditActive, planningChoices)}
-            selectedNodeId={treeSelectedNodeId ?? treeEditActive.id}
-            tree={treeEditActive}
-          />
-        ) : (
-          readOnly && !selectedBoardTreeWithDraft ? historyTreeRead.error || deliveryChangeRuntime.projectionError ? <TerasEmptyState>{historyTreeRead.error ?? deliveryChangeRuntime.projectionError}</TerasEmptyState> : deliveryChangeRuntime.loading ? <TerasLoadingState label="Loading selected work tree…" skeleton="details" /> : <TerasEmptyState>No verified work tree is available for this item.</TerasEmptyState> : <ControlBoardArtTreeView
-            tree={selectedBoardTreeWithDraft}
-            actions={!readOnly && (deliveryChangeRuntime.mode === "live" ||
-              selectedActions.some(action => action.action_type === "edit-work-tree" && action.enabled)) ? (
-              <TerasActionButton size="table-compact" disabled={deliveryChangeRuntime.loading || Boolean(deliveryChangeRuntime.projectionError) || treeEditEntering}
-                onClick={() => void editWorkStructure()}>Edit Work Structure</TerasActionButton>
-            ) : undefined}
-            workItemAction={node => {
-              const id = node.workItemId;
-              if (!id) return undefined;
-              const child = packageWorkItems.find(item => item.node.legacy_work_package_id === id);
-              if (child) return { label: "View on Work Board", open: () => showWorkItemOnBoard(child) };
-              if (readOnly || model.source_truth !== "OpenProject-backed OOS" || node.componentType === "Epic" ||
-                ["done", "retired"].includes(node.status ?? "")) return undefined;
-              return {
-                label: node.componentType === "PI Objective" ? "Review PI Outcome" : "Review Completion",
-                open: () => setCompletionTarget(id),
-              };
-            }}
-          />
-        )
+  const treeReadError = readOnly ? historyTreeRead.error ?? deliveryChangeRuntime.projectionError : null;
+  const treeContent = activeView === "art-tree" && selectedPackage ? (
+    workTree ? (
+      <ExecutionWorkTree
+        key={selectedPackage.delivery_package_id}
+        tree={workTree}
+        editing={treeEditActive && !readOnly ? {
+          addMenuNodeId: treeAddMenuNodeId,
+          expandedNodeIds: treeExpandedNodeIds,
+          onDiscardDraft: () => setDiscardDraftGuardOpen(true),
+          onDoneEditing: finishTreeEditing,
+          onExpandedNodeIdsChange: setTreeExpandedNodeIds,
+          onOpenDetailNodeIdChange: setTreeOpenDetailNodeId,
+          onSelectedNodeIdChange: setTreeSelectedNodeId,
+          onTreeAddMenuNodeIdChange: setTreeAddMenuNodeId,
+          onTreeChange: handleTreeDraftChange,
+          openDetailNodeId: treeOpenDetailNodeId,
+          planningIssues: executionTreePlanningInputIssues(treeEditActive, planningChoices),
+          selectedNodeId: treeSelectedNodeId ?? treeEditActive.id,
+        } : undefined}
+        actions={!readOnly && (deliveryChangeRuntime.mode === "live" ||
+          selectedActions.some(action => action.action_type === "edit-work-tree" && action.enabled)) ? (
+          <TerasActionButton size="table-compact" disabled={deliveryChangeRuntime.loading || Boolean(deliveryChangeRuntime.projectionError) || treeEditEntering}
+            onClick={() => void editWorkStructure()}>Edit Work Structure</TerasActionButton>
+        ) : undefined}
+        renderItemActions={(node) => {
+          const action = inspectTreeAction(node);
+          return action ? <TerasActionButton size="table-compact" emphasis="secondary"
+            aria-label={`${action.label}: ${node.title}`} onClick={action.open}>{action.label}</TerasActionButton> : null;
+        }}
+      />
+    ) : treeReadError ? <TerasEmptyState>{treeReadError}</TerasEmptyState>
+      : deliveryChangeRuntime.loading ? <TerasLoadingState label="Loading selected work tree…" skeleton="details" />
+      : <TerasEmptyState fill>No verified work tree is available for this item.</TerasEmptyState>
   ) : undefined;
 
   const treeEditPanel = selectedPackage && treeEditActive && selectedTreeEditNode ? (
@@ -1134,6 +1162,18 @@ export function DeliveryExecutionBoard({
     : null;
 
   const inspectedWork = activeView === "work-board" ? selectedChild ?? shownFeature : null;
+  function inspectTreeAction(node: ExecutionTreeDraftNode) {
+    const id = node.legacyWorkPackageId;
+    if (!id) return undefined;
+    const child = packageWorkItems.find(item => item.node.legacy_work_package_id === id);
+    if (child) return { label: "View on Work Board", open: () => showWorkItemOnBoard(child) };
+    if (readOnly || model.source_truth !== "OpenProject-backed OOS" || node.kind === "Epic" ||
+      ["done", "retired"].includes(node.backendStatus)) return undefined;
+    return {
+      label: node.kind === "PI Objective" ? "Review PI Outcome" : "Review Completion",
+      open: () => setCompletionTarget(id),
+    };
+  }
   const workBoardInspector = treeEditPanel ?? (inspectedWork ? (
     <ExecutionPackageWorkItemPanel
       key={inspectedWork.node.id}
@@ -1149,7 +1189,7 @@ export function DeliveryExecutionBoard({
     <ExecutionWorkBoardContextPanel
       deliveryPackage={selectedPackage}
       items={selectedTree ? activeView === "art-tree" || choosingFeature ? packageWorkItems : visibleWorkItems : null}
-      view={activeView === "art-tree" ? "ART Tree" : choosingFeature ? "Feature Board" : activeScope === "all-work" ? "All Work" : "Epic Board"}
+      view={activeView === "art-tree" ? "Work Tree" : choosingFeature ? "Feature Board" : activeScope === "all-work" ? "All Work" : "Epic Board"}
     />
   ) : undefined);
 
@@ -1174,15 +1214,15 @@ export function DeliveryExecutionBoard({
         selectedTone={treeEditActive ? "warn" : inspectedWork?.lane.tone ?? selectedPackageProjection?.tone ?? "info"}
       />}
       <TerasDialog
-        actions={<TerasActionButton type="submit" form="find-execution-art-tree" disabled={!artReference.trim()}>Open ART Tree</TerasActionButton>}
-        closeLabel="Close ART lookup"
+        actions={<TerasActionButton type="submit" form="find-execution-art-tree" disabled={!artReference.trim()}>Open Work Tree</TerasActionButton>}
+        closeLabel="Close work item lookup"
         contentOverflow="auto"
-        description="Enter an initiative or work item number from the current Delivery inventory."
+        description="Enter an epic or work item number to open its package tree."
         height="content"
         kicker="Delivery"
         onClose={() => setFindStructureOpen(false)}
         open={findStructureOpen}
-        title="Find ART Tree"
+        title="Find Work Tree"
         width="compact"
       >
         <form id="find-execution-art-tree" onSubmit={event => {
@@ -1192,10 +1232,10 @@ export function DeliveryExecutionBoard({
             navigateBoard({ packageId: item.delivery_package_id, view: "art-tree", scope: "", workItemId: null, featureId: null });
             setFindStructureOpen(false);
           } catch (error) {
-            setFindStructureError(error instanceof Error ? error.message : "The ART tree could not be found.");
+            setFindStructureError(error instanceof Error ? error.message : "Delivery could not find the work tree for that number.");
           }
         }}>
-          <TerasTextField label="ART item number" value={artReference} onValueChange={value => {
+          <TerasTextField label="Work item number" value={artReference} onValueChange={value => {
             setArtReference(value);
             setFindStructureError(null);
           }} />
@@ -1250,7 +1290,7 @@ export function DeliveryExecutionBoard({
                     .find(work => work.node.legacy_work_package_id === requiredWorkId)
                 : null;
               if (requiredWorkId && destination === "work" && !requiredChild) {
-                throw new Error("The required item is unavailable on this package’s Work Board. Check its ART Tree and package records.");
+                throw new Error("The required item is unavailable on this package’s Work Board. Check its Work Tree and package records.");
               }
 
               if (destination !== "architecture") setWorkSessionOpen(false);
@@ -1323,9 +1363,19 @@ export function DeliveryExecutionBoard({
           runtime={deliveryCloseoutRuntime}
         />
       ) : null}
+      {deliveryChangeRuntime.operationStatus === "checking" && !treeChangeReviewOpen && (
+        <TerasEmptyState>Checking the result of your submitted work structure change…</TerasEmptyState>
+      )}
+      {deliveryChangeRuntime.operationStatus === "completed" && !treeChangeReviewOpen && (
+        <TerasEmptyState>Your submitted work structure change was recorded. Review the current work structure before applying further edits.</TerasEmptyState>
+      )}
+      {deliveryChangeRuntime.operationStatus === "failed" && !treeChangeReviewOpen && (
+        <TerasEmptyState>Review the saved work structure before applying another change.</TerasEmptyState>
+      )}
       <ExecutionTreeChangeReviewDialog
         acceptanceNote={treeChangeAcceptanceNote}
         error={treeChangeError}
+        operationStatus={deliveryChangeRuntime.operationStatus}
         onAcceptanceNoteChange={setTreeChangeAcceptanceNote}
         onApply={() => void applyTreeChanges()}
         onClose={() => {
@@ -1359,7 +1409,7 @@ export function DeliveryExecutionBoard({
         <TerasEmptyState>{treeEditEntryError}</TerasEmptyState>
       </TerasDialog>
       <TerasDraftCloseGuardDialog
-        description={treeAppliedChangeIds.length?"Applied changes remain recorded in ART. Discarding removes only the remaining local draft; reopen Work Structure to review fresh owner state.":"This will discard the unsaved execution tree draft and restore the last projected tree for the selected package."}
+        description={treeAppliedChangeIds.length?"Changes already saved stay on the board. Discarding removes only the remaining local draft; reopen Work Structure to review fresh owner state.":"This will discard the unsaved execution tree draft and restore the last projected tree for the selected package."}
         kicker="Execution Tree Draft"
         keepEditingLabel="Keep Editing"
         leaveLabel="Discard Draft"

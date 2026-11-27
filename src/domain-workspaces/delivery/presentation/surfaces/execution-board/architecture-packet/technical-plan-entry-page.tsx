@@ -59,7 +59,7 @@ export function useTechnicalPlanEntryPage<Key extends string | number>(keys: rea
   return { selected, browse, heading, open, back };
 }
 
-export function TechnicalPlanEntryPage({ title, category, heading, onBack, children, entryPath, framed = false }: {
+export function TechnicalPlanEntryPage({ title, category, heading, onBack, children, entryPath, framed = false, reviewRoot = false }: {
   title: string;
   category: string;
   heading: ReturnType<typeof useTechnicalPlanEntryPage>["heading"];
@@ -67,6 +67,7 @@ export function TechnicalPlanEntryPage({ title, category, heading, onBack, child
   children: ReactNode;
   entryPath?: string;
   framed?: boolean;
+  reviewRoot?: boolean;
 }) {
   const titleId = useId();
   const content = <>
@@ -76,24 +77,37 @@ export function TechnicalPlanEntryPage({ title, category, heading, onBack, child
     {children}
   </>;
   return framed ? <TerasPlanning.EntryPanel treatment="neutral" frame="padded" density="compact" spacing="normal"
-    aria-labelledby={titleId} data-plan-entry-path={entryPath}>{content}</TerasPlanning.EntryPanel> :
+    aria-labelledby={titleId} data-plan-entry-path={entryPath} data-plan-review-entry={reviewRoot || undefined}>{content}</TerasPlanning.EntryPanel> :
     <TerasPlanning.EntryDetails data-plan-entry-path={entryPath}>{content}</TerasPlanning.EntryDetails>;
 }
 
-export function TechnicalPlanAddDialog({ title, width = "standard", disabled, onClose, onAdd, children }: {
+export function TechnicalPlanFormDialog({ title, width, description, actions, onClose, children }: {
   title: string;
-  width?: "compact" | "standard";
+  width: "compact" | "standard" | "large";
+  description?: string;
+  actions: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return <TerasPlanning.FormDialog open onClose={onClose} kicker="Plan the changes" title={title}
+    width={width} height="content" contentOverflow="auto" description={description} actions={actions}>
+    {children}
+  </TerasPlanning.FormDialog>;
+}
+
+export function TechnicalPlanAddDialog({ title, width = "standard", actionLabel = "Add to draft", disabled, onClose, onAdd, children }: {
+  title: string;
+  width?: "compact" | "standard" | "large";
+  actionLabel?: string;
   disabled: boolean;
   onClose: () => void;
   onAdd: () => void;
   children: ReactNode;
 }) {
-  return <TerasPlanning.FormDialog open onClose={onClose} kicker="Plan the changes" title={title}
-    width={width} height="content" contentOverflow="auto"
-    actions={<>
-      <TerasActionButton emphasis="secondary" onClick={onClose}>Cancel</TerasActionButton>
-      <TerasActionButton emphasis="primary" disabled={disabled} onClick={onAdd}>Add to draft</TerasActionButton>
-    </>}>
+  return <TechnicalPlanFormDialog title={title} width={width} onClose={onClose} actions={<>
+    <TerasActionButton emphasis="secondary" onClick={onClose}>Cancel</TerasActionButton>
+    <TerasActionButton emphasis="primary" disabled={disabled} onClick={onAdd}>{actionLabel}</TerasActionButton>
+  </>}>
     {children}
-  </TerasPlanning.FormDialog>;
+  </TechnicalPlanFormDialog>;
 }

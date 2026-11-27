@@ -1,12 +1,15 @@
 import type { SourcePreviewAdapter } from "./source-preview-contract.ts";
 export const sourceEditorLimits = { fileBytes: 65536, readBytes: 262144, readFiles: 48, treePaths: 5000, operations: 64, changedBytes: 524288, wireBytes: 1048576 } as const;
-export type SourceOperation = { action: "create" | "replace" | "delete"; path: string; content: string | null; expected_digest: string | null };
+export const sourceSectionLimits = { textBytes: 16384, fileBytes: 262144 } as const;
+export type SourcePatch = { offset_utf16: number; before: string };
+export type SourceOperation = { action: "create" | "replace" | "delete" | "patch"; path: string; content: string | null; expected_digest: string | null; patch?: SourcePatch };
 export type OperatorDraftCommand = {
   schema_version: 1; command_id: string; execution_id: string; expected_revision: string;
   expected_change_set_digest: string | null; requested_at: string; objective: string;
   input_origin: "manual" | "import"; retry_of: string | null; commit_message: string; operations: SourceOperation[];
 };
-export type SourceFile = { path: string; content: string; content_digest: string; size_bytes: number };
+export type SourceFileRegion = { start_line: number; end_line: number; total_lines: number; offset_utf16: number; baseline_digest: string; baseline_bytes: number };
+export type SourceFile = { path: string; content: string; content_digest: string; size_bytes: number; region?: SourceFileRegion };
 export type SourceCapture = {
   schema_version: 1; session_id: string; owner_repo: string; landing_unit_id: string; head_commit: string; clean: true;
   tree: { paths: string[]; total_path_count: number; truncated: boolean }; files: SourceFile[]; admitted_bytes: number; context_digest: string;
@@ -24,6 +27,8 @@ export type SourceEditorState = {
 export type SourceEditorTarget = {
   endpoint: string; label: string; current: SourceEditorState; objective: string;
   preview?: SourcePreviewAdapter;
+  retainedDraftAvailable?: boolean;
+  sectionEditing?: boolean;
   objectiveReadOnly?: boolean; objectiveMin: number; objectiveMax: number;
   scope: null | { source_root: string; design_profile: string };
 };
@@ -70,35 +75,66 @@ export function sourcePathIssue(path: string, scope: SourceEditorTarget["scope"]
   }
   return null;
 }
-export function assertSourceOperations(value: unknown): SourceOperation[] {
+function boundedInteger(value: unknown, min: number, max: number) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min || value > max) invalid();
+  return value;
+}
+export function assertSourceOperations(value: unknown, allowPatch = false): SourceOperation[] {
   if (!Array.isArray(value) || !value.length || value.length > sourceEditorLimits.operations) invalid();
   const result = value.map(entry => {
-    const row = sourceObject(entry); sourceExact(row, ["action", "path", "content", "expected_digest"]);
-    if (!["create", "replace", "delete"].includes(String(row.action))) invalid();
+    const row = sourceObject(entry);
+    const hasPatch = Object.hasOwn(row, "patch");
+    sourceExact(row, ["action", "path", "content", "expected_digest", ...(hasPatch ? ["patch"] : [])]);
+    if (!["create", "replace", "delete", "patch"].includes(String(row.action)) || hasPatch !== (row.action === "patch")) invalid();
     const content = row.content === null ? null : sourceText(row.content), expected = row.expected_digest === null ? null : sourceDigest(row.expected_digest);
-    if (row.action === "create" ? content === null || expected !== null : row.action === "replace" ? content === null || expected === null : content !== null || expected === null) invalid();
-    return { action: row.action as SourceOperation["action"], path: sourcePath(row.path), content, expected_digest: expected };
+    if (row.action === "create" ? content === null || expected !== null : row.action === "delete" ? content !== null || expected === null : content === null || expected === null) invalid();
+    let patch: SourcePatch | undefined;
+    if (hasPatch) {
+      if (!allowPatch || content === null) invalid();
+      const section = sourceObject(row.patch); sourceExact(section, ["offset_utf16", "before"]);
+      const before = sourceText(section.before);
+      if (before === content || byteLength(before) > sourceSectionLimits.textBytes || byteLength(content) > sourceSectionLimits.textBytes) invalid();
+      patch = { offset_utf16: boundedInteger(section.offset_utf16, 0, sourceSectionLimits.fileBytes), before };
+    }
+    return { action: row.action as SourceOperation["action"], path: sourcePath(row.path), content, expected_digest: expected, ...(patch ? { patch } : {}) };
   });
-  if (new Set(result.map(row => row.path)).size !== result.length || result.reduce((n, row) => n + byteLength(row.content ?? ""), 0) > sourceEditorLimits.changedBytes) invalid();
+  if (new Set(result.map(row => row.path)).size !== result.length || result.reduce((n, row) => n + byteLength(row.content ?? "") + byteLength(row.patch?.before ?? ""), 0) > sourceEditorLimits.changedBytes) invalid();
   return result;
 }
-export function assertOperatorDraftCommand(value: unknown): OperatorDraftCommand {
+export function assertOperatorDraftCommand(value: unknown, allowPatch = false): OperatorDraftCommand {
   const item = sourceObject(value); sourceExact(item, ["schema_version", "command_id", "execution_id", "expected_revision", "expected_change_set_digest", "requested_at", "objective", "input_origin", "retry_of", "commit_message", "operations"]);
   const objective = sourceString(item.objective, 16384), message = sourceString(item.commit_message, 120);
   if (item.schema_version !== 1 || objective.length < 8 || message.length < 10 || !["manual", "import"].includes(String(item.input_origin))) invalid();
   const result: OperatorDraftCommand = { schema_version: 1, command_id: sourceId(item.command_id), execution_id: sourceId(item.execution_id), expected_revision: sourceDate(item.expected_revision),
     expected_change_set_digest: item.expected_change_set_digest === null ? null : sourceDigest(item.expected_change_set_digest), requested_at: sourceDate(item.requested_at), objective,
-    input_origin: item.input_origin as "manual" | "import", retry_of: item.retry_of === null ? null : sourceId(item.retry_of), commit_message: message, operations: assertSourceOperations(item.operations) };
+    input_origin: item.input_origin as "manual" | "import", retry_of: item.retry_of === null ? null : sourceId(item.retry_of), commit_message: message, operations: assertSourceOperations(item.operations, allowPatch) };
   if (byteLength(JSON.stringify(result)) > sourceEditorLimits.wireBytes) invalid(); return result;
 }
-export function assertSourceCapture(value: unknown): SourceCapture {
+export function assertSourceCapture(value: unknown, startLine?: number): SourceCapture {
   const item = sourceObject(value), tree = sourceObject(item.tree);
   sourceExact(item, ["schema_version", "session_id", "owner_repo", "landing_unit_id", "head_commit", "clean", "tree", "files", "admitted_bytes", "context_digest"]);
   sourceExact(tree, ["paths", "total_path_count", "truncated"]);
   if (item.schema_version !== 1 || item.clean !== true || !Array.isArray(tree.paths) || tree.paths.length > 5000 || !Array.isArray(item.files) || item.files.length > 48 || !Number.isSafeInteger(tree.total_path_count) || Number(tree.total_path_count) < tree.paths.length || tree.truncated !== (Number(tree.total_path_count) > tree.paths.length)) invalid();
   const paths = tree.paths.map(path => sourceString(path, 4096));
   if (new Set(paths).size !== paths.length) invalid();
-  const files = item.files.map(value => { const row = sourceObject(value); sourceExact(row, ["path", "content", "content_digest", "size_bytes"]); const content = sourceText(row.content); if (row.size_bytes !== byteLength(content)) invalid(); return { path: sourcePath(row.path), content, content_digest: sourceDigest(row.content_digest), size_bytes: byteLength(content) }; });
+  const entries = item.files;
+  const files = entries.map(value => {
+    const row = sourceObject(value); sourceExact(row, ["path", "content", "content_digest", "size_bytes", ...(startLine === undefined ? [] : ["region"])]);
+    const content = sourceText(row.content), size = byteLength(content);
+    if (row.size_bytes !== size) invalid();
+    let region: SourceFileRegion | undefined;
+    if (startLine !== undefined) {
+      const part = sourceObject(row.region);
+      sourceExact(part, ["start_line", "end_line", "total_lines", "offset_utf16", "baseline_digest", "baseline_bytes"]);
+      if (entries.length !== 1 || part.start_line !== startLine || size > sourceSectionLimits.textBytes) invalid();
+      const total = boundedInteger(part.total_lines, startLine, sourceSectionLimits.fileBytes);
+      const bytes = boundedInteger(part.baseline_bytes, size, sourceSectionLimits.fileBytes);
+      region = { start_line: startLine, end_line: boundedInteger(part.end_line, startLine, Math.min(startLine + 39, total)),
+        total_lines: total, offset_utf16: boundedInteger(part.offset_utf16, 0, bytes - size),
+        baseline_digest: sourceDigest(part.baseline_digest), baseline_bytes: bytes };
+    }
+    return { path: sourcePath(row.path), content, content_digest: sourceDigest(row.content_digest), size_bytes: size, ...(region ? { region } : {}) };
+  });
   const size = files.reduce((n, file) => n + file.size_bytes, 0);
   if (size > sourceEditorLimits.readBytes || item.admitted_bytes !== size || new Set(files.map(file => file.path)).size !== files.length) invalid();
   return { schema_version: 1, session_id: sourceId(item.session_id), owner_repo: sourceString(item.owner_repo), landing_unit_id: sourceId(item.landing_unit_id), head_commit: sourceCommit(item.head_commit), clean: true,
@@ -129,6 +165,6 @@ export function assertSourceDraft(value: unknown, workflow: "prototype-source-dr
   }
   const objective = sourceString(item.objective, 16384); if (objective.length < 8) invalid();
   return { session_id: sourceId(item.session_id), revision: sourceDate(item.revision), digest: sourceDigest(item.digest), objective, accepted: item.accepted,
-    change_set: { schema_version: 1, change_set_id: sourceId(change.change_set_id), session_id: sourceId(change.session_id), base_commit: sourceCommit(change.base_commit), objective_digest: sourceDigest(change.objective_digest), commit_message: sourceString(change.commit_message, 120), operations: assertSourceOperations(change.operations) }, provenance };
+    change_set: { schema_version: 1, change_set_id: sourceId(change.change_set_id), session_id: sourceId(change.session_id), base_commit: sourceCommit(change.base_commit), objective_digest: sourceDigest(change.objective_digest), commit_message: sourceString(change.commit_message, 120), operations: assertSourceOperations(change.operations, workflow === "delivery-art-source-draft") }, provenance };
 }
 function invalid(): never { throw new Error("Source editor input or owner response is outside the bounded text-source contract."); }

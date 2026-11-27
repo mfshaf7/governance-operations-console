@@ -11,6 +11,7 @@ import type {
   DeliveryPackageSummary,
   DeliveryReadModel,
 } from "../../read-model/index.ts";
+import { deliveryWorkItemStatus } from "../../domain/delivery-execution.ts";
 import {
   deliveryPostureTerms,
   getDeliveryEffectivePackageProjection,
@@ -124,7 +125,7 @@ function deliveryArtNodeToControlBoardTreeNode(
     description: node.description,
     id: node.id,
     workItemId: node.legacy_work_package_id ?? undefined,
-    status: node.backend_status,
+    status: deliveryWorkItemStatus(node),
     sourceLabel: node.legacy_work_package_id ? `${node.component_type} ${node.legacy_work_package_id}` : undefined,
     title: node.title,
     totalChildCount: getChildCounts(node).total_child_count,

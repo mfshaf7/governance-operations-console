@@ -93,6 +93,19 @@ test("case:1326-editor-state-positive: manual, linked retry and amendment preser
   assert.notEqual(sourceDraftFingerprint([{ ...buffers[0], content: "changed" }], saved.commit_message, objective), fingerprint);
 });
 
+test("Delivery compacts an edit that grows a bounded file and keeps its byte-exact original range", () => {
+  const baseline = "\uFEFF" + "a".repeat(65516) + "🌱\r\n";
+  const content = baseline.replace("🌱", "🌲".repeat(12));
+  const buffer = { path: "src/growing.txt", content, baseline, expectedDigest: textDigest(baseline), changed: true, deleted: false };
+  const command = sourceSaveCommand(state, objective, "Update the growing file", [buffer], "manual", "grows", at, true);
+  const [{ patch, content: replacement }] = command.operations;
+  assert.equal(baseline.slice(0, patch.offset_utf16) + replacement + baseline.slice(patch.offset_utf16 + patch.before.length), content);
+  assert.equal(patch.before, "🌱");
+  assert.throws(() => assertOperatorDraftCommand(command), /bounded/);
+  const saved = assertSourceDraft(draft(command), "delivery-art-source-draft");
+  assert.deepEqual(draftBuffers(saved).map(buffer => buffer.patch), [patch]);
+});
+
 test("case:1326-editor-state-negative: applying, uncertain apply and source-created cannot create a new save", () => {
   for (const status of ["accepted", "applying", "apply-unknown", "source-created"]) {
     assert.equal(sourceEditable(status), false);

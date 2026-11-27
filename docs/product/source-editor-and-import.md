@@ -56,6 +56,33 @@ source are read-only and use the existing recovery/delivery controls.
    different one. A conflict requires current owner readback and explicit
    reconciliation; it never discards local edits automatically.
 
+### Resume a blocked editor
+
+- **Repository has uncommitted changes** means the prepared repository failed
+  its clean-baseline check. Preserve or review those changes through the work
+  session. Once its approved baseline is available, choose **Check source
+  workspace**. Any baseline repair remains an explicit repository action.
+- **Console access expired** means the Platform identity check denied the
+  request. Keep the editor tab open. From the admitted host account, use
+  [Platform session renewal](https://github.com/mfshaf7/platform-engineering/blob/main/products/governance-operations-console/runbooks/manage-session-projection.md#renew-an-expired-session)
+  for the running installation. Choose **Check source workspace**, then resume
+  editing or **Retry original save** if a save was pending. The editor checks
+  the current draft and work session before resuming.
+
+### Edit part of a large Delivery source file
+
+Select an existing text file. When it exceeds the whole-file limit, choose
+the **Starting line** and **Load section**. The editor opens up to 40 lines
+and 16 KiB at a time. Edit the section and inspect it in **Review diff**.
+One section per file is saved with the original file digest and precise text
+range. A contiguous edit that grows an open file beyond the whole-file limit
+can be saved using the same representation.
+
+This applies to regular UTF-8 Delivery source files up to 256 KiB. Section
+editing is manual and uses the same private draft save, exact saved-review, and
+approval steps. Whole-file import, deletion, Prototype and AI context keep
+their existing bounds.
+
 ## Supported input
 
 Use regular UTF-8 text, preserving the BOM and line endings. Source reads are

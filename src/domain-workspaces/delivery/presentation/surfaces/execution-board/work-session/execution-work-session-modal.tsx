@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { TerasLoadingState,
   TerasActionButton,
   TerasContentTray,
   TerasDraftCloseGuardDialog,
   TerasEmptyState,
+  TerasFieldGrid,
   TerasFieldStack,
   TerasMetadataList,
   TerasModalShell,
@@ -22,6 +23,7 @@ import type {
   DeliveryWorkSessionDecisionInput,
   DeliveryWorkSessionProjection,
 } from "../../../../live-runtime/delivery-work-session-live-types.ts";
+import type { DeliveryPublication } from "../../../../live-runtime/delivery-command-outcome.ts";
 import { workSessionCommand, workSessionCommandLabel, workSessionMove, workSessionReviewUrl, type ExecutionWorkSessionTarget } from "./execution-work-session-target.ts";
 import { ExecutionSourceRealizationPanel } from "./execution-source-realization-panel.tsx";
 import { canContinueApprovedSourceAccess } from "./execution-source-access.ts";
@@ -34,10 +36,14 @@ import { ExecutionTechnicalPlanGuidance, type ExecutionPlanStarterTransfer } fro
 
 type WorkSessionRuntime = {
   reconstructWork?: () => Promise<unknown>;
+  resumeRebuild?: () => Promise<unknown>;
   recoverWork?: (reason: string) => Promise<unknown>;
   closeWork: () => Promise<unknown>;
-  continueWork: (sourceIntentRef?: string) => Promise<unknown>;
+  continueWork: (sourceIntentRef?: string, reviewedVerificationDigest?: string) => Promise<unknown>;
   mergeWork: () => Promise<unknown>;
+  operationStatus?: "idle" | "checking" | "completed" | "failed";
+  publication?: DeliveryPublication | null;
+  accessCheckStatus?: "idle" | "checking" | "failed";
   mode: "disconnected-preview" | "live" | null;
   prepare: () => Promise<unknown>;
   projection: DeliveryWorkSessionProjection | null;
@@ -72,7 +78,7 @@ export function ExecutionWorkSessionModal({
   );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [sourceIntent, setSourceIntent] = useState<string | null>(null);
+  const [sourceAccess, setSourceAccess] = useState<{ scope: string; intent: string | null } | null>(null);
   const [recoveryReason, setRecoveryReason] = useState("");
 
   const [closeGuard, setCloseGuard] = useState<"close" | "reload" | null>(null);
@@ -125,11 +131,27 @@ export function ExecutionWorkSessionModal({
     architecture: { required: decision.architecture.required, artifact_location: decision.architecture.artifactLocation },
     landing_unit: { ...draft.landing_unit, branch: decision.branch, decision: decision.landingUnitDecision, id: decision.landingUnitId, rollback_boundary: decision.rollbackBoundary, split_reason: decision.splitReason },
   } : null;
+  const scope = projection?.source_access_scope;
+  const boundIntentRef = projection?.source_authorization?.intent_ref ?? null;
+  const sourceAccessKey = JSON.stringify([target.workItemId, projection?.session_id, scope, boundIntentRef, sourceDecision]);
+  const sourceIntent = sourceAccess?.scope === sourceAccessKey ? sourceAccess.intent : null;
+  const updateSourceIntent = useCallback((intent: string | null) => {
+    setSourceAccess(current => current?.scope === sourceAccessKey && current.intent === intent ? current : { scope: sourceAccessKey, intent });
+  }, [sourceAccessKey]);
   const nextAction = projection?.next_action ?? null;
+  const verification = projection?.operating_verification;
+  const requiresSourceAccess = nextAction?.code === "source-worktree-required" || nextAction?.code === "architecture-compatible-refresh-required";
   const move = nextAction ? workSessionMove(nextAction.code, projection?.facts?.operating_evidence) : null;
   const diagnostic = error ?? runtime.projectionError;
   const unavailable = runtime.projectionStatus === "offline";
-  const reviewUrl = workSessionReviewUrl(projection?.pull_request?.url);
+  const publishingUrl = workSessionReviewUrl(runtime.publication?.url);
+  const reviewUrl = publishingUrl ?? workSessionReviewUrl(projection?.pull_request?.url);
+  const merged = projection?.pull_request?.state === "merged";
+  const sourceAccessClosing = nextAction?.code === "source-revocation-required" || nextAction?.code === "source-revocation-pending";
+  const sourceStageFinished = merged || ["closed", "cleanup-required", "cleanup-blocked", "recovery-recorded"].includes(projection?.state ?? "");
+  const showSourceAccess = runtime.mode === "live" && target.workItemId !== null &&
+    (sourceAccessClosing || !sourceStageFinished && Boolean(projection?.session_id || draft));
+  const refreshAfterAccessClosure = useCallback(() => { void runtime.refresh().catch(() => undefined); }, [runtime.refresh]);
   const prerequisite = nextAction && ["architecture-prerequisite-required", "architecture-human-gate-required"].includes(nextAction.code);
   const requiredWorkRef = nextAction?.inputs?.work_item_id;
   const requiredWorkId = typeof requiredWorkRef === "string" && /^work-item-[1-9][0-9]*$/.test(requiredWorkRef) ? Number(requiredWorkRef.replace("work-item-", "")) : undefined;
@@ -153,14 +175,35 @@ export function ExecutionWorkSessionModal({
   const canStart =
     runtime.mode === "live" &&
     runtime.projectionStatus === "current" &&
+    !projection?.session_id &&
     Boolean(draft && decisionReady && !sourceChanged);
+  const checkingOperation = runtime.operationStatus === "checking";
+  const checkingPublication = Boolean(publishingUrl && (submitting || checkingOperation));
+  const checkingAccess = runtime.accessCheckStatus === "checking";
+  const accessFailed = runtime.accessCheckStatus === "failed";
+  const waitingForSourceAccess = requiresSourceAccess && (!scope || !sourceIntent);
+  const sourceProgress = checkingPublication ? {
+    title: "Pull request opened", status: "Verifying",
+    description: "The pull request is open. Delivery is still collecting verification results for this revision.",
+  } : checkingAccess ? {
+    title: "Checking repository access", status: "Checking",
+    description: "The Console is checking the original repository access request.",
+  } : accessFailed ? {
+    title: "Review repository access", status: "Access needs attention",
+    description: "The access request needs attention. Check Repository access below for the current result.",
+  } : null;
+  const setupProgress = draft && decision && !projection?.session_id && runtime.projectionStatus === "current" &&
+    !diagnostic && !checkingOperation && runtime.operationStatus !== "failed"
+    ? workSessionSetupProgress(canStart, Boolean(sourceIntent), sourceChanged) : null;
+  const nextProgress = sourceProgress ?? setupProgress;
   const canRunProjectedCommand =
     runtime.mode === "live" &&
     runtime.projectionStatus === "current" &&
     Boolean(
       projection?.session_id &&
         projection.session_revision &&
-        projectedCommand,
+        projectedCommand && (!publishingUrl || nextAction?.code !== "agent-source-publish-required") &&
+        !waitingForSourceAccess,
     );
 
   async function run(command: () => Promise<unknown>) {
@@ -182,31 +225,31 @@ export function ExecutionWorkSessionModal({
     }
     if (projectedCommand === "merge") return runtime.mergeWork();
     if (projectedCommand === "close") return runtime.closeWork();
+    if (requiresSourceAccess && (!scope || !sourceIntent)) throw new Error("Confirm repository access before continuing.");
+    if (verification) return runtime.continueWork(undefined, verification.digest);
     return runtime.continueWork(sourceIntent ?? undefined);
   }
 
   return (
     <>
-    <TerasModalShell busy={submitting} busyLabel="Reading or updating execution session…"
+    <TerasModalShell busy={submitting} busyLabel="Updating the work session…"
       bodyLayout="scroll"
-      description="Run the governed source lifecycle from authoritative OOS state, gates, and receipts."
+      description="Prepare your work, edit files, and follow the review and checks through completion."
       footer={
         <TerasActionButton emphasis="secondary" disabled={submitting} onClick={requestClose}>
           Back to Board
         </TerasActionButton>
       }
       height="content"
-      kicker="Delivery Execution"
+      kicker="Delivery · Execution"
       onClose={requestClose}
       surfaceId="delivery-execution-work-session"
-      title="Governed Work Session"
+      title="Work Session"
       width="large"
     >
-      {sourceChanged ? <TerasEmptyState>The recorded decision changed while you were editing. Your draft is retained; reload the current decision before starting work.
-        <TerasActionButton disabled={submitting} emphasis="secondary" onClick={() => setCloseGuard("reload")}>Reload current decision</TerasActionButton>
-      </TerasEmptyState> : null}
-      <TerasZoneLayout variant="main-aside">
-        <TerasZone fit="fill">
+      <TerasZoneLayout variant="main-support">
+        <TerasZone fit="content" role="region" aria-label="Work details">
+          <TerasFieldStack spacing="normal">
           <TerasPanel spacing="normal"
             frame="padded"
             layout="header-body"
@@ -216,11 +259,11 @@ export function ExecutionWorkSessionModal({
             <TerasPanelHeader
               actions={runtime.mode === "live" ? (
                 <TerasActionButton disabled={submitting} emphasis="secondary" onClick={() => run(runtime.refresh)}>
-                  Read Current Session
+                  Refresh session
                 </TerasActionButton>
               ) : undefined}
               description={target.description}
-              kicker="Selected Target"
+              kicker="Selected work"
               title={target.title}
             />
             <TerasMetadataList
@@ -230,23 +273,29 @@ export function ExecutionWorkSessionModal({
                   value: target.sourceValue,
                 },
                 {
-                  label: "Execution target",
+                  label: "Work item",
                   value: target.workItemId
-                    ? `OpenProject work item #${target.workItemId}`
+                    ? `Work item #${target.workItemId}`
                     : "Unavailable",
                 },
                 {
                   label: "Session",
-                  value: projection?.session_id ?? "Not started",
+                  value: projection?.state === "closed" ? "Closed" : projection?.state === "recovery-recorded" ? "Archived" :
+                    projection?.session_id ? "Started" : "Not started",
                 },
                 {
-                  label: "Landing unit scope",
+                  label: "Work covered",
                   value: workSessionScope(projection, decision?.coveredWorkItemIds),
                 },
               ]}
             />
           </TerasPanel>
 
+          {sourceChanged ? <TerasContentTray role="status" title="Work setup changed"
+            description="Your edits are still here. Review the updated setup before starting."
+            actions={<TerasActionButton disabled={submitting} emphasis="secondary" onClick={() => setCloseGuard("reload")}>
+              Reload current decision
+            </TerasActionButton>} /> : null}
           {decision ? (
             <TerasPanel spacing="normal"
               frame="padded"
@@ -255,14 +304,15 @@ export function ExecutionWorkSessionModal({
               treatment="state"
             >
               <TerasPanelHeader
-                description="Confirm the source landing and rollback boundary before OOS starts work."
-                kicker="Landing Unit"
-                title="Work Session Decision"
+                description="Review which work will be merged together and what to undo if it fails."
+                kicker="Before you start"
+                title="Work to review together"
               />
               <TerasFieldStack spacing="normal">
                 <TerasTextField
                   disabled={submitting || recordedPlan}
-                  label="Covered ART items (comma-separated)"
+                  label="Work item numbers"
+                  helper="Enter each number separated by a comma, such as 1386, 1387."
                   onValueChange={(value) => setDecision(current => current ? { ...current,
                     coveredWorkItemIds: value.split(",").map(item => item.trim().replace(/^#?([1-9][0-9]*)$/, "work-item-$1"))
                   } : current)}
@@ -271,25 +321,27 @@ export function ExecutionWorkSessionModal({
                 />
                 <TerasSelectField
                   disabled={submitting || recordedPlan}
-                  label="Landing unit model"
+                  label="How will the changes merge?"
                   onValueChange={(value) =>
                     updateDecision(setDecision, "landingUnitDecision", value)
                   }
                   options={[
                     {
-                      label: "Child isolated landing unit",
+                      label: "Merge this work item separately",
                       value: "child_isolated_landing_unit",
                     },
                     {
-                      label: "Feature single landing unit",
+                      label: "Merge the feature’s work together",
                       value: "feature_single_landing_unit",
                     },
                   ]}
                   value={decision.landingUnitDecision}
                 />
+                <TerasFieldGrid>
                 <TerasTextField
                   disabled={submitting || recordedPlan}
-                  label="Landing unit id"
+                  label="Change group ID"
+                  helper="Use a short label to identify this group, such as homepage-update."
                   onValueChange={(value) =>
                     updateDecision(setDecision, "landingUnitId", value)
                   }
@@ -298,14 +350,17 @@ export function ExecutionWorkSessionModal({
                 <TerasTextField
                   disabled={submitting}
                   label="Branch"
+                  helper="The session will publish changes from this branch."
                   onValueChange={(value) =>
                     updateDecision(setDecision, "branch", value)
                   }
                   value={decision.branch}
                 />
+                </TerasFieldGrid>
+                <TerasFieldGrid>
                 <TerasNoteField
                   disabled={submitting}
-                  label="Split reason"
+                  label="Why group the changes this way?"
                   minimumHeight="short"
                   onValueChange={(value) =>
                     updateDecision(setDecision, "splitReason", value)
@@ -314,16 +369,17 @@ export function ExecutionWorkSessionModal({
                 />
                 <TerasNoteField
                   disabled={submitting}
-                  label="Rollback boundary"
+                  label="What should be undone together?"
                   minimumHeight="short"
                   onValueChange={(value) =>
                     updateDecision(setDecision, "rollbackBoundary", value)
                   }
                   value={decision.rollbackBoundary}
                 />
+                </TerasFieldGrid>
                 <TerasSelectField
                   disabled={submitting || recordedPlan}
-                  label="Architecture packet"
+                  label="Technical Plan"
                   onValueChange={(value) =>
                     setDecision((current) =>
                       current
@@ -348,7 +404,7 @@ export function ExecutionWorkSessionModal({
                   <TerasContentTray title="Approved Technical Plan"
                     description="The recorded plan sets the work scope and repository for this session." />
                 ) : decision.architecture.required ? (
-                  <TerasContentTray kicker="Architecture Location">
+                  <TerasContentTray kicker="Technical Plan file">
                     <TerasFieldStack spacing="normal">
                       <TerasTextField
                   disabled={submitting}
@@ -360,7 +416,7 @@ export function ExecutionWorkSessionModal({
                       />
                       <TerasTextField
                   disabled={submitting}
-                        label="Relative path"
+                        label="Path in the repository"
                         onValueChange={(value) =>
                           updateArchitectureLocation(
                             setDecision,
@@ -379,37 +435,9 @@ export function ExecutionWorkSessionModal({
             </TerasPanel>
           ) : null}
 
-          {runtime.mode === "live" && target.workItemId && (projection?.session_id || draft) ? <SourceAuthorizationPanel
-            subject={{ kind: "delivery", work_item_ref: `work-item-${target.workItemId}` }} sourceStartDigest={null}
-            decision={projection?.session_id || !decisionReady || sourceChanged ? null : sourceDecision} onIntentChange={setSourceIntent}
-            preparationAllowed={Boolean(projection?.session_id || (decisionReady && !sourceChanged))}
-            boundIntentRef={projection?.source_authorization?.intent_ref ?? null}
-            onContinueApprovedScope={canContinueApprovedSourceAccess(runtime)
-              ? (intentId) => run(() => runtime.continueWork(intentId)) : undefined}
-            continuePending={submitting}
-            onRecoverDecision={(value) => {
-              const original = assertDeliveryWorkSessionDecision(value);
-              if (original.work_item_id !== `work-item-${target.workItemId}`) throw new Error("Source approval belongs to another Delivery target.");
-              if (!projection?.session_id) setDecision(decisionInputFromDraft(original));
-            }}
-          /> : null}
-
-          {projection?.session_id ? (
-            <TerasPanel spacing="normal"
-              frame="padded"
-              layout="header-body"
-              tone="info"
-              treatment="state"
-            >
-              <TerasPanelHeader
-                description="Authoritative source, evidence, review, and cleanup posture for this work session."
-                kicker="Lifecycle Evidence"
-                title="Governed State"
-              />
-              <TerasMetadataList items={workSessionEvidence(projection)} />
-            </TerasPanel>
-          ) : null}
-          {runtime.mode === "live" && runtime.projectionStatus === "current" && projection?.session_id && projection.session_revision && target.workItemId ? (
+          {runtime.mode === "live" && runtime.projectionStatus === "current" &&
+            !sourceStageFinished && !sourceAccessClosing && nextAction?.code !== "source-worktree-required" &&
+            projection?.session_id && projection.session_revision && target.workItemId ? (
             <ExecutionSourceRealizationPanel
               key={`${projection.session_id}:${target.workItemId}`}
               sessionId={projection.session_id}
@@ -419,106 +447,30 @@ export function ExecutionWorkSessionModal({
               workItemId={target.workItemId}
             />
           ) : null}
-        </TerasZone>
-
-        <TerasZone fit="content">
-          <TerasPanel spacing="normal"
-            frame="padded"
-            layout="header-body"
-            tone={runtime.projectionStatus === "offline" ? "danger" : "info"}
-            treatment="rail"
-          >
-            <TerasPanelHeader
-              description={unavailable ? "Read the session again to check the current state." :
-                diagnostic ? "The result could not be confirmed. Read Current Session before trying again." :
-                move?.description ?? (runtime.mode === "disconnected-preview" ? "This preview is disconnected from live work sessions." : undefined)}
-              kicker="Current Move"
-              statusLabel={unavailable ? "Unavailable" : diagnostic ? "Check result" : move?.status}
-              statusTone={unavailable ? "danger" : diagnostic || move?.status === "Blocked" ? "warn" : move?.status === "Complete" ? "ok" : "info"}
-              title={unavailable ? "Session unavailable" : move?.title ?? "Work session status"}
-            />
-            {unavailable ? (
-              <TerasActionButton emphasis="secondary" disabled={submitting} onClick={() => run(runtime.refresh)}>
-                Retry Session Read
-              </TerasActionButton>
-            ) : canPrepare ? (
-              <TerasActionButton disabled={submitting} onClick={() => run(runtime.prepare)}>
-                Prepare Session
-              </TerasActionButton>
-            ) : canStart && decision ? (
-              <TerasActionButton disabled={submitting || !sourceIntent}
-                onClick={() => run(() => runtime.start(decision, sourceIntent ?? undefined))}>
-                Start Work Session
-              </TerasActionButton>
-            ) : canRunProjectedCommand && nextAction ? (
-              <TerasActionButton disabled={submitting} onClick={() => run(runProjectedCommand)}>
-                {workSessionCommandLabel(nextAction.code)}
-              </TerasActionButton>
-            ) : nextAction?.code === "architecture-recovery-required" ? (
+          {verification ? <TerasPanel spacing="normal" frame="padded" layout="header-body" treatment="neutral">
+              <TerasPanelHeader kicker="Verification" title="What will be checked"
+                description="Review the original merge, the verifier, and the approved checks." />
+              <TerasMetadataList items={[
+                { label: "Original merge", value: <a href={verification.source.pull_request_url} target="_blank" rel="noopener noreferrer">PR #{verification.source.pull_request_url.split("/").at(-1)} · {verification.source.merge_commit.slice(0, 7)} ↗</a> },
+                { label: "Reviewed verifier", value: <a href={verification.verifier.pull_request_url} target="_blank" rel="noopener noreferrer">PR #{verification.verifier.pull_request_url.split("/").at(-1)} · {verification.verifier.revision.slice(0, 7)} ↗</a> },
+                { label: "Approved checks", value: <ul>{verification.cases.map(testCase => <li key={testCase.id}>{testCase.title}</li>)}</ul> },
+              ]} />
+          </TerasPanel> : null}
+          {nextAction?.code === "architecture-recovery-required" ? (
+            <TerasPanel spacing="normal" frame="padded" layout="header-body" treatment="neutral">
+              <TerasPanelHeader kicker="Recovery" title="Previous session records"
+                description="Review the retained records and explain why you want to archive this session." />
               <TerasFieldStack spacing="normal">
-                <TerasSignalItem label="Review recovery" title="Archive superseded session" detail="Preserve this attempt and its evidence before preparing current work. Archiving does not complete ART work or approve a release." tone="warn" />
-                {reviewUrl ? <a href={reviewUrl} target="_blank" rel="noopener noreferrer">Review Bound Pull Request ↗</a> : null}
+                {reviewUrl ? <a href={reviewUrl} target="_blank" rel="noopener noreferrer">Open the original pull request ↗</a> : null}
                 <TerasTechnicalDetails summary="Recovery evidence" items={[
                   { label: "Session", value: projection?.session_id ?? "Unavailable" },
                   { label: "Source head", value: String(projection?.pull_request?.head_commit ?? projection?.source?.head_commit ?? "Unavailable") },
                   { label: "Merge commit", value: String(projection?.pull_request?.merge_commit ?? "Unmerged source") },
                 ]} />
                 <TerasNoteField label="Reason for archiving" value={recoveryReason} onValueChange={setRecoveryReason} placeholder="Explain why the superseded attempt should be retained as history." />
-                <TerasActionButton disabled={submitting || runtime.mode !== "live" || runtime.projectionStatus !== "current" || !runtime.recoverWork || recoveryReason.trim().length < 20}
-                  onClick={() => run(() => runtime.recoverWork!(recoveryReason))}>Archive Superseded Session</TerasActionButton>
               </TerasFieldStack>
-            ) : followUp && onNavigate ? (
-              <TerasActionButton disabled={submitting} onClick={() => onNavigate(followUp, projection?.delivery_id ?? null, requiredWorkId)}>
-                {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? planRequirement?.actionLabel ?? "Open Technical Plan" : prerequisite ? "Open Required Work" : "Open Work Board"}
-              </TerasActionButton>
-            ) : nextAction?.code === "pull-request-review-required" && reviewUrl ? (
-              <a href={reviewUrl} target="_blank" rel="noopener noreferrer">Open Pull Request ↗</a>
-            ) : runtime.projectionStatus === "loading" ? (
-              <TerasLoadingState label="Loading execution session…" skeleton="details" />
-            ) : null}
-            {diagnostic || nextAction ? (
-              <TerasTechnicalDetails items={[
-                ...(diagnostic ? [{ label: "Read or action result", value: diagnostic }] : []),
-                ...(projection ? [{ label: "Recorded state", value: projection.state }] : []),
-                ...(nextAction ? [
-                  { label: "Recorded reason", value: nextAction.reason },
-                  { label: "Action code", value: nextAction.code },
-                  { label: "Responsible component", value: nextAction.authority },
-                ] : []),
-              ]} />
-            ) : null}
-          </TerasPanel>
-
-          {canAdvise && planGuidance && onDraftTechnicalPlan && onViewApprovedPlan ? <ExecutionTechnicalPlanGuidance
-            scope={planGuidance} disabled={submitting || sourceChanged} onDraft={onDraftTechnicalPlan} onViewApproved={onViewApprovedPlan} /> : null}
-          {planRequirement?.status === "covered" && onNavigate ? <TerasContentTray title={planRequirement.title}
-            description={planRequirement.detail}>
-            <TerasActionButton emphasis="secondary" onClick={() => onNavigate("architecture", projection?.delivery_id ?? null)}>
-              {planRequirement.actionLabel}
-            </TerasActionButton>
-          </TerasContentTray> : null}
-          {projection?.command_receipt ? (
-            <TerasPanel spacing="normal"
-              frame="padded"
-              layout="header-body"
-              tone="info"
-              treatment="state"
-            >
-              <TerasPanelHeader
-                description="Immutable OOS evidence for the latest accepted command."
-                kicker="Command Receipt"
-                title="Recorded Result"
-              />
-              <TerasMetadataList
-                items={[
-                  { label: "Result", value: projection.command_receipt.result_state },
-                  { label: "Executor", value: projection.command_receipt.executor_id },
-                  { label: "Receipt", value: projection.command_receipt.ref },
-                ]}
-              />
             </TerasPanel>
           ) : null}
-
           {projection?.closeout ? (
             <TerasPanel spacing="normal"
               frame="padded"
@@ -527,19 +479,19 @@ export function ExecutionWorkSessionModal({
               treatment="state"
             >
               <TerasPanelHeader
-                description="Authoritative OOS result for every ART item covered by this Landing Unit."
-                kicker="Landing Unit Closeout"
+                description="See which work items were marked complete and which still need attention."
+                kicker="Completion"
                 statusLabel={
                   projection.closeout.state === "complete" ? "Complete" : "Retry required"
                 }
                 statusTone={projection.closeout.state === "complete" ? "ok" : "warn"}
-                title="Covered Scope Result"
+                title="Work item results"
               />
               <TerasMetadataList
                 items={[
                   {
                     label: "Scope",
-                    value: `${projection.closeout.covered_work_item_ids.length} ART item${projection.closeout.covered_work_item_ids.length === 1 ? "" : "s"}`,
+                    value: `${projection.closeout.covered_work_item_ids.length} work item${projection.closeout.covered_work_item_ids.length === 1 ? "" : "s"}`,
                   },
                   {
                     label: "Completed",
@@ -558,32 +510,136 @@ export function ExecutionWorkSessionModal({
             </TerasPanel>
           ) : null}
 
-          {projection?.cleanup_receipt ? (
+          {projection && (projection.session_id || projection.command_receipt || projection.cleanup_receipt) ? (
             <TerasPanel spacing="normal"
               frame="padded"
               layout="header-body"
-              tone="ok"
-              treatment="state"
+              treatment="neutral"
             >
               <TerasPanelHeader
-                description="Durable OOS evidence for terminal work-session resource retirement."
-                kicker="Cleanup Receipt"
-                title="Terminal Result"
+                kicker="Work Session"
+                title="Session progress"
               />
-              <TerasMetadataList
-                items={[
-                  {
-                    label: "Outcome",
-                    value: projection.cleanup_receipt.outcome,
-                  },
-                  {
-                    label: "State",
-                    value: projection.state,
-                  },
-                ]}
-              />
+              <TerasMetadataList items={workSessionProgress(projection)} />
+              <TerasTechnicalDetails items={[
+                ...workSessionDiagnostics(projection),
+                ...(projection.command_receipt ? [
+                  { label: "Latest result code", value: projection.command_receipt.result_state },
+                  { label: "Latest action executor", value: projection.command_receipt.executor_id },
+                  { label: "Latest action receipt", value: projection.command_receipt.ref },
+                ] : []),
+                ...(projection.cleanup_receipt ? [
+                  { label: "Cleanup outcome code", value: projection.cleanup_receipt.outcome },
+                  { label: "Recorded session state", value: projection.state },
+                ] : []),
+              ]} />
             </TerasPanel>
           ) : null}
+          {canAdvise && planGuidance && onDraftTechnicalPlan && onViewApprovedPlan ? <ExecutionTechnicalPlanGuidance
+            scope={planGuidance} disabled={submitting || sourceChanged} onDraft={onDraftTechnicalPlan} onViewApproved={onViewApprovedPlan} /> : null}
+          {planRequirement?.status === "covered" && onNavigate ? <TerasContentTray title={planRequirement.title}
+            description={planRequirement.detail}>
+            <TerasActionButton emphasis="secondary" onClick={() => onNavigate("architecture", projection?.delivery_id ?? null)}>
+              {planRequirement.actionLabel}
+            </TerasActionButton>
+          </TerasContentTray> : null}
+          </TerasFieldStack>
+        </TerasZone>
+
+        <TerasZone fit="content" role="region" aria-label="Session actions">
+          <TerasFieldStack spacing="normal">
+          <TerasPanel spacing="normal"
+            frame="padded"
+            layout="header-body"
+            tone={runtime.projectionStatus === "offline" ? "danger" : "info"}
+            treatment="rail"
+          >
+            <TerasPanelHeader
+              description={nextProgress?.description ?? (checkingOperation ? (runtime.resumeRebuild ? "Continue the saved rebuild if the connection was interrupted. The Console will use the original request." : "The Console will check the original request and show the result when Delivery confirms it.") : runtime.operationStatus === "failed" ? "Delivery reported a problem with the original request. Read the current session before trying again." : unavailable ? "Read the session again to check the current state." :
+                diagnostic ? "The result could not be confirmed. Refresh the session before trying again." :
+                waitingForSourceAccess ? "Review the repository and branch below before continuing." :
+                verification ? "Review the checks under What will be checked, then verify the runtime results." :
+                move?.description ?? (runtime.mode === "disconnected-preview" ? "This preview is disconnected from live work sessions." : undefined))}
+              kicker={nextAction?.code === "work-complete" ? "Session status" : "Next action"}
+              statusLabel={nextProgress?.status ?? (checkingOperation ? "Checking" : unavailable ? "Unavailable" : diagnostic ? "Check result" : waitingForSourceAccess ? "Access required" : move?.status)}
+              statusTone={unavailable ? "danger" : diagnostic || move?.status === "Blocked" ? "warn" : move?.status === "Complete" ? "ok" : "info"}
+              title={nextProgress?.title ?? (checkingOperation ? "Checking the original result" : unavailable ? "Session unavailable" : waitingForSourceAccess ? "Review repository access" : move?.title ?? "Work session status")}
+            />
+            {checkingOperation || checkingAccess || checkingPublication ? runtime.resumeRebuild ? (
+              <TerasActionButton disabled={submitting} onClick={() => run(runtime.resumeRebuild!)}>Resume Saved Rebuild</TerasActionButton>
+            ) : null : unavailable ? (
+              <TerasActionButton emphasis="secondary" disabled={submitting} onClick={() => run(runtime.refresh)}>
+                Retry loading session
+              </TerasActionButton>
+            ) : canPrepare ? (
+              <TerasActionButton disabled={submitting} onClick={() => run(runtime.prepare)}>
+                Prepare Session
+              </TerasActionButton>
+            ) : canStart && decision && sourceIntent ? (
+              <TerasActionButton disabled={submitting}
+                onClick={() => run(() => runtime.start(decision, sourceIntent))}>
+                Start Work Session
+              </TerasActionButton>
+            ) : canRunProjectedCommand && nextAction ? (
+              <TerasActionButton disabled={submitting} onClick={() => run(runProjectedCommand)}>
+                {workSessionCommandLabel(nextAction.code)}
+              </TerasActionButton>
+            ) : nextAction?.code === "architecture-recovery-required" ? (
+                <TerasActionButton disabled={submitting || runtime.mode !== "live" || runtime.projectionStatus !== "current" || !runtime.recoverWork || recoveryReason.trim().length < 20}
+                  onClick={() => run(() => runtime.recoverWork!(recoveryReason))}>Archive Superseded Session</TerasActionButton>
+            ) : followUp && onNavigate ? (
+              <TerasActionButton disabled={submitting} onClick={() => onNavigate(followUp, projection?.delivery_id ?? null, requiredWorkId)}>
+                {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? planRequirement?.actionLabel ?? "Open Technical Plan" : prerequisite ? "Open Required Work" : "Open Work Board"}
+              </TerasActionButton>
+            ) : runtime.projectionStatus === "loading" ? (
+              <TerasLoadingState label="Loading execution session…" skeleton="details" />
+            ) : null}
+            {reviewUrl && !verification && nextAction?.code !== "architecture-recovery-required" ? (
+              <a href={reviewUrl} target="_blank" rel="noopener noreferrer">{merged ? "Open Merged Pull Request ↗" : "Open Pull Request ↗"}</a>
+            ) : null}
+            {diagnostic || nextAction ? (
+              <TerasTechnicalDetails items={[
+                ...(diagnostic ? [{ label: "Read or action result", value: diagnostic }] : []),
+                ...(projection ? [{ label: "Session reference", value: projection.session_id ?? "Not started" },
+                  { label: "Recorded state", value: projection.state }] : []),
+                ...(verification ? [
+                  { label: "Original reviewed head", value: verification.source.head_commit },
+                  { label: "Original merge commit", value: verification.source.merge_commit },
+                  { label: "Verification profile revision", value: verification.verifier.revision },
+                  { label: "Original Review Packet digest", value: verification.review_packet_digest },
+                ] : nextAction?.code === "acquire-operating-evidence" && projection?.source?.head_commit
+                  ? [{ label: "Verification profile revision", value: projection.source.head_commit }] : []),
+                ...(nextAction ? [
+                  { label: "Recorded reason", value: nextAction.reason },
+                  { label: "Action code", value: nextAction.code },
+                  { label: "Responsible component", value: nextAction.authority },
+                ] : []),
+              ]} />
+            ) : null}
+          </TerasPanel>
+
+          {showSourceAccess ?
+          <section aria-label="Repository access">
+          <SourceAuthorizationPanel
+            subject={{ kind: "delivery", work_item_ref: scope?.work_item_ref ?? `work-item-${target.workItemId}` }} sourceStartDigest={scope?.source_start_digest ?? null}
+            decision={projection?.session_id || !decisionReady || sourceChanged ? null : sourceDecision} onIntentChange={updateSourceIntent}
+            preparationAllowed={Boolean(projection?.session_id ? scope : (decisionReady && !sourceChanged))}
+            boundIntentRef={boundIntentRef}
+            activeSession={scope && projection?.session_id ? { sessionId: projection.session_id, landingUnitId: projection.landing_unit_id, predecessorIntentRef: scope.predecessor_intent_ref } : null}
+            closureSessionId={sourceAccessClosing ? projection?.source_authorization?.session_id : undefined}
+            onAccessClosed={sourceAccessClosing ? refreshAfterAccessClosure : undefined}
+            onContinueApprovedScope={canContinueApprovedSourceAccess(runtime)
+              ? (intentId) => run(() => runtime.continueWork(intentId)) : undefined}
+            continuePending={submitting || checkingAccess}
+            onRecoverDecision={(value) => {
+              const original = assertDeliveryWorkSessionDecision(value);
+              if (original.work_item_id !== `work-item-${target.workItemId}`) throw new Error("This access approval is for a different work item.");
+              if (!projection?.session_id) setDecision(decisionInputFromDraft(original));
+            }}
+          />
+          </section> : null}
+
+          </TerasFieldStack>
         </TerasZone>
       </TerasZoneLayout>
     </TerasModalShell>
@@ -624,12 +680,44 @@ function workSessionScope(projection: DeliveryWorkSessionProjection | null, sele
     projection?.decision_draft?.covered_work_item_ids ??
     (projection?.work_item_id ? [projection.work_item_id] : []);
   if (workItemIds.length === 0) return "Not resolved";
-  return `${workItemIds.length} ART item${workItemIds.length === 1 ? "" : "s"} · ${workItemIds
+  return `${workItemIds.length} work item${workItemIds.length === 1 ? "" : "s"} · ${workItemIds
     .map((workItemId) => `#${workItemId.replace("work-item-", "")}`)
     .join(", ")}`;
 }
 
-function workSessionEvidence(projection: DeliveryWorkSessionProjection) {
+function workSessionSetupProgress(canStart: boolean, accessApproved: boolean, setupChanged: boolean) {
+  if (!canStart) return {
+    title: "Review the work setup", status: "Review needed",
+    description: setupChanged ? "Load the updated setup before continuing." :
+      "Check that the work includes the selected item and complete the setup fields.",
+  };
+  if (!accessApproved) return {
+    title: "Approve access to start", status: "Access required",
+    description: "Review the repository and branch below. Start appears once access is approved.",
+  };
+  return {
+    title: "Start the reviewed work", status: "Ready to start",
+    description: "Start the session to set up your files and branch.",
+  };
+}
+
+function workSessionProgress(projection: DeliveryWorkSessionProjection) {
+  const facts = projection.facts ?? {};
+  const pullRequest = projection.pull_request?.state ?? facts.pull_request;
+  const review = facts.review_packet;
+  const checks = facts.operating_evidence === "not-required" ? facts.evidence : facts.operating_evidence ?? facts.evidence;
+  return [
+    { label: "Pull request", value: pullRequest === "merged" ? "Merged" :
+      pullRequest === "open" ? "Open for review" : pullRequest === "draft" ? "Draft" : "No open pull request shown" },
+    { label: "Verification", value: checks === "ready" ? "Results recorded" :
+      checks === "invalid" ? "Results need attention" : checks === "stale" ? "New results needed" : "Results pending" },
+    { label: "Review record", value: review === "finalized" ? "Finalized" :
+      review === "merge-ready" ? (pullRequest === "merged" ? "Merge review recorded" : "Ready for merge") :
+      review === "draft" ? "Draft" : "Final review pending" },
+  ];
+}
+
+function workSessionDiagnostics(projection: DeliveryWorkSessionProjection) {
   const facts = projection.facts ?? {};
   const context = projection.lifecycle_context;
   const contextValue = context

@@ -609,6 +609,19 @@ dialog:has(.technicalPlanFormDialog) [role="option"] {
   }
 }
 
+.planFactsTray a {
+  color: #8bb5ff;
+  text-decoration: underline;
+}
+
+.technicalPlanReviewDialog[data-height="fill"]:has([data-plan-review-entry]) {
+  height: auto;
+}
+
+.technicalPlanReviewDialog [data-teras-list]:has(> .planInspectionRow) {
+  grid-auto-rows: max-content;
+}
+
 .planReaderList {
   display: flex;
   flex-direction: column;

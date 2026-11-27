@@ -35,7 +35,8 @@ export function useSourceAssistant(target: SourceEditorTarget, runtime: Runtime)
   }
  },[memory.ready,memory.turns,memory.pendingRequest,memory.restoreVersion,target.current.sessionId,target.endpoint]);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;controller.current?.abort();};},[target.endpoint]);
- const paths=contextPaths??(runtime.data?.selected?[runtime.data.selected]:[]);
+ const paths=(contextPaths??(runtime.data?.selected?[runtime.data.selected]:[]))
+  .filter(path=>!runtime.data?.buffers.some(file=>file.path===path&&file.patch));
  const [readOnlyContext,setReadOnlyContext]=useState<string[]>([]);
  const readOnlyPaths=paths.filter(path=>readOnlyContext.includes(path));
  async function dispatch(request:AssistantRequest,snapshot:AssistantSnapshot){

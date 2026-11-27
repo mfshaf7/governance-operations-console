@@ -103,6 +103,14 @@ adds caller credentials and constructs the operator and acceptance records.
 
 ## Result Handling
 
+Work Structure and PI Planning follow the exact submitted command when the
+browser loses its response. The Console reads the existing acceptance or
+result event and keeps the command reference across a reload in the same
+tab. After reloading a multi-change plan, it restores the submitted
+operation's outcome and reads the current package before another review.
+A fresh review applies any remaining changes using the current revision.
+
+
 - `applied`: refresh canonical Delivery truth and show the durable receipt.
 - `routed`: open the authority named by `next_action`.
 - `partial_failure`: do not claim completion; follow the reconciliation action.

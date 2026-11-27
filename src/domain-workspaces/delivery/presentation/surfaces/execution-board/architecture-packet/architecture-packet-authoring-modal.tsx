@@ -43,6 +43,7 @@ import { technicalPlanDefaultSection, technicalPlanPrepareDraft, technicalPlanRe
 import type { PlanChangeConfirmation } from "./architecture-plan-field.tsx";
 import { TechnicalPlanAdvisor } from "./technical-plan-advisor.tsx";
 import { TechnicalPlanReview } from "./technical-plan-review.tsx";
+import { TechnicalPlanSessionImpact } from "./technical-plan-session-impact.tsx";
 import { TechnicalPlanScope } from "./technical-plan-overview.tsx";
 import { TechnicalPlanActionPanel } from "./technical-plan-action-panel.tsx";
 import { technicalPlanRequirement, type TechnicalPlanRequirement } from "../../../../work-model/execution/technical-plan-requirement.ts";
@@ -234,6 +235,12 @@ function ArchitecturePacketEditorModal({
     try {
       await action();
     } catch (caught) {
+      if (caught instanceof ArchitecturePacketLiveRuntimeError &&
+        ["delivery_art_plan_impact_changed", "delivery_art_snapshot_stale"].includes(caught.code ?? "")) {
+        setValidated(null);
+        setApproved(null);
+        setConfirmed(false);
+      }
       setValidationIssues(caught instanceof ArchitecturePacketLiveRuntimeError ? caught.issues : []);
       setError(
         caught instanceof Error ? caught.message : "Architecture Packet request failed.",
@@ -272,8 +279,8 @@ function ArchitecturePacketEditorModal({
       architecturePacketInputFromEditor(draft, "draft"),
     );
     const result = snapshot.result;
-    if (!result || result.workflow_id !== "delivery-art-architecture-packet-draft") {
-      throw new Error("OOS did not return a validated Architecture Packet draft.");
+    if (!result || result.workflow_id !== "delivery-art-architecture-packet-draft" || !result.session_impact) {
+      throw new Error("Plan validation did not return a work-session impact check.");
     }
     if(result.architecture_packet.delivery_id!==editor.deliveryId || [...result.architecture_packet.covered_work_item_ids].sort().join()!==editor.coveredWorkItemIds.map(id=>id.trim()).filter(Boolean).sort().join()) throw Error("The validated plan did not match the selected package and covered work.");
     setValidated(result);
@@ -288,8 +295,8 @@ function ArchitecturePacketEditorModal({
       architecturePacketInputFromEditor(editor, "architecture-ready"),
     );
     const result = snapshot.result;
-    if (!result || result.workflow_id !== "delivery-art-architecture-packet-draft") {
-      throw new Error("OOS did not return an operator-approved Architecture Packet.");
+    if (!result || result.workflow_id !== "delivery-art-architecture-packet-draft" || !result.session_impact) {
+      throw new Error("Plan approval did not return a work-session impact check.");
     }
     if (result.architecture_packet.decision.status !== "architecture-ready") {
       throw new Error("OOS did not preserve the architecture-ready decision.");
@@ -297,15 +304,20 @@ function ArchitecturePacketEditorModal({
     if(result.source_snapshot.art_digest!==validated.source_snapshot.art_digest || JSON.stringify(result.architecture_packet.architecture)!==JSON.stringify(validated.architecture_packet.architecture) || JSON.stringify(result.architecture_packet.conformance_plan)!==JSON.stringify(validated.architecture_packet.conformance_plan) || JSON.stringify(result.architecture_packet.source_snapshot.repo_revisions)!==JSON.stringify(validated.architecture_packet.source_snapshot.repo_revisions) || JSON.stringify(result.architecture_packet.covered_work_item_ids)!==JSON.stringify(validated.architecture_packet.covered_work_item_ids)) {
       setValidated(null);setConfirmed(false);throw Error("Source facts changed during approval. Validate and review the current plan again; nothing was recorded.");
     }
+    if (result.session_impact.revision !== validated.session_impact?.revision) {
+      setValidated({ ...validated, session_impact: result.session_impact });
+      setConfirmed(false);
+      throw new Error("Work-session impact changed during approval. Review the updated impact before approving.");
+    }
     setApproved(result);
     setPersisted(null);
   }
 
   async function persistCandidate() {
     if (readOnly) throw Error("History cannot record a plan.");
-    if (!approved) throw new Error("Approve the exact candidate before persistence.");
+    if (!approved?.session_impact) throw new Error("Approve the exact plan and work-session impact before recording.");
     const persistedDraft = JSON.stringify(editor);
-    const snapshot = await runtime.persist(approved.architecture_packet);
+    const snapshot = await runtime.persist(approved.architecture_packet, approved.session_impact.revision);
     const result = snapshot.result;
     if (!result || result.workflow_id !== "delivery-art-architecture-packet-persist") {
       throw new Error("OOS did not return durable Architecture Packet custody.");
@@ -318,11 +330,14 @@ function ArchitecturePacketEditorModal({
   }
 
   const recordedPlan = editing ? null : current;
+  const sessionImpact = persisted ? persisted.session_impact : approved?.session_impact ?? validated?.session_impact;
   const displayed = persisted?.artifact ?? approved?.architecture_packet ?? validated?.architecture_packet ?? recordedPlan?.artifact ?? null;
   const viewEditor = displayed ? architecturePacketEditorFromArtifact(displayed) : editor;
   const sourceLabel = persisted || recordedPlan?.contract_posture === "current" ? "Recorded approved plan" :
-    recordedPlan ? "Historical plan" : approved ? "Approved · recording pending" : validated ? "Validated draft" : "Draft · awaiting validation";
+    recordedPlan ? "Historical plan" : approved ? "Approved · recording pending" : validated ? "Validated draft" :
+    validationIssues.length ? "Draft · changes needed" : "Draft · awaiting validation";
   const stateLabel = readOnly ? "Read-only" : displayed ? sourceLabel : checking ? "Reading recorded plan…" :
+    validationIssues.length ? "Draft · changes needed" :
     editing ? "Draft in progress" : missing ? "No approved plan recorded" : !live ? "Disconnected preview" : "Plan status unavailable";
   const requirement = suppliedRequirement ?? technicalPlanRequirement({ deliveryId: editor.deliveryId, available: live });
   const workTitle = defaultWorkItemId ? titles[`work-item-${defaultWorkItemId}`] ?? `Work item #${defaultWorkItemId}` : undefined;
@@ -389,6 +404,7 @@ function ArchitecturePacketEditorModal({
     step === "scope" ? (inspectPlan ? "Review the saved scope" : needsScope ? "Choose work to include" : "Review the plan’s scope") :
     step === "plan" ? (inspectPlan ? "Review the saved plan" : "Review your plan") : hasRecordedPlan ? recordedPlanTitle :
     approved ? "Record the approved plan" : validated ? "Approve the reviewed plan" :
+    validationIssues.length ? "Review the changes needed" :
     checkToResolve ? "Resolve the remaining checks" : "Validate this draft";
   const actionDescription = historyWithoutPlan ? (checking ? "Reading the plan saved for this package." : "History displays plans recorded for this package.") :
     step === "scope" ? (inspectPlan ? "See the work included in the recorded plan." : "Review the included work and explain the approach before continuing.") :
@@ -397,7 +413,8 @@ function ArchitecturePacketEditorModal({
       defaultWorkItemId ? "Return to the work-start check for the selected item." : "Open the package’s Work Board to see its work items.") :
     approved ? "Record this approved version for work start." :
     validated ? "Review the checked plan and approve it for the covered work." :
-    checkToResolve ? checkLabelFor(checkToResolve) : "Check the draft against the current work and source evidence.";
+    validationIssues.length ? "Review the findings below the plan summary, then check the updated draft." :
+    checkToResolve ? checkLabelFor(checkToResolve) : "Check that the plan matches the current work and repository revisions.";
   const disabledReason = step !== "review" ? null :
     validated && !approved && !confirmed ? "Confirm the approval decision below the reviewed plan." :
     !live && !recordedPlan && !persisted ? "Validation and recording need a connected workspace." : null;
@@ -413,7 +430,12 @@ function ArchitecturePacketEditorModal({
       onClick={() => void run(persistCandidate)}>Record Approved Plan</TerasActionButton>;
     if (validated) return <TerasActionButton disabled={submitting || !live || !confirmed || approvalIssues.length > 0}
       onClick={() => void run(approveCandidate)}>Approve Plan</TerasActionButton>;
-    if (checkToResolve) return <TerasActionButton disabled={submitting} onClick={() => openCheck(checkToResolve)}>Review next issue</TerasActionButton>;
+    const nextIssue = validationIssues.find(issue => validationFinding(issue, titles, architecture).section) ?? checkToResolve;
+    if (nextIssue) return <TerasActionButton disabled={submitting} onClick={() => {
+      const finding = validationFinding(nextIssue, titles, architecture);
+      if (finding.section) { setSection(finding.section); openChanges(); }
+      else openCheck(nextIssue);
+    }}>Review next issue</TerasActionButton>;
     return <TerasActionButton disabled={submitting || !live} onClick={() => void run(validateDraft)}>Validate Plan</TerasActionButton>;
   }
 
@@ -472,7 +494,9 @@ function ArchitecturePacketEditorModal({
                   disabled={submitting} onClick={() => setPlanView("design")}>Saved architecture</TerasActionButton>
               </TerasPlanning.ViewActions>
               {planView === "edit" && canOpenPlanForm ? <ArchitecturePlanEditor editor={inspectPlan ? viewEditor : editor}
-                model={model} disabled={!editable} navigationDisabled={submitting} onEdit={update => { if (editable) edit(update); }}
+                model={model} disabled={!editable} navigationDisabled={submitting}
+                approvedRuntimeResponsibilities={current?.contract_posture === "current" ? current.artifact.architecture.runtime_boundaries : undefined}
+                onEdit={update => { if (editable) edit(update); }}
                 selectedSection={section} onSectionChange={setSection} confirmChange={confirmChange} /> : null}
               {planView === "design" ? <ArchitectureSavedContext deliveryId={editor.deliveryId} live={live} context={saved} /> : null}
               {planView === "sequence" ? architectureError ? <TerasEmptyState>
@@ -494,9 +518,29 @@ function ArchitecturePacketEditorModal({
                     onClick={() => openCheck(issue)}>Open section</TerasActionButton>} />)}</TerasFieldStack>
               </TerasTechnicalDetails> : null}
               <TechnicalPlanReview editor={viewEditor} titles={titles} sourceLabel={sourceLabel}
-                approval={validated && !readOnly && !approved ? <TerasChoiceGroup frame="tray" ariaLabel="Technical plan approval" label="Operator approval"
+                approval={<>
+                  {validationIssues.length ? <TerasPanel frame="padded" treatment="neutral" spacing="normal">
+                    <TerasPanelHeader kicker="Plan checks" title="Changes needed before approval"
+                      description="Open the relevant section to check each finding." />
+                    <TerasFieldStack spacing="compact">
+                      {validationIssues.map((issue, index) => {
+                        const finding = validationFinding(issue, titles, architecture);
+                        return <TerasSignalItem key={index} label={finding.section ? technicalPlanSection(finding.section)[1] : "Plan check"}
+                          title={finding.summary} tone="warn" textOverflow="wrap"
+                          actions={finding.section ? <TerasActionButton emphasis="secondary" size="table-compact" disabled={submitting}
+                            onClick={() => { setSection(finding.section!); openChanges(); }}>Open section</TerasActionButton> : undefined} />;
+                      })}
+                    </TerasFieldStack>
+                    <TerasTechnicalDetails summary={`Plan checks requiring attention · ${validationIssues.length}`}
+                      items={[...(error ? [{ label: "Validation response", value: error }] : []),
+                        ...validationIssues.map((value, index) => ({ label: `Check ${index + 1}`, value }))]} />
+                  </TerasPanel> : null}
+                  {sessionImpact ? <TechnicalPlanSessionImpact impact={sessionImpact} titles={titles} recorded={Boolean(persisted)}
+                    onOpenSession={persisted ? onOpenWorkBoard : undefined} /> : null}
+                  {validated && !readOnly && !approved ? <TerasChoiceGroup frame="tray" ariaLabel="Technical plan approval" label="Operator approval"
                   selectedId={confirmed ? "approve" : "review"} onSelect={value => setConfirmed(value === "approve")} disabled={submitting}
-                  options={[{ id: "review", label: "Review required", tone: "warn" }, { id: "approve", label: "I approve this technical plan for the covered work", tone: "ok" }]} /> : null} />
+                  options={[{ id: "review", label: "Review required", tone: "warn" }, { id: "approve", label: "I approve this technical plan for the covered work", tone: "ok" }]} /> : null}
+                </>} />
               {displayed ? <TerasTechnicalDetails summary="Plan identity and source evidence" items={candidateMetadata(displayed)} /> : null}
             </TerasFieldStack> : null}
           </TerasPlanning.StepRegion>
@@ -505,7 +549,7 @@ function ArchitecturePacketEditorModal({
           <TerasPanelStack fill="last" minimumFillHeight="medium" scroll>
             <TechnicalPlanActionPanel kicker={readOnly && (step === "review" || historyWithoutPlan) ? "Plan status" : undefined}
               title={actionTitle} description={actionDescription} disabledReason={disabledReason}
-              error={error ?? readError} validationIssues={validationIssues}
+              error={validationIssues.length ? "This plan needs correction." : error ?? readError}
               recorded={Boolean(persisted || recordedPlan?.contract_posture === "current")} evidence={recordingEvidence}>
               {primaryAction()}
               {canRevise ? <TerasActionButton disabled={submitting} emphasis="secondary" onClick={reviseCurrent}>Revise Current Plan</TerasActionButton> : null}
@@ -532,6 +576,37 @@ function ArchitecturePacketEditorModal({
       description="Stay until the save is confirmed to resume this version from another session." leaveLabel="Leave Now"
       onKeepEditing={()=>{exitAction.current=onClose;setCloseGuardOpen(false);}} onLeave={()=>exitAction.current()}/>
   </>;
+}
+
+function validationFinding(issue: string, titles: Record<string, string>, architecture: unknown) {
+  if (/\bacyclic\b/.test(issue)) {
+    if (/\bparent links\b/.test(issue)) return { section: null, summary: "Some work items are set as parents of one another. Check the package tree for a parent loop." };
+    if (/\bsource landing graph\b/.test(issue)) return { section: "architecture:landing_units",
+      summary: "Some change groups require each other to merge first. Review their merge order." };
+    return { section: "architecture:work_item_execution_plan",
+      summary: "Some work or approvals depend on each other. Review the order to see what can start first." };
+  }
+  if (issue === "architecture human gate ids must be unique") return { section: "architecture:required_human_gates",
+    summary: "Two approvals use the same identifier. Review the list for a duplicate approval." };
+  const approval = /^architecture human gate (\S+) (.*)$/.exec(issue);
+  if (approval) {
+    const [, id, reason] = approval;
+    const details = architecture as { required_human_gates?: Array<{ gate_id?: string; authority_work_item_id?: string }> } | null;
+    const record = Array.isArray(details?.required_human_gates) ? details.required_human_gates.find(gate => gate?.gate_id === id) : null;
+    const heading = record?.authority_work_item_id ? titles[record.authority_work_item_id] ??
+      record.authority_work_item_id.replace(/^work-item-([1-9]\d*)$/, "Work item #$1") : "An approval";
+    const work = [...new Set([...reason.matchAll(/\bwork-item-([1-9]\d*)\b/g)].map(([ref, number]) => titles[ref] ?? `Work item #${number}`))];
+    const summary = reason.includes("evidence prerequisites are absent")
+      ? `${heading} is missing a dependency for its required evidence${work.length ? ` (${work.join(", ")})` : ""}.`
+      : reason.includes("authority owner does not match") ? `${heading} must use the repository assigned to its approval work item.`
+      : reason.includes("references unknown") ? `${heading} points to work or a change group outside this plan.`
+      : reason.includes("blocks source merge") ? `${heading} applies a merge approval to a group without file changes.`
+      : `Review which work item records the approval for ${heading}.`;
+    return { section: "architecture:required_human_gates", summary };
+  }
+  const section = technicalPlanCheckSection(issue);
+  return { section, summary: section ? `Review the entries in ${technicalPlanSection(section)[1]}.` :
+    "The plan did not pass this check. Open Plan checks requiring attention for the recorded finding." };
 }
 
 function candidateMetadata(artifact: ArchitecturePacketArtifact) {

@@ -410,14 +410,39 @@ function sessionSnapshot() {
   }};
 }
 
-test("source decision preserves edits on refresh and guards changed source and close", async ({ page }) => {
+test("source decision preserves edits on refresh and guards changed source and close", async ({ page }, info) => {
   const h=await deliveryHarness(page,{live:true}),snapshot=sessionSnapshot();
   await page.route("**/api/delivery/execution/714/work-session",r=>r.fulfill({json:snapshot}));
   await openWorkItem(page, h, "Check Work Requirements");
-  const modal=page.getByRole("dialog",{name:"Governed Work Session",exact:true});
+  const modal=page.getByRole("dialog",{name:"Work Session",exact:true});
+  await expect(modal.getByRole("heading",{name:"Work to review together",exact:true})).toBeVisible();
+  await expect(modal.getByRole("button",{name:"How will the changes merge?",exact:true})).toHaveText(/Merge the feature’s work together/);
+  await expect(modal.getByText("Next action",{exact:true})).toBeVisible();
+  await expect(modal.getByRole("heading",{name:"Approve access to start",exact:true})).toBeVisible();
+  const permission = modal.getByRole("region",{name:"Repository access",exact:true});
+  await expect(permission.getByRole("heading",{name:"Repository access",exact:true})).toBeVisible();
+  await expect(permission).toContainText("which repository and branch the Console can use");
+  const nextAction = modal.getByRole("heading",{name:"Approve access to start",exact:true});
+  for (const [width,height] of [[1700,1000],[1280,720]]) {
+    await page.setViewportSize({width,height});
+    const shell = modal.locator('[data-teras-modal="delivery-execution-work-session"]');
+    await expect(shell).toHaveAttribute("data-width","large");
+    const frame = await shell.boundingBox();
+    expect(frame.width).toBeGreaterThan(1180);
+    expect(frame.width).toBeLessThanOrEqual(1480);
+    expect(frame.x + frame.width / 2).toBeCloseTo(width / 2, 0);
+    expect(frame.y).toBeGreaterThanOrEqual(7);
+    expect(frame.y + frame.height).toBeLessThan(height);
+    expect(await permission.evaluate((el, title) => {
+      const rail = el.closest("[data-teras-zone]");
+      return [...rail.querySelectorAll("h2,h3,h4,h5")].some(heading => heading.textContent === title) &&
+        el.getBoundingClientRect().top < rail.getBoundingClientRect().bottom;
+    }, await nextAction.textContent())).toBe(true);
+  }
+  await page.screenshot({path:info.outputPath("work-session-setup.png")});
   const field=modal.getByRole("textbox",{name:"Branch",exact:true});
   await expect(field).toHaveValue("inspection/work");await field.fill("inspection/unsaved");
-  const refresh=modal.getByRole("button",{name:"Read Current Session",exact:true});
+  const refresh=modal.getByRole("button",{name:"Refresh session",exact:true});
   await refresh.click();await expect(refresh).toBeEnabled();await expect(field).toHaveValue("inspection/unsaved");
   snapshot.projection.decision_draft.landing_unit.branch="inspection/new-owner";
   await refresh.click();await expect(modal.getByRole("button",{name:"Reload current decision",exact:true})).toBeVisible();
@@ -461,8 +486,8 @@ test("closeout Result remains pending and all impact branches retain nonoverlapp
   for(const name of ["Demo summary","Demo outcome","Demo evidence","Inspection summary","Inspection actions"])await support.getByRole("textbox",{name,exact:true}).fill("Synthetic layout inspection only");
   await support.getByRole("button",{name:"Done",exact:true}).click();
   await modal.getByRole("button",{name:"Review Closeout",exact:true}).click();
-  await modal.getByRole("radio",{name:"Workspace entrant",exact:true}).click();await modal.getByRole("button",{name:"Configure",exact:true}).click();
-  const impact=page.getByRole("dialog",{name:"Workspace Entrant Impact",exact:true});
+  await modal.getByRole("radio",{name:"New workspace registration",exact:true}).click();await modal.getByRole("button",{name:"Configure",exact:true}).click();
+  const impact=page.getByRole("dialog",{name:"New workspace registration",exact:true});
   for(const [width,height] of [[1700,1000],[1280,720]]) {
     await page.setViewportSize({width,height});
     for(const kind of ["Product","Shared repository (specialist)","Shared component"]) {
@@ -549,9 +574,32 @@ test("Execution retains all views with readable horizontally navigable lanes",as
   await h.workspace.getByRole("radio",{name:"Control Board",exact:true}).click();
   await h.workspace.getByRole("button",{name:/^Epic 698 Governed AI Control Plane/}).click();
   await h.workspace.getByRole("button",{name:"Open Work Board",exact:true}).click();
-  await h.workspace.getByRole("radio",{name:"ART Tree",exact:true}).click();
-  await expect(h.workspace.getByRole("radio",{name:"ART Tree",exact:true})).toBeChecked();
+  await h.workspace.getByRole("radio",{name:"Work Tree",exact:true}).click();
+  await expect(h.workspace.getByRole("radio",{name:"Work Tree",exact:true})).toBeChecked();
   await expect(h.workspace.getByRole("heading",{name:"Governed AI Control Plane",exact:true}).first()).toBeVisible();
+  const hierarchy = h.workspace.getByRole("region", { name: "Work hierarchy", exact: true });
+  const story = hierarchy.getByRole("button", { name: /Validate mutation draft before apply.*#714/i });
+  const otherStory = hierarchy.getByRole("button", { name: /Render apply receipt in console.*#715/i });
+  const description = hierarchy.getByRole("region", { name: "Description", exact: true });
+  await expect(story).toContainText(/ready/i);
+  await expect(description).toHaveCount(0);
+  await story.press("Enter");
+  await expect(story).toHaveAttribute("aria-expanded", "true");
+  await expect(description.getByRole("paragraph")).toHaveText("Selected execution target for the ready package.");
+  await expect(hierarchy.getByRole("textbox")).toHaveCount(0);
+  await otherStory.click();
+  await expect(story).toHaveAttribute("aria-expanded", "false");
+  await expect(otherStory).toHaveAttribute("aria-expanded", "true");
+  await expect(description).toHaveCount(1);
+  await expect(description.getByRole("paragraph")).toHaveText("Open execution target waiting behind the selected story.");
+  await otherStory.click();
+  await expect(description).toHaveCount(0);
+  await hierarchy.getByRole("button", { name: "Collapse All", exact: true }).click();
+  await expect(story).toHaveCount(0);
+  await hierarchy.getByRole("button", { name: "Expand All", exact: true }).click();
+  await story.click();
+  await hierarchy.getByRole("button", { name: /^View on Work Board:/ }).click();
+  await expect(h.workspace.locator('[data-execution-work-item-details="node-698-story-1"]')).toBeVisible();
   expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
 });
 
@@ -560,6 +608,39 @@ function retainedTreeSnapshot(id) {
   return{mode:"live",status:"current",observedAt:new Date().toISOString(),error:null,projection:{schema_version:1,delivery_id:id,record_ref:`openproject://work_packages/${n}`,source_revision:"delivery-package:sha256:"+"a".repeat(64),projection_state:"current",projected_at:new Date().toISOString(),last_event_ref:null,
     package:{dependency_relations:[],execution_tree:{id:n,record_ref:`openproject://work_packages/${n}`,type:"Epic",subject:"Synthetic retained inspection tree",description:"Synthetic original tree for locked presentation checks only",status:"done",children:[{id:n*100+1,record_ref:`openproject://work_packages/${n*100+1}`,type:"Feature",subject:"Retained inspection feature",description:"Synthetic retained source",status:"done",children:[]}]}}}};
 }
+
+test("History Work Tree shows the original description in the locked inline field", async ({ page }) => {
+  const h = await deliveryHarness(page, { live: true });
+  const original = h.model.packages.find(item => item.legacy_epic_id === 698).delivery_package_id;
+  Object.assign(h.model, JSON.parse(JSON.stringify(h.model).replaceAll(JSON.stringify(original), '"delivery-698"')));
+  const archived = h.model.packages.find(item => item.legacy_epic_id === 698);
+  Object.assign(archived, { backend_status: "done", package_posture: "Done", workflow_phase: "audit_only" });
+  const snapshot = retainedTreeSnapshot("delivery-698");
+  const originalFeature = snapshot.projection.package.execution_tree.children[0];
+  originalFeature.description = "## Acceptance checks\n\nAll **planned checks** passed.\n\n- Verify archived inputs";
+  await page.route("**/api/delivery/execution/**/change-control", route => route.fulfill({ json: snapshot }));
+  await h.refresh();
+  await h.section("execution-board");
+  await h.workspace.getByRole("radio", { name: "History", exact: true }).click();
+  await h.workspace.getByRole("button", { name: /^Epic 698 Governed AI Control Plane/ }).click();
+  await h.workspace.getByRole("button", { name: "Open Work Board", exact: true }).click();
+  await h.workspace.getByRole("radio", { name: "Work Tree", exact: true }).click();
+  const hierarchy = h.workspace.getByRole("region", { name: "Work hierarchy", exact: true });
+  const feature = hierarchy.getByRole("button", { name: /Retained inspection feature.*#69801/i });
+  await expect(feature).toContainText(/done/i);
+  await feature.click();
+  const description = hierarchy.getByRole("region", { name: "Description", exact: true });
+  const heading = description.getByRole("heading", { name: "Acceptance checks", exact: true });
+  await expect(heading).toBeVisible();
+  await expect(heading).toHaveCSS("font-weight", "760");
+  await expect(description.getByRole("paragraph")).toHaveText("All planned checks passed.");
+  await expect(description.locator("strong")).toHaveText("planned checks");
+  await expect(description.getByRole("listitem")).toHaveText("Verify archived inputs");
+  await expect(hierarchy.getByRole("textbox")).toHaveCount(0);
+  await expect(hierarchy.getByRole("button", { name: /^Add child under/ })).toHaveCount(0);
+  await expect(h.workspace.getByRole("button", { name: "Edit Work Structure", exact: true })).toHaveCount(0);
+  expect(h.writes).toEqual([]);
+});
 
 test("History uses the native Work Design flow with navigation enabled and mutations locked",async({page})=>{
   const h=await deliveryHarness(page,{live:true});
@@ -727,8 +808,12 @@ test("Execution tree-change uses saved dates and keeps review controls reachable
   await h.section("execution-board");
   await h.workspace.getByRole("button").filter({ hasText: "Broker Draft Validation" }).first().click();
   await h.workspace.getByRole("button", { name: "Open Work Board", exact: true }).click();
-  await h.workspace.getByRole("radio", { name: "ART Tree", exact: true }).click();
+  await h.workspace.getByRole("radio", { name: "Work Tree", exact: true }).click();
   await h.workspace.getByRole("button", { name: "Edit Work Structure", exact: true }).click();
+  await expect(h.workspace.getByRole("heading", { name: "Editing tools", exact: true })).toBeVisible();
+  await expect(h.workspace.getByText("Selected Node", { exact: true })).toHaveCount(0);
+  await expect(h.workspace.getByText("Source WP", { exact: true })).toHaveCount(0);
+  await expect(h.workspace.getByText("Depends on", { exact: true })).toBeVisible();
   await h.workspace.getByRole("button", { name: "Add child under Epic - Synthetic retained inspection tree", exact: true }).click();
   await expect(h.workspace.getByRole("menuitem", { name: "Add Feature", exact: true })).toHaveCount(0);
   await h.workspace.getByRole("menuitem", { name: "Add Milestone", exact: true }).click();

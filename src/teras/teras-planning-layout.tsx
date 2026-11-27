@@ -136,6 +136,7 @@ export const TerasPlanning = {
   EntryPanel: layout(TerasPanel, styles.planEntry),
   EntryDetails: element("section", styles.planEntry),
   FormDialog: layout(TerasDialog, styles.technicalPlanFormDialog),
+  ReviewDialog: layout(TerasDialog, styles.technicalPlanReviewDialog),
   ReaderEntry: element("div", styles.planReaderEntry),
   ReaderList,
   RecordDetails: element("div", styles.sequenceRecordDetails),

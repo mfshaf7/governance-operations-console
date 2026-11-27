@@ -58,11 +58,11 @@ test("planning inspection works with an empty execution register and clears abse
 });
 
 test("unknown, ambiguous and disconnected inspection cannot select a guessed initiative", () => {
-  assert.throws(() => executionInspectionPackage(999, inventory()), /not uniquely present/);
+  assert.throws(() => executionInspectionPackage(999, inventory()), /could not be matched to one package/);
   const duplicate = inventory();
   duplicate.art_tree.roots[1].children = [duplicate.art_tree.roots[0].children[0]];
-  assert.throws(() => executionInspectionPackage(909, duplicate), /not uniquely present/);
-  assert.throws(() => executionInspectionPackage(908, { ...inventory(), source_truth: "mock" }), /requires.*OOS/);
+  assert.throws(() => executionInspectionPackage(909, duplicate), /could not be matched to one package/);
+  assert.throws(() => executionInspectionPackage(908, { ...inventory(), source_truth: "mock" }), /Reload the current Delivery work/);
 });
 
 test("canonical inventory status is scoped read truth, not future wiring or blanket write readiness", () => {
@@ -124,8 +124,8 @@ test("actual UI entry, native editor refresh and evidence handoff are composed t
   assert.match(board, /canonicalSnapshot.projection.package.execution_tree/);
   assert.match(board, /await deliveryChangeRuntime.apply\(/);
   assert.match(board, /Inspect/);
-  assert.match(board, /title="Find ART Tree"/);
-  assert.match(board, /label="ART item number"/);
+  assert.match(board, /title="Find Work Tree"/);
+  assert.match(board, /label="Work item number"/);
   assert.match(board, /setFindStructureOpen\(false\)/);
   const router = read("presentation/workflows/refinement/session/refinement-step-router.tsx");
   assert.match(router, /sourceWorkDesignPackage \?\? deliveryPackage/);
