@@ -13,6 +13,7 @@ export class RepositoryBootstrapOosError extends Error {
   readonly retryAt: string | null;
   constructor(code: string, status = 502, retryAt: string | null = null) {
     super(code === "repository_owner_bootstrap_provider_throttled" ? "GitHub temporarily limited repository reads."
+      : code === "github_source_connection_required" ? "Check that the GitHub Source App has access to this repository, then retry the same setup."
       : code === "record_authority_unavailable"
         ? "Platform canonical records are unavailable or stale. Restore the approved record refresh, then retry this exact setup; no source access is granted."
         : "The owner has not confirmed this repository setup. Refresh its original retained request; no fallback source or credential is substituted.");
@@ -53,18 +54,25 @@ export async function prepareRepositoryBootstrap(value: unknown, options: Option
       ["checkout_created", "canonical_mutation", "runtime_activation"].some(key => result[key] !== false) || bootstrapCanonicalDigest(body) !== bootstrapDigest(claimed)) throw new Error("Owner preparation does not bind its exact server-derived intent.");
   const authority = object(result.owner_authority);
   knownFields(authority, ["inventory_entry_ref", "verification_setup_eligible", "canonical_authority", "record_ref", "policy_ref", "owner_repo", "intake_entry_ref", "provider_repository", "classification", "inventory_posture", "custody_receipt_digest", "source_bootstrap_eligible", "ordinary_source_eligible", "model_writes_allowed", "canonical_mutation", "runtime_activation"]);
+  if (result.credential_issued === true) {
+    const access = closed(result.read_authorization, ["scope", "credential_revoked"]);
+    if (access.scope !== "trusted-owner-controls" || access.credential_revoked !== true) {
+      throw new Error("Owner preparation requires a revoked read credential for the trusted controls.");
+    }
+  } else if (result.credential_issued !== false || result.read_authorization !== undefined) {
+    throw new Error("Owner preparation reports inconsistent read-credential evidence.");
+  }
   if (authority.canonical_authority !== undefined) {
     const native = closed(authority.canonical_authority, ["kind", "instance_id", "record_id"]);
     const reference = closed(authority.record_ref, ["version", "digest"]), policy = closed(authority.policy_ref, ["repo", "revision", "contract_digest"]);
-    const access = closed(result.read_authorization, ["scope", "credential_revoked"]);
     const entry = object(authority.inventory_entry_ref ?? authority.intake_entry_ref);
     if (native.kind !== "internal-instance-record" || typeof native.instance_id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(native.instance_id) ||
         native.record_id !== `repo:${input.owner_repo}` || !Number.isSafeInteger(reference.version) || Number(reference.version) < 1 ||
         reference.version !== entry.version || reference.digest !== entry.digest || policy.repo !== "workspace-governance" || !/^[0-9a-f]{40}$/.test(String(policy.revision)) ||
-        access.scope !== "trusted-owner-controls" || access.credential_revoked !== true || result.credential_issued !== true) throw new Error("Private inspection must bind the current internal owner and its revoked read credential.");
+        result.credential_issued !== true) throw new Error("Private inspection must bind the current internal owner and its revoked read credential.");
     bootstrapDigest(reference.digest); bootstrapDigest(policy.contract_digest);
-  } else if (result.credential_issued !== false || result.read_authorization !== undefined || authority.record_ref !== undefined || authority.policy_ref !== undefined) {
-    throw new Error("Legacy preparation cannot claim a private source credential.");
+  } else if (authority.record_ref !== undefined || authority.policy_ref !== undefined) {
+    throw new Error("A Git-backed owner cannot claim an internal record reference.");
   }
   if (authority.intake_entry_ref) knownFields(authority.intake_entry_ref, ["id", "version", "digest"]);
   if (authority.provider_repository) knownFields(authority.provider_repository, ["provider", "provider_repository_id", "full_name"]);
@@ -197,6 +205,7 @@ async function knownOwnerFailure(response: Response): Promise<{code:string;retry
       return typeof retryAt === "string" && Number.isFinite(Date.parse(retryAt)) &&
         new Date(retryAt).toISOString() === retryAt ? { code, retryAt } : { code };
     }
+    if (code === "github_source_connection_required" && response.status === 403) return { code };
     return code === "record_authority_unavailable" || code === "repository_owner_bootstrap_query_invalid" ? { code } : null;
   } catch { return null; }
   finally { reader.releaseLock(); }
