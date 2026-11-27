@@ -85,7 +85,7 @@ for (const kind of ["prototype", "delivery", "repository-bootstrap"]) {
     const newer = scope(kind, "newer", "prepared", "2030-10-20T11:00:00.000Z");
     let values = [newer, old], posted;
     t.mock.method(globalThis, "fetch", async (path, init) => {
-      assert.equal(path, base);
+      assert.equal(path, init?.method !== "POST" && kind === "delivery" ? `${base}?work_item_ref=work-item-42` : base);
       if (init?.method === "POST") {
         posted = JSON.parse(init.body);
         const next = scope(kind, "successor", "prepared", "2030-10-20T12:00:00.000Z");
@@ -135,22 +135,23 @@ test("actual panel renders loading/offline controls and retained Prototype/Boots
   const { SourceAuthorizationPanel } = compile(panelPath, { "@/teras": teras,
     "../live-runtime/use-source-authorization.ts": { useSourceAuthorization: () => runtime } });
   const render = kind => renderToStaticMarkup(React.createElement(SourceAuthorizationPanel, { subject: selector(kind), sourceStartDigest: sourceStart, onIntentChange() {} }));
-  assert.match(render("prototype"), /Loading/); assert.doesNotMatch(render("prototype"), /Prepare source access/);
+  assert.match(render("prototype"), /Loading/); assert.doesNotMatch(render("prototype"), /Show access request/);
   runtime = { ...runtime, pending: false, error: "Unavailable" };
-  assert.match(render("prototype"), /Unavailable/); assert.doesNotMatch(render("prototype"), /Prepare source access/);
+  assert.match(render("prototype"), /Unavailable/); assert.doesNotMatch(render("prototype"), /Show access request/);
   runtime = { ...runtime, error: null, ready: true };
-  assert.match(render("prototype"), /Prepare source access/);
+  assert.match(render("prototype"), /Show access request/);
   for (const kind of ["prototype", "repository-bootstrap"]) {
     const old = scope(kind, "old", "revoked", "2030-10-20T10:00:00.000Z");
     runtime = { ...runtime, preparation: old, candidates: [old] };
     assert.match(render(kind), /Access closed/);
-    assert.match(render(kind), /Prepare replacement access/);
+    assert.match(render(kind), /Show replacement access request/);
   }
 });
 
 test("approved source continuation uses the selected intent and keeps revocation independent", async () => {
   const buttons = [];
   let runtime = { ready: true, pending: false, error: null,
+    get approvedIntent() { return this.ready && this.preparation.authorization.state === "approved" ? this.preparation.intent_id : null; },
     preparation: scope("delivery", "old", "approved", "2030-10-20T10:00:00.000Z"),
     operation: null, candidates: [], refresh() {}, command() {}, prepare() {}, select() {} };
   const container = ({ children }) => React.createElement("section", null, children);
@@ -167,23 +168,23 @@ test("approved source continuation uses the selected intent and keeps revocation
       onContinueApprovedScope: callback, ...extra,
     }));
   };
-  const continuation = () => buttons.find(button => button.children === "Continue Approved Source Access");
-  assert.match(render(), /Continue Approved Source Access/);
+  const continuation = () => buttons.find(button => button.children === "Continue with approved access");
+  assert.match(render(), /Continue with approved access/);
   await continuation().onClick();
   runtime.preparation = scope("delivery", "newer", "approved", "2030-10-20T11:00:00.000Z");
   render(); await continuation().onClick();
   assert.deepEqual(calls, ["source-intent:old", "source-intent:newer"]);
 
   render({ continuePending: true }); assert.equal(continuation().disabled, true);
-  assert.equal(buttons.find(button => button.children === "Stop source access").disabled, false);
+  assert.equal(buttons.find(button => button.children === "End repository access").disabled, false);
   runtime.pending = true; render(); assert.equal(continuation().disabled, true);
   runtime.pending = false;
-  assert.doesNotMatch(render({ onContinueApprovedScope: undefined }), /Continue Approved Source Access/);
-  runtime.ready = false; assert.doesNotMatch(render(), /Continue Approved Source Access/);
+  assert.doesNotMatch(render({ onContinueApprovedScope: undefined }), /Continue with approved access/);
+  runtime.ready = false; assert.doesNotMatch(render(), /Continue with approved access/);
   runtime.ready = true;
   for (const state of ["prepared", "revoked", "revocation-requested", "expired"]) {
     runtime.preparation = { ...runtime.preparation, authorization: { state, credential_receipt: null } };
-    assert.doesNotMatch(render(), /Continue Approved Source Access/, state);
+    assert.doesNotMatch(render(), /Continue with approved access/, state);
   }
 });
 

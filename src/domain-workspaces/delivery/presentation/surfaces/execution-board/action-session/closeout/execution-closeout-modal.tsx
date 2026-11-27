@@ -134,7 +134,7 @@ export function ExecutionCloseoutModal({
         draft.acceptanceNote.trim(),
       );
       if (!nextResult) {
-        throw new Error("Canonical Delivery closeout authority is unavailable.");
+        throw new Error("Delivery could not confirm the package closure.");
       }
       setActiveStep("result");
     } catch (error) {
@@ -330,7 +330,7 @@ export function ExecutionCloseoutModal({
         ) : null}
         {activeStep === "review" ? (
           <TerasWizardPanel
-            description="Confirm canonical readiness, evidence completeness, impact, and accountable acceptance before mutation."
+            description="Check the results, review what the work changes, then confirm package closure."
             kicker="Apply Review"
             title="Closeout Decision"
           >
@@ -339,7 +339,8 @@ export function ExecutionCloseoutModal({
               items={[
                 { label: "Delivery", value: `Epic ${packageSummary.legacy_epic_id}` },
                 { label: "Readiness", value: projection?.projection_state.replaceAll("_", " ") ?? "Unavailable" },
-                { label: "Impact", value: draft.impactKind.replaceAll("-", " ") },
+                { label: "Impact", value: draft.impactKind === "workspace-entrant" ? "New workspace registration" :
+                  draft.impactKind === "existing-product-change" ? "Existing product change" : "No registry change" },
                 { label: "Evidence records", value: projection ? String(projection.readiness.evidence_refs.length) : "Not loaded" },
                 { label: "Next Action", value: projection?.next_action.label ?? "Unavailable" },
               ]}
@@ -580,7 +581,7 @@ function ExecutionCloseoutSupport({
               </TerasActionButton>
             )
           }
-          description="Classify the closeout outcome without claiming downstream acceptance."
+          description="Choose what the completed work adds or changes in the workspace."
           fit="content"
           kicker="Outcome Impact"
           title={impactComplete ? "Impact Ready" : "Impact Incomplete"}
@@ -594,8 +595,8 @@ function ExecutionCloseoutSupport({
               onDraftChange({ ...draft, impactKind })
             }
             options={[
-              { id: "none", label: "No downstream impact", tone: "muted" },
-              { id: "workspace-entrant", label: "Workspace entrant", tone: "warn" },
+              { id: "none", label: "No registry change", tone: "muted" },
+              { id: "workspace-entrant", label: "New workspace registration", tone: "warn" },
               { id: "existing-product-change", label: "Existing product change", tone: "info" },
             ]}
             selectedId={draft.impactKind}
@@ -609,18 +610,20 @@ function ExecutionCloseoutSupport({
               result?.event ?? projection.outcome_history.at(-1) ?? null,
             ) ? (
               <TerasActionButton onClick={onOpenIntake}>
-                Classify Candidate
+                Review workspace registration
               </TerasActionButton>
             ) : undefined
           }
-          description="Use the exact authority and action returned with the durable outcome."
+          description={deliveryWorkspaceIntakeCandidate(result?.event ?? projection.outcome_history.at(-1) ?? null)
+            ? "Review the registration details and submit them through Workspace Registry."
+            : undefined}
           fit="content"
           kicker="Next Action"
           title={result?.next_action.label ?? projection.next_action.label}
           tone={closeoutResultTone(result?.status, projection.projection_state)}
           treatment="rail"
         >
-          <TerasMetadataList
+          <TerasTechnicalDetails
             items={[
               {
                 label: "Authority",
@@ -636,7 +639,7 @@ function ExecutionCloseoutSupport({
       ) : null}
       {error ? (
         <TerasWizardPanel
-          description="The reviewed draft is preserved for correction or retry."
+          description="Your draft is still available. Check the current result before trying again."
           fit="content"
           kicker="Apply Stopped"
           title="Closeout Not Applied"
@@ -657,7 +660,7 @@ function CloseoutHistory({
 }) {
   if (events.length === 0) {
     return (
-      <TerasEmptyState>No durable closeout outcome has been recorded yet.</TerasEmptyState>
+      <TerasEmptyState>No package closure has been recorded yet.</TerasEmptyState>
     );
   }
   return (

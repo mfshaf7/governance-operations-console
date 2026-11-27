@@ -47,6 +47,7 @@ export async function draftArchitecturePacketRoute(request: NextRequest) {
     return snapshot(
       await draftArchitecturePacket(
         assertArchitecturePacketDraftInput(body.input),
+        { includeSessionImpact: true },
       ),
       "live",
     );
@@ -59,6 +60,9 @@ export async function persistArchitecturePacketRoute(request: NextRequest) {
   try {
     requireLiveMode();
     const body = record(await request.json().catch(() => null));
+    if (typeof body.expected_impact_revision !== "string" || !/^sha256:[0-9a-f]{64}$/.test(body.expected_impact_revision)) {
+      throw new DeliveryOosError("Review the current work-session impact before recording the plan.", "delivery_art_plan_impact_invalid", 400);
+    }
     return snapshot(
       await persistArchitecturePacket(
         assertArchitecturePacketArtifact(body.artifact, {
@@ -66,6 +70,7 @@ export async function persistArchitecturePacketRoute(request: NextRequest) {
           decisionStatus: "architecture-ready",
           schemaVersion: 6,
         }),
+        { expectedImpactRevision: body.expected_impact_revision },
       ),
       "live",
     );

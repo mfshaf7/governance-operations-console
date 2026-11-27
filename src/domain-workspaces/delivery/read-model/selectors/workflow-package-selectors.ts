@@ -132,7 +132,7 @@ export const deliveryActionDefinitions: Record<
   },
   "view-art-tree": {
     action_type: "view-art-tree",
-    default_label: "View ART Tree",
+    default_label: "View Work Tree",
     description: "Inspect package hierarchy without mutating ART.",
     mutable: false,
     tone: "info",

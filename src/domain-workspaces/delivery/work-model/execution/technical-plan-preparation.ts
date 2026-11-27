@@ -25,9 +25,11 @@ export const technicalPlanEmptyAnswers: Readonly<Record<string, string | undefin
 export function technicalPlanVerificationCoverage(editor: TechnicalPlanDraft) {
   try {
     const cases = technicalPlanSectionValue(editor, "conformance_plan:cases");
+    const caseSchema = technicalPlanSectionBinding("conformance_plan:cases").schema.items ?? {};
     const coverage = new Map<string, Set<string>>();
     for (const entry of Array.isArray(cases) ? cases : []) {
-      if (!["positive", "negative"].includes(entry?.polarity) || !Array.isArray(entry.applies_to_work_item_ids)) continue;
+      if (!["positive", "negative"].includes(entry?.polarity) || !Array.isArray(entry.applies_to_work_item_ids) ||
+          technicalPlanMissingCaseFields(entry, caseSchema).length) continue;
       for (const id of entry.applies_to_work_item_ids) {
         const kinds = coverage.get(id) ?? new Set<string>();
         kinds.add(entry.polarity);
@@ -64,6 +66,15 @@ function needsInput(value: unknown, input: PlanSchema): boolean {
   if (schema.type === "number") return typeof value !== "number" || !Number.isFinite(value);
   return false;
 }
+export function technicalPlanMissingCaseFields(value: unknown, input: PlanSchema) {
+  const schema = resolvePlanSchema(input);
+  const row = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  return (schema.required ?? []).filter(key => {
+    const field = resolvePlanSchema(schema.properties?.[key] ?? {});
+    return field.enum ? !field.enum.includes(row[key]) : needsInput(row[key], field);
+  });
+}
+
 /** Local input guidance only. Owner validation and approval remain separate. */
 export function technicalPlanInputState(editor: TechnicalPlanDraft, section: string): "Empty" | "Draft" | "Needs attention" | "None applies" {
   try {

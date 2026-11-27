@@ -4,8 +4,10 @@ import { controlPlatformOperation, platformCanonicalDigest as digest, platformOw
 
 type Options = { config?: ConsoleOosOperatorConfiguration; fetchImpl?: typeof fetch };
 const base = "/v1/platform-operations/source-preparations";
-export async function listSourceAuthorizations(options: Options = {}) {
-  const value = await platformOwnerRequest(`${base}?limit=200`, { method: "GET" }, options);
+export async function listSourceAuthorizations(options: Options & { workItemRef?: string | null } = {}) {
+  const query = new URLSearchParams({ limit: "200" });
+  if (options.workItemRef) query.set("work_item_ref", options.workItemRef);
+  const value = await platformOwnerRequest(`${base}?${query}`, { method: "GET" }, options);
   if (!object(value) || value.workflow_id !== "source-credential-preparation-list" || !Array.isArray(value.preparations) || value.preparations.length > 200) throw new Error("Source authorization list is malformed.");
   return value.preparations.map(verifyPreparation);
 }

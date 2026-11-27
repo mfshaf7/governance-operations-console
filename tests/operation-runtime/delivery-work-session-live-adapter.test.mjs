@@ -319,22 +319,23 @@ test("Delivery work-session target entry normalizes exact ART references without
   assert.equal(parseExecutionWorkItemReference(" #1175 "), 1175);
   assert.equal(parseExecutionWorkItemReference("work-item-1175"), 1175);
   for (const invalid of ["", "#0", "item-1175", "1175 extra", "9007199254740992"]) {
-    assert.throws(() => parseExecutionWorkItemReference(invalid), /valid ART work item/i);
+    assert.throws(() => parseExecutionWorkItemReference(invalid), /Enter a work item number/i);
   }
 
   assert.deepEqual(directExecutionWorkSessionTarget(1175), {
     description:
-      "Authoritative OOS state determines whether this Delivery work item can start or continue.",
+      "Check what this work needs before you start or continue.",
     entry: "direct",
     sourceLabel: "Entry route",
-    sourceValue: "Direct ART target",
-    title: "Work Item 1175",
+    sourceValue: "Opened by work item number",
+    title: "Work item #1175",
     workItemId: 1175,
   });
   assert.deepEqual(
     packageExecutionWorkSessionTarget(
       {
         delivery_package_id: "package-1",
+        legacy_epic_id: 714,
         display_name: "Selected package",
         source_ref: "openproject://work_packages/714",
         summary: "Package-owned execution target.",
@@ -345,7 +346,7 @@ test("Delivery work-session target entry normalizes exact ART references without
       description: "Package-owned execution target.",
       entry: "package",
       sourceLabel: "Package",
-      sourceValue: "openproject://work_packages/714",
+      sourceValue: "Epic #714",
       title: "Selected package",
       workItemId: 714,
     },
@@ -387,7 +388,8 @@ test("case:delivery-execution-end-to-end-negative keeps browser authority bounde
   assert.match(actionSource, /project-review-evidence/);
   assert.match(actionSource, /cleanup-required/);
   assert.match(actionSource, /cleanup-retry-required/);
-  assert.match(actionSource, /Close Landing Unit/);
+  assert.equal(workSessionCommand("art-closeout-required"), "close");
+  assert.equal(workSessionCommandLabel("art-closeout-required"), "Complete the covered work");
   assert.match(modalSource, /projection\.closeout/);
 });
 
@@ -627,7 +629,7 @@ function jsonResponse(body, status = 200) {
 
 test("typed session actions cover retained partial closeout and reconstruction without executing owner command strings",()=>{
   assert.equal(workSessionCommand("landing-unit-closeout-retry-required"),"close");
-  assert.equal(workSessionCommandLabel("landing-unit-closeout-retry-required"),"Retry Landing Unit Closeout");
+  assert.equal(workSessionCommandLabel("landing-unit-closeout-retry-required"),"Retry completing the work");
   assert.equal(workSessionCommand("architecture-reconstruction-required"),"reconstruct");
   assert.equal(workSessionCommand("source-binding-reconstruction-required"),"reconstruct");
   assert.equal(workSessionCommand("architecture-compatible-refresh-required"),"continue");

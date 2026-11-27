@@ -33,7 +33,7 @@ export function ExecutionCloseoutEvidenceDialog({
       }
       closeLabel="Close supporting evidence"
       contentOverflow="auto"
-      description="Record the demonstration and inspection evidence required by the closeout contract."
+      description="Add links or notes that show what you demonstrated and reviewed."
       height="fill"
       kicker="Delivery Closeout"
       onClose={onClose}
@@ -107,7 +107,7 @@ export function ExecutionCloseoutImpactDialog({ draft, onClose, onDraftChange, o
       ? "Choose the registered product and describe the delivered change. Its identity and version are read from Workspace Registry."
       : "Describe the item to onboard and its responsibilities. The system assigns the source reference and version when closeout is recorded."}
     kicker="Delivery Closeout" onClose={onClose} open
-    title={draft.impactKind === "existing-product-change" ? "Existing Product Impact" : "Workspace Entrant Impact"}>
+    title={draft.impactKind === "existing-product-change" ? "Existing Product Impact" : "New workspace registration"}>
     {draft.impactKind === "existing-product-change"
       ? <ExecutionCloseoutProductPicker value={draft.existingProduct} live={live}
           onChange={existingProduct => onDraftChange({ ...draft, existingProduct })} />

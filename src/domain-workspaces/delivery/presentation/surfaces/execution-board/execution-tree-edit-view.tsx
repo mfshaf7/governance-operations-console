@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo, useState, type ReactNode } from "react";
+
 import type { DeliveryComponentType } from "../../../read-model/index.ts";
 import { executionTreeChildKinds } from "../../../work-model/execution/execution-tree-change-plan.ts";
 
@@ -7,7 +9,7 @@ import {
   BuildTreeEditorTree,
   type BuildTreeEditorTreeAddAction,
 } from "@/product-apps/build-tree";
-import { TerasActionButton, TerasActionRow, TerasPanelHeader } from "@/teras";
+import { TerasActionButton, TerasActionRow, TerasPanelHeader, TerasUtilityButton } from "@/teras";
 import {
   composeExecutionTreeNodeTitle,
   createExecutionTreeChildNode,
@@ -15,6 +17,7 @@ import {
   executionTreeChildCountLabel,
   executionTreeDraftPlaceholder,
   executionTreeEditableTitlePlaceholder,
+  executionTreeInitialExpandedNodeIds,
   executionTreeNodeDisplayTitle,
   executionTreeNodeIndex,
   executionTreeNodeKindLabel,
@@ -28,21 +31,7 @@ import {
   type ExecutionTreeDraftNode,
 } from "./execution-board-view-model.ts";
 
-export function ExecutionTreeEditView({
-  addMenuNodeId,
-  expandedNodeIds,
-  onDiscardDraft,
-  onDoneEditing,
-  onExpandedNodeIdsChange,
-  onOpenDetailNodeIdChange,
-  onSelectedNodeIdChange,
-  onTreeAddMenuNodeIdChange,
-  onTreeChange,
-  openDetailNodeId,
-  planningIssues,
-  selectedNodeId,
-  tree,
-}: {
+type ExecutionTreeEditing = {
   addMenuNodeId: string | null;
   expandedNodeIds: string[];
   onDiscardDraft: () => void;
@@ -55,31 +44,53 @@ export function ExecutionTreeEditView({
   openDetailNodeId: string | null;
   planningIssues: string[];
   selectedNodeId: string;
+};
+
+export function ExecutionWorkTree({
+  actions,
+  editing,
+  renderItemActions,
+  tree,
+}: {
+  actions?: ReactNode;
+  editing?: ExecutionTreeEditing;
+  renderItemActions?: (node: ExecutionTreeDraftNode) => ReactNode;
   tree: ExecutionTreeDraftNode;
 }) {
-  const expandedNodeIdSet = new Set(expandedNodeIds);
+  const [collapsedReadIds, setCollapsedReadIds] = useState<string[]>([]);
+  const [openReadId, setOpenReadId] = useState<string | null>(null);
+  const readBranchIds = useMemo(() => executionTreeInitialExpandedNodeIds(tree), [tree]);
+  const openDetailNodeId = editing ? editing.openDetailNodeId : openReadId;
+  const expandedNodeIds = editing?.expandedNodeIds ?? readBranchIds.filter(id => !collapsedReadIds.includes(id));
+  const selectedNodeId = editing?.selectedNodeId ?? openReadId ?? tree.id;
+  const addMenuNodeId = editing?.addMenuNodeId ?? null;
 
   function toggleNode(nodeId: string) {
-    onTreeAddMenuNodeIdChange(null);
-    onExpandedNodeIdsChange(
-      expandedNodeIdSet.has(nodeId)
-        ? expandedNodeIds.filter((expandedNodeId) => expandedNodeId !== nodeId)
-        : [...expandedNodeIds, nodeId],
-    );
+    if (!editing) {
+      setCollapsedReadIds(current => current.includes(nodeId)
+        ? current.filter(id => id !== nodeId)
+        : [...current, nodeId]);
+      return;
+    }
+    editing.onTreeAddMenuNodeIdChange(null);
+    editing.onExpandedNodeIdsChange(expandedNodeIds.includes(nodeId)
+      ? expandedNodeIds.filter(id => id !== nodeId)
+      : [...expandedNodeIds, nodeId]);
   }
 
   function selectNode(node: ExecutionTreeDraftNode) {
-    onSelectedNodeIdChange(node.id);
-    onTreeAddMenuNodeIdChange(null);
+    editing?.onSelectedNodeIdChange(node.id);
+    editing?.onTreeAddMenuNodeIdChange(null);
   }
 
   function addChild(
     parent: ExecutionTreeDraftNode,
     kind: DeliveryComponentType,
   ) {
+    if (!editing) return;
     const child = createExecutionTreeChildNode({ kind, parent });
 
-    onTreeChange(
+    editing.onTreeChange(
       updateExecutionTreeNode(tree, parent.id, (node) => ({
         ...node,
         children:
@@ -88,32 +99,32 @@ export function ExecutionTreeEditView({
             : insertExecutionTreePrimaryNode(node.children, child),
       })),
     );
-    onExpandedNodeIdsChange([...new Set([...expandedNodeIds, parent.id])]);
-    onOpenDetailNodeIdChange(child.id);
-    onSelectedNodeIdChange(child.id);
-    onTreeAddMenuNodeIdChange(null);
+    editing.onExpandedNodeIdsChange([...new Set([...expandedNodeIds, parent.id])]);
+    editing.onOpenDetailNodeIdChange(child.id);
+    editing.onSelectedNodeIdChange(child.id);
+    editing.onTreeAddMenuNodeIdChange(null);
   }
 
   function updateNode(
     node: ExecutionTreeDraftNode,
     update: (node: ExecutionTreeDraftNode) => ExecutionTreeDraftNode,
   ) {
-    onTreeChange(updateExecutionTreeNode(tree, node.id, update));
+    editing?.onTreeChange(updateExecutionTreeNode(tree, node.id, update));
   }
 
   function deleteNode(node: ExecutionTreeDraftNode) {
-    if (node.id === tree.id) {
+    if (!editing || node.id === tree.id) {
       return;
     }
 
     const nextTree = deleteExecutionTreeNode(tree, node.id);
-    onTreeChange(nextTree);
-    onExpandedNodeIdsChange(
+    editing.onTreeChange(nextTree);
+    editing.onExpandedNodeIdsChange(
       expandedNodeIds.filter((expandedNodeId) => expandedNodeId !== node.id),
     );
-    onOpenDetailNodeIdChange(nextTree.id);
-    onSelectedNodeIdChange(nextTree.id);
-    onTreeAddMenuNodeIdChange(null);
+    editing.onOpenDetailNodeIdChange(nextTree.id);
+    editing.onSelectedNodeIdChange(nextTree.id);
+    editing.onTreeAddMenuNodeIdChange(null);
   }
 
   function getAddActions(
@@ -128,31 +139,51 @@ export function ExecutionTreeEditView({
   }
 
   return (
-    <>
+    <div role="region" aria-label="Work hierarchy">
       <TerasPanelHeader
         actions={
           <TerasActionRow spacing="tight">
-            <TerasActionButton onClick={onDiscardDraft} emphasis="secondary">
-              Discard Draft
-            </TerasActionButton>
-            <TerasActionButton disabled={planningIssues.length > 0} onClick={onDoneEditing} emphasis="primary">
-              Done Editing
-            </TerasActionButton>
+            {editing ? (
+              <>
+                <TerasActionButton onClick={editing.onDiscardDraft} emphasis="secondary">Discard Draft</TerasActionButton>
+                <TerasActionButton disabled={editing.planningIssues.length > 0} onClick={editing.onDoneEditing} emphasis="primary">
+                  Done Editing
+                </TerasActionButton>
+              </>
+            ) : (
+              <>
+                <TerasUtilityButton
+                  disabled={readBranchIds.length === 0}
+                  onClick={() => {
+                    setCollapsedReadIds(expandedNodeIds.length ? readBranchIds : []);
+                    setOpenReadId(null);
+                  }}
+                  variant="subtle"
+                >
+                  {expandedNodeIds.length ? "Collapse All" : "Expand All"}
+                </TerasUtilityButton>
+                {actions}
+              </>
+            )}
           </TerasActionRow>
         }
         actionsLayout="inline"
-        kicker="Inline Edit"
-        title="Execution Tree Draft"
-        description={planningIssues[0] ?? "Edit this selected ART tree, then review and apply accepted changes through the governed Delivery route."}
+        kicker={editing ? "Inline Edit" : "Inspect"}
+        title={editing ? "Execution Tree Draft" : "Work Tree"}
+        description={editing ? editing.planningIssues[0] ?? "Edit the work items in this package, then review your changes before saving." : undefined}
       />
       <BuildTreeEditorTree
         addMenuNodeId={addMenuNodeId}
+        copy={editing ? undefined : { detailDraftLabel: "Description" }}
+        inlineInspection={editing ? undefined : { renderActions: renderItemActions }}
+        readOnly={!editing}
+        structureLocked={!editing}
         canDeleteNode={(node) => node.id.includes("-local-")}
         expandedNodeIds={expandedNodeIds}
         getAddActions={getAddActions}
         getChildCountLabel={executionTreeChildCountLabel}
         getDisplayTitle={executionTreeNodeDisplayTitle}
-        getDraftPlaceholder={executionTreeDraftPlaceholder}
+        getDraftPlaceholder={editing ? executionTreeDraftPlaceholder : () => "No description recorded."}
         getEditableTitlePlaceholder={(node) =>
           executionTreeEditableTitlePlaceholder(node.kind)
         }
@@ -166,19 +197,22 @@ export function ExecutionTreeEditView({
         onDeleteNode={deleteNode}
         onFocusInlineTitle={(node) => {
           selectNode(node);
-          onOpenDetailNodeIdChange(node.id);
+          editing?.onOpenDetailNodeIdChange(node.id);
         }}
         onInlineNodeSelect={(node) => {
-          selectNode(node);
-          onOpenDetailNodeIdChange(
-            openDetailNodeId === node.id ? null : node.id,
-          );
+          const next = openDetailNodeId === node.id ? null : node.id;
+          if (editing) {
+            selectNode(node);
+            editing.onOpenDetailNodeIdChange(next);
+          } else {
+            setOpenReadId(next);
+          }
         }}
         onOpenScaffold={() => undefined}
         onStructuredGroupSelect={(node) => selectNode(node)}
         onStructuredNodeSelect={(node) => selectNode(node)}
         onToggleAddMenu={(node) =>
-          onTreeAddMenuNodeIdChange(addMenuNodeId === node.id ? null : node.id)
+          editing?.onTreeAddMenuNodeIdChange(addMenuNodeId === node.id ? null : node.id)
         }
         onToggleNode={(node) => toggleNode(node.id)}
         onToggleStructuredGroup={(node) => selectNode(node)}
@@ -202,6 +236,6 @@ export function ExecutionTreeEditView({
         structuredGroupIds={[]}
         tree={tree}
       />
-    </>
+    </div>
   );
 }

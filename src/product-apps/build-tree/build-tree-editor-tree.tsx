@@ -3,7 +3,7 @@
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
-import { TerasActionButton, TerasNoteField } from "@/teras";
+import { TerasActionButton, TerasDocument, TerasNoteField, TerasReadoutField } from "@/teras";
 
 import type { BuildTreeNodeLike } from "./build-tree-core";
 import type { BuildTreeViewMode } from "./build-tree-model";
@@ -44,6 +44,7 @@ export type BuildTreeEditorTreeProps<
   getNodeMeta?: (node: TNode) => ReactNode;
   renderNodeDetails?: (node: TNode) => ReactNode;
   readOnly?: boolean;
+  inlineInspection?: { renderActions?: (node: TNode) => ReactNode };
   draftNotesSize?: "standard" | "large";
   addMenuNodeId: string | null;
   canDeleteNode?: (node: TNode) => boolean;
@@ -111,6 +112,7 @@ export function BuildTreeEditorTree<
   getNodeMeta,
   renderNodeDetails,
   readOnly = false,
+  inlineInspection,
   draftNotesSize = "standard",
   addMenuNodeId,
   canDeleteNode,
@@ -216,6 +218,9 @@ export function BuildTreeEditorTree<
     const detailOpen = mode === "inline" && openDetailNodeId === node.id;
     const titleParts = getTitleParts(node);
     const displayTitle = getDisplayTitle(node);
+    const inspecting = readOnly && Boolean(inlineInspection);
+    const SelectItem = inspecting ? "button" : "div";
+    const detailActions = inspecting && detailOpen ? inlineInspection?.renderActions?.(node) : null;
 
     return (
       <div className={editorStyles.buildTreeEditorTreeBranch} key={node.id}>
@@ -223,11 +228,14 @@ export function BuildTreeEditorTree<
           className={`${editorStyles.buildTreeEditorTreeNode} ${editorNodeRoleClass(role)} ${
             selected ? editorStyles.buildTreeEditorTreeNodeSelected : ""
           } ${addMenuNodeId === node.id ? editorStyles.buildTreeEditorTreeNodeMenuOpen : ""}`}
+          data-node-id={node.id}
           style={{ "--build-tree-depth": depth } as CSSProperties}
         >
-          <div
+          <SelectItem
+            aria-expanded={inspecting ? detailOpen : undefined}
             className={editorStyles.buildTreeEditorTreeSelect}
             onClick={() => onInlineNodeSelect(node)}
+            type={inspecting ? "button" : undefined}
           >
             <span className={editorStyles.buildTreeEditorTreeIndex}>
               {getIndex(node, position)}
@@ -244,28 +252,32 @@ export function BuildTreeEditorTree<
                   <span className={editorStyles.buildTreeEditorTreeTitleSeparator}>
                     -
                   </span>
-                  <input
-                    {...buildTreeEditorFieldProps}
-                    aria-label={`${getKindLabel(node.kind, node)} draft title`}
-                    className={editorStyles.buildTreeEditorTreeTitleInput}
-                    onChange={(event) => onUpdateTitle(node, event.target.value)}
-                    disabled={readOnly}
-                    onClick={(event) => event.stopPropagation()}
-                    onFocus={() => onFocusInlineTitle(node)}
-                    placeholder={getEditableTitlePlaceholder(node)}
-                    size={Math.max(
-                      12,
-                      Math.min(42, titleParts.editable.length || 16),
-                    )}
-                    value={titleParts.editable}
-                  />
+                  {inspecting ? (
+                    <span className={editorStyles.buildTreeEditorTreeTitleReadout}>{titleParts.editable || displayTitle}</span>
+                  ) : (
+                    <input
+                      {...buildTreeEditorFieldProps}
+                      aria-label={`${getKindLabel(node.kind, node)} draft title`}
+                      className={editorStyles.buildTreeEditorTreeTitleInput}
+                      onChange={(event) => onUpdateTitle(node, event.target.value)}
+                      disabled={readOnly}
+                      onClick={(event) => event.stopPropagation()}
+                      onFocus={() => onFocusInlineTitle(node)}
+                      placeholder={getEditableTitlePlaceholder(node)}
+                      size={Math.max(
+                        12,
+                        Math.min(42, titleParts.editable.length || 16),
+                      )}
+                      value={titleParts.editable}
+                    />
+                  )}
                 </span>
               ) : (
                 <strong>{displayTitle}</strong>
               )}
               <small>{getSummary(node)}</small>
             </span>
-          </div>
+          </SelectItem>
           <div className={editorStyles.buildTreeEditorSimpleControlArea}>
             {expandable ? (
               <button
@@ -301,29 +313,44 @@ export function BuildTreeEditorTree<
           </div>
           {detailOpen ? (
             <div className={editorStyles.buildTreeEditorTreeDetail}>
-              <TerasNoteField
-                {...buildTreeEditorFieldProps}
-                className={editorStyles.buildTreeEditorTreeNoteField}
-                label={resolvedCopy.detailDraftLabel}
-                onValueChange={(value) => onUpdateDraftBody(node, value)}
-                disabled={readOnly}
-                placeholder={getDraftPlaceholder(node)}
-                value={node.draftBody}
-              />
-              <label
-                className={`${editorStyles.buildTreeEditorTreeField} ${editorStyles.buildTreeEditorDetailRemarkField}`}
-              >
-                <span>{resolvedCopy.detailRemarkLabel}</span>
-                <input
-                  {...buildTreeEditorFieldProps}
-                  aria-label={`${getKindLabel(node.kind, node)} operator remark`}
-                  onChange={(event) => onUpdateRemark(node, event.target.value)}
-                  disabled={readOnly}
-                  placeholder={resolvedCopy.detailRemarkPlaceholder}
-                  value={node.remark}
+              {inspecting ? (
+                <TerasReadoutField
+                  className={editorStyles.buildTreeEditorTreeReadout}
+                  label={resolvedCopy.detailDraftLabel}
+                  scrollHeight="fill"
+                  surface="field"
+                  value={node.draftBody.trim() ? (
+                    <TerasDocument ariaLabel={resolvedCopy.detailDraftLabel} content={node.draftBody} />
+                  ) : getDraftPlaceholder(node)}
                 />
-              </label>
-              {showScaffoldAction ? (
+              ) : (
+                <>
+                  <TerasNoteField
+                    {...buildTreeEditorFieldProps}
+                    className={editorStyles.buildTreeEditorTreeNoteField}
+                    label={resolvedCopy.detailDraftLabel}
+                    onValueChange={(value) => onUpdateDraftBody(node, value)}
+                    disabled={readOnly}
+                    placeholder={getDraftPlaceholder(node)}
+                    value={node.draftBody}
+                  />
+                  <label
+                    className={`${editorStyles.buildTreeEditorTreeField} ${editorStyles.buildTreeEditorDetailRemarkField}`}
+                  >
+                    <span>{resolvedCopy.detailRemarkLabel}</span>
+                    <input
+                      {...buildTreeEditorFieldProps}
+                      aria-label={`${getKindLabel(node.kind, node)} operator remark`}
+                      onChange={(event) => onUpdateRemark(node, event.target.value)}
+                      disabled={readOnly}
+                      placeholder={resolvedCopy.detailRemarkPlaceholder}
+                      value={node.remark}
+                    />
+                  </label>
+                </>
+              )}
+              {detailActions ? <div className={editorStyles.buildTreeEditorTreeDetailActions}>{detailActions}</div> : null}
+              {showScaffoldAction && !inspecting ? (
                 <div className={editorStyles.buildTreeEditorTreeDetailActions}>
                   <TerasActionButton
                     onClick={() => onOpenScaffold(node)}

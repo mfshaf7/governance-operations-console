@@ -6,8 +6,8 @@ import styles from "./teras-patterns.module.css";
 import { TerasLoadingState } from "./teras-loading-state";
 
 /** A product-neutral text/diff field. No network, storage or source execution. */
-export function TerasCodeEditor({ path, value, original, diff, readOnly, onValueChange, maxBytes = 65536 }: {
-  path: string; value: string; original: string; diff: boolean; readOnly: boolean; onValueChange: (value: string) => void; maxBytes?: number;
+export function TerasCodeEditor({ path, value, original, diff, readOnly, onValueChange, maxBytes = 65536, startingLine = 1 }: {
+  path: string; value: string; original: string; diff: boolean; readOnly: boolean; onValueChange: (value: string) => void; maxBytes?: number; startingLine?: number;
 }) {
   const host = useRef<HTMLDivElement>(null), view = useRef<EditorView | null>(null), raw = useRef(value), callback = useRef(onValueChange), replacing = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +19,7 @@ export function TerasCodeEditor({ path, value, original, diff, readOnly, onValue
   useEffect(() => {
     let cancelled = false; setError(null); setLoading(true); raw.current = value;
     void (async () => {
-      const [{ EditorView, keymap }, { EditorState, Compartment }, { basicSetup }, { indentWithTab, temporarilySetTabFocusMode }, { unifiedMergeView }, { HighlightStyle, syntaxHighlighting }, { tags }] = await Promise.all([
+      const [{ EditorView, keymap, lineNumbers }, { EditorState, Compartment }, { basicSetup }, { indentWithTab, temporarilySetTabFocusMode }, { unifiedMergeView }, { HighlightStyle, syntaxHighlighting }, { tags }] = await Promise.all([
         import("@codemirror/view"), import("@codemirror/state"), import("codemirror"), import("@codemirror/commands"), import("@codemirror/merge"),
         import("@codemirror/language"), import("@lezer/highlight"),
       ]);
@@ -35,6 +35,7 @@ export function TerasCodeEditor({ path, value, original, diff, readOnly, onValue
       const editable = new Compartment(), editableState = (value: boolean) => [EditorState.readOnly.of(value), EditorView.editable.of(!value)];
       const editor = new EditorView({ parent: host.current, state: EditorState.create({ doc: normalizedCodeText(raw.current), extensions: [
         basicSetup, keymap.of([{ key: "Escape", run: temporarilySetTabFocusMode }, indentWithTab]), extension,
+        ...(startingLine === 1 ? [] : [lineNumbers({ formatNumber: line => String(line + startingLine - 1) })]),
         syntaxHighlighting(HighlightStyle.define([
           { tag: tags.keyword, color: "var(--amber)" }, { tag: [tags.string, tags.regexp], color: "var(--green)" },
           { tag: [tags.number, tags.bool, tags.null], color: "var(--teal)" }, { tag: [tags.variableName, tags.propertyName, tags.function(tags.variableName)], color: "var(--blue)" },
@@ -67,7 +68,7 @@ export function TerasCodeEditor({ path, value, original, diff, readOnly, onValue
     // Value changes from typing must preserve cursor and undo state.
     // A parent remounts the field when explicitly replacing a buffer.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, original, diff, maxBytes]);
+  }, [path, original, diff, maxBytes, startingLine]);
   useEffect(() => { reconfigureReadOnly.current?.(readOnly); }, [readOnly]);
   useEffect(() => {
     if (raw.current === value) return;

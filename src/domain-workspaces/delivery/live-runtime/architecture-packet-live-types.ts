@@ -49,8 +49,30 @@ export type ArchitecturePacketArtifact = Record<string, unknown> & {
   };
 };
 
+export type ArchitectureSessionImpactReason =
+  | "plan-not-required"
+  | "session-operator"
+  | "operation-pending"
+  | "binding-unavailable"
+  | "scope-unchanged"
+  | "scope-regrouped"
+  | "scope-changed-clean"
+  | "source-or-evidence-exists";
+
+export type ArchitectureSessionImpact = {
+  revision: string;
+  sessions: {
+    disposition: "refresh" | "rebuild" | "review" | "continues";
+    reason: ArchitectureSessionImpactReason;
+    owner_repo: string;
+    work_item_ids: string[];
+    open_work_item_id: string | null;
+  }[];
+};
+
 export type ArchitecturePacketDraftResult = {
   architecture_packet: ArchitecturePacketArtifact;
+  session_impact?: ArchitectureSessionImpact;
   source_snapshot: {
     art_digest: string;
     covered_record_count: number;
@@ -64,6 +86,7 @@ export type ArchitecturePacketPersistResult = {
   artifact: ArchitecturePacketArtifact;
   custody_receipt: Record<string, unknown>;
   owner_receipt: Record<string, unknown>;
+  session_impact?: ArchitectureSessionImpact;
   workflow_id: "delivery-art-architecture-packet-persist";
 };
 

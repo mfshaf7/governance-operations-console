@@ -54,6 +54,11 @@ export type DeliveryArtNode = {
   tone: DeliveryTone;
 };
 
+export function deliveryWorkItemStatus(node: DeliveryArtNode): DeliveryBackendStatus {
+  return !["done", "parked", "retired"].includes(node.backend_status) &&
+    (node.blocker || node.dependency_blocked) ? "blocked" : node.backend_status;
+}
+
 export type DeliveryMilestone = {
   checkpoint_kind: DeliveryMilestoneKind;
   evidence_refs?: string[];

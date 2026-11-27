@@ -86,7 +86,7 @@ The Execution repair retains this compact composition. Show recorded in-progress
 blocked and ready work in lifecycle metadata; label the open count as work items
 because it covers all descendant levels. Replace the false Advisor attribution
 with those observed facts. Primary work selection uses names and numbers, with
-the same picker available from ART Tree. Source session, completion and package
+the same picker available from Work Tree. Source session, completion and package
 reviews keep their original owner authority. Latest Loaded Activity explicitly
 describes a bounded read rather than the whole timeline. Deferred work remains
 reachable under Current; History stays locked. Family Map covers the same
@@ -102,7 +102,7 @@ formatting is supplied by the adapter, while facts and approval stay operator
 decisions. Closeout product selection reads registered identity/version and
 responsibilities; unavailable reads show retry and never an empty success.
 
-Control Board and Family Map retain the existing off-white grid canvas; ART Tree
+Control Board and Family Map retain the existing off-white grid canvas; Work Tree
 retains its existing dark canvas. Scope those theme rules to the Control Board
 workspace so shared panel/loading styles cannot override them through CSS load
 order. This preserves the existing palette and board geometry.
@@ -1121,8 +1121,10 @@ architecture. The full-map and saved-diagram viewers provide more space.
   approvals, and verification. Place open decisions, recovery, and section
   details in quieter follow-up areas. Open a planning area and an individual
   entry for details. Match the plan editor's verification labels and case
-  summaries. Size readers to content for short lists and give long lists a
-  full-height reader. Show validation issues on the review step
+  summaries. Use the shared entry panel and Back to entries action for
+  review details. Size short lists and records to content. Long lists use
+  the available height and restore their search and scroll on return.
+  Show validation issues on the review step
   with links back to the relevant editor. History uses the same inspection
   surfaces with edits locked.
 

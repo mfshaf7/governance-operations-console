@@ -30,7 +30,7 @@ calls for a technical plan points to the plan in **Manage Package**.
 - Choose **All Work** for stories, tasks and defects across the package.
   When a package has several Features, the Feature filter chooses which one
   to show. Both controls sit inside the canvas at the bottom right. The back
-  button returns to the board you came from. Use the header switch to choose **Work Board** or **ART Tree**.
+  button returns to the board you came from. Use the header switch to choose **Work Board** or **Work Tree**.
   The right panel shows the package, Feature or selected item.
   **Next Action** follows the overview or item context. It guides the first
   selection on Epic Board and All Work, and holds the relevant review or
@@ -40,12 +40,30 @@ calls for a technical plan points to the plan in **Manage Package**.
   dependencies. Use **Open item** to inspect a dependency on the Work Board
   and **Review Blocker** for a recorded blocker when a current change review
   is available. The review is bound to that item and the current revision.
-- **ART Tree** shows the recorded hierarchy. Open a Feature or executable item
-  on the Work Board, or review completion for other eligible structural items.
-  **Edit Work Structure** opens the existing reviewed tree-change workflow.
+- **Work Tree** shows the recorded hierarchy with the same rows used during
+  editing. Select an item to read its complete, formatted description in a
+  scrollable field. Only one description is open at a time. From the open item, open
+  the Work Board or review completion when available. History opens the
+  same tree and locked description fields for retained work.
+  **Edit Work Structure** opens the reviewed tree-change workflow. Select an
+  item to edit its description in the tree. Use **Depends on** in the editing
+  tools to change which work must finish first. The Work Board shows saved
+  links under the same heading when you inspect an item.
 
 Opening a review or work session reads the existing OOS workflow. Starting or
 completing work requires explicit submission.
+
+In **Work Session**, the main area shows the selected work, setup, progress,
+verification details and completed results. The right side shows **Next
+action** and the repository access needed to continue. During setup,
+review the work item numbers and whether the changes merge separately or with
+the feature. Use **Technical details** for the exact service status, identifiers
+and recorded results. If you lose a response, follow the original action until
+Delivery confirms its result.
+
+When **Technical Plan** checks find a problem, **Review & record** shows the
+findings beside the plan summary. Open the named section to correct it.
+Expand **Plan checks requiring attention** for the original service findings.
 
 Current includes deferred packages in the **Deferred** lane. **Resume Work**
 opens a reviewed return-status/reason form; the service checks prerequisites
@@ -124,6 +142,13 @@ source session reports a missing or unbound architecture requirement, Next Actio
 also opens the same package-scoped workspace and identifies the affected work.
 No package-wide permission is inferred from one work item's requirement.
 
+In **Review & record**, validate the draft to see **Impact on work in progress**.
+Review any session that needs a plan-link refresh, a rebuild, or an operator
+decision. Some sessions can continue under their existing approval. If the
+current plan or a session changes before recording, validate and review the
+updated impact again. Once recorded, **Open Work Session** takes you to the
+affected item to see its current next action.
+
 Choose the work in **Choose scope**. Browse the package tree by Feature,
 search by name or number, and select the exact work the plan covers. Items
 already in the current plan and the original work-start target are visible.
@@ -169,8 +194,16 @@ selected approval supplies the groups to commission. Select a pinned source
 repository and enter the path and setting name to read a boolean or declared
 activation posture from its committed JSON or YAML. Authorization records can
 reuse a reference from the approved plan or read a document from a pinned
-revision. The Console fills the immutable link and digest. Confirm what the
-document authorizes before using it.
+revision. Paste a GitHub permalink to select its pinned repository and
+commit, or enter the document path. The Console fills the immutable link
+and digest. Confirm what the document authorizes before using it. Use
+**Enter a verified reference manually** when you already have a confirmed
+link and digest and the document cannot be read through the plan.
+
+The owner adds standard installation rules when it authors the plan.
+In **Runtime responsibilities**, select a repository to reuse its allowed
+or prohibited actions from the approved plan. Enter the owning contract’s
+action ID for a new responsibility.
 
 Switching to standard installation access or no lifecycle changes keeps the
 previous details in the private draft. Select the earlier option to restore
@@ -180,6 +213,10 @@ entered source value, or removing work with assigned checks or timing asks
 for confirmation before clearing that input.
 
 Describe a success and failure case for each covered item in **Verification**.
+Use **Add verification case** to select the covered work and verification
+areas, then specify the check type, environment, timing, evidence group,
+and expected outcome. **Keep incomplete case** saves a partial case in the draft. Open its
+row to finish the remaining fields before validation.
 Use **Check coverage** to see the standard checks, add plan-specific checks,
 and assign them to work. Use **Connection and Git checks** when the change affects how systems exchange
 commands, data, or results, or needs proof of a Git dependency. The Console
@@ -200,7 +237,10 @@ items by name or number. Read open decisions and recovery from their panels.
 Choose a review area and open its section to inspect records in the reader.
 **Back to entries** restores the list and search after opening a record.
 Verification uses the same case summaries, **Check coverage**, and
-**Connection and Git checks** as the plan editor. Source revision rows show the
+**Connection and Git checks** as the plan editor. Open a case to read its
+covered work, verification areas, and expected outcome. Runtime actions
+show readable names and their exact IDs. Access and execution keeps the
+authorization link and its digest together. Source revision rows show the
 recorded branch and short commit. Open a row to read the full revision.
 **Review next issue** and **Open section** return to the relevant form when
 preparation is incomplete. Owner validation findings remain available until
@@ -285,7 +325,7 @@ service, agreed approach, and review date. The package blocker review uses the
 existing owner command. Child blockers and dependencies are attached to their
 items on the Work Board.
 
-In connected mode, **Find ART Tree** accepts an exact ART number in the
+In connected mode, **Find Work Tree** accepts an exact work item number in the
 current owner inventory. This opens the matching package's tree, including
 planning-stage packages which are outside the Execution lanes. Ambiguous or
 unavailable entries show an error.
@@ -340,13 +380,13 @@ review authority.
 4. If no session exists, choose `Prepare Session`. When an approved Technical
    Plan defines the selected work, the draft shows its complete approved work
    group and binds the saved plan automatically. Review the branch and rollback
-   boundary before approving source access. Reload the decision if the
+   boundary before approving repository access. Reload the decision if the
    approved plan changes while you review it.
-5. Review the Landing Unit model, identity, branch, split reason, rollback
-   boundary, and architecture packet decision. The Console sends only these
-   bounded operator inputs; the server retains OOS-owned work item, covered
-   items, human gates, base ref, and operator identity from a fresh
-   caller-bound draft requested when the accepted decision is submitted.
+5. Under **Work to review together**, confirm the covered work, branch, and
+   what you would undo together. In **Repository access**, choose **Show
+   access request**. Review the repository, branch, and expiry, then choose
+   **Approve repository access**. This lets the Console work with the named
+   repository and branch for this session.
 6. Choose `Start Work Session`. OOS validates the exact decision and returns
    the next projection and immutable command receipt.
 7. Use the action shown for the exact OOS projection. Automatable transitions
@@ -355,36 +395,64 @@ review authority.
 8. Human review, Security, architecture, source-work, exception, and other
    authority gates remain read-only. The Console shows their owner and reason
    instead of presenting a bypass action.
-9. `Merge Source` appears only for `source-merge-approval-required`.
-   `Close Landing Unit` appears only for `art-closeout-required`. The selected
+9. `Merge reviewed changes` appears only for `source-merge-approval-required`.
+   When GitHub reports that the branch is behind, open the pull request to see
+   the update it requires. The new revision must pass its checks and review.
+   The pull request remains linked through runtime verification. After merge,
+   the session shows the verification action and retains the earlier draft.
+   When a separately reviewed verifier applies, review both pull requests and
+   the approved cases before choosing **Verify Runtime Results**. The results
+   attach to the original merge for final evidence and closeout.
+   `Complete the covered work` appears only for `art-closeout-required`. The selected
    work item is a resumable alias; OOS closes the full Review Packet scope and
    the Console shows the covered item count and structured result. A partial
    closeout retains the session for retry, while failed terminal cleanup exposes
    `Retry Cleanup` against the same OOS close command.
-10. If OOS reports an explicit rejection, correct the input and issue a new
-   operator action. If the network outcome is unknown, retry retains the same
-   command identity so OOS can replay the retained result safely.
+10. If OOS reports an explicit rejection, review the current session and
+    correct the input before issuing a new operator action. When the browser
+    loses the response, the Console follows the original command reference
+    and shows its pending or completed result. The reference survives a reload
+    in the same browser tab. After the provider confirms a pull request,
+    its link appears while verification continues. After closing the work,
+    check the retained repository access closure if Platform is still releasing it.
 
-After an uncertain network, HTTP timeout or server failure, use **Read Current
-Session** before another decision. That action only reads the original OOS
-session; it neither resubmits the source command nor grants authority. An
-accepted operation may have completed after its HTTP acknowledgement was lost.
-Retrying unchanged input retains the original command identity even after a
-server error. A different target, scope or reviewed input gets its own identity;
-an explicit rejection still allows a corrected operator action. Source tests
-for this recovery do not replace exact composed acceptance or live qualification.
+**Refresh session** remains the canonical status read. The command
+read looks up the original owner record and receipt. Neither read repeats a
+source action, grants access, or closes work. A confirmed result can be read
+after repository access expires. An unconfirmed outcome stays visible while the
+Console checks the same command.
 
-### Continue An Approved Source Scope
+### Recover a Draft After Rebuilding the Session
 
-**Source access** displays the selected scope, its expiry, credential receipt
-and original owner operation. The scope approval and its short-lived source
-credential have separate lifetimes. When a current live session requires source
-credentials and the selected scope remains approved, choose
-`Continue Approved Source Access`. This submits the existing guarded OOS
+When a rebuild is interrupted and the Console finds the original accepted
+request, choose **Resume Saved Rebuild**. The request keeps its original
+identity and reviewed revision. Once the new source workspace is ready, open
+**Edit or import files** and choose **Review Previous Draft**. The earlier
+files are available for read-only inspection. **Check and Recover Files**
+checks each path against current source before filling a new draft. If any
+file changed, review the retained text and resolve the difference before
+saving. The new draft still needs an explicit save and review before any
+source action can apply it.
+
+Before preparing the rebuilt source workspace, review **Repository access**.
+The panel shows when the previous approval has closed. Prepare and approve
+replacement access, then wait for the provider to confirm it. **Prepare Source
+Workspace** appears after confirmation. A compatible plan refresh can keep
+using a valid approval already bound to the same session.
+
+### Continue With Repository Access
+
+**Repository access** shows the repository, branch, and expiry. Exact approval
+and permission records are available under **Technical details**. When work
+needs access that you have already approved, choose
+`Continue with approved access`. This submits the existing guarded OOS
 continuation with that exact selected intent. OOS revalidates the scope and
 renews its credential when needed before attempting source work. The primary
 owner next action remains authoritative; this supporting control grants no
 source permission or local success.
+
+If the access operation is still running, the Console checks the original
+Platform operation and reads the session again when it finishes.
 
 After an interruption, use **Open access request** and **Check access status**
 (or **Check original access request** after a lost response) to
@@ -400,7 +468,7 @@ scope review; unavailable or stale authority never enables continuation.
 Inside the package workspace, choose **Review Completion** from the
 item on the Work Board. For a Feature, choose **Review Feature Completion**
 when its child work is closed. For a PI Objective, open the outcome review
-from the **ART Tree**.
+from the **Work Tree**.
 The review reads current native continuation context and any source session.
 Use this path only when the outcome requires no source change. A source-backed
 outcome must use its existing governed work session, merged evidence and close
@@ -481,9 +549,9 @@ Open an item on its package Work Board to resolve current OOS eligibility.
 Unavailable and successful-empty reads are distinct; `Refresh owner records`
 retries a failed read without fixture fallback. Visible-page polling is bounded.
 
-Inside an active Governed Work Session, the source-realization panel provides:
+In an active Work Session, **Edit or draft changes** provides:
 
-1. A bounded source objective. **Edit or import source** opens the shared
+1. A bounded source objective. **Edit or import files** opens the shared
    [source workspace](source-editor-and-import.md); optional model generation
    remains a separate action using configured model selection.
 2. Caller-bound source text, original/diff inspection, file/folder import and

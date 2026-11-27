@@ -4,7 +4,7 @@ import type { DeliveryReadModel, DeliveryArtNode } from "../../../../read-model/
 // Resolves routing only. It does not infer start eligibility or mutation rights.
 export function executionInspectionPackage(workItemId: number, model: DeliveryReadModel) {
   if (model.source_truth !== "OpenProject-backed OOS") {
-    throw new Error("Canonical initiative inspection requires the current OOS inventory.");
+    throw new Error("Reload the current Delivery work before opening this item.");
   }
   const contains = (node: DeliveryArtNode): boolean =>
     node.legacy_work_package_id === workItemId || node.children.some(contains);
@@ -12,7 +12,7 @@ export function executionInspectionPackage(workItemId: number, model: DeliveryRe
   const matches = model.packages.filter((item) =>
     roots.some((root) => root.id === item.tree_root_id));
   if (roots.length !== 1 || matches.length !== 1) {
-    throw new Error("The ART item is not uniquely present in the current initiative inventory. Refresh canonical records before inspecting it.");
+    throw new Error("This work item could not be matched to one package. Reload Delivery and try opening it again.");
   }
   return matches[0];
 }
@@ -38,11 +38,11 @@ export function directExecutionWorkSessionTarget(
   return {
     description: packageSummary
       ? "Review the current work requirements and next action."
-      : "Authoritative OOS state determines whether this Delivery work item can start or continue.",
+      : "Check what this work needs before you start or continue.",
     entry: "direct",
     sourceLabel: packageSummary ? "Package" : "Entry route",
-    sourceValue: packageSummary?.display_name ?? "Direct ART target",
-    title: item ? `${item.component_type} ${workItemId} · ${item.title}` : `Work Item ${workItemId}`,
+    sourceValue: packageSummary?.display_name ?? "Opened by work item number",
+    title: item ? `${item.component_type} #${workItemId} · ${item.title}` : `Work item #${workItemId}`,
     workItemId,
   };
 }
@@ -55,7 +55,7 @@ export function packageExecutionWorkSessionTarget(
     description: packageSummary.summary,
     entry: "package",
     sourceLabel: "Package",
-    sourceValue: packageSummary.source_ref,
+    sourceValue: `Epic #${packageSummary.legacy_epic_id}`,
     title: packageSummary.display_name,
     workItemId,
   };
@@ -65,7 +65,7 @@ export function parseExecutionWorkItemReference(value: string) {
   const match = /^(?:#|work-item-)?([1-9][0-9]*)$/i.exec(value.trim());
   const workItemId = match ? Number(match[1]) : Number.NaN;
   if (!Number.isSafeInteger(workItemId)) {
-    throw new Error("Enter a valid ART work item such as 1175, #1175, or work-item-1175.");
+    throw new Error("Enter a work item number such as 1175 or #1175.");
   }
   return workItemId;
 }
@@ -73,18 +73,18 @@ export function parseExecutionWorkItemReference(value: string) {
 const continueCommandLabels: Record<string, string> = {
   "acquire-operating-evidence": "Verify Runtime Results",
   "architecture-compatible-refresh-required": "Refresh Session Plan",
-  "agent-source-publish-required": "Publish Source",
+  "agent-source-publish-required": "Send changes for review",
   "draft-finalization": "Prepare Final Evidence",
-  "draft-review-packet": "Draft Review Packet",
-  "draft-work-start": "Draft Work Start",
-  "evaluate-work-start": "Evaluate Work Start",
-  "finalize-review-packet": "Finalize Review Packet",
-  "issue-operating-readiness": "Evaluate Operating Readiness",
-  "mark-merge-ready": "Evaluate Merge Readiness",
-  "owner-evidence-acquisition-required": "Run Evidence Checks",
-  "persist-architecture": "Persist Architecture",
-  "project-review-evidence": "Project Evidence",
-  "source-worktree-required": "Prepare Source Workspace",
+  "draft-review-packet": "Prepare the review summary",
+  "draft-work-start": "Prepare work setup",
+  "evaluate-work-start": "Check whether work can start",
+  "finalize-review-packet": "Save the review record",
+  "issue-operating-readiness": "Check whether the work is ready to run",
+  "mark-merge-ready": "Check whether changes can merge",
+  "owner-evidence-acquisition-required": "Run verification checks",
+  "persist-architecture": "Save the Technical Plan",
+  "project-review-evidence": "Prepare verification results",
+  "source-worktree-required": "Set up work files",
 };
 
 export function workSessionCommand(code: string | null | undefined) {
@@ -102,10 +102,10 @@ export function workSessionCommand(code: string | null | undefined) {
 }
 
 export function workSessionCommandLabel(code: string) {
-  if (["architecture-reconstruction-required", "source-binding-reconstruction-required"].includes(code)) return "Rebuild Session Binding";
-  if (code === "landing-unit-closeout-retry-required") return "Retry Landing Unit Closeout";
-  if (code === "source-merge-approval-required") return "Merge Source";
-  if (code === "art-closeout-required") return "Close Landing Unit";
+  if (["architecture-reconstruction-required", "source-binding-reconstruction-required"].includes(code)) return "Rebuild work session";
+  if (code === "landing-unit-closeout-retry-required") return "Retry completing the work";
+  if (code === "source-merge-approval-required") return "Merge reviewed changes";
+  if (code === "art-closeout-required") return "Complete the covered work";
   if (code === "cleanup-required") return "Finish Cleanup";
   if (code === "cleanup-retry-required") return "Retry Cleanup";
   return Object.hasOwn(continueCommandLabels, code) ? continueCommandLabels[code] : "Continue";
@@ -115,7 +115,7 @@ export function workSessionCommandLabel(code: string) {
 // still available in the session's technical details.
 const workSessionMoves: Record<string, { title: string; description: string; status?: string }> = {
   "work-session-start-required": { title: "Prepare this work", description: "Check what this item needs before you start a session.", status: "Ready to check" },
-  "work-session-start-ready": { title: "Review before starting", description: "Confirm the work covered by this session and approve source access when it is requested." },
+  "work-session-start-ready": { title: "Review before starting", description: "Confirm the work covered by this session and approve repository access when it is requested." },
   "landing-unit-decision-required": { title: "Review before starting", description: "Confirm the work that will be reviewed and merged together." },
   "landing-unit-decision-invalid": { title: "Review the work scope", description: "Correct the session decision before starting work." },
   "architecture-compatible-refresh-required": { title: "Refresh the session plan", description: "The approved Technical Plan changed. Link this session to the latest version to keep working with the same scope.", status: "Refresh needed" },
@@ -123,22 +123,23 @@ const workSessionMoves: Record<string, { title: string; description: string; sta
   "architecture-binding-required": { title: "Review the approved plan", description: "Review the plan covering this work before linking it to the session." },
   "architecture-prerequisite-required": { title: "Finish prerequisite work", description: "Check the item that must be complete before this work can proceed.", status: "Waiting" },
   "architecture-human-gate-required": { title: "Review the required approval", description: "Open the work item where this approval is recorded.", status: "Waiting for approval" },
-  "architecture-reconstruction-required": { title: "Rebuild the session link", description: "The plan changed. Rebuild the session link before continuing.", status: "Review needed" },
-  "source-binding-reconstruction-required": { title: "Rebuild the source link", description: "Review the source link before continuing this session.", status: "Review needed" },
+  "architecture-reconstruction-required": { title: "Rebuild the work session", description: "The plan changed. Review and rebuild the work session before continuing.", status: "Review needed" },
+  "source-binding-reconstruction-required": { title: "Review repository setup", description: "The repository setup changed. Review it before continuing this session.", status: "Review needed" },
   "architecture-recovery-required": { title: "Review the previous session", description: "Review the retained work and evidence before archiving this attempt.", status: "Review needed" },
   "architecture-status-unavailable": { title: "Plan status unavailable", description: "Read the current session to check whether the approved plan is available.", status: "Unavailable" },
-  "source-worktree-required": { title: "Prepare the source workspace", description: "Set up the branch and workspace for this session before editing." },
-  "source-work-required": { title: "Work on the source", description: "Use Edit or Import Source to open the editor or bring in your changes. Keep changes on this session’s branch until they are ready for review.", status: "In progress" },
-  "agent-source-credential-required": { title: "Confirm source access", description: "Use the source access panel to review and continue with the approved repository access.", status: "Access needed" },
+  "source-worktree-required": { title: "Set up work files", description: "Set up the branch and workspace for this session before editing." },
+  "source-work-required": { title: "Edit the work files", description: "Use Edit or import files to open the editor or bring in your changes. Keep changes on this session’s branch until they are ready for review.", status: "In progress" },
+  "agent-source-credential-required": { title: "Confirm repository access", description: "Check the requested repository and branch before continuing.", status: "Access needed" },
   "agent-source-publish-required": { title: "Publish changes for review", description: "Push the committed changes on this session’s branch and open the pull request." },
-  "source-base-refresh-required": { title: "Refresh the source base", description: "Review the current repository revision before continuing this session.", status: "Refresh needed" },
-  "source-revocation-required": { title: "Close source access", description: "Check the source access panel to confirm the session’s repository access is released." },
-  "source-revocation-pending": { title: "Source access is closing", description: "Read the current session to confirm that repository access has closed.", status: "Waiting" },
+  "source-base-refresh-required": { title: "Check the starting revision", description: "Review the current repository revision before continuing this session.", status: "Refresh needed" },
+  "source-revocation-required": { title: "End repository access", description: "Check that the session’s permission to use the repository has ended." },
+  "source-revocation-pending": { title: "Repository access is ending", description: "Read the current session to confirm that repository access has closed.", status: "Waiting" },
   "pull-request-required": { title: "Open the pull request", description: "This session is waiting for a pull request for its reviewed branch." },
-  "pull-request-review-required": { title: "Review the source changes", description: "Open the pull request to inspect the changes and record the review.", status: "Waiting for review" },
+  "pull-request-review-required": { title: "Review the file changes", description: "Open the pull request to inspect the changes and record the review.", status: "Waiting for review" },
+  "pull-request-base-update-required": { title: "Update the pull request branch", description: "Open the pull request to check the required branch update. The updated revision needs fresh checks and review before merge.", status: "Branch behind" },
   "source-merge-approval-required": { title: "Merge the reviewed changes", description: "Merge the approved pull request for this session." },
-  "owner-evidence-acquisition-required": { title: "Run the verification checks", description: "Check the exact source revision and collect its results for review." },
-  "acquire-operating-evidence": { title: "Verify the runtime results", description: "Check the recorded runtime results for this version before completing the work." },
+  "owner-evidence-acquisition-required": { title: "Run the verification checks", description: "Run the required checks on the changes being reviewed." },
+  "acquire-operating-evidence": { title: "Verify the runtime results", description: "Run the approved checks against the merged changes before completing the work." },
   "security-acceptance-required": { title: "Waiting for security approval", description: "The required security decision must be recorded before the changes can merge.", status: "Waiting for approval" },
   "exception-or-risk-acceptance-required": { title: "Review the remaining risk", description: "Review the required exception or risk decision before continuing.", status: "Review needed" },
   "art-blocker-review-required": { title: "Review the blocker", description: "Open the work board to see what is blocking this work.", status: "Blocked" },
@@ -167,7 +168,7 @@ export function workSessionMove(code: string, operatingEvidence?: string) {
     return { ...move, status: move.status ?? "Action required" };
   }
   if (workSessionCommand(code)) return {
-    title: workSessionCommandLabel(code), description: "Continue the recorded session step.", status: "Action required",
+    title: workSessionCommandLabel(code), description: "The result will appear here once the step finishes.", status: "Action required",
   };
   return { title: "Review the session status", description: "Open Technical details to see what the session reported.", status: "Review needed" };
 }

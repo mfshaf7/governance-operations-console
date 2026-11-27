@@ -78,7 +78,7 @@ export const executionActionContracts: Record<
   },
   block: {
     applyDescription:
-      "Confirm the blocker target, route, and disposition gates before recording the blocker.",
+      "Check which work is blocked and confirm how it should be handled.",
     applyTitle: "Review Blocker Route",
     draftDescription:
       "Record a bounded blocker on the selected execution target. This does not clear or repair the source issue.",
@@ -86,7 +86,7 @@ export const executionActionContracts: Record<
     family: "blocker",
     familyLabel: "Blocker",
     modalDescription:
-      "Blocker actions route through the bounded blocker workflow and preserve recovery/disposition evidence.",
+      "Record what is blocking the work and how you plan to resolve it.",
     modalKicker: "Blocker Action",
     receiptActionLabel: "Record Blocker Receipt",
     receiptCategory: "blocked_by_gate",
@@ -100,7 +100,7 @@ export const executionActionContracts: Record<
   },
   "clear-blocker": {
     applyDescription:
-      "Confirm the blocker resolution source and expected resumed posture before clearing.",
+      "Confirm how the blocker was resolved and choose the status to return to.",
     applyTitle: "Review Blocker Clear",
     draftDescription:
       "Clear a blocker only after the owning blocker workflow records repair, workaround, or accepted risk.",
@@ -108,7 +108,7 @@ export const executionActionContracts: Record<
     family: "blocker",
     familyLabel: "Blocker",
     modalDescription:
-      "Clear Blocker must use blocker workflow evidence; it is not a metadata-only board action.",
+      "Review the recorded resolution before clearing the blocker.",
     modalKicker: "Blocker Action",
     receiptActionLabel: "Record Clear Receipt",
     receiptCategory: "accepted",
@@ -124,12 +124,12 @@ export const executionActionContracts: Record<
       "Confirm the closeout finding and keep the package in progress for remaining child work.",
     applyTitle: "Review Remaining Work Decision",
     draftDescription:
-      "Closeout found open scope. Keep the package active and continue the remaining work instead of closing it.",
+      "Some work is still open. Review what remains before deciding how to continue.",
     draftTitle: "Prepare Continue Decision",
     family: "closeout",
     familyLabel: "Closeout",
     modalDescription:
-      "Closeout decisions separate completed evidence from remaining work before changing package posture.",
+      "Keep the package open for unfinished work.",
     modalKicker: "Closeout Decision",
     receiptActionLabel: "Record Continue Receipt",
     receiptCategory: "accepted",
@@ -163,15 +163,15 @@ export const executionActionContracts: Record<
   },
   "edit-work-tree": {
     applyDescription:
-      "Tree edits are made inline on the ART Tree surface; this modal fallback must not be used for the edit path.",
+      "Tree edits are made inline on the Work Tree surface; this modal fallback must not be used for the edit path.",
     applyTitle: "Inline Tree Edit",
     draftDescription:
-      "Switch to ART Tree edit mode and adjust the selected tree directly.",
+      "Switch to Work Tree edit mode and adjust the selected tree directly.",
     draftTitle: "Open Inline Tree Edit",
     family: "work-tree",
     familyLabel: "Work Tree",
     modalDescription:
-      "Execution tree editing belongs on the inline ART Tree surface, not in an action workflow modal.",
+      "Execution tree editing belongs on the inline Work Tree surface, not in an action workflow modal.",
     modalKicker: "Inline Tree Edit",
     receiptActionLabel: "Back to Board",
     receiptCategory: "accepted",
@@ -179,7 +179,7 @@ export const executionActionContracts: Record<
       "Inline tree edits remain a draft until the operator reviews and applies them through Delivery change control.",
     receiptProjection: "reviewed tree changes applied through Delivery change control",
     receiptTitle: "Inline Edit Draft",
-    reviewActionLabel: "Open ART Tree",
+    reviewActionLabel: "Open Work Tree",
     reviewable: false,
   },
   "open-audit-trail": {
@@ -327,19 +327,19 @@ export const executionActionContracts: Record<
     reviewable: true,
   },
   "view-art-tree": {
-    applyDescription: "ART Tree inspection is read-only and has no apply step.",
-    applyTitle: "View ART Tree",
+    applyDescription: "Work Tree inspection is read-only and has no apply step.",
+    applyTitle: "View Work Tree",
     draftDescription: "Inspect package hierarchy without mutating ART.",
-    draftTitle: "Inspect ART Tree",
+    draftTitle: "Inspect Work Tree",
     family: "inspect",
     familyLabel: "Inspect",
     modalDescription: "Read-only hierarchy inspection.",
-    modalKicker: "ART Tree",
+    modalKicker: "Work Tree",
     receiptActionLabel: "Close",
     receiptCategory: "accepted",
     receiptDescription: "Tree inspection does not create a mutation receipt.",
     receiptProjection: "no package mutation",
-    receiptTitle: "ART Tree Closed",
+    receiptTitle: "Work Tree Closed",
     reviewActionLabel: "Close",
     reviewable: false,
   },

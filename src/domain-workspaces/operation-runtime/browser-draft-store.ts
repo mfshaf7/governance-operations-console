@@ -64,3 +64,14 @@ function browserLocalStorage(): Storage | null {
     return null;
   }
 }
+
+// A tab-local cache holds operation references for refresh recovery. Owner
+// records and receipts remain authoritative and do not belong in this cache.
+export function browserOperationTabStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}

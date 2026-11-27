@@ -289,6 +289,7 @@ live-runtime/refinement-live-types.ts
 live-runtime/use-catalog-live-runtime.ts
 live-runtime/use-architecture-packet-live-runtime.ts
 live-runtime/use-delivery-closeout-live-runtime.ts
+live-runtime/delivery-command-outcome.ts
 live-runtime/use-delivery-change-live-runtime.ts
 live-runtime/use-delivery-work-session-live-runtime.ts
 live-runtime/use-refinement-live-runtime.ts
@@ -575,6 +576,7 @@ server/architecture-packet-oos-client.ts
 server/delivery-closeout-api-routes.ts
 server/delivery-closeout-oos-client.ts
 server/delivery-change-api-routes.ts
+server/delivery-command-outcome-api.ts
 server/delivery-change-oos-client.ts
 server/delivery-work-session-api-routes.ts
 server/delivery-work-session-oos-client.ts
@@ -633,6 +635,7 @@ presentation/surfaces/execution-board/architecture-packet/technical-plan-entry-p
 presentation/surfaces/execution-board/architecture-packet/technical-plan-source-facts.tsx
 presentation/surfaces/execution-board/architecture-packet/technical-plan-review.tsx
 presentation/surfaces/execution-board/architecture-packet/technical-plan-sequence-view.tsx
+presentation/surfaces/execution-board/architecture-packet/technical-plan-session-impact.tsx
 product-adapters/context-board/sequence-model.ts
 
 work-model/execution/technical-plan-guidance.ts

@@ -27,6 +27,7 @@ import { ControlBoardStatusBoard } from "@/product-apps/control-board/control-bo
 import { ControlBoardCardDisclosure, ControlBoardInspectorHeader } from "@/product-apps/control-board/control-board-inspection-layout";
 import { deliveryControlBoardPostureTerms } from "../../../product-adapters/control-board/index.ts";
 import { getDeliveryEffectivePackageProjection, type DeliveryArtNode, type DeliveryPackageSummary } from "../../../read-model/index.ts";
+import { deliveryWorkItemStatus } from "../../../domain/delivery-execution.ts";
 import { executionPackageText } from "../../../work-model/execution/execution-package-content.ts";
 import { executionActiveBlockerMetadata } from "./execution-board-view-model.ts";
 
@@ -75,9 +76,7 @@ export function executionPackageWorkItems(tree: DeliveryArtNode | null, delivery
     const isFeature = node.component_type === "Feature";
     if (isFeature || ["User story", "Task", "Defect"].includes(node.component_type)) {
       const recordedStatus = node.backend_status;
-      const blocked = !["done", "parked", "retired"].includes(recordedStatus)
-        && Boolean(node.blocker || node.dependency_blocked);
-      const status = blocked ? "blocked" : recordedStatus;
+      const status = deliveryWorkItemStatus(node);
       const title = postureByStatus[status];
       const workItemId = node.legacy_work_package_id;
       const parentProgress = feature ? progressByFeature.get(feature.id) : undefined;
@@ -177,7 +176,7 @@ export function ExecutionPackageWorkBoard({ items, selectedId, showFeatureName, 
 export function ExecutionWorkBoardContextPanel({ deliveryPackage, items, view }: {
   deliveryPackage: DeliveryPackageSummary;
   items: ExecutionPackageWorkItem[] | null;
-  view: "Epic Board" | "Feature Board" | "All Work" | "ART Tree";
+  view: "Epic Board" | "Feature Board" | "All Work" | "Work Tree";
 }) {
   const projection = getDeliveryEffectivePackageProjection(deliveryPackage);
   const features = items?.filter(item => item.featureProgress).length;

@@ -16,8 +16,9 @@ export function deliveryHistoryInspectionTree(projection: DeliveryChangeProjecti
     if (depth > 32 || seen.size >= 8192 || !Number.isSafeInteger(value.id) || value.id < 1 || seen.has(value.id) || value.record_ref !== `openproject://work_packages/${value.id}` || !kinds.has(value.type)) throw new Error("The selected owner tree has inconsistent or excessive hierarchy.");
     seen.add(value.id);
     const children = value.children.map(child => node(child, depth + 1));
-    return { id: `work-item-${value.id}`, title: value.subject, componentType: value.type,
-      description: value.description ?? "Owner narrative not projected.", children,
+    return { id: `work-item-${value.id}`, workItemId: value.id, title: value.subject, componentType: value.type,
+      status: value.status.toLowerCase().replaceAll("_", "-"),
+      description: value.description ?? "Description unavailable.", children,
       totalChildCount: children.reduce((count, child) => count + child.totalChildCount + 1, 0) };
   }
   return node(projection.package.execution_tree);

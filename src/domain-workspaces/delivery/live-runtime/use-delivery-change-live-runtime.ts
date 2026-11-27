@@ -4,10 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   assertDeliveryChangeCommandResult,
+  assertDeliveryChangeResult,
   assertDeliveryChangeSnapshot,
   deliveryChangeDeliveryId,
   isDeliveryChangeLiveApiError,
 } from "./delivery-change-live-contract.ts";
+import { submitTrackedDeliveryCommand, useDeliveryCommandRecovery } from "./delivery-command-outcome.ts";
 import type {
   DeliveryChangeOperation,
   DeliveryChangeResult,
@@ -29,12 +31,6 @@ export class DeliveryChangeLiveRuntimeError extends Error {
   }
 }
 
-type PendingCommand = {
-  acceptedAt: string;
-  commandId: string;
-  requestKey: string;
-};
-
 type PendingRefresh = {
   deliveryId: string;
   promise: Promise<DeliveryChangeSnapshot>;
@@ -52,7 +48,8 @@ export function useDeliveryChangeLiveRuntime(
   const activeDeliveryId = useRef<string | null>(deliveryId);
   const snapshotRef = useRef<DeliveryChangeSnapshot | null>(null);
   const pendingRefresh = useRef<PendingRefresh | null>(null);
-  const pendingCommands = useRef<Record<string, PendingCommand>>({});
+  const [dispatching, setDispatching] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!deliveryId) {
@@ -91,7 +88,6 @@ export function useDeliveryChangeLiveRuntime(
   useEffect(() => {
     activeDeliveryId.current = deliveryId;
     snapshotRef.current = null;
-    pendingCommands.current = {};
     setSnapshot(null);
     setLastResult(null);
     if (!deliveryId) return;
@@ -113,6 +109,13 @@ export function useDeliveryChangeLiveRuntime(
     });
   }, [deliveryId, refresh]);
 
+  const recovery = useDeliveryCommandRecovery(deliveryId ? `work-structure:${deliveryId}` : null, dispatching, value => {
+    const result = assertDeliveryChangeResult(value);
+    setLastResult(result);
+    void refresh().catch(() => undefined);
+    return result.status === "applied";
+  });
+
   const apply = useCallback(
     async (operation: DeliveryChangeOperation, acceptanceNote: string, reviewedSourceRevision?: string) => {
       if (!deliveryId) {
@@ -132,47 +135,33 @@ export function useDeliveryChangeLiveRuntime(
       if (reviewedSourceRevision && current.projection.source_revision !== reviewedSourceRevision) {
         throw new DeliveryChangeLiveRuntimeError("The package changed after this review opened. Reopen the action and review its current state.", "delivery_change_review_stale");
       }
-      const requestKey = JSON.stringify({
-        acceptanceNote,
-        expectedSourceRevision: current.projection.source_revision,
-        operation,
-      });
-      const pending = pendingCommands.current[requestKey];
-      const commandId =
-        pending?.requestKey === requestKey
-          ? pending.commandId
-          : commandIdentity(operation.type);
-      const acceptedAt =
-        pending?.requestKey === requestKey
-          ? pending.acceptedAt
-          : new Date().toISOString();
-      pendingCommands.current[requestKey] = {
-        acceptedAt,
-        commandId,
-        requestKey,
-      };
-      const response = await fetch(`${deliveryChangePath(deliveryId)}/commands`, {
-        body: JSON.stringify({
-          acceptedAt,
-          acceptanceNote,
-          commandId,
-          expectedSourceRevision: current.projection.source_revision,
-          operation,
-        }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
-      const body: unknown = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw clientError(body);
+      const commandId = commandIdentity(operation.type);
+      setDispatching(true);
+      try {
+        const result = await submitTrackedDeliveryCommand({
+          scope: `work-structure:${deliveryId}`,
+          reference: { kind: "change-control", target: deliveryId, commandId },
+          send: () => fetch(`${deliveryChangePath(deliveryId)}/commands`, {
+            body: JSON.stringify({
+              acceptedAt: new Date().toISOString(),
+              acceptanceNote, commandId,
+              expectedSourceRevision: current.projection!.source_revision,
+              operation,
+            }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          }),
+          accept: (value, recovered) => recovered ? assertDeliveryChangeResult(value) : assertDeliveryChangeCommandResult(value).result,
+          reject: clientError,
+          onChecking: () => setChecking(true),
+        });
+        if (activeDeliveryId.current === deliveryId) setLastResult(result);
+        await refresh().catch(() => undefined);
+        return result;
+      } finally {
+        setChecking(false);
+        setDispatching(false);
       }
-      const commandResult = assertDeliveryChangeCommandResult(body);
-      if (activeDeliveryId.current === deliveryId) {
-        setLastResult(commandResult.result);
-      }
-      await refresh();
-      delete pendingCommands.current[requestKey];
-      return commandResult.result;
     },
     [deliveryId, refresh],
   );
@@ -180,6 +169,7 @@ export function useDeliveryChangeLiveRuntime(
   return {
     apply,
     lastResult,
+    operationStatus: checking ? "checking" as const : recovery,
     loading: snapshot === null,
     mode: snapshot?.mode ?? null,
     projection: snapshot?.projection ?? null,

@@ -496,40 +496,6 @@
   margin-top: 0.46rem;
 }
 
-.controlBoardTreeChildren {
-  margin-left: 2rem;
-  padding-left: 1.9rem;
-}
-
-.controlBoardTreeChildren::before {
-  left: 0.58rem;
-}
-
-.controlBoardTreeChildren > div::before {
-  left: -1.32rem;
-  width: 1.28rem;
-}
-
-.controlBoardTreeSurface {
-  display: grid;
-  gap: 0.7rem;
-}
-
-.controlBoardTreeToolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  justify-content: flex-end;
-}
-
-.controlBoardTreeBadges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.34rem;
-}
-
 @media (max-width: 1180px) {
   .controlBoardWorkspaceFrame {
     --control-board-inspector-width: 21rem;
@@ -583,6 +549,11 @@
   overflow: auto;
   scrollbar-color: rgba(255, 193, 90, 0.44) rgba(20, 14, 9, 0.62);
   scrollbar-width: thin;
+}
+
+.controlBoardMainPaneDark .controlBoardCanvasBody {
+  grid-row: 1;
+  padding-bottom: 0.92rem;
 }
 
 .controlBoardCanvasBody > .controlBoardLaneRow {

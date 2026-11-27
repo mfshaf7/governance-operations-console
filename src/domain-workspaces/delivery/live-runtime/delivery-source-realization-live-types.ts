@@ -1,6 +1,7 @@
 import type { EffectiveModelSelection } from "../../../console-integration/governed-ai/model-selection.ts";
 export type DeliverySourceRealizationAction = "start" | "continue" | "cancel" | "recover";
 export type DeliverySourceRealizationProjection = {
+  retained_draft_available?: boolean;
   schema_version: 1;
   workflow_id: "delivery-art-source-realization";
   session_id: string;
@@ -18,7 +19,7 @@ export type DeliverySourceRealizationProjection = {
     change_set: null | {
       digest: string;
       commit_message: string;
-      operations: Array<{ action: "create" | "replace" | "delete"; path: string; content_digest: string | null; expected_digest: string | null }>;
+      operations: Array<{ action: "create" | "replace" | "delete" | "patch"; path: string; content_digest: string | null; expected_digest: string | null }>;
     };
     source_receipt: null | { receipt_id: string; receipt_digest: string; head_commit: string; change_set_digest: string };
     failure: null | { code: string; retryable: boolean };

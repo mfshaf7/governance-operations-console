@@ -156,7 +156,7 @@ export function ExecutionActionModal({
         height="content"
         width="standard"
         closeLabel="Close package audit trail"
-        description={`Read-only package-scoped history for ${packageSummary.source_ref}.`}
+        description={`Recorded activity for Epic #${packageSummary.legacy_epic_id}.`}
         kicker="Audit Trail"
         onClose={onClose}
         open
@@ -355,7 +355,7 @@ export function ExecutionActionModal({
                   <TerasSignalItem
                     detail={error}
                     label="Apply stopped"
-                    title="Canonical Delivery change was not completed"
+                    title="The change could not be confirmed"
                     tone="danger"
                   />
                 </TerasList>

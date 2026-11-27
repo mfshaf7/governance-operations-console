@@ -18,7 +18,7 @@ export function sourceOperation(id, action, state, intent = sourceIntent()) {
   op.provider_operation.action = action; op.provider_operation.capability_id = action;
   if (state === "succeeded") {
     const revoked = action === "agent-source.revoke";
-    const credential = { schema_version: 1, artifact_type: "source-intent-credential-receipt", command_id: op.command.command_id, action, outcome: revoked ? "revoked" : "issued",
+    const credential = { schema_version: 1, artifact_type: "source-intent-credential-receipt", command_id: op.command.command_id, action, outcome: revoked ? "revoked" : action === "agent-source.renew" ? "renewed" : "issued",
       source_intent_digest: hash(intent), source_intent_id: intent.intent_id, supersedes_intent_digest: intent.supersedes_intent_digest, subject: intent.subject, session_id: null,
       landing_unit_id: intent.landing_unit_id, repository: intent.repository, repository_id: intent.repository_id, installation_id: intent.installation_id, branch: intent.branch, fetched_base: intent.fetched_base,
       human_reviewer_id: intent.human_reviewer_id, caller_id: intent.caller_id, operator_id: intent.operator_id, source_start_digest: intent.source_start_digest,

@@ -22,6 +22,8 @@ import {
 type ArchitecturePacketClientOptions = {
   env?: NodeJS.ProcessEnv;
   fetchImpl?: typeof fetch;
+  includeSessionImpact?: boolean;
+  expectedImpactRevision?: string;
 };
 
 const architecturePacketTimeoutMs = 75_000;
@@ -65,7 +67,10 @@ export async function draftArchitecturePacket(
     config,
     "/v1/delivery-art/architecture-packets/draft",
     {
-      body: JSON.stringify({ input: checked }),
+      body: JSON.stringify({
+        input: checked,
+        include_session_impact: options.includeSessionImpact,
+      }),
       headers: { "x-oos-operator-id": config.operatorId },
       method: "POST",
     },
@@ -95,7 +100,10 @@ export async function persistArchitecturePacket(
     config,
     "/v1/delivery-art/architecture-packets/persist",
     {
-      body: JSON.stringify({ artifact: checked }),
+      body: JSON.stringify({
+        artifact: checked,
+        expected_impact_revision: options.expectedImpactRevision,
+      }),
       headers: { "x-oos-operator-id": config.operatorId },
       method: "POST",
     },

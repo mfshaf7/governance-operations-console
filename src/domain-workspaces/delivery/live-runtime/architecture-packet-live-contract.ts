@@ -7,6 +7,7 @@ import type {
   ArchitecturePacketDraftResult,
   ArchitecturePacketPersistResult,
   ArchitecturePacketRepoRevision,
+  ArchitectureSessionImpact,
 } from "./architecture-packet-live-types.ts";
 
 const deliveryIdPattern = /^delivery-[1-9][0-9]*$/;
@@ -16,6 +17,13 @@ const commitPattern = /^[0-9a-f]{40}$/;
 const digestPattern = /^sha256:[0-9a-f]{64}$/;
 const wgcfArtifactPattern = /^wgcf:\/\/artifacts\/delivery-art\/sha256\/[0-9a-f]{64}$/;
 const localArtifactPattern = /^local:\/\/delivery-art\/[A-Za-z0-9._:-]+\.json$/;
+
+const impactReasons = {
+  refresh: ["scope-unchanged"],
+  rebuild: ["scope-changed-clean"],
+  review: ["session-operator", "operation-pending", "binding-unavailable", "scope-regrouped", "source-or-evidence-exists"],
+  continues: ["plan-not-required"],
+} satisfies Record<ArchitectureSessionImpact["sessions"][number]["disposition"], string[]>;
 
 const architectureSections = [
   ["descendant_owner_map", "ownership map", "non-empty-array"],
@@ -273,6 +281,7 @@ export function assertArchitecturePacketDraftResult(
   positiveInteger(snapshot.covered_record_count, "covered record count");
   nonNegativeInteger(snapshot.dependency_record_count, "dependency record count");
   nonNegativeInteger(snapshot.relation_count, "relation count");
+  assertOptionalSessionImpact(result.session_impact);
   return value as ArchitecturePacketDraftResult;
 }
 
@@ -292,7 +301,27 @@ export function assertArchitecturePacketPersistResult(
   });
   record(result.custody_receipt, "Architecture Packet custody receipt");
   record(result.owner_receipt, "Architecture Packet owner receipt");
+  assertOptionalSessionImpact(result.session_impact);
   return value as ArchitecturePacketPersistResult;
+}
+
+function assertOptionalSessionImpact(value: unknown) {
+  if (value === undefined) return;
+  const impact = record(value, "work-session impact");
+  match(impact.revision, digestPattern, "work-session impact revision");
+  if (!Array.isArray(impact.sessions)) invalid("Work-session impact sessions must be a list.");
+  for (const entry of impact.sessions) {
+    const session = record(entry, "affected work session");
+    const disposition = session.disposition as keyof typeof impactReasons;
+    const reasons: readonly string[] | undefined = Object.hasOwn(impactReasons, disposition) ? impactReasons[disposition] : undefined;
+    if (!reasons?.includes(String(session.reason))) invalid("Work-session impact disposition and reason do not match.");
+    match(session.owner_repo, repoPattern, "work session repository");
+    if (!Array.isArray(session.work_item_ids) || !session.work_item_ids.length) invalid("An affected work session must cover at least one work item.");
+    for (const id of session.work_item_ids) match(id, workItemIdPattern, "affected work item id");
+    if (session.open_work_item_id !== null && !session.work_item_ids.includes(session.open_work_item_id)) {
+      invalid("The work-session link must open an affected item.");
+    }
+  }
 }
 
 export function assertArchitecturePacketCurrentResult(

@@ -44,6 +44,14 @@ export type DeliveryWorkSessionPullRequest = Record<string, unknown> & {
   state: string;
 };
 
+export type DeliveryReviewedOperatingVerification = {
+  digest: string;
+  source: { pull_request_url: string; head_commit: string; merge_commit: string };
+  verifier: { pull_request_url: string; revision: string };
+  review_packet_digest: string;
+  cases: Array<{ id: string; title: string }>;
+};
+
 export type DeliveryWorkSessionArchitectureLocation =
   | { relative_path: string; repo: string }
   | { recorded_artifact_digest: string };
@@ -142,6 +150,7 @@ export type DeliveryWorkSessionProjection = {
     pristine_proof?: { source?: { local_branch_head?: string; worktree_head?: string } };
   };
   source_authorization?: { intent_ref: string; session_id: string; revision?: string; state?: string; operation_ref?: string | null };
+  source_access_scope?: { work_item_ref: string; source_start_digest: string; predecessor_intent_ref?: string };
   agent_source?: Record<string, unknown> & { state: string };
   cleanup?: DeliveryWorkSessionCleanup;
   cleanup_receipt?: DeliveryWorkSessionCleanupReceipt;
@@ -155,8 +164,10 @@ export type DeliveryWorkSessionProjection = {
   landing_unit_id: string | null;
   lifecycle_context?: DeliveryWorkSessionLifecycleContext;
   next_action: DeliveryWorkSessionNextAction | null;
+  pending_rebuild?: { command_id: string; expected_session_revision: string };
   projection?: DeliveryWorkSessionLifecycleProjection;
   pull_request?: DeliveryWorkSessionPullRequest;
+  operating_verification?: DeliveryReviewedOperatingVerification;
   replayed?: boolean;
   session_id: string | null;
   session_revision: string | null;

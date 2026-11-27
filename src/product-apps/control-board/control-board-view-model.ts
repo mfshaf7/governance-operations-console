@@ -12,7 +12,7 @@ export const controlBoardViewOptions: Array<{
 }> = [
   { label: "Control Board", view: "control-board" },
   { label: "Family Map", view: "family-map" },
-  { label: "ART Tree", view: "art-tree" },
+  { label: "Work Tree", view: "art-tree" },
 ];
 
 export const controlBoardPostureOrder: ControlBoardPackagePosture[] = [
