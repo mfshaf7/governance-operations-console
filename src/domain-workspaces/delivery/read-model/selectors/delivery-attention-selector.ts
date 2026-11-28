@@ -192,8 +192,9 @@ function deliveryAttentionItemForPackage(
 
   if (
     packagePosture === "Blocked" &&
-    (deliveryPackage.workflow_phase === "execution" ||
-      deliveryPackage.workflow_phase === "audit_only")
+    deliveryPackage.workflow_phase === "execution" &&
+    (deliveryPackage.execution_navigation?.actionable_blocker_ids?.length !== 0 ||
+      deliveryPackage.backend_status === "blocked" || deliveryPackage.active_blocker)
   ) {
     return {
       actionLabel: "Open Board",
@@ -203,6 +204,21 @@ function deliveryAttentionItemForPackage(
       target: { surfaceId: "execution-board", packageId: deliveryPackage.delivery_package_id },
       title: deliveryPackage.display_name,
       tone: "danger",
+    };
+  }
+
+  const navigation = deliveryPackage.execution_navigation;
+  if (deliveryPackage.workflow_phase === "execution" && navigation?.blocking_scope === "some-work" &&
+      navigation.actionable_blocker_ids?.length) {
+    const count = navigation.actionable_blocker_ids.length;
+    return {
+      actionLabel: "Review Waiting Work",
+      detail: `${count} ${count === 1 ? "work item needs" : "work items need"} blocker review. Other work can continue.`,
+      label: "Work Needs Review",
+      rank: 42,
+      target: { surfaceId: "execution-board", packageId: deliveryPackage.delivery_package_id },
+      title: deliveryPackage.display_name,
+      tone: "warn",
     };
   }
 

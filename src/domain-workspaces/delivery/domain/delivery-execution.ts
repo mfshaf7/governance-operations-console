@@ -35,6 +35,9 @@ export type DeliveryFamilyMapGroup = {
 export type DeliveryArtNode = {
   blocker?: import("./delivery-package.ts").DeliveryActiveBlockerProjection;
   dependency_blocked?: boolean;
+  unresolved_dependency_work_package_ids?: number[];
+  completion_prerequisite_work_package_ids?: number[];
+  inherited_status?: "blocked" | "parked";
   depends_on_work_package_ids?: number[];
   owner_repo?: string | null;
   planning?: {
@@ -54,9 +57,15 @@ export type DeliveryArtNode = {
   tone: DeliveryTone;
 };
 
+export function deliveryWorkItemHasUnresolvedStartDependency(node: DeliveryArtNode): boolean {
+  if (!node.dependency_blocked) return false;
+  if (!node.completion_prerequisite_work_package_ids?.length || !node.unresolved_dependency_work_package_ids?.length) return true;
+  return node.unresolved_dependency_work_package_ids.some(id => !node.completion_prerequisite_work_package_ids!.includes(id));
+}
+
 export function deliveryWorkItemStatus(node: DeliveryArtNode): DeliveryBackendStatus {
-  return !["done", "parked", "retired"].includes(node.backend_status) &&
-    (node.blocker || node.dependency_blocked) ? "blocked" : node.backend_status;
+  if (["done", "parked", "retired"].includes(node.backend_status)) return node.backend_status;
+  return node.inherited_status ?? (node.blocker || deliveryWorkItemHasUnresolvedStartDependency(node) ? "blocked" : node.backend_status);
 }
 
 export type DeliveryMilestone = {

@@ -2696,9 +2696,11 @@
 }
 
 .terasReadoutField[data-surface="field"] .terasReadoutFieldBox {
+  --text: #15130e;
+  --teras-document-link-color: #26549a;
   border-color: rgba(255, 193, 90, .22);
   padding-inline-start: .8rem;
-  color: #15130e;
+  color: var(--text);
   background: #f8f4eb;
 }
 

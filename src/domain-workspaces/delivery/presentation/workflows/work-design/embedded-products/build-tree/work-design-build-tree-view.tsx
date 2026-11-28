@@ -10,12 +10,16 @@ import {
 } from "@/product-apps/build-tree";
 import type { BuildTreeEditorTreeRole } from "@/product-apps/build-tree";
 
+import { deliveryTreeTitleParts } from "../../../../../product-adapters/build-tree/delivery-tree-title.ts";
+
 import type { WorkDesignFinalizedBrief } from "../../artifacts/context-brief/index.ts";
 import { workDesignBuildTreeContextHandoffMetadata } from "./work-design-build-tree-view-model.ts";
 import {
   TerasActionButton,
   TerasActionRow,
   TerasAdvisorPanel,
+  TerasDocument,
+  TerasReadoutField,
   TerasFieldStack,
   TerasMetadataList,
   TerasNoteField,
@@ -58,6 +62,7 @@ type WorkDesignContextDecisionCopy = {
 type WorkDesignBuildTreeViewProps = {
   contextFinalizedBriefAvailable?: boolean;
   readOnly?: boolean;
+  epicNumber: number;
   treeAdvisorControls?: import("react").ComponentProps<typeof TerasAdvisorPanel>["draftControls"];
   addFeature: (parentId?: string) => void;
   addRiskBranch: (parentId?: string) => void;
@@ -101,6 +106,7 @@ type WorkDesignBuildTreeViewProps = {
 export function WorkDesignBuildTreeView({
   contextFinalizedBriefAvailable = true,
   readOnly = false,
+  epicNumber,
   treeAdvisorControls,
   addFeature,
   addRiskBranch,
@@ -285,17 +291,21 @@ export function WorkDesignBuildTreeView({
                 prefix={titleParts.locked}
                 value={titleParts.editable}
               />
-              <TerasNoteField
-                disabled={readOnly}
-                {...buildTreeEditorFieldProps}
-                accentRgb={workDesignNodeAccentRgb(node.kind)}
-                density="compact"
-                fill
-                label="Draft Notes"
-                onValueChange={(value) => updateNodeDraftBody(node.id, value)}
-                placeholder={workDesignDraftPlaceholder(node)}
-                value={node.draftBody}
-              />
+              {readOnly ? <TerasReadoutField label="Work item notes" scrollHeight="fill" surface="field"
+                value={node.draftBody.trim() || node.description.trim() ? (
+                  <TerasDocument ariaLabel="Work item notes" content={node.draftBody.trim() || node.description} />
+                ) : "No notes recorded."} /> : (
+                <TerasNoteField
+                  {...buildTreeEditorFieldProps}
+                  accentRgb={workDesignNodeAccentRgb(node.kind)}
+                  density="compact"
+                  fill
+                  label="Draft Notes"
+                  onValueChange={(value) => updateNodeDraftBody(node.id, value)}
+                  placeholder={workDesignDraftPlaceholder(node)}
+                  value={node.draftBody}
+                />
+              )}
               <TerasTextField
                 disabled={readOnly}
                 {...buildTreeEditorFieldProps}
@@ -415,8 +425,11 @@ export function WorkDesignBuildTreeView({
         <BuildTreeEditorTree
           draftNotesSize="large"
           readOnly={readOnly}
+          structureLocked={readOnly}
+          inlineInspection={readOnly ? {} : undefined}
           addMenuNodeId={treeAddMenuNodeId}
           copy={{
+            detailDraftLabel: readOnly ? "Work item notes" : "Draft Notes",
             groupedLeafCollapsedDescription:
               "Summary first. Expand to inspect the full User story stack.",
             groupedLeafEmptyDescription:
@@ -466,7 +479,7 @@ export function WorkDesignBuildTreeView({
           getNodeRole={workDesignBuildTreeNodeRole}
           getStructuredLayout={workDesignStructuredNodeLayout}
           getSummary={workDesignNodeSummary}
-          getTitleParts={workDesignNodeTitleParts}
+          getTitleParts={node => deliveryTreeTitleParts(node, node.recordedWorkItemNumber ?? (node.kind === "Epic" ? epicNumber : undefined))}
           mode={buildTreeViewMode}
           onDeleteNode={requestDelete}
           onFocusInlineTitle={(node) => {

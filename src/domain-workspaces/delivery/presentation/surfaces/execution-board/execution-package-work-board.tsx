@@ -256,6 +256,7 @@ export function ExecutionPackageWorkItemPanel({ item, planningPlacement, action,
   if (!readOnly && lane.status === "blocked") {
     if (blockerAction) nextActionDescription = "Review the recorded blocker and choose a return status once it’s resolved.";
     else if (node.dependency_blocked && dependencies.length) nextActionDescription = "Review the dependencies above to see what needs to finish first.";
+    else if (node.inherited_status === "blocked") nextActionDescription = "Review the hold on the parent work before continuing.";
     else if (blocker) nextActionDescription = "Use the blocker details above to see what needs to be resolved.";
     else if (!action) nextActionDescription = "Confirm what’s blocking this item before continuing.";
   }
@@ -276,7 +277,8 @@ export function ExecutionPackageWorkItemPanel({ item, planningPlacement, action,
             <TerasList frame="contained">
               <TerasSignalItem label="Blocker" tone="warn" textOverflow="wrap"
                 title={blocker?.statement.trim() ? executionPackageText(blocker.statement)
-                  : node.dependency_blocked ? "Waiting on a dependency" : "No blocker details were returned"}
+                  : node.dependency_blocked ? "Waiting on a dependency"
+                  : node.inherited_status === "blocked" ? "Parent work is on hold" : "No blocker details were returned"}
                 detail={blocker?.impact.trim() ? executionPackageText(blocker.impact) : undefined} />
             </TerasList>
             {blocker ? <TerasMetadataList items={executionActiveBlockerMetadata(blocker)} /> : null}

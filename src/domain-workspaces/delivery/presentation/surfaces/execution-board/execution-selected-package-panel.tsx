@@ -1,3 +1,4 @@
+import { deliveryWorkItemStatus } from "../../../domain/delivery-execution.ts";
 import type { DeliveryArtNode, DeliveryAvailableAction, DeliveryPackageSummary } from "../../../read-model/index.ts";
 import { getChildCounts, getDeliveryEffectivePackageProjection, getPackageAuditEvents, getPackageDetailsById } from "../../../read-model/index.ts";
 import { TerasActionButton, TerasActionRow, TerasContentRegion, TerasFieldStack, TerasLoadingState, TerasEmptyState,
@@ -30,7 +31,7 @@ export function ExecutionSelectedPackagePanel({ auditEvents, details, onActionSe
   scheduledWork, scheduledPIs, recordedAssignments, previewPlanRecorded,
   onInspectCloseout, onInspectHistory, readOnly = false, historyDetail,
   historyLoading = false, historyError, actionLoading = false, actionError,
-  onInspectTechnicalPlan, onOpenWorkBoard, technicalPlanRequirement: requirementInput,
+  onInspectTechnicalPlan, onInspectWaitingItem, onOpenWorkBoard, technicalPlanRequirement: requirementInput,
 }: {
   auditEvents: ReturnType<typeof getPackageAuditEvents>; details: ReturnType<typeof getPackageDetailsById>;
   onActionSelect: (action: DeliveryAvailableAction) => void; packageSummary: DeliveryPackageSummary; packageTree: DeliveryArtNode | null;
@@ -41,7 +42,7 @@ export function ExecutionSelectedPackagePanel({ auditEvents, details, onActionSe
   previewPlanRecorded: boolean;
   onInspectCloseout?: () => void; onInspectHistory?: () => void; readOnly?: boolean; historyDetail?: string;
   historyLoading?: boolean; historyError?: string | null; actionLoading?: boolean; actionError?: string | null;
-  onInspectTechnicalPlan?: () => void; onOpenWorkBoard: () => void; technicalPlanRequirement?: TechnicalPlanRequirement;
+  onInspectTechnicalPlan?: () => void; onInspectWaitingItem: (item: DeliveryArtNode) => void; onOpenWorkBoard: () => void; technicalPlanRequirement?: TechnicalPlanRequirement;
 }) {
   const planning = usePIPlanningPreview();
   const planningSourceId = packageSummary.execution_handoff?.source_package_id ?? packageSummary.delivery_package_id;
@@ -53,6 +54,16 @@ export function ExecutionSelectedPackagePanel({ auditEvents, details, onActionSe
   const effectiveProjection = getDeliveryEffectivePackageProjection(packageSummary);
   const childCounts = packageTree ? getChildCounts(packageTree) : null;
   const groups = executionPackageWorkGroups(packageTree);
+  const navigation = packageSummary.execution_navigation;
+  const packageItems = executionWorkChoices(packageTree?.children ?? [], "all");
+  const blockedIds = new Set(navigation?.blocked_work_item_ids);
+  const waitingItems = navigation
+    ? packageItems.filter(item => item.legacy_work_package_id !== null && blockedIds.has(item.legacy_work_package_id) && deliveryWorkItemStatus(item) === "blocked")
+    : groups.find(group => group.status === "blocked")?.items ?? [];
+  const completionItems = packageItems.filter(item => item.completion_prerequisite_work_package_ids?.length);
+  const waitingLabels = new Map(packageItems.map(item => [
+    item.legacy_work_package_id, `${item.component_type} #${item.legacy_work_package_id}`,
+  ]));
   const [targetPI, ...packageFacts] = executionSelectedPackageMetadata({ childCounts, details, packageSummary, packageTree });
   const workOverview = [
     ...(scheduledWork ? [{
@@ -73,6 +84,7 @@ export function ExecutionSelectedPackagePanel({ auditEvents, details, onActionSe
   const blocker = packageSummary.active_blocker;
   const nextAction = executionPackageNextAction({
     status: packageSummary.backend_status,
+    blockingScope: navigation?.blocking_scope,
     closeoutPending: effectiveProjection.posture === "Closeout Pending",
     hasCloseout: Boolean(onInspectCloseout),
     actions: selectedActions,
@@ -121,7 +133,8 @@ export function ExecutionSelectedPackagePanel({ auditEvents, details, onActionSe
       <TerasInspectionSection title="Next Action">
         <TerasContentTray title={nextAction.title} description={nextAction.detail} />
       </TerasInspectionSection>
-      {blocker || packageSummary.backend_status === "blocked" || Boolean(packageSummary.execution_navigation?.blocked_work_item_ids.length || groups.find(group => group.status === "blocked")?.count) ? <TerasInspectionSection title="What’s Blocking Progress">
+      {blocker || packageSummary.backend_status === "blocked" || navigation?.blocking_scope === "package" || waitingItems.length ? <TerasInspectionSection
+        title={effectiveProjection.posture === "Blocked" ? "What’s Blocking Progress" : "Waiting Work"}>
         <TerasFieldStack spacing="compact">
           {blocker ? <>
             <TerasList frame="contained"><TerasSignalItem textOverflow="wrap" label="What is blocked?" title={executionPackageText(blocker.statement || "Statement not recorded")}
@@ -133,12 +146,34 @@ export function ExecutionSelectedPackagePanel({ auditEvents, details, onActionSe
               { label: "Recorded reason", value: blocker.justification || "Not recorded" }, { label: "First recorded", value: blocker.discovered_on || "Not recorded" },
               { label: "Original statement", value: blocker.statement }, { label: "Original impact", value: blocker.impact },
             ]} />
-          </> : packageSummary.backend_status === "blocked" ? <TerasList frame="contained">
-            <TerasSignalItem label="Package status" title="Blocked" detail="No package blocker details were returned." tone="danger" actions={reviewBlocker} />
-          </TerasList> :
-            <TerasList frame="contained"><TerasSignalItem label="Blocked child work" title="Some work items are blocked"
-              detail="Open the Work Board to see the affected items and their dependencies." tone="warn" /></TerasList>}
+          </> : packageSummary.backend_status === "blocked" || navigation?.blocking_scope === "package" ? <TerasList frame="contained">
+            <TerasSignalItem label="Package status" title="Blocked"
+              detail={packageTree?.dependency_blocked ? "This Epic is waiting for prerequisite work." : "No package blocker details were returned."}
+              tone="danger" actions={reviewBlocker} />
+          </TerasList> : null}
+          {waitingItems.length > 0 ? <TerasList frame="contained">{waitingItems.map(item => {
+            const dependencies = item.unresolved_dependency_work_package_ids?.map(id => waitingLabels.get(id) ?? `Work item #${id}`);
+            const detail = item.blocker?.statement ? executionPackageText(item.blocker.statement)
+              : dependencies?.length ? `Waiting for ${dependencies.join(", ")}.`
+              : item.dependency_blocked ? "Waiting for prerequisite work." : "This item has a recorded blocker.";
+            return <TerasSignalItem key={item.id} textOverflow="wrap" label={waitingLabels.get(item.legacy_work_package_id)}
+              title={item.title} detail={detail} tone="warn" actions={
+                <TerasActionButton emphasis="secondary" size="table-compact" onClick={() => onInspectWaitingItem(item)}>
+                  View {item.component_type === "Risk" ? "Risk" : "Work Item"}
+                </TerasActionButton>
+              } />;
+          })}</TerasList> : null}
         </TerasFieldStack>
+      </TerasInspectionSection> : null}
+      {completionItems.length ? <TerasInspectionSection title="Needed for completion">
+        <TerasList frame="contained">{completionItems.map(item =>
+          <TerasSignalItem key={item.id} textOverflow="wrap" label={waitingLabels.get(item.legacy_work_package_id)}
+            title={executionPackageText(item.title)}
+            detail={`Requires ${item.completion_prerequisite_work_package_ids!.map(id => waitingLabels.get(id) ?? `Work item #${id}`).join(", ")} before closing.`}
+            tone="info" actions={<TerasActionButton emphasis="secondary" size="table-compact" onClick={() => onInspectWaitingItem(item)}>
+              View {item.component_type === "Risk" ? "Risk" : "Work Item"}
+            </TerasActionButton>} />
+        )}</TerasList>
       </TerasInspectionSection> : null}
       <TerasInspectionSection title={readOnly ? "Package Records" : "Manage Package"}>
         <TerasFieldStack spacing="compact">

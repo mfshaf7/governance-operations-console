@@ -4,6 +4,7 @@ import { Fragment } from "react";
 
 import { TerasContentTray, TerasSegmentedControl, TerasSelectableRow, TerasStatusPill, TerasTrayStack } from "@/teras";
 import { BuildTreeEditorTree } from "@/product-apps/build-tree";
+import { deliveryTreeTitleParts } from "../../../../../product-adapters/build-tree/delivery-tree-title.ts";
 import { refinementBuildTreeLayout, refinementBuildTreeNode, refinementBuildTreeRole } from "../../../../../product-adapters/build-tree/index.ts";
 import type { DeliveryRefinementTreeNode } from "../../../../../read-model/index.ts";
 import { deliveryFieldDisplayLabel } from "../../../../../read-model/terms/copy.ts";
@@ -55,7 +56,7 @@ export function MetadataTargetTree({ readOnly = false, metadataDraftValues, coll
     visibleNodeIds={visibleNodeIds} expandedNodeIds={ids.filter(id => !collapsedNodeIds.includes(id))}
     structuredGroupIds={filtered ? ids : ids.filter(id => !closedStoryGroups.includes(id))}
     getNodeRole={refinementBuildTreeRole} getStructuredLayout={item => refinementBuildTreeLayout(item, visibleNodeIds)}
-    getDisplayTitle={item => item.title} getKindLabel={(_kind, item) => refinementItemLabel(item)}
+    getDisplayTitle={item => item.title} getKindLabel={kind => kind === "User story" ? "User Story" : kind}
     getIndex={(item, position) => item.kind === "Epic" ? "E" : item.kind === "Risk" ? "R" : String(position + 1).padStart(2, "0")}
     getSummary={item => refinementItemSummary(item.description)}
     getChildCountLabel={item => `${item.children.length} work items`}
@@ -69,7 +70,7 @@ export function MetadataTargetTree({ readOnly = false, metadataDraftValues, coll
       <MetadataTreeFields readOnly={readOnly} targets={targets.filter(target => target.node.id === item.id)} drafts={metadataDraftValues}
         resolutions={metadataFieldResolutions} selectedFieldKey={selectedFieldKey} onSelect={onSelectMetadataField} /> : null}
     getAddActions={() => []} getDraftPlaceholder={() => ""} getEditableTitlePlaceholder={() => ""}
-    getTitleParts={item => ({ editable: item.title, locked: "" })}
+    getTitleParts={item => deliveryTreeTitleParts(item, /^\d+$/.test(item.id) ? Number(item.id) : undefined)}
     onStructuredNodeSelect={item => {
       if (collapsedNodeIds.includes(item.id)) onToggleNode(item.id);
       if (metadataSelectionMode === "shared") onToggleMetadataBulkNode(item.id); else onSelectItem(item.id);

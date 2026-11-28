@@ -89,13 +89,14 @@ export function DeliveryPackageRegisterSurface({
       workDesignSessionForPackage: loadWorkDesignSessionDraft,
     });
   }, [registerModel, surface, registerRevision]);
-  const packagePostureOptions: Array<DeliveryPackageRegisterStatusLabel|"all">=live?["all","New","Ready","In Progress","Blocked","Done","Deferred","Retired","Closeout Pending"]:["all",...Array.from(new Set(packages.map(deliveryPackageRegisterStatusLabel)))];
+  const history = model.history_scope === "history";
+  const statusLabel = history ? (row: DeliveryPackageRegisterPackage) => row.package_posture : deliveryPackageRegisterStatusLabel;
+  const packagePostureOptions: Array<DeliveryPackageRegisterStatusLabel|"all">=live?["all","New","Ready","In Progress","Blocked","Done","Deferred","Retired","Closeout Pending"]:["all",...Array.from(new Set(packages.map(statusLabel)))];
   const normalizedPackageSearch = packageSearch.trim().toLowerCase();
   const filteredPackages = live ? packages.filter(row=>page.model?.packages.some(source=>source.delivery_package_id===row.delivery_package_id)) : packages.filter((deliveryPackage) => {
     const matchesPosture =
       packagePostureFilter === "all" ||
-      deliveryPackageRegisterStatusLabel(deliveryPackage) ===
-        packagePostureFilter;
+      statusLabel(deliveryPackage) === packagePostureFilter;
     const matchesSearch = normalizedPackageSearch
       ? [
           deliveryPackage.backend_status,
@@ -220,6 +221,7 @@ export function DeliveryPackageRegisterSurface({
                 actions={<TerasActionButton emphasis="secondary" onClick={() => void page.refresh()}>Retry loading</TerasActionButton>} />
               : filteredPackages.length > 0 ? (
               <DeliveryPackageRegisterTable
+                history={model.history_scope === "history"}
                 onSelectPackage={(deliveryPackage) =>
                   setSelectedPackageId(deliveryPackage.delivery_package_id)
                 }

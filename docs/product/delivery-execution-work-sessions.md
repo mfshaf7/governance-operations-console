@@ -12,6 +12,31 @@ and Start Work Session preserve the approved work group's exact identifier.
 
 ## Purpose
 
+The package status describes the Epic as a whole. A story or risk can
+wait while the package stays **In Progress**. Use **Waiting Work** in the
+package panel to see the affected records and open their details. **Blocked**
+means a package hold or a hold across all remaining execution paths.
+**Closeout Pending** leads to review of the remaining completion evidence
+after the recorded descendant obligations are terminal.
+
+The Work Session shows the selected item's current reason before
+preparation. Use **Open PI Planning** if an iteration is missing. Review the
+linked item or Work Board when a prerequisite or parent hold is recorded.
+After completing a session, use **Open Work Board** when the initiative
+still has open work. The original session and its verification remain
+available while the initiative is being completed.
+
+An approved Technical Plan can require evidence before a Risk or other
+non-source item closes. In Execution, **Needed for completion** lists those
+requirements from the current recorded plan. Work with a prerequisite still
+needed for starting remains in **Waiting Work**. Review Completion continues
+to check the live owner rules for the selected item.
+
+If the **Console update available** notice appears in a Work Session, save
+any pending drafts and use **Back to Board**. Finish or close other open
+workspaces before selecting **Reload Console**. Reopen the saved work from
+its Work Board or continue the original command using its recorded result.
+
 Use **Delivery → Execution** to find a package on the Control Board or
 Family Map. Select it to inspect its status and manage PI planning, the
 technical plan, package blockers, closeout, and records. Choose **Open Work

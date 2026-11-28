@@ -78,6 +78,10 @@ export type DeliveryPackageSummary = {
     prepared_work_item_ids: number[];
     planning_prepared_work_item_ids?: number[];
     blocked_work_item_ids: number[];
+    blocking_scope?: "package" | "all-work" | "some-work" | "none";
+    actionable_blocker_ids?: number[];
+    held_work_item_ids?: number[];
+    deferred_work_item_ids?: number[];
     refinement_work_item_ids: number[];
     refinement_governance_pending?: boolean;
     eligibility: "check-selected-work-item";

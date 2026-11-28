@@ -114,6 +114,9 @@ export function workSessionCommandLabel(code: string) {
 // These descriptions explain broker actions to operators. The raw owner reason is
 // still available in the session's technical details.
 const workSessionMoves: Record<string, { title: string; description: string; status?: string }> = {
+  "work-scope-held": { title: "Review the hold on this work", description: "Inspect the recorded reason before starting.", status: "Waiting" },
+  "work-prerequisites-review-required": { title: "Review prerequisite work", description: "Inspect the recorded dependencies before starting.", status: "Waiting" },
+  "work-planning-required": { title: "Schedule this work", description: "Assign this item to an iteration in PI Planning.", status: "Needs scheduling" },
   "work-session-start-required": { title: "Prepare this work", description: "Check what this item needs before you start a session.", status: "Ready to check" },
   "work-session-start-ready": { title: "Review before starting", description: "Confirm the work covered by this session and approve repository access when it is requested." },
   "landing-unit-decision-required": { title: "Review before starting", description: "Confirm the work that will be reviewed and merged together." },

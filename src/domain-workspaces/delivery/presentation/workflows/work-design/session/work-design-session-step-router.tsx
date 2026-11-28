@@ -259,6 +259,7 @@ export function WorkDesignSessionStepRouter({
         />
       ) : activeStep === "build" ? (
         <WorkDesignBuildTreeStep
+          epicNumber={deliveryPackage.legacy_epic_id}
           contextFinalizedBriefAvailable={contextArtifacts.contextFinalizedBriefAvailable}
           readOnly={readOnly}
           treeAdvisorControls={buildTree.treeAdvisorControls}

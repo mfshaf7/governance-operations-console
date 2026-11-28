@@ -291,7 +291,7 @@ export function useConsoleShellController() {
   }
 
   function openPulseRoute(route: WorkspacePulseRoute) {
-    openConsoleNavigationTarget(route.target);
+    openConsoleNavigationTarget(route.target, route.entryIntent ?? null);
   }
 
   function openAttentionCandidate(

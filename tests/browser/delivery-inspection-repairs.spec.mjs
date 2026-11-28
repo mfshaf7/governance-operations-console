@@ -649,8 +649,8 @@ test("Execution retains all views with readable horizontally navigable lanes",as
   await expect(h.workspace.getByRole("radio",{name:"Work Tree",exact:true})).toBeChecked();
   await expect(h.workspace.getByRole("heading",{name:"Governed AI Control Plane",exact:true}).first()).toBeVisible();
   const hierarchy = h.workspace.getByRole("region", { name: "Work hierarchy", exact: true });
-  const story = hierarchy.getByRole("button", { name: /Validate mutation draft before apply.*#714/i });
-  const otherStory = hierarchy.getByRole("button", { name: /Render apply receipt in console.*#715/i });
+  const story = hierarchy.getByRole("button", { name: /^\d+ User Story #714 - Validate mutation draft before apply/i });
+  const otherStory = hierarchy.getByRole("button", { name: /^\d+ User Story #715 - Render apply receipt in console/i });
   const description = hierarchy.getByRole("region", { name: "Description", exact: true });
   await expect(story).toContainText(/ready/i);
   await expect(description).toHaveCount(0);
@@ -723,14 +723,14 @@ test("Current Work Tree reads descriptions from the selected owner tree", async 
   await h.workspace.getByRole("button", { name: "Retry loading", exact: true }).click();
   const hierarchy = h.workspace.getByRole("region", { name: "Work hierarchy", exact: true });
   const description = hierarchy.getByRole("region", { name: "Description", exact: true });
-  await hierarchy.getByRole("button", { name: /Broker-owned orchestration path.*#710/ }).click();
+  await hierarchy.getByRole("button", { name: /^\d+ Feature #710 - Broker-owned orchestration path/ }).click();
   await expect(description.getByRole("heading", { name: "Owner acceptance" })).toBeVisible({ timeout: 5000 });
   await expect(description.locator("strong")).toHaveText("the recorded proof");
-  await hierarchy.getByRole("button", { name: /Validate mutation draft before apply.*#714/ }).click();
+  await hierarchy.getByRole("button", { name: /^\d+ User Story #714 - Validate mutation draft before apply/ }).click();
   await expect(description).toHaveText(/No description recorded/);
-  await hierarchy.getByRole("button", { name: /Render apply receipt in console.*#715/ }).click();
+  await hierarchy.getByRole("button", { name: /^\d+ User Story #715 - Render apply receipt in console/ }).click();
   await expect(description.getByRole("paragraph")).toHaveText("Read the completed receipt.");
-  await hierarchy.getByRole("button", { name: /Broker-owned orchestration path.*#710/ }).click();
+  await hierarchy.getByRole("button", { name: /^\d+ Feature #710 - Broker-owned orchestration path/ }).click();
   await hierarchy.getByRole("button", { name: "View on Work Board: Broker-owned orchestration path", exact: true }).click();
   await expect(h.workspace.getByRole("radio", { name: "Work Board", exact: true })).toBeChecked();
   await expect(h.workspace.getByRole("heading", { name: "Broker-owned orchestration path", exact: true }).first()).toBeVisible();
@@ -745,7 +745,7 @@ test("a Feature row links from Work Tree to its Work Board", async ({ page }) =>
   await h.workspace.getByRole("button", { name: /^Feature #710 Broker-owned orchestration path/i }).click();
   await h.workspace.getByRole("radio", { name: "Work Tree", exact: true }).click();
   const hierarchy = h.workspace.getByRole("region", { name: "Work hierarchy", exact: true });
-  await hierarchy.getByRole("button", { name: /Broker-owned orchestration path.*#710/ }).click();
+  await hierarchy.getByRole("button", { name: /^\d+ Feature #710 - Broker-owned orchestration path/ }).click();
   await hierarchy.getByRole("button", { name: "View on Work Board: Broker-owned orchestration path", exact: true }).click();
   await expect(h.workspace.getByRole("radio", { name: "Work Board", exact: true })).toBeChecked({ timeout: 5000 });
   await expect(h.workspace.getByRole("heading", { name: "Broker-owned orchestration path", exact: true }).first()).toBeVisible();
@@ -768,7 +768,7 @@ test("History Work Tree shows the original description in the locked inline fiel
   await h.workspace.getByRole("button", { name: "Open Work Board", exact: true }).click();
   await h.workspace.getByRole("radio", { name: "Work Tree", exact: true }).click();
   const hierarchy = h.workspace.getByRole("region", { name: "Work hierarchy", exact: true });
-  const feature = hierarchy.getByRole("button", { name: /Retained inspection feature.*#69801/i });
+  const feature = hierarchy.getByRole("button", { name: /^\d+ Feature #69801 - Retained inspection feature/i });
   await expect(feature).toContainText(/done/i);
   await feature.click();
   const description = hierarchy.getByRole("region", { name: "Description", exact: true });
@@ -810,6 +810,9 @@ test("History uses the native Work Design flow with navigation enabled and mutat
 
 test("Refinement single/shared editors and every step retain short-window inspection",async({page})=>{
   const h=await deliveryHarness(page);await page.setViewportSize({width:1280,height:720});await h.section("refinement");
+  await page.route("**/api/delivery/refinement/**/projection", route => route.fulfill({ json: {
+    mode: "disconnected-preview", status: "current", observedAt: new Date().toISOString(), projection: null, error: null,
+  } }));
   await h.workspace.getByRole("row").filter({hasText:"Adapter Contract Metadata Repair"}).click();await h.workspace.getByRole("button",{name:"Open Refinement Hub",exact:true}).click();
   await expect(page.getByRole("group",{name:"Refinement steps"})).toBeVisible();
   await page.getByRole("button",{name:"Open Metadata Workbench",exact:true}).click();
@@ -819,8 +822,8 @@ test("Refinement single/shared editors and every step retain short-window inspec
   await reachable(page,modal().getByRole("button",{name:"Read work item",exact:true}));
   await modal().getByRole("radio",{name:"Multiple items",exact:true}).click();
   await modal().getByRole("button",{name:"Expand Feature 1 - Metadata Materialization",exact:true}).click();
-  await modal().getByRole("button").filter({hasText:"User Story 1 - Primary Execution Target"}).click();
-  await modal().getByRole("button").filter({hasText:"User Story 2 - Readiness Metadata"}).click();
+  await modal().getByRole("button").filter({hasText:"Draft 1 - Primary Execution Target"}).click();
+  await modal().getByRole("button").filter({hasText:"Draft 2 - Readiness Metadata"}).click();
   await expect(modal()).not.toContainText("No Shared Fields");
   await reachable(page,modal().getByRole("button",{name:"run",exact:true}));
   await modal().getByRole("button",{name:"Back to Hub",exact:true}).click();
@@ -931,6 +934,8 @@ for (const [packageName, actionName, reviewName, recordName] of [
 test("Execution tree-change uses saved dates and keeps review controls reachable", async ({ page }) => {
   const pi = "PI-2026-03";
   const h = await deliveryHarness(page, { live: true });
+  Object.assign(h.model, JSON.parse(JSON.stringify(h.model).replaceAll('"pkg-714"', '"delivery-714"')));
+  await h.refresh();
   const values = structuredClone(h.model.catalog.values);
   const bounds = values.find(value => value.catalog_value_id === "catalog-value-pi-2026-03-window");
   Object.assign(bounds, { value_key: "2026-06-01/2026-06-14", lifecycle_state: "read_only" });
@@ -956,7 +961,7 @@ test("Execution tree-change uses saved dates and keeps review controls reachable
   await expect(h.workspace.getByText("Selected Node", { exact: true })).toHaveCount(0);
   await expect(h.workspace.getByText("Source WP", { exact: true })).toHaveCount(0);
   await expect(h.workspace.getByText("Depends on", { exact: true })).toBeVisible();
-  await h.workspace.getByRole("button", { name: "Add child under Epic - Synthetic retained inspection tree", exact: true }).click();
+  await h.workspace.getByRole("button", { name: /^Add child under Epic #\d+ - Synthetic retained inspection tree$/ }).click();
   await expect(h.workspace.getByRole("menuitem", { name: "Add Feature", exact: true })).toHaveCount(0);
   await h.workspace.getByRole("menuitem", { name: "Add Milestone", exact: true }).click();
   await h.workspace.getByRole("textbox", { name: "Milestone draft title", exact: true }).fill("Synthetic reviewed milestone");

@@ -1,11 +1,11 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 
-import { TerasActionButton, TerasContentTray } from "@/teras";
+import { TerasActionButton, TerasContentTray, TerasDocument, TerasReadoutField } from "@/teras";
 
-import type { BuildTreeNodeLike } from "./build-tree-core";
+import type { BuildTreeNodeLike, BuildTreeRowTitle } from "./build-tree-core";
 import {
   buildTreeReadOnlyExpansionStateLabel,
   buildTreeReadOnlyToggleAllAriaLabel,
@@ -13,6 +13,7 @@ import {
 } from "./build-tree-view-contract";
 import type { BuildTreeStructuredNodeLayout } from "./build-tree-view-model";
 import styles from "./build-tree-viewer.module.css";
+import editorStyles from "./build-tree-editor-tree.module.css";
 
 export type BuildTreeViewerCopy = {
   groupedEmptyDescription?: string;
@@ -32,6 +33,8 @@ export type BuildTreeViewerProps<TNode extends BuildTreeNodeLike<TNode>> = {
   getKindLabel: (kind: TNode["kind"]) => string;
   getLayout: (node: TNode) => BuildTreeStructuredNodeLayout<TNode>;
   getSummary: (node: TNode) => string;
+  getTitleParts: (node: TNode) => BuildTreeRowTitle;
+  getItemText: (node: TNode) => { label: string; content: string; status: string };
   groupKind: TNode["kind"];
   leafKind: TNode["kind"];
   onToggleAll: () => void;
@@ -57,6 +60,8 @@ export function BuildTreeViewer<TNode extends BuildTreeNodeLike<TNode>>({
   getKindLabel,
   getLayout,
   getSummary,
+  getTitleParts,
+  getItemText,
   groupKind,
   leafKind,
   onToggleAll,
@@ -64,6 +69,7 @@ export function BuildTreeViewer<TNode extends BuildTreeNodeLike<TNode>>({
   rootKind,
   tree,
 }: BuildTreeViewerProps<TNode>) {
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
   const resolvedCopy = {
     ...defaultViewerCopy,
     ...copy,
@@ -97,18 +103,21 @@ export function BuildTreeViewer<TNode extends BuildTreeNodeLike<TNode>>({
         supportChildren.length > 0 ||
         groupedLeafChildren.length > 0);
     const displayTitle = getDisplayTitle(node);
+    const itemOpen = openItemId === node.id;
+    const itemText = getItemText(node);
     const structuredChildCount = getChildCountLabel(node);
     const nodeRole = buildTreeViewerNodeRole(node);
 
     return (
       <div className={styles.buildTreeStructuredTreeBranch} key={node.id}>
         <div
-          className={`${styles.buildTreeStructuredTreeNode} ${styles.buildTreeViewerStructuredNode}`}
+          className={`${styles.buildTreeStructuredTreeNode} ${styles.buildTreeViewerStructuredNode} ${itemOpen ? styles.buildTreeStructuredTreeNodeSelected : ""}`}
           data-kind={node.kind}
           data-role={nodeRole}
           style={{ "--build-tree-depth": depth } as CSSProperties}
         >
-          <div className={styles.buildTreeStructuredTreeSelect}>
+          <button className={styles.buildTreeStructuredTreeSelect} type="button" aria-expanded={itemOpen}
+            onClick={() => setOpenItemId(itemOpen ? null : node.id)}>
             <span className={styles.buildTreeStructuredTreeIndex}>
               {getIndex(node, position)}
             </span>
@@ -116,16 +125,16 @@ export function BuildTreeViewer<TNode extends BuildTreeNodeLike<TNode>>({
               <span className={styles.buildTreeStructuredTreeKind}>
                 {getKindLabel(node.kind)}
               </span>
-              <strong>{displayTitle}</strong>
+              <BuildTreeStructuredTitle {...getTitleParts(node)} />
               <small>{getSummary(node)}</small>
             </span>
-          </div>
+          </button>
           {node.kind !== leafKind || collapsible ? (
             <div className={styles.buildTreeViewerTreeNodeControls}>
               {node.kind !== leafKind ? (
                 <div className={styles.buildTreeStructuredTreeMeta}>
                   <span>{structuredChildCount}</span>
-                  <span>{node.draftBody.trim() ? "drafted" : "needs draft"}</span>
+                  <span>{itemText.status}</span>
                 </div>
               ) : null}
               {collapsible ? (
@@ -144,6 +153,9 @@ export function BuildTreeViewer<TNode extends BuildTreeNodeLike<TNode>>({
               ) : null}
             </div>
           ) : null}
+          {itemOpen ? <TerasReadoutField className={`${styles.buildTreeViewerReadout} ${editorStyles.buildTreeEditorTreeReadout}`}
+            label={itemText.label} scrollHeight="fill" surface="field"
+            value={itemText.content.trim() ? <TerasDocument ariaLabel={itemText.label} content={itemText.content} /> : "No notes recorded."} /> : null}
         </div>
         {node.kind === groupKind && !collapsed ? (
           <div className={styles.buildTreeStructuredTreeChildren}>
@@ -212,7 +224,7 @@ export function BuildTreeViewer<TNode extends BuildTreeNodeLike<TNode>>({
         actions={
           <TerasActionButton
             aria-label={buildTreeReadOnlyToggleAllAriaLabel(collapsedNodeIds)}
-            onClick={onToggleAll}
+            onClick={() => { setOpenItemId(null); onToggleAll(); }}
             size="table-compact"
             emphasis="secondary"
           >
@@ -227,4 +239,10 @@ export function BuildTreeViewer<TNode extends BuildTreeNodeLike<TNode>>({
       </div>
     </>
   );
+}
+
+export function BuildTreeStructuredTitle({ editable, locked, reference }: BuildTreeRowTitle) {
+  const prefix = reference ?? locked;
+  return <strong>{prefix ? <><span data-work-reference={reference ? true : undefined}>{prefix}</span>{" - "}</> : null}
+    {editable || "Untitled"}</strong>;
 }

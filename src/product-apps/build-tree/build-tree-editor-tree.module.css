@@ -214,6 +214,10 @@
   flex: 0 0 auto;
 }
 
+.buildTreeEditorTreeTitlePrefix[data-work-reference] {
+  color: var(--amber);
+}
+
 .buildTreeEditorTreeTitleSeparator {
   color: rgba(255, 193, 90, 0.64);
 }
@@ -481,13 +485,13 @@
   min-height: clamp(12rem, 28vh, 20rem);
 }
 
-.buildTreeEditorTreeReadout {
-  --text: #15130e;
-  block-size: clamp(9.6rem, calc(20vh + 1.35rem), 12.85rem);
+.buildTreeEditorTreeReadout,
+.buildTreeEditorTree[data-draft-notes-size="standard"] .buildTreeEditorTreeDetail .buildTreeEditorTreeNoteField {
+  block-size: clamp(12rem, 34vh, 22rem);
 }
 
-.buildTreeEditorTreeReadout a {
-  color: #26549a;
+.buildTreeEditorTree[data-draft-notes-size="standard"] .buildTreeEditorTreeDetail .buildTreeEditorTreeNoteField textarea {
+  min-height: 0;
 }
 
 .buildTreeEditorTreeDetailActions {

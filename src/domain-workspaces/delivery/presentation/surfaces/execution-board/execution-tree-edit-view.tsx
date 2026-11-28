@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import type { DeliveryComponentType } from "../../../read-model/index.ts";
 import { executionTreeChildKinds } from "../../../work-model/execution/execution-tree-change-plan.ts";
@@ -49,21 +49,32 @@ type ExecutionTreeEditing = {
 export function ExecutionWorkTree({
   actions,
   editing,
+  initialOpenItemId,
+  packageStatusLabel,
   renderItemActions,
   tree,
 }: {
   actions?: ReactNode;
   editing?: ExecutionTreeEditing;
+  initialOpenItemId?: string | null;
+  packageStatusLabel: string;
   renderItemActions?: (node: ExecutionTreeDraftNode) => ReactNode;
   tree: ExecutionTreeDraftNode;
 }) {
+  const hierarchyRef = useRef<HTMLDivElement>(null);
   const [collapsedReadIds, setCollapsedReadIds] = useState<string[]>([]);
-  const [openReadId, setOpenReadId] = useState<string | null>(null);
+  const [openReadId, setOpenReadId] = useState<string | null>(initialOpenItemId ?? null);
   const readBranchIds = useMemo(() => executionTreeInitialExpandedNodeIds(tree), [tree]);
   const openDetailNodeId = editing ? editing.openDetailNodeId : openReadId;
   const expandedNodeIds = editing?.expandedNodeIds ?? readBranchIds.filter(id => !collapsedReadIds.includes(id));
   const selectedNodeId = editing?.selectedNodeId ?? openReadId ?? tree.id;
   const addMenuNodeId = editing?.addMenuNodeId ?? null;
+
+  useEffect(() => {
+    if (!initialOpenItemId) return;
+    const target = hierarchyRef.current?.querySelector(`[data-node-id="${CSS.escape(initialOpenItemId)}"]`);
+    target?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [initialOpenItemId]);
 
   function toggleNode(nodeId: string) {
     if (!editing) {
@@ -139,7 +150,7 @@ export function ExecutionWorkTree({
   }
 
   return (
-    <div role="region" aria-label="Work hierarchy">
+    <div ref={hierarchyRef} role="region" aria-label="Work hierarchy">
       <TerasPanelHeader
         actions={
           <TerasActionRow spacing="tight">
@@ -170,7 +181,7 @@ export function ExecutionWorkTree({
         actionsLayout="inline"
         kicker={editing ? "Inline Edit" : "Inspect"}
         title={editing ? "Execution Tree Draft" : "Work Tree"}
-        description={editing ? editing.planningIssues[0] ?? "Edit the work items in this package, then review your changes before saving." : undefined}
+        description={editing ? editing.planningIssues[0] ?? "Edit the work items in this package, then review your changes before saving." : "Open an item to read its description and see the actions available for it."}
       />
       <BuildTreeEditorTree
         addMenuNodeId={addMenuNodeId}
@@ -188,10 +199,10 @@ export function ExecutionWorkTree({
           executionTreeEditableTitlePlaceholder(node.kind)
         }
         getIndex={executionTreeNodeIndex}
-        getKindLabel={(kind) => executionTreeNodeKindLabel(kind)}
+        getKindLabel={executionTreeNodeKindLabel}
         getNodeRole={executionTreeNodeRole}
         getStructuredLayout={executionTreeStructuredNodeLayout}
-        getSummary={executionTreeNodeSummary}
+        getSummary={(node) => executionTreeNodeSummary(node, node.id === tree.id ? packageStatusLabel : undefined)}
         getTitleParts={executionTreeNodeTitleParts}
         mode="inline"
         onDeleteNode={deleteNode}

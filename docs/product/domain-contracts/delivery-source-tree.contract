@@ -519,6 +519,7 @@ presentation/workspace/workspace-summary-model.ts
 presentation/workspace/workspace-types.ts
 presentation/workspace/workspace-view-model.ts
 presentation/workspace/workspace.tsx
+product-adapters/build-tree/delivery-tree-title.ts
 product-adapters/build-tree/index.ts
 product-adapters/build-tree/refinement-build-tree.ts
 product-adapters/build-tree/work-design-advisor-patch.ts
@@ -606,6 +607,7 @@ work-model/execution/execution-action-contracts.ts
 work-model/execution/architecture-form-model.ts
 work-model/execution/architecture-form-schema.ts
 work-model/execution/completion-evidence-form.ts
+work-model/execution/delivery-completion-prerequisites.ts
 work-model/execution/execution-action-eligibility.ts
 work-model/execution/execution-action-intent.ts
 work-model/execution/execution-change-operation.ts

@@ -21,3 +21,19 @@ export function documentContentBlocks(source: string): DocumentContentBlock[] {
   }
   return blocks;
 }
+
+export function documentSummary(source: string, limit = 160): string {
+  const blocks = documentContentBlocks(source);
+  const body = blocks.find(block => block.kind !== "heading" && block.kind !== "code");
+  const text = (body ?? blocks.find(block => block.kind === "heading"))?.lines.join(" ") ?? "";
+  const plain = text
+    .replace(/!?\[([^\]\n]+)\]\((?:[^()\n]|\([^()\n]*\))*\)/g, "$1")
+    .replace(/`([^`\n]+)`/g, "$1")
+    .replace(/(\*{1,3}|_{1,3}|~~)(\S(?:.*?\S)?)\1/g, "$2")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (plain.length <= limit) return plain;
+  const excerpt = plain.slice(0, limit - 1);
+  const lastSpace = excerpt.lastIndexOf(" ");
+  return `${lastSpace > limit / 2 ? excerpt.slice(0, lastSpace) : excerpt}…`;
+}

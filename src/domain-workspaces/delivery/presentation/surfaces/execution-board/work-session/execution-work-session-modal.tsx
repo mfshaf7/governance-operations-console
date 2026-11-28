@@ -1,3 +1,4 @@
+import { ConsoleReleaseNotice } from "@/console-integration/configuration/console-release-notice";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { TerasLoadingState,
@@ -74,7 +75,7 @@ export function ExecutionWorkSessionModal({
   onViewApprovedPlan?: () => void;
   workRecords?: ReadonlyMap<string, { title: string; repository: string | null }>;
   featureReview?: { title: string; workItemId: number; open: () => void };
-  onNavigate?: (destination: "work" | "closeout" | "architecture", deliveryId: string | null, workItemId?: number) => void;
+  onNavigate?: (destination: "work" | "closeout" | "architecture" | "planning", deliveryId: string | null, workItemId?: number) => void;
 }) {
   const draft = runtime.projection?.decision_draft ?? null;
   const [decision, setDecision] = useState<DeliveryWorkSessionDecisionInput | null>(
@@ -170,8 +171,10 @@ export function ExecutionWorkSessionModal({
   const prerequisite = nextAction && ["architecture-prerequisite-required", "architecture-human-gate-required"].includes(nextAction.code);
   const requiredWorkRef = nextAction?.inputs?.work_item_id;
   const requiredWorkId = typeof requiredWorkRef === "string" && /^work-item-[1-9][0-9]*$/.test(requiredWorkRef) ? Number(requiredWorkRef.replace("work-item-", "")) : undefined;
-  const followUp = nextAction && ["initiative-closeout-required", "initiative-closeout-gates-required"].includes(nextAction.code) ? "closeout" :
-    prerequisite || nextAction && ["initiative-work-remains", "initiative-follow-up-required", "art-blocker-review-required"].includes(nextAction.code) ? "work" :
+  const startReason = nextAction && ["work-scope-held", "work-prerequisites-review-required", "work-planning-required"].includes(nextAction.code) ? nextAction.reason : null;
+  const followUp = nextAction?.code === "work-planning-required" ? "planning" :
+    nextAction && ["initiative-closeout-required", "initiative-closeout-gates-required"].includes(nextAction.code) ? "closeout" :
+    prerequisite || nextAction && ["initiative-work-remains", "initiative-follow-up-required", "art-blocker-review-required", "work-scope-held", "work-prerequisites-review-required"].includes(nextAction.code) ? "work" :
     nextAction && ["architecture-packet-required", "architecture-binding-required"].includes(nextAction.code) ? "architecture" : null;
   const configuredPlan = projection?.configured_path?.architecture as { required?: boolean } | undefined;
   const canAdvise = runtime.mode === "live" && runtime.projectionStatus === "current" &&
@@ -274,6 +277,7 @@ export function ExecutionWorkSessionModal({
       <TerasZoneLayout variant="main-support">
         <TerasZone fit="content" role="region" aria-label="Work details">
           <TerasFieldStack spacing="normal">
+          <ConsoleReleaseNotice workspaceOpen />
           <TerasPanel spacing="normal"
             frame="padded"
             layout="header-body"
@@ -603,7 +607,7 @@ export function ExecutionWorkSessionModal({
                 diagnostic ? "The result could not be confirmed. Refresh the session before trying again." :
                 waitingForSourceAccess ? "Review the repository and branch below before continuing." :
                 verification ? "Review the checks under What will be checked, then verify the runtime results." :
-                move?.description ?? (runtime.mode === "disconnected-preview" ? "This preview is disconnected from live work sessions." : undefined))}
+                startReason ?? move?.description ?? (runtime.mode === "disconnected-preview" ? "This preview is disconnected from live work sessions." : undefined))}
               kicker={nextAction?.code === "work-complete" ? "Session status" : "Next action"}
               statusLabel={nextProgress?.status ?? (checkingOperation ? "Checking" : unavailable ? "Unavailable" : diagnostic ? "Check result" : waitingForSourceAccess ? "Access required" : move?.status)}
               statusTone={unavailable ? "danger" : pendingProgress ? "info" : diagnostic || move?.status === "Blocked" ? "warn" : move?.status === "Complete" ? "ok" : "info"}
@@ -639,7 +643,9 @@ export function ExecutionWorkSessionModal({
               </TerasActionButton>
             ) : followUp && onNavigate ? (
               <TerasActionButton disabled={submitting} onClick={() => onNavigate(followUp, projection?.delivery_id ?? null, requiredWorkId)}>
-                {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? planRequirement?.actionLabel ?? "Open Technical Plan" : prerequisite ? "Open Required Work" : "Open Work Board"}
+                {followUp === "planning" ? "Open PI Planning" : followUp === "closeout" ? "Review Closeout"
+                  : followUp === "architecture" ? planRequirement?.actionLabel ?? "Open Technical Plan"
+                  : requiredWorkId ? "View Related Work" : "Open Work Board"}
               </TerasActionButton>
             ) : runtime.projectionStatus === "loading" ? (
               <TerasLoadingState label="Loading execution session…" skeleton="details" />

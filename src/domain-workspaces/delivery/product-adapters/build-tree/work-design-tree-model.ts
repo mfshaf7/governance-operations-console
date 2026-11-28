@@ -1,3 +1,4 @@
+import { documentSummary } from "../../../../teras/teras-document-content.ts";
 import type { DeliveryPackageSummary } from "../../read-model/index.ts";
 import {
   buildTreeExpandedNodeIds,
@@ -337,6 +338,7 @@ export function workDesignNodeIndex(node: WorkDesignNode, position: number) {
 
 export function workDesignNodeSummary(node: WorkDesignNode) {
   const childCount = node.children?.length ?? 0;
+  if (childCount === 0) return documentSummary(node.draftBody.trim() || node.description);
   return buildTreeNodeSummary(node, {
     childItemLabel: (count) =>
       `${count} child ${count === 1 ? "item" : "items"}`,

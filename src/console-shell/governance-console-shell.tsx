@@ -26,6 +26,7 @@ import { AgentRuntimeDock } from "./presentation/agent-runtime-dock";
 import { AgentContextPanel } from "./presentation/agent-context-panel";
 import { ConsoleActivityPanel } from "./presentation/console-activity-panel";
 import { ConsoleCommandBar } from "./presentation/console-command-bar";
+import { ConsoleReleaseNotice, ConsoleReleaseProvider } from "../console-integration/configuration/console-release-notice";
 import { ConsoleFocusRouter } from "./presentation/console-focus-router";
 import { useConsoleShellController } from "./use-console-shell-controller";
 import { WorkspaceViewStateProvider } from "../console-integration/registers/workspace-view-state";
@@ -56,7 +57,7 @@ export function GovernanceConsoleShell() {
       <AgentConnectionStatusProvider status={providerStatus}>
       <DraftAdvisorScopeProvider>
       <WorkspaceViewStateProvider>
-        <GovernanceConsoleContent providerStatus={providerStatus} />
+        <ConsoleReleaseProvider><GovernanceConsoleContent providerStatus={providerStatus} /></ConsoleReleaseProvider>
       </WorkspaceViewStateProvider>
       </DraftAdvisorScopeProvider>
       </AgentConnectionStatusProvider>
@@ -104,6 +105,7 @@ function GovernanceConsoleContent({
       <div ref={controller.consoleHomeRef}>
         <ConsoleCommandBar />
       </div>
+      <ConsoleReleaseNotice workspaceOpen={Boolean(controller.selectedWorkbenchSurface || controller.activeConsoleWorkspaceId)} />
       <OperationWorkbenchSelector
         selected={controller.selectedWorkbenchSurface}
         onSelect={controller.selectWorkbenchSurface}

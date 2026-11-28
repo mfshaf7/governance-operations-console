@@ -14,6 +14,8 @@ export type BuildTreeMetricSelectors<TNode, TMetric extends string> = Record<
   (node: TNode) => boolean
 >;
 
+export type BuildTreeRowTitle = { editable: string; locked?: string; reference?: string };
+
 export type BuildTreeTitleParts = {
   editable: string;
   locked: string;

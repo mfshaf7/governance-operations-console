@@ -14,6 +14,8 @@ import {
 } from "./architecture-packet-oos-client.ts";
 import { DeliveryOosError } from "./delivery-oos-client.ts";
 
+import { completionPrerequisitesFromPlan } from "../work-model/execution/delivery-completion-prerequisites.ts";
+
 const noStoreHeaders = { "Cache-Control": "no-store" };
 
 export async function readCurrentArchitecturePacketRoute(
@@ -25,6 +27,19 @@ export async function readCurrentArchitecturePacketRoute(
       return snapshot(null, "disconnected-preview");
     }
     return snapshot(await readCurrentArchitecturePacket(deliveryId), "live");
+  } catch (error) {
+    return architecturePacketErrorResponse(error);
+  }
+}
+
+export async function readCompletionPrerequisitesRoute(deliveryIdInput: string) {
+  try {
+    const deliveryId = routeDeliveryId(deliveryIdInput);
+    requireLiveMode();
+    const plan = await readCurrentArchitecturePacket(deliveryId);
+    const workItems = plan.contract_posture === "current" && plan.artifact.custody.state === "durable"
+      ? completionPrerequisitesFromPlan(plan.artifact.architecture) : {};
+    return NextResponse.json({ deliveryId, workItems }, { headers: noStoreHeaders });
   } catch (error) {
     return architecturePacketErrorResponse(error);
   }

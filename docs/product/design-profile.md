@@ -145,8 +145,10 @@ omit the empty footer track. Keep individual and shared editing, empty selection
 review controls and saved drafts. Scroll the existing rail/tree regions
 at shorter desktop heights; footer navigation remains fixed.
 
-The work-item tree is a selector with short readable summaries, canonical item
+The work-item tree is a selector with short plain-text summaries, canonical item
 numbers when available, explicit field-review counts, branch collapse and search.
+Use the card-colored work type above the title and the amber recorded number on
+the title line.
 Search and Needs review retain matching ancestry and never change the selected
 shared set. Hidden selections remain counted and can be cleared explicitly.
 Full descriptions belong in Read work item, preserving headings, paragraphs,
@@ -196,9 +198,9 @@ Context Handoff starts expanded in Structured Tree. Its explicit collapse choice
 is independent of opening the draft editor/advisor and survives view switching
 within the session. Draft Notes receive a generous viewport-aware minimum in the
 selected-item editor and Inline Tree; the support rail/tree own overflow in short
-windows. The shared tree's large-notes option is selected by Work Design only;
-Execution retains its existing compact sizing. Text and saved-work behavior stay
-unchanged.
+windows. Execution uses the same enlarged description height in inspection and editing.
+Use card-colored type labels and amber recorded numbers. Numbered drafts keep
+their draft sequence until a recorded work-item number is available.
 
 In Work Design Review Draft, the operator review gate fits its content at the
 top of the support column. Its enclosing shared scroll zone handles short-window
@@ -210,7 +212,9 @@ space, while the brief/count summary keeps natural height above a filled Tree
 Summary panel with its inspection action at the bottom. Do not shrink the outer
 packet or leave unframed gaps between its inner panels. The separate operator
 review gate remains content-sized. Snapshot, export, finalized brief and full
-tree inspection remain available through their existing controls.
+tree inspection remain available through their existing controls. Full Tree and
+History show short row summaries and open one formatted notes reader at a time.
+Read the selected saved draft or retained Work Design record in that reader.
 
 Review Draft uses the same single-diagram preview, hover navigation and zoomable
 viewer as Finalized Brief. Complete collection export is not a preview image.

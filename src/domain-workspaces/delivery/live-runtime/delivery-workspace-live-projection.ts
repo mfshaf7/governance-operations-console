@@ -36,6 +36,8 @@ export function projectCanonicalDeliveryWorkspace(value: unknown, sourceRevision
       },
       blocker: blocker(item.blocker),
       dependency_blocked: item.dependency_blocked === true,
+      unresolved_dependency_work_package_ids: Array.isArray(item.unresolved_dependency_work_package_ids)
+        ? item.unresolved_dependency_work_package_ids.map(value => integer(value)) : undefined,
       depends_on_work_package_ids: Array.isArray(item.depends_on_work_package_ids) ? item.depends_on_work_package_ids.map(value => integer(value)) : [],
       metadata_status: item.ready_contract_applicable === false ? "not_applicable" : item.ready_contract_satisfied === true ? "complete" : "missing",
       tone: tone(backendStatus), children: array(item.children).map((child) => node(child, depth + 1)),
@@ -49,9 +51,21 @@ export function projectCanonicalDeliveryWorkspace(value: unknown, sourceRevision
     if (epic.type !== "Epic" || epic.record_ref !== `openproject://work_packages/${id}`) invalid();
     const root = node(item.execution_tree);
     if (root.legacy_work_package_id !== id) invalid();
-    roots.push(root);
     const packageId = `delivery-${id}`;
     const navigation = executionNavigation(item.execution_navigation, root);
+    const held = new Set(navigation?.held_work_item_ids);
+    const deferred = new Set(navigation?.deferred_work_item_ids);
+    function applyInheritedStatus(node: DeliveryArtNode) {
+      if (node.legacy_work_package_id !== null) {
+        if (deferred.has(node.legacy_work_package_id)) node.inherited_status = "parked";
+        else if (held.has(node.legacy_work_package_id)) node.inherited_status = "blocked";
+      }
+      for (const child of node.children) applyInheritedStatus(child);
+    }
+    if (held.size || deferred.size) applyInheritedStatus(root);
+    roots.push(root);
+    const posture = navigation?.package_posture ?? postures[backendStatus];
+    const openCount = integer(summary.open_descendant_count, true);
     const workSessions = sessions(item.work_sessions, root);
     selected.push({ delivery_package_id: packageId, owner_repo: typeof epic.owner_repo === "string" ? epic.owner_repo : "Unassigned", source_revision: sourceRevision,
       active_execution_target_id: navigation?.active_work_item_ids.length === 1 ? `work-item-${navigation.active_work_item_ids[0]}` : null,
@@ -62,12 +76,15 @@ export function projectCanonicalDeliveryWorkspace(value: unknown, sourceRevision
     return {
       delivery_package_id: packageId, legacy_epic_id: id, display_name: text(epic.subject),
       initiative_family: nullableText(epic.initiative_family),
-      backend_status: backendStatus, package_posture: navigation?.package_posture ?? postures[backendStatus],
+      backend_status: backendStatus, package_posture: posture,
       execution_navigation: navigation, active_blocker: root.blocker, work_sessions: workSessions,
-      open_child_count: integer(summary.open_descendant_count, true), source_custody: null,
+      open_child_count: openCount, source_custody: null,
       source_ref: String(epic.record_ref), target_pi: nullableText(epic.target_pi),
-      summary: `Canonical ART ${backendStatus}; ${integer(summary.open_descendant_count, true)} open descendants. Repository custody and work eligibility are resolved by their owner workflows.`,
-      tone: tone(backendStatus), tree_root_id: root.id, workflow_phase: navigation?.workflow_phase ?? workflowPhase(root),
+      summary: root.blocker?.statement || (navigation?.blocking_scope === "all-work"
+        ? "The remaining in-scope work is waiting. Open the Work Board to review the reasons."
+        : `${openCount} open work ${openCount === 1 ? "item" : "items"}.`),
+      tone: posture === "Blocked" ? "danger" : posture === "Closeout Pending" ? "warn" : tone(backendStatus),
+      tree_root_id: root.id, workflow_phase: navigation?.workflow_phase ?? workflowPhase(root),
       available_actions: [],
     };
   });
@@ -126,10 +143,13 @@ function executionNavigation(value: unknown, root: DeliveryArtNode): DeliveryPac
     !["execution", "refinement", "work_design", "audit_only"].includes(String(item.workflow_phase)) ||
     ![...Object.values(postures), "Closeout Pending"].includes(item.package_posture as DeliveryPackagePosture) || typeof item.closeout_pending !== "boolean") invalid();
   if (item.refinement_governance_pending !== undefined && typeof item.refinement_governance_pending !== "boolean") invalid();
+  if (item.blocking_scope !== undefined && !["package", "all-work", "some-work", "none"].includes(String(item.blocking_scope))) invalid();
+  const optionalIds = ["planning_prepared_work_item_ids", "held_work_item_ids", "deferred_work_item_ids", "actionable_blocker_ids"];
   for (const key of ["active_work_item_ids", "prepared_work_item_ids", "blocked_work_item_ids", "refinement_work_item_ids",
-    ...(item.planning_prepared_work_item_ids === undefined ? [] : ["planning_prepared_work_item_ids"])]) {
+    ...optionalIds.filter(key => item[key] !== undefined)]) {
     const refs = array(item[key]);
-    if (new Set(refs).size !== refs.length || refs.some(id => !Number.isSafeInteger(id) || !ids.has(Number(id)) || id === root.legacy_work_package_id)) invalid();
+    if (new Set(refs).size !== refs.length || refs.some(id => !Number.isSafeInteger(id) || !ids.has(Number(id)) ||
+      (key !== "actionable_blocker_ids" && id === root.legacy_work_package_id))) invalid();
   }
   return item as NonNullable<DeliveryPackageSummary["execution_navigation"]>;
 }

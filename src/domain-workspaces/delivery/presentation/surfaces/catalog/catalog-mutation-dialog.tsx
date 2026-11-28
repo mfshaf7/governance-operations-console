@@ -411,6 +411,8 @@ export function CatalogMutationDialog({
                 value={label}
               />
             ) : null}
+            {calendarSetup && value && <TerasContentTray title="Calendar applies to this entire PI"
+              description="All packages in this planning increment use these dates. Saved assignments keep their existing iteration labels." />}
             {calendarSetup && <TerasMetadataList aria-label="Planning increment" aria-live="polite" columns={1} items={[
               { label: "PI name", value: value?.value_key ?? (derivedValueKey || "Choose a start date to generate the name.") },
             ]} />}

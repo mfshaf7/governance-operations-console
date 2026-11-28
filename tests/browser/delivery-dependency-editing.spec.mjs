@@ -58,7 +58,7 @@ async function open(page){
  });
  const workspace=await openBoard(page);
  const hierarchy = workspace.getByRole("region", {name:"Work hierarchy", exact:true});
- await hierarchy.getByRole("button",{name:/Work 3.*#3\b/i}).click();
+ await hierarchy.getByRole("button",{name:/^\d+ User Story #3 - Work 3\b/i}).click();
  await hierarchy.getByRole("button",{name:/^View on Work Board:/}).click();
  const details = workspace.locator('[data-execution-work-item-details="work-item-3"]');
  await expect(details.getByText("Depends on", {exact:true})).toBeVisible();
@@ -67,7 +67,7 @@ async function open(page){
  await expect(details.getByRole("button",{name:"Add prerequisite",exact:true})).toHaveCount(0);
  await workspace.getByRole("radio",{name:"Work Tree",exact:true}).click();
  await workspace.getByRole("button",{name:"Edit Work Structure",exact:true}).click();
- const expand=workspace.getByRole("button",{name:/^Expand Feature 2/});if(await expand.count())await expand.click();
+ const expand=workspace.getByRole("button",{name:/^Expand Feature #2\b/});if(await expand.count())await expand.click();
  return {state,workspace};
 }
 async function openBoard(page){
@@ -107,7 +107,7 @@ test("prerequisites preserve external links, reject local cycles, and apply revi
  const external=state.relations.find(r=>r.depends_on.id===900);expect(external.lag).toBe(4);expect(external.description).toBe("External supporting note");
  await result.getByRole("button",{name:"Close work structure result",exact:true}).click();
  await workspace.getByRole("button",{name:"Edit Work Structure",exact:true}).click();
- const expand=workspace.getByRole("button",{name:/^Expand Feature 2/});if(await expand.count())await expand.click();
+ const expand=workspace.getByRole("button",{name:/^Expand Feature #2\b/});if(await expand.count())await expand.click();
  await workspace.locator('input[value="Work 3"]').click();await expect(workspace.getByRole("list",{name:"Selected prerequisites",exact:true})).toContainText("User story 5");
  expect(state.errors).toEqual([]);
 });

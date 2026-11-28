@@ -34,6 +34,7 @@ type RetainedWorkSessionRead = {
   workItemId: number;
   deliveryId: string;
   status: "closed" | "absent" | "unavailable";
+  snapshot?: DeliveryWorkSessionSnapshot;
 };
 
 export function useRetainedWorkSessionRead(workItemId: number | null, deliveryId: string | null) {
@@ -60,7 +61,8 @@ export function useRetainedWorkSessionRead(workItemId: number | null, deliveryId
           throw new Error("Saved work session read is unavailable.");
         }
         if (!request.signal.aborted) {
-          setRead({ ...record, status: session.state === "closed" && session.cleanup_receipt ? "closed" : "absent" });
+          const closed = session.state === "closed" && Boolean(session.cleanup_receipt);
+          setRead(closed ? { ...record, status: "closed", snapshot } : { ...record, status: "absent" });
         }
       } catch {
         if (!request.signal.aborted) setRead({ ...record, status: "unavailable" });
@@ -71,8 +73,10 @@ export function useRetainedWorkSessionRead(workItemId: number | null, deliveryId
     return () => request.abort();
   }, [workItemId, deliveryId, attempt]);
 
+  const current = read?.workItemId === workItemId && read.deliveryId === deliveryId ? read : null;
   return {
-    status: read?.workItemId === workItemId && read.deliveryId === deliveryId ? read.status : "checking",
+    status: current?.status ?? "checking",
+    snapshot: current?.snapshot ?? null,
     retry() {
       setRead(null);
       setAttempt(previous => previous + 1);
@@ -80,7 +84,11 @@ export function useRetainedWorkSessionRead(workItemId: number | null, deliveryId
   } as const;
 }
 
-export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onCanonicalChanged?: () => Promise<void>) {
+export function useDeliveryWorkSessionLiveRuntime(
+  workItemId: number | null,
+  onCanonicalChanged?: () => Promise<void>,
+  retainedSnapshot: DeliveryWorkSessionSnapshot | null = null,
+) {
   const [snapshot, setSnapshot] =
     useState<DeliveryWorkSessionSnapshot | null>(null);
   const pendingCommands = useRef<Record<string, PendingCommand>>({});
@@ -179,8 +187,17 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
     setAccessCheckFailed(false);
     pendingCommands.current = {};
     confirmedRevision.current = null;
+    if (workItemId === null) return;
+    const receipt = retainedSnapshot?.projection;
+    const age = Date.now() - Date.parse(retainedSnapshot?.observedAt ?? "");
+    if (retainedSnapshot?.status === "current" && retainedSnapshot.mode === "live" &&
+        receipt?.work_item_id === `work-item-${workItemId}` &&
+        receipt.state === "closed" && receipt.cleanup_receipt && age >= 0 && age <= 60000) {
+      publish(retainedSnapshot);
+      return;
+    }
     void refresh().catch(() => undefined);
-  }, [refresh]);
+  }, [publish, refresh, retainedSnapshot, workItemId]);
 
   useEffect(() => {
     if (!pendingAccess) return;
