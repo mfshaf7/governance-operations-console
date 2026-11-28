@@ -8,6 +8,8 @@ import { useSourceAssistant } from "../live-runtime/use-source-assistant.ts";
 import { SourceFileExplorer } from "./source-file-explorer.tsx";
 import { SourceImportPanel } from "./source-import-panel.tsx";
 import { SourcePreviewPanel } from "./source-preview-panel.tsx";
+import { SavedProjectRuntimePanel } from "./saved-project-runtime-panel.tsx";
+import { useSavedProjectRuntime } from "../live-runtime/use-saved-project-runtime.ts";
 import { SourceAssistantPanel } from "./source-assistant-panel.tsx";
 import styles from "./source-editor-workspace.module.css";
 
@@ -15,6 +17,8 @@ export function SourceEditorWorkspace({target,onClose,onSaved,onReviewed}:{targe
  const runtime=useSourceEditor(target,onSaved),current=runtime.data,assistant=useSourceAssistant(target,runtime);
  const [assistantOpen,setAssistantOpen]=useState(true),[mode,setMode]=useState<"edit"|"diff">("edit");
  const [previewLayout,setPreviewLayout]=useState<"none"|"preview"|"split">("none");
+ const savedRuntime = useSavedProjectRuntime(target.savedRuntimeEndpoint);
+ const [previewKind, setPreviewKind] = useState<"studio"|"saved">(target.preview ? "studio" : "saved");
  const [importOpen,setImportOpen]=useState(false),[guard,setGuard]=useState<"close"|"reload"|null>(null),[showDetails,setShowDetails]=useState(false);
  const [retainedPath, setRetainedPath] = useState<string | null>(null);
  const [sectionLine, setSectionLine] = useState("1");
@@ -28,6 +32,14 @@ export function SourceEditorWorkspace({target,onClose,onSaved,onReviewed}:{targe
  const requestClose=()=>{if(!runtime.pending)runtime.dirty||runtime.uncertain||assistant.pending||assistant.proposal?setGuard("close"):onClose();};
  const requestReload=()=>{if(runtime.dirty||runtime.uncertain||assistant.proposal)setGuard("reload");else void runtime.reload();};
  const save=()=>void runtime.save();
+ const sharedRuntimeVisible = Boolean(savedRuntime.overview || savedRuntime.original);
+ const canRun = !!savedRuntime.overview && !savedRuntime.original && !savedRuntime.busy && !savedRuntime.checking &&
+   !runtime.pending && !runtime.blocked && !runtime.uncertain && !runtime.error;
+ const runDraft = (draft: SourceDraft) => {
+   setPreviewKind("saved");
+   setPreviewLayout("split");
+   savedRuntime.run(draft);
+ };
  const proposed=assistant.proposal?.reply.edits.find(edit=>edit.path===assistant.reviewPath),proposedOriginal=assistant.proposal?.snapshot.files.find(file=>file.path===assistant.reviewPath);
  const editorPath=retainedFile?.path??proposed?.path??buffer?.path,reviewing=!!proposed;
  const sectionFile = !retained && !reviewing && current?.selected &&
@@ -38,12 +50,18 @@ export function SourceEditorWorkspace({target,onClose,onSaved,onReviewed}:{targe
  useEffect(() => { setSectionLine(String(region?.start_line ?? 1)); }, [sectionFile, region?.start_line]);
  useEffect(()=>{if(assistant.reviewPath)setPreviewLayout("none");},[assistant.reviewPath,assistant.proposal?.reply.request_id]);
  const previewActive=!retained&&previewLayout!=="none",previewOnly=!retained&&previewLayout==="preview";
- const viewOptions=[{value:"edit",label:"Edit text"},{value:"diff",label:"Review diff"},...(target.preview?[{value:"preview",label:"Preview"},{value:"split",label:"Split view"}]:[])];
+ const viewOptions=[{value:"edit",label:"Edit text"},{value:"diff",label:"Review diff"},...((target.preview || sharedRuntimeVisible)?[{value:"preview",label:"Preview"},{value:"split",label:"Split view"}]:[])];
  return <>
   <TerasModalShell width="viewport" height="fill" bodyLayout="fill" kicker="Source workspace" title={target.label} surfaceId="source-editor-workspace" onClose={requestClose}
    description="Edit files, import your work, or ask AI for reviewable changes. Your draft stays separate from source publication."
    footer={retained ? undefined : <TerasActionRow>
     <TerasActionButton disabled={!!retained||!runtime.editable||!operations.length||!runtime.dirty&&!!current?.draft} onClick={save}>Save private draft</TerasActionButton>
+    {sharedRuntimeVisible ? <>
+      <TerasActionButton emphasis="secondary" disabled={!canRun || !current?.draft?.provenance || current.draft.accepted}
+        onClick={() => current?.draft && runDraft(current.draft)}>Run saved draft</TerasActionButton>
+      <TerasActionButton disabled={!canRun || !runtime.editable || !runtime.dirty || !operations.length}
+        onClick={() => void runtime.save(runDraft)}>Save and run</TerasActionButton>
+    </> : null}
     {runtime.uncertain?<TerasActionButton disabled={runtime.pending||!!runtime.blocked} onClick={save}>Retry original save</TerasActionButton>:null}
     <TerasActionButton emphasis="secondary" disabled={!!retained||runtime.pending||!!runtime.error||runtime.dirty||runtime.uncertain||!current?.draft||current.current.state!=="draft-ready"} onClick={()=>current?.draft&&onReviewed(current.draft)}>Mark saved digest inspected</TerasActionButton>
     <TerasActionButton emphasis="secondary" disabled={runtime.pending||assistant.pending||!!runtime.blocked} onClick={requestReload}>Reload saved source draft</TerasActionButton>
@@ -105,7 +123,14 @@ export function SourceEditorWorkspace({target,onClose,onSaved,onReviewed}:{targe
        </TerasFieldStack></TerasContentTray>}
        <div className={styles.sourceCanvas} data-layout={retained?"none":previewLayout}><div className={styles.codePane} hidden={previewOnly}>
        {retainedFile ? <TerasCodeEditor key={`retained:${retainedFile.path}`} path={retainedFile.path} value={retainedFile.content??""} original={retainedFile.patch?.before??""} diff={!!retainedFile.patch} readOnly onValueChange={runtime.edit} /> : editorPath?<TerasCodeEditor key={`${editorPath}:${reviewing?assistant.proposal?.reply.request_id:buffer?.patch?.offset_utf16??"working"}`} path={editorPath} value={reviewing?proposed.content??"":buffer?.deleted?"":buffer?.content??""} original={reviewing?proposedOriginal?.content??"":buffer?.baseline??""} diff={reviewing||mode==="diff"&&buffer?.baseline!==undefined} readOnly={reviewing||!runtime.editable||!!buffer?.deleted||buffer?.baseline===undefined} onValueChange={runtime.edit} maxBytes={editorMaxBytes} startingLine={region?.start_line}/>:runtime.pending?<TerasLoadingState label="Loading source text…" skeleton="details"/>:<TerasEmptyState>{sectionFile?"Choose a starting line to load source text.":"Source text is loaded on selection."}</TerasEmptyState>}
-       </div>{target.preview?<div className={styles.previewPane} hidden={!previewActive}><SourcePreviewPanel adapter={target.preview} active={previewActive} hasDraftChanges={operations.length>0&&["not-started","draft-ready","failed","cancelled"].includes(current?.current.state??"")}/></div>:null}</div>
+       </div>{target.preview || sharedRuntimeVisible ? <div className={styles.previewPane} hidden={!previewActive}>
+        {target.preview && sharedRuntimeVisible ? <TerasSegmentedControl ariaLabel="Preview source" value={previewKind}
+          options={[{value:"studio",label:"Studio preview"},{value:"saved",label:"Saved draft run"}]}
+          onValueChange={value => setPreviewKind(value === "saved" ? "saved" : "studio")} /> : null}
+        {previewKind === "saved" && sharedRuntimeVisible ?
+          <SavedProjectRuntimePanel runtime={savedRuntime} draft={current?.draft ?? null} dirty={runtime.dirty} /> :
+          <SourcePreviewPanel adapter={target.preview} active={previewActive} hasDraftChanges={operations.length>0&&["not-started","draft-ready","failed","cancelled"].includes(current?.current.state??"")}/>}
+       </div> : null}</div>
       </div>
      </TerasPanel>
      {assistantOpen&&!retained?<SourceAssistantPanel assistant={assistant} disabled={!runtime.editable}/>:null}

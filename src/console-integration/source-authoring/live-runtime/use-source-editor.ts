@@ -278,29 +278,34 @@ export function useSourceEditor(target: SourceEditorTarget, onSaved: (draft: Sou
       if(!current||busy.current||command.current||current.current.revision!==token.before.current.revision||sourceAssistantFingerprint(current.buffers,token.files)!==token.after)throw Error("Later changes or a save exist. Undo individual edits instead; your newer work was preserved.");
       setData({...current,buffers:[...current.buffers.filter(file=>!token.paths.includes(file.path)),...token.before.buffers.filter(file=>token.paths.includes(file.path))]});setNotice("AI changes undone. Your earlier draft is restored.");
     },
-    save: () => run(async () => {
-      const current = latest.current; if (!current) return;
-      if (!command.current) {
-        if (current.objective.trim().length < target.objectiveMin || current.objective.length > target.objectiveMax) throw new Error(`Use an objective between ${target.objectiveMin} and ${target.objectiveMax} characters.`);
-        if (current.current.state === "draft-ready" && current.current.attempt?.objectiveDigest !== await sourceObjectiveDigest(current.objective)) throw new Error("Amending this draft requires its original exact objective. Re-enter that objective, or cancel the old attempt before starting a different one.");
-        command.current = assertOperatorDraftCommand(sourceSaveCommand(current.current, current.objective, current.message, current.buffers, current.origin, crypto.randomUUID(), new Date().toISOString(), target.sectionEditing), target.sectionEditing);
-      }
-      let receivedAcknowledgement = false;
-      try {
-        const ack = await sourceEditorRequest<SourceSaveAcknowledgement>(`${target.endpoint}/draft`, command.current);
-        receivedAcknowledgement = true;
-        if (ack.commandId !== command.current.command_id || ack.current.sessionId !== current.current.sessionId) throw new Error("Save acknowledgement belongs to another source command or session.");
-        setNotice(`Private draft saved at ${ack.savedRevision}. Exact digest: ${ack.savedDigest}. Source acceptance is a separate action.`);
-        if (ack.current.revision !== ack.savedRevision || ack.current.attempt?.digest !== ack.savedDigest) {
-          command.current = null; setUncertain(false); throw new Error("The original save is acknowledged, but the owner now has a newer draft. Your local edits remain; reload explicitly to reconcile.");
+    save: async (afterSaved?: (draft: SourceDraft) => void) => {
+      let confirmed: SourceDraft | null = null;
+      const saved = await run(async () => {
+        const current = latest.current; if (!current) return;
+        if (!command.current) {
+          if (current.objective.trim().length < target.objectiveMin || current.objective.length > target.objectiveMax) throw new Error(`Use an objective between ${target.objectiveMin} and ${target.objectiveMax} characters.`);
+          if (current.current.state === "draft-ready" && current.current.attempt?.objectiveDigest !== await sourceObjectiveDigest(current.objective)) throw new Error("Amending this draft requires its original exact objective. Re-enter that objective, or cancel the old attempt before starting a different one.");
+          command.current = assertOperatorDraftCommand(sourceSaveCommand(current.current, current.objective, current.message, current.buffers, current.origin, crypto.randomUUID(), new Date().toISOString(), target.sectionEditing), target.sectionEditing);
         }
-        const draft = await load(ack.savedDigest);
-        if (draft) savedCallback.current(draft);
-      } catch (error) {
-        if (sourceDefinitiveSaveRejection(error, receivedAcknowledgement)) command.current = null;
-        if (alive.current) setUncertain(command.current !== null);
-        throw error;
-      }
-    }),
+        let receivedAcknowledgement = false;
+        try {
+          const ack = await sourceEditorRequest<SourceSaveAcknowledgement>(`${target.endpoint}/draft`, command.current);
+          receivedAcknowledgement = true;
+          if (ack.commandId !== command.current.command_id || ack.current.sessionId !== current.current.sessionId) throw new Error("Save acknowledgement belongs to another source command or session.");
+          setNotice(`Private draft saved at ${ack.savedRevision}. Exact digest: ${ack.savedDigest}. Source acceptance is a separate action.`);
+          if (ack.current.revision !== ack.savedRevision || ack.current.attempt?.digest !== ack.savedDigest) {
+            command.current = null; setUncertain(false); throw new Error("The original save is acknowledged, but the owner now has a newer draft. Your local edits remain; reload explicitly to reconcile.");
+          }
+          const draft = await load(ack.savedDigest);
+          if (draft) { confirmed = draft; savedCallback.current(draft); }
+        } catch (error) {
+          if (sourceDefinitiveSaveRejection(error, receivedAcknowledgement)) command.current = null;
+          if (alive.current) setUncertain(command.current !== null);
+          throw error;
+        }
+      });
+      if (saved && confirmed) afterSaved?.(confirmed);
+      return saved;
+    },
   };
 }

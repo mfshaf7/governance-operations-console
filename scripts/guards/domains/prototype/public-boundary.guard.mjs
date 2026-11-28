@@ -46,6 +46,7 @@ export const guard = {
       [
         "./prototype-closure-api-routes",
         "./prototype-preview-api-routes",
+        "./prototype-project-runtime-routes",
         "./prototype-source-editor-api-routes",
         "./project-context",
       ],

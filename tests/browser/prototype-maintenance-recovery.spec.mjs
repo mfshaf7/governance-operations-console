@@ -1,5 +1,7 @@
 import {test,expect} from "../support/filled-surface-layout.mjs";
 import {createRequire} from "node:module";
+import {createHash} from "node:crypto";
+import {sourceIntent,sourceOperation} from "../support/platform-attention-fixture.mjs";
 const require=createRequire(import.meta.url);
 const {prototypeWorkspaceReadModel}=require("../../src/domain-workspaces/prototype/read-model/prototype-workspace-read-model.ts");
 const base=process.env.CONSOLE_TEST_BASE_URL??"http://127.0.0.1:3320";
@@ -47,6 +49,134 @@ test("cold source opening restores cancelled work; new objectives require an exp
  await modal.getByRole("button",{name:"New source work",exact:true}).click();await modal.getByLabel("New source-work objective").fill("A separate objective that has not been submitted.");
  await modal.locator('button[aria-label^="Close"]').click();const guard=page.getByRole("alertdialog");await expect(guard).toBeVisible();await guard.getByRole("button",{name:/Keep/i}).click();await expect(modal.getByLabel("New source-work objective")).toHaveValue("A separate objective that has not been submitted.");expect(h.writes).toEqual([]);
 });
+test("Prototype runs only a confirmed saved source revision", async ({ page }, info) => {
+  const { control, writes } = await harness(page, { sourceState: "not-started" });
+  const requestId = "prototype-source-request:example:retained", sessionId = "example-session";
+  const objective = "Inspect the retained example source objective.";
+  const sha = value => "sha256:" + createHash("sha256").update(value).digest("hex");
+  const baseCommit = "a".repeat(40), file = "prototypes/example/index.html", originalText = "<h1>Original</h1>";
+  const intent = sourceIntent({
+    subject: { kind: "prototype", prototype_id: "prototype:example", registry_ref: "record://prototypes/example",
+      registry_revision: baseCommit, source_ref: "repo://sample/project/prototypes/example", source_revision: baseCommit },
+  });
+  const receipt = sourceOperation("a".repeat(24), "agent-source.issue", "succeeded", intent).provider_operation.receipt.source_credential;
+  await page.route("**/api/platform-operations/source-authorizations", route => route.fulfill({json: {
+    mode: "live", projection: [{
+      schema_version: 1, workflow_id: "source-credential-preparation", intent_id: intent.intent_id, source_intent: intent,
+      source_intent_digest: receipt.source_intent_digest, session_id: sessionId, created_at: "2026-01-01T00:00:00Z",
+      operation_refs: { issue: null, revoke: null }, start_decision: null,
+      authorization: { state: "approved", approval_ref: "source-approval:example", credential_receipt: receipt },
+      authority: "operator-orchestration-service", secret_values_embedded: false,
+    }],
+  }}));
+  let current = { sessionId, revision: "2026-01-01T00:00:00Z", state: "not-started", attempt: null };
+  let saved = null, rejectSave = false, attempts = 0, revision = 0;
+  const runs = [], results = new Map();
+  const previewAddress = "http://project-isolated.localhost:43100/";
+  await page.route("**/api/prototypes/source-requests/**", async route => {
+    const request = route.request(), url = new URL(request.url()), pathname = decodeURIComponent(url.pathname);
+    if (!pathname.startsWith(`/api/prototypes/source-requests/${requestId}/`)) return route.fallback();
+    const live = projection => route.fulfill({json: {mode: "live", projection}});
+    const unavailable = (status, code, error) => route.fulfill({status, json: {mode: "live", code, error}});
+    if (pathname.endsWith("/files")) return live({current, capture: {
+      head_commit: baseCommit, tree: { paths: [file], truncated: false },
+      files: url.searchParams.has("path") ? [{path: file, content: originalText, content_digest: sha(originalText)}] : [],
+    }});
+    if (pathname.endsWith("/draft")) {
+      if (request.method() === "GET") return saved ? live(saved) :
+        unavailable(404, "prototype_source_authoring_draft_missing", "No draft saved.");
+      attempts += 1;
+      if (rejectSave) return unavailable(409, "prototype_source_authoring_source_changed", "Save refused by the source owner.");
+      const command = request.postDataJSON(), sourceRevision = `2026-01-01T00:00:0${attempts}Z`;
+      const digest = sha(JSON.stringify(command.operations));
+      current = { sessionId, state: "draft-ready", revision: sourceRevision,
+        attempt: { requestId: command.command_id, executionId: command.execution_id, objectiveDigest: sha(JSON.stringify(objective)), digest } };
+      saved = { session_id: sessionId, revision: sourceRevision, digest, objective, accepted: false,
+        provenance: { origin: "operator", inputOrigin: "manual", amendedAt: sourceRevision, originalModel: false },
+        editorState: current, change_set: { base_commit: baseCommit, commit_message: command.commit_message, operations: command.operations } };
+      return live({ commandId: command.command_id, savedRevision: sourceRevision, savedDigest: digest, current, replayed: false });
+    }
+    if (pathname.endsWith("/project-runtime")) return live({
+      project_ref: "project:example", setup: { recipe_id: "static", configuration_revision: "setup-1" },
+      revision, records: [], before: null,
+    });
+    if (pathname.endsWith("/project-runtime/run") && request.method() === "POST") {
+      const intent = request.postDataJSON();
+      runs.push(intent);
+      const manifest = sha(intent.source_digest);
+      const result = { acknowledgement: { command_id: intent.command_id, operation_id: "project-operation:example",
+        scope_revision: ++revision, accepted_at: "2026-01-01T00:01:00Z",
+        snapshot: {snapshot_id: `project-source:${manifest.slice(7)}`, manifest_digest: manifest} },
+        status: "ready", source_revision: intent.source_revision, source_digest: intent.source_digest,
+        configuration_revision: intent.configuration_revision, last_observation: null,
+        observation: { state: "ready", observed_at: "2026-01-01T00:01:01Z", instance_ref: "project-runtime:example",
+          owner_receipt_ref: "platform-project-receipt:example",
+          ...(runs.length > 1 ? {endpoint_ref: previewAddress} : {}) },
+      };
+      results.set(intent.command_id, result);
+      return runs.length === 1 ? unavailable(502, "response_unavailable", "The run response was interrupted.") : live(result);
+    }
+    if (pathname.includes("/project-runtime/commands/") && request.method() === "POST") {
+      const original = results.get(pathname.split("/").at(-1));
+      expect(request.postDataJSON()).toEqual({});
+      return original ? live(original) : unavailable(404, "project_runtime_command_not_found", "Original run unavailable.");
+    }
+    return route.fallback();
+  });
+  await control.getByRole("button", {name: "Open Source Authoring", exact: true}).click();
+  await page.getByRole("button", {name: "Open source workspace", exact: true}).click();
+  const editor = page.getByRole("dialog", {name: "Example source — app/design source", exact: true});
+  await editor.getByRole("treeitem", {name: `Open ${file}`, exact: true}).click();
+  const contents = editor.locator(".cm-content[contenteditable=true]");
+  await contents.fill("<h1>First save</h1>");
+  await editor.getByRole("textbox", {name: "Commit message for the saved draft"}).fill("Update the example page");
+  await editor.getByRole("button", {name: "Save private draft", exact: true}).click();
+  const runSaved = editor.getByRole("button", {name: "Run saved draft", exact: true});
+  await expect(runSaved).toBeEnabled();
+  const firstSave = saved;
+  expect(runs).toHaveLength(0);
+
+  await contents.fill("<h1>Unsaved text</h1>");
+  await runSaved.click();
+  await expect.poll(() => runs.length).toBe(1);
+  expect(runs[0]).toMatchObject({source_revision: firstSave.revision, source_digest: firstSave.digest});
+  await expect(editor).toContainText("Unsaved edits stay in the editor.");
+  await expect(editor).toContainText("The run response was interrupted.");
+  await editor.getByRole("button", {name: "Check original run", exact: true}).click();
+  await expect(editor.getByRole("heading", {name: "Ready", exact: true})).toBeVisible();
+  const openPreview = editor.getByRole("button", {name: "Open preview", exact: true});
+  await expect(openPreview).toHaveCount(0);
+  expect(runs).toHaveLength(1);
+
+  const saveAndRun = editor.getByRole("button", {name: "Save and run", exact: true});
+  await saveAndRun.click();
+  await expect.poll(() => runs.length).toBe(2);
+  expect(runs[1]).toMatchObject({source_revision: saved.revision, source_digest: saved.digest});
+  expect(runs[1].source_digest).not.toBe(runs[0].source_digest);
+  await expect(editor).toContainText("This run uses your current saved draft.");
+  await page.context().route(previewAddress, route => route.fulfill({body: "Isolated preview"}));
+  const [preview] = await Promise.all([page.context().waitForEvent("page"), openPreview.click()]);
+  await expect(preview).toHaveURL(previewAddress);
+  await expect(preview.getByText("Isolated preview")).toBeVisible();
+  await preview.close();
+  const history = editor.getByRole("list", {name: "Saved draft runs", exact: true});
+  await expect(history.getByRole("listitem")).toHaveCount(2);
+  const historicalRun = history.getByRole("button").last();
+  await historicalRun.click();
+  await expect(historicalRun).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => history.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+  await editor.screenshot({path: info.outputPath("prototype-saved-source-run.png")});
+
+  await contents.fill("<h1>Preserve after a rejected save</h1>");
+  rejectSave = true;
+  await saveAndRun.click();
+  await expect(editor).toContainText("Save refused by the source owner.");
+  await expect(contents).toContainText("Preserve after a rejected save");
+  expect(attempts).toBe(3);
+  expect(runs).toHaveLength(2);
+  expect(writes).toEqual([]);
+});
+
 for(const options of [{sourceState:"apply-unknown"},{listUnavailable:true}])test(`unknown source outcome cannot be replaced by new work: ${JSON.stringify(options)}`,async({page})=>{
  const h=await harness(page,options);await h.control.getByRole("button",{name:"Open Source Authoring",exact:true}).click();const modal=page.getByRole("dialog").last();
  await expect(modal).toContainText(options.listUnavailable?"Owner source request list unavailable":"Source outcome needs recovery");

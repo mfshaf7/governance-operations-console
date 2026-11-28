@@ -27,6 +27,7 @@ export type SourceEditorState = {
 export type SourceEditorTarget = {
   endpoint: string; label: string; current: SourceEditorState; objective: string;
   preview?: SourcePreviewAdapter;
+  savedRuntimeEndpoint?: string;
   retainedDraftAvailable?: boolean;
   sectionEditing?: boolean;
   objectiveReadOnly?: boolean; objectiveMin: number; objectiveMax: number;
