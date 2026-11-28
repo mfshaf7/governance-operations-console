@@ -73,7 +73,7 @@ import {
 import { ExecutionTreeChangeReviewDialog } from "./execution-tree-change-review-dialog.tsx";
 import { ExecutionWorkTree } from "./execution-tree-edit-view.tsx";
 import { ExecutionTreeEditSupportPanel } from "./execution-tree-edit-support-panel.tsx";
-import { useDeliveryWorkSessionLiveRuntime } from "../../../live-runtime/use-delivery-work-session-live-runtime.ts";
+import { useDeliveryWorkSessionLiveRuntime, useRetainedWorkSessionRead } from "../../../live-runtime/use-delivery-work-session-live-runtime.ts";
 import type { ExecutionPlanStarterTransfer } from "./work-session/execution-technical-plan-guidance.tsx";
 import { technicalPlanGuidanceScope } from "../../../work-model/execution/technical-plan-guidance.ts";
 import { ExecutionWorkSessionModal } from "./work-session/execution-work-session-modal.tsx";
@@ -1184,6 +1184,25 @@ export function DeliveryExecutionBoard({
     : null;
 
   const inspectedWork = activeView === "work-board" ? selectedChild ?? shownFeature : null;
+  const retainedWorkSessionTarget = !readOnly && !disconnectedPreview && inspectedWork?.lane.status === "done" &&
+    !inspectedWork.sessionRecorded ? inspectedWork.node.legacy_work_package_id : null;
+  const retainedWorkSession = useRetainedWorkSessionRead(
+    retainedWorkSessionTarget,
+    selectedPackage?.delivery_package_id ?? null,
+  );
+
+  function retainedWorkSessionAction(item: ExecutionPackageWorkItem) {
+    if (retainedWorkSessionTarget === null || item.node.legacy_work_package_id !== retainedWorkSessionTarget) return null;
+    if (retainedWorkSession.status === "closed") {
+      return <TerasActionButton emphasis="secondary" onClick={() => openChildAction(item)}>Open Work Session</TerasActionButton>;
+    }
+    if (retainedWorkSession.status === "unavailable") {
+      return <TerasActionButton emphasis="secondary" onClick={retainedWorkSession.retry}>Retry saved session</TerasActionButton>;
+    }
+    return retainedWorkSession.status === "checking"
+      ? <TerasRecordMetaText>Checking for a saved work session…</TerasRecordMetaText>
+      : null;
+  }
   function inspectTreeAction(node: ExecutionTreeDraftNode) {
     const id = node.legacyWorkPackageId;
     if (!id) return undefined;
@@ -1196,12 +1215,18 @@ export function DeliveryExecutionBoard({
       open: () => setCompletionTarget(id),
     };
   }
+  const savedSessionAction = inspectedWork ? retainedWorkSessionAction(inspectedWork) : null;
+  const workAction = selectedChild
+    ? renderChildAction(selectedChild)
+    : inspectedWork ? featureReviewAction(inspectedWork) : null;
   const workBoardInspector = treeEditPanel ?? (inspectedWork ? (
     <ExecutionPackageWorkItemPanel
       key={inspectedWork.node.id}
       item={inspectedWork}
       planningPlacement={planningPlacement(inspectedWork.node)}
-      action={selectedChild ? renderChildAction(selectedChild) : featureReviewAction(inspectedWork)}
+      action={savedSessionAction && workAction
+        ? <TerasActionRow spacing="compact">{workAction}{savedSessionAction}</TerasActionRow>
+        : savedSessionAction ?? workAction}
       blockerAction={reviewItemBlocker(inspectedWork)}
       dependencies={workDependencies(inspectedWork)}
       readOnly={readOnly}
