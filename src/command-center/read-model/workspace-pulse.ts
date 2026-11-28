@@ -1,5 +1,5 @@
 import { attentionCandidateTone, attentionClassTone } from "./attention-tone.ts";
-import type { ConsoleNavigationTarget } from "../../console-architecture";
+import type { ConsoleEntryIntent, ConsoleNavigationTarget } from "../../console-architecture";
 import type {
   CommandCenterAttentionCandidate,
   CommandCenterAttentionSnapshot,
@@ -48,6 +48,7 @@ export type WorkspacePulseSource = Readonly<{
 }>;
 
 export type WorkspacePulseRoute = Readonly<{
+  entryIntent?: ConsoleEntryIntent;
   label: string;
   target: ConsoleNavigationTarget;
 }>;
@@ -484,6 +485,7 @@ export function projectWorkspacePulseFromAttention(
         ? {
             label: candidate.route.label,
             target: candidate.route.entryIntent.target,
+            entryIntent: candidate.route.entryIntent,
           }
         : null,
       state: issueSourceIds.has(source.registration.id)
@@ -546,6 +548,7 @@ function attentionCandidatePulseRecord(
       ? {
           label: candidate.route.label,
           target: candidate.route.entryIntent.target,
+          entryIntent: candidate.route.entryIntent,
         }
       : null,
     signalId,

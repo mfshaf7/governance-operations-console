@@ -1,3 +1,4 @@
+import { deliveryTreeTitleParts } from "../../src/domain-workspaces/delivery/product-adapters/build-tree/delivery-tree-title.ts";
 import { documentContentBlocks as refinementDescriptionBlocks } from "../../src/teras/teras-document-content.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -34,7 +35,12 @@ test("full descriptions retain headings, paragraphs, lists and literal code whil
   const blocks = refinementDescriptionBlocks(original);
   assert.deepEqual(blocks.map(b => b.kind), ["heading", "paragraph", "list", "heading", "ordered", "code"]);
   assert.equal(blocks.at(-1).lines[0], "<script>literal source only</script>");
-  assert.equal(refinementItemSummary(original).includes("##"), false);
+  assert.equal(refinementItemSummary(original), "A readable outcome.");
+  assert.equal(refinementItemSummary("## Review\n\n- [Read the report](https://example.test/report)\n- **Keep the receipt**"), "Read the report Keep the receipt");
+  assert.deepEqual(deliveryTreeTitleParts({ kind: "User story", title: "Story 1.2 — Verify scope" }, 1101),
+    { editable: "Verify scope", reference: "#1101", locked: undefined });
+  assert.deepEqual(deliveryTreeTitleParts({ kind: "Feature", title: "Feature 2 - Pick a plan" }, undefined),
+    { editable: "Pick a plan", reference: undefined, locked: "Draft 2" });
   assert.ok(refinementItemSummary("## Goal\n\n" + "Meaningful outcome. ".repeat(100)).length <= 160);
 });
 

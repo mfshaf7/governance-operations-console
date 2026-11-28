@@ -1,6 +1,5 @@
 import {
   buildTreeExpandedNodeIds,
-  buildTreeNodeDisplayTitle,
   buildTreeNodeTitleParts,
   buildTreeRootExpandedNodeIds,
   buildTreeStructuredNodeLayout,
@@ -47,7 +46,7 @@ export function executionBoardPrimaryAction(
 
 const executionWorkCountDescriptions = {
   "in-progress": "Stories, defects, and tasks recorded as in progress.",
-  blocked: "Stories, defects, and tasks with a blocked status, recorded blocker, or blocking dependency.",
+  blocked: "Work items with a recorded blocker, a parent hold, or a prerequisite still open.",
   ready: "Stories, defects, and tasks marked ready. Check the item’s requirements before starting work.",
 };
 
@@ -285,11 +284,19 @@ export function executionTreeChildCountLabel(node: ExecutionTreeDraftNode) {
 }
 
 export function executionTreeNodeDisplayTitle(node: ExecutionTreeDraftNode) {
-  return buildTreeNodeDisplayTitle(node, executionTreeTitleProfile);
+  const { reference, editable } = executionTreeNodeTitleParts(node);
+  const kind = executionTreeNodeKindLabel(node.kind);
+  return `${reference ? `${kind} ${reference}` : kind} - ${editable}`;
 }
 
 export function executionTreeNodeTitleParts(node: ExecutionTreeDraftNode) {
-  return buildTreeNodeTitleParts(node, executionTreeTitleProfile);
+  const parts = buildTreeNodeTitleParts(node, executionTreeTitleProfile);
+  const kind = executionTreeNodeKindLabel(node.kind);
+  const repeatedKind = new RegExp(`^(?:${kind}\\s*[:–—-]\\s*)+`, "i");
+  return {
+    reference: node.legacyWorkPackageId == null ? undefined : `#${node.legacyWorkPackageId}`,
+    editable: parts.editable.replace(repeatedKind, "") || parts.editable,
+  };
 }
 
 export function composeExecutionTreeNodeTitle(
@@ -369,11 +376,11 @@ export function executionTreeNodeIndex(
   }
 }
 
-export function executionTreeNodeSummary(node: ExecutionTreeDraftNode) {
+export function executionTreeNodeSummary(node: ExecutionTreeDraftNode, packageStatusLabel?: string) {
   const count = node.children.length;
-  const status = node.backendStatus === "parked" ? "Deferred" :
-    node.backendStatus.charAt(0).toUpperCase() + node.backendStatus.slice(1).replaceAll("-", " ");
-  const identity = node.legacyWorkPackageId === null ? "New draft" : `#${node.legacyWorkPackageId} · ${status}`;
+  const status = packageStatusLabel ?? (node.backendStatus === "parked" ? "Deferred" :
+    node.backendStatus.charAt(0).toUpperCase() + node.backendStatus.slice(1).replaceAll("-", " "));
+  const identity = node.legacyWorkPackageId == null ? "New draft" : status;
   return count ? `${identity} · ${count} ${count === 1 ? "child" : "children"}` : identity;
 }
 

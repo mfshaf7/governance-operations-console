@@ -1,3 +1,4 @@
+import { deliveryWorkItemStatus } from "../../domain/delivery-execution.ts";
 import { deliveryReadModel } from "../projections/root-projection.ts";
 import type {
   DeliveryActionType,
@@ -352,7 +353,7 @@ export function getChildCounts(node: DeliveryArtNode): {
 
   return {
     blocked_child_count: descendants.filter(
-      (child) => child.backend_status === "blocked",
+      (child) => deliveryWorkItemStatus(child) === "blocked",
     ).length,
     open_child_count: descendants.filter(
       (child) =>

@@ -74,7 +74,8 @@ export function projectAgentOwnerSnapshot(source: AgentContextSource, value: unk
       const projection = object(body.projection); const state = object(projection.projection_state);
       if (state.status !== "fresh") throw new Error("Delivery not fresh");
       const rows = list(projection.packages); const active = rows.filter(row => !["done", "retired", "parked"].includes(String(object(row).backend_status)));
-      detail = `${rows.length} retained Delivery initiatives; ${active.length} current (${tally(rows, "backend_status")}); terminal and parked records are history`;
+      const deferred = rows.filter(row => object(row).backend_status === "parked").length;
+      detail = `${rows.length} retained Delivery initiatives. ${active.length} current${active.length ? ` (${tally(active, "package_posture")})` : ""}. ${deferred} deferred.`;
       sourceRevision = revision(state.source_revision);
     } else if (source === "orchestration") {
       const rows = list(body.runs); partial=rows.length>=100; detail = `${partial ? "Partial recent window: " : ""}${list(body.definitions).length} definitions; ${rows.length} runs (${tally(rows, "state")})`;

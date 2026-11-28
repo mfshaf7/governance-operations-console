@@ -25,7 +25,21 @@ export function SourceFileExplorer({ paths, selected, operations, scope, truncat
   }, [selected]);
   const toggle = (path: string) => setCollapsed(current => { const next = new Set(current); if (next.has(path)) next.delete(path); else next.add(path); return next; });
   const start = (kind: "file" | "folder") => { setCreating(kind); setCreationError(null); setNewPath(directory ? `${directory}/` : ""); };
-  const focus = (path?: string) => { if (!path) return; setFocused(path); Array.from(root.current?.querySelectorAll<HTMLButtonElement>("[data-source-tree-entry]") ?? []).find(node => node.dataset.sourceTreeEntry === path)?.focus(); };
+  const revealFocusedPath = (button: HTMLButtonElement) => {
+    requestAnimationFrame(() => {
+      if (document.activeElement === button && button.matches(":focus-visible")) {
+        button.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
+    });
+  };
+  const focus = (path?: string) => {
+    if (!path) return;
+    setFocused(path);
+    const button = Array.from(root.current?.querySelectorAll<HTMLButtonElement>("[data-source-tree-entry]") ?? [])
+      .find(node => node.dataset.sourceTreeEntry === path);
+    if (button && document.activeElement === button) revealFocusedPath(button);
+    else button?.focus();
+  };
   return <TerasFieldStack spacing="compact">
     <TerasTextField label="Find files or folders" value={query} onValueChange={setQuery} maxLength={240} />
     {onContext ? <TerasActionRow>
@@ -40,10 +54,10 @@ export function SourceFileExplorer({ paths, selected, operations, scope, truncat
     {entries.length ? <ul ref={root} role="tree" aria-label="Source file tree" className={styles.tree}>
       {entries.map((entry, index) => {
         const issue = entry.folder ? null : sourcePathIssue(entry.path, scope), operation = operations.find(row => row.path === entry.path), expanded = !!query || !collapsed.has(entry.path);
-        return <li key={entry.path} role="none" className={styles.treeRow} style={{ paddingLeft: `${entry.depth * 12}px` }}>
+        return <li key={entry.path} role="none" className={styles.treeRow} style={{ paddingInlineStart: `${Math.min(entry.depth, 4) * 12}px` }}>
           <button type="button" role="treeitem" aria-level={entry.depth + 1} aria-expanded={entry.folder ? expanded : undefined} aria-selected={!entry.folder && selected === entry.path} aria-disabled={!entry.folder && (pending || !!issue)}
             aria-label={entry.folder ? `Folder ${entry.path}` : `Open ${entry.path}`} title={issue ? `${entry.path}: ${issue}` : entry.path} data-source-tree-entry={entry.path} className={styles.treeEntry}
-            tabIndex={tabStop === entry.path ? 0 : -1} onFocus={() => setFocused(entry.path)}
+            tabIndex={tabStop === entry.path ? 0 : -1} onFocus={event => { setFocused(entry.path); revealFocusedPath(event.currentTarget); }}
             onClick={() => { if (entry.folder) { setDirectory(entry.path); toggle(entry.path); } else if (!pending && !issue) { setDirectory(entry.path.includes("/") ? entry.path.slice(0, entry.path.lastIndexOf("/")) : ""); onSelect(entry.path); } }}
             onKeyDown={event => {
               const key = event.key; if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(key)) return; event.preventDefault();
@@ -55,7 +69,10 @@ export function SourceFileExplorer({ paths, selected, operations, scope, truncat
               if (key === "ArrowLeft") { if (entry.folder && expanded && !query) toggle(entry.path); else focus(entry.path.includes("/") ? entry.path.slice(0, entry.path.lastIndexOf("/")) : undefined); }
             }}>
             {entry.folder ? <>{expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}{expanded ? <FolderOpen size={15} /> : <Folder size={15} />}</> : <><span className={styles.treeIndent} /><FileText size={15} /></>}
-            <span className={styles.treeName}>{entry.name}</span>{operation ? <span className={styles.fileChange} title={operation.action}>{operation.action === "create" ? "A" : operation.action === "delete" ? "D" : "M"}</span> : null}
+            <span className={styles.treeEntryText}>
+              <span className={styles.treeName}>{entry.name}</span>
+              {entry.depth > 0 ? <span className={styles.treePath} aria-hidden="true">{entry.path}</span> : null}
+            </span>{operation ? <span className={styles.fileChange} title={operation.action}>{operation.action === "create" ? "A" : operation.action === "delete" ? "D" : "M"}</span> : null}
           </button>
           {!entry.folder && onContext && !sectionPaths?.includes(entry.path) ? <input className={styles.contextCheck} type="checkbox" aria-label={`${contextPaths.includes(entry.path) ? "Remove from" : "Add to"} AI context: ${entry.path}`} title="Include this file when asking AI" checked={contextPaths.includes(entry.path)} disabled={contextPending || !!issue} onChange={() => onContext(entry.path)} /> : null}
         </li>;

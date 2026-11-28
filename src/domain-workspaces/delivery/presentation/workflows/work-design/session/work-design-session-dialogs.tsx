@@ -12,6 +12,7 @@ import type { WorkDesignSessionState } from "../session-controller/use-work-desi
 import { WorkDesignSessionDialogStack } from "./work-design-session-dialog-stack.tsx";
 
 type WorkDesignSessionDialogsProps = {
+  readOnly: boolean;
   applyCompleted: boolean;
   applyWorkflow: ReturnType<typeof useWorkDesignApplyWorkflow>;
   buildTree: ReturnType<typeof useWorkDesignBuildTree>;
@@ -25,6 +26,7 @@ type WorkDesignSessionDialogsProps = {
 };
 
 export function WorkDesignSessionDialogs({
+  readOnly,
   applyCompleted,
   applyWorkflow,
   buildTree,
@@ -278,6 +280,8 @@ export function WorkDesignSessionDialogs({
       }}
       reviewTreeDialog={{
         metrics,
+        historical: readOnly,
+        epicNumber: deliveryPackage.legacy_epic_id,
         onClose: () => setReviewTreeDialogOpen(false),
         onOpenBuildTree: () => {
           setReviewTreeDialogOpen(false);

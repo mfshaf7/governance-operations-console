@@ -5,10 +5,11 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { TerasActionButton, TerasDocument, TerasNoteField, TerasReadoutField } from "@/teras";
 
-import type { BuildTreeNodeLike } from "./build-tree-core";
+import type { BuildTreeNodeLike, BuildTreeRowTitle } from "./build-tree-core";
 import type { BuildTreeViewMode } from "./build-tree-model";
 import { buildTreeEditorFieldProps } from "./build-tree-view-contract";
 import type { BuildTreeStructuredNodeLayout } from "./build-tree-view-model";
+import { BuildTreeStructuredTitle } from "./build-tree-viewer";
 import editorStyles from "./build-tree-editor-tree.module.css";
 import structuredStyles from "./build-tree-viewer.module.css";
 
@@ -60,7 +61,7 @@ export type BuildTreeEditorTreeProps<
   getNodeRole: (node: TNode) => BuildTreeEditorTreeRole;
   getStructuredLayout: (node: TNode) => BuildTreeStructuredNodeLayout<TNode>;
   getSummary: (node: TNode) => ReactNode;
-  getTitleParts: (node: TNode) => { editable: string; locked: string };
+  getTitleParts: (node: TNode) => BuildTreeRowTitle;
   mode: BuildTreeViewMode;
   onDeleteNode: (node: TNode) => void;
   onFocusInlineTitle: (node: TNode) => void;
@@ -217,8 +218,11 @@ export function BuildTreeEditorTree<
     const expandable = role === "group" || childCount > 0;
     const detailOpen = mode === "inline" && openDetailNodeId === node.id;
     const titleParts = getTitleParts(node);
+    const titlePrefix = titleParts.reference ?? titleParts.locked;
     const displayTitle = getDisplayTitle(node);
+    const kindLabel = getKindLabel(node.kind, node);
     const inspecting = readOnly && Boolean(inlineInspection);
+    const inspectionText = node.draftBody.trim() ? node.draftBody : node.description;
     const SelectItem = inspecting ? "button" : "div";
     const detailActions = inspecting && detailOpen ? inlineInspection?.renderActions?.(node) : null;
 
@@ -241,17 +245,15 @@ export function BuildTreeEditorTree<
               {getIndex(node, position)}
             </span>
             <span className={editorStyles.buildTreeEditorTreeText}>
-              <span className={editorStyles.buildTreeEditorTreeKind}>
-                {getKindLabel(node.kind, node)}
-              </span>
+              <span className={editorStyles.buildTreeEditorTreeKind}>{kindLabel}</span>
               {mode === "inline" ? (
                 <span className={editorStyles.buildTreeEditorTreeTitleRow}>
-                  <span className={editorStyles.buildTreeEditorTreeTitlePrefix}>
-                    {titleParts.locked}
-                  </span>
-                  <span className={editorStyles.buildTreeEditorTreeTitleSeparator}>
-                    -
-                  </span>
+                  {titlePrefix ? <>
+                    <span className={editorStyles.buildTreeEditorTreeTitlePrefix} data-work-reference={Boolean(titleParts.reference) || undefined}>
+                      {titlePrefix}
+                    </span>
+                    <span className={editorStyles.buildTreeEditorTreeTitleSeparator}>-</span>
+                  </> : null}
                   {inspecting ? (
                     <span className={editorStyles.buildTreeEditorTreeTitleReadout}>{titleParts.editable || displayTitle}</span>
                   ) : (
@@ -319,8 +321,8 @@ export function BuildTreeEditorTree<
                   label={resolvedCopy.detailDraftLabel}
                   scrollHeight="fill"
                   surface="field"
-                  value={node.draftBody.trim() ? (
-                    <TerasDocument ariaLabel={resolvedCopy.detailDraftLabel} content={node.draftBody} />
+                  value={inspectionText.trim() ? (
+                    <TerasDocument ariaLabel={resolvedCopy.detailDraftLabel} content={inspectionText} />
                   ) : getDraftPlaceholder(node)}
                 />
               ) : (
@@ -328,6 +330,7 @@ export function BuildTreeEditorTree<
                   <TerasNoteField
                     {...buildTreeEditorFieldProps}
                     className={editorStyles.buildTreeEditorTreeNoteField}
+                    fill={draftNotesSize === "standard"}
                     label={resolvedCopy.detailDraftLabel}
                     onValueChange={(value) => onUpdateDraftBody(node, value)}
                     disabled={readOnly}
@@ -418,7 +421,7 @@ export function BuildTreeEditorTree<
               <span className={structuredStyles.buildTreeStructuredTreeKind}>
                 {getKindLabel(node.kind, node)}
               </span>
-              <strong>{displayTitle}</strong>
+              <BuildTreeStructuredTitle {...getTitleParts(node)} />
               <small>{getSummary(node)}</small>
             </span>
           </button>

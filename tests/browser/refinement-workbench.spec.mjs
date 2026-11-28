@@ -50,7 +50,7 @@ test("readiness reuses the locked Refinement tree without persisting inspection 
   await page.setViewportSize({ width: 1700, height: 1050 });
   const h = await openWorkbench(page, { saved: true }), d = modal(page);
   await d.getByRole("button", { name: "Expand Feature 1 — reviewed outcome", exact: true }).click();
-  await d.locator('[data-structure-locked="true"]').getByRole("button").filter({ hasText: "Story 1.1" }).click();
+  await d.locator('[data-structure-locked="true"]').getByRole("button", { name: /^\d+ User Story #1100\b/i }).click();
   await d.getByRole("button", { name: /^Edit Notes for User story/ }).click();
   const note = "Reviewed source note retained exactly in the locked Refinement tree.";
   await d.getByRole("textbox", { name: "Notes", exact: true }).fill(note);
@@ -70,7 +70,7 @@ test("readiness reuses the locked Refinement tree without persisting inspection 
   await review.getByRole("button", { name: "Expand all", exact: true }).click();
   const tree = review.locator('[data-structure-locked="true"]');
   await expect(tree.locator('[data-kind][data-role]')).toHaveCount(36);
-  await tree.getByRole("button").filter({ hasText: "Story 1.1" }).click();
+  await tree.getByRole("button", { name: /^\d+ User Story #1100\b/i }).click();
   await expect(tree.getByText(note, { exact: true })).toHaveCount(0);
   await tree.getByRole("button", { name: /^View Notes for User story/ }).click();
   await expect(tree.getByText(note, { exact: true })).toBeVisible();
@@ -81,7 +81,7 @@ test("readiness reuses the locked Refinement tree without persisting inspection 
   await expect(review.getByRole("button", { name: "New conversation", exact: true })).toHaveCount(0);
   await expect(review.getByRole("button", { name: /View Work Design Handoff/i })).toHaveCount(0);
   await review.getByRole("searchbox", { name: "Find work items", exact: true }).fill("Story 1.2");
-  await expect(tree.getByRole("button").filter({ hasText: "Story 1.2" })).toBeVisible();
+  await expect(tree.getByRole("button", { name: /^\d+ User Story #1101\b/i })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("locked-refinement-tree.png") });
   await review.getByRole("button", { name: "Back to Readiness", exact: true }).click();
   await expect(d.getByRole("heading", { name: "Readiness Review", exact: true })).toBeVisible();
@@ -94,7 +94,7 @@ test("readiness reuses the locked Refinement tree without persisting inspection 
 for (const width of [1280, 1700]) test(`long real-shaped work tree is navigable and full descriptions are safely formatted at ${width}`, async ({ page }) => {
   await page.setViewportSize({ width, height: width === 1280 ? 800 : 1050 });
   const h = await openWorkbench(page), d = modal(page), tree = d.locator('[data-structure-locked="true"]');
-  await expect(tree.getByRole("button").filter({ hasText: "Story 1.1" })).toHaveCount(0);
+  await expect(tree.getByRole("button", { name: /^\d+ User Story #1100\b/i })).toHaveCount(0);
   await expect(tree.locator('button[aria-label^="Delete"], button[aria-label^="Add"], input')).toHaveCount(0);
   await expect(tree.locator('[data-kind="Epic"]')).toHaveCount(1);
   await expect(d.getByRole("textbox", { name: "Refinement metadata advisor prompt", exact: true })).toBeDisabled();
@@ -121,9 +121,9 @@ for (const width of [1280, 1700]) test(`long real-shaped work tree is navigable 
   await page.screenshot({ path: test.info().outputPath("formatted-work-description.png") });
   await details.getByRole("button", { name: "Close work item details", exact: true }).click();
   await d.getByRole("searchbox", { name: "Find work items", exact: true }).fill("Story 1.1");
-  await expect(tree.getByRole("button").filter({ hasText: "Story 1.1" })).toBeVisible();
-  await expect(tree.getByRole("button").filter({ hasText: "Story 2.1" })).toHaveCount(0);
-  await tree.getByRole("button").filter({ hasText: "Story 1.1" }).click();
+  await expect(tree.getByRole("button", { name: /^\d+ User Story #1100\b/i })).toBeVisible();
+  await expect(tree.getByRole("button", { name: /^\d+ User Story #1110\b/i })).toHaveCount(0);
+  await tree.getByRole("button", { name: /^\d+ User Story #1100\b/i }).click();
   await expect(d.getByRole("textbox", { name: "Implementation repository", exact: true })).toHaveCount(0);
   await expect(d.getByRole("button", { name: "Change field", exact: true })).toHaveCount(0);
   await tree.getByRole("button", { name: /^Edit Implementation repository for User story/ }).click();
@@ -132,15 +132,15 @@ for (const width of [1280, 1700]) test(`long real-shaped work tree is navigable 
   await expect(d.getByRole("textbox", { name: "Refinement metadata advisor prompt", exact: true })).toBeEnabled();
   await d.getByRole("searchbox", { name: "Find work items", exact: true }).fill("");
   await d.getByRole("button", { name: "Expand Feature 1 — reviewed outcome", exact: true }).click();
-  await expect(tree.getByRole("button").filter({ hasText: "Story 1.1" })).toBeVisible();
+  await expect(tree.getByRole("button", { name: /^\d+ User Story #1100\b/i })).toBeVisible();
   await tree.getByRole("button", { name: /^Edit Effort for User story/ }).click();
   await expect(d.getByRole("spinbutton", { name: "Effort", exact: true })).toHaveAttribute("min", "0");
   await d.getByRole("spinbutton", { name: "Effort", exact: true }).fill("-2");
   await expect(d.getByRole("button", { name: "Mark reviewed", exact: true })).toBeDisabled();
   await d.getByRole("button", { name: "Needs review", exact: true }).click();
   await expect(d.getByRole("button", { name: "Needs review", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(tree.getByRole("button").filter({ hasText: "Story 1.1" })).toBeVisible();
-  await expect(tree.getByRole("button").filter({ hasText: "Story 1.2" })).toHaveCount(0);
+  await expect(tree.getByRole("button", { name: /^\d+ User Story #1100\b/i })).toBeVisible();
+  await expect(tree.getByRole("button", { name: /^\d+ User Story #1101\b/i })).toHaveCount(0);
   await d.getByRole("button", { name: "Needs review", exact: true }).click();
   await d.getByRole("button", { name: "Reset", exact: true }).click();
   await tree.getByRole("button", { name: /^Edit Notes for User story/ }).click();
@@ -165,8 +165,8 @@ test("shared field review targets only the explicit selection and idle renders d
   await d.getByRole("radio", { name: "Multiple items", exact: true }).click();
   await expect(d.getByText("Select two or more work items below to see their common fields.", { exact: true })).toBeVisible();
   await d.getByRole("button", { name: "Expand Feature 1 — reviewed outcome", exact: true }).click();
-  await tree.getByRole("button").filter({ hasText: "Story 1.1" }).click();
-  await tree.getByRole("button").filter({ hasText: "Story 1.2" }).click();
+  await tree.getByRole("button", { name: /^\d+ User Story #1100\b/i }).click();
+  await tree.getByRole("button", { name: /^\d+ User Story #1101\b/i }).click();
   await expect(d.getByRole("textbox", { name: "Implementation repository", exact: true })).toHaveCount(0);
   await d.getByRole("button", { name: "Edit shared Implementation repository", exact: true }).click();
   await expect(d.getByText("Different current values", { exact: true })).toBeVisible();
@@ -185,7 +185,7 @@ test("shared field review targets only the explicit selection and idle renders d
   await d.getByRole("button", { name: "Clear selection (2)", exact: true }).click();
   await expect(d.getByText("Select two or more work items below to see their common fields.", { exact: true })).toBeVisible();
   await tree.getByRole("button").filter({ hasText: "Adapter Contract Metadata Repair" }).click();
-  await tree.getByRole("button").filter({ hasText: "Story 1.1" }).click();
+  await tree.getByRole("button", { name: /^\d+ User Story #1100\b/i }).click();
   await expect(d.getByText("These items have no editable field in common. Change the selection or edit one item at a time.", { exact: true })).toBeVisible();
   await expect(d.getByRole("button", { name: "Mark 2 items reviewed", exact: true })).toHaveCount(0);
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
@@ -219,7 +219,7 @@ test("individual advice carries ancestor drafts and stays unreviewed until expli
  await tree.getByRole("button",{name:/^Edit Target PI for Epic/}).click();
  await d.getByLabel("Target PI",{exact:true}).click();await page.getByRole("option",{name:"PI-2026-04",exact:true}).click();
  await d.getByRole("searchbox",{name:"Find work items",exact:true}).fill("Story 1.1");
- await tree.getByRole("button").filter({hasText:"Story 1.1"}).click();
+ await tree.getByRole("button", { name: /^\d+ User Story #1100\b/i }).click();
  await tree.getByRole("button",{name:/^Edit Implementation repository for User story/}).click();
  await d.getByRole("textbox",{name:"Refinement metadata advisor prompt",exact:true}).fill("Help fill this in using the project settings.");
  await d.getByRole("button",{name:"run",exact:true}).click();
@@ -239,7 +239,7 @@ test("shared advice keeps mixed per-item values and applies only to the selected
  const h=await openWorkbench(page,{assist:async body=>fieldAdvice(body)}),d=modal(page),tree=d.locator('[data-structure-locked="true"]');
  await d.getByRole("radio",{name:"Multiple items",exact:true}).click();
  await d.getByRole("button",{name:"Expand Feature 1 — reviewed outcome",exact:true}).click();
- await tree.getByRole("button").filter({hasText:"Story 1.1"}).click();await tree.getByRole("button").filter({hasText:"Story 1.2"}).click();
+ await tree.getByRole("button", { name: /^\d+ User Story #1100\b/i }).click();await tree.getByRole("button", { name: /^\d+ User Story #1101\b/i }).click();
  await d.getByRole("button",{name:"Edit shared Implementation repository",exact:true}).click();
  await d.getByRole("textbox",{name:"Refinement metadata advisor prompt",exact:true}).fill("Fill this for the selected items.");
  await d.getByRole("button",{name:"run",exact:true}).click();
@@ -263,7 +263,7 @@ test("native per-item choices survive individual and shared review while integer
   fields.find(field=>field.backend_field==="effort").numeric_type="integer";
  }}),d=modal(page),tree=d.locator('[data-structure-locked="true"]');
  await d.getByRole("searchbox",{name:"Find work items",exact:true}).fill("Story 1.1");
- await tree.getByRole("button").filter({hasText:"Story 1.1"}).click();
+ await tree.getByRole("button", { name: /^\d+ User Story #1100\b/i }).click();
  await tree.getByRole("button",{name:/^Edit Priority for User story/}).click();
  await d.getByLabel("Priority",{exact:true}).click();
  await expect(page.getByRole("option",{name:"High",exact:true})).toBeVisible();
@@ -278,8 +278,8 @@ test("native per-item choices survive individual and shared review while integer
  await number.fill("2");await d.getByRole("button",{name:"Mark reviewed",exact:true}).click();
  await d.getByRole("searchbox",{name:"Find work items",exact:true}).fill("Story 1.");
  await d.getByRole("radio",{name:"Multiple items",exact:true}).click();
- await tree.getByRole("button").filter({hasText:"Story 1.1"}).click();
- await tree.getByRole("button").filter({hasText:"Story 1.2"}).click();
+ await tree.getByRole("button", { name: /^\d+ User Story #1100\b/i }).click();
+ await tree.getByRole("button", { name: /^\d+ User Story #1101\b/i }).click();
  await d.getByRole("button",{name:"Edit shared Priority",exact:true}).click();
  await d.getByLabel("Priority",{exact:true}).click();
  await expect(page.getByRole("option",{name:"Normal",exact:true})).toBeVisible();
@@ -335,8 +335,8 @@ for (const count of [1, 2]) test(`selected repository advice avoids 35-item choi
   const d = modal(page), tree = d.locator('[data-structure-locked="true"]');
   if (count === 2) await d.getByRole("radio", { name: "Multiple items", exact: true }).click();
   await d.getByRole("button", { name: "Expand Feature 1 — reviewed outcome", exact: true }).click();
-  await tree.getByRole("button").filter({ hasText: "Story 1.1" }).click();
-  if (count === 2) await tree.getByRole("button").filter({ hasText: "Story 1.2" }).click();
+  await tree.getByRole("button", { name: /^\d+ User Story #1100\b/i }).click();
+  if (count === 2) await tree.getByRole("button", { name: /^\d+ User Story #1101\b/i }).click();
   await d.getByRole("button", count === 1 ? { name: /^Edit Implementation repository for User story/ } : { name: "Edit shared Implementation repository", exact: true }).click();
   await d.getByRole("textbox", { name: "Refinement metadata advisor prompt", exact: true }).fill("Fill this field in from the project context.");
   await d.getByRole("button", { name: "run", exact: true }).click();

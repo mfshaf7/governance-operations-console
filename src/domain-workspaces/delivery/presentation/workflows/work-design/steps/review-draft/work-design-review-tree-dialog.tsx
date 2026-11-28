@@ -20,6 +20,8 @@ import {
 } from "../../../../../product-adapters/build-tree/index.ts";
 import type { WorkDesignNode } from "../../model/work-design-model.ts";
 
+import { deliveryTreeTitleParts } from "../../../../../product-adapters/build-tree/delivery-tree-title.ts";
+
 type WorkDesignReviewTreeMetrics = {
   features: number;
   risks: number;
@@ -33,6 +35,8 @@ type WorkDesignReviewTreeDialogProps = {
   onToggleAll: () => void;
   onToggleNode: (nodeId: string) => void;
   open: boolean;
+  historical: boolean;
+  epicNumber: number;
   packageName: string;
   reviewTreeCollapsedNodeIds: string[];
   tree: WorkDesignNode;
@@ -45,6 +49,8 @@ export function WorkDesignReviewTreeDialog({
   onToggleAll,
   onToggleNode,
   open,
+  historical,
+  epicNumber,
   packageName,
   reviewTreeCollapsedNodeIds,
   tree,
@@ -60,8 +66,8 @@ export function WorkDesignReviewTreeDialog({
         </TerasActionButton>
       }
       closeLabel="Close full tree viewer"
-      description="Inspect the complete draft tree that will be reviewed. Edits stay in Build Tree."
-      kicker="Read-Only Draft Tree"
+      description={historical ? "Open a work item to read its retained notes." : "Open a work item to read its saved draft notes before review."}
+      kicker={historical ? "Work Design History" : "Read-Only Draft Tree"}
       onClose={onClose}
       open={open}
       title={packageName}
@@ -72,15 +78,14 @@ export function WorkDesignReviewTreeDialog({
         <TerasStatItem label="Risks" value={metrics.risks} />
         <TerasStatItem label="Mode" value={buildTreeReadOnlyModeLabel} />
       </TerasStatGroup>
-      <BuildTreeViewer
+      {open ? <BuildTreeViewer
         collapsedNodeIds={reviewTreeCollapsedNodeIds}
         copy={{
-          groupedEmptyDescription: "No draft stories captured.",
+          groupedEmptyDescription: historical ? "No user stories recorded." : "No draft stories captured.",
           groupedItemLabel: "User Stories",
-          groupedVisibleDescription:
-            "Full story stack visible for read-only inspection.",
+          groupedVisibleDescription: "Open a story to read its notes.",
           groupedVisibleTitle: (count) =>
-            `${count} draft ${count === 1 ? "story" : "stories"}`,
+            `${count} ${historical ? "user" : "draft"} ${count === 1 ? "story" : "stories"}`,
           supportGroupLabel: "Support Branches",
           toolbarKicker: "Tree View",
         }}
@@ -90,13 +95,23 @@ export function WorkDesignReviewTreeDialog({
         getKindLabel={workDesignNodeKindLabel}
         getLayout={workDesignStructuredNodeLayout}
         getSummary={workDesignNodeSummary}
+        getTitleParts={node => deliveryTreeTitleParts(node, node.recordedWorkItemNumber ?? (node.kind === "Epic" ? epicNumber : undefined))}
+        getItemText={node => {
+          const hasDraft = Boolean(node.draftBody.trim());
+          const content = hasDraft ? node.draftBody : node.description;
+          return {
+            label: historical ? "Work item notes" : hasDraft ? "Draft Notes" : "Description",
+            content,
+            status: historical ? content.trim() ? "notes recorded" : "no notes recorded" : hasDraft ? "drafted" : "needs draft",
+          };
+        }}
         groupKind="Feature"
         leafKind="User story"
         onToggleAll={onToggleAll}
         onToggleNode={onToggleNode}
         rootKind="Epic"
         tree={tree}
-      />
+      /> : null}
     </TerasDialog>
   );
 }

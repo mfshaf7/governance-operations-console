@@ -559,6 +559,7 @@ export function useWorkDesignSessionController({
 
   return {
     dialogsProps: {
+      readOnly,
       applyCompleted,
       applyWorkflow,
       buildTree,

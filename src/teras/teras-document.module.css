@@ -10,7 +10,7 @@
 .description li + li { margin-top: 0.35rem; }
 .description pre { overflow: auto; padding: 0.8rem; border: 1px solid rgba(255, 247, 231, 0.16); border-radius: 0.65rem; white-space: pre-wrap; }
 .description code { font-family: "IBM Plex Mono", monospace; font-size: 0.85em; }
-.description a { color: #8bb5ff; text-decoration: underline; }
+.description a { color: var(--teras-document-link-color, #8bb5ff); text-decoration: underline; }
 .description blockquote { border-left: 2px solid rgba(255, 193, 90, 0.55); padding-left: 0.9rem; }
 
 .note {

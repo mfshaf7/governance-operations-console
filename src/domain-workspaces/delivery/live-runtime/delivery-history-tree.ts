@@ -4,7 +4,7 @@ import type { WorkDesignNode } from "../work-model/work-design/work-design-types
 
 // Selected-package read, not an inventory expansion. Never bind another
 // initiative's tree or substitute an empty tree for unavailable owner data.
-export function deliveryPackageInspectionTree(projection: DeliveryChangeProjection | null, deliveryId: string): ControlBoardTreeNode | null {
+export function deliveryPackageInspectionTree(projection: DeliveryChangeProjection | null, deliveryId: string, itemStatuses?: ReadonlyMap<number | null, { recorded: string; effective: string }>): ControlBoardTreeNode | null {
   if (!projection) return null;
   const match = /^delivery-([1-9][0-9]*)$/.exec(deliveryId);
   if (!match || projection.delivery_id !== deliveryId || projection.record_ref !== `openproject://work_packages/${match[1]}` || projection.package.execution_tree.id !== Number(match[1])) {
@@ -16,8 +16,10 @@ export function deliveryPackageInspectionTree(projection: DeliveryChangeProjecti
     if (depth > 32 || seen.size >= 8192 || !Number.isSafeInteger(value.id) || value.id < 1 || seen.has(value.id) || value.record_ref !== `openproject://work_packages/${value.id}` || !kinds.has(value.type)) throw new Error("The selected owner tree has inconsistent or excessive hierarchy.");
     seen.add(value.id);
     const children = value.children.map(child => node(child, depth + 1));
+    const recorded = value.status.toLowerCase().replaceAll("_", "-");
+    const itemStatus = itemStatuses?.get(value.id);
     return { id: `work-item-${value.id}`, workItemId: value.id, title: value.subject, componentType: value.type,
-      status: value.status.toLowerCase().replaceAll("_", "-"),
+      status: itemStatus?.recorded === recorded ? itemStatus.effective : recorded,
       description: value.description ?? "Description unavailable.", children,
       totalChildCount: children.reduce((count, child) => count + child.totalChildCount + 1, 0) };
   }
@@ -32,7 +34,7 @@ export function deliveryHistoryDesignTree(projection: DeliveryChangeProjection |
   function design(node: ControlBoardTreeNode): WorkDesignNode | null {
     if (!["Epic", "Feature", "User story", "Risk"].includes(node.componentType)) return null;
     return {id:node.id,kind:node.componentType as WorkDesignNode["kind"],title:node.title,
-      description:node.description,draftBody:node.description,remark:"",tone:"info",
+      description:node.description,draftBody:node.description,recordedWorkItemNumber:node.workItemId,remark:"",tone:"info",
       children:node.children.map(design).filter((child):child is WorkDesignNode=>child!==null)};
   }
   return design(tree);

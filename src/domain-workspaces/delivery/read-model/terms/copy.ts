@@ -63,19 +63,19 @@ export const deliveryPostureTerms: Record<
   { description: string; label: string }
 > = {
   New: {
-    description: "Canonical ART work exists but is not yet ready or started.",
+    description: "Work is still being prepared.",
     label: "New",
   },
   Blocked: {
-    description: "Next committed step is blocked; use the blocker workflow.",
+    description: "The package is on hold or all remaining execution work is waiting.",
     label: "Blocked",
   },
   "Closeout Pending": {
-    description: "Needs evidence review before package closeout.",
+    description: "The remaining work is closed. Review the evidence and closeout requirements.",
     label: "Closeout Pending",
   },
   Deferred: {
-    description: "Open work is intentionally parked outside active focus.",
+    description: "Work is intentionally paused.",
     label: "Deferred",
   },
   Done: {
@@ -83,12 +83,12 @@ export const deliveryPostureTerms: Record<
     label: "Done",
   },
   "In Progress": {
-    description: "Execution has started; required work remains.",
+    description: "Work has started and can continue.",
     label: "In Progress",
   },
   Ready: {
     description:
-      "Recorded as ready. The work session checks prerequisites before work starts.",
+      "Prepared work is available for review. Check its requirements before starting.",
     label: "Ready",
   },
   Retired: {

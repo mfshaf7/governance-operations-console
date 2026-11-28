@@ -4,11 +4,12 @@ import { mkdtemp, writeFile, rm, chmod } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ownerAttentionSnapshot } from "../../src/console-integration/live-attention.ts";
-import { projectWorkspacePulseSnapshot } from "../../src/command-center/read-model/workspace-pulse.ts";
+import { projectWorkspacePulseFromAttention, projectWorkspacePulseSnapshot } from "../../src/command-center/read-model/workspace-pulse.ts";
 import { buildResourceMetricDetail, formatCommitPercent } from "../../src/runtime-readiness/read-model/resource-read-model.ts";
 import { buildRuntimeAlerts } from "../../src/runtime-readiness/read-model/runtime-alert-read-model.ts";
 import { readConsoleOperatorIdentity } from "../../src/console-integration/identity/server/console-operator-identity-route.ts";
 import { buildAgentWorkspaceContext, projectAgentOwnerSnapshot } from "../../src/console-shell/context/agent-workspace-context.ts";
+import { projectDeliveryOwnerAttention } from "../../src/domain-workspaces/delivery/read-model/attention-source.ts";
 import { projectPrototypeOwnerAttention } from "../../src/domain-workspaces/prototype/read-model/attention-source.ts";
 import { prototypeWorkspaceReadModel } from "../../src/domain-workspaces/prototype/read-model/fixtures/prototype-workspace-read-model.fixture.ts";
 import { prototypeClosureLifecycleOutcome } from "../../src/domain-workspaces/prototype/read-model/native-lifecycle-outcomes.ts";
@@ -42,6 +43,25 @@ test("an incomplete attention projection never certifies global zero or running 
   assert.equal(projection.signals.find(signal => signal.id === "active-operations").label, "Required actions");
 });
 
+test("Delivery attention distinguishes a recorded partial hold and keeps the package route in Pulse", () => {
+  const now = new Date().toISOString();
+  const item = { delivery_package_id: "delivery-1384", display_name: "Delivery example", backend_status: "new",
+    workflow_phase: "execution", package_posture: "In Progress", source_ref: "openproject://work_packages/1384",
+    execution_navigation: { blocking_scope: "some-work", actionable_blocker_ids: [] } };
+  const projection = { source_truth: "OpenProject-backed OOS", generated_at: now,
+    projection_state: { status: "fresh", checked_at: now, source_revision: "test" }, packages: [item], intake_sources: [] };
+  const read = () => projectDeliveryOwnerAttention({ state: "current", capturedAt: now, payload: { mode: "live", projection } });
+  assert.deepEqual(read().candidates, []);
+  item.execution_navigation.actionable_blocker_ids = [1413];
+  const source = read();
+  assert.equal(source.candidates[0]?.attentionClass, "required-action");
+  const pulse = projectWorkspacePulseFromAttention({
+    candidates: source.candidates, issues: [], projectedAt: now, schemaVersion: 1, sources: [source],
+  });
+  assert.equal(pulse.signals.find(signal => signal.id === "active-operations")?.records[0]?.route?.entryIntent?.subjectRef, "delivery-1384");
+  assert.equal(pulse.sources[0]?.route?.entryIntent?.requiredMoveRef, "delivery.execution-board.work-needs-review");
+});
+
 test("commit ratios above 100 percent stay informational in the card, selected chart and alerts", () => {
   const sample = { capturedAt: new Date().toISOString(), cpuPercent: 10, memoryPercent: 30, virtualMemoryPercent: 125, diskPercent: 20, networkKibps: 1, rxKibps: 1, txKibps: 0 };
   assert.equal(formatCommitPercent(125), "125%");
@@ -55,7 +75,7 @@ test("Delivery page context distinguishes retained history from current work", (
   const now = new Date().toISOString();
   const read = projectAgentOwnerSnapshot("delivery", { mode: "live", projection: { projection_state: { status: "fresh" }, packages: [{ backend_status: "done" }, { backend_status: "parked" }, { backend_status: "retired" }, { backend_status: "in-progress" }] } }, now);
   const page = buildAgentWorkspaceContext({ delivery: read }, now, "DELIVERY");
-  assert.equal(page.scope, "page"); assert.match(page.signals[0], /4 retained Delivery initiatives; 1 current/); assert.doesNotMatch(page.signals[0], /open Delivery|done excluded/);
+  assert.equal(page.scope, "page"); assert.match(page.signals[0], /4 retained Delivery initiatives\. 1 current/); assert.doesNotMatch(page.signals[0], /open Delivery|done excluded/);
 });
 
 test("Account identity matches enforcing source and clears on conflict, expiry or unsafe permissions", async () => {

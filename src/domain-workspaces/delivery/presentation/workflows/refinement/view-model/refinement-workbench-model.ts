@@ -1,3 +1,4 @@
+import { documentSummary } from "../../../../../../teras/teras-document-content.ts";
 import type { DeliveryRefinementDraftField, DeliveryRefinementFieldStatus, DeliveryRefinementTreeNode } from "../../../../read-model/index.ts";
 type RefinementReviewTarget = { field: DeliveryRefinementDraftField; key: string; node: DeliveryRefinementTreeNode; status: DeliveryRefinementFieldStatus; sourceValue: string };
 import type { RefinementMetadataFieldResolutionMap } from "../model/refinement-model.ts";
@@ -7,9 +8,7 @@ export function refinementItemLabel(node: DeliveryRefinementTreeNode) {
 }
 
 export function refinementItemSummary(description: string) {
-  const paragraph = description.split(/\n\s*\n/).find(part => part.trim() && !/^\s*#/.test(part)) ?? description;
-  const text = paragraph.replace(/^\s*#{1,6}\s+/gm, "").replace(/[*`]/g, "").replace(/\s+/g, " ").trim();
-  return text.length > 160 ? `${text.slice(0, 157).replace(/\s+\S*$/, "")}…` : text;
+  return documentSummary(description);
 }
 
 export function refinementFieldReviewLabel(target: RefinementReviewTarget, resolutions: RefinementMetadataFieldResolutionMap, drafts: Record<string, string> = {}) {

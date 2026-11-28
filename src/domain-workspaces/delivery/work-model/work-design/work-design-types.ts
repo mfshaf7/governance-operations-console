@@ -44,6 +44,7 @@ export type WorkDesignNode = {
   draftBody: string;
   id: string;
   kind: WorkDesignNodeKind;
+  recordedWorkItemNumber?: number;
   remark: string;
   title: string;
   tone: DeliveryTone;

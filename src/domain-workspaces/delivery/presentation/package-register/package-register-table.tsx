@@ -16,12 +16,14 @@ import type { DeliveryPackageRegisterPackage } from "./package-register-types.ts
 
 export function DeliveryPackageRegisterTable({
   rowOffset=0,
+  history = false,
   onSelectPackage,
   onViewPackage,
   packages,
   selectedPackageId,
 }: {
   rowOffset?:number;
+  history?: boolean;
   onSelectPackage: (deliveryPackage: DeliveryPackageRegisterPackage) => void;
   onViewPackage: (deliveryPackage: DeliveryPackageRegisterPackage) => void;
   packages: DeliveryPackageRegisterPackage[];
@@ -63,11 +65,13 @@ export function DeliveryPackageRegisterTable({
       },
     },
     {
-      header: "Status",
+      header: history ? "Current Epic status" : "Status",
       intent: "status",
       key: "status",
       render: (deliveryPackage) => (
-        <span title={`Project status: ${deliveryPackage.package_posture}`}><TerasStatusPill tone={deliveryPackageRegisterStatusTone(deliveryPackage)}>{deliveryPackageRegisterStatusLabel(deliveryPackage)}</TerasStatusPill></span>
+        <TerasStatusPill tone={history ? deliveryPackage.tone : deliveryPackageRegisterStatusTone(deliveryPackage)}>
+          {history ? deliveryPackage.package_posture : deliveryPackageRegisterStatusLabel(deliveryPackage)}
+        </TerasStatusPill>
       ),
     },
     {

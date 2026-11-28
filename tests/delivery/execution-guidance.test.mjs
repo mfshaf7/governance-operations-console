@@ -11,6 +11,9 @@ import { deliveryChangeOperationForExecutionAction } from "../../src/domain-work
 import { deliveryModelForScope } from "../../src/domain-workspaces/delivery/live-runtime/delivery-history-projection.ts";
 import { getExecutionBoardPackages, getDeliveryPackagesByWorkflowPhase } from "../../src/domain-workspaces/delivery/read-model/selectors/workflow-package-selectors.ts";
 
+import { deliveryWorkItemStatus } from "../../src/domain-workspaces/delivery/domain/delivery-execution.ts";
+import { completionPrerequisitesFromPlan, withCompletionPrerequisites } from "../../src/domain-workspaces/delivery/work-model/execution/delivery-completion-prerequisites.ts";
+
 const at = "2026-11-17T00:00:00Z";
 const node = (id, status, type = "Epic") => ({id, status, type, record_ref:`openproject://work_packages/${id}`,subject:`Work ${id}`,children:[]});
 function model(status = "in-progress") {
@@ -57,4 +60,24 @@ test("review controls require an exact owner package and retirement cannot use a
   assert.equal(deliveryChangeOperationForExecutionAction({action,applyIntent}).payload.work_item_id,"work-item-1");
   assert.deepEqual(executionReviewActions({...projection,package:{execution_tree:node(1,"parked")}},item).map(a=>a.action_type),["resume"]);
   assert.deepEqual(executionReviewActions({...projection,package:{execution_tree:node(1,"done")}},item),[]);
+});
+
+test("only exact completion dependencies of non-source work change the displayed wait", () => {
+  const risk = { ...model().art_tree.roots[0], component_type: "Risk", legacy_work_package_id: 3,
+    backend_status: "new", dependency_blocked: true, unresolved_dependency_work_package_ids: [2], children: [] };
+  const groups = [{ source_backed: false, covered_work_item_ids: ["work-item-3"] },
+    { source_backed: true, covered_work_item_ids: ["work-item-4"] }];
+  const plan = { landing_units: groups, work_item_execution_plan: [
+    { work_item_id: "work-item-3", start_after_work_item_ids: ["work-item-5"],
+      close_after_work_item_ids: ["work-item-2", "work-item-5"] },
+    { work_item_id: "work-item-4", start_after_work_item_ids: [], close_after_work_item_ids: ["work-item-2"] },
+  ] };
+  const timing = completionPrerequisitesFromPlan(plan);
+  assert.deepEqual(timing, { 3: [2] });
+  const openRisk = withCompletionPrerequisites(risk, timing);
+  assert.equal(deliveryWorkItemStatus(openRisk), "new");
+  assert.deepEqual(openRisk.unresolved_dependency_work_package_ids, [2]);
+  assert.equal(deliveryWorkItemStatus({ ...openRisk, unresolved_dependency_work_package_ids: [2, 5] }), "blocked");
+  assert.equal(deliveryWorkItemStatus({ ...openRisk, inherited_status: "blocked" }), "blocked");
+  assert.equal(deliveryWorkItemStatus({ ...openRisk, backend_status: "blocked" }), "blocked");
 });

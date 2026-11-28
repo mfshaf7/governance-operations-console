@@ -340,6 +340,10 @@
   word-break: normal;
 }
 
+.buildTreeStructuredTreeText strong [data-work-reference] {
+  color: var(--amber);
+}
+
 .buildTreeStructuredTreeText small {
   display: block;
   margin-top: 0.24rem;
@@ -543,8 +547,9 @@
   transform: none;
 }
 
-.buildTreeViewerTreeReadOnly .buildTreeStructuredTreeSelect {
-  cursor: default;
+.buildTreeViewerReadout {
+  grid-column: 1 / -1;
+  min-width: 0;
 }
 
 .buildTreeViewerStructuredNode {

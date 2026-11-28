@@ -18,7 +18,11 @@
 .treeEntry[aria-selected="true"] { background:rgba(255,193,90,.11); border-color:rgba(255,193,90,.25); }
 .treeEntry:focus-visible { outline:2px solid var(--amber); outline-offset:-2px; }
 .treeEntry[aria-disabled="true"] { opacity:.55; cursor:default; }
-.treeName { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.treeEntryText { flex:1; min-width:0; }
+.treeName { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.treePath { display:none; margin-top:.16rem; color:var(--muted); font-size:.68rem; }
+.treeEntry:focus-visible .treePath { display:block; overflow-wrap:anywhere; }
+.treeEntry:focus-visible .treeName { white-space:normal; overflow-wrap:anywhere; }
 .fileChange { color:var(--amber); margin-left:auto; font-size:.65rem; }
 .contextCheck { accent-color:var(--amber); width:13px; height:13px; flex-shrink:0; cursor:pointer; }
 .explorerHint { margin:.2rem 0; font-size:.68rem; line-height:1.6; color:var(--muted); }
