@@ -7,9 +7,9 @@
     "npm": "10.x"
   },
   "scripts": {
-    "dev": "NEXT_TELEMETRY_DISABLED=1 next dev --hostname 127.0.0.1 --port 3317",
-    "build": "NEXT_TELEMETRY_DISABLED=1 next build",
-    "typecheck": "tsc --noEmit",
+    "dev": "NEXT_TELEMETRY_DISABLED=1 node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3317",
+    "build": "NEXT_TELEMETRY_DISABLED=1 node node_modules/next/dist/bin/next build",
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "architecture": "node scripts/guards/run-guards.mjs --all",
     "architecture:shared": "node scripts/guards/run-guards.mjs --shared",
     "architecture:delivery": "node scripts/guards/run-guards.mjs --domain delivery",
