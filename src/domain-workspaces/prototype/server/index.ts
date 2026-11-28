@@ -14,3 +14,5 @@ export {
 
 export { prototypeSourceEditorRoute } from "./prototype-source-editor-api-routes.ts";
 export { readCanonicalPrototypeWorkspace } from "./project-context.ts";
+
+export { prototypeProjectRuntimeRoute } from "./prototype-project-runtime-routes.ts";

@@ -125,7 +125,8 @@ function PrototypeSourceTool({ record, prototypeId, onDirtyChange }: { record: P
     {editorOpen && current?.session_id && realization && !current.source_request.owner_preparation ? <SourceEditorWorkspace key={current.session_id}
       target={{ endpoint: `/api/prototypes/source-requests/${encodeURIComponent(current.request_id)}`, label: `${record.name} — app/design source`,
         current: { sessionId: current.session_id, revision: realization.revision, state: realization.state, attempt: attempt ? { requestId: attempt.request_id, executionId: attempt.execution_id, objectiveDigest: attempt.objective_digest, digest: attempt.change_set?.digest ?? null } : null },
-        objective: current.source_request.objective, objectiveReadOnly: true, objectiveMin: 8, objectiveMax: 16384, scope: current.source_scope, preview: prototypeSourcePreviewAdapter(prototypeId) }}
+        objective: current.source_request.objective, objectiveReadOnly: true, objectiveMin: 8, objectiveMax: 16384, scope: current.source_scope, preview: prototypeSourcePreviewAdapter(prototypeId),
+        savedRuntimeEndpoint: `/api/prototypes/source-requests/${encodeURIComponent(current.request_id)}/project-runtime` }}
       onClose={() => setEditorOpen(false)} onSaved={() => void runtime.refresh(current.request_id)} onReviewed={() => void runtime.inspectDraft()} /> : null}
   <TerasDraftCloseGuardDialog open={switchTo !== undefined} title="Discard source-work draft?" description="Switching requests discards the unsubmitted objective and setup." kicker="Source Authoring" leaveLabel="Discard draft" onKeepEditing={() => setSwitchTo(undefined)} onLeave={discardAndSelect} />
   </TerasFieldStack>;

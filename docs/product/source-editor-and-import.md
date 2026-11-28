@@ -236,3 +236,23 @@ and local-apply guards reject edits/deletions. This flag changes AI proposal sco
 not manual editing permission. Scope/forbidden-path/provider admission still apply.
 File contents are read on an explicit request, not by selecting the checkbox.
 Combined preview review and operating qualification remain unfinished.
+
+### Run an exact saved Prototype draft
+
+An admitted Prototype project may use the shared runtime from the existing
+Source Workspace. **Save private draft** records your edits without starting a
+run. **Run saved draft** uses the last confirmed save, even if you have
+unsaved changes. **Save and run** starts only after the current edits are
+saved and the owner confirms that exact revision and digest. A failed save
+leaves the edits in the editor. Manual Save works with AI offline.
+
+Choose **Saved draft run** in Preview or Split to inspect the result and
+source for the original command. Use **Check original run** if its response is
+lost. **Retry original run** uses the same retained command. The Studio
+preview remains available for applied source. The saved-source view opens a
+browser preview only when the owner confirms a qualified project address.
+
+The shared runtime requires the existing review, applied setup, and Platform
+admission. Its current source integration can be exercised in the disposable
+dev-integration lane. The live activation and any legacy retirement follow
+the separate publication decision.

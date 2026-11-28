@@ -161,3 +161,20 @@ test("case:1326-git-lineage-positive / negative: exact displayed text and select
     assert.throws(() => verifySourceDraft({ ...d, change_set: { ...d.change_set, operations: [{ ...c.operations[0], content: "altered" }] } }, { sessionId, base, revision: later, digest: d.digest, accepted: false }, "delivery-art-source-draft"));
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+test("saved-project results bind the exact snapshot and an observed Ready instance", async () => {
+  const { readSavedProjectOverview } = await import("../../src/console-integration/source-authoring/saved-project-runtime-contract.ts");
+  const digest = "sha256:" + "a".repeat(64);
+  const setup = { recipe_id: "static", configuration_revision: "setup:one" };
+  const run = { acknowledgement: { command_id: "run:one", operation_id: "operation:one", accepted_at: "2026-11-28T08:00:00Z",
+    scope_revision: 1, snapshot: { snapshot_id: "project-source:" + "a".repeat(64), manifest_digest: digest } },
+    status: "ready", source_revision: "draft:one", source_digest: digest, configuration_revision: setup.configuration_revision,
+    observation: { state: "ready", observed_at: "2026-11-28T08:00:01Z", instance_ref: "instance:one", owner_receipt_ref: "receipt:one" },
+    last_observation: null };
+  const overview = { project_ref: "prototype:one", setup, revision: 1, records: [run], before: null };
+  assert.deepEqual(readSavedProjectOverview(overview), overview);
+  assert.throws(() => readSavedProjectOverview({ ...overview, records: [{ ...run, observation: null }] }), /owner has not confirmed/);
+  assert.throws(() => readSavedProjectOverview({ ...overview, records: [{ ...run,
+    acknowledgement: { ...run.acknowledgement, snapshot: { ...run.acknowledgement.snapshot, snapshot_id: "project-source:other" } },
+  }] }), /acknowledgement is invalid/);
+});
