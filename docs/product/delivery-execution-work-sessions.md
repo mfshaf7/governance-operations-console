@@ -382,8 +382,10 @@ review authority.
    group and binds the saved plan automatically. Review the branch and rollback
    boundary before approving repository access. Reload the decision if the
    approved plan changes while you review it.
-5. Under **Work to review together**, confirm the covered work, branch, and
-   what you would undo together. In **Repository access**, choose **Show
+5. Check the work item titles and repository in **Approved work scope** when
+   the Technical Plan supplies them. Otherwise, select the work under
+   **Work to review together**. Confirm the branch and what you would undo
+   together. In **Repository access**, choose **Show
    access request**. Review the repository, branch, and expiry, then choose
    **Approve repository access**. This lets the Console work with the named
    repository and branch for this session.
@@ -408,6 +410,10 @@ review authority.
    the Console shows the covered item count and structured result. A partial
    closeout retains the session for retry, while failed terminal cleanup exposes
    `Retry Cleanup` against the same OOS close command.
+   Once the session is closed, **Session progress** shows the covered work,
+   finalized review links and available checks. When its parent Feature is
+   ready for its separate review, use **Review Feature** to open that review
+   directly. Any remaining repository access closure comes first.
 10. If OOS reports an explicit rejection, review the current session and
     correct the input before issuing a new operator action. When the browser
     loses the response, the Console follows the original command reference
@@ -486,9 +492,15 @@ The server rereads the target before submitting the existing OOS completion
 operation. It reports completion only after native success and canonical
 readback with valid evidence. Current descendants, blockers, required fields,
 narrative and native status-transition rules remain enforced by the owners.
+On a Feature, **Find approved evidence** reads the original finalized child
+reviews. Add a selected link to **What changed?**, then review the draft
+before confirming. If the child scope has changed, read the current work and
+review the draft again. Open **View Feature Outcome** to read the saved
+completion and follow its evidence links.
 
-For an already completed parent scope still marked open, select
-`Reconcile a completed parent (stale-open closeout)` and enter an explicit
+For an already completed Feature scope still marked open, expand
+**Parent closeout options**, choose **Close a parent after its child work is
+finished**, and enter an explicit
 parent-closeout justification. This reuses OOS's existing stale-open operation,
 requires terminal children and completed related scope, and does not infer
 business acceptance from child status. Use **Review Closeout** in the main board’s package panel for an Epic.

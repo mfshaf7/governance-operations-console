@@ -365,16 +365,44 @@ test("non-source completion protects evidence on both Escape and board navigatio
   await expect(modal).toHaveCount(0);expect(h.writes).toEqual([]);expect(h.errors).toEqual([]);
 });
 
-test("completion uses explicit observed results and retains an unconfirmed submission", async ({ page }, info) => {
-  const h = await deliveryHarness(page, { live: true }); let submitted, recovered = false;
-  await page.route("**/api/delivery/execution/714/completion", route => {
-    if (route.request().method() === "GET") return route.fulfill({ json: { mode: "live", context: { ...completionContext(714), ...(recovered ? { status: "done", completion_evidence_valid: true, can_complete: false } : {}) } } });
+test("Feature completion distinguishes rejected evidence from an unconfirmed submission", async ({ page }, info) => {
+  const h = await deliveryHarness(page, { live: true }); let submitted, recovered = false, attempts = 0;
+  const feature = h.model.art_tree.roots.find(node => node.legacy_work_package_id === 698).children
+    .find(node => node.legacy_work_package_id === 710);
+  feature.backend_status = "in-progress";
+  for (const child of feature.children) child.backend_status = "done";
+  await page.route("**/api/delivery/execution/**/change-control", route => route.fulfill({ json: retainedTreeSnapshot("delivery-698") }));
+  const reviewedUrl = "https://github.com/example/project/pull/433";
+  let evidenceLookups = 0;
+  await page.route(url => url.pathname === "/api/delivery/execution/710/completion", route => {
+    if (route.request().method() === "GET") {
+      const lookup = new URL(route.request().url()).searchParams.get("include_completed_child_evidence") === "true";
+      if (lookup) evidenceLookups += 1;
+      return route.fulfill({ json: { mode: "live", context: {
+        ...completionContext(710), completed_child_count: 2,
+        ...(lookup ? { completed_child_evidence: {
+          completed_child_count: 2, matched_child_count: 1, unavailable_child_count: evidenceLookups === 1 ? 1 : 0,
+          links: [{ url: reviewedUrl, work_items: [{ id: 714, subject: "Validate the accepted outcome" }] }],
+        } } : {}),
+        ...(recovered ? { status: "done", completion_evidence_valid: true, can_complete: false,
+          recorded_completion: { "Completion Summary": "The Feature outcome was confirmed and saved." },
+        } : {}),
+      } } });
+    }
     submitted = route.request().postDataJSON();
+    if (++attempts === 1) return route.fulfill({ status: 422, json: {
+      code: "completion_evidence_invalid", error: "Describe how this result was validated."
+    } });
     return route.fulfill({ status: 503, json: { error: "Synthetic owner rejection; completion is not confirmed." } });
   });
-  await openWorkItem(page, h, "Review Completion");
-  const modal = page.getByRole("dialog", { name: "Complete Work", exact: true });
-  for (const [label, value] of [["Completion summary", "The reviewed outcome is complete."], ["What changed?", "Recorded the accepted outcome and its evidence."],
+  await h.refresh();
+  await h.section("execution-board");
+  await h.workspace.getByRole("button", { name: /^Epic 698 Governed AI Control Plane/ }).click();
+  await h.workspace.getByRole("button", { name: "Open Work Board", exact: true }).click();
+  await h.workspace.locator('[data-execution-work-item="node-698-feature-1"]').click();
+  await h.workspace.getByRole("button", { name: "Review Feature Completion", exact: true }).click();
+  const modal = page.getByRole("dialog", { name: "Review Feature Completion", exact: true });
+  for (const [label, value] of [["Completion summary", "The reviewed outcome is complete."], ["What changed?", "Recorded the accepted outcome in PR #433."],
     ["Test evidence", "Verified the retained operation."], ["Validation evidence", "Inspected the original receipt."]]) {
     await modal.getByRole("textbox", { name: label, exact: true }).fill(value);
   }
@@ -383,11 +411,38 @@ test("completion uses explicit observed results and retains an unconfirmed submi
     await modal.getByRole("button", { name, exact: true }).click(); await page.getByRole("option", { name: "Passed", exact: true }).click();
   }
   await modal.getByRole("radio", { name: "I confirm this work is complete and the evidence is accurate", exact: true }).click();
+  const changes = modal.getByRole("textbox", { name: "What changed?", exact: true });
+  await expect(modal).toContainText("paste the full pull request URL in place of a reference like PR #123");
+  await expect(modal.getByRole("button", { name: "Record completion", exact: true })).toBeDisabled();
+  expect(attempts).toBe(0);
+  expect(evidenceLookups).toBe(0);
+  await changes.fill("Recorded the accepted outcome.");
+  await modal.getByRole("button", { name: "Find approved evidence", exact: true }).click();
+  await expect(modal.getByRole("link", { name: "example/project #433 ↗", exact: true })).toHaveAttribute("href", reviewedUrl);
+  await expect(modal).toContainText("Evidence could not be read for 1 completed item");
+  await expect(changes).toHaveValue("Recorded the accepted outcome.");
+  const addEvidence = modal.getByRole("button", { name: "Add evidence from example/project #433", exact: true });
+  await addEvidence.click();
+  await expect(addEvidence).toBeDisabled();
+  await expect(changes).toHaveValue(`Recorded the accepted outcome.\nRecorded approved changes for #714 in [example/project #433](${reviewedUrl})`);
+  await modal.getByRole("button", { name: "Retry loading evidence", exact: true }).click();
+  await expect(modal).toContainText("Some completed children have no finalized pull request link");
+  await expect(changes).toHaveValue(`Recorded the accepted outcome.\nRecorded approved changes for #714 in [example/project #433](${reviewedUrl})`);
+  expect(evidenceLookups).toBe(2);
+  expect(attempts).toBe(0);
+  await modal.getByRole("radio", { name: "I confirm this work is complete and the evidence is accurate", exact: true }).click();
   await expect(modal.getByRole("button", { name: "Record completion", exact: true })).toBeEnabled();
   for (const [width, height] of [[1700, 1050], [1280, 720]]) {
     await page.setViewportSize({ width, height }); await modal.screenshot({ path: info.outputPath(`completion-${width}.png`) });
     expect(await modal.evaluate(e => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(1);
   }
+  await modal.getByRole("button", { name: "Record completion", exact: true }).click();
+  await expect(modal).toContainText("Describe how this result was validated.");
+  expect(submitted.evidence.changed_surfaces).toContain(reviewedUrl);
+  await expect(modal.getByRole("button", { name: "Read current target", exact: true })).toHaveCount(0);
+  await expect(changes).toBeEnabled();
+  await changes.fill("Recorded and validated the accepted outcome in https://github.com/example/project/pull/433");
+  await modal.getByRole("radio", { name: "I confirm this work is complete and the evidence is accurate", exact: true }).click();
   await modal.getByRole("button", { name: "Record completion", exact: true }).click();
   await expect(modal).toContainText("Synthetic owner rejection");
   expect(submitted.evidence.test_result_evidence).toBe("- PASS: Verified the retained operation.");
@@ -395,7 +450,10 @@ test("completion uses explicit observed results and retains an unconfirmed submi
   await expect(modal.getByRole("textbox", { name: "Completion summary", exact: true })).toHaveValue("The reviewed outcome is complete.");
   const beforeRecovery = h.stats.workspaceReads; recovered = true;
   await modal.getByRole("button", { name: "Read current target", exact: true }).click();
-  await expect(modal).toContainText("Canonical completion recovered by read");
+  const result = page.getByRole("dialog", { name: "Feature Outcome", exact: true });
+  await expect(result).toContainText("Canonical completion recovered by read");
+  await expect(result).toContainText("The Feature outcome was confirmed and saved.");
+  await expect(result.getByRole("button", { name: "Record completion", exact: true })).toHaveCount(0);
   await expect.poll(() => h.stats.workspaceReads).toBeGreaterThan(beforeRecovery);
   expect(h.errors).toEqual([]);
 });
@@ -409,6 +467,19 @@ function sessionSnapshot() {
       landing_unit:{base_ref:"origin/main",branch:"inspection/work",decision:"feature_single_landing_unit",id:"inspection-unit",rollback_boundary:"Same reviewed unit",split_reason:"Same owner and rollback boundary"}},
   }};
 }
+
+test("approved work scope shows titles and preserves the branch choice", async ({ page }) => {
+  const h = await deliveryHarness(page, { live:true }), snapshot = sessionSnapshot();
+  snapshot.projection.decision_draft.architecture = { required:true, artifact_location:{ recorded_artifact_digest:"sha256:"+"a".repeat(64) } };
+  await page.route("**/api/delivery/execution/714/work-session", route => route.fulfill({ json:snapshot }));
+  await openWorkItem(page, h, "Check Work Requirements");
+  const modal = page.getByRole("dialog", { name:"Work Session", exact:true });
+  await expect(modal.getByRole("heading", { name:"Approved work scope", exact:true })).toBeVisible();
+  await expect(modal).toContainText("#714 · Validate mutation draft before apply");
+  await expect(modal.getByRole("textbox", { name:"Work item numbers", exact:true })).toHaveCount(0);
+  await expect(modal.getByRole("textbox", { name:"Branch", exact:true })).toBeEnabled();
+  expect(h.writes).toEqual([]);
+});
 
 test("source decision preserves edits on refresh and guards changed source and close", async ({ page }, info) => {
   const h=await deliveryHarness(page,{live:true}),snapshot=sessionSnapshot();
@@ -608,6 +679,77 @@ function retainedTreeSnapshot(id) {
   return{mode:"live",status:"current",observedAt:new Date().toISOString(),error:null,projection:{schema_version:1,delivery_id:id,record_ref:`openproject://work_packages/${n}`,source_revision:"delivery-package:sha256:"+"a".repeat(64),projection_state:"current",projected_at:new Date().toISOString(),last_event_ref:null,
     package:{dependency_relations:[],execution_tree:{id:n,record_ref:`openproject://work_packages/${n}`,type:"Epic",subject:"Synthetic retained inspection tree",description:"Synthetic original tree for locked presentation checks only",status:"done",children:[{id:n*100+1,record_ref:`openproject://work_packages/${n*100+1}`,type:"Feature",subject:"Retained inspection feature",description:"Synthetic retained source",status:"done",children:[]}]}}}};
 }
+
+test("Current Work Tree reads descriptions from the selected owner tree", async ({ page }) => {
+  const h = await deliveryHarness(page, { live: true });
+  const original = h.model.packages.find(item => item.legacy_epic_id === 698).delivery_package_id;
+  Object.assign(h.model, JSON.parse(JSON.stringify(h.model).replaceAll(JSON.stringify(original), '"delivery-698"')));
+  const packageRow = h.model.packages.find(item => item.delivery_package_id === "delivery-698");
+  const inventory = h.model.art_tree.roots.find(item => item.id === packageRow.tree_root_id);
+  const snapshot = retainedTreeSnapshot("delivery-698");
+  function ownerNode(node) {
+    return {
+      id: node.legacy_work_package_id,
+      record_ref: `openproject://work_packages/${node.legacy_work_package_id}`,
+      type: node.component_type,
+      subject: node.title,
+      status: node.backend_status,
+      description: node.description,
+      children: node.children.map(ownerNode),
+    };
+  }
+  const owner = ownerNode(inventory);
+  const feature = owner.children.find(item => item.id === 710);
+  feature.description = "## Owner acceptance\n\nKeep **the recorded proof** visible.";
+  feature.children.find(item => item.id === 714).description = "";
+  feature.children.find(item => item.id === 715).description = "Read the completed receipt.";
+  for (const item of [inventory, ...inventory.children, ...inventory.children.flatMap(node => node.children)]) {
+    item.description = "";
+  }
+  snapshot.projection.package.execution_tree = owner;
+  let ownerAvailable = false;
+  await page.route("**/api/delivery/execution/**/change-control", route => route.fulfill({ json: ownerAvailable
+    ? snapshot
+    : { ...snapshot, projection: null, status: "offline", error: "Owner read temporarily unavailable." }
+  }));
+  await h.refresh();
+  await h.section("execution-board");
+  await h.workspace.getByRole("button", { name: /^Epic 698 Governed AI Control Plane/ }).click();
+  await h.workspace.getByRole("button", { name: "Open Work Board", exact: true }).click();
+  await h.workspace.getByRole("radio", { name: "Work Tree", exact: true }).click();
+  await expect(h.workspace.getByText("This package’s work tree could not be loaded.")).toBeVisible();
+  await expect(h.workspace.getByRole("region", { name: "Work hierarchy", exact: true })).toHaveCount(0);
+  ownerAvailable = true;
+  await h.workspace.getByRole("button", { name: "Retry loading", exact: true }).click();
+  const hierarchy = h.workspace.getByRole("region", { name: "Work hierarchy", exact: true });
+  const description = hierarchy.getByRole("region", { name: "Description", exact: true });
+  await hierarchy.getByRole("button", { name: /Broker-owned orchestration path.*#710/ }).click();
+  await expect(description.getByRole("heading", { name: "Owner acceptance" })).toBeVisible({ timeout: 5000 });
+  await expect(description.locator("strong")).toHaveText("the recorded proof");
+  await hierarchy.getByRole("button", { name: /Validate mutation draft before apply.*#714/ }).click();
+  await expect(description).toHaveText(/No description recorded/);
+  await hierarchy.getByRole("button", { name: /Render apply receipt in console.*#715/ }).click();
+  await expect(description.getByRole("paragraph")).toHaveText("Read the completed receipt.");
+  await hierarchy.getByRole("button", { name: /Broker-owned orchestration path.*#710/ }).click();
+  await hierarchy.getByRole("button", { name: "View on Work Board: Broker-owned orchestration path", exact: true }).click();
+  await expect(h.workspace.getByRole("radio", { name: "Work Board", exact: true })).toBeChecked();
+  await expect(h.workspace.getByRole("heading", { name: "Broker-owned orchestration path", exact: true }).first()).toBeVisible();
+  expect(h.writes).toEqual([]);
+});
+
+test("a Feature row links from Work Tree to its Work Board", async ({ page }) => {
+  const h = await deliveryHarness(page);
+  await h.section("execution-board");
+  await h.workspace.getByRole("button", { name: /^Epic 698 Governed AI Control Plane/ }).click();
+  await h.workspace.getByRole("button", { name: "Open Work Board", exact: true }).click();
+  await h.workspace.getByRole("button", { name: /^Feature #710 Broker-owned orchestration path/i }).click();
+  await h.workspace.getByRole("radio", { name: "Work Tree", exact: true }).click();
+  const hierarchy = h.workspace.getByRole("region", { name: "Work hierarchy", exact: true });
+  await hierarchy.getByRole("button", { name: /Broker-owned orchestration path.*#710/ }).click();
+  await hierarchy.getByRole("button", { name: "View on Work Board: Broker-owned orchestration path", exact: true }).click();
+  await expect(h.workspace.getByRole("radio", { name: "Work Board", exact: true })).toBeChecked({ timeout: 5000 });
+  await expect(h.workspace.getByRole("heading", { name: "Broker-owned orchestration path", exact: true }).first()).toBeVisible();
+});
 
 test("History Work Tree shows the original description in the locked inline field", async ({ page }) => {
   const h = await deliveryHarness(page, { live: true });

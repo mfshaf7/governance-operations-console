@@ -11,26 +11,66 @@ const evidence = {
   validation_evidence: "- PASS: Canonical owner readback and receipt confirm the completed domain outcome.",
 };
 
-function owner({ activeSource = false, missingCustody = false, foreignContext = false, done = false, badPost = false } = {}) {
+function owner({ activeSource = false, missingCustody = false, foreignContext = false, done = false, badPost = false, evidenceRejection = false, reviewedChild } = {}) {
   const calls = [];
+  let childId = 43;
   let updated = "2026-01-01T00:00:00.000Z";
   const options = { env, fetchImpl: async (url, init) => {
     calls.push({ method: init.method, path: new URL(url).pathname, body: init.body ? JSON.parse(init.body) : null });
-    if (url.endsWith("/continuation-context")) return Response.json({
+    const target = new URL(url);
+    if (target.pathname.endsWith("/continuation-context")) return Response.json({
       workflow_id: "delivery-work-item-continuation-context", work_item_id: "work-item-42", work_item_record_ref: "openproject://work_packages/42",
       source_session_present: missingCustody ? null : activeSource,
-      continuation_context: { target_item: { id: foreignContext ? 43 : 42, record_ref: "openproject://work_packages/42", subject: "Accept the native transfer", type: "User story",
+      ...(reviewedChild && target.searchParams.get("include_completed_child_evidence") === "true" ? {
+        completed_child_evidence: { completed_child_count: 1, matched_child_count: 1, links: [
+          { url: "https://github.com/example/owner/pull/433", work_items: [{ id: reviewedChild, subject: "Reviewed change" }] },
+        ] },
+      } : {}),
+      continuation_context: { target_item: { id: foreignContext ? 43 : 42, record_ref: "openproject://work_packages/42", subject: "Accept the native transfer", type: reviewedChild ? "Feature" : "User story",
         status: done ? "done" : "new", owner_repo: "example-owner", updated_at: updated,
         blocked: false, dependency_blocked: false, ready_contract_satisfied: true, completion_narrative_contract_satisfied: true,
-        completion_status_transition_available: !done, completion_evidence_present: done, completion_evidence_formatting_valid: done }, summary: { open_descendant_count: 0, open_child_count: 0, completed_related_count: 1 } },
+        completion_status_transition_available: !done, completion_evidence_present: done, completion_evidence_formatting_valid: done },
+        previously_completed_related_items: reviewedChild ? [{ relation: "completed_child", item: {
+          id: childId, parent_id: 42, status: "done", record_ref: `openproject://work_packages/${childId}`, subject: "Reviewed change",
+        } }] : [],
+        summary: { open_descendant_count: 0, open_child_count: 0, completed_related_count: 1 } },
     });
     assert.ok(url.endsWith("/complete") || url.endsWith("/stale-open-close"));
+    if (evidenceRejection) return Response.json({
+      error: "validation_failure", details: "completion_evidence_invalid", message: "Describe the changed outcome."
+    }, { status: 422 });
     done = true;
     return Response.json({ workflow_id: url.endsWith("/complete") ? "delivery-work-item-complete" : "delivery-work-item-stale-open-close", work_item_id: "work-item-42", work_item_record_ref: "openproject://work_packages/42",
       work_item: { id: badPost ? 43 : 42, status: "done" } });
   } };
-  return { calls, options, changeRevision() { updated = "2026-01-01T00:01:00.000Z"; } };
+  return { calls, options, replaceChild(id) { childId = id; }, changeRevision() { updated = "2026-01-01T00:01:00.000Z"; } };
 }
+
+test("Feature evidence is fetched only on request and must bind to this Feature's children", async () => {
+  const runtime = owner({ reviewedChild: 43 });
+  const base = await readItemCompletionContext(42, runtime.options);
+  assert.equal(base.completed_child_count, 1);
+  assert.equal(base.completed_child_evidence, undefined);
+  const reviewed = await readItemCompletionContext(42, { ...runtime.options, includeCompletedChildEvidence: true });
+  assert.equal(reviewed.revision, base.revision);
+  assert.equal(assertCompletionContext(reviewed).completed_child_evidence.links[0].work_items[0].id, 43);
+  runtime.replaceChild(44);
+  await assert.rejects(submitItemCompletion(42, { expectedRevision: base.revision, nonSourceConfirmed: true, evidence }, runtime.options),
+    error => error.code === "delivery_completion_context_changed");
+  assert.equal(runtime.calls.filter(call => call.method === "POST").length, 0);
+  const foreign = owner({ reviewedChild: 44 });
+  await assert.rejects(readItemCompletionContext(42, { ...foreign.options, includeCompletedChildEvidence: true }),
+    error => error.code === "delivery_completion_child_evidence_invalid");
+});
+
+test("completion identifies a definitive evidence rejection from the native owner response", async () => {
+  const runtime = owner({ evidenceRejection: true });
+  const context = await readItemCompletionContext(42, runtime.options);
+  await assert.rejects(submitItemCompletion(42, { expectedRevision: context.revision, nonSourceConfirmed: true, evidence }, runtime.options),
+    error => error.status === 422 && error.code === "completion_evidence_invalid" && error.message === "Describe the changed outcome.");
+  assert.equal(runtime.calls.filter(call => call.method === "POST").length, 1);
+  assert.equal((await readItemCompletionContext(42, runtime.options)).status, "new");
+});
 
 test("non-source completion uses native context, one ordinary completion and canonical readback without source actions", async () => {
   const runtime = owner();

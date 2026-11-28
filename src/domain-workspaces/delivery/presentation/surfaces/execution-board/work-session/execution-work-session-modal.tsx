@@ -62,6 +62,8 @@ export function ExecutionWorkSessionModal({
   planGuidance,
   onDraftTechnicalPlan,
   onViewApprovedPlan,
+  workRecords,
+  featureReview,
 }: {
   onClose: () => void;
   runtime: WorkSessionRuntime;
@@ -70,6 +72,8 @@ export function ExecutionWorkSessionModal({
   planGuidance?: TechnicalPlanGuidanceScope | null;
   onDraftTechnicalPlan?: (transfer: ExecutionPlanStarterTransfer) => void;
   onViewApprovedPlan?: () => void;
+  workRecords?: ReadonlyMap<string, { title: string; repository: string | null }>;
+  featureReview?: { title: string; workItemId: number; open: () => void };
   onNavigate?: (destination: "work" | "closeout" | "architecture", deliveryId: string | null, workItemId?: number) => void;
 }) {
   const draft = runtime.projection?.decision_draft ?? null;
@@ -77,7 +81,8 @@ export function ExecutionWorkSessionModal({
     null,
   );
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const submitting = pendingAction !== null;
   const [sourceAccess, setSourceAccess] = useState<{ scope: string; intent: string | null } | null>(null);
   const [recoveryReason, setRecoveryReason] = useState("");
 
@@ -140,6 +145,15 @@ export function ExecutionWorkSessionModal({
   }, [sourceAccessKey]);
   const nextAction = projection?.next_action ?? null;
   const verification = projection?.operating_verification;
+  const closedReview = projection?.closed_review;
+  const setupItems = decision?.coveredWorkItemIds ?? draft?.covered_work_item_ids ?? [];
+  const setupRepositories = [...new Set(setupItems.map(id => workRecords?.get(id)?.repository).filter(Boolean))];
+  const configuredRepository = (projection?.configured_path?.landing_unit as { owner_repo?: unknown } | undefined)?.owner_repo;
+  const workLabel = (id: string) => {
+    const number = id.slice("work-item-".length);
+    const title = workRecords?.get(id)?.title;
+    return title ? `#${number} · ${title}` : `Work item #${number}`;
+  };
   const requiresSourceAccess = nextAction?.code === "source-worktree-required" || nextAction?.code === "architecture-compatible-refresh-required";
   const move = nextAction ? workSessionMove(nextAction.code, projection?.facts?.operating_evidence) : null;
   const diagnostic = error ?? runtime.projectionError;
@@ -148,6 +162,7 @@ export function ExecutionWorkSessionModal({
   const reviewUrl = publishingUrl ?? workSessionReviewUrl(projection?.pull_request?.url);
   const merged = projection?.pull_request?.state === "merged";
   const sourceAccessClosing = nextAction?.code === "source-revocation-required" || nextAction?.code === "source-revocation-pending";
+  const reviewFeature = projection?.state === "closed" && !sourceAccessClosing ? featureReview : undefined;
   const sourceStageFinished = merged || ["closed", "cleanup-required", "cleanup-blocked", "recovery-recorded"].includes(projection?.state ?? "");
   const showSourceAccess = runtime.mode === "live" && target.workItemId !== null &&
     (sourceAccessClosing || !sourceStageFinished && Boolean(projection?.session_id || draft));
@@ -195,7 +210,16 @@ export function ExecutionWorkSessionModal({
   const setupProgress = draft && decision && !projection?.session_id && runtime.projectionStatus === "current" &&
     !diagnostic && !checkingOperation && runtime.operationStatus !== "failed"
     ? workSessionSetupProgress(canStart, Boolean(sourceIntent), sourceChanged) : null;
-  const nextProgress = sourceProgress ?? setupProgress;
+  const pendingProgress = pendingAction && !checkingOperation ? {
+    title: pendingAction,
+    status: "In progress",
+    description: "The Console will show the result when Delivery confirms it.",
+  } : null;
+  const nextProgress = sourceProgress ?? pendingProgress ?? (reviewFeature ? {
+    title: "Review the completed Feature",
+    status: "Ready for review",
+    description: `Child work for ${reviewFeature.title} is closed. Review and record the overall result.`,
+  } : setupProgress);
   const canRunProjectedCommand =
     runtime.mode === "live" &&
     runtime.projectionStatus === "current" &&
@@ -206,15 +230,15 @@ export function ExecutionWorkSessionModal({
         !waitingForSourceAccess,
     );
 
-  async function run(command: () => Promise<unknown>) {
-    setSubmitting(true);
+  async function run(command: () => Promise<unknown>, title = "Updating the work session") {
+    setPendingAction(title);
     setError(null);
     try {
       await command();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Work-session request failed.");
     } finally {
-      setSubmitting(false);
+      setPendingAction(null);
     }
   }
 
@@ -304,13 +328,22 @@ export function ExecutionWorkSessionModal({
               treatment="state"
             >
               <TerasPanelHeader
-                description="Review which work will be merged together and what to undo if it fails."
+                description={recordedPlan ? "This is the scope and repository recorded in the approved Technical Plan." :
+                  "Review which work will be merged together and what to undo if it fails."}
                 kicker="Before you start"
-                title="Work to review together"
+                title={recordedPlan ? "Approved work scope" : "Work to review together"}
               />
               <TerasFieldStack spacing="normal">
+                {recordedPlan ? <>
+                  <TerasMetadataList columns={2} items={[
+                    { label: "Repository", value: typeof configuredRepository === "string" && configuredRepository
+                      ? configuredRepository : setupRepositories.join(", ") || "Read repository access below" },
+                    { label: "Base branch", value: draft?.landing_unit.base_ref ?? "Unavailable" },
+                    ...setupItems.map(id => ({ label: "Covered work", value: workLabel(id) })),
+                  ]} />
+                </> : <>
                 <TerasTextField
-                  disabled={submitting || recordedPlan}
+                  disabled={submitting}
                   label="Work item numbers"
                   helper="Enter each number separated by a comma, such as 1386, 1387."
                   onValueChange={(value) => setDecision(current => current ? { ...current,
@@ -320,7 +353,7 @@ export function ExecutionWorkSessionModal({
                     .map(item => item.replace(/^work-item-/, "")).join(", ")}
                 />
                 <TerasSelectField
-                  disabled={submitting || recordedPlan}
+                  disabled={submitting}
                   label="How will the changes merge?"
                   onValueChange={(value) =>
                     updateDecision(setDecision, "landingUnitDecision", value)
@@ -337,16 +370,17 @@ export function ExecutionWorkSessionModal({
                   ]}
                   value={decision.landingUnitDecision}
                 />
+                </>}
                 <TerasFieldGrid>
-                <TerasTextField
-                  disabled={submitting || recordedPlan}
+                {!recordedPlan ? <TerasTextField
+                  disabled={submitting}
                   label="Change group ID"
                   helper="Use a short label to identify this group, such as homepage-update."
                   onValueChange={(value) =>
                     updateDecision(setDecision, "landingUnitId", value)
                   }
                   value={decision.landingUnitId}
-                />
+                /> : null}
                 <TerasTextField
                   disabled={submitting}
                   label="Branch"
@@ -377,8 +411,8 @@ export function ExecutionWorkSessionModal({
                   value={decision.rollbackBoundary}
                 />
                 </TerasFieldGrid>
-                <TerasSelectField
-                  disabled={submitting || recordedPlan}
+                {!recordedPlan ? <TerasSelectField
+                  disabled={submitting}
                   label="Technical Plan"
                   onValueChange={(value) =>
                     setDecision((current) =>
@@ -399,11 +433,8 @@ export function ExecutionWorkSessionModal({
                     { label: "Not required", value: "not-required" },
                   ]}
                   value={decision.architecture.required ? "required" : "not-required"}
-                />
-                {recordedPlan ? (
-                  <TerasContentTray title="Approved Technical Plan"
-                    description="The recorded plan sets the work scope and repository for this session." />
-                ) : decision.architecture.required ? (
+                /> : null}
+                {!recordedPlan && decision.architecture.required ? (
                   <TerasContentTray kicker="Technical Plan file">
                     <TerasFieldStack spacing="normal">
                       <TerasTextField
@@ -519,8 +550,21 @@ export function ExecutionWorkSessionModal({
               <TerasPanelHeader
                 kicker="Work Session"
                 title="Session progress"
+                description={projection.closed_review_unavailable ? "This session is closed. Its final review could not be read. Refresh the session to try again."
+                  : projection.state === "closed" && !closedReview && !projection.facts && !projection.pull_request
+                  ? "This session is closed. Its closure record does not list the pull request or verification results."
+                  : undefined}
               />
               <TerasMetadataList items={workSessionProgress(projection)} />
+              {closedReview ? <TerasMetadataList items={[
+                ...closedReview.covered_work_item_ids.map(id => ({ label: "Closed work", value: workLabel(id) })),
+                ...closedReview.pull_request_urls.map(url => {
+                  const [, owner, repo, , number] = new URL(url).pathname.split("/");
+                  return { label: "Merged pull request", value: <a href={url} target="_blank" rel="noopener noreferrer">{owner}/{repo} #{number} ↗</a> };
+                }),
+              ]} /> : null}
+              {closedReview?.passed_checks?.length ? <TerasTechnicalDetails summary="Passed checks"
+                items={closedReview.passed_checks.map(name => ({ label: name, value: "Passed" }))} /> : null}
               <TerasTechnicalDetails items={[
                 ...workSessionDiagnostics(projection),
                 ...(projection.command_receipt ? [
@@ -562,7 +606,7 @@ export function ExecutionWorkSessionModal({
                 move?.description ?? (runtime.mode === "disconnected-preview" ? "This preview is disconnected from live work sessions." : undefined))}
               kicker={nextAction?.code === "work-complete" ? "Session status" : "Next action"}
               statusLabel={nextProgress?.status ?? (checkingOperation ? "Checking" : unavailable ? "Unavailable" : diagnostic ? "Check result" : waitingForSourceAccess ? "Access required" : move?.status)}
-              statusTone={unavailable ? "danger" : diagnostic || move?.status === "Blocked" ? "warn" : move?.status === "Complete" ? "ok" : "info"}
+              statusTone={unavailable ? "danger" : pendingProgress ? "info" : diagnostic || move?.status === "Blocked" ? "warn" : move?.status === "Complete" ? "ok" : "info"}
               title={nextProgress?.title ?? (checkingOperation ? "Checking the original result" : unavailable ? "Session unavailable" : waitingForSourceAccess ? "Review repository access" : move?.title ?? "Work session status")}
             />
             {checkingOperation || checkingAccess || checkingPublication ? runtime.resumeRebuild ? (
@@ -577,16 +621,22 @@ export function ExecutionWorkSessionModal({
               </TerasActionButton>
             ) : canStart && decision && sourceIntent ? (
               <TerasActionButton disabled={submitting}
-                onClick={() => run(() => runtime.start(decision, sourceIntent))}>
+                onClick={() => run(() => runtime.start(decision, sourceIntent), "Starting the work session")}>
                 Start Work Session
               </TerasActionButton>
             ) : canRunProjectedCommand && nextAction ? (
-              <TerasActionButton disabled={submitting} onClick={() => run(runProjectedCommand)}>
+              <TerasActionButton disabled={submitting} onClick={() => run(runProjectedCommand,
+                nextAction.code === "acquire-operating-evidence" ? "Verifying runtime results"
+                  : projectedCommand === "close" ? "Closing the work session" : undefined)}>
                 {workSessionCommandLabel(nextAction.code)}
               </TerasActionButton>
             ) : nextAction?.code === "architecture-recovery-required" ? (
                 <TerasActionButton disabled={submitting || runtime.mode !== "live" || runtime.projectionStatus !== "current" || !runtime.recoverWork || recoveryReason.trim().length < 20}
                   onClick={() => run(() => runtime.recoverWork!(recoveryReason))}>Archive Superseded Session</TerasActionButton>
+            ) : reviewFeature ? (
+              <TerasActionButton disabled={submitting} onClick={reviewFeature.open}>
+                Review Feature #{reviewFeature.workItemId}
+              </TerasActionButton>
             ) : followUp && onNavigate ? (
               <TerasActionButton disabled={submitting} onClick={() => onNavigate(followUp, projection?.delivery_id ?? null, requiredWorkId)}>
                 {followUp === "closeout" ? "Review Closeout" : followUp === "architecture" ? planRequirement?.actionLabel ?? "Open Technical Plan" : prerequisite ? "Open Required Work" : "Open Work Board"}
@@ -703,17 +753,24 @@ function workSessionSetupProgress(canStart: boolean, accessApproved: boolean, se
 
 function workSessionProgress(projection: DeliveryWorkSessionProjection) {
   const facts = projection.facts ?? {};
-  const pullRequest = projection.pull_request?.state ?? facts.pull_request;
-  const review = facts.review_packet;
-  const checks = facts.operating_evidence === "not-required" ? facts.evidence : facts.operating_evidence ?? facts.evidence;
+  const pullRequest = projection.pull_request?.state ?? facts.pull_request ??
+    (projection.closed_review?.pull_request_urls.length ? "merged" : undefined);
+  const review = projection.closed_review ? "finalized" : facts.review_packet;
+  const checks = projection.closed_review?.verification_recorded ? "ready" :
+    facts.operating_evidence === "not-required" ? facts.evidence : facts.operating_evidence ?? facts.evidence;
+  const closed = projection.state === "closed";
+  const cleanup = projection.cleanup_receipt?.outcome;
   return [
-    { label: "Pull request", value: pullRequest === "merged" ? "Merged" :
-      pullRequest === "open" ? "Open for review" : pullRequest === "draft" ? "Draft" : "No open pull request shown" },
-    { label: "Verification", value: checks === "ready" ? "Results recorded" :
-      checks === "invalid" ? "Results need attention" : checks === "stale" ? "New results needed" : "Results pending" },
-    { label: "Review record", value: review === "finalized" ? "Finalized" :
+    ...(closed ? [{ label: "Work session", value: "Closed" }] : []),
+    ...(cleanup === "complete" || cleanup === "complete-with-retained-resources"
+      ? [{ label: "Cleanup", value: cleanup === "complete" ? "Complete" : "Complete with resources retained" }] : []),
+    ...(!closed || pullRequest ? [{ label: "Pull request", value: pullRequest === "merged" ? "Merged" :
+      pullRequest === "open" ? "Open for review" : pullRequest === "draft" ? "Draft" : "No open pull request shown" }] : []),
+    ...(!closed || checks ? [{ label: "Verification", value: checks === "ready" ? "Results recorded" :
+      checks === "invalid" ? "Results need attention" : checks === "stale" ? "New results needed" : closed ? "Result unavailable" : "Results pending" }] : []),
+    ...(!closed || review ? [{ label: "Review record", value: review === "finalized" ? "Finalized" :
       review === "merge-ready" ? (pullRequest === "merged" ? "Merge review recorded" : "Ready for merge") :
-      review === "draft" ? "Draft" : "Final review pending" },
+      review === "draft" ? "Draft" : closed ? "Review unavailable" : "Final review pending" }] : []),
   ];
 }
 

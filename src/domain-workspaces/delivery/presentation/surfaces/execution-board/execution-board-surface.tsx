@@ -88,7 +88,7 @@ import { DeliveryCommandUnconfirmed } from "../../../live-runtime/delivery-comma
 import { useDeliveryChangeLiveRuntime } from "../../../live-runtime/use-delivery-change-live-runtime.ts";
 import { useDeliveryCloseoutLiveRuntime } from "../../../live-runtime/use-delivery-closeout-live-runtime.ts";
 import { DeliveryHistoryDialog,useDeliveryOwnerHistory } from "../../workflows/shared/history/delivery-history-dialog.tsx";
-import { deliveryHistoryInspectionTree } from "../../../live-runtime/delivery-history-tree.ts";
+import { deliveryPackageInspectionTree } from "../../../live-runtime/delivery-history-tree.ts";
 import {
   buildExecutionTreeChangePlan,
   createdWorkItemId,
@@ -193,6 +193,7 @@ export function DeliveryExecutionBoard({
   const [treeChangeReviewOpen, setTreeChangeReviewOpen] = useState(false);
   const [treeChangeSubmitting, setTreeChangeSubmitting] = useState(false);
   const [treeEditEntering,setTreeEditEntering]=useState(false);
+  const [treeReadRetrying, setTreeReadRetrying] = useState(false);
   const [treeChangeSuccess,setTreeChangeSuccess]=useState<number|null>(null);
   const [treeChangeError, setTreeChangeError] = useState<string | null>(null);
   const [treeChangeAcceptanceNote, setTreeChangeAcceptanceNote] = useState("");
@@ -384,14 +385,19 @@ export function DeliveryExecutionBoard({
   const actionSession = useExecutionActionSession({
     submitLive: submitLiveExecutionAction,
   });
-  const historyTreeRead = useMemo(() => {
-    if (!readOnly || !selectedPackage) return {tree:null,error:null};
-    try { return {tree:deliveryHistoryInspectionTree(deliveryChangeRuntime.projection,selectedPackage.delivery_package_id),error:null}; }
-    catch { return {tree:null,error:"The selected package tree could not be verified."}; }
-  }, [readOnly,selectedPackage,deliveryChangeRuntime.projection]);
-  const selectedBoardTree = readOnly ? historyTreeRead.tree : selectedPackage
-    ? (boardPackageTreeById[selectedPackage.delivery_package_id] ?? null)
-    : null;
+  const useOwnerTree = readOnly || model.source_truth === "OpenProject-backed OOS";
+  const treePackageId = selectedPackage?.delivery_package_id;
+  const ownerTree = useMemo(() => {
+    if (!useOwnerTree || !treePackageId || deliveryChangeRuntime.projectionStatus !== "current") return null;
+    try {
+      return deliveryPackageInspectionTree(deliveryChangeRuntime.projection, treePackageId);
+    } catch {
+      return null;
+    }
+  }, [useOwnerTree, treePackageId, deliveryChangeRuntime.projection, deliveryChangeRuntime.projectionStatus]);
+  const selectedBoardTree = useOwnerTree
+    ? ownerTree
+    : treePackageId ? boardPackageTreeById[treePackageId] ?? null : null;
   const selectedTreeDraftActive =
     selectedPackage &&
     treeDraftPackageId === selectedPackage.delivery_package_id
@@ -839,7 +845,8 @@ export function DeliveryExecutionBoard({
     if (!disconnectedPreview && item.sessionRecorded) {
       return <TerasActionButton onClick={() => openChildAction(item)}>Open Work Session</TerasActionButton>;
     }
-    if (item.lane.status === "done") return null;
+    if (item.lane.status === "done") return disconnectedPreview ? null :
+      <TerasActionButton emphasis="secondary" onClick={() => setCompletionTarget(id)}>View Feature Outcome</TerasActionButton>;
     if (item.lane.status === "blocked") {
       return !item.node.blocker && !item.node.dependency_blocked && visibleWorkItems.some(child => child.lane.status === "blocked")
         ? <TerasRecordMetaText>Select a blocked child item to see what needs attention.</TerasRecordMetaText>
@@ -1069,7 +1076,17 @@ export function DeliveryExecutionBoard({
       : <TerasEmptyState fill>No work tree is available for this package.</TerasEmptyState>
   ) : undefined;
 
-  const treeReadError = readOnly ? historyTreeRead.error ?? deliveryChangeRuntime.projectionError : null;
+  async function retryWorkTree() {
+    setTreeReadRetrying(true);
+    try {
+      await deliveryChangeRuntime.refresh();
+    } catch {
+      // Keep the retry affordance when the owner read still fails.
+    } finally {
+      setTreeReadRetrying(false);
+    }
+  }
+
   const treeContent = activeView === "art-tree" && selectedPackage ? (
     workTree ? (
       <ExecutionWorkTree
@@ -1100,9 +1117,14 @@ export function DeliveryExecutionBoard({
             aria-label={`${action.label}: ${node.title}`} onClick={action.open}>{action.label}</TerasActionButton> : null;
         }}
       />
-    ) : treeReadError ? <TerasEmptyState>{treeReadError}</TerasEmptyState>
-      : deliveryChangeRuntime.loading ? <TerasLoadingState label="Loading selected work tree…" skeleton="details" />
-      : <TerasEmptyState fill>No verified work tree is available for this item.</TerasEmptyState>
+    ) : deliveryChangeRuntime.loading || treeReadRetrying ? (
+      <TerasLoadingState label="Loading selected work tree…" skeleton="details" />
+    ) : useOwnerTree ? (
+      <TerasEmptyState fill>
+        This package’s work tree could not be loaded.
+        <TerasActionButton emphasis="primary" onClick={() => void retryWorkTree()}>Retry loading</TerasActionButton>
+      </TerasEmptyState>
+    ) : <TerasEmptyState fill>No verified work tree is available for this item.</TerasEmptyState>
   ) : undefined;
 
   const treeEditPanel = selectedPackage && treeEditActive && selectedTreeEditNode ? (
@@ -1193,6 +1215,14 @@ export function DeliveryExecutionBoard({
     />
   ) : undefined);
 
+  const sessionParent = workSessionOpen && workSessionRuntime.projection?.delivery_id === selectedPackage?.delivery_package_id
+    ? packageWorkItems.find(item => item.node.legacy_work_package_id === workSessionTarget?.workItemId)?.feature
+    : null;
+  const reviewFeature = sessionParent && !disconnectedPreview ? packageWorkItems.find(item =>
+    item.node.id === sessionParent.id && !item.sessionRecorded && item.node.legacy_work_package_id !== null &&
+    !["done", "retired", "parked", "blocked"].includes(item.lane.status) && getChildCounts(item.node).open_child_count === 0)
+    : null;
+
   return (
     <>
       <DeliveryHistoryDialog deliveryId={historyOpen ? selectedPackage?.delivery_package_id ?? null : null} focus="closeout" onClose={() => setHistoryOpen(false)} />
@@ -1274,6 +1304,19 @@ export function DeliveryExecutionBoard({
       ) : null}
       {!readOnly && workSessionTarget && workSessionOpen ? (
         <ExecutionWorkSessionModal
+          workRecords={new Map(executionWorkChoices(selectedTree ? [selectedTree] : [], "all")
+            .filter(node => node.legacy_work_package_id !== null)
+            .map(node => [`work-item-${node.legacy_work_package_id}`, { title: node.title, repository: node.owner_repo ?? null }]))}
+          featureReview={reviewFeature?.node.legacy_work_package_id ? {
+            title: reviewFeature.node.title,
+            workItemId: reviewFeature.node.legacy_work_package_id,
+            open: () => {
+              showWorkItemOnBoard(reviewFeature);
+              setWorkSessionOpen(false);
+              setWorkSessionTarget(null);
+              setCompletionTarget(reviewFeature.node.legacy_work_package_id);
+            },
+          } : undefined}
           planRequirement={planRequirement}
           planGuidance={planGuidance}
           onDraftTechnicalPlan={starter => openTechnicalPlan(starter.scope.work.id, starter)}

@@ -8,10 +8,13 @@ export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "no-store" };
 type Context = { params: Promise<{ workItemId: string }> };
 
-export async function GET(_request: Request, { params }: Context) {
+export async function GET(request: NextRequest, { params }: Context) {
   try {
     if (!deliveryOosConfigured()) return NextResponse.json({ mode: "disconnected-preview", context: null }, { headers });
-    return NextResponse.json({ mode: "live", context: await readItemCompletionContext(completionTargetId((await params).workItemId)) }, { headers });
+    const includeCompletedChildEvidence = request.nextUrl.searchParams.get("include_completed_child_evidence") === "true";
+    const context = await readItemCompletionContext(completionTargetId((await params).workItemId),
+      { includeCompletedChildEvidence, includeRecordedCompletion: !includeCompletedChildEvidence });
+    return NextResponse.json({ mode: "live", context }, { headers });
   } catch (error) { return failure(error); }
 }
 
@@ -19,7 +22,7 @@ export async function POST(request: NextRequest, { params }: Context) {
   return authorizeConsoleMutation(request, async () => {
   try {
     if (!deliveryOosConfigured()) throw new Error("Non-source completion requires its live broker.");
-    const result = await submitItemCompletion(completionTargetId((await params).workItemId), await request.json());
+    const result = await submitItemCompletion(completionTargetId((await params).workItemId), await request.json(), { includeRecordedCompletion: true });
     return NextResponse.json({ mode: "live", ...result }, { headers });
   } catch (error) { return failure(error); }
   });

@@ -192,6 +192,23 @@ export function assertDeliveryWorkSessionProjection(
     const receipt = record(projection.cleanup_receipt, "cleanup receipt");
     text(receipt.outcome, "cleanup receipt outcome");
   }
+  if (projection.closed_review !== undefined) {
+    const review = record(projection.closed_review, "closed review");
+    if (projection.state !== "closed" || !projection.cleanup_receipt) invalid("Final review requires a closed work session.");
+    workItemIdList(review.covered_work_item_ids, "closed review covered work items");
+    if (!(review.covered_work_item_ids as unknown[]).includes(projection.work_item_id) ||
+      typeof review.verification_recorded !== "boolean" ||
+      !Array.isArray(review.pull_request_urls) || review.pull_request_urls.some(url => typeof url !== "string" ||
+        !/^https:\/\/github\.com\/[a-z0-9_.-]+\/[a-z0-9_.-]+\/pull\/[1-9][0-9]*$/i.test(url))) {
+      invalid("Final review is not bound to the closed work session.");
+    }
+    if (review.passed_checks !== undefined &&
+      (!Array.isArray(review.passed_checks) || review.passed_checks.some(name => typeof name !== "string" || !name.trim()))) {
+      invalid("Final review check names are invalid.");
+    }
+  }
+  if (projection.closed_review_unavailable !== undefined &&
+    (projection.state !== "closed" || projection.closed_review_unavailable !== true)) invalid("Invalid closed review availability.");
   if (projection.closeout !== undefined) {
     const closeout = record(projection.closeout, "Landing Unit closeout");
     oneOf(closeout.state, ["complete", "partial_failure"], "closeout state");
