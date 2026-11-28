@@ -131,7 +131,7 @@ async function harness(page, initial = {}){
     }
     return route.fulfill({status:503,json:{mode:"live",status:"offline",projection:null,error:"Isolated unavailable owner"}});
   });
-  return {state,...await openWorkSession(page, state.feature)};
+  return {state,...await openWorkSession(page, state.feature, state.complete)};
 }
 
 test("publication shows the confirmed PR while the same command finishes its checks", async ({page})=>{
@@ -278,7 +278,7 @@ test("a rebuilt session waits for the current access receipt before preparing so
   expect(state.errors).toEqual([]);
 });
 
-async function openWorkSession(page, feature = false){
+async function openWorkSession(page, feature = false, retained = false){
   await page.goto(base,{waitUntil:"domcontentloaded"});
   await page.waitForFunction(()=>{const b=document.querySelector('button[title="Open DELIVERY"]');return b&&Object.keys(b).some(key=>key.startsWith("__reactProps$"));});
   await page.locator('button[title="Open DELIVERY"]').click();
@@ -287,11 +287,19 @@ async function openWorkSession(page, feature = false){
   await workspace.getByRole("button",{name:"Open Work Board",exact:true}).click();
   if (feature) await workspace.locator("[data-execution-work-item]").filter({ hasText:"Reviewed Feature" }).click();
   const completed = workspace.locator('[data-execution-work-item]').filter({ hasText: "Work 3" });
-  await expect(completed).toContainText("Session Recorded");
+  if (retained) await expect(completed).not.toContainText("Session Recorded");
+  else await expect(completed).toContainText("Session Recorded");
   await completed.click();
   await workspace.getByRole("button",{name:"Open Work Session",exact:true}).click();
   return {workspace,modal:page.getByRole("dialog",{name:"Work Session",exact:true})};
 }
+
+test("a completed story reopens its closed session after it leaves the board session list", async ({ page }) => {
+  const { state, modal } = await harness(page, { feature: true, complete: true, sessionStatus: "closed" });
+  await expect(modal.getByRole("link", { name: "example/work #43 ↗", exact: true })).toBeVisible();
+  await expect(modal).toContainText("Finalized");
+  expect(state.writes).toEqual([]);
+});
 
 for (const [shape,largeFeature] of [["single repo",false],["seven children across two repos",true]]) {
 test(`a closed grouped session carries the approved proof into Feature review and saved outcomes ${shape}`, async ({ page }) => {

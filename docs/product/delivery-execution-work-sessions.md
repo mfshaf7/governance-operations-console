@@ -375,6 +375,9 @@ review authority.
 1. Open the package workspace and select the work item on its **Work Board**.
 2. Choose **Check Work Requirements** or **Open Work Session**. The exact
    item's OOS read determines eligibility and the next action.
+   For a completed item, Delivery checks whether a session was saved when
+   you select it. **Open Work Session** reopens the saved review. If the
+   check fails, use **Retry saved session** to check the same work item.
 3. In disconnected preview, **Review Start** is available for an item with an
    enabled local start intent. In live mode, wait for the OOS projection.
 4. If no session exists, choose `Prepare Session`. When an approved Technical

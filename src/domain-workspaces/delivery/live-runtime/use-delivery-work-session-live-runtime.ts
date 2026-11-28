@@ -30,6 +30,56 @@ type PendingCommand = {
   requestKey: string;
 };
 
+type RetainedWorkSessionRead = {
+  workItemId: number;
+  deliveryId: string;
+  status: "closed" | "absent" | "unavailable";
+};
+
+export function useRetainedWorkSessionRead(workItemId: number | null, deliveryId: string | null) {
+  const [read, setRead] = useState<RetainedWorkSessionRead | null>(null);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    if (workItemId === null || deliveryId === null) return;
+
+    const request = new AbortController();
+    const record = { workItemId, deliveryId };
+    async function inspect() {
+      try {
+        const response = await fetch(workSessionPath(record.workItemId), {
+          cache: "no-store",
+          signal: request.signal,
+        });
+        if (!response.ok) throw new Error("Saved work session read failed.");
+        const snapshot = assertDeliveryWorkSessionSnapshot(await response.json());
+        const session = snapshot.projection;
+        if (snapshot.mode !== "live" || snapshot.status !== "current" ||
+          !session || session.work_item_id !== `work-item-${record.workItemId}` ||
+          (session.state === "closed" && session.delivery_id !== record.deliveryId)) {
+          throw new Error("Saved work session read is unavailable.");
+        }
+        if (!request.signal.aborted) {
+          setRead({ ...record, status: session.state === "closed" && session.cleanup_receipt ? "closed" : "absent" });
+        }
+      } catch {
+        if (!request.signal.aborted) setRead({ ...record, status: "unavailable" });
+      }
+    }
+
+    void inspect();
+    return () => request.abort();
+  }, [workItemId, deliveryId, attempt]);
+
+  return {
+    status: read?.workItemId === workItemId && read.deliveryId === deliveryId ? read.status : "checking",
+    retry() {
+      setRead(null);
+      setAttempt(previous => previous + 1);
+    },
+  } as const;
+}
+
 export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onCanonicalChanged?: () => Promise<void>) {
   const [snapshot, setSnapshot] =
     useState<DeliveryWorkSessionSnapshot | null>(null);
