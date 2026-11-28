@@ -13,15 +13,17 @@ test.use({viewport:{width:1700,height:1050},actionTimeout:12000});
 // never stand in for qualification of live OOS, source or ART mutations.
 async function harness(page, initial = {}){
   const state={complete:false,reads:0,writes:[],errors:[],failClose:false,code:"landing-unit-closeout-retry-required",...initial};
+  const childIds = state.largeFeature ? [3, 4, 5, 6, 7, 8, 9] : [3, 4];
   function inventory(){
     const at=new Date().toISOString(),epic={id:1,type:"Epic",status:"new",subject:"Connected Execution Check",record_ref:"openproject://work_packages/1",owner_repo:null,target_pi:null,architecture_anchor_ref:null,required_upstream_ref:null};
-    const tasks=[3,4].map(id=>({id,type:"Task",subject:`Work ${id}`,status:id===3||state.complete?"done":"in-progress",children:[],ready_contract_satisfied:true}));
+    const tasks=childIds.map(id=>({id,type:"Task",subject:`Work ${id}`,status:id!==4||state.complete?"done":"in-progress",children:[],ready_contract_satisfied:true}));
+    const children = state.feature ? [{ id:2, type:"Feature", subject:"Reviewed Feature", status:state.featureDone?"done":"in-progress", children:tasks }] : tasks;
     return projectCanonicalDeliveryOverview({schema_version:1,workflow_id:"delivery-console-overview",project:{identifier:"workspace-delivery-art"},roots:[epic],deferred_history_refs:[],mutation_authority:"none",
-      operational_initiatives:[{epic,summary:{open_descendant_count:state.complete?0:1},execution_tree:{...epic,children:tasks},work_sessions:state.complete?[]:[{session_id:"work-session:delivery-1:workflow",work_item_ids:["work-item-3","work-item-4"],updated_at:at,state:"recorded"}],
+      operational_initiatives:[{epic,summary:{open_descendant_count:state.complete?0:1},execution_tree:{...epic,children},work_sessions:state.complete?[]:[{session_id:"work-session:delivery-1:workflow",work_item_ids:["work-item-3","work-item-4"],updated_at:at,state:"recorded"}],
         execution_navigation:{authority:"operator-orchestration-service",eligibility:"check-selected-work-item",native_status:"new",workflow_phase:"execution",package_posture:state.complete?"Closeout Pending":"In Progress",closeout_pending:state.complete,
           active_work_item_ids:state.complete?[]:[4],prepared_work_item_ids:[],blocked_work_item_ids:[],refinement_work_item_ids:[]}}]},"browser-owner-revision",at);
   }
-  function session(){return {mode:"live",status:"current",observedAt:new Date().toISOString(),error:null,projection:{
+  function session(reviewRead = false){return {mode:"live",status:"current",observedAt:new Date().toISOString(),error:null,projection:{
     workflow_id:"delivery-art-work-session",work_item_id:"work-item-3",delivery_id:"delivery-1",covered_work_item_ids:["work-item-3","work-item-4"],
     landing_unit_id:"workflow",session_id:Object.hasOwn(state, "sessionId") ? state.sessionId : "work-session:delivery-1:workflow",session_revision:state.complete?"2026-11-17T02:00:00Z":"2026-11-17T01:00:00Z",state:state.sessionStatus??"closeout-required",
     ...(state.operatingEvidence || state.operatingVerification ? {facts:{
@@ -35,6 +37,9 @@ async function harness(page, initial = {}){
     ...(state.closedSession ? { cleanup_receipt:{ session_id:state.closedSession, outcome:"complete" },
       source_authorization:{ intent_ref:"source-intent:closed",session_id:state.closedSession,
         state:state.closureConfirmed ? "revoked" : "revocation-pending" } } : {}),
+    ...(state.feature && state.complete ? { cleanup_receipt:{ session_id:"work-session:delivery-1:workflow", outcome:"complete" },
+      ...(reviewRead ? { closed_review:{ covered_work_item_ids:["work-item-3","work-item-4"],
+        pull_request_urls:["https://github.com/example/work/pull/43"], verification_recorded:true } } : {}) } : {}),
     ...(state.pullRequest ? {pull_request:state.pullRequest} : {}),
     next_action:{authority:"operator-orchestration-service",code:state.code,...(state.requiredWork?{inputs:{work_item_id:`work-item-${state.requiredWork}`}}:{}),reason:state.reason??"Synthetic owner next action for the connected workflow check."}}};}
   page.on("pageerror",error=>state.errors.push(error.message));
@@ -42,7 +47,28 @@ async function harness(page, initial = {}){
     const request=route.request(),path=new URL(request.url()).pathname;
     if(path==="/api/delivery/workspace"){state.reads++;return route.fulfill({json:{mode:"live",projection:inventory()}});}
     if(path==="/api/console/capabilities")return route.fulfill({json:{artifactType:"console-runtime-capability-projection",schemaVersion:1,mode:"live",capabilities:[]}});
-    if(path==="/api/delivery/execution/3/work-session")return route.fulfill({json:session()});
+    if(path==="/api/delivery/execution/3/work-session")return route.fulfill({json:session(true)});
+    if(path==="/api/delivery/execution/2/completion" && state.feature){
+      const lookup = new URL(request.url()).searchParams.get("include_completed_child_evidence");
+      if(request.method()==="POST") {
+        const body = request.postDataJSON();
+        state.writes.push({path, body});
+        state.featureEvidence = body.evidence.changed_surfaces;
+        state.featureDone = true;
+      }
+      return route.fulfill({json:{mode:"live", outcome:state.featureDone?"recorded":undefined, context:{
+        work_item_id:2, record_ref:"openproject://work_packages/2", subject:"Reviewed Feature", status:state.featureDone?"done":"in-progress",
+        owner_repo:"example/work", revision:"sha256:"+"a".repeat(64), open_descendant_count:0,open_child_count:0,completed_related_count:childIds.length,
+        completed_child_count:childIds.length,source_session_active:false,completion_evidence_valid:Boolean(state.featureDone),can_complete:!state.featureDone,blocking_reasons:[],
+        ...(lookup ? {completed_child_evidence:{completed_child_count:childIds.length,matched_child_count:childIds.length,unavailable_child_count:0,links:[
+          {url:"https://github.com/example/work/pull/43",work_items:[{id:3,subject:"Work 3"},{id:4,subject:"Work 4"}]},
+          ...(state.largeFeature ? [{url:"https://github.com/example/another-repo/pull/43",
+            work_items:childIds.slice(2).map(id => ({id,subject:`Work ${id}`}))}] : []),
+        ]}} : {}),
+        ...(state.featureDone ? {recorded_completion:{"Completion Summary":"The completed child work delivered the reviewed outcome.",
+          "Changed Surfaces":state.featureEvidence}} : {}),
+      }}});
+    }
     if (state.sourceAccess && (path.includes("/source-authorizations") || path.startsWith("/api/environment-operations/"))) {
       return state.sourceAccess(route, path);
     }
@@ -73,7 +99,9 @@ async function harness(page, initial = {}){
           state.lostCommandId=request.postDataJSON().commandId;
           return route.fulfill({status:503,json:{mode:"live",status:"offline",error:"Synthetic lost acknowledgement",code:"delivery_work_session_projection_unavailable"}});
         }
-        state.complete=true;state.code="initiative-closeout-required";return route.fulfill({json:session()});
+        state.complete=true;
+        if (state.feature) state.sessionStatus = "closed";
+        state.code="initiative-closeout-required";return route.fulfill({json:session()});
       }
       if(path.endsWith("/work-session/continue") && state.code==="acquire-operating-evidence"){
         if(state.failOperatingEvidence){
@@ -103,7 +131,7 @@ async function harness(page, initial = {}){
     }
     return route.fulfill({status:503,json:{mode:"live",status:"offline",projection:null,error:"Isolated unavailable owner"}});
   });
-  return {state,...await openWorkSession(page)};
+  return {state,...await openWorkSession(page, state.feature)};
 }
 
 test("publication shows the confirmed PR while the same command finishes its checks", async ({page})=>{
@@ -162,6 +190,9 @@ test("a retired session follows its original access closure and returns to close
     },
   });
   await expect(modal.getByRole("heading",{name:"Confirm repository access ended",exact:true})).toBeVisible();
+  await expect(modal).toContainText("This session is closed.");
+  await expect(modal.getByText("Results pending", {exact:true})).toHaveCount(0);
+  await expect(modal.getByText("Final review pending", {exact:true})).toHaveCount(0);
   await expect(modal.getByRole("button",{name:"Approve repository access",exact:true})).toHaveCount(0);
   await expect(modal.getByRole("button",{name:"Show replacement access request",exact:true})).toHaveCount(0);
   state.closureConfirmed = closureConfirmed = true;
@@ -247,18 +278,51 @@ test("a rebuilt session waits for the current access receipt before preparing so
   expect(state.errors).toEqual([]);
 });
 
-async function openWorkSession(page){
+async function openWorkSession(page, feature = false){
   await page.goto(base,{waitUntil:"domcontentloaded"});
   await page.waitForFunction(()=>{const b=document.querySelector('button[title="Open DELIVERY"]');return b&&Object.keys(b).some(key=>key.startsWith("__reactProps$"));});
   await page.locator('button[title="Open DELIVERY"]').click();
   const workspace=page.getByRole("dialog",{name:"Delivery Workspace",exact:true});
   await workspace.locator('[data-delivery-workspace-section="execution-board"]').click();
   await workspace.getByRole("button",{name:"Open Work Board",exact:true}).click();
+  if (feature) await workspace.locator("[data-execution-work-item]").filter({ hasText:"Reviewed Feature" }).click();
   const completed = workspace.locator('[data-execution-work-item]').filter({ hasText: "Work 3" });
   await expect(completed).toContainText("Session Recorded");
   await completed.click();
   await workspace.getByRole("button",{name:"Open Work Session",exact:true}).click();
   return {workspace,modal:page.getByRole("dialog",{name:"Work Session",exact:true})};
+}
+
+for (const [shape,largeFeature] of [["single repo",false],["seven children across two repos",true]]) {
+test(`a closed grouped session carries the approved proof into Feature review and saved outcomes ${shape}`, async ({ page }) => {
+  const {state,workspace,modal} = await harness(page, { feature:true, largeFeature });
+  await modal.getByRole("button", { name:"Retry completing the work", exact:true }).click();
+  await expect(modal.getByRole("link", { name:"example/work #43 ↗", exact:true })).toBeVisible();
+  await expect(modal).toContainText("#4 · Work 4");
+  await expect(modal).toContainText("Finalized");
+  await modal.getByRole("button", { name:"Review Feature #2", exact:true }).click();
+  const review = page.getByRole("dialog", { name:"Review Feature Completion", exact:true });
+  await review.getByRole("button", { name:"Find approved evidence", exact:true }).click();
+  await review.getByRole("button", { name:"Add evidence from example/work #43", exact:true }).click();
+  if (largeFeature) await review.getByRole("button", { name:"Add evidence from example/another-repo #43", exact:true }).click();
+  for (const [label,value] of [["Completion summary","The Feature outcome was confirmed."],["Test evidence","Verified both child stories."],["Validation evidence","Read the recorded review."]]) {
+    await review.getByRole("textbox", { name:label, exact:true }).fill(value);
+  }
+  for (const name of ["Test result","Validation result"]) {
+    await review.getByRole("button", { name, exact:true }).click();
+    await page.getByRole("option", { name:"Passed", exact:true }).click();
+  }
+  await review.getByRole("radio", { name:"I confirm this work is complete and the evidence is accurate", exact:true }).click();
+  await review.getByRole("button", { name:"Record completion", exact:true }).click();
+  const outcome = page.getByRole("dialog", { name:"Feature Outcome", exact:true });
+  await expect(outcome).toContainText("The completed child work delivered the reviewed outcome.");
+  await expect(outcome.getByRole("link", { name:"example/work #43", exact:true })).toHaveAttribute("href", "https://github.com/example/work/pull/43");
+  await outcome.getByRole("button", { name:"Back to Board", exact:true }).click();
+  await workspace.getByRole("button", { name:"View Feature Outcome", exact:true }).click();
+  await expect(outcome).toContainText("The completed child work delivered the reviewed outcome.");
+  expect(state.writes.map(entry => entry.path)).toEqual(["/api/delivery/execution/3/work-session/close","/api/delivery/execution/2/completion"]);
+  expect(state.errors).toEqual([]);
+});
 }
 
 test("lost closeout acknowledgement recovers the original result across reload without resubmitting",async({page},info)=>{
@@ -532,7 +596,19 @@ test("the merged session can request verification of recorded runtime results", 
   await expect(modal.getByRole("button", { name: "Edit or import files", exact: true })).toHaveCount(0);
   await expect(modal.getByRole("heading", { name: "Review repository access", exact: true })).toHaveCount(0);
   const verify = modal.getByRole("button", { name: "Verify Runtime Results", exact: true });
+  let finishVerification;
+  const verificationGate = new Promise(resolve => { finishVerification = resolve; });
+  await page.route("**/api/delivery/execution/3/work-session/continue", async route => {
+    await verificationGate;
+    await route.fallback();
+  }, { times: 1 });
   await verify.click();
+  try {
+    await expect(modal.getByRole("heading", { name: "Verifying runtime results", exact: true })).toBeVisible();
+    await expect(verify).toBeDisabled();
+  } finally {
+    finishVerification();
+  }
   await expect(modal.getByRole("heading", { name: "Runtime results need attention", exact: true })).toBeVisible();
   await expect(modal.getByRole("button", { name: "Prepare Final Evidence", exact: true })).toHaveCount(0);
 

@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
-import { completionObject, completionEvidence, completionTargetId, itemPiReview, type ItemCompletionContext } from "../live-runtime/delivery-item-completion-contract.ts";
+import { assertCompletedChildEvidence, completionObject, completionEvidence, completionTargetId, itemPiReview, type ItemCompletionContext } from "../live-runtime/delivery-item-completion-contract.ts";
 import { deliveryOosRequest, resolveDeliveryOosConfig, DeliveryOosError } from "./delivery-oos-client.ts";
 import { readDeliveryChangeProjection } from "./delivery-change-oos-client.ts";
 
-type Options = { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch };
+type Options = { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; includeCompletedChildEvidence?: boolean; includeRecordedCompletion?: boolean };
 // Reuse the governed work-session ART budget for readiness, native forms and
 // canonical readback; these operations can exceed the generic 12s window.
 const completionOosTimeoutMs = 75_000;
@@ -11,8 +11,13 @@ const completionOosTimeoutMs = 75_000;
 export async function readItemCompletionContext(target: number, options: Options = {}): Promise<ItemCompletionContext> {
   const id = completionTargetId(target);
   const config = resolveDeliveryOosConfig(options.env);
+  const params = new URLSearchParams();
+  if (options.includeCompletedChildEvidence) params.set("include_completed_child_evidence", "true");
+  if (options.includeRecordedCompletion) params.set("include_completion_record", "true");
+  const query = params.size ? `?${params}` : "";
+  const headers = params.size ? { "x-oos-operator-id": config.operatorId } : undefined;
   const raw = await deliveryOosRequest(
-    config, `/v1/delivery-work-items/${id}/continuation-context`, { method: "GET" }, options.fetchImpl, completionOosTimeoutMs,
+    config, `/v1/delivery-work-items/${id}/continuation-context${query}`, { method: "GET", headers }, options.fetchImpl, completionOosTimeoutMs,
   );
   const envelope = completionObject(raw);
   const context = completionObject(envelope.continuation_context);
@@ -30,6 +35,25 @@ export async function readItemCompletionContext(target: number, options: Options
     throw new DeliveryOosError("Source-session records could not be checked. Retry before recording completion or PI review.", "delivery_completion_session_state_unavailable", 503);
   }
   const sourceSessionPresent = envelope.source_session_present;
+  const related = context.previously_completed_related_items;
+  const completedChildIds = new Set<number>();
+  if (item.type === "Feature" && Array.isArray(related)) {
+    for (const entry of related) {
+      const relation = completionObject(entry);
+      if (relation.relation !== "completed_child") continue;
+      const child = completionObject(relation.item);
+      if (typeof child.id === "number" && Number.isSafeInteger(child.id) && child.id > 0 &&
+        child.parent_id === id && child.status === "done" && child.record_ref === `openproject://work_packages/${child.id}`) {
+        completedChildIds.add(child.id);
+      }
+    }
+  }
+  const reviewedEvidence = options.includeCompletedChildEvidence && envelope.completed_child_evidence !== undefined
+    ? assertCompletedChildEvidence(envelope.completed_child_evidence) : undefined;
+  if (reviewedEvidence && (reviewedEvidence.completed_child_count !== completedChildIds.size ||
+    reviewedEvidence.links.some(link => link.work_items.some(child => !completedChildIds.has(child.id))))) {
+    throw new DeliveryOosError("Reviewed evidence does not match this Feature’s completed children.", "delivery_completion_child_evidence_invalid", 502);
+  }
   const reasons: string[] = [];
   if (sourceSessionPresent) reasons.push("An active source session must finish through its existing merge and close path.");
   if (item.type === "Epic") reasons.push("Use initiative closeout for an Epic.");
@@ -40,12 +64,19 @@ export async function readItemCompletionContext(target: number, options: Options
   if (item.completion_status_transition_available !== true) reasons.push("The native completion transition is unavailable.");
   const piReview = item.type === "PI Objective" ? await readPiReviewMetadata(id, envelope.delivery_id, item, options) : undefined;
   const pi = piReview ? { ...piReview, can_review: piReview.review_outcomes.length > 0 && !sourceSessionPresent && !["done", "retired"].includes(item.status) } : undefined;
-  const revision = `sha256:${createHash("sha256").update(JSON.stringify({ item, open_descendant_count: summary.open_descendant_count, source_session_present: sourceSessionPresent, pi_review: pi })).digest("hex")}`;
+  const revision = `sha256:${createHash("sha256").update(JSON.stringify({
+    item, open_descendant_count: summary.open_descendant_count, source_session_present: sourceSessionPresent, pi_review: pi,
+    ...(item.type === "Feature" ? { completed_children: [...completedChildIds].sort((a, b) => a - b) } : {}),
+  })).digest("hex")}`;
   return {
     work_item_id: id, record_ref: ref, subject: item.subject, status: item.status,
     owner_repo: typeof item.owner_repo === "string" ? item.owner_repo : null,
     revision, open_descendant_count: Number(summary.open_descendant_count),
     open_child_count: Number(summary.open_child_count), completed_related_count: Number(summary.completed_related_count),
+    ...(item.type === "Feature" ? { completed_child_count: completedChildIds.size } : {}),
+    ...(reviewedEvidence ? { completed_child_evidence: reviewedEvidence } : {}),
+    ...(options.includeRecordedCompletion && item.type === "Feature" && item.status === "done" && context.recorded_completion
+      ? { recorded_completion: completionObject(context.recorded_completion) as Record<string, string> } : {}),
     source_session_active: sourceSessionPresent,
     completion_evidence_valid: item.completion_evidence_present === true && item.completion_evidence_formatting_valid === true,
     can_complete: item.status !== "done" && reasons.length === 0,
@@ -135,7 +166,14 @@ export async function submitItemCompletion(target: number, value: unknown, optio
   const input = { ...evidence, ...(route === "stale-open-close" ? { stale_open_justification: String(body.staleOpenJustification).trim() } : {}) };
   if (!input.completion_note) delete (input as Partial<typeof input>).completion_note;
   const raw = completionObject(await deliveryOosRequest(resolveDeliveryOosConfig(options.env),
-    `/v1/delivery-work-items/${target}/${route}`, { method: "POST", body: JSON.stringify({ input }) }, options.fetchImpl, completionOosTimeoutMs));
+    `/v1/delivery-work-items/${target}/${route}`, { method: "POST", body: JSON.stringify({ input }) }, options.fetchImpl, completionOosTimeoutMs)
+    .catch(error => {
+      if (error instanceof DeliveryOosError && error.status === 422 &&
+        error.code === "validation_failure" && error.details === "completion_evidence_invalid") {
+        throw new DeliveryOosError(error.message, "completion_evidence_invalid", error.status);
+      }
+      throw error;
+    }));
   const item = completionObject(raw.work_item);
   if (raw.workflow_id !== (route === "complete" ? "delivery-work-item-complete" : "delivery-work-item-stale-open-close") || raw.work_item_id !== `work-item-${target}` ||
     raw.work_item_record_ref !== current.record_ref || item.id !== target || item.status !== "done") {

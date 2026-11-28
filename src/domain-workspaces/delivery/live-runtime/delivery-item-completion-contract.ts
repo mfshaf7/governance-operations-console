@@ -18,6 +18,9 @@ export type ItemCompletionContext = {
   open_descendant_count: number;
   open_child_count: number;
   completed_related_count: number;
+  completed_child_count?: number;
+  completed_child_evidence?: CompletedChildEvidence;
+  recorded_completion?: Record<string, string>;
   source_session_active: boolean;
   completion_evidence_valid: boolean;
   can_complete: boolean;
@@ -32,6 +35,40 @@ export type ItemCompletionContext = {
     can_review: boolean;
   };
 };
+
+export type CompletedChildEvidence = {
+  completed_child_count: number;
+  matched_child_count: number;
+  unavailable_child_count?: number;
+  links: { url: string; work_items: { id: number; subject: string }[] }[];
+};
+
+export function assertCompletedChildEvidence(value: unknown): CompletedChildEvidence {
+  const evidence = completionObject(value);
+  const count = Number(evidence.completed_child_count), matched = Number(evidence.matched_child_count);
+  if (!Number.isSafeInteger(evidence.completed_child_count) || !Number.isSafeInteger(evidence.matched_child_count) ||
+    matched < 0 || count < matched || !Array.isArray(evidence.links)) throw new Error("Completed child evidence is invalid.");
+  if (evidence.unavailable_child_count !== undefined &&
+    (!Number.isSafeInteger(evidence.unavailable_child_count) || Number(evidence.unavailable_child_count) < 0 ||
+      matched + Number(evidence.unavailable_child_count) > count)) throw new Error("Completed child evidence coverage is invalid.");
+  const urls = new Set(), children = new Set();
+  for (const value of evidence.links) {
+    const link = completionObject(value);
+    if (typeof link.url !== "string" || !/^https:\/\/github\.com\/[a-z0-9_.-]+\/[a-z0-9_.-]+\/pull\/[1-9][0-9]*$/i.test(link.url) ||
+      urls.has(link.url) || !Array.isArray(link.work_items) || !link.work_items.length) throw new Error("A reviewed evidence link is invalid.");
+    urls.add(link.url);
+    const linkChildren = new Set();
+    for (const value of link.work_items) {
+      const item = completionObject(value);
+      if (typeof item.id !== "number" || completionTargetId(item.id) !== item.id ||
+        linkChildren.has(item.id) || typeof item.subject !== "string" || !item.subject.trim()) throw new Error("A reviewed child record is invalid.");
+      linkChildren.add(item.id);
+      children.add(item.id);
+    }
+  }
+  if (children.size !== matched) throw new Error("Completed child evidence does not match its reported coverage.");
+  return value as CompletedChildEvidence;
+}
 
 export type ItemPiReview = { actualBusinessValue: number; reviewOutcome: string; reviewNote: string };
 export function itemPiReview(value: unknown): ItemPiReview {
@@ -100,6 +137,20 @@ export function assertCompletionContext(value: unknown): ItemCompletionContext {
   }
   if (body.can_complete && (body.status === "done" || body.source_session_active || body.open_descendant_count !== 0 || body.blocking_reasons.length !== 0)) {
     throw new Error("Completion eligibility contradicts its canonical prerequisites.");
+  }
+  if (body.completed_child_count !== undefined && (!Number.isSafeInteger(body.completed_child_count) ||
+    Number(body.completed_child_count) < 0 || Number(body.completed_child_count) > Number(body.completed_related_count))) {
+    throw new Error("The completed child count is invalid.");
+  }
+  if (body.completed_child_evidence !== undefined &&
+    assertCompletedChildEvidence(body.completed_child_evidence).completed_child_count !== body.completed_child_count) {
+    throw new Error("Reviewed evidence belongs to a different set of child work.");
+  }
+  if (body.recorded_completion !== undefined && (body.status !== "done" ||
+    Object.entries(completionObject(body.recorded_completion)).some(([key, content]) =>
+      !["Completion Summary", "Changed Surfaces", "Test Result Evidence", "Validation Evidence"].includes(key) ||
+      typeof content !== "string" || !content.trim()))) {
+    throw new Error("The saved Feature outcome is invalid.");
   }
   if (body.pi_review !== undefined) {
     const pi = completionObject(body.pi_review);

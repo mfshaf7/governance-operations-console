@@ -4,7 +4,7 @@ import type { WorkDesignNode } from "../work-model/work-design/work-design-types
 
 // Selected-package read, not an inventory expansion. Never bind another
 // initiative's tree or substitute an empty tree for unavailable owner data.
-export function deliveryHistoryInspectionTree(projection: DeliveryChangeProjection | null, deliveryId: string): ControlBoardTreeNode | null {
+export function deliveryPackageInspectionTree(projection: DeliveryChangeProjection | null, deliveryId: string): ControlBoardTreeNode | null {
   if (!projection) return null;
   const match = /^delivery-([1-9][0-9]*)$/.exec(deliveryId);
   if (!match || projection.delivery_id !== deliveryId || projection.record_ref !== `openproject://work_packages/${match[1]}` || projection.package.execution_tree.id !== Number(match[1])) {
@@ -27,7 +27,7 @@ export function deliveryHistoryInspectionTree(projection: DeliveryChangeProjecti
 // The native Work Design editor owns design branches, not PI Objectives,
 // milestones or execution-only records. The full ART tree remains in Execution.
 export function deliveryHistoryDesignTree(projection: DeliveryChangeProjection | null, deliveryId: string): WorkDesignNode | null {
-  const tree = deliveryHistoryInspectionTree(projection, deliveryId);
+  const tree = deliveryPackageInspectionTree(projection, deliveryId);
   if (!tree) return null;
   function design(node: ControlBoardTreeNode): WorkDesignNode | null {
     if (!["Epic", "Feature", "User story", "Risk"].includes(node.componentType)) return null;

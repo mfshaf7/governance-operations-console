@@ -154,6 +154,13 @@ export type DeliveryWorkSessionProjection = {
   agent_source?: Record<string, unknown> & { state: string };
   cleanup?: DeliveryWorkSessionCleanup;
   cleanup_receipt?: DeliveryWorkSessionCleanupReceipt;
+  closed_review?: {
+    covered_work_item_ids: string[];
+    pull_request_urls: string[];
+    verification_recorded: boolean;
+    passed_checks?: string[];
+  };
+  closed_review_unavailable?: boolean;
   closeout?: DeliveryWorkSessionCloseout;
   command_receipt?: DeliveryWorkSessionCommandReceipt;
   configured_path?: Record<string, unknown>;

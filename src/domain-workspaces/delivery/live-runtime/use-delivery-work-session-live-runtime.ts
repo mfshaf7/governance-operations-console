@@ -62,7 +62,15 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
     void changed.current?.().catch(() => undefined);
   }, []);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (keepConfirmedClosure = false) => {
+    function showReadFailure(next: DeliveryWorkSessionSnapshot) {
+      setSnapshot(current => keepConfirmedClosure && current?.projection?.state === "closed" &&
+        current.projection.work_item_id === `work-item-${workItemId}`
+        ? current.projection.closed_review ? current : {
+          ...current, projection: { ...current.projection, closed_review_unavailable: true },
+        }
+        : next);
+    }
     if (workItemId === null) {
       const next: DeliveryWorkSessionSnapshot = {
         error: "The selected execution target has no work-item identity.",
@@ -71,7 +79,7 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
         projection: null,
         status: "offline",
       };
-      setSnapshot(next);
+      showReadFailure(next);
       return next;
     }
     let response: Response;
@@ -93,7 +101,7 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
         projection: null,
         status: "offline",
       };
-      setSnapshot(next);
+      showReadFailure(next);
       throw error;
     }
     const body: unknown = await response.json().catch(() => null);
@@ -106,7 +114,7 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
         projection: null,
         status: "offline",
       };
-      setSnapshot(next);
+      showReadFailure(next);
       throw error;
     }
     const next = assertDeliveryWorkSessionSnapshot(body);
@@ -163,9 +171,11 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
 
   const scope = workItemId === null ? null : `work-session:${workItemId}`;
   const recovery = useDeliveryCommandRecovery(scope, dispatching, result => {
-    publishCommand(assertDeliveryWorkSessionSnapshot({
+    const next = assertDeliveryWorkSessionSnapshot({
       mode: "live", status: "current", error: null, observedAt: new Date().toISOString(), projection: result,
-    }));
+    });
+    publishCommand(next);
+    if (next.projection?.state === "closed") void refresh(true).catch(() => undefined);
     return true;
   }, setPendingRebuild, setPublication);
 
@@ -190,6 +200,7 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
         ...(observePublication ? { onPublication: setPublication } : {}),
       });
       publishCommand(next);
+      if (next.projection?.state === "closed") void refresh(true).catch(() => undefined);
       return next;
     } catch (error) {
       if (error instanceof DeliveryWorkSessionLiveRuntimeError && error.code === "platform_source_credential_pending" &&
@@ -202,7 +213,7 @@ export function useDeliveryWorkSessionLiveRuntime(workItemId: number | null, onC
       setChecking(false);
       setDispatching(false);
     }
-  }, [publishCommand]);
+  }, [publishCommand, refresh]);
 
   const prepare = useCallback(async () => {
     const current = await currentSnapshot(snapshot, refresh);
